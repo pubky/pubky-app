@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { filterSuggestions, mergeTagSuggestions } from './useTagInput.utils';
+import { describe, expect, it } from 'vitest';
 import { TAG_INPUT_MAX_SUGGESTIONS } from './useTagInput.constants';
+import { filterSuggestions, mergeTagSuggestions } from './useTagInput.utils';
 
 describe('filterSuggestions', () => {
   const tags = [

@@ -1,13 +1,12 @@
 'use client';
 
-import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
-import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-
-import type { SearchRecentUserItemProps } from './SearchRecentUserItem.types';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
+import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { formatPublicKey } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import type { SearchRecentUserItemProps } from './SearchRecentUserItem.types';
 
 /**
  * SearchRecentUserItem

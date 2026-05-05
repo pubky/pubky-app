@@ -1,7 +1,6 @@
 'use client';
-import { Image } from '@/atoms/Image/Image';
-
 import { useState } from 'react';
+import { Image } from '@/atoms/Image/Image';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 
 type PostAttachmentsCarouselImageProps = {

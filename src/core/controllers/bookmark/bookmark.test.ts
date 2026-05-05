@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TBookmarkEventParams } from './bookmark.types';
-import { HttpMethod } from '@/libs/http/http.types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
+import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
+import type { TBookmarkEventParams } from './bookmark.types';
+
 // Mock pubky-app-specs
 vi.mock('pubky-app-specs', () => ({
   PubkySpecsBuilder: class {

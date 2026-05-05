@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import { Logger } from '@/libs/logger/logger';
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {

@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-
-import type { UseAuthUrlOptions } from '../useAuthUrl/useAuthUrl.types';
 import { useAuthUrl } from '../useAuthUrl/useAuthUrl';
+import type { UseAuthUrlOptions } from '../useAuthUrl/useAuthUrl.types';
 
 type UseMobileAuthReturn = {
   url: string;

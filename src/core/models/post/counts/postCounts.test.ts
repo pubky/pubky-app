@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetDatabase } from '@/database/franky/franky.helpers';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { resetDatabase } from '@/database/franky/franky.helpers';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import type { NexusPostCounts } from '@/services/nexus/nexus.types';
+
 describe('PostCountsModel', () => {
   beforeEach(async () => {
     await resetDatabase();

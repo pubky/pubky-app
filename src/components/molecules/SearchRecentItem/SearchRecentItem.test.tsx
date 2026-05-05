@@ -1,9 +1,10 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
+import type { RecentTagSearchItem, RecentUserSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
 import { SearchRecentItem } from './SearchRecentItem';
 import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
-import type { RecentUserSearchItem, RecentTagSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
-import type { Pubky } from '@/models/models.types';
+
 vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: ({ label, onClick, ...props }: { label: string; onClick?: () => void }) => (

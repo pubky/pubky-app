@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { FeedNavigation } from './FeedNavigation';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { FeedNavigation } from './FeedNavigation';
+
 // Mock next/navigation
 const mockUsePathname = vi.fn();
 vi.mock('next/navigation', () => ({

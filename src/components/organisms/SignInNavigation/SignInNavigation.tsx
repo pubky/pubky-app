@@ -1,12 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { HOME_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
+import { useSignInStore } from '@/stores/signIn/signIn.store';
 import { DialogRestoreEncryptedFile } from '../DialogRestoreEncryptedFile/DialogRestoreEncryptedFile';
 import { DialogRestoreRecoveryPhrase } from '../DialogRestoreRecoveryPhrase/DialogRestoreRecoveryPhrase';
 
-import { HOME_ROUTES } from '@/app/routes';
-import { useSignInStore } from '@/stores/signIn/signIn.store';
 export const SignInNavigation = () => {
   const router = useRouter();
   const authUrlResolved = useSignInStore((state) => state.authUrlResolved);

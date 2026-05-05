@@ -1,8 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { SidebarButton } from './SidebarButton';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { FileText, LockKeyhole, Users } from 'lucide-react';
+import { describe, expect, it, vi } from 'vitest';
+import { SidebarButton } from './SidebarButton';
 
 describe('SidebarButton', () => {
   it('renders with icon and children', () => {

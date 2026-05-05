@@ -1,8 +1,9 @@
-import { HttpMethod } from '@/libs/http/http.types';
 import type { TBookmarkPersistInput } from '@/application/bookmark/bookmark.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 /**
  * Bookmark application service.
  *

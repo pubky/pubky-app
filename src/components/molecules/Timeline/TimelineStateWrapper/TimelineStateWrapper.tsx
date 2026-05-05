@@ -4,7 +4,6 @@ import { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import { TimelineLoading } from '../TimelineLoading';
 
 interface TimelineStateWrapperProps {

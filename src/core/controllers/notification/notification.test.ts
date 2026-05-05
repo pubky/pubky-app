@@ -1,17 +1,18 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { NotificationController } from './notification';
-import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
-import { mockAuthStore, mockNotificationStore } from '@/test-utils/stores';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationApplication } from '@/application/notification/notification';
 import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
+import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultNotificationPreferences, type NotificationPreferences } from '@/stores/settings/settings.types';
+import { mockAuthStore, mockNotificationStore } from '@/test-utils/stores';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { NotificationController } from './notification';
+
 const mockUserId = 'pubky-user-123' as Pubky;
 
 const setupAuthStore = (userId: Pubky = mockUserId) => {

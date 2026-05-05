@@ -1,17 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  PubkyAppFeedReach,
-  PubkyAppFeedSort,
   FeedResult,
   PubkyAppFeedLayout,
+  PubkyAppFeedReach,
+  PubkyAppFeedSort,
   PubkySpecsBuilder,
 } from 'pubky-app-specs';
-import { FeedApplication } from './feed';
-import { asOpaque } from '@/test-utils/type-assertions';
-import { HttpMethod } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/application/feed/feed.types';
 import { db } from '@/database/franky/franky';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import { FeedModel } from '@/models/feed/feed';
 import { buildFeedStreamId } from '@/models/feed/feed.helpers';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -22,6 +20,9 @@ import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFeedService } from '@/services/local/feed/feed';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { FeedApplication } from './feed';
+
 // Mock the LocalFeedService
 vi.mock('@/services/local/feed/feed', () => ({
   LocalFeedService: {

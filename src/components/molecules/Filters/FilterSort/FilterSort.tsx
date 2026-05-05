@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { Flame, SquareAsterisk } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { SORT, type SortType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps } from '../Filters.types';
 
-import { SquareAsterisk, Flame } from 'lucide-react';
-import { SORT, type SortType } from '@/stores/home/home.types';
 export function FilterSort({
   selectedTab,
   defaultSelectedTab = SORT.TIMELINE,

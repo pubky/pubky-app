@@ -1,13 +1,13 @@
 import { Table } from 'dexie';
-
-import { UserConnectionsFields, UserConnectionsModelSchema } from './userConnections.schema';
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { TupleModelBase } from '@/models/shared/base/tuple/baseTuple';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import { UserConnectionsFields, UserConnectionsModelSchema } from './userConnections.schema';
+
 export class UserConnectionsModel
   extends TupleModelBase<Pubky, UserConnectionsModelSchema>
   implements UserConnectionsModelSchema

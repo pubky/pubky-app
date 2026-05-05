@@ -1,17 +1,17 @@
-import { describe, it, expect } from 'vitest';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-
-import {
-  pubkyLayoutToHomeLayout,
-  homeLayoutToPubkyLayout,
-  pubkyReachToHomeReach,
-  homeReachToPubkyReach,
-  pubkySortToHomeSort,
-  homeSortToPubkySort,
-  pubkyPostKindToHomeContent,
-  homeContentToPubkyPostKind,
-} from './pubky-app-spec-feed-mappers';
+import { describe, expect, it } from 'vitest';
 import { CONTENT, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
+import {
+  homeContentToPubkyPostKind,
+  homeLayoutToPubkyLayout,
+  homeReachToPubkyReach,
+  homeSortToPubkySort,
+  pubkyLayoutToHomeLayout,
+  pubkyPostKindToHomeContent,
+  pubkyReachToHomeReach,
+  pubkySortToHomeSort,
+} from './pubky-app-spec-feed-mappers';
+
 describe('pubky-app-spec-feed-mappers', () => {
   describe('Layout Mappers', () => {
     describe('pubkyLayoutToHomeLayout', () => {

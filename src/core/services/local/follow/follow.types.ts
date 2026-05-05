@@ -1,6 +1,7 @@
 import type { TFollowParams } from '@/controllers/user/user.type';
 import type { Pubky } from '@/models/models.types';
 import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+
 export interface CreateFollowParams extends TFollowParams {
   activeStreamId?: PostStreamTypes | null;
 }

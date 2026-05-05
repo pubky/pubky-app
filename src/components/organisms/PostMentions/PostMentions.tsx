@@ -1,13 +1,12 @@
 'use client';
 
-import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
-import { RemarkAnchorProps } from '@/molecules/PostText/PostText.types';
-import { extractTextFromChildren } from '@/molecules/PostText/PostText.utils';
 import { Link } from '@/atoms/Link/Link';
-import { UserInfoPopover } from '@/molecules/UserInfoPopover/UserInfoPopover';
-
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { Identity } from '@/libs/identity/identity';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
+import { RemarkAnchorProps } from '@/molecules/PostText/PostText.types';
+import { extractTextFromChildren } from '@/molecules/PostText/PostText.utils';
+import { UserInfoPopover } from '@/molecules/UserInfoPopover/UserInfoPopover';
 
 export const PostMentions = (props: RemarkAnchorProps) => {
   const { href, children, className, node: _node, ref: _ref, ...rest } = props;

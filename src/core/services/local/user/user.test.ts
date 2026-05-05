@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { LocalUserService } from './user';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
@@ -8,6 +7,8 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { LocalUserService } from './user';
+
 describe('LocalUserService', () => {
   beforeEach(async () => {
     vi.clearAllMocks();

@@ -1,4 +1,5 @@
 import type { Pubky } from '@/models/models.types';
+
 export const FOLLOW_ACTIONS = {
   FOLLOW: 'follow',
   UNFOLLOW: 'unfollow',

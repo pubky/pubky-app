@@ -1,12 +1,13 @@
-import type { TFeedbackSubmitInput } from './feedback.types';
-import { Logger } from '@/libs/logger/logger';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
 import { ChatwootService } from '@/services/chatwoot/chatwoot';
 import { CHATWOOT_FEEDBACK_MESSAGE_PREFIX, CHATWOOT_INBOX_IDS } from '@/services/chatwoot/chatwoot.constants';
 import { buildChatwootEmail, extractSourceId } from '@/services/chatwoot/chatwoot.utils';
+import type { TFeedbackSubmitInput } from './feedback.types';
+
 /**
  * Feedback application service.
  *

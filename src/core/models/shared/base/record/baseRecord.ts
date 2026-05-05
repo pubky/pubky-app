@@ -3,6 +3,7 @@ import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { ModelBase } from '@/models/shared/base/baseModel';
+
 /**
  * Base class for record-oriented models backed by a Dexie table.
  */

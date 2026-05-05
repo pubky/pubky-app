@@ -2,7 +2,6 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import type { SettingsSectionProps } from './SettingsSection.types';
 
 export function SettingsSection({

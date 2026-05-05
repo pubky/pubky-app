@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dexie, { Table } from 'dexie';
-import { indexedDB, IDBKeyRange } from 'fake-indexeddb';
-import { RecordModelBase } from './baseRecord';
+import { IDBKeyRange, indexedDB } from 'fake-indexeddb';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { RecordModelBase } from './baseRecord';
 
 interface TestSchema {
   id: number;

@@ -1,9 +1,10 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useSearchAutocomplete } from './useSearchAutocomplete';
-import { AUTOCOMPLETE_DEBOUNCE_MS } from './useSearchAutocomplete.constants';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { useSearchAutocomplete } from './useSearchAutocomplete';
+import { AUTOCOMPLETE_DEBOUNCE_MS } from './useSearchAutocomplete.constants';
+
 // Hoist mock data
 const {
   mockUserDetailsMap,

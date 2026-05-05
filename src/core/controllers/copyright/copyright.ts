@@ -1,6 +1,7 @@
-import type { TCopyrightSubmitParams } from './copyright.types';
 import { CopyrightApplication } from '@/application/copyright/copyright';
 import { CopyrightValidators } from '@/pipes/copyright/copyright.validators';
+import type { TCopyrightSubmitParams } from './copyright.types';
+
 /**
  * Controller for copyright/DMCA takedown request submission.
  * Entry point for the copyright feature, called from the API route.

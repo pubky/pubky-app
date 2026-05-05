@@ -1,14 +1,14 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
 import { useRouter } from 'next/navigation';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { HeaderContainer, HeaderTitle, HeaderOnboarding, HeaderSocialLinks, HeaderNavigationButtons } from './Header';
+import { describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 import { HeaderHome } from '../HeaderHome/HeaderHome';
 import { HeaderSignIn } from '../HeaderSignIn/HeaderSignIn';
+import { HeaderContainer, HeaderNavigationButtons, HeaderOnboarding, HeaderSocialLinks, HeaderTitle } from './Header';
 
-import { useAuthStore } from '@/stores/auth/auth.store';
-import { useNotificationStore } from '@/stores/notification/notification.store';
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),

@@ -1,27 +1,26 @@
 'use client';
+import { useEffect, useState } from 'react';
+import { Maximize, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import {
   Carousel,
+  type CarouselApi,
   CarouselContent,
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-  type CarouselApi,
 } from '@/atoms/Carousel/Carousel';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/atoms/Dialog/Dialog';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
+import { cn } from '@/libs/utils/utils';
+import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostAttachmentsCarouselImage } from '../PostAttachmentsCarouselImage/PostAttachmentsCarouselImage';
 import { useToast } from '../Toaster/use-toast';
 
-import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
-
-import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { X, Maximize } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
 };

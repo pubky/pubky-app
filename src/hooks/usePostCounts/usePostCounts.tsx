@@ -1,9 +1,10 @@
 'use client';
 
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import type { UsePostCountsResult } from './usePostCounts.types';
 import { PostController } from '@/controllers/post/post';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
+import type { UsePostCountsResult } from './usePostCounts.types';
+
 /**
  * Hook to get post counts from local database with live updates.
  * If the post counts are not in cache, it will trigger a fetch from Nexus.

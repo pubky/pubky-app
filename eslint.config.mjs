@@ -1,7 +1,10 @@
 import { fixupConfigRules } from '@eslint/compat';
 import pluginNext from '@next/eslint-plugin-next';
+import pluginStylistic from '@stylistic/eslint-plugin';
+import pluginImport from 'eslint-plugin-import';
 import pluginReact from 'eslint-plugin-react';
 import pluginReactHooks from 'eslint-plugin-react-hooks';
+import pluginSimpleImportSort from 'eslint-plugin-simple-import-sort';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 
@@ -43,6 +46,9 @@ const eslintConfig = [
       react: pluginReact,
       'react-hooks': pluginReactHooks,
       '@next/next': pluginNext,
+      '@stylistic': pluginStylistic,
+      import: pluginImport,
+      'simple-import-sort': pluginSimpleImportSort,
     },
     rules: {
       ...tsPlugin.configs['recommended'].rules,
@@ -53,6 +59,31 @@ const eslintConfig = [
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       'react-hooks/set-state-in-effect': 'off', // Allow setState in effects
+      'import/first': 'error',
+      '@stylistic/padding-line-between-statements': [
+        'error',
+        { blankLine: 'always', prev: 'import', next: '*' },
+        { blankLine: 'any', prev: 'import', next: 'import' },
+      ],
+      'simple-import-sort/exports': 'error',
+      'simple-import-sort/imports': [
+        'error',
+        {
+          groups: [
+            [
+              '^\\u0000',
+              '^node:',
+              '^react(?:$|/)',
+              '^react-dom(?:$|/)',
+              '^next(?:$|/)',
+              '^@?\\w',
+              '^@/',
+              '^',
+              '^\\.',
+            ],
+          ],
+        },
+      ],
       '@typescript-eslint/no-unused-vars': [
         'error',
         {

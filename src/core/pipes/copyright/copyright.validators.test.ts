@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { CopyrightValidators } from './copyright.validators';
+import { describe, expect, it } from 'vitest';
 import { VALIDATION_MESSAGES } from '@/config/forms';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { CopyrightValidators } from './copyright.validators';
 
 describe('CopyrightValidators', () => {
   // Test one required string validator thoroughly to verify helper behavior

@@ -1,21 +1,20 @@
 'use client';
 
-import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
-
 import { getTagsLayoutForSurfaceLayout, PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
+import { useHomeStore } from '@/stores/home/home.store';
+import { PostPageHeader } from '../PostPageHeader/PostPageHeader';
 import { SinglePostArticle } from '../SinglePostArticle/SinglePostArticle';
 import { SinglePostCard } from '../SinglePostCard/SinglePostCard';
-import { PostPageHeader } from '../PostPageHeader/PostPageHeader';
-
-import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
+import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import type { SinglePostContentProps } from './SinglePostContent.types';
-import { isPostDeleted } from '@/libs/utils/utils';
-import { useHomeStore } from '@/stores/home/home.store';
+
 /**
  * SinglePostContent Organism
  *

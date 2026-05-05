@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { UseConfirmableDialogOptions, UseConfirmableDialogReturn } from './useConfirmableDialog.types';
 
 /**

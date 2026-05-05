@@ -1,16 +1,15 @@
 'use client';
 
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import Image from 'next/image';
+import { AUTH_ROUTES, ROOT_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '../Content/Content';
 import { PageTitle } from '../Page/Page';
-
-import { AUTH_ROUTES, ROOT_ROUTES } from '@/app/routes';
 
 export const LogoutContent = () => {
   return (

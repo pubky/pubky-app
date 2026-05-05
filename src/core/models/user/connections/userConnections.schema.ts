@@ -1,4 +1,5 @@
 import type { Pubky } from '@/models/models.types';
+
 export interface UserConnectionsModelSchema {
   id: Pubky;
   following: Pubky[];

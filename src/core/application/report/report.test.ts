@@ -1,6 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TReportSubmitInput } from './report.types';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -11,6 +9,9 @@ import { REPORT_ISSUE_LABELS, REPORT_ISSUE_TYPES } from '@/pipes/report/report.c
 import { ChatwootService } from '@/services/chatwoot/chatwoot';
 import { CHATWOOT_INBOX_IDS, CHATWOOT_REPORT_MESSAGE_PREFIX } from '@/services/chatwoot/chatwoot.constants';
 import type { TChatwootContact } from '@/services/chatwoot/chatwoot.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+import type { TReportSubmitInput } from './report.types';
+
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
   userName: 'Test User',

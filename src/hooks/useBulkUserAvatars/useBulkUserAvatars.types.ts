@@ -1,4 +1,5 @@
 import type { Pubky } from '@/models/models.types';
+
 export interface UserWithAvatar {
   id: Pubky;
   name?: string;

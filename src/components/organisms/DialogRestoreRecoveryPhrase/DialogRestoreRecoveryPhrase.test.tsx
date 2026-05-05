@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { DialogRestoreRecoveryPhrase } from './DialogRestoreRecoveryPhrase';
 import { AuthController } from '@/controllers/auth/auth';
+import { DialogRestoreRecoveryPhrase } from './DialogRestoreRecoveryPhrase';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: vi.fn(({ children }) => <div data-testid="dialog">{children}</div>),

@@ -1,12 +1,13 @@
-import {
-  PollingInactiveReason,
-  type CoordinatorInitOptions,
-  type PollingServiceConfig,
-  type PollingServiceState,
-} from './coordinators.types';
 import { Env } from '@/libs/env/env';
 import { Logger } from '@/libs/logger/logger';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import {
+  type CoordinatorInitOptions,
+  PollingInactiveReason,
+  type PollingServiceConfig,
+  type PollingServiceState,
+} from './coordinators.types';
+
 /**
  * Abstract base class for polling coordinators
  *

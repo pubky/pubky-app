@@ -1,21 +1,20 @@
 'use client';
 
-import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import * as React from 'react';
 import { Container } from '@/atoms/Container/Container';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
 import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
 import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
-
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
-
+import { useHomeStore } from '@/stores/home/home.store';
 import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
 } from '../Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
-import { useHomeStore } from '@/stores/home/home.store';
+import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
+
 /**
  * HomeFeedFilters
  *

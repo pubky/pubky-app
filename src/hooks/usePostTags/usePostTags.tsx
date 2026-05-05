@@ -1,17 +1,18 @@
 'use client';
 
-import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslations } from 'next-intl';
-import { toast } from '@/molecules/Toaster/use-toast';
-import type { UsePostTagsResult, UsePostTagsOptions } from './usePostTags.types';
-import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
-import { TAGS_PER_PAGE } from './usePostTags.constants';
 import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
+import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
+import { toast } from '@/molecules/Toaster/use-toast';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { TAGS_PER_PAGE } from './usePostTags.constants';
+import type { UsePostTagsOptions, UsePostTagsResult } from './usePostTags.types';
+
 /**
  * Hook for fetching and managing post tags with pagination.
  * Uses useLiveQuery with PostController for automatic reactivity.

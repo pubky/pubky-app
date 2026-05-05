@@ -1,17 +1,17 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { UsersRound } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import type { Pubky } from '@/models/models.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
 import { CompactUserListItemSkeleton } from '../CompactUserListItemSkeleton/CompactUserListItemSkeleton';
 import { UserListItem } from '../UserListItem/UserListItem';
 
-import { APP_ROUTES } from '@/app/routes';
-import { UsersRound } from 'lucide-react';
-import type { Pubky } from '@/models/models.types';
-import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 const USERS_LIMIT = 3;
 
 /**

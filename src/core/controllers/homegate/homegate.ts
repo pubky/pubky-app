@@ -9,6 +9,7 @@ import type {
   THomegateVerifySmsCodeResult,
 } from '@/application/homegate/homegate.types';
 import type { BtcRate } from '@/services/exchangerate/exchangerate.types';
+
 /**
  * Controller for homegate operations.
  * Entry point for homegate features, called from UI components.

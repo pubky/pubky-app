@@ -1,5 +1,5 @@
-import { HotStore, HotActions, hotInitialState, HotActionTypes } from './hot.types';
 import { ZustandSet } from '../stores.types';
+import { HotActions, HotActionTypes, hotInitialState, HotStore } from './hot.types';
 
 // Actions/Mutators - State modification functions
 export const createHotActions = (set: ZustandSet<HotStore>): HotActions => ({

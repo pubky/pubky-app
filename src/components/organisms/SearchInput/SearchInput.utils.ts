@@ -1,4 +1,5 @@
 import { MAX_ACTIVE_SEARCH_TAGS } from '@/stores/search/search.constants';
+
 /**
  * Parse tags from URL search params
  * @param tagsParam - Raw tags parameter from URL (comma-separated)

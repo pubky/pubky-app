@@ -1,14 +1,14 @@
 'use client';
 
+import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
-import { PostTag } from '../PostTag/PostTag';
-
 import { SEARCH_CLOSED_STYLE, SEARCH_INPUT_EXPANDED_STYLE } from '@/config/search';
-import type { SearchInputBarProps } from './SearchInputBar.types';
-import { Search } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+import { PostTag } from '../PostTag/PostTag';
+import type { SearchInputBarProps } from './SearchInputBar.types';
+
 export function SearchInputBar({
   activeTags,
   inputValue,

@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { validateDns, readResponseBody, normalizeImageUrl } from './nextjs.utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import {
   AuthErrorCode,
@@ -10,6 +9,7 @@ import {
 } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
+import { normalizeImageUrl, readResponseBody, validateDns } from './nextjs.utils';
 
 // ---------------------------------------------------------------------------
 // Mocks

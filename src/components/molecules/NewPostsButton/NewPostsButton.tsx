@@ -1,10 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { Button } from '@/atoms/Button/Button';
-
-import type { NewPostsButtonProps } from './NewPostsButton.types';
-
 /**
  * NewPostsButton
  *
@@ -23,7 +18,11 @@ import type { NewPostsButtonProps } from './NewPostsButton.types';
  * ```
  */
 import { ArrowUp } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/atoms/Button/Button';
 import { cn } from '@/libs/utils/utils';
+import type { NewPostsButtonProps } from './NewPostsButton.types';
+
 export function NewPostsButton({ count, onClick, visible, isScrolled = false }: NewPostsButtonProps) {
   const t = useTranslations('post');
   if (!visible || count === 0) return null;

@@ -1,14 +1,15 @@
-import type { TReportSubmitInput } from './report.types';
-import { Logger } from '@/libs/logger/logger';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
 import { REPORT_ISSUE_LABELS } from '@/pipes/report/report.constants';
 import type { ReportIssueType } from '@/pipes/report/report.types';
 import { ChatwootService } from '@/services/chatwoot/chatwoot';
 import { CHATWOOT_INBOX_IDS, CHATWOOT_REPORT_MESSAGE_PREFIX } from '@/services/chatwoot/chatwoot.constants';
 import { buildChatwootEmail, extractSourceId } from '@/services/chatwoot/chatwoot.utils';
+import type { TReportSubmitInput } from './report.types';
+
 /**
  * Report application service.
  *

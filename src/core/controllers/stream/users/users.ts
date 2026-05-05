@@ -1,11 +1,12 @@
-import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import type {
   TGetOrFetchUsersParams,
   TReadUserStreamChunkParams,
   TReadUserStreamChunkResponse,
 } from '@/application/stream/users/users.types';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 /**
  * Stream User Controller
  *

@@ -1,7 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { MentionPopover } from './MentionPopover';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
+import { MentionPopover } from './MentionPopover';
+
 vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({

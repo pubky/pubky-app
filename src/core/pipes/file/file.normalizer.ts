@@ -1,10 +1,11 @@
 import { BlobResult, FileResult } from 'pubky-app-specs';
+import type { TToFileParams, TUploadFileParams } from '@/controllers/file/file.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { TToFileParams, TUploadFileParams } from '@/controllers/file/file.types';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+
 export class FileNormalizer {
   private constructor() {}
 

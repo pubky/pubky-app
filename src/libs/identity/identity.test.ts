@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Identity } from './identity';
 import { Keypair } from '@synonymdev/pubky';
 import * as bip39 from 'bip39';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
+import { asInvalid } from '@/test-utils/type-assertions';
+import { Identity } from './identity';
 
 // Mock @synonymdev/pubky
 const mockCreateRecoveryFile = vi.fn(() => new Uint8Array([1, 2, 3, 4, 5]));

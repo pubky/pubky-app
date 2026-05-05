@@ -1,4 +1,3 @@
-import { Identity } from '@/libs/identity/identity';
 import { ProfileApplication } from '@/application/profile/profile';
 import type {
   TCommitSetDetailsParams,
@@ -6,10 +5,12 @@ import type {
   TDeleteAccountInput,
   TDownloadDataInput,
 } from '@/controllers/profile/profile.types';
+import { Identity } from '@/libs/identity/identity';
 import type { Pubky } from '@/models/models.types';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+
 // Operations related with the profile.json file in the homeserver
 export class ProfileController {
   private constructor() {} // Prevent instantiation

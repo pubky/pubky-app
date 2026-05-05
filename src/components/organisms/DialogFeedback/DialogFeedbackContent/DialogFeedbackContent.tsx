@@ -1,17 +1,17 @@
 'use client';
 
+import { Loader2, Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
-import { PostHeader } from '../../PostHeader/PostHeader';
-
 import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
-import type { DialogFeedbackContentProps } from './DialogFeedbackContent.types';
-import { Loader2, Send } from 'lucide-react';
 import { getCharacterCount } from '@/libs/utils/utils';
+import { PostHeader } from '../../PostHeader/PostHeader';
+import type { DialogFeedbackContentProps } from './DialogFeedbackContent.types';
+
 export function DialogFeedbackContent({
   feedback,
   handleChange,

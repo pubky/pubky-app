@@ -1,17 +1,18 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { CreateProfileForm } from './CreateProfileForm';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HOME_ROUTES } from '@/app/routes';
-import { ServerErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import { AuthController } from '@/controllers/auth/auth';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { UserValidator } from '@/pipes/user/user.validator';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { CreateProfileForm } from './CreateProfileForm';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
@@ -336,15 +337,24 @@ vi.mock('@/molecules/ProfileNavigation/ProfileNavigation', () => {
       continueButtonLoading,
       continueText,
       onContinue,
+      onHandleBackButton,
+      backText,
+      backButtonDisabled,
     }: {
       children?: React.ReactNode;
       continueButtonDisabled?: boolean;
       continueButtonLoading?: boolean;
       continueText?: string;
       onContinue?: () => void;
+      onHandleBackButton?: () => void;
+      backText?: string;
+      backButtonDisabled?: boolean;
     }) => (
       <div data-testid="profile-navigation">
         {children}
+        <button onClick={onHandleBackButton} disabled={backButtonDisabled} data-testid="back-button">
+          {backText || 'Back'}
+        </button>
         <button
           onClick={onContinue}
           disabled={continueButtonDisabled || continueButtonLoading}
@@ -786,6 +796,14 @@ describe('CreateProfileForm', () => {
   });
 
   describe('Form submission (basic tests)', () => {
+    it('renders disabled back button in profile navigation', () => {
+      render(<CreateProfileForm />);
+      const backButton = screen.getByTestId('back-button');
+      expect(backButton).toBeInTheDocument();
+      expect(backButton).toBeDisabled();
+      expect(backButton).toHaveTextContent('Back');
+    });
+
     it('should render continue button correctly', () => {
       render(<CreateProfileForm />);
       const continueButton = screen.getByTestId('continue-button');

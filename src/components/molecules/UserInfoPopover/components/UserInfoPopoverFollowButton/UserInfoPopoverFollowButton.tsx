@@ -1,10 +1,10 @@
 'use client';
 
+import { Check, Loader2, UserMinus, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Typography } from '@/atoms/Typography/Typography';
 
-import { Loader2, Check, UserMinus, UserRoundPlus } from 'lucide-react';
 interface UserInfoPopoverFollowButtonProps {
   isFollowing: boolean;
   isLoading: boolean;

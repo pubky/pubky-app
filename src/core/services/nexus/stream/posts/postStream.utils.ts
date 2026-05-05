@@ -1,5 +1,5 @@
-import { Env } from '@/libs/env/env';
 import type { TFetchStreamParams } from '@/application/stream/posts/post.types';
+import { Env } from '@/libs/env/env';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type {
   THandleNotCommonStreamParamsParams,
@@ -17,6 +17,7 @@ import {
   type TStreamIdBreakdown,
   type TStreamSource,
 } from '@/services/nexus/stream/posts/postStream.types';
+
 /**
  * Creates parameters for fetching a post stream based on the stream ID and pagination settings.
  * @param streamId - The unique identifier of the stream to fetch

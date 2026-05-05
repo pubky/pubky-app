@@ -1,15 +1,15 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { useIsScrolledFromTop } from '@/hooks/useIsScrolledFromTop/useIsScrolledFromTop';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
-import { useTranslations } from 'next-intl';
+import { Logger } from '@/libs/logger/logger';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { NewPostsButton } from '@/molecules/NewPostsButton/NewPostsButton';
 import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 
-import { Logger } from '@/libs/logger/logger';
-import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
-import { StreamPostsController } from '@/controllers/stream/posts/posts';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
 interface NewPostsSectionProps {
   streamId: PostStreamId;
   postIds: string[];

@@ -1,19 +1,19 @@
 'use client';
 
-import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { APP_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Tag } from '@/atoms/Tag/Tag';
-
-import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config/tags';
-import type { HotTagsOverviewProps } from './HotTagsOverview.types';
-import { DEFAULT_TAGS_LIMIT } from './HotTagsOverview.constants';
-import { HotTagsOverviewSkeleton } from './HotTagsOverview.skeleton';
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { cn } from '@/libs/utils/utils';
 import type { UserStreamReach } from '@/services/nexus/nexus.types';
 import { useHotStore } from '@/stores/hot/hot.store';
+import { DEFAULT_TAGS_LIMIT } from './HotTagsOverview.constants';
+import { HotTagsOverviewSkeleton } from './HotTagsOverview.skeleton';
+import type { HotTagsOverviewProps } from './HotTagsOverview.types';
+
 /**
  * HotTagsOverview
  *

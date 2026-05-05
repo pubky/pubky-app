@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockAnimationEvent } from '@/test-utils/react-events';
 import { useClosingPresence } from './useClosingPresence';

@@ -1,11 +1,9 @@
 'use client';
 import { Button } from '@/atoms/Button/Button';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-
-import type { TaggerAvatarProps } from '../PostTagPopoverWrapper.types';
-import { UserInfoPopover } from '../../UserInfoPopover/UserInfoPopover';
-
 import { cn, formatPublicKey } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { UserInfoPopover } from '../../UserInfoPopover/UserInfoPopover';
+import type { TaggerAvatarProps } from '../PostTagPopoverWrapper.types';
 
 /**
  * TaggerAvatar

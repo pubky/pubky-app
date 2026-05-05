@@ -1,5 +1,5 @@
-import { createQueryClient } from '@/libs/query-client/query-client.factory';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { createQueryClient } from '@/libs/query-client/query-client.factory';
 
 /**
  * Nexus API Query Client

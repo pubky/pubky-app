@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { PostStreamQueue, postStreamQueue } from './post-stream-queue';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import type { Pubky } from '@/models/models.types';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
-import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamModel } from '@/models/stream/user/userStream';
-import { UserStreamTypes, type UserStreamId } from '@/models/stream/user/userStream.types';
+import { type UserStreamId, UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
@@ -15,6 +14,8 @@ import { UserTagsModel } from '@/models/user/tags/userTags';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusPostsKeyStream } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
+import { PostStreamQueue, postStreamQueue } from './post-stream-queue';
+
 /**
  * Tests for mute filtering with stream pagination
  *

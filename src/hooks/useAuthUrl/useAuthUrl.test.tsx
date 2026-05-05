@@ -1,11 +1,11 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Session } from '@synonymdev/pubky';
-import { mockSession } from '@/test-utils/pubky';
-import { useAuthUrl } from './useAuthUrl';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { mockSession } from '@/test-utils/pubky';
+import { useAuthUrl } from './useAuthUrl';
 
 // Mock dependencies
 const mockToast = vi.fn();

@@ -1,9 +1,9 @@
 'use client';
 
-import { useTagged } from '@/hooks/useTagged/useTagged';
-import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
+import { useTagged } from '@/hooks/useTagged/useTagged';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { TaggedEmpty } from '@/molecules/TaggedEmpty/TaggedEmpty';
 import { TaggedSection } from '@/molecules/TaggedSection/TaggedSection';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';

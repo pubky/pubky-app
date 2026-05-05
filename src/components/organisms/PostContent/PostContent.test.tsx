@@ -1,11 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PostContent } from './PostContent';
-import { PostContentBase } from '../PostContentBase/PostContentBase';
-
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
-import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { PostContentBase } from '../PostContentBase/PostContentBase';
+import { PostContent } from './PostContent';
+
 // Mock hooks used by PostContent
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),

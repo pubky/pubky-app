@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SearchController } from './search';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchApplication } from '@/application/search/search';
+import { SearchController } from './search';
+
 describe('SearchController', () => {
   beforeEach(() => {
     vi.clearAllMocks();

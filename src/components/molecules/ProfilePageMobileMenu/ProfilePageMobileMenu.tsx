@@ -1,9 +1,9 @@
 'use client';
 
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import * as React from 'react';
-import { PROFILE_PAGE_TYPES, type ProfilePageType } from '@/app/profile/types';
 import { Bell, CircleUserRound, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
+import { PROFILE_PAGE_TYPES, type ProfilePageType } from '@/app/profile/types';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { UsersRound2 } from '@/icons';
 import { MobileTabBar } from '../MobileTabBar/MobileTabBar';
 import type { MobileTabBarItem } from '../MobileTabBar/MobileTabBar.types';

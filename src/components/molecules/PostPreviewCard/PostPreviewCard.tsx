@@ -1,13 +1,12 @@
 'use client';
 
+import { Card, CardContent } from '@/atoms/Card/Card';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
-import { Card, CardContent } from '@/atoms/Card/Card';
+import { cn } from '@/libs/utils/utils';
 import { PostContentBase } from '@/organisms/PostContentBase/PostContentBase';
 import { PostHeader } from '@/organisms/PostHeader/PostHeader';
-
 import type { PostPreviewCardProps } from './PostPreviewCard.types';
-import { cn } from '@/libs/utils/utils';
 
 /**
  * PostPreviewCard - Compact preview card for displaying a post in a nested context.

@@ -1,14 +1,13 @@
 'use client';
 
-import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { usePathname } from 'next/navigation';
-import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { SETTINGS_ROUTES } from '@/app/routes';
+import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
 import { SettingsInfo } from '@/molecules/Settings/SettingsInfo/SettingsInfo';
 import { SettingsMenu } from '@/molecules/Settings/SettingsMenu/SettingsMenu';
 import { SettingsMobileMenu } from '@/molecules/Settings/SettingsMobileMenu/SettingsMobileMenu';
-
-import { SETTINGS_ROUTES } from '@/app/routes';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import type { SettingsProps } from './Settings.types';
 
 /**

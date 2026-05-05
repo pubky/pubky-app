@@ -1,17 +1,16 @@
 'use client';
+import { TriangleAlert, Wallet } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
 import { useLnVerificationInfo } from '@/hooks/useLnVerificationInfo/useLnVerificationInfo';
+import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
+import { cn } from '@/libs/utils/utils';
 import { HumanBitcoinCardSkeleton, PriceSkeleton } from './HumanBitcoinCard.skeleton';
 import type { HumanBitcoinCardProps } from './HumanBitcoinCard.types';
-import { useTranslations } from 'next-intl';
-import { Wallet, TriangleAlert } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
 
 export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
   const t = useTranslations('onboarding.bitcoin');

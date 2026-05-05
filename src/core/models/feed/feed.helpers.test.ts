@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import { describe, expect, it } from 'vitest';
 import {
   buildFeedStreamId,
   contentToStreamKind,
@@ -13,6 +13,7 @@ import {
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+
 describe('Feed Helpers', () => {
   describe('reachToString', () => {
     it('should convert Following to "following"', () => {

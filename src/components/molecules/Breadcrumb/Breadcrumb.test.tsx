@@ -1,7 +1,7 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbSeparator, BreadcrumbEllipsis, BreadcrumbPage } from './Breadcrumb';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbPage, BreadcrumbSeparator } from './Breadcrumb';
 
 describe('Breadcrumb', () => {
   describe('Breadcrumb Container', () => {

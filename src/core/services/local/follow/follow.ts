@@ -1,15 +1,8 @@
-import { FOLLOWING_TIMELINE_STREAMS, FRIENDS_TIMELINE_STREAMS } from './follow.constants';
-import type {
-  CreateFollowParams,
-  DeleteFollowParams,
-  InvalidateTimelineStreamsParams,
-  UpdateUserStreamsParams,
-} from './follow.types';
-import { Logger } from '@/libs/logger/logger';
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { db } from '@/database/franky/franky';
+import { Logger } from '@/libs/logger/logger';
 import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { UserConnectionsModel } from '@/models/user/connections/userConnections';
 import { UserConnectionsFields } from '@/models/user/connections/userConnections.schema';
@@ -18,6 +11,14 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { UserStreamReach } from '@/services/nexus/nexus.types';
+import { FOLLOWING_TIMELINE_STREAMS, FRIENDS_TIMELINE_STREAMS } from './follow.constants';
+import type {
+  CreateFollowParams,
+  DeleteFollowParams,
+  InvalidateTimelineStreamsParams,
+  UpdateUserStreamsParams,
+} from './follow.types';
+
 export class LocalFollowService {
   static async create({ follower, followee, activeStreamId }: CreateFollowParams) {
     try {

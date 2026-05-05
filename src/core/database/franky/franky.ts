@@ -1,40 +1,40 @@
 import Dexie from 'dexie';
 import { DB_NAME, DB_VERSION } from '@/config/database';
-
-import { Logger } from '@/libs/logger/logger';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { bookmarkTableSchema, type BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
-import { feedTableSchema, type FeedModelSchema } from '@/models/feed/feed.schema';
-import { fileDetailsTableSchema, type FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
-import { hotTagsTableSchema, type HotTagsModelSchema } from '@/models/hot/hot.schema';
+import { Logger } from '@/libs/logger/logger';
+import { type BookmarkModelSchema, bookmarkTableSchema } from '@/models/bookmark/bookmark.schema';
+import { type FeedModelSchema, feedTableSchema } from '@/models/feed/feed.schema';
+import { type FileDetailsModelSchema, fileDetailsTableSchema } from '@/models/file/fileDetails.schema';
+import { type HotTagsModelSchema, hotTagsTableSchema } from '@/models/hot/hot.schema';
 import type { Pubky } from '@/models/models.types';
-import { moderationTableSchema, type ModerationModelSchema } from '@/models/moderation/moderation.schema';
+import { type ModerationModelSchema, moderationTableSchema } from '@/models/moderation/moderation.schema';
 import { notificationTableSchema } from '@/models/notification/notification.schema';
 import type { FlatNotification } from '@/models/notification/notification.types';
-import { postCountsTableSchema, type PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
-import { postDetailsTableSchema, type PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import { type PostCountsModelSchema, postCountsTableSchema } from '@/models/post/counts/postCounts.schema';
+import { type PostDetailsModelSchema, postDetailsTableSchema } from '@/models/post/details/postDetails.schema';
 import {
-  postRelationshipsTableSchema,
   type PostRelationshipsModelSchema,
+  postRelationshipsTableSchema,
 } from '@/models/post/relationships/postRelationships.schema';
-import { postTtlTableSchema, type PostTtlModelSchema } from '@/models/post/ttl/postTtl.schema';
-import { tagCollectionTableSchema, type TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import { postStreamTableSchema, type PostStreamModelSchema } from '@/models/stream/post/postStream.schema';
-import { tagStreamTableSchema, type TagStreamModelSchema } from '@/models/stream/tag/tagStream.schema';
-import { userStreamTableSchema, type UserStreamModelSchema } from '@/models/stream/user/userStream.schema';
+import { type PostTtlModelSchema, postTtlTableSchema } from '@/models/post/ttl/postTtl.schema';
+import { type TagCollectionModelSchema, tagCollectionTableSchema } from '@/models/shared/tag/tag.schema';
+import { type PostStreamModelSchema, postStreamTableSchema } from '@/models/stream/post/postStream.schema';
+import { type TagStreamModelSchema, tagStreamTableSchema } from '@/models/stream/tag/tagStream.schema';
+import { type UserStreamModelSchema, userStreamTableSchema } from '@/models/stream/user/userStream.schema';
 import {
-  userConnectionsTableSchema,
   type UserConnectionsModelSchema,
+  userConnectionsTableSchema,
 } from '@/models/user/connections/userConnections.schema';
-import { userCountsTableSchema, type UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
-import { userDetailsTableSchema, type UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import { type UserCountsModelSchema, userCountsTableSchema } from '@/models/user/counts/userCounts.schema';
+import { type UserDetailsModelSchema, userDetailsTableSchema } from '@/models/user/details/userDetails.schema';
 import {
-  userRelationshipsTableSchema,
   type UserRelationshipsModelSchema,
+  userRelationshipsTableSchema,
 } from '@/models/user/relationships/userRelationships.schema';
-import { userTtlTableSchema, type UserTtlModelSchema } from '@/models/user/ttl/userTtl.schema';
+import { type UserTtlModelSchema, userTtlTableSchema } from '@/models/user/ttl/userTtl.schema';
+
 export class AppDatabase extends Dexie {
   private static readonly DEXIE_VERSION_MULTIPLIER = 10;
 

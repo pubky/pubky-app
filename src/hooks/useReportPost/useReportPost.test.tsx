@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { useReportPost } from './useReportPost';
-import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
 import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
+import { useReportPost } from './useReportPost';
+import { REPORT_API_ENDPOINT, REPORT_POST_STEPS } from './useReportPost.constants';
+
 // Mock fetch
 global.fetch = vi.fn();
 

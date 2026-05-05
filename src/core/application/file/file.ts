@@ -1,6 +1,6 @@
-import { HttpMethod } from '@/libs/http/http.types';
 import type { FilesListParams } from '@/application/file/file.types';
 import type { TGetFileUrlParams, TGetMetadataParams } from '@/controllers/file/file.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -8,6 +8,7 @@ import { LocalFileService } from '@/services/local/file/file';
 import { NexusFileService } from '@/services/nexus/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
 import type { NexusFileDetails, NexusFileUrls } from '@/services/nexus/nexus.types';
+
 /**
  * File Application
  *

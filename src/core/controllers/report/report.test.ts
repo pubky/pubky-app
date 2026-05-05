@@ -1,6 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TReportSubmitParams } from './report.types';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReportApplication } from '@/application/report/report';
 import type { Pubky } from '@/models/models.types';
 import {
@@ -8,6 +6,9 @@ import {
   REPORT_ISSUE_TYPES,
   REPORT_REASON_MAX_LENGTH,
 } from '@/pipes/report/report.constants';
+import { asInvalid } from '@/test-utils/type-assertions';
+import type { TReportSubmitParams } from './report.types';
+
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
   userName: 'Test User',

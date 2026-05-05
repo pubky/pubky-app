@@ -1,14 +1,13 @@
 import '@testing-library/jest-dom';
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
-
 import React from 'react';
-import { vi, expect } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import { beforeAll, afterAll, afterEach, beforeEach } from 'vitest';
-
+import { expect, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
 // Import English messages for i18n mock
 import enMessages from '../../messages/en.json';
+
 // =============================================================================
 // IMPORTANT: Set environment variables BEFORE importing any app code
 // =============================================================================

@@ -1,24 +1,23 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
+// Module-level cache: survives remounts within the session so that
+// navigating between /home and /feed/[id] doesn't flash empty tabs.
+import { Home, Pencil, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
-
-import { APP_ROUTES } from '@/app/routes';
-import { usePathname } from 'next/navigation';
-
-// Module-level cache: survives remounts within the session so that
-// navigating between /home and /feed/[id] doesn't flash empty tabs.
-import { Pencil, Home, PlusCircle } from 'lucide-react';
+import { FeedController } from '@/controllers/feed/feed';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
-import { FeedController } from '@/controllers/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
+
 let cachedFeeds: FeedModelSchema[] = [];
 interface FeedNavigationProps {
   className?: string;

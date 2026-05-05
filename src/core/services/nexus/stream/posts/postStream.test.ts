@@ -1,12 +1,8 @@
-import { describe, it, expect, test, vi, beforeEach } from 'vitest';
-import { postStreamApi } from './postStream.api';
-import { StreamKind, StreamOrder } from './postStream.types';
-import { createPostStreamParams, breakDownStreamId } from './postStream.utils';
-import { NexusPostStreamService } from './postStream';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import { beforeEach, describe, expect, it, test, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
-import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
-import { StreamSorting, type NexusPost, type NexusPostsKeyStream } from '@/services/nexus/nexus.types';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { type NexusPost, type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import {
   StreamSource,
   type TPostStreamFetchParams,
@@ -18,6 +14,11 @@ import {
   type TStreamQueryParams,
   type TStreamWithObserverParams,
 } from '@/services/nexus/stream/posts/postStream.types';
+import { NexusPostStreamService } from './postStream';
+import { postStreamApi } from './postStream.api';
+import { StreamKind, StreamOrder } from './postStream.types';
+import { breakDownStreamId, createPostStreamParams } from './postStream.utils';
+
 //TODO: Split the suite by module (postStream.api.test.ts, postStream.utils.test.ts, postStream.service.test.ts) so each file targets the key behaviours of that module under @posts.
 
 vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {

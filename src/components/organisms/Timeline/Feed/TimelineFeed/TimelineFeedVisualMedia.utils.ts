@@ -1,6 +1,6 @@
 'use client';
-import type { VisualTile, VisualTileProbeState } from './TimelineFeedVisual.types';
 import { Logger } from '@/libs/logger/logger';
+import type { VisualTile, VisualTileProbeState } from './TimelineFeedVisual.types';
 
 export type ProbeCacheEntry = {
   status: VisualTileProbeState;

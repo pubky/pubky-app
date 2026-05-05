@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { PopoverPublicKey } from './PopoverPublicKey';
+
 vi.mock('@/atoms/Popover/Popover', () => {
   return {
     Popover: ({ children }: { children: React.ReactNode }) => <div data-testid="popover">{children}</div>,

@@ -1,6 +1,6 @@
 'use client';
 
-import { NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl';
+import { type AbstractIntlMessages, NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 
 export interface IntlProviderProps {

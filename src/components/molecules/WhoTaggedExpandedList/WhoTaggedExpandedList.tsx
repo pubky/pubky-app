@@ -1,17 +1,17 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { APP_ROUTES } from '@/app/routes';
+import { Container } from '@/atoms/Container/Container';
 import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { useRouter } from 'next/navigation';
-import { Container } from '@/atoms/Container/Container';
-import { TaggerUserRow } from '../TaggerUserRow/TaggerUserRow';
-
-import { APP_ROUTES } from '@/app/routes';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
-import type { WhoTaggedExpandedListProps } from './WhoTaggedExpandedList.types';
-import { WhoTaggedExpandedListSkeleton } from './WhoTaggedExpandedList.skeleton';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { TaggerUserRow } from '../TaggerUserRow/TaggerUserRow';
+import { WhoTaggedExpandedListSkeleton } from './WhoTaggedExpandedList.skeleton';
+import type { WhoTaggedExpandedListProps } from './WhoTaggedExpandedList.types';
+
 /**
  * WhoTaggedExpandedList
  *

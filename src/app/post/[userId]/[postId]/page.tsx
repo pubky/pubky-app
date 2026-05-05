@@ -1,15 +1,15 @@
 import type { Metadata as NextMetadata } from 'next';
 import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
-import { SinglePost } from '@/templates/Post/SinglePost/SinglePost';
-
-import { Metadata } from '@/molecules/Metadata/Metadata';
-import { isPostDeleted } from '@/libs/utils/utils';
 import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
+import { Metadata } from '@/molecules/Metadata/Metadata';
 import type { NexusPostDetails, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { postApi } from '@/services/nexus/post/post.api';
 import { userApi } from '@/services/nexus/user/user.api';
+import { SinglePost } from '@/templates/Post/SinglePost/SinglePost';
+
 export interface PostPageProps {
   params: Promise<{
     userId: string;

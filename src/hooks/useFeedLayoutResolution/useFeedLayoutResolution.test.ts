@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { resolveFeedLayout } from './useFeedLayoutResolution';
 import { LAYOUT } from '@/stores/home/home.types';
+import { resolveFeedLayout } from './useFeedLayoutResolution';
+
 describe('resolveFeedLayout', () => {
   it('keeps visual layout active for supported feeds on desktop/tablet', () => {
     const result = resolveFeedLayout({

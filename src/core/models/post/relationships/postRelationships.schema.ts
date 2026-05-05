@@ -1,4 +1,5 @@
 import type { NexusPostRelationships } from '@/services/nexus/nexus.types';
+
 export interface PostRelationshipsModelSchema extends NexusPostRelationships {
   id: string;
 }

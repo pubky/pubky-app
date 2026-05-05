@@ -1,8 +1,8 @@
 'use client';
 
-import { useBodyScrollLock } from '@/hooks/useBodyScrollLock/useBodyScrollLock';
 import { useEffect, useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock/useBodyScrollLock';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 
 export interface AvatarZoomModalProps {

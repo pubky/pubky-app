@@ -1,7 +1,7 @@
 'use client';
 
-import { Tooltip as TooltipPrimitive } from 'radix-ui';
 import * as React from 'react';
+import { Tooltip as TooltipPrimitive } from 'radix-ui';
 import { cn } from '@/libs/utils/utils';
 
 const TooltipProvider = TooltipPrimitive.Provider;
@@ -35,4 +35,4 @@ const TooltipContent = React.forwardRef<
 ));
 TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 
-export { TooltipProvider, Tooltip, TooltipTrigger, TooltipPortal, TooltipContent };
+export { Tooltip, TooltipContent, TooltipPortal, TooltipProvider, TooltipTrigger };

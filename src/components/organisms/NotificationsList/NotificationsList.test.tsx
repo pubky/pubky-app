@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { NotificationsList } from './NotificationsList';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+
 // Mock NotificationItem
 vi.mock('@/organisms/NotificationItem/NotificationItem', () => ({
   NotificationItem: ({ notification }: { notification: FlatNotification }) => (

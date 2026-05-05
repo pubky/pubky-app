@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
-
 import { useClosingPresence } from '@/hooks/useClosingPresence/useClosingPresence';
-import { POPOVER_ALIGN_OFFSET, POPOVER_HOVER_DELAY, POPOVER_SIDE_OFFSET } from './UserInfoPopover.constants';
 import { UserInfoPopoverContent } from './components/UserInfoPopoverContent/UserInfoPopoverContent';
+import { POPOVER_ALIGN_OFFSET, POPOVER_HOVER_DELAY, POPOVER_SIDE_OFFSET } from './UserInfoPopover.constants';
 
 interface UserInfoPopoverProps {
   userId: string;

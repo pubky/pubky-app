@@ -1,7 +1,7 @@
 'use client';
 
-import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { Container } from '@/atoms/Container/Container';
+import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { FilterSortWhoToFollow } from '@/molecules/Filters/FilterSortWhoToFollow/FilterSortWhoToFollow';
 import { ActiveUsers } from '@/organisms/ActiveUsers/ActiveUsers';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';

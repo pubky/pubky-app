@@ -1,7 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { FilterSort } from './FilterSort';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { SORT, type SortType } from '@/stores/home/home.types';
+import { FilterSort } from './FilterSort';
+
 describe('FilterSort', () => {
   it('renders with default selected tab', () => {
     render(<FilterSort />);

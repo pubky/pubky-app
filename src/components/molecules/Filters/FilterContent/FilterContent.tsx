@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { CirclePlay, Download, Image, Layers, Link, Newspaper, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { CONTENT, type ContentType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps } from '../Filters.types';
 
-import { Layers, StickyNote, Newspaper, Image, CirclePlay, Link, Download } from 'lucide-react';
-import { CONTENT, type ContentType } from '@/stores/home/home.types';
 interface FilterContentProps extends BaseFilterProps<ContentType> {
   disabledTabs?: ContentType[];
 }

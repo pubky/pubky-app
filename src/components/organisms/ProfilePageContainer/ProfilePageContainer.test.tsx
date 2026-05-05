@@ -1,13 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ProfilePageContainer } from './ProfilePageContainer';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
-import { asOpaque } from '@/test-utils/type-assertions';
-import { mockAuthStore } from '@/test-utils/stores';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
+import { mockAuthStore } from '@/test-utils/stores';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { ProfilePageContainer } from './ProfilePageContainer';
+
 // Mock dependencies
 const mockCurrentUserPubky = 'user123';
 const mockAuthStoreState = {

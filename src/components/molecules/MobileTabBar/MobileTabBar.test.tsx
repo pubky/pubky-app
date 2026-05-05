@@ -1,8 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StickyNote, Tag, UsersRound } from 'lucide-react';
+import { describe, expect, it, vi } from 'vitest';
 import { MobileTabBar } from './MobileTabBar';
 import type { MobileTabBarItem } from './MobileTabBar.types';
 

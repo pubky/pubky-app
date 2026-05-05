@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useHotStreamId } from './useHotStreamId';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { REACH } from '@/stores/home/home.types';
 import { useHotStore } from '@/stores/hot/hot.store';
 import { TIMEFRAME } from '@/stores/hot/hot.types';
+import { useHotStreamId } from './useHotStreamId';
+
 describe('useHotStreamId', () => {
   // Reset hot store before each test
   beforeEach(() => {

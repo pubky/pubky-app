@@ -1,9 +1,10 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mockKeyboardEvent } from '@/test-utils/react-events';
-import { useMentionAutocomplete } from './useMentionAutocomplete';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { mockKeyboardEvent } from '@/test-utils/react-events';
+import { useMentionAutocomplete } from './useMentionAutocomplete';
+
 // Hoist mock data
 const {
   mockUserDetailsMap,

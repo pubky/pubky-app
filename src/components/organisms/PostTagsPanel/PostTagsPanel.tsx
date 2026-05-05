@@ -1,22 +1,22 @@
 'use client';
 
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { Tag } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { TagKind } from '@/application/tag/tag.types';
+import { Container } from '@/atoms/Container/Container';
+import { SidebarButton } from '@/atoms/SidebarButton/SidebarButton';
 import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
 import { usePostTags } from '@/hooks/usePostTags/usePostTags';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { Container } from '@/atoms/Container/Container';
-import { SidebarButton } from '@/atoms/SidebarButton/SidebarButton';
+import { cn } from '@/libs/utils/utils';
 import { TaggedList } from '@/molecules/TaggedList/TaggedList';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import type { TagInputHandle } from '@/molecules/TagInput/TagInput.types';
-
-import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.types';
-import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
-import { Tag } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
-import { TagKind } from '@/application/tag/tag.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
+import type { PostTagsPanelHandle, PostTagsPanelProps } from './PostTagsPanel.types';
+
 const INITIAL_VISIBLE_TAGS = 3;
 
 /**

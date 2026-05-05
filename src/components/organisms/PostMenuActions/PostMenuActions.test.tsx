@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostMenuActions } from './PostMenuActions';
+
 vi.mock('@/atoms/DropdownMenu/DropdownMenu', () => {
   return {
     DropdownMenu: ({

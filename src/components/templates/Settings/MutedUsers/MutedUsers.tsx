@@ -1,11 +1,10 @@
 'use client';
 
+import { MegaphoneOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { SettingsSectionCard } from '@/molecules/Settings/SettingsSectionCard/SettingsSectionCard';
 import { MutedUsersList } from '@/organisms/Settings/MutedUsersList/MutedUsersList';
-
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { MegaphoneOff } from 'lucide-react';
 
 export function MutedUsers() {
   const t = useTranslations('settings.mutedUsers');

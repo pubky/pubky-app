@@ -1,10 +1,10 @@
 'use client';
 
-import type React from 'react';
 import { useRouter } from 'next/navigation';
+import type React from 'react';
 import { POST_ROUTES } from '@/app/routes';
-import type { UsePostNavigationResult } from './usePostNavigation.types';
 import { parseCompositeId } from '@/models/models.utils';
+import type { UsePostNavigationResult } from './usePostNavigation.types';
 
 const INTERACTIVE_SELECTOR = 'a,button,input,textarea,select,label,[role="button"],[role="link"]';
 
@@ -19,6 +19,7 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   const element = getEventTargetElement(target);
   return Boolean(element?.closest(INTERACTIVE_SELECTOR));
 }
+
 /**
  * usePostNavigation
  *

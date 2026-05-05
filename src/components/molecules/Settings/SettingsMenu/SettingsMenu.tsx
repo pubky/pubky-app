@@ -1,8 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import {
   FilterHeader,
   FilterItem,
@@ -11,7 +11,6 @@ import {
   FilterList,
   FilterRoot,
 } from '@/atoms/Filter/Filter';
-
 import { SETTINGS_MENU_ITEMS } from './SettingsMenu.constants';
 
 export function SettingsMenu() {

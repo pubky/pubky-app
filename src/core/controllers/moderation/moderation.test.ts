@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ModerationController } from './moderation';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ModerationApplication } from '@/application/moderation/moderation';
 import type { EnrichedPostDetails, EnrichedUserDetails } from '@/application/moderation/moderation.types';
 import type { Pubky } from '@/models/models.types';
@@ -8,6 +7,8 @@ import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.s
 import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { SettingsStore } from '@/stores/settings/settings.types';
+import { ModerationController } from './moderation';
+
 vi.mock('@/application/moderation/moderation', () => ({
   ModerationApplication: {
     setUnBlur: vi.fn(),

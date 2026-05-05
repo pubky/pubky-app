@@ -1,7 +1,6 @@
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { PostTag } from '../PostTag/PostTag';
-
 import type { SearchTagSectionProps } from './SearchTagSection.types';
 
 /**

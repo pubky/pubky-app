@@ -2,9 +2,8 @@
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import type { MobileTabBarProps } from './MobileTabBar.types';
 import { cn } from '@/libs/utils/utils';
+import type { MobileTabBarProps } from './MobileTabBar.types';
 
 /**
  * Shared mobile tab bar molecule used by Hot, Profile, and Settings pages.

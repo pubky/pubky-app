@@ -1,23 +1,23 @@
 'use client';
 
-import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
-import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
-import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
-import { UserListItem } from '../UserListItem/UserListItem';
-
-import { APP_ROUTES } from '@/app/routes';
-import type { HotActiveUsersProps } from './HotActiveUsers.types';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { cn } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHotStore } from '@/stores/hot/hot.store';
+import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
+import { UserListItem } from '../UserListItem/UserListItem';
+import type { HotActiveUsersProps } from './HotActiveUsers.types';
+
 const DEFAULT_USERS_LIMIT = 10;
 
 /**

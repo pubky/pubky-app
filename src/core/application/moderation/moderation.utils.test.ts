@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { detectModerationFromTags, shouldBlur } from './moderation.utils';
+import { describe, expect, it } from 'vitest';
 import { MODERATED_TAGS, MODERATION_ID } from '@/config/moderation';
+import { detectModerationFromTags, shouldBlur } from './moderation.utils';
 
 describe('moderation.utils', () => {
   describe('detectModerationFromTags', () => {

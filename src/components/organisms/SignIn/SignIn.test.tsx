@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import React from 'react';
-import messages from '../../../../messages/en.json';
-import { asOpaque } from '@/test-utils/type-assertions';
-import { SignInContent, SignInFooter } from './SignIn';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { asOpaque } from '@/test-utils/type-assertions';
+import messages from '../../../../messages/en.json';
+import { SignInContent, SignInFooter } from './SignIn';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>

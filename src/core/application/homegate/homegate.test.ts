@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExchangerateService } from '@/services/exchangerate/exchangerate';
 import { HomegateService } from '@/services/homegate/homegate';
+
 const testData = {
   inviteCode: 'test-invite-code-123',
   verificationId: '550e8400-e29b-41d4-a716-446655440000',

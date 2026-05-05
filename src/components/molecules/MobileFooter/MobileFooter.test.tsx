@@ -1,10 +1,11 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
 import { usePathname } from 'next/navigation';
-import { MobileFooter } from './MobileFooter';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
-import { FileController } from '@/controllers/file/file';
+import { MobileFooter } from './MobileFooter';
+
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
 const createSessionStorageMock = () => ({

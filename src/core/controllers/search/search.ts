@@ -1,5 +1,6 @@
 import { SearchApplication } from '@/application/search/search';
 import type { TPrefixSearchParams, TSearchResult } from '@/services/nexus/search/search.types';
+
 export class SearchController {
   private constructor() {}
 

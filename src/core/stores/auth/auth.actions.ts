@@ -1,7 +1,8 @@
-import { AuthStore, AuthActions, authInitialState, AuthActionTypes, AuthInitParams } from './auth.types';
-import { ZustandSet } from '../stores.types';
 import { Session } from '@synonymdev/pubky';
 import type { Pubky } from '@/models/models.types';
+import { ZustandSet } from '../stores.types';
+import { AuthActions, AuthActionTypes, authInitialState, AuthInitParams, AuthStore } from './auth.types';
+
 const safeSessionExport = (session: Session | null): string | null => {
   if (!session) return null;
   try {

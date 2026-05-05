@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { StreamSorting, TPaginationParams, TPaginationRangeParams } from '@/services/nexus/nexus.types';
+
 export enum STREAM_PREFIX {
   POSTS = 'v0/stream/posts',
   POSTS_KEYS = 'v0/stream/posts/keys',

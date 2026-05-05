@@ -3,7 +3,6 @@ import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { TaggedList } from '../TaggedList/TaggedList';
 import { TagInput } from '../TagInput/TagInput';
-
 import type { TaggedSectionProps } from './TaggedSection.types';
 
 export function TaggedSection({

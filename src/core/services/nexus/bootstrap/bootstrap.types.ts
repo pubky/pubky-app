@@ -6,6 +6,7 @@ import type {
   NexusPost,
   NexusUser,
 } from '@/services/nexus/nexus.types';
+
 export type NexusBootstrapResponse = {
   users: NexusUser[];
   posts: NexusPost[];

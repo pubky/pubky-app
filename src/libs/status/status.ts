@@ -1,4 +1,4 @@
-import { STATUS_LABELS, STATUS_EMOJIS, DEFAULT_STATUS, EMOJI_REGEX } from './status.constants';
+import { DEFAULT_STATUS, EMOJI_REGEX, STATUS_EMOJIS, STATUS_LABELS } from './status.constants';
 import type { ParsedStatus, StatusKey } from './status.types';
 
 /**

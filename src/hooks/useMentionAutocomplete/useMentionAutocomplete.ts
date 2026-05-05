@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { debounce, type DebouncedFunc } from 'lodash-es';
+import { SearchController } from '@/controllers/search/search';
 import { useListboxNavigation } from '@/hooks/useListboxNavigation/useListboxNavigation';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
-import type { UseMentionAutocompleteParams, UseMentionAutocompleteResult } from './useMentionAutocomplete.types';
-import { MENTION_DEBOUNCE_MS, MENTION_USER_LIMIT } from './useMentionAutocomplete.constants';
-import { extractMentionQuery } from './useMentionAutocomplete.utils';
 import { Logger } from '@/libs/logger/logger';
-import { SearchController } from '@/controllers/search/search';
 import type { Pubky } from '@/models/models.types';
+import { MENTION_DEBOUNCE_MS, MENTION_USER_LIMIT } from './useMentionAutocomplete.constants';
+import type { UseMentionAutocompleteParams, UseMentionAutocompleteResult } from './useMentionAutocomplete.types';
+import { extractMentionQuery } from './useMentionAutocomplete.utils';
+
 /**
  * Hook for mention autocomplete functionality in post input
  *

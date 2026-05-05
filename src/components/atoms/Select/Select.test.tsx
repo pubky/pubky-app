@@ -1,14 +1,5 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
-
-// Mock DOM APIs not available in JSDOM that Radix Select requires
-beforeAll(() => {
-  Element.prototype.scrollIntoView = vi.fn();
-  Element.prototype.hasPointerCapture = vi.fn();
-  Element.prototype.releasePointerCapture = vi.fn();
-  Element.prototype.setPointerCapture = vi.fn();
-});
-
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   Select,
   SelectContent,
@@ -19,6 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from './Select';
+
+// Mock DOM APIs not available in JSDOM that Radix Select requires
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.hasPointerCapture = vi.fn();
+  Element.prototype.releasePointerCapture = vi.fn();
+  Element.prototype.setPointerCapture = vi.fn();
+});
 
 describe('Select', () => {
   it('renders with default props', () => {

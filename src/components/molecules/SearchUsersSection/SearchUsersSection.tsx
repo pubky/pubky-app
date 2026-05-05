@@ -1,7 +1,6 @@
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { SearchUserSuggestion } from '../SearchUserSuggestion/SearchUserSuggestion';
-
 import type { SearchUsersSectionProps } from './SearchUsersSection.types';
 
 /**

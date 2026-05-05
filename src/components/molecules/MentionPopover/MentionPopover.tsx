@@ -1,11 +1,10 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
-import { SearchUserSuggestion } from '../SearchUserSuggestion/SearchUserSuggestion';
-
-import type { MentionPopoverProps } from './MentionPopover.types';
 import { cn } from '@/libs/utils/utils';
+import { SearchUserSuggestion } from '../SearchUserSuggestion/SearchUserSuggestion';
+import type { MentionPopoverProps } from './MentionPopover.types';
 
 const POPOVER_CLASSNAME =
   'absolute z-50 mt-1 w-[var(--mention-popover-width)] max-h-[var(--mention-popover-max-height)] overflow-y-auto rounded-md border border-border bg-popover p-2';

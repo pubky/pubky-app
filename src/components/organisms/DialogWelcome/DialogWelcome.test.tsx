@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogWelcome } from './DialogWelcome';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({

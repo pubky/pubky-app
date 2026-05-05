@@ -1,4 +1,5 @@
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+
 // Post Stream ID Pattern: sorting:source:kind
 // - SORTING: timeline (recent), total_engagement (popularity)
 // - SOURCE: all, following, friends, me, bookmarks, post_replies, author, author_replies

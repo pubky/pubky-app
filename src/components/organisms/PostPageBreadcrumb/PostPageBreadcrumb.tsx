@@ -7,10 +7,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/atoms/DropdownMenu/DropdownMenu';
-import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbSeparator } from '@/molecules/Breadcrumb/Breadcrumb';
-
-import type { PostPageBreadcrumbProps } from './PostPageBreadcrumb.types';
 import type { Ancestor } from '@/hooks/usePostAncestors/usePostAncestors.types';
+import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbSeparator } from '@/molecules/Breadcrumb/Breadcrumb';
+import type { PostPageBreadcrumbProps } from './PostPageBreadcrumb.types';
 
 /**
  * PostPageBreadcrumb Organism

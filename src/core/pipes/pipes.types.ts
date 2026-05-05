@@ -1,6 +1,7 @@
 import { PubkyAppPostKind } from 'pubky-app-specs';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+
 export type PostValidatorData = {
   content: string;
   kind: PubkyAppPostKind;

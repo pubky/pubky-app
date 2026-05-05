@@ -2,7 +2,6 @@
 
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { UserListItem } from '@/organisms/UserListItem/UserListItem';
-
 import type { TaggerUserRowProps } from './TaggerUserRow.types';
 
 /**

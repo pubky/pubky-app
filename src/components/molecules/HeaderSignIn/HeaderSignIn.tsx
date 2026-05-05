@@ -1,13 +1,13 @@
 'use client';
 
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import * as React from 'react';
 import { Container } from '@/atoms/Container/Container';
-import { HeaderNavigationButtons } from '../Header/Header';
-import { SearchInput } from '@/organisms/SearchInput/SearchInput';
-
 import { FileController } from '@/controllers/file/file';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { SearchInput } from '@/organisms/SearchInput/SearchInput';
 import { useNotificationStore } from '@/stores/notification/notification.store';
+import { HeaderNavigationButtons } from '../Header/Header';
+
 export const HeaderSignIn = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const unreadNotifications = useNotificationStore((state) => state.selectUnread());

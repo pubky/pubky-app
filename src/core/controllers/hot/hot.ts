@@ -2,6 +2,7 @@ import { HotApplication } from '@/application/hot/hot';
 import type { NexusHotTag } from '@/services/nexus/nexus.types';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 export class HotController {
   private constructor() {} // Prevent instantiation
 

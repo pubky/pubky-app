@@ -1,17 +1,17 @@
 'use client';
 
+import { Edit, MessageCircle, Repeat } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Container } from '@/atoms/Container/Container';
 import { EmojiPickerDialog } from '@/molecules/EmojiPickerDialog/EmojiPickerDialog';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
 import { PostTag } from '@/molecules/PostTag/PostTag';
+import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
 import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
 import { PostInputTags } from '../PostInputTags/PostInputTags';
-
-import { getButtonLabel } from './PostInputExpandableSection.utils';
 import type { PostInputExpandableSectionProps } from './PostInputExpandableSection.types';
-import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
-import { Edit, Repeat, MessageCircle } from 'lucide-react';
+import { getButtonLabel } from './PostInputExpandableSection.utils';
+
 const IconsButton = {
   [POST_INPUT_VARIANT.EDIT]: Edit,
   [POST_INPUT_VARIANT.REPOST]: Repeat,

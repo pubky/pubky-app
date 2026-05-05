@@ -1,10 +1,10 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { forwardRef, useImperativeHandle, useRef, type ReactElement } from 'react';
-import { SinglePostCard } from './SinglePostCard';
-import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
-import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
+import { forwardRef, type ReactElement, useImperativeHandle, useRef } from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
+import { SinglePostCard } from './SinglePostCard';
 
 const { mockPostHeader, mockPostTagsPanelFocus } = vi.hoisted(() => ({
   mockPostHeader: vi.fn(

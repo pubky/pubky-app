@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useEntityTags } from './useEntityTags';
-import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import { useEntityTags } from './useEntityTags';
+
 // Mock the underlying hooks
 const mockUseTaggedResult: {
   tags: NexusTag[];

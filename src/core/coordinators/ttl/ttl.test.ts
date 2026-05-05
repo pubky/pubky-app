@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mockSession } from '@/test-utils/pubky';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TtlController } from '@/controllers/ttl/ttl';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
+
 // =============================================================================
 // Test Helpers
 // =============================================================================
