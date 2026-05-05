@@ -1,7 +1,6 @@
 'use client';
-import { Container } from '@/atoms/Container/Container';
-
 import { useSelectedLayoutSegments } from 'next/navigation';
+import { Container } from '@/atoms/Container/Container';
 
 export default function FeedLayout({ post, children }: { post: React.ReactNode; children: React.ReactNode }) {
   const segments = useSelectedLayoutSegments('post');

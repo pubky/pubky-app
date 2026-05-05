@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useSelectedLayoutSegments } from 'next/navigation';
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FeedLayout from './layout';
 
 vi.mock('next/navigation', () => ({
