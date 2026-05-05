@@ -1,11 +1,11 @@
+import { SmsCodeErrorType } from './homegate.constants';
+
 /**
  * Result of checking SMS verification availability.
  * Returns available true when service is accessible.
  * Returns available false when geoblocked (403).
  * Returns available false with error true for generic errors (network failure, server error, etc.)
  */
-import { SmsCodeErrorType } from './homegate.constants';
-
 export type TSmsInfoResult = { available: boolean; error?: boolean };
 
 /**

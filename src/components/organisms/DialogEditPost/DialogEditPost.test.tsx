@@ -122,7 +122,6 @@ vi.mock('../PostInput/PostInput', () => ({
 
 // Use real libs - use actual implementations
 
-// Import hooks after mocking
 describe('DialogEditPost', () => {
   beforeEach(() => {
     vi.clearAllMocks();

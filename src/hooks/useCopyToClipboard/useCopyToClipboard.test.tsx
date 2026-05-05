@@ -1,9 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-// Import the hook after mocking
 import { useCopyToClipboard } from './useCopyToClipboard';
 
-// Mock the dependencies before importing the hook
 const { mockCopyToClipboard } = vi.hoisted(() => ({
   mockCopyToClipboard: vi.fn(),
 }));

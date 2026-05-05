@@ -1,6 +1,5 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-// Import components after mocking
 import useEmblaCarousel from 'embla-carousel-react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './Carousel';
