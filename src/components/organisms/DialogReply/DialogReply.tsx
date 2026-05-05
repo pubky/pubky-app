@@ -1,15 +1,14 @@
 'use client';
 
-import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
-import { PostInput } from '../PostInput/PostInput';
-
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { scrollDialogTextareaIntoDialog } from '@/organisms/PostInput/PostInput.utils';
+import { PostInput } from '../PostInput/PostInput';
 import type { DialogReplyProps } from './DialogReply.types';
 
 const REPLY_TEXTAREA_SELECTOR = '#reply-post-input [data-slot="textarea"]';

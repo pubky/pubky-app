@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import ErrorPage from './error';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
+import ErrorPage from './error';
 
 describe('app/error', () => {
   beforeEach(() => {

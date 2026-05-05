@@ -1,22 +1,23 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BookmarkResult, postUriBuilder } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  TEST_PUBKY,
-  TEST_POST_IDS,
-  INVALID_INPUTS,
-  setupUnitTestMocks,
-  setupIntegrationTestMocks,
-  restoreMocks,
-  buildPubkyUri,
-  createPostUri,
-} from '../pipes.test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { asOpaque } from '@/test-utils/type-assertions';
+import {
+  buildPubkyUri,
+  createPostUri,
+  INVALID_INPUTS,
+  restoreMocks,
+  setupIntegrationTestMocks,
+  setupUnitTestMocks,
+  TEST_POST_IDS,
+  TEST_PUBKY,
+} from '../pipes.test-utils';
+
 describe('BookmarkNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createBookmark: ReturnType<typeof vi.fn> }>) => ({
     createBookmark: vi.fn((uri: string) =>

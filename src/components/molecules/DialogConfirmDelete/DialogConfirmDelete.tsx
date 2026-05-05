@@ -1,11 +1,11 @@
 'use client';
 
+import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
 
-import { Trash2 } from 'lucide-react';
 interface DialogConfirmDeleteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

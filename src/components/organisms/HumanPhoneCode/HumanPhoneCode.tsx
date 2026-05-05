@@ -1,4 +1,7 @@
 'use client';
+import React, { useState } from 'react';
+import { ArrowRight, RefreshCcw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -6,16 +9,13 @@ import { Image } from '@/atoms/Image/Image';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
+import { HomegateController } from '@/controllers/homegate/homegate';
+import { cn } from '@/libs/utils/utils';
 import { HumanPhoneCodeInput } from '@/molecules/HumanPhoneCodeInput/HumanPhoneCodeInput';
 import { PageTitle } from '@/molecules/Page/Page';
 import { useToast } from '@/molecules/Toaster/use-toast';
-
-import React, { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import type { HumanPhoneCodeProps } from './HumanPhoneCode.types';
-import { RefreshCcw, ArrowRight } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
-import { HomegateController } from '@/controllers/homegate/homegate';
+
 export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCodeProps) => {
   const t = useTranslations('onboarding.phoneCode');
   const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);

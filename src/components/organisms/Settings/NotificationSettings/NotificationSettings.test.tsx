@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { NotificationSettings } from './NotificationSettings';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultNotificationPreferences } from '@/stores/settings/settings.types';
+import { NotificationSettings } from './NotificationSettings';
+
 // Mock settings store and hook
 const mockSetNotificationPreference = vi.fn();
 const mockUseSettingsStore = vi.fn();

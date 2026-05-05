@@ -1,11 +1,12 @@
 import { Table } from 'dexie';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { db } from '@/database/franky/franky';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
+
 export class FeedModel extends RecordModelBase<string, FeedModelSchema> implements FeedModelSchema {
   static table: Table<FeedModelSchema, string> = db.table('feeds');
 

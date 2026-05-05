@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
-import type { IframeProps } from './Iframe.types';
 import { cn } from '@/libs/utils/utils';
+import type { IframeProps } from './Iframe.types';
 
 export const Iframe = forwardRef<HTMLIFrameElement, IframeProps>(function Iframe(
   { 'data-testid': dataTestId, className, width = '100%', height = '315', ...props }: IframeProps,

@@ -1,8 +1,8 @@
 'use client';
 
-import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useRouter } from 'next/navigation';
 import { SETTINGS_ROUTES } from '@/app/routes';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 
 interface UseUserInfoPopoverActionsResult {
   isLoading: boolean;

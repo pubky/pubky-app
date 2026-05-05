@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { RightSidebar } from './RightSidebar';
 
 // Mock the organisms (WhoToFollow and ActiveUsers were moved from molecules to organisms)

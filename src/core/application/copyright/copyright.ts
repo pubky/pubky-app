@@ -1,7 +1,8 @@
-import type { TCopyrightSubmitInput } from './copyright.types';
 import { ChatwootService } from '@/services/chatwoot/chatwoot';
 import { CHATWOOT_INBOX_IDS } from '@/services/chatwoot/chatwoot.constants';
 import { extractSourceId } from '@/services/chatwoot/chatwoot.utils';
+import type { TCopyrightSubmitInput } from './copyright.types';
+
 /**
  * Copyright application service.
  *

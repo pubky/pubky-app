@@ -1,11 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
-import { StreamPostsController } from './posts';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamApplication } from '@/application/stream/posts/post';
+import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { StreamPostsController } from './posts';
+
 describe('StreamPostsController', () => {
   const streamId = PostStreamTypes.TIMELINE_ALL_ALL;
   const viewerId = 'user-viewer' as Pubky;

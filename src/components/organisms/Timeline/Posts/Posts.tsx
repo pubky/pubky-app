@@ -1,8 +1,8 @@
 'use client';
 
+import { Container } from '@/atoms/Container/Container';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
-import { Container } from '@/atoms/Container/Container';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';

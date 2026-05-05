@@ -10,7 +10,6 @@ import {
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
 import { Link } from '@/atoms/Link/Link';
-
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/config/externalLinks';
 
 interface DialogDownloadPubkyRingProps {

@@ -1,6 +1,7 @@
 import { Logger } from '@/libs/logger/logger';
 import { HotTagsModel } from '@/models/hot/hot';
 import type { NexusHotTag } from '@/services/nexus/nexus.types';
+
 /**
  * Local Hot Service
  *

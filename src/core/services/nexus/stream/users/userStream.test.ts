@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import { userStreamApi, buildUserStreamBodyUrl } from './userStream.api';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { describe, expect, it } from 'vitest';
 import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import { asInvalid } from '@/test-utils/type-assertions';
+import { buildUserStreamBodyUrl, userStreamApi } from './userStream.api';
+
 describe('Users Stream API - Error Control', () => {
   const mockUserId = 'erztyis9oiaho93ckucetcf5xnxacecqwhbst5hnd7mmkf69dhby';
   const mockViewerId = 'viewer-pubky-id';

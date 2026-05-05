@@ -2,21 +2,21 @@
 
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
+import { Bookmark, Flame, Home, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { ProgressSteps } from '../ProgressSteps/ProgressSteps';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-
-import { GITHUB_URL, TWITTER_GETPUBKY_URL, TELEGRAM_URL } from '@/config/externalLinks';
-import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
-import { Home, Flame, Bookmark, Settings } from 'lucide-react';
-import { Github2, XTwitter, Telegram } from '@/icons';
+import { GITHUB_URL, TELEGRAM_URL, TWITTER_GETPUBKY_URL } from '@/config/externalLinks';
+import { Github2, Telegram, XTwitter } from '@/icons';
 import { cn } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { ProgressSteps } from '../ProgressSteps/ProgressSteps';
+
 export interface HeaderContainerProps {
   children: React.ReactNode;
   className?: string;

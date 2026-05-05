@@ -1,5 +1,5 @@
-import { BackupPage as TemplatesBackupPage } from '@/templates/Onboarding/BackupPage/BackupPage';
 import { Metadata } from '@/molecules/Metadata/Metadata';
+import { BackupPage as TemplatesBackupPage } from '@/templates/Onboarding/BackupPage/BackupPage';
 
 export const metadata = Metadata({
   title: 'Backup - Onboarding',

@@ -1,8 +1,8 @@
 'use client';
+import { Lightbulb, Settings2 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
-
-import { Settings2, Lightbulb } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+
 export interface ButtonFiltersProps {
   onClick?: () => void;
   className?: string;

@@ -1,12 +1,13 @@
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserTagsModel, type UserTagsModelSchema } from '@/models/user/tags/userTags';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+
 export class LocalUserTagService {
   private static readonly TAG_TABLES = [UserTagsModel.table, UserCountsModel.table] as const;
 

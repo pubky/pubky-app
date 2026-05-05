@@ -1,4 +1,13 @@
 'use client';
+/**
+ * Component for entering an invite code for homeserver during onboarding.
+ * The parent validates the code with the homeserver before navigating; onSuccess may throw on invalid code.
+ * @param onBack - Function to call when the user clicks the back button.
+ * @param onSuccess - Called with the trimmed invite code; may be async. Throws on validation failure.
+ */
+import React, { useState } from 'react';
+import { ArrowLeft, ArrowRight, CircleCheck, Loader2, Server } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -8,28 +17,17 @@ import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import { TWITTER_URL, TELEGRAM_URL } from '@/config/externalLinks';
+import { TELEGRAM_URL, TWITTER_URL } from '@/config/externalLinks';
+import { AuthController } from '@/controllers/auth/auth';
+import { Telegram, XTwitter } from '@/icons';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 import { HumanFooter } from '@/molecules/HumanFooter/HumanFooter';
 import { PageTitle } from '@/molecules/Page/Page';
 import { PopoverInviteHomeserver } from '@/molecules/PopoverInviteHomeserver/PopoverInviteHomeserver';
-
-import React, { useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { formatInviteCode } from './HumanInviteCode.utils';
 import type { HumanInviteCodeProps } from './HumanInviteCode.types';
+import { formatInviteCode } from './HumanInviteCode.utils';
 
-/**
- * Component for entering an invite code for homeserver during onboarding.
- * The parent validates the code with the homeserver before navigating; onSuccess may throw on invalid code.
- * @param onBack - Function to call when the user clicks the back button.
- * @param onSuccess - Called with the trimmed invite code; may be async. Throws on validation failure.
- */
-import { CircleCheck, Server, ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
-import { XTwitter, Telegram } from '@/icons';
-import { Logger } from '@/libs/logger/logger';
-import { cn } from '@/libs/utils/utils';
-import { AuthController } from '@/controllers/auth/auth';
 export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => {
   const t = useTranslations('onboarding.inviteCode');
   const tCommon = useTranslations('common');

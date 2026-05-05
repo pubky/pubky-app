@@ -1,19 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NEXUS_URL } from '@/config/nexus';
+import type { Pubky } from '@/models/models.types';
+import type { NexusTag, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
+import { NexusUserService } from '@/services/nexus/user/user';
+import { buildUrlWithQuery } from '../nexus.utils';
 import { userApi } from './user.api';
 import {
-  TUserViewParams,
   TUserPaginationParams,
   TUserRelationshipParams,
   TUserTaggersParams,
   TUserTagsParams,
+  TUserViewParams,
   USER_PATH_PARAMS,
 } from './user.types';
-import { buildUrlWithQuery } from '../nexus.utils';
-import { NEXUS_URL } from '@/config/nexus';
-import { queryNexus } from '@/services/nexus/nexus.utils';
-import type { Pubky } from '@/models/models.types';
-import type { NexusTag, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
-import { NexusUserService } from '@/services/nexus/user/user';
 
 vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();

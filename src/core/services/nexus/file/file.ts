@@ -1,8 +1,9 @@
-import { filesApi } from './file.api';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
+import { filesApi } from './file.api';
+
 /**
  * Nexus File Service
  *

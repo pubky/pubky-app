@@ -1,10 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { Typography } from '../Typography/Typography';
-
-import type { TagProps } from './Tag.types';
 import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
+import { Typography } from '../Typography/Typography';
+import type { TagProps } from './Tag.types';
 
 export const Tag = ({
   name,

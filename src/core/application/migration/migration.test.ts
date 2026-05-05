@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MigrationApplication } from './migration';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedApplication } from '@/application/feed/feed';
 import { MuteApplication } from '@/application/mute/mute';
 import { SettingsApplication } from '@/application/settings/settings';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import type { SettingsState } from '@/stores/settings/settings.types';
+import { MigrationApplication } from './migration';
+
 vi.mock('pubky-app-specs', () => ({
   baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
 }));

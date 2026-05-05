@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { PostStreamQueue } from './post-stream-queue';
-import type { CollectParams } from './post-stream-queue.types';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { PostStreamQueue } from './post-stream-queue';
+import type { CollectParams } from './post-stream-queue.types';
+
 describe('PostStreamQueue', () => {
   let queue: PostStreamQueue;
   const streamId = 'timeline:all:all' as PostStreamId;

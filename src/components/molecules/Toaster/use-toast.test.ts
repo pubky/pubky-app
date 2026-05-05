@@ -1,6 +1,6 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { useToast, toast, reducer, actionTypes } from './use-toast';
+import { act, renderHook } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { actionTypes, reducer, toast, useToast } from './use-toast';
 
 describe('useToast', () => {
   describe('useToast hook', () => {

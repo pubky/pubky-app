@@ -1,23 +1,24 @@
 import {
-  TTL_POST_MS,
-  TTL_USER_MS,
   TTL_BATCH_INTERVAL_MS,
   TTL_POST_MAX_BATCH_SIZE,
+  TTL_POST_MS,
   TTL_USER_MAX_BATCH_SIZE,
+  TTL_USER_MS,
 } from '@/config/sync';
+import { TtlController } from '@/controllers/ttl/ttl';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
+  EntityOps,
   TtlCoordinatorConfig,
   TtlCoordinatorState,
   TtlSubscribePostParams,
-  TtlUnsubscribePostParams,
   TtlSubscribeUserParams,
+  TtlUnsubscribePostParams,
   TtlUnsubscribeUserParams,
-  EntityOps,
 } from './ttl.types';
-import { Logger } from '@/libs/logger/logger';
-import { TtlController } from '@/controllers/ttl/ttl';
-import type { Pubky } from '@/models/models.types';
-import { useAuthStore } from '@/stores/auth/auth.store';
+
 /**
  * TtlCoordinator
  *

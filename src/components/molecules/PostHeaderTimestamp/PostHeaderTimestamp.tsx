@@ -1,10 +1,9 @@
 'use client';
+import { Clock } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { Clock } from 'lucide-react';
 
 interface PostHeaderTimestampProps {
   timeAgo: string;

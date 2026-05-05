@@ -1,5 +1,5 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRequireAuth } from './useRequireAuth';
 
 const mockCurrentUserPubky = vi.hoisted(() => ({ value: null as string | null }));

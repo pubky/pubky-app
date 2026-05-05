@@ -1,6 +1,5 @@
 'use client';
 import { Container } from '@/atoms/Container/Container';
-
 import type { SettingsSwitchGroupProps } from './SettingsSwitchGroup.types';
 
 export function SettingsSwitchGroup({ children }: SettingsSwitchGroupProps) {

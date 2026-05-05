@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { isAppError } from '@/libs/error/error.utils';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { usePostMenuActions } from './usePostMenuActions';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
-import { isAppError } from '@/libs/error/error.utils';
-import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+
 // Hoist mocks
 const {
   mockIsAppError,

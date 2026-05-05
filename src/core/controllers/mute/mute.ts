@@ -1,9 +1,10 @@
-import { HttpMethod } from '@/libs/http/http.types';
-import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { MuteApplication } from '@/application/mute/mute';
 import type { TMuteParams } from '@/controllers/mute/mute.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { MuteNormalizer } from '@/pipes/mute/mute.normalizer';
+
 export class MuteController {
   private constructor() {}
 

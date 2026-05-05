@@ -3,9 +3,8 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { SidebarButton } from '@/atoms/SidebarButton/SidebarButton';
-
-import type { SidebarSectionProps } from './SidebarSection.types';
 import { cn } from '@/libs/utils/utils';
+import type { SidebarSectionProps } from './SidebarSection.types';
 
 /**
  * SidebarSection

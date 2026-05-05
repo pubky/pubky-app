@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { Button } from '@/atoms/Button/Button';
-
-import type { PostTagAddButtonProps } from './PostTagAddButton.types';
 import { Plus } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
 import { cn } from '@/libs/utils/utils';
+import type { PostTagAddButtonProps } from './PostTagAddButton.types';
 
 export function PostTagAddButton({ onClick, className, disabled, variant = 'dashed' }: PostTagAddButtonProps) {
   return (

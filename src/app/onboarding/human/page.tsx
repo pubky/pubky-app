@@ -1,5 +1,5 @@
-import { Human } from '@/templates/Onboarding/Human/Human';
 import { Metadata } from '@/molecules/Metadata/Metadata';
+import { Human } from '@/templates/Onboarding/Human/Human';
 
 export const metadata = Metadata({
   title: 'Fair Access - Onboarding',

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { type MigrationStore, migrationInitialState } from './migration.types';
-import { createMigrationActions } from './migration.actions';
 import { MIGRATION_STORE_KEY } from '../persistedKeys';
+import { createMigrationActions } from './migration.actions';
+import { migrationInitialState, type MigrationStore } from './migration.types';
 
 // No persistence - ephemeral state that resets on page refresh
 export const useMigrationStore = create<MigrationStore>()(

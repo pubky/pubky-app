@@ -1,8 +1,8 @@
 import './globals.css';
-
 import type { Viewport } from 'next';
 import { getLocale, getMessages } from 'next-intl/server';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { RootContainer } from '@/molecules/ContainerRoot/ContainerRoot';
 import { Metadata } from '@/molecules/Metadata/Metadata';
 import { NewPostCTA } from '@/molecules/NewPostCTA/NewPostCTA';
@@ -10,12 +10,11 @@ import { Toaster } from '@/molecules/Toaster/Toaster';
 import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/CoordinatorsManager';
 import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
 import { Header } from '@/organisms/Header/Header';
-import { IntlProvider } from '@/providers/IntlProvider/IntlProvider';
-import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvider/GlobalErrorHandlerProvider';
-import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
 import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
+import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
+import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvider/GlobalErrorHandlerProvider';
+import { IntlProvider } from '@/providers/IntlProvider/IntlProvider';
 import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
-import { TOOLTIP_DELAY_MS } from '@/config/ui';
 
 export const viewport: Viewport = {
   width: 'device-width',

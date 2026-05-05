@@ -1,25 +1,25 @@
 'use client';
 
+import { useEffect } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
+import { Container } from '@/atoms/Container/Container';
+import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
-import { useEffect } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { isValidTagLabel } from '@/libs/utils/utils';
+import type { Pubky } from '@/models/models.types';
 import { SearchInputBar } from '@/molecules/SearchInputBar/SearchInputBar';
 import { SearchSuggestions } from '@/molecules/SearchSuggestions/SearchSuggestions';
 import { toast } from '@/molecules/Toaster/use-toast';
-import { Container } from '@/atoms/Container/Container';
-
-import { APP_ROUTES } from '@/app/routes';
-import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
-import { parseTagsFromUrl } from './SearchInput.utils';
-import { SearchInputProps } from './SearchInput.types';
-import { isValidTagLabel } from '@/libs/utils/utils';
-import type { Pubky } from '@/models/models.types';
 import { useSearchStore } from '@/stores/search/search.store';
+import { SearchInputProps } from './SearchInput.types';
+import { parseTagsFromUrl } from './SearchInput.utils';
+
 export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const router = useRouter();
   const searchParams = useSearchParams();

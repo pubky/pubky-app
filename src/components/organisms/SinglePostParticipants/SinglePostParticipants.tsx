@@ -1,17 +1,17 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { usePostParticipants } from '@/hooks/usePostParticipants/usePostParticipants';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
-import { UserListItem } from '../UserListItem/UserListItem';
-
-import { APP_ROUTES } from '@/app/routes';
-import { SinglePostParticipantsSkeleton } from './SinglePostParticipants.skeleton';
-import type { SinglePostParticipantsProps, ParticipantItemProps } from './SinglePostParticipants.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { UserListItem } from '../UserListItem/UserListItem';
+import { SinglePostParticipantsSkeleton } from './SinglePostParticipants.skeleton';
+import type { ParticipantItemProps, SinglePostParticipantsProps } from './SinglePostParticipants.types';
+
 /**
  * Individual participant item with reactive follow status
  */

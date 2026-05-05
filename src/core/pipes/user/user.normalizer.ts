@@ -6,6 +6,7 @@ import type { Pubky } from '@/models/models.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { UserValidatorData } from '@/pipes/pipes.types';
 import type { NexusUserLink } from '@/services/nexus/nexus.types';
+
 export type UiLink = { label: string; url: string };
 
 export class UserNormalizer {

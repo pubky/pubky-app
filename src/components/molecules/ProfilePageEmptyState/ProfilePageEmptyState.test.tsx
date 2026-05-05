@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Frown, Tag } from 'lucide-react';
+import { describe, expect, it, vi } from 'vitest';
 import { ProfilePageEmptyState } from './ProfilePageEmptyState';
 
 // Mock Next.js Image

@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useCustomFeed } from './useCustomFeed';
-import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout } from 'pubky-app-specs';
-import { Logger } from '@/libs/logger/logger';
+import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedController } from '@/controllers/feed/feed';
+import { Logger } from '@/libs/logger/logger';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { useCustomFeed } from './useCustomFeed';
+
 // --- Hoisted mocks ---
 
 const { mockUseLiveQuery, mockUsePathname, mockUseParams } = vi.hoisted(() => ({

@@ -1,4 +1,5 @@
 import { PostDetailsModel } from '@/models/post/details/postDetails';
+
 /**
  * Sort post IDs by their timestamp (indexed_at) in descending order (most recent first)
  *

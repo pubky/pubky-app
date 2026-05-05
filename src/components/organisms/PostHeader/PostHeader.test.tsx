@@ -1,11 +1,12 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PostHeader } from './PostHeader';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { PostHeader } from './PostHeader';
+
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
 }));

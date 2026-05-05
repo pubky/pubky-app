@@ -1,11 +1,11 @@
 'use client';
+import { Activity, SlidersHorizontal, UserRound } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-import { Logo } from '../Logo/Logo';
-
-import { SlidersHorizontal, UserRound, Activity } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { Logo } from '../Logo/Logo';
+
 export interface MobileHeaderProps {
   onLeftIconClick?: () => void;
   onRightIconClick?: () => void;

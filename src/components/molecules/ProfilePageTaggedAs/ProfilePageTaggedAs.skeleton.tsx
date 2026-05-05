@@ -1,6 +1,5 @@
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-
 import { SKELETON_TAG_ROWS } from './ProfilePageTaggedAs.constants';
 
 export function ProfilePageTaggedAsSkeleton() {

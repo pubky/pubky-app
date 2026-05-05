@@ -1,10 +1,9 @@
 'use client';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-
 import { TAGS_PER_PAGE } from '@/hooks/usePostTags/usePostTags.constants';
-import type { PostTagsPanelProps } from './PostTagsPanel.types';
 import { cn } from '@/libs/utils/utils';
+import type { PostTagsPanelProps } from './PostTagsPanel.types';
 
 type PostTagsPanelSkeletonProps = Omit<PostTagsPanelProps, 'postId'>;
 

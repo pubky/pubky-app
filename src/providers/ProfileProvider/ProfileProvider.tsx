@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import type { ProfileContextValue, ProfileProviderProps } from './ProfileProvider.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import type { ProfileContextValue, ProfileProviderProps } from './ProfileProvider.types';
+
 /**
  * Default context value used when no provider is present
  */

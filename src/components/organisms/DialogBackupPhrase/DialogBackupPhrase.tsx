@@ -1,8 +1,8 @@
 'use client';
 
-import { useRecoveryPhraseValidation } from '@/hooks/useRecoveryPhraseValidation/useRecoveryPhraseValidation';
-import { useState, useEffect, ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import Image from 'next/image';
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
@@ -17,11 +17,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
-import { WordSlot } from '@/molecules/WordSlot/WordSlot';
-
-import { Eye, ArrowRight, EyeOff, ArrowLeft, Check } from 'lucide-react';
+import { useRecoveryPhraseValidation } from '@/hooks/useRecoveryPhraseValidation/useRecoveryPhraseValidation';
 import { cn } from '@/libs/utils/utils';
+import { WordSlot } from '@/molecules/WordSlot/WordSlot';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+
 interface DialogBackupPhraseProps {
   children?: ReactNode;
 }

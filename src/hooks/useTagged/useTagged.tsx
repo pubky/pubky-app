@@ -3,18 +3,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslations } from 'next-intl';
-import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
-import { toast } from '@/molecules/Toaster/use-toast';
-import type { UseTaggedResult, UseTaggedOptions } from './useTagged.types';
-import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
-import { TAGS_PER_PAGE } from './useTagged.constants';
-import { Logger } from '@/libs/logger/logger';
 import { TagKind } from '@/application/tag/tag.types';
 import { TagController } from '@/controllers/tag/tag';
 import { UserController } from '@/controllers/user/user';
+import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
+import { toast } from '@/molecules/Toaster/use-toast';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { TAGS_PER_PAGE } from './useTagged.constants';
+import type { UseTaggedOptions, UseTaggedResult } from './useTagged.types';
+
 /**
  * Unified hook for fetching and managing user tags.
  * Uses useLiveQuery on IndexedDB for automatic reactivity across all instances.

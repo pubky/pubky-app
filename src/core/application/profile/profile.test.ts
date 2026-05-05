@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PubkyAppUser, UserResult } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { asOpaque } from '@/test-utils/type-assertions';
+
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({
   PubkySpecsBuilder: class {

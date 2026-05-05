@@ -1,8 +1,8 @@
 'use client';
 
 import { forwardRef } from 'react';
-import type { AudioProps } from './Audio.types';
 import { cn } from '@/libs/utils/utils';
+import type { AudioProps } from './Audio.types';
 
 export const Audio = forwardRef<HTMLAudioElement, AudioProps>(function Audio(
   { 'data-testid': dataTestId, className, src, controls = true, preload = 'metadata', ...props }: AudioProps,

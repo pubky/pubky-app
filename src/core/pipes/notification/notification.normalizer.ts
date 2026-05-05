@@ -4,7 +4,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { getBusinessKey } from '@/models/notification/notification.helpers';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
 import type { NotificationPreferences } from '@/stores/settings/settings.types';

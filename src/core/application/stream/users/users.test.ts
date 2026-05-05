@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import type { Pubky } from '@/models/models.types';
 import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
@@ -7,6 +7,7 @@ import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { NexusUser } from '@/services/nexus/nexus.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
+
 describe('UserStreamApplication', () => {
   const DEFAULT_USER_ID = 'user-1' as Pubky;
   const DEFAULT_VIEWER_ID = 'viewer-123' as Pubky;

@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CDN_URL, NEXUS_URL } from '@/config/nexus';
-import { buildNexusUrl, buildCdnUrl, buildUrlWithQuery, createFetchOptions, queryNexus } from './nexus.utils';
-import { mockResponse } from '@/test-utils/dom';
-import { asOpaque } from '@/test-utils/type-assertions';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { mockResponse } from '@/test-utils/dom';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { buildCdnUrl, buildNexusUrl, buildUrlWithQuery, createFetchOptions, queryNexus } from './nexus.utils';
 
 describe('nexus.utils', () => {
   describe('buildNexusUrl', () => {

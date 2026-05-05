@@ -1,6 +1,7 @@
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
+
 /**
  * Handles mute filtering for post streams.
  *

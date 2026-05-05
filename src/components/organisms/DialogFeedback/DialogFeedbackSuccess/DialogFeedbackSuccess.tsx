@@ -1,11 +1,11 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { DialogClose, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
-
 import type { DialogFeedbackSuccessProps } from './DialogFeedbackSuccess.types';
-import { Check } from 'lucide-react';
+
 export function DialogFeedbackSuccess({ onOpenChange }: DialogFeedbackSuccessProps) {
   const t = useTranslations('feedback.success');
   const tCommon = useTranslations('common');

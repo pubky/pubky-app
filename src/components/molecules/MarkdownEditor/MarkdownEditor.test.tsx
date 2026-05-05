@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
 import { createRef } from 'react';
 import type { MDXEditorMethods } from '@mdxeditor/editor';
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MarkdownEditor } from './MarkdownEditor';
 
 interface DynamicOptions {

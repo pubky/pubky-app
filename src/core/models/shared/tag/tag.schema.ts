@@ -1,4 +1,5 @@
 import type { NexusTag } from '@/services/nexus/nexus.types';
+
 export interface TagCollectionModelSchema<Id> {
   id: Id;
   tags: NexusTag[];

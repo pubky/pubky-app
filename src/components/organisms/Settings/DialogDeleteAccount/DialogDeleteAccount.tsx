@@ -1,9 +1,9 @@
 'use client';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
 
-import { Trash2 } from 'lucide-react';
 interface DialogDeleteAccountProps {
   isOpen: boolean;
   onOpenChangeAction: (open: boolean) => void;

@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { ClickableTagsList } from './ClickableTagsList';
-import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
-import { useAuthStore } from '@/stores/auth/auth.store';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { ClickableTagsList } from './ClickableTagsList';
+
 // Mock hooks
 const mockHandleTagToggle = vi.fn();
 const mockHandleTagAdd = vi.fn().mockResolvedValue({ success: true });

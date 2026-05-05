@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { NotificationItem } from './NotificationItem';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({

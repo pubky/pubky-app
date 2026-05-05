@@ -1,5 +1,6 @@
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+
 export interface UseEntityTagsOptions {
   /** Custom viewer ID (defaults to current user) */
   viewerId?: string;

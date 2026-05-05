@@ -1,12 +1,11 @@
 'use client';
 
-import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { Container } from '@/atoms/Container/Container';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
 import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
 import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
-
 import { CONTENT } from '@/stores/home/home.types';
 import {
   pubkyLayoutToHomeLayout,
@@ -14,6 +13,7 @@ import {
   pubkyReachToHomeReach,
   pubkySortToHomeSort,
 } from '@/utils/pubky-app-spec-feed-mappers';
+
 interface CustomFeedFiltersProps {
   variant: 'sidebar' | 'drawer';
 }

@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { persist, devtools } from 'zustand/middleware';
-import { type OnboardingStore, onboardingInitialState } from './onboarding.types';
+import { devtools, persist } from 'zustand/middleware';
+import { ONBOARDING_PERSIST_KEY } from '../persistedKeys';
 import { createOnboardingActions } from './onboarding.actions';
 import { createOnboardingSelectors } from './onboarding.selectors';
-import { ONBOARDING_PERSIST_KEY } from '../persistedKeys';
+import { onboardingInitialState, type OnboardingStore } from './onboarding.types';
 
 // Store creation
 export const useOnboardingStore = create<OnboardingStore>()(

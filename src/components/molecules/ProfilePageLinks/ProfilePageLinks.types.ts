@@ -1,5 +1,6 @@
 import type { LucideProps } from 'lucide-react';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+
 export interface ProfilePageSidebarLink {
   icon: React.ComponentType<LucideProps>;
   url: string;

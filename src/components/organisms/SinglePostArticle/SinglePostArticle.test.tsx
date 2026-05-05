@@ -1,9 +1,10 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SinglePostArticle } from './SinglePostArticle';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
-import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
+import { SinglePostArticle } from './SinglePostArticle';
+
 // Mock hooks
 vi.mock('@/hooks/usePostArticle/usePostArticle', () => ({
   usePostArticle: vi.fn(),

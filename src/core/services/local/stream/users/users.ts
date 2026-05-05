@@ -1,7 +1,7 @@
 import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
-import { ModerationType, type ModerationModelSchema } from '@/models/moderation/moderation.schema';
+import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import { UserStreamModel } from '@/models/stream/user/userStream';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
@@ -13,6 +13,7 @@ import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import type { TUserStreamUpsertParams } from '@/services/local/stream/users/users.types';
 import type { NexusTag, NexusUser, NexusUserCounts, NexusUserRelationship } from '@/services/nexus/nexus.types';
+
 /**
  * Local Stream Users Service
  *

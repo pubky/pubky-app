@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import { ProfilePageLayout } from './ProfilePageLayout';
 import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
-import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 
 // Mock molecules and organisms
 vi.mock('@/atoms/Container/Container', () => {

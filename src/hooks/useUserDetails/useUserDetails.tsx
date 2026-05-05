@@ -1,9 +1,10 @@
 'use client';
 
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import type { UseUserDetailsResult } from './useUserDetails.types';
 import { UserController } from '@/controllers/user/user';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import type { UseUserDetailsResult } from './useUserDetails.types';
+
 /**
  * Hook to get user details from local database with live updates.
  * If the user is not in cache, it will trigger a fetch from Nexus.

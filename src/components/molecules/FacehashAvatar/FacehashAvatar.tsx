@@ -2,10 +2,9 @@
 
 import { Facehash } from 'facehash';
 import { Typography } from '@/atoms/Typography/Typography';
-
+import { cn } from '@/libs/utils/utils';
 import { FACEHASH_AVATAR_COLORS } from './FacehashAvatar.constants';
 import type { FacehashAvatarProps } from './FacehashAvatar.types';
-import { cn } from '@/libs/utils/utils';
 
 /**
  * Renders a deterministic generative face avatar using the `facehash` library.

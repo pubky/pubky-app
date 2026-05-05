@@ -1,6 +1,4 @@
 import { LastReadResult } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
 import type {
   TFetchMissingEntitiesParams,
   TFetchNotificationsResult,
@@ -13,8 +11,10 @@ import type {
 } from '@/application/notification/notification.types';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalNotificationService } from '@/services/local/notification/notification';

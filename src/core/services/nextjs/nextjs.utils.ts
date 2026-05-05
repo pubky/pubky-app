@@ -1,5 +1,3 @@
-import { HttpStatusCode } from '@/libs/http/http.types';
-import { isIpSafe } from '@/libs/network/network';
 import { AppError } from '@/libs/error/error';
 import {
   AuthErrorCode,
@@ -10,6 +8,8 @@ import {
 } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
+import { isIpSafe } from '@/libs/network/network';
 
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5MB
 

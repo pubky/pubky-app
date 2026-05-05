@@ -1,5 +1,5 @@
-import { OnboardingStore } from './onboarding.types';
 import { ZustandGet } from '../stores.types';
+import { OnboardingStore } from './onboarding.types';
 
 export const createOnboardingSelectors = (get: ZustandGet<OnboardingStore>) => ({
   /**

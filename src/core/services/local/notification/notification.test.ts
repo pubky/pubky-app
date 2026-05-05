@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { LocalNotificationService } from './notification';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationModel } from '@/models/notification/notification';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import { LocalNotificationService } from './notification';
+
 const createFlat = (timestamp: number): FlatNotification =>
   ({ type: NotificationType.Follow, timestamp, followed_by: `user-${timestamp}` }) as FlatNotification;
 

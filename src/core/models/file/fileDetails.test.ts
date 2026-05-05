@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { resetDatabase } from '@/database/franky/franky.helpers';
 import { FileDetailsModel } from '@/models/file/fileDetails';
 import type { Pubky } from '@/models/models.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
+
 describe('FileDetailsModel', () => {
   beforeEach(async () => {
     await resetDatabase();

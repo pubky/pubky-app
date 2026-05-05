@@ -1,16 +1,15 @@
 import JSZip from 'jszip';
-
 import { baseUriBuilder } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs/http/http.types';
-import { ClientErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import type {
   TApplicationCommitUpdateDetailsParams,
   TCreateProfileInput,
   TDeleteAccountParams,
   TDownloadDataParams,
 } from '@/application/profile/profile.types';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
@@ -18,6 +17,7 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalProfileService } from '@/services/local/profile/profile';
 import { LocalUserService } from '@/services/local/user/user';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 export class ProfileApplication {
   private constructor() {} // Prevent instantiation
 

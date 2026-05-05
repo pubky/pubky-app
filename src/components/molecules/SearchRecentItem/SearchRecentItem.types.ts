@@ -1,7 +1,7 @@
-import { RecentTagSearchItem, RecentUserSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
-
-import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
 import type { Pubky } from '@/models/models.types';
+import { RecentTagSearchItem, RecentUserSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
+import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
+
 /**
  * Type derived from RECENT_ITEM_TYPE constant values
  */

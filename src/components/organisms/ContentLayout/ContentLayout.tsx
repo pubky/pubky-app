@@ -1,21 +1,21 @@
 'use client';
 
-import { resolveFeedLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
-import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
+import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { resolveFeedLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { cn } from '@/libs/utils/utils';
 import { ButtonFilters } from '@/molecules/ButtonFilters/ButtonFilters';
 import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
 import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
 import { SideDrawer } from '@/molecules/SideDrawer/SideDrawer';
-
-import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
-import type { ContentLayoutProps, StickySidebarProps } from './ContentLayout.types';
-import { cn } from '@/libs/utils/utils';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
 import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
+import type { ContentLayoutProps, StickySidebarProps } from './ContentLayout.types';
+
 /**
  * Reusable sticky sidebar component for left and right sidebars
  * Sidebars stay pinned below the main header and scroll independently

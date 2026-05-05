@@ -1,12 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
-import { Container } from '@/atoms/Container/Container';
-import { Typography } from '@/atoms/Typography/Typography';
-import { DialogBackup } from '../DialogBackup/DialogBackup';
-import { DialogConfirmBackup } from '../DialogConfirmBackup/DialogConfirmBackup';
-
 /**
  * AlertBackup
  *
@@ -14,8 +7,15 @@ import { DialogConfirmBackup } from '../DialogConfirmBackup/DialogConfirmBackup'
  * Shows an alert when user has a secret key that needs to be backed up.
  * No props needed - manages its own state internally.
  */
+import { useEffect, useState } from 'react';
 import { TriangleAlert } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { DialogBackup } from '../DialogBackup/DialogBackup';
+import { DialogConfirmBackup } from '../DialogConfirmBackup/DialogConfirmBackup';
+
 export const AlertBackup = () => {
   const { secretKey } = useOnboardingStore();
   const [showAlert, setShowAlert] = useState(false);

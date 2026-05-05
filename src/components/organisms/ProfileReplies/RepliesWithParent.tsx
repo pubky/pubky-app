@@ -1,24 +1,24 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { Container } from '@/atoms/Container/Container';
+import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
+import { PostController } from '@/controllers/post/post';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useRef } from 'react';
-import { Container } from '@/atoms/Container/Container';
-import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
+import { Logger } from '@/libs/logger/logger';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
-import { PostMain } from '../PostMain/PostMain';
-
-import type { RepliesWithParentProps, ReplyWithParentProps } from './RepliesWithParent.types';
-import { Logger } from '@/libs/logger/logger';
-import { PostController } from '@/controllers/post/post';
-import { CompositeIdDomain } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { PostMain } from '../PostMain/PostMain';
+import type { RepliesWithParentProps, ReplyWithParentProps } from './RepliesWithParent.types';
+
 /**
  * RepliesWithParent
  *

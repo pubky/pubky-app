@@ -1,19 +1,20 @@
 import { userUriBuilder } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
-import { sleep } from '@/libs/utils/utils';
+import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
+import type { TPubkyParams } from '@/controllers/auth/auth.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isNotFound, isRetryable, toAppError } from '@/libs/error/error.utils';
-import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
-import type { TPubkyParams } from '@/controllers/auth/auth.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { sleep } from '@/libs/utils/utils';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type {
   TGenerateAuthUrlResult,
   THomeserverSessionResult,
   THomeserverSignUpParams,
 } from '@/services/homeserver/homeserver.types';
+
 export class AuthApplication {
   private constructor() {} // Prevent instantiation
 

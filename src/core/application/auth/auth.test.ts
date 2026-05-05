@@ -1,18 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Session, Keypair } from '@synonymdev/pubky';
-import { asOpaque } from '@/test-utils/type-assertions';
-import { mockAuthStore } from '@/test-utils/stores';
-import { mockSession } from '@/test-utils/pubky';
+import type { Keypair, Session } from '@synonymdev/pubky';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthApplication } from '@/application/auth/auth';
+import type { THomeserverAuthenticateParams } from '@/application/auth/auth.types';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
-import { AuthApplication } from '@/application/auth/auth';
-import type { THomeserverAuthenticateParams } from '@/application/auth/auth.types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { THomeserverSignUpParams } from '@/services/homeserver/homeserver.types';
+import { mockSession } from '@/test-utils/pubky';
+import { mockAuthStore } from '@/test-utils/stores';
+import { asOpaque } from '@/test-utils/type-assertions';
+
 const spyOnSleep = async () => vi.spyOn(await import('@/libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
 
 vi.mock('pubky-app-specs', () => ({

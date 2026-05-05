@@ -2,17 +2,18 @@
 
 import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
-import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
-import { Logger } from '@/libs/logger/logger';
-import type {
-  UsePostParticipantsResult,
-  UsePostParticipantsOptions,
-  PostParticipant,
-} from './usePostParticipants.types';
 import { PostController } from '@/controllers/post/post';
+import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
+import type {
+  PostParticipant,
+  UsePostParticipantsOptions,
+  UsePostParticipantsResult,
+} from './usePostParticipants.types';
+
 const DEFAULT_LIMIT = 10;
 
 /**

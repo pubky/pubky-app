@@ -7,6 +7,7 @@ import type {
   TVerifySmsCodeParams,
   TVerifySmsCodeResult,
 } from '@/services/homegate/homegate.types';
+
 export type THomegateCreateLnVerificationResult = TCreateLnVerificationResult;
 export type THomegateAwaitLnVerificationResult = TAwaitLnVerificationResult;
 export type THomegateVerifySmsCodeParams = TVerifySmsCodeParams;

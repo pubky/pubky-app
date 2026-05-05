@@ -1,5 +1,6 @@
-import type { AvatarGroupItem } from '../AvatarGroup/AvatarGroup.types';
 import type { TimeframeType } from '@/stores/hot/hot.types';
+import type { AvatarGroupItem } from '../AvatarGroup/AvatarGroup.types';
+
 export interface HotTagCardProps {
   /** Rank position (1, 2, 3) */
   rank: number;

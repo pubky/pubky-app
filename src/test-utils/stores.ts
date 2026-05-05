@@ -8,6 +8,7 @@ import type { OnboardingStore } from '@/stores/onboarding/onboarding.types';
 import type { SearchStore } from '@/stores/search/search.types';
 import type { SettingsStore } from '@/stores/settings/settings.types';
 import type { SignInStore } from '@/stores/signIn/signIn.types';
+
 /**
  * Build a partial Zustand store double for tests.
  *

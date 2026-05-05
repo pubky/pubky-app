@@ -1,8 +1,9 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MAX_ACTIVE_SEARCH_TAGS } from '@/stores/search/search.constants';
 import { useTagSearch } from './useTagSearch';
 import { buildSearchUrl } from './useTagSearch.utils';
-import { MAX_ACTIVE_SEARCH_TAGS } from '@/stores/search/search.constants';
+
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({

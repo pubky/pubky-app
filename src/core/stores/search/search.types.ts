@@ -1,4 +1,5 @@
 import type { Pubky } from '@/models/models.types';
+
 /**
  * Recent search item types
  */

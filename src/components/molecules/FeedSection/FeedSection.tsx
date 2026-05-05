@@ -1,4 +1,5 @@
 'use client';
+import { Bitcoin, Palette, Pickaxe, Plus, Zap } from 'lucide-react';
 import {
   FilterHeader,
   FilterItem,
@@ -7,9 +8,8 @@ import {
   FilterList,
   FilterRoot,
 } from '@/atoms/Filter/Filter';
-
-import { Bitcoin, Pickaxe, Zap, Palette, Plus } from 'lucide-react';
 import { UsersRound2 } from '@/icons';
+
 export interface FeedItem {
   icon: React.ComponentType<{
     className?: string;

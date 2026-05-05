@@ -1,8 +1,8 @@
 'use client';
 
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type { UsePullToRefreshOptions, UsePullToRefreshResult, PullToRefreshState } from './usePullToRefresh.types';
+import type { PullToRefreshState, UsePullToRefreshOptions, UsePullToRefreshResult } from './usePullToRefresh.types';
 
 /**
  * Default configuration values

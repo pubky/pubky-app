@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { PubkyAppPostKind, PubkyAppPost, PubkyAppPostEmbed } from 'pubky-app-specs';
+import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
@@ -12,12 +12,13 @@ import { PostRelationshipsModel } from '@/models/post/relationships/postRelation
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
-import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
 import { LocalPostService } from '@/services/local/post/post';
 import type { TLocalSavePostParams } from '@/services/local/post/post.types';
+
 // Test data
 const testData = {
   authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,

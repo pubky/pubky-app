@@ -1,5 +1,6 @@
-import { HotTagsModelSchema } from './hot.schema';
 import type { NexusHotTag, UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import { HotTagsModelSchema } from './hot.schema';
+
 /**
  * Builds a composite hot tags ID from timeframe and reach parameters
  * Format: timeframe:reach

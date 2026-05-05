@@ -1,9 +1,8 @@
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-
-import type { SearchUserSuggestionProps } from './SearchUserSuggestion.types';
 import { formatPublicKey } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import type { SearchUserSuggestionProps } from './SearchUserSuggestion.types';
 
 export function SearchUserSuggestion({ user, onClick }: SearchUserSuggestionProps) {
   const handleClick = () => {

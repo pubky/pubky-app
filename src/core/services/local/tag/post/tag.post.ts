@@ -1,8 +1,8 @@
-import { Logger } from '@/libs/logger/logger';
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { db } from '@/database/franky/franky';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostTagsModel, type PostTagsModelSchema } from '@/models/post/tags/postTags';
@@ -10,6 +10,7 @@ import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+
 export class LocalPostTagService {
   private static readonly TAG_TABLES = [
     PostTagsModel.table,

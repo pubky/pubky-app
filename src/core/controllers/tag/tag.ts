@@ -1,6 +1,7 @@
 import { TagApplication } from '@/application/tag/tag';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+
 export class TagController {
   private constructor() {}
 

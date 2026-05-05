@@ -1,21 +1,20 @@
 'use client';
 
 import { useState } from 'react';
+import { FileText, HelpCircle, LockKeyhole, MessageCircle, MessageSquare, Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
-import { FAQAccordion } from '../../FAQAccordion/FAQAccordion';
-import { SettingsDivider } from '../SettingsDivider/SettingsDivider';
 import { DialogFeedback } from '@/organisms/DialogFeedback/DialogFeedback';
 import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
 import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
-
-import { SUPPORT_LINKS } from './HelpContent.constants';
+import { FAQAccordion } from '../../FAQAccordion/FAQAccordion';
 import type { FAQAccordionItem } from '../../FAQAccordion/FAQAccordion.types';
+import { SettingsDivider } from '../SettingsDivider/SettingsDivider';
+import { SUPPORT_LINKS } from './HelpContent.constants';
 
-import { HelpCircle, FileText, MessageCircle, Send, LockKeyhole, MessageSquare } from 'lucide-react';
 export function HelpContent() {
   const t = useTranslations('help');
   const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);

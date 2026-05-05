@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
-import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
-import { Logger } from '@/libs/logger/logger';
-import { isAppError } from '@/libs/error/error.utils';
 import { NOT_FOUND_CACHED_STREAM } from '@/controllers/stream/posts/post.constants';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
+import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 import { SORT } from '@/stores/home/home.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
+import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
+
 /**
  * useStreamPagination
  *

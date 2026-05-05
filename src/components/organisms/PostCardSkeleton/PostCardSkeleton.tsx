@@ -1,8 +1,7 @@
 import { Card, CardContent } from '@/atoms/Card/Card';
-
-import { PostHeaderSkeleton } from '../PostHeader/PostHeader.skeleton';
-import { PostContentBaseSkeleton } from '../PostContentBase/PostContentBase.skeleton';
 import { PostActionsBarSkeleton } from '../PostActionsBar/PostActionsBar.skeleton';
+import { PostContentBaseSkeleton } from '../PostContentBase/PostContentBase.skeleton';
+import { PostHeaderSkeleton } from '../PostHeader/PostHeader.skeleton';
 
 export function PostCardSkeleton() {
   return (

@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import { bootstrapApi } from '@/services/nexus/bootstrap/bootstrap.api';
+
 describe('NexusBootstrapService', () => {
   const mockFetch = vi.fn();
   const pubky = 'test-user-123';

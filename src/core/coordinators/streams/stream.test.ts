@@ -1,8 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
-import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout } from 'pubky-app-specs';
-import { mockHomeStore } from '@/test-utils/stores';
-import { mockSession } from '@/test-utils/pubky';
 import { FeedController } from '@/controllers/feed/feed';
 import { SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
@@ -15,14 +13,17 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import {
   CONTENT,
-  LAYOUT,
-  REACH,
-  SORT,
   type ContentType,
   type HomeStore,
+  LAYOUT,
+  REACH,
   type ReachType,
+  SORT,
   type SortType,
 } from '@/stores/home/home.types';
+import { mockSession } from '@/test-utils/pubky';
+import { mockHomeStore } from '@/test-utils/stores';
+
 // =============================================================================
 // Test Helpers
 // =============================================================================

@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useProfileStats } from './useProfileStats';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserController } from '@/controllers/user/user';
 import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
+import { useProfileStats } from './useProfileStats';
+
 // Hoist mock data using vi.hoisted
 // Note: undefined = query not executed yet (loading), null = query executed but no data found
 const {

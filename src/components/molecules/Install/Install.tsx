@@ -1,9 +1,11 @@
 'use client';
 
-import Image from 'next/image';
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { AppWindow, ArrowRight, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
@@ -11,15 +13,13 @@ import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
+import { PUBKY_CORE_URL, PUBKY_RING_URL } from '@/config/externalLinks';
+import { cn } from '@/libs/utils/utils';
+import { DialogDownloadPubkyRing } from '@/organisms/DialogDownloadPubkyRing/DialogDownloadPubkyRing';
 import { ContentCard } from '../Content/Content';
 import { PageTitle } from '../Page/Page';
 import { PopoverTradeoffs } from '../PopoverTradeoffs/PopoverTradeoffs';
-import { DialogDownloadPubkyRing } from '@/organisms/DialogDownloadPubkyRing/DialogDownloadPubkyRing';
 
-import { PUBKY_RING_URL, PUBKY_CORE_URL } from '@/config/externalLinks';
-import { ONBOARDING_ROUTES } from '@/app/routes';
-import { Loader2, AppWindow, ArrowRight } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
 export const InstallCard = () => {
   const t = useTranslations('onboarding.install');
   return (

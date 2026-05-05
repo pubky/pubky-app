@@ -2,10 +2,10 @@
 
 import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { FilterBarPageType, PROFILE_PAGE_TYPES, ProfilePageType } from '@/app/profile/types';
 import { PROFILE_ROUTES } from '@/app/routes';
-import { PROFILE_PAGE_TYPES, ProfilePageType, FilterBarPageType } from '@/app/profile/types';
-import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 
 /**
  * Profile routes configuration - single source of truth

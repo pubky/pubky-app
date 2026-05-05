@@ -1,5 +1,5 @@
-import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { PostStreamApplication } from '@/application/stream/posts/post';
+import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type {
   TReadPostStreamChunkParams,
@@ -8,6 +8,7 @@ import type {
 } from '@/controllers/stream/posts/posts.types';
 import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 // -=-=-=-=-=-=-=-=-=-=-=-=-=- POPULARITY STREAMS -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // If we are in engagement mode, we might not have background live updates. There is no
 // identifier to fetch updates from redis. Always the top post has the max engagement

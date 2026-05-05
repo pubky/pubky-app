@@ -1,4 +1,5 @@
 import type { Pubky } from '@/models/models.types';
+
 export interface UseMutedUsersResult {
   /** Array of muted user IDs */
   mutedUserIds: Pubky[];

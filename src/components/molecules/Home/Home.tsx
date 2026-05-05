@@ -2,20 +2,19 @@
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ActionButtons } from '../ActionButtons/ActionButtons';
+import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Image } from '@/atoms/Image/Image';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
+import { PUBKY_CORE_URL } from '@/config/externalLinks';
+import { cn } from '@/libs/utils/utils';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
 import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
 import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
-
-import { PUBKY_CORE_URL } from '@/config/externalLinks';
-import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
-import { cn } from '@/libs/utils/utils';
+import { ActionButtons } from '../ActionButtons/ActionButtons';
 
 export const HomeActions = () => {
   const t = useTranslations('landing');

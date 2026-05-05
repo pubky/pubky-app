@@ -1,10 +1,11 @@
 'use client';
 
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import { ProfileStats, UseProfileStatsResult } from './useProfileStats.types';
 import { UserController } from '@/controllers/user/user';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { NexusUserCounts } from '@/services/nexus/nexus.types';
 import { useNotificationStore } from '@/stores/notification/notification.store';
+import { ProfileStats, UseProfileStatsResult } from './useProfileStats.types';
+
 /**
  * Hook for fetching and transforming user profile statistics.
  * Pure data fetching and transformation - no side effects or actions.

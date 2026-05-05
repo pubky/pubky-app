@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ProfileTagged } from './ProfileTagged';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { ProfileTagged } from './ProfileTagged';
 
 // Mock providers
 vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({

@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SearchApplication } from './search';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NexusSearchService } from '@/services/nexus/search/search';
+import { SearchApplication } from './search';
+
 describe('SearchApplication', () => {
   beforeEach(() => {
     vi.clearAllMocks();

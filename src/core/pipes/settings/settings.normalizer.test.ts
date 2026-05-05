@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TEST_PUBKY, restoreMocks, buildPubkyUri } from '../pipes.test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
-import { SettingsNormalizer, type SettingsJson } from '@/pipes/settings/settings.normalizer';
+import { type SettingsJson, SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import {
   defaultNotificationPreferences,
   defaultPrivacyPreferences,
   type SettingsState,
 } from '@/stores/settings/settings.types';
+import { buildPubkyUri, restoreMocks, TEST_PUBKY } from '../pipes.test-utils';
+
 describe('SettingsNormalizer', () => {
   beforeEach(() => {
     vi.clearAllMocks();

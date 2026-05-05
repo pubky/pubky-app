@@ -1,12 +1,13 @@
-import { validateDns, readResponseBody } from '../nextjs.utils';
-import { detectMediaType, extractMetadata, buildFallbackMetadata, validateRedirectUrl } from './og-metadata.utils';
-import { HttpStatusCode } from '@/libs/http/http.types';
+import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { AppError } from '@/libs/error/error';
 import { NetworkErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
-import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
+import { readResponseBody, validateDns } from '../nextjs.utils';
+import { buildFallbackMetadata, detectMediaType, extractMetadata, validateRedirectUrl } from './og-metadata.utils';
+
 const MAX_REDIRECTS = 5;
 const FETCH_TIMEOUT_MS = 10_000;
 

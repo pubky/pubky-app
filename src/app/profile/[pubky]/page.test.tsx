@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import DynamicProfilePage from './page';
 

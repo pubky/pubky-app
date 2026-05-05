@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { GET } from './route';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
+import { OgMetadataController } from '@/controllers/og-metadata/og-metadata';
 import { AuthErrorCode, ClientErrorCode, TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
-import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
-import { OgMetadataController } from '@/controllers/og-metadata/og-metadata';
+import { GET } from './route';
+
 const createRequest = (url: string) => {
   const searchParams = new URLSearchParams({ url });
   return new NextRequest(`http://localhost:3000/api/og-metadata?${searchParams.toString()}`, {

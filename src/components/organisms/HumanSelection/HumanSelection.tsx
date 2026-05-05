@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
@@ -7,9 +9,6 @@ import { HumanFooter } from '@/molecules/HumanFooter/HumanFooter';
 import { HumanSmsCard } from '@/molecules/HumanSmsCard/HumanSmsCard';
 import { PageTitle } from '@/molecules/Page/Page';
 import { HumanBitcoinCard } from '../HumanBitcoinCard/HumanBitcoinCard';
-
-import React from 'react';
-import { useTranslations } from 'next-intl';
 import type { HumanSelectionProps } from './HumanSelection.types';
 
 export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanSelectionProps) => {

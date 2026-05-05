@@ -1,15 +1,14 @@
 'use client';
 
-import { useNestedReplies } from '@/hooks/useNestedReplies/useNestedReplies';
 import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
+import { useNestedReplies } from '@/hooks/useNestedReplies/useNestedReplies';
+import { AUTO_COLLAPSE_THRESHOLD, DEFAULT_MAX_DEPTH } from '@/hooks/useNestedReplies/useNestedReplies.constants';
+import { cn } from '@/libs/utils/utils';
 import { ShowMoreReplies } from '@/molecules/ShowMoreReplies/ShowMoreReplies';
 import { ThreadExpandToggle } from '@/molecules/ThreadExpandToggle/ThreadExpandToggle';
 import { PostMain } from '../PostMain/PostMain';
-
-import { AUTO_COLLAPSE_THRESHOLD, DEFAULT_MAX_DEPTH } from '@/hooks/useNestedReplies/useNestedReplies.constants';
-import { cn } from '@/libs/utils/utils';
 
 interface ReplyWithNestedProps {
   /** The composite ID of the reply post */

@@ -2,6 +2,7 @@ import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import type { ContentType } from '@/stores/home/home.types';
 import { getStreamId } from '@/stores/home/home.utils';
+
 /**
  * Custom hook that returns the current streamId based on global filter state
  *

@@ -1,10 +1,10 @@
-import { HttpMethod } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
-import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { UserApplication } from '@/application/user/user';
 import type { TUserCountsOrFetchResult } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TFollowParams, TPubkyListParams } from '@/controllers/user/user.type';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
@@ -20,6 +20,7 @@ import type {
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { getStreamId } from '@/stores/home/home.utils';
+
 export class UserController {
   private constructor() {} // Prevent instantiation
 

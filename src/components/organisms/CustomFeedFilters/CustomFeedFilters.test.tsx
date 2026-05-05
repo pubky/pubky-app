@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CustomFeedFilters } from './CustomFeedFilters';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { CustomFeedFilters } from './CustomFeedFilters';
+
 // Mock hooks
 const mockUseCustomFeed = vi.fn();
 vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({

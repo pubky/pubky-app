@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PostInputTags } from './PostInputTags';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_MAX_TAGS, TAG_MAX_LENGTH } from '@/config/posts';
+import { PostInputTags } from './PostInputTags';
 
 // Mock state for TagInput simulation
 let mockTagInputValue = '';

@@ -1,5 +1,6 @@
 import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { NextJsOgMetadataService } from '@/services/nextjs/og-metadata/og-metadata';
+
 /**
  * OG metadata application service.
  *

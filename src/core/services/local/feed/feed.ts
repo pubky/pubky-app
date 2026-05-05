@@ -2,6 +2,7 @@ import type { TFeedIdParam } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
 import { FeedModel } from '@/models/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+
 const FEED_TABLES = [FeedModel.table];
 
 export class LocalFeedService {

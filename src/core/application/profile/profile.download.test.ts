@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { asOpaque } from '@/test-utils/type-assertions';
+
 const mockFile = vi.fn();
 const mockFolder = vi.fn();
 const mockGenerateAsync = vi.fn();

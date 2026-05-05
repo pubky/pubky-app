@@ -1,23 +1,23 @@
 'use client';
 
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
-import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Bookmark, Flame, Home, Search, Settings } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-
-import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
-import { useTranslations } from 'next-intl';
-import { Home, Search, Flame, Bookmark, Settings } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
 import { FileController } from '@/controllers/file/file';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
+import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { cn } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
+
 export interface MobileFooterProps {
   className?: string;
 }

@@ -1,9 +1,9 @@
-import { Container } from '../Container/Container';
-
-import { POST_THREAD_CONNECTOR_VARIANTS } from './PostThreadConnector.constants';
-import type { PostThreadConnectorVariant } from './PostThreadConnector.types';
 import { LineHorizontal, RoundedCorner } from '@/icons';
 import { cn } from '@/libs/utils/utils';
+import { Container } from '../Container/Container';
+import { POST_THREAD_CONNECTOR_VARIANTS } from './PostThreadConnector.constants';
+import type { PostThreadConnectorVariant } from './PostThreadConnector.types';
+
 interface PostThreadConnectorProps {
   height?: number;
   variant?: PostThreadConnectorVariant;

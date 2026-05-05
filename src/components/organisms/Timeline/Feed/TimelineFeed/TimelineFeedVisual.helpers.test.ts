@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { CONTENT } from '@/stores/home/home.types';
 import {
   composeVisualRows,
   getVisualPendingOverflowFallbackIds,
-  resolveVisualFeedContent,
   resolvePreferredVisualTileSize,
+  resolveVisualFeedContent,
   resolveVisualTileSizeOptions,
 } from './TimelineFeedVisual.helpers';
 import type { VisualTile } from './TimelineFeedVisual.types';
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { CONTENT } from '@/stores/home/home.types';
+
 function createTile(id: string, preferredSize: NonNullable<VisualTile['preferredSize']>): VisualTile {
   return {
     id,

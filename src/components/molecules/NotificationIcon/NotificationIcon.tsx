@@ -1,9 +1,9 @@
 'use client';
-import { Container } from '@/atoms/Container/Container';
-
-import type { NotificationIconProps } from './NotificationIcon.types';
-import { NOTIFICATION_ICON_MAP, ICON_SIZE, BADGE_SIZE } from './NotificationIcon.constants';
 import { StickyNote } from 'lucide-react';
+import { Container } from '@/atoms/Container/Container';
+import { BADGE_SIZE, ICON_SIZE, NOTIFICATION_ICON_MAP } from './NotificationIcon.constants';
+import type { NotificationIconProps } from './NotificationIcon.types';
+
 export function NotificationIcon({ type, showBadge }: NotificationIconProps) {
   const IconComponent = NOTIFICATION_ICON_MAP[type] || StickyNote;
   return (

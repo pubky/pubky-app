@@ -1,10 +1,11 @@
 import { BookmarkResult } from 'pubky-app-specs';
-import { Logger } from '@/libs/logger/logger';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+
 export class BookmarkNormalizer {
   private constructor() {}
 

@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MuteFilter } from './mute-filter';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
+import { MuteFilter } from './mute-filter';
+
 // Mock the parseCompositeId function
 vi.mock('@/models/models.utils', () => ({
   parseCompositeId: vi.fn((id: string) => {

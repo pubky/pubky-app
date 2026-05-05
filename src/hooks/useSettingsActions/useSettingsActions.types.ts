@@ -1,4 +1,5 @@
 import type { NotificationPreferences } from '@/stores/settings/settings.types';
+
 export interface UseSettingsActionsResult {
   /** Updates a single notification preference and syncs to homeserver */
   setNotificationPreference: (type: keyof NotificationPreferences, enabled: boolean) => Promise<void>;

@@ -1,5 +1,6 @@
 'use client';
 
+import { FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -10,7 +11,6 @@ import { PopoverBackup } from '@/molecules/PopoverBackup/PopoverBackup';
 import { DialogBackupEncrypted } from '../DialogBackupEncrypted/DialogBackupEncrypted';
 import { DialogBackupPhrase } from '../DialogBackupPhrase/DialogBackupPhrase';
 
-import { FileText } from 'lucide-react';
 export const BackupMethodCard = () => {
   const t = useTranslations('onboarding.backupMethod');
   //const { mnemonic } = Stores.useOnboardingStore();

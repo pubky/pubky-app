@@ -1,10 +1,11 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useBookmark } from './useBookmark';
-import { mockAuthStore } from '@/test-utils/stores';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockAuthStore } from '@/test-utils/stores';
+import { useBookmark } from './useBookmark';
+
 // Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(),

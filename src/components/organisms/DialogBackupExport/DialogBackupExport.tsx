@@ -13,7 +13,6 @@ import {
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
 import { Link } from '@/atoms/Link/Link';
-
 import { APP_STORE_URL, PLAY_STORE_URL, PUBKY_CORE_URL } from '@/config/externalLinks';
 import { generatePubkyRingDeeplink } from '@/libs/deeplink/deeplink';
 import type { TMnemonicWords } from '@/libs/identity/identity.types';

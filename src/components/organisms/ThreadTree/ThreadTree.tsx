@@ -1,9 +1,9 @@
 'use client';
 
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
-import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
 import { ShowMoreReplies } from '@/molecules/ShowMoreReplies/ShowMoreReplies';
 import { QuickReply } from '../QuickReply/QuickReply';
 import { ReplyWithNested } from '../ReplyWithNested/ReplyWithNested';

@@ -1,9 +1,8 @@
 'use client';
 import { PostTag } from '../PostTag/PostTag';
 import { SearchRecentUserItem } from '../SearchRecentUserItem/SearchRecentUserItem';
-
-import type { SearchRecentItemProps } from './SearchRecentItem.types';
 import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
+import type { SearchRecentItemProps } from './SearchRecentItem.types';
 
 /**
  * SearchRecentItem

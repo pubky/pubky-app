@@ -1,20 +1,21 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
-import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
-import { asInvalid } from '@/test-utils/type-assertions';
-import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
-import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, LAYOUT, REACH, SORT, type ContentType } from '@/stores/home/home.types';
+import { CONTENT, type ContentType, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
+import { asInvalid } from '@/test-utils/type-assertions';
+import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
+
 const mockUsePullToRefresh = vi.hoisted(() =>
   vi.fn(
     (): UsePullToRefreshResult => ({

@@ -1,7 +1,7 @@
 import type { Capabilities, Session } from '@synonymdev/pubky';
-
-import { HttpMethod } from '@/libs/http/http.types';
 import type { TKeypairParams } from '@/application/auth/auth.types';
+import { HttpMethod } from '@/libs/http/http.types';
+
 export type FetchOptions = {
   method?: HttpMethod;
   body?: string | Uint8Array;

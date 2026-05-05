@@ -1,9 +1,9 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
-import { useVisualFeedTiles } from './useVisualFeedTiles';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolvePreferredVisualTileSize } from './TimelineFeedVisual.helpers';
 import type { VisualTile } from './TimelineFeedVisual.types';
 import { resetVisualTileCaches } from './TimelineFeedVisualMedia.utils';
+import { useVisualFeedTiles } from './useVisualFeedTiles';
 
 const { mockUseLiveQuery, mockFetchFiles, mockGetOrFetch } = vi.hoisted(() => ({
   mockUseLiveQuery: vi.fn(),

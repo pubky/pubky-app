@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { EMAIL_URL, TELEGRAM_URL, TWITTER_URL } from '@/config/externalLinks';
 import { PopoverInvite } from './PopoverInvite';
-import { EMAIL_URL, TWITTER_URL, TELEGRAM_URL } from '@/config/externalLinks';
 
 describe('InvitePopover', () => {
   it('renders trigger button with gift icon', () => {

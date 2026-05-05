@@ -1,16 +1,15 @@
 'use client';
 
+import { Check, UserMinus, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Tag } from '@/atoms/Tag/Tag';
 import { Typography } from '@/atoms/Typography/Typography';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-
-import { Check, UserMinus, UserRoundPlus } from 'lucide-react';
-import type { FollowerItemProps } from './FollowerItem.types';
 import { formatPublicKey } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import type { FollowerItemProps } from './FollowerItem.types';
 
 export function FollowerItem({ follower, isFollowing = false, onFollow, isCurrentUser = false }: FollowerItemProps) {
   const t = useTranslations('userList');

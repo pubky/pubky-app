@@ -5,6 +5,7 @@ import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import type { TPersistFilesParams } from '@/services/local/file/file.types';
 import { buildUrls } from '@/services/local/file/file.utils';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
+
 export class LocalFileService {
   private constructor() {} // Prevent instantiation
 

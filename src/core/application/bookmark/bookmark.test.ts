@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BookmarkApplication } from './bookmark';
-import type { TCreateBookmarkInput, TDeleteBookmarkInput } from './bookmark.types';
-import { mockAuthStore } from '@/test-utils/stores';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockAuthStore } from '@/test-utils/stores';
+import { BookmarkApplication } from './bookmark';
+import type { TCreateBookmarkInput, TDeleteBookmarkInput } from './bookmark.types';
+
 // Mock the LocalBookmarkService
 vi.mock('@/services/local/bookmark/bookmark', () => ({
   LocalBookmarkService: {

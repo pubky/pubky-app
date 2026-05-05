@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { DialogAge } from './DialogAge';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,

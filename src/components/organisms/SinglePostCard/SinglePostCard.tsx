@@ -1,9 +1,13 @@
 'use client';
 
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import React, { useRef, useState } from 'react';
+import { TagKind } from '@/application/tag/tag.types';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
+import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { cn } from '@/libs/utils/utils';
+import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
 import { ClickableTagsList } from '../ClickableTagsList/ClickableTagsList';
 import { DialogReply } from '../DialogReply/DialogReply';
 import { DialogRepost } from '../DialogRepost/DialogRepost';
@@ -12,12 +16,8 @@ import { PostContent } from '../PostContent/PostContent';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
-
-import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
-import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
 import type { SinglePostCardProps } from './SinglePostCard.types';
-import { cn } from '@/libs/utils/utils';
-import { TagKind } from '@/application/tag/tag.types';
+
 /**
  * SinglePostCard Organism
  *

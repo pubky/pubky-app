@@ -1,16 +1,14 @@
 'use client';
 
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
-
 import { MENU_VARIANT } from '@/config/ui';
-import { ProfileMenuActionsContent } from './ProfileMenuActionsContent/ProfileMenuActionsContent';
-
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import type { ProfileMenuActionsProps } from './ProfileMenuActions.types';
+import { ProfileMenuActionsContent } from './ProfileMenuActionsContent/ProfileMenuActionsContent';
 
 export function ProfileMenuActions({ userId, trigger }: ProfileMenuActionsProps) {
   const isMobile = useIsMobile();

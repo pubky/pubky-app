@@ -1,11 +1,11 @@
 import { postUriBuilder } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
+import type { TDeletePostParams } from '@/controllers/post/post.types';
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { TDeletePostParams } from '@/controllers/post/post.types';
-import { db } from '@/database/franky/franky';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -19,12 +19,13 @@ import type { PostRelationshipsModelSchema } from '@/models/post/relationships/p
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import type { TLocalSavePostParams, TLocalUpdatePostStreamParams } from '@/services/local/post/post.types';
+
 export class LocalPostService {
   private constructor() {}
 
