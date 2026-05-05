@@ -3,7 +3,6 @@ import type { BlobResult, FileResult } from 'pubky-app-specs';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { HttpMethod } from '@/libs/http/http.types';
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
-import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { FileVariant } from '@/services/nexus/file/file.types';
@@ -159,12 +158,14 @@ describe('FileApplication', () => {
         await FileApplication.toFileAttachment({ file: rawFile, pubky: TEST_PUBKY });
         expect.fail('Should have thrown');
       } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
-        const appError = error as AppError;
-        expect(appError.category).toBe(ErrorCategory.Validation);
-        expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-        expect(appError.service).toBe(ErrorService.Local);
-        expect(appError.operation).toBe('toFileAttachment');
+        expect(error).toMatchObject({
+          name: 'AppError',
+          category: ErrorCategory.Validation,
+          code: ValidationErrorCode.INVALID_INPUT,
+          service: ErrorService.Local,
+          operation: 'toFileAttachment',
+          message: 'Image sanitization failed',
+        });
       }
       expect(FileNormalizer.toFileAttachment).not.toHaveBeenCalled();
     });
