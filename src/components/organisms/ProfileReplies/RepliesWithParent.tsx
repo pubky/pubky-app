@@ -10,6 +10,7 @@ import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyb
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
@@ -87,6 +88,7 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
  * Always shows the parent post if it exists.
  */
 function ReplyWithParent({ replyPostId }: ReplyWithParentProps) {
+  const { handlePostKeyDown } = usePostNavigation();
   // Component-level cache to track in-flight parent post fetches
   // Using useRef to avoid SSR memory leaks and state pollution
   const fetchingParentPostsRef = useRef(new Set<string>());
@@ -163,18 +165,39 @@ function ReplyWithParent({ replyPostId }: ReplyWithParentProps) {
 
   return (
     <Container overrideDefaults className="flex flex-col">
-      {/* Show parent post if it exists */}
+      {/* Parent post — independently focusable so Tab/Enter navigates to parent.
+          j/k while focused here is handled by the ancestor-card fallback in
+          usePostListKeyboard, so it correctly moves to the next outer card. */}
       {shouldShowParent && (
         <>
-          <PostMain postId={parentPostId} isReply={false} />
+          <Container
+            overrideDefaults
+            role="article"
+            tabIndex={0}
+            onKeyDown={(e) => handlePostKeyDown(parentPostId, e)}
+            className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <PostMain postId={parentPostId} isReply={false} />
+          </Container>
           <Container overrideDefaults className="pl-3">
             <PostThreadSpacer />
           </Container>
         </>
       )}
 
-      {/* Show the reply with isReply={true} */}
-      <Container overrideDefaults className={shouldShowParent ? 'pl-3' : ''}>
+      {/* Reply post — independently focusable so Tab/Enter navigates directly to the reply.
+          j/k while focused here bubbles to the ancestor-card fallback in
+          usePostListKeyboard and correctly moves to the next outer card. */}
+      <Container
+        overrideDefaults
+        data-post-list-card="true"
+        tabIndex={0}
+        onKeyDown={(e) => handlePostKeyDown(replyPostId, e)}
+        className={cn(
+          'rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          shouldShowParent && 'pl-3',
+        )}
+      >
         <PostMain postId={replyPostId} isReply={true} isLastReply={true} />
       </Container>
     </Container>

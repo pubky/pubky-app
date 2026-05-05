@@ -54,8 +54,10 @@ exports[`RepliesWithParent > Snapshots > should match snapshot with replies (no 
           data-testid="container"
         >
           <div
-            class=""
+            class="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            data-post-list-card="true"
             data-testid="container"
+            tabindex="0"
           >
             <div
               data-is-reply="true"
@@ -77,8 +79,10 @@ exports[`RepliesWithParent > Snapshots > should match snapshot with replies (no 
           data-testid="container"
         >
           <div
-            class=""
+            class="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            data-post-list-card="true"
             data-testid="container"
+            tabindex="0"
           >
             <div
               data-is-reply="true"
@@ -119,9 +123,16 @@ exports[`RepliesWithParent > Snapshots > should match snapshot with replies and 
           data-testid="container"
         >
           <div
-            data-is-reply="false"
-            data-testid="post-author3:parent1"
-          />
+            class="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            data-testid="container"
+            role="article"
+            tabindex="0"
+          >
+            <div
+              data-is-reply="false"
+              data-testid="post-author3:parent1"
+            />
+          </div>
           <div
             class="pl-3"
             data-testid="container"
@@ -131,8 +142,10 @@ exports[`RepliesWithParent > Snapshots > should match snapshot with replies and 
             />
           </div>
           <div
-            class="pl-3"
+            class="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring pl-3"
+            data-post-list-card="true"
             data-testid="container"
+            tabindex="0"
           >
             <div
               data-is-reply="true"
@@ -154,9 +167,16 @@ exports[`RepliesWithParent > Snapshots > should match snapshot with replies and 
           data-testid="container"
         >
           <div
-            data-is-reply="false"
-            data-testid="post-author4:parent2"
-          />
+            class="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            data-testid="container"
+            role="article"
+            tabindex="0"
+          >
+            <div
+              data-is-reply="false"
+              data-testid="post-author4:parent2"
+            />
+          </div>
           <div
             class="pl-3"
             data-testid="container"
@@ -166,8 +186,10 @@ exports[`RepliesWithParent > Snapshots > should match snapshot with replies and 
             />
           </div>
           <div
-            class="pl-3"
+            class="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring pl-3"
+            data-post-list-card="true"
             data-testid="container"
+            tabindex="0"
           >
             <div
               data-is-reply="true"

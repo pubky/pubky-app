@@ -309,6 +309,28 @@ describe('TimelinePosts', () => {
       });
     });
 
+    it('should make all post cards individually tabbable', async () => {
+      render(
+        <TimelinePosts
+          postIds={mockPostIds}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(mockPostIds.length);
+      });
+
+      const cards = screen.getAllByRole('article');
+      expect(cards[0]).toHaveAttribute('tabindex', '0');
+      expect(cards[1]).toHaveAttribute('tabindex', '0');
+      expect(cards[2]).toHaveAttribute('tabindex', '0');
+    });
+
     it('should render posts with correct keys', async () => {
       const { container } = render(
         <TimelinePosts

@@ -2,22 +2,23 @@ import type React from 'react';
 
 export interface UsePostListKeyboardResult {
   /**
-   * Index of the post that currently holds the roving tabindex.
-   * The card at this index is the only one with `tabIndex={0}`.
+   * Index of the currently focused ref-registered card.
+   * Updated on card focus and on programmatic keyboard navigation.
    */
   focusedIndex: number;
   /**
    * Ref setter for each card wrapper. Pass to the wrapping element of each post:
-   *   `<Container ref={setCardRef(i)} tabIndex={focusedIndex === i ? 0 : -1} ... />`
+   *   `<Container ref={setCardRef(i)} tabIndex={0} ... />`
    */
   setCardRef: (index: number) => (el: HTMLElement | null) => void;
   /**
    * Keydown handler for the list container. Handles ArrowUp/ArrowDown/j/k/Home/End.
-   * Only fires when focus is on a registered card (not on a descendant input or button).
+   * Only fires when focus is on a registered card or a `cardSelector`-matched extra
+   * item (not on a descendant input, button, or nested card).
    */
   onListKeyDown: (event: React.KeyboardEvent) => void;
   /**
-   * Sync focused index when a card receives focus (e.g., via mouse click or programmatic focus).
+   * Sync focused index when a card receives focus (e.g. via mouse click or Tab).
    * Pass to each card wrapper's `onFocus`.
    */
   onCardFocus: (index: number) => void;

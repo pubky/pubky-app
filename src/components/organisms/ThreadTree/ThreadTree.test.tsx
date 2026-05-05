@@ -33,6 +33,7 @@ vi.mock('@/molecules/ShowMoreReplies/ShowMoreReplies', () => {
       <button
         type="button"
         data-testid="show-more-replies"
+        data-post-list-card="true"
         data-count={String(count)}
         data-is-last={String(isLast)}
         onClick={onClick}
@@ -99,6 +100,26 @@ describe('ThreadTree', () => {
     expect(screen.getByTestId('show-more-replies')).toHaveAttribute('data-is-last', 'true');
   });
 
+  it('keeps reply cards tabbable and uses total reply count for aria-setsize', () => {
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1', 'author:reply-2'],
+      totalCount: 5,
+      hasMore: true,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    const cards = screen.getAllByRole('article');
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveAttribute('tabindex', '0');
+    expect(cards[1]).toHaveAttribute('tabindex', '0');
+    expect(cards[0]).toHaveAttribute('aria-setsize', '5');
+    expect(cards[1]).toHaveAttribute('aria-setsize', '5');
+  });
+
   it('calls expandAll when show-more is clicked', () => {
     const expandAll = vi.fn(async () => {});
     vi.mocked(useThreadReplies).mockReturnValue({
@@ -113,6 +134,55 @@ describe('ThreadTree', () => {
     render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
     fireEvent.click(screen.getByTestId('show-more-replies'));
 
+    expect(expandAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves focus between reply cards with j/k keys', () => {
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1', 'author:reply-2'],
+      totalCount: 2,
+      hasMore: false,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    const cards = screen.getAllByRole('article');
+    cards[0].focus();
+    expect(document.activeElement).toBe(cards[0]);
+
+    fireEvent.keyDown(cards[0], { key: 'j' });
+    expect(document.activeElement).toBe(cards[1]);
+
+    fireEvent.keyDown(cards[1], { key: 'k' });
+    expect(document.activeElement).toBe(cards[0]);
+  });
+
+  it('moves focus to "show more replies" with j and allows expanding', () => {
+    const expandAll = vi.fn(async () => {});
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1'],
+      totalCount: 6,
+      hasMore: true,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll,
+    });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    const card = screen.getByRole('article');
+    const showMoreButton = screen.getByTestId('show-more-replies');
+
+    card.focus();
+    expect(document.activeElement).toBe(card);
+
+    fireEvent.keyDown(card, { key: 'j' });
+    expect(document.activeElement).toBe(showMoreButton);
+
+    fireEvent.click(showMoreButton);
     expect(expandAll).toHaveBeenCalledTimes(1);
   });
 

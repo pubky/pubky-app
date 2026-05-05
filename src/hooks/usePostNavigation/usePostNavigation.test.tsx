@@ -1,5 +1,5 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockMouseEvent } from '@/test-utils/react-events';
 import { usePostNavigation } from './usePostNavigation';
 
@@ -167,6 +167,29 @@ describe('usePostNavigation', () => {
       expect(preventDefault).not.toHaveBeenCalled();
       expect(openSpy).not.toHaveBeenCalled();
     });
+
+    it('opens post in new tab when middle-clicking a button with data-allow-post-navigation', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const preventDefault = vi.fn();
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+      const allowButton = document.createElement('button');
+      allowButton.setAttribute('data-allow-post-navigation', '');
+
+      act(() => {
+        result.current.handlePostAuxClick(
+          'author1:post1',
+          mockMouseEvent({
+            button: 1,
+            preventDefault,
+            target: allowButton,
+          }),
+        );
+      });
+
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledWith('/post/author1/post1', '_blank', 'noopener,noreferrer');
+    });
   });
 
   describe('handlePostClick', () => {
@@ -189,6 +212,26 @@ describe('usePostNavigation', () => {
 
       expect(mockPush).not.toHaveBeenCalled();
       expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it('navigates when interactive element explicitly allows post navigation', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const showMoreButton = document.createElement('button');
+      showMoreButton.setAttribute('data-allow-post-navigation', '');
+      const buttonText = document.createElement('span');
+      showMoreButton.appendChild(buttonText);
+
+      act(() => {
+        result.current.handlePostClick(
+          'author1:post1',
+          mockMouseEvent({
+            target: buttonText,
+          }),
+        );
+      });
+
+      expect(mockPush).toHaveBeenCalledWith('/post/author1/post1');
+      expect(mockPush).toHaveBeenCalledTimes(1);
     });
   });
 

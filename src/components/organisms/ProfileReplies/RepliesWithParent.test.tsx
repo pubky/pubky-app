@@ -309,6 +309,38 @@ describe('RepliesWithParent', () => {
       });
     });
 
+    it('should make all reply cards individually tabbable', async () => {
+      const mockReplyIds = ['author1:reply1', 'author2:reply2'];
+
+      mockUseStreamPagination.mockReturnValue({
+        postIds: mockReplyIds,
+        loading: false,
+        loadingMore: false,
+        error: null,
+        hasMore: true,
+        loadMore: vi.fn(),
+        refresh: vi.fn(),
+        prependPosts: vi.fn(),
+        removePosts: vi.fn(),
+      });
+
+      mockUseLiveQuery
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce(null);
+
+      render(<RepliesWithParent streamId={mockStreamId} />);
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(mockReplyIds.length);
+      });
+
+      const cards = screen.getAllByRole('article');
+      expect(cards[0]).toHaveAttribute('tabindex', '0');
+      expect(cards[1]).toHaveAttribute('tabindex', '0');
+    });
+
     it('should render reply with isReply=true', async () => {
       const mockReplyIds = ['author1:reply1'];
 

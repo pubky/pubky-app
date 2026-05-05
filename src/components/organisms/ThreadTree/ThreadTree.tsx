@@ -27,10 +27,15 @@ interface ThreadTreeProps {
 export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
   const { replyIds, hasMore, totalCount, isExpandingAll, expandAll } = useThreadReplies(postId);
   const { handlePostKeyDown } = usePostNavigation();
-  const { setCardRef, onListKeyDown, onCardFocus } = usePostListKeyboard(replyIds.length);
+  const { setCardRef, onListKeyDown, onCardFocus } = usePostListKeyboard(replyIds.length, {
+    // Include ShowMoreReplies (data-post-list-card="true") in j/k navigation.
+    // The containment filter in the hook excludes nested ReplyWithNested depth>0
+    // cards (which share the same attribute) from the list automatically.
+    cardSelector: '[data-post-list-card="true"]',
+  });
 
   if (replyIds.length === 0 && !hasMore) {
-    // No replies -- only show quick reply if enabled
+    // No replies — only show quick reply if enabled
     return showQuickReply ? (
       <Container overrideDefaults>
         <PostThreadSpacer />
@@ -40,6 +45,7 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
   }
 
   const remaining = Math.max(0, totalCount - replyIds.length);
+  const ariaSetSize = totalCount > 0 ? totalCount : replyIds.length;
 
   return (
     <Container overrideDefaults role="feed" onKeyDown={onListKeyDown}>
@@ -50,11 +56,12 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
         return (
           <Container
             key={replyId}
-            overrideDefaults
             ref={setCardRef(index)}
+            overrideDefaults
+            data-post-list-card="true"
             role="article"
             aria-posinset={index + 1}
-            aria-setsize={replyIds.length}
+            aria-setsize={ariaSetSize}
             tabIndex={0}
             onFocus={() => onCardFocus(index)}
             onKeyDown={(e) => handlePostKeyDown(replyId, e)}

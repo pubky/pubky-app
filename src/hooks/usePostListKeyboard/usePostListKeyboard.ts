@@ -1,35 +1,75 @@
 'use client';
 
-import type React from 'react';
 import { useRef, useState } from 'react';
+import type React from 'react';
 import type { UsePostListKeyboardResult } from './usePostListKeyboard.types';
+
+interface UsePostListKeyboardOptions {
+  /**
+   * Optional CSS selector for extra navigable items not registered via `setCardRef`
+   * (e.g. a "Show more" button rendered after the mapped list).
+   *
+   * Elements matching the selector that are NOT contained within any registered
+   * ref card are appended to the keyboard navigation list in DOM order. This lets
+   * a single hook handle both a flat ref-registered list (e.g. reply cards) and
+   * one-off sibling elements (e.g. `ShowMoreReplies`) without duplicating logic.
+   *
+   * Elements matched by the selector that ARE inside a registered ref are ignored,
+   * which prevents nested child cards (e.g. `ReplyWithNested` depth > 0) from
+   * polluting the navigation list.
+   */
+  cardSelector?: string;
+}
 
 /**
  * usePostListKeyboard
  *
- * Roving-tabindex keyboard navigation for a flat list of post cards.
+ * Keyboard navigation for a list of post cards.
  *
- * - Only one card is in the tab order at a time (the one at `focusedIndex`);
- *   the rest get `tabIndex={-1}` so they can still be focused programmatically.
  * - ArrowDown/ArrowUp and j/k move focus between cards.
- * - Home/End jump to the first/last loaded card.
- * - Movement keys are ignored unless focus is on a registered card, so they
- *   never stomp on text inputs, action buttons, or other descendants.
+ * - Home/End jump to the first/last item.
+ * - Movement keys are ignored unless focus is on a registered card or a
+ *   selector-matched extra item, so they never stomp on descendant inputs.
+ *
+ * Pass `options.cardSelector` to include additional navigable elements that are
+ * siblings of the main list (e.g. a "Show more" button) without registering refs
+ * for them. See `UsePostListKeyboardOptions` for details.
  *
  * Pair with `usePostNavigation.handlePostKeyDown` on each card to handle
  * Enter/Space activation and Cmd/Ctrl/Shift+Enter new-tab opens.
  */
-export function usePostListKeyboard(itemCount: number): UsePostListKeyboardResult {
+export function usePostListKeyboard(
+  itemCount: number,
+  options?: UsePostListKeyboardOptions,
+): UsePostListKeyboardResult {
   const [focusedIndex, setFocusedIndex] = useState(0);
   const cardRefs = useRef<(HTMLElement | null)[]>([]);
 
-  const focusAt = (target: number) => {
-    if (itemCount === 0) return;
-    const clamped = Math.max(0, Math.min(target, itemCount - 1));
-    setFocusedIndex(clamped);
-    const el = cardRefs.current[clamped];
-    el?.focus();
-    el?.scrollIntoView({ block: 'nearest' });
+  /**
+   * Build the full navigable card list for a given container.
+   *
+   * Always starts with the ref-registered cards (in registration order).
+   * If `cardSelector` is set, appends any matching elements from the container
+   * that are NOT inside a registered ref card.
+   */
+  const buildCardList = (container: HTMLElement): HTMLElement[] => {
+    const registered = cardRefs.current.filter((el): el is HTMLElement => el !== null);
+    if (!options?.cardSelector) return registered;
+
+    const allMatching = Array.from(container.querySelectorAll<HTMLElement>(options.cardSelector));
+    const extras = allMatching.filter((el) => !registered.some((c) => c === el || c.contains(el)));
+    return [...registered, ...extras];
+  };
+
+  const focusAt = (cards: HTMLElement[], target: number) => {
+    if (cards.length === 0) return;
+    const clamped = Math.max(0, Math.min(target, cards.length - 1));
+    const card = cards[clamped];
+    // Only track focusedIndex for ref-registered cards.
+    const refIndex = cardRefs.current.indexOf(card);
+    if (refIndex !== -1) setFocusedIndex(refIndex);
+    card.focus();
+    card.scrollIntoView?.({ block: 'nearest' });
   };
 
   const setCardRef = (index: number) => (el: HTMLElement | null) => {
@@ -41,30 +81,39 @@ export function usePostListKeyboard(itemCount: number): UsePostListKeyboardResul
   };
 
   const onListKeyDown = (event: React.KeyboardEvent) => {
-    // Only intercept when focus is on a registered card, not a descendant
-    // (action button, link, textarea, etc.). This keeps inputs and shortcuts safe.
     const target = event.target as HTMLElement;
-    const cardIndex = cardRefs.current.indexOf(target);
+    const cards = buildCardList(event.currentTarget as HTMLElement);
+    let cardIndex = cards.indexOf(target);
+
+    // Fallback: if focus is on a non-interactive focusable descendant of a
+    // registered card (e.g. the parent-post article wrapper inside a
+    // reply-with-parent card), navigate from the containing card.
+    // Interactive controls (buttons, inputs, links) are excluded so that j/k
+    // is still ignored when a real action element inside a card is focused.
+    if (cardIndex === -1 && !target.closest('a,button,input,textarea,select,[role="button"],[role="link"]')) {
+      cardIndex = cards.findIndex((card) => card.contains(target));
+    }
+
     if (cardIndex === -1) return;
 
     switch (event.key) {
       case 'ArrowDown':
       case 'j':
         event.preventDefault();
-        focusAt(cardIndex + 1);
+        focusAt(cards, cardIndex + 1);
         break;
       case 'ArrowUp':
       case 'k':
         event.preventDefault();
-        focusAt(cardIndex - 1);
+        focusAt(cards, cardIndex - 1);
         break;
       case 'Home':
         event.preventDefault();
-        focusAt(0);
+        focusAt(cards, 0);
         break;
       case 'End':
         event.preventDefault();
-        focusAt(itemCount - 1);
+        focusAt(cards, cards.length - 1);
         break;
     }
   };

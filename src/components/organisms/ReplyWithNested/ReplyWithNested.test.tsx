@@ -33,11 +33,31 @@ vi.mock('@/hooks/useNestedReplies/useNestedReplies.constants', () => ({
 
 vi.mock('@/atoms/Container/Container', () => {
   return {
-    Container: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
-      <div className={className}>{children}</div>
+    Container: ({
+      children,
+      className,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      className?: string;
+      [key: string]: unknown;
+    }) => (
+      <div className={className} {...props}>
+        {children}
+      </div>
     ),
   };
 });
+
+vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
+  usePostNavigation: () => ({
+    getPostHref: vi.fn(() => '/post/author/reply'),
+    navigateToPost: vi.fn(),
+    handlePostClick: vi.fn(),
+    handlePostAuxClick: vi.fn(),
+    handlePostKeyDown: vi.fn(),
+  }),
+}));
 
 vi.mock('@/atoms/PostThreadSpacer/PostThreadSpacer', () => {
   return {
@@ -213,6 +233,19 @@ describe('ReplyWithNested', () => {
     render(<ReplyWithNested replyId="author:reply-1" />);
 
     expect(screen.queryByTestId('show-more-nested')).not.toBeInTheDocument();
+  });
+
+  it('makes nested replies individually tabbable', () => {
+    render(<ReplyWithNested replyId="author:reply-1" />);
+
+    // Top-level reply remains controlled by ThreadTree wrapper.
+    // Nested replies (depth > 0) should each be keyboard-focusable.
+    const nestedArticles = screen.getAllByRole('article');
+    expect(nestedArticles).toHaveLength(2);
+    nestedArticles.forEach((article) => {
+      expect(article).toHaveAttribute('tabindex', '0');
+      expect(article).toHaveAttribute('data-post-list-card', 'true');
+    });
   });
 
   it('applies min-w-0 to the nested sub-reply column so long usernames truncate', () => {

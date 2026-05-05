@@ -7,6 +7,7 @@ import { parseCompositeId } from '@/models/models.utils';
 import type { UsePostNavigationResult } from './usePostNavigation.types';
 
 const INTERACTIVE_SELECTOR = 'a,button,input,textarea,select,label,[role="button"],[role="link"]';
+const POST_NAVIGATION_ALLOW_SELECTOR = '[data-allow-post-navigation]';
 
 function getEventTargetElement(target: EventTarget | null): Element | null {
   if (!target) return null;
@@ -16,8 +17,8 @@ function getEventTargetElement(target: EventTarget | null): Element | null {
 }
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
-  const element = getEventTargetElement(target);
-  return Boolean(element?.closest(INTERACTIVE_SELECTOR));
+  const interactiveElement = getEventTargetElement(target)?.closest(INTERACTIVE_SELECTOR);
+  return Boolean(interactiveElement && !interactiveElement.matches(POST_NAVIGATION_ALLOW_SELECTOR));
 }
 
 /**

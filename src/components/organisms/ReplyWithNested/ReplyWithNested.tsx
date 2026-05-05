@@ -5,6 +5,7 @@ import { Container } from '@/atoms/Container/Container';
 import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
 import { useNestedReplies } from '@/hooks/useNestedReplies/useNestedReplies';
 import { AUTO_COLLAPSE_THRESHOLD, DEFAULT_MAX_DEPTH } from '@/hooks/useNestedReplies/useNestedReplies.constants';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { cn } from '@/libs/utils/utils';
 import { ShowMoreReplies } from '@/molecules/ShowMoreReplies/ShowMoreReplies';
 import { ThreadExpandToggle } from '@/molecules/ThreadExpandToggle/ThreadExpandToggle';
@@ -37,6 +38,7 @@ export function ReplyWithNested({
   depth = 0,
   maxDepth = DEFAULT_MAX_DEPTH,
 }: ReplyWithNestedProps) {
+  const { handlePostKeyDown } = usePostNavigation();
   const { nestedReplyIds, hasMoreReplies, hasNestedReplies, replyCount, isExpandingAll, expandAll } = useNestedReplies(
     replyId,
     { depth, maxDepth },
@@ -65,7 +67,16 @@ export function ReplyWithNested({
       {/* Main reply */}
       <PostThreadSpacer />
       <Container overrideDefaults className={canShowToggle ? 'relative' : undefined}>
-        <PostMain postId={replyId} isReply={true} isLastReply={isLastReply} />
+        <Container
+          overrideDefaults
+          data-post-list-card={depth > 0 ? 'true' : undefined}
+          role={depth > 0 ? 'article' : undefined}
+          tabIndex={depth > 0 ? 0 : undefined}
+          onKeyDown={depth > 0 ? (e) => handlePostKeyDown(replyId, e) : undefined}
+          className={depth > 0 ? 'rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring' : undefined}
+        >
+          <PostMain postId={replyId} isReply={true} isLastReply={isLastReply} />
+        </Container>
         {/* Toggle on the connector line, just above the rounded corner */}
         {canShowToggle && (
           <Container overrideDefaults className="absolute bottom-[24px] left-0 z-10 -translate-x-1/2">
