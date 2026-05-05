@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { describe, expect, it } from 'vitest';
-import { getSentryInitBase } from './sentry';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { getSentryInitBase } from './sentry';
 
 const TEST_PUBKY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
 
