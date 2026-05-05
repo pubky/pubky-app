@@ -6,6 +6,7 @@ import type {
   TTagsPaginationParams,
   TUserId,
 } from '@/services/nexus/nexus.types';
+
 export type TUserDepthParams = {
   depth?: number;
   viewer_id?: Pubky;

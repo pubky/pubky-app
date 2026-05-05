@@ -1,12 +1,15 @@
 'use client';
 
-import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
-import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { useRef, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
+import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
+import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostText } from '@/molecules/PostText/PostText';
+import { FileVariant } from '@/services/nexus/file/file.types';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
 import { DialogReply } from '../DialogReply/DialogReply';
 import { DialogRepost } from '../DialogRepost/DialogRepost';
@@ -16,9 +19,6 @@ import { PostHeader } from '../PostHeader/PostHeader';
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 
-import type { PostDetailsModel } from '@/models/post/details/postDetails';
-import { FileVariant } from '@/services/nexus/file/file.types';
-import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 interface SinglePostArticleProps {
   postId: string;
   content: string;

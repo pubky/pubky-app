@@ -1,4 +1,5 @@
 import type { NexusHotTag, UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+
 export interface HotTag {
   name: string;
   count: number;

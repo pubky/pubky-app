@@ -1,7 +1,5 @@
 'use client';
 
-import { useControlledState } from '@/hooks/useControlledState/useControlledState';
-import { useRadiogroupKeyboard } from '@/hooks/useRadiogroupKeyboard/useRadiogroupKeyboard';
 import * as React from 'react';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -12,6 +10,8 @@ import {
   FilterList,
   FilterRoot,
 } from '@/atoms/Filter/Filter';
+import { useControlledState } from '@/hooks/useControlledState/useControlledState';
+import { useRadiogroupKeyboard } from '@/hooks/useRadiogroupKeyboard/useRadiogroupKeyboard';
 import { FilterListItem } from '../Filters.types';
 
 export interface FilterRadioGroupProps<T = string> {

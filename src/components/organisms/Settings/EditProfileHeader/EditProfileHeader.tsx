@@ -1,18 +1,17 @@
 'use client';
 
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { Key } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { PageTitle } from '@/molecules/Page/Page';
-import { PopoverPublicKey } from '@/molecules/PopoverPublicKey/PopoverPublicKey';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import { Key } from 'lucide-react';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
+import { PageTitle } from '@/molecules/Page/Page';
+import { PopoverPublicKey } from '@/molecules/PopoverPublicKey/PopoverPublicKey';
 
 export const EditProfileHeader = () => {
   const t = useTranslations('forms.profile');

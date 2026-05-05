@@ -1,22 +1,22 @@
 'use client';
 
-import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useTranslations, useLocale } from 'next-intl';
-import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
+import { type ReactNode, useEffect, useMemo, useRef } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { isDynamicPublicRoute, PUBLIC_ROUTES } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
-
-import { Logger } from '@/libs/logger/logger';
+import { AuthController } from '@/controllers/auth/auth';
+import { MigrationController } from '@/controllers/migration/migration';
+import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { AuthController } from '@/controllers/auth/auth';
-import { MigrationController } from '@/controllers/migration/migration';
+import { Logger } from '@/libs/logger/logger';
+import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
 

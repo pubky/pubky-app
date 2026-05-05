@@ -1,9 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { useReplyStream } from './useReplyStream';
-import { StreamPostsController } from '@/controllers/stream/posts/posts';
+
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));

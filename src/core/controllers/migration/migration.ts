@@ -1,9 +1,10 @@
+import { MigrationApplication } from '@/application/migration/migration';
 import { setLocaleCookie } from '@/i18n/utils';
 import { Logger } from '@/libs/logger/logger';
-import { MigrationApplication } from '@/application/migration/migration';
 import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+
 export class MigrationController {
   private constructor() {}
 

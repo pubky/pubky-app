@@ -1,4 +1,5 @@
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
+
 export interface TCreateTagInput extends TTagEventParams {
   tagUrl: string;
   tagJson: Record<string, unknown>;

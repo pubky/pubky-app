@@ -1,8 +1,9 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { defaultPrivacyPreferences } from '@/stores/settings/settings.types';
 import { mockMouseEvent } from '@/test-utils/react-events';
 import { useLinkConfirmation } from './useLinkConfirmation';
-import { defaultPrivacyPreferences } from '@/stores/settings/settings.types';
+
 const mockUseSettingsStore = vi.fn();
 
 vi.mock('@/stores/settings/settings.store', () => ({

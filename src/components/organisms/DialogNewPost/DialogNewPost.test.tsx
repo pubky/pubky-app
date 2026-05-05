@@ -1,7 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DialogNewPost } from './DialogNewPost';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
+import { DialogNewPost } from './DialogNewPost';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({

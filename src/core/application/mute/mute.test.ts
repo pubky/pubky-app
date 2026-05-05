@@ -1,17 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
-import { MuteApplication } from './mute';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { db } from '@/database/franky/franky';
 import { AppError } from '@/libs/error/error';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
-import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamModel } from '@/models/stream/user/userStream';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalMuteService } from '@/services/local/mute/mute';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
+import { MuteApplication } from './mute';
+
 vi.mock('pubky-app-specs', () => ({
   baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
 }));

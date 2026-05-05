@@ -1,8 +1,8 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { SettingsSectionCard } from './SettingsSectionCard';
 import { User } from 'lucide-react';
+import { describe, expect, it } from 'vitest';
+import { SettingsSectionCard } from './SettingsSectionCard';
 
 describe('SettingsSectionCard', () => {
   const defaultProps = {

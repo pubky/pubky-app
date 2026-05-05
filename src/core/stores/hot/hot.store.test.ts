@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useHotStore } from './hot.store';
-import { TIMEFRAME, hotInitialState } from './hot.types';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { REACH } from '../home/home.types';
+import { useHotStore } from './hot.store';
+import { hotInitialState, TIMEFRAME } from './hot.types';
 
 describe('HotStore', () => {
   beforeEach(() => {

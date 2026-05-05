@@ -1,6 +1,5 @@
 'use client';
 import { Container } from '@/atoms/Container/Container';
-
 import { PostCardSkeleton } from '@/organisms/PostCardSkeleton/PostCardSkeleton';
 
 const TIMELINE_SKELETON_COUNT = 3;

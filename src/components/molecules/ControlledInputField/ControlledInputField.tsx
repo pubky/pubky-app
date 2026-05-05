@@ -3,10 +3,8 @@
 import { Controller, FieldValues } from 'react-hook-form';
 import { Container } from '@/atoms/Container/Container';
 import { Label } from '@/atoms/Label/Label';
-
 import { FORM_LABEL_CLASSES } from '@/config/forms';
 import { InputField } from '../InputField/InputField';
-
 import type { ControlledInputFieldProps } from './ControlledInputField.types';
 
 export function ControlledInputField<T extends FieldValues>({

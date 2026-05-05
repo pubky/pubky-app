@@ -4,6 +4,7 @@ import {
   type TPrefixSearchParams,
   type TTagSearchParams,
 } from '@/services/nexus/search/search.types';
+
 /**
  * Search API Endpoints
  *

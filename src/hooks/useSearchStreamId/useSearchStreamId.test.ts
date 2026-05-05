@@ -1,8 +1,9 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useSearchStreamId, useSearchTags } from './useSearchStreamId';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, SORT } from '@/stores/home/home.types';
+import { useSearchStreamId, useSearchTags } from './useSearchStreamId';
+
 // Mock next/navigation
 const mockGet = vi.fn();
 vi.mock('next/navigation', () => ({

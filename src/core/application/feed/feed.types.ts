@@ -1,8 +1,9 @@
 import { FeedResult } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs/http/http.types';
 import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
+
 export interface FeedDeleteParams {
   userId: string;
   params: TFeedPersistParams;

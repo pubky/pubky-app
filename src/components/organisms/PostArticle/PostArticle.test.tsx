@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { PostArticle } from './PostArticle';
-import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileVariant } from '@/services/nexus/file/file.types';
+import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
+import { PostArticle } from './PostArticle';
+
 // Mock hooks
 const mockUsePostArticle = vi.fn();
 const mockHandleLinkClick = vi.fn();

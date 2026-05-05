@@ -1,6 +1,6 @@
 import { CDN_URL } from '@/config/nexus';
-import type { ResolveAvatarFallbackSeedProps, ResolveAvatarFallbackInitialProps } from './AvatarWithFallback.types';
 import { extractInitials } from '@/libs/utils/utils';
+import type { ResolveAvatarFallbackInitialProps, ResolveAvatarFallbackSeedProps } from './AvatarWithFallback.types';
 
 /**
  * Regex pattern for validating userId format.

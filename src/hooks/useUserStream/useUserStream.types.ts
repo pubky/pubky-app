@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
+
 export interface UserStreamUserCounts {
   posts: number;
   tags: number;

@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Session, Keypair, PublicKey } from '@synonymdev/pubky';
-import { asOpaque } from '@/test-utils/type-assertions';
+import type { Keypair, PublicKey, Session } from '@synonymdev/pubky';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+
 // =============================================================================
 // HOISTED MOCKS - Must be hoisted to run before module imports
 // =============================================================================

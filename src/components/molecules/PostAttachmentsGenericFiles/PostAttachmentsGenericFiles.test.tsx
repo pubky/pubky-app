@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { PostAttachmentsGenericFiles } from './PostAttachmentsGenericFiles';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { PostAttachmentsGenericFiles } from './PostAttachmentsGenericFiles';
 
 // Mock @/atoms
 vi.mock('@/atoms/Button/Button', () => {

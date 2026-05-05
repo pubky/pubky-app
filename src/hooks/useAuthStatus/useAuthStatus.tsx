@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { AuthStatus, type AuthStatusResult } from './useAuthStatus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { AuthStatus, type AuthStatusResult } from './useAuthStatus.types';
+
 export function useAuthStatus(): AuthStatusResult {
   // Get state from stores
   const onboardingStore = useOnboardingStore();

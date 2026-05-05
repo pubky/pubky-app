@@ -1,6 +1,6 @@
-import { Env } from '@/libs/env/env';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
+import { Env } from '@/libs/env/env';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { TUserCountsParams } from '@/models/user/counts/userCounts.types';
@@ -10,6 +10,7 @@ import type { UserRelationshipsModelSchema } from '@/models/user/relationships/u
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import type { NexusTag, NexusUserCounts, NexusUserDetails, NexusUserRelationship } from '@/services/nexus/nexus.types';
+
 export class LocalUserService {
   private constructor() {} // Prevent instantiation
 

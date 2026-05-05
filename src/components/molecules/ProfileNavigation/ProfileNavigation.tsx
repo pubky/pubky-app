@@ -1,9 +1,9 @@
 'use client';
+import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-
-import { ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+
 export const ProfileNavigation = ({
   continueButtonDisabled,
   continueText = 'Finish',

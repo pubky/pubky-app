@@ -1,27 +1,26 @@
 'use client';
 
-import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
-import { useEntityTags } from '@/hooks/useEntityTags/useEntityTags';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import * as React from 'react';
+import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
-import { PostTag } from '@/molecules/PostTag/PostTag';
-import { PostTagAddButton } from '@/molecules/PostTagAddButton/PostTagAddButton';
-import { PostTagPopoverWrapper } from '@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper';
-import { TagInput } from '@/molecules/TagInput/TagInput';
-import { TagInputToggle } from '@/molecules/TagInputToggle/TagInputToggle';
-
-import type { ClickableTagsListProps } from './ClickableTagsList.types';
-import { cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
-
 import {
   CLICKABLE_TAGS_DEFAULT_MAX_LENGTH,
   CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
   TAG_INPUT_WIDTH_AT_LIMIT,
   TAG_INPUT_WIDTH_DEFAULT,
 } from '@/config/tags';
-import { TagKind } from '@/application/tag/tag.types';
+import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
+import { useEntityTags } from '@/hooks/useEntityTags/useEntityTags';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { cn, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
+import { PostTag } from '@/molecules/PostTag/PostTag';
+import { PostTagAddButton } from '@/molecules/PostTagAddButton/PostTagAddButton';
+import { PostTagPopoverWrapper } from '@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper';
+import { TagInput } from '@/molecules/TagInput/TagInput';
+import { TagInputToggle } from '@/molecules/TagInputToggle/TagInputToggle';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import type { ClickableTagsListProps } from './ClickableTagsList.types';
+
 /**
  * ClickableTagsList
  *

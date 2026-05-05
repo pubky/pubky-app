@@ -1,16 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
-import { PageTitle } from '../Page/Page';
-import { DialogAge } from '@/organisms/DialogAge/DialogAge';
-import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
-import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
-
-import { ONBOARDING_ROUTES } from '@/app/routes';
+import { DialogAge } from '@/organisms/DialogAge/DialogAge';
+import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
+import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
+import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
+import { PageTitle } from '../Page/Page';
 
 export const HomeserverHeader = () => {
   return (

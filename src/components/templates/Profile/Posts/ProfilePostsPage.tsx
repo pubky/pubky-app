@@ -1,6 +1,5 @@
-import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
-
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
 /**
  * ProfilePostsPage Template

@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { Heading } from '@/atoms/Heading/Heading';
-
 import type { SearchHeaderProps } from './SearchHeader.types';
 
 /**

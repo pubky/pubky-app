@@ -1,13 +1,12 @@
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { CustomFeedFilters } from '@/organisms/CustomFeedFilters/CustomFeedFilters';
 import { FeedNavigation } from '@/organisms/FeedNavigation/FeedNavigation';
 import { HomeFeedRightDrawer, HomeFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
 import { PostInput } from '@/organisms/PostInput/PostInput';
-import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
-
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
 export function Custom() {
   return (

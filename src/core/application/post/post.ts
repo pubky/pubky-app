@@ -1,9 +1,4 @@
 import { postUriBuilder } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
-import { ClientErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import type { TCreatePostInput, TEditPostInput, TGetOrFetchPostParams } from '@/application/post/post.types';
@@ -15,6 +10,11 @@ import type {
   TFetchMorePostTagsParams,
   TFetchPostTaggersParams,
 } from '@/controllers/post/post.types';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -27,6 +27,7 @@ import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
 import type { TCompositeId } from '@/services/nexus/post/post.types';
+
 export class PostApplication {
   /**
    * Reads post details from local database and enriches with moderation state

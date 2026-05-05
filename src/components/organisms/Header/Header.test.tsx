@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { Header } from './Header';
+import { describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES, HOME_ROUTES, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
+import { Header } from './Header';
 
 // Mock Next.js navigation
 const mockUsePathname = vi.fn();

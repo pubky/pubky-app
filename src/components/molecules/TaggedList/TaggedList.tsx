@@ -1,14 +1,14 @@
 'use client';
 
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
-import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
 import { useEffect, useRef, useState } from 'react';
+import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
 import { TaggedItem } from '../TaggedItem/TaggedItem';
-
 import type { TaggedListProps } from './TaggedList.types';
-import { TagKind } from '@/application/tag/tag.types';
+
 export function TaggedList({
   tags,
   taggedId,

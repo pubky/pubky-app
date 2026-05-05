@@ -1,17 +1,17 @@
 'use client';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ONBOARDING_ROUTES } from '@/app/routes';
+import { AuthController } from '@/controllers/auth/auth';
+import { Logger } from '@/libs/logger/logger';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
 import { HumanInviteCode } from '@/organisms/HumanInviteCode/HumanInviteCode';
 import { HumanLightningPayment } from '@/organisms/HumanLightningPayment/HumanLightningPayment';
 import { HumanPhoneCode } from '@/organisms/HumanPhoneCode/HumanPhoneCode';
 import { HumanPhoneInput } from '@/organisms/HumanPhoneInput/HumanPhoneInput';
 import { HumanSelection } from '@/organisms/HumanSelection/HumanSelection';
-
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { ONBOARDING_ROUTES } from '@/app/routes';
-import { Logger } from '@/libs/logger/logger';
-import { AuthController } from '@/controllers/auth/auth';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+
 enum States {
   Selection = 'selection',
   PhoneInput = 'phoneInput',

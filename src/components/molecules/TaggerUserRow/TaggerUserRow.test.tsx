@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TaggerUserRow } from './TaggerUserRow';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
+import { TaggerUserRow } from './TaggerUserRow';
 
 // Mock useIsFollowing hook
 const mockUseIsFollowing = vi.fn();

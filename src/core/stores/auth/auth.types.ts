@@ -1,5 +1,6 @@
 import { Session } from '@synonymdev/pubky';
 import type { Pubky } from '@/models/models.types';
+
 export interface AuthInitParams {
   currentUserPubky: Pubky | null;
   session: Session | null;

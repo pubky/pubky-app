@@ -1,24 +1,9 @@
 'use client';
 
-import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
-import { useState, useRef, type ForwardedRef } from 'react';
-import { useTranslations } from 'next-intl';
 import '@mdxeditor/editor/style.css';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { type ForwardedRef, useRef, useState } from 'react';
 import { languages } from '@codemirror/language-data';
-import { AlertTriangle, Smile, Type } from 'lucide-react';
-import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config/posts';
-import { Button } from '@/atoms/Button/Button';
-import { Container } from '@/atoms/Container/Container';
-import { Textarea } from '@/atoms/Textarea/Textarea';
-import { Typography } from '@/atoms/Typography/Typography';
-import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
-
-import { MarkdownMark } from '@/icons';
-import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
-import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
-import { cn } from '@/libs/utils/utils';
-
+import { oneDark } from '@codemirror/theme-one-dark';
 import {
   BlockTypeSelect,
   BoldItalicUnderlineToggles,
@@ -44,6 +29,19 @@ import {
   toolbarPlugin,
   UndoRedo,
 } from '@mdxeditor/editor';
+import { AlertTriangle, Smile, Type } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Textarea } from '@/atoms/Textarea/Textarea';
+import { Typography } from '@/atoms/Typography/Typography';
+import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
+import { MarkdownMark } from '@/icons';
+import { cn } from '@/libs/utils/utils';
+import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
+import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
+import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
 
 /**
  * Preload all CodeMirror language support modules to prevent layout shift

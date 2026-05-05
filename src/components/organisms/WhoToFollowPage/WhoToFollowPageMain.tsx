@@ -1,18 +1,18 @@
 'use client';
 
+import { Users } from 'lucide-react';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
-import { Container } from '@/atoms/Container/Container';
-import { Typography } from '@/atoms/Typography/Typography';
-import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
-import { UserListItem } from '../UserListItem/UserListItem';
-
-import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
-import { Users } from 'lucide-react';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
+import { UserListItem } from '../UserListItem/UserListItem';
+import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
+
 const LOAD_MORE_SKELETON_COUNT = 2;
 
 /**

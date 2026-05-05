@@ -1,6 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+import { Clipboard, Link } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { z } from 'zod';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -13,13 +16,10 @@ import {
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
 import { Label } from '@/atoms/Label/Label';
+import { USER_LINK_LABEL_MAX_LENGTH, USER_LINK_URL_MAX_LENGTH } from '@/config/user';
+import { copyToClipboard } from '@/libs/utils/utils';
 import { InputField } from '@/molecules/InputField/InputField';
 
-import { USER_LINK_LABEL_MAX_LENGTH, USER_LINK_URL_MAX_LENGTH } from '@/config/user';
-import { useState } from 'react';
-import { z } from 'zod';
-import { Link, Clipboard } from 'lucide-react';
-import { copyToClipboard } from '@/libs/utils/utils';
 const labelSchema = z
   .string()
   .trim()

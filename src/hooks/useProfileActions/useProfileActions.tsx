@@ -3,15 +3,15 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
-
 import { AUTH_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
+import { AuthController } from '@/controllers/auth/auth';
+import { ProfileController } from '@/controllers/profile/profile';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { Logger } from '@/libs/logger/logger';
 import { withPubkyPrefix } from '@/libs/utils/utils';
-import { AuthController } from '@/controllers/auth/auth';
-import { ProfileController } from '@/controllers/profile/profile';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 export interface ProfileActions {
   onEdit: () => void;
   onCopyPublicKey: () => void;

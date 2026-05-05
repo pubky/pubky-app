@@ -1,4 +1,5 @@
 import type { NexusHotTag } from '@/services/nexus/nexus.types';
+
 /**
  * Hot Tags Model Schema
  * Stores cached hot/trending tags with composite ID based on timeframe and reach

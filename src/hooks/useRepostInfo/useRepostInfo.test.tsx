@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useRepostInfo } from './useRepostInfo';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
+import { useRepostInfo } from './useRepostInfo';
+
 // Hoist mock data
 const { mockRelationships, setMockRelationships } = vi.hoisted(() => {
   const relationshipsData = { current: undefined as PostRelationshipsModelSchema | null | undefined };

@@ -1,8 +1,8 @@
 'use client';
+import { CircleMinus, CirclePlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 
-import { useTranslations } from 'next-intl';
-import { CircleMinus, CirclePlus } from 'lucide-react';
 interface ThreadExpandToggleProps {
   expanded: boolean;
   onToggle: () => void;

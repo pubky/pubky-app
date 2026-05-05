@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { URL_TRUNCATE_LENGTH, TITLE_TRUNCATE_LENGTH } from '@/config/urls';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TITLE_TRUNCATE_LENGTH, URL_TRUNCATE_LENGTH } from '@/config/urls';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';

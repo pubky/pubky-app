@@ -1,9 +1,10 @@
 /**
  * Icons for each issue type
  */
-import { IdCard, Frown, Hand, Baby, Flag, ShieldAlert, Briefcase, Ban, Copyright } from 'lucide-react';
+import { Baby, Ban, Briefcase, Copyright, Flag, Frown, Hand, IdCard, ShieldAlert } from 'lucide-react';
 import { REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
 import type { ReportIssueType } from '@/pipes/report/report.types';
+
 export const ISSUE_TYPE_ICONS: Record<
   ReportIssueType,
   React.ComponentType<{

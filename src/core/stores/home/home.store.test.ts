@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { useHomeStore } from './home.store';
-import { LAYOUT, SORT, REACH, CONTENT, homeInitialState } from './home.types';
+import { CONTENT, homeInitialState, LAYOUT, REACH, SORT } from './home.types';
 
 describe('HomeStore', () => {
   beforeEach(() => {

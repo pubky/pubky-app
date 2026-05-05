@@ -1,8 +1,8 @@
 import { PubkyAppUser } from 'pubky-app-specs';
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { NotificationModel } from '@/models/notification/notification';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -20,6 +20,7 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+
 export class LocalProfileService {
   private constructor() {} // Prevent instantiation
 

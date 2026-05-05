@@ -1,10 +1,9 @@
 import { Container } from '@/atoms/Container/Container';
 import { Iframe } from '@/atoms/Iframe/Iframe';
-
-import type { EmbedData, EmbedProvider } from '../Provider.types';
-import { VIDEO_EMBED_PROPS } from '../Provider.constants';
 import { convertHmsToSeconds } from '@/libs/utils/utils';
 import { HMS_TIMESTAMP_REGEX } from '@/libs/utils/utils.constants';
+import { VIDEO_EMBED_PROPS } from '../Provider.constants';
+import type { EmbedData, EmbedProvider } from '../Provider.types';
 
 /**
  * Extract Vimeo video ID from URL

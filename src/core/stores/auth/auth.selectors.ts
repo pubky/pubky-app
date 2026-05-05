@@ -1,5 +1,5 @@
-import { AuthStore } from './auth.types';
 import { ZustandGet } from '../stores.types';
+import { AuthStore } from './auth.types';
 
 // Selectors - State access functions with validation
 export const createAuthSelectors = (get: ZustandGet<AuthStore>) => ({

@@ -1,4 +1,5 @@
 import { buildNexusUrl, encodePathSegment } from '@/services/nexus/nexus.utils';
+
 /**
  * Bootstrap API Endpoints
  * All API endpoints related to bootstrap operations

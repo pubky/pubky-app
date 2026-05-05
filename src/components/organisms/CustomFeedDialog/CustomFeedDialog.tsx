@@ -1,43 +1,42 @@
 'use client';
 
-import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
-import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
+import { type ComponentType, type ReactNode, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Activity,
+  CirclePlay,
+  Columns3,
+  Delete,
+  Download,
+  Flame,
+  HeartHandshake,
+  Image,
+  Layers,
+  LayoutGrid,
+  Link,
+  Menu,
+  Newspaper,
+  Radio,
+  SquareAsterisk,
+  StickyNote,
+} from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/atoms/Dialog/Dialog';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
+import { FeedController } from '@/controllers/feed/feed';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { UsersRound2 } from '@/icons';
+import { Env } from '@/libs/env/env';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { useToast } from '@/molecules/Toaster/use-toast';
 
-import { useTranslations } from 'next-intl';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import { useRouter } from 'next/navigation';
-import { APP_ROUTES } from '@/app/routes';
-import { UsersRound2 } from '@/icons';
-import { Env } from '@/libs/env/env';
-
-import {
-  Radio,
-  HeartHandshake,
-  SquareAsterisk,
-  Flame,
-  Columns3,
-  Menu,
-  LayoutGrid,
-  Layers,
-  StickyNote,
-  Newspaper,
-  Image,
-  CirclePlay,
-  Link,
-  Download,
-  Activity,
-  Delete,
-} from 'lucide-react';
-import { FeedController } from '@/controllers/feed/feed';
 type CustomFeedDialogProps = {
   mode: 'create' | 'edit';
   children: ReactNode;

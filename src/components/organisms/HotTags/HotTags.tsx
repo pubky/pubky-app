@@ -1,18 +1,17 @@
 'use client';
 
-import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { Tag as TagIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Tag } from '@/atoms/Tag/Tag';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
-
-import { APP_ROUTES } from '@/app/routes';
 import { MAX_TAGS } from './HotTags.constants';
-import type { HotTagsProps } from './HotTags.types';
 import { HotTagsSkeleton } from './HotTags.skeleton';
+import type { HotTagsProps } from './HotTags.types';
 
 /**
  * HotTags

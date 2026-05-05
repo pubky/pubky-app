@@ -1,13 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import { HeartHandshake, Radio } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { UsersRound2 } from '@/icons';
+import { REACH, type ReachType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps } from '../Filters.types';
 
-import { Radio, HeartHandshake } from 'lucide-react';
-import { UsersRound2 } from '@/icons';
-import { REACH, type ReachType } from '@/stores/home/home.types';
 export function FilterReach({
   selectedTab,
   defaultSelectedTab = REACH.ALL,

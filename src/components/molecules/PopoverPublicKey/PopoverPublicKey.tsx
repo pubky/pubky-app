@@ -1,11 +1,11 @@
+import { CircleHelp } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import { CircleHelp } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+
 export function PopoverPublicKey({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <Popover hover>

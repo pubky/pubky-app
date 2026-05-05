@@ -6,6 +6,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
+
 export interface FeedLayoutResolutionInput {
   requestedLayout: LayoutType;
   variant: TimelineFeedVariant;

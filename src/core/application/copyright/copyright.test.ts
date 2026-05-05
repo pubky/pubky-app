@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TCopyrightSubmitInput } from './copyright.types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { ChatwootService } from '@/services/chatwoot/chatwoot';
 import { CHATWOOT_INBOX_IDS } from '@/services/chatwoot/chatwoot.constants';
 import type { TChatwootContact } from '@/services/chatwoot/chatwoot.types';
+import type { TCopyrightSubmitInput } from './copyright.types';
+
 const testData = {
   nameOwner: 'John Doe',
   originalContentUrls: 'https://example.com/original',

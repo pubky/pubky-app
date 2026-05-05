@@ -1,16 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { debounce } from 'lodash-es';
-import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import { TAG_MAX_LENGTH } from '@/config/posts';
+import { SearchController } from '@/controllers/search/search';
+import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import { Logger } from '@/libs/logger/logger';
-
-import type {
-  UseSearchAutocompleteParams,
-  UseSearchAutocompleteResult,
-  AutocompleteTag,
-} from './useSearchAutocomplete.types';
+import type { Pubky } from '@/models/models.types';
 import {
   AUTOCOMPLETE_DEBOUNCE_MS,
   AUTOCOMPLETE_TAG_LIMIT,
@@ -18,8 +14,12 @@ import {
   MIN_USER_ID_SEARCH_LENGTH,
   USER_ID_PREFIXES,
 } from './useSearchAutocomplete.constants';
-import { SearchController } from '@/controllers/search/search';
-import type { Pubky } from '@/models/models.types';
+import type {
+  AutocompleteTag,
+  UseSearchAutocompleteParams,
+  UseSearchAutocompleteResult,
+} from './useSearchAutocomplete.types';
+
 export function useSearchAutocomplete({
   query,
   enabled = true,

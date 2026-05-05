@@ -1,6 +1,7 @@
 import { OgMetadataApplication } from '@/application/og-metadata/og-metadata';
 import type { TOgMetadataParams, TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { OgMetadataValidators } from '@/pipes/og-metadata/og-metadata.validators';
+
 /**
  * Controller for OG metadata fetching.
  * Entry point for the OG metadata feature, called from the API route.

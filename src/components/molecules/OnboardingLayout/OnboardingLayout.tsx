@@ -1,5 +1,4 @@
 import { Container } from '@/atoms/Container/Container';
-
 import { OnboardingLayoutProps } from './OnboardingLayout.types';
 
 export function OnboardingLayout({ testId, children, navigation }: OnboardingLayoutProps) {

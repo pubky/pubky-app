@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useBookmarksStreamId } from './useBookmarksStreamId';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, SORT } from '@/stores/home/home.types';
+import { useBookmarksStreamId } from './useBookmarksStreamId';
+
 describe('useBookmarksStreamId', () => {
   beforeEach(() => {
     // Reset store to default state before each test

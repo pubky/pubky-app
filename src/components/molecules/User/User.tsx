@@ -1,13 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import { StickyNote, Tag, UserRoundPlus } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 
-import { UserRoundPlus, Tag, StickyNote } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
 export interface UserData {
   id: string;
   name: string;

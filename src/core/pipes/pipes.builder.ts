@@ -1,5 +1,6 @@
 import { PubkySpecsBuilder } from 'pubky-app-specs';
 import type { Pubky } from '@/models/models.types';
+
 export class PubkySpecsSingleton {
   private static builder: PubkySpecsBuilder | null = null;
 

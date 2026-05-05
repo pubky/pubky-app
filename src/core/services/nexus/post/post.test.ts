@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { postApi } from './post.api';
-import { type TPostViewParams, type TPostBase, type TPostTaggersParams, type TPostTagsParams } from './post.types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NEXUS_URL } from '@/config/nexus';
-import { queryNexus } from '@/services/nexus/nexus.utils';
 import type { Pubky } from '@/models/models.types';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import { NexusPostService } from '@/services/nexus/post/post';
+import { postApi } from './post.api';
+import { type TPostBase, type TPostTaggersParams, type TPostTagsParams, type TPostViewParams } from './post.types';
 
 vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();

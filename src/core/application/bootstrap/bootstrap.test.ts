@@ -1,21 +1,19 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LastReadResult } from 'pubky-app-specs';
-import { BootstrapApplication } from './bootstrap';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
+import { FeedApplication } from '@/application/feed/feed';
+import { FileApplication } from '@/application/file/file';
+import { MuteApplication } from '@/application/mute/mute';
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { Env } from '@/libs/env/env';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
-import { FeedApplication } from '@/application/feed/feed';
-import { FileApplication } from '@/application/file/file';
-import { MuteApplication } from '@/application/mute/mute';
-import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
 import type { Pubky } from '@/models/models.types';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
@@ -30,7 +28,10 @@ import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
-import { UserStreamTimeframe, type NexusFileDetails, type NexusNotification } from '@/services/nexus/nexus.types';
+import { type NexusFileDetails, type NexusNotification, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { BootstrapApplication } from './bootstrap';
+
 // Mock pubky-app-specs to avoid WebAssembly issues
 vi.mock('pubky-app-specs', () => ({
   default: vi.fn(() => Promise.resolve()),

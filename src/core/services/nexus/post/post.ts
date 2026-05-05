@@ -4,6 +4,7 @@ import type { NexusPost, NexusTag, NexusTaggers } from '@/services/nexus/nexus.t
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { postApi } from '@/services/nexus/post/post.api';
 import type { TCompositeId } from '@/services/nexus/post/post.types';
+
 export class NexusPostService {
   private constructor() {}
 

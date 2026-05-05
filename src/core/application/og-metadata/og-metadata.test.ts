@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 // Create stable mock references via vi.hoisted so they're shared
 // between the vi.mock factories and the test assertions
 const { mockResolve4, mockIsIP, mockIsIpSafe } = vi.hoisted(() => ({

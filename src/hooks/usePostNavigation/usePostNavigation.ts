@@ -3,8 +3,9 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { POST_ROUTES } from '@/app/routes';
-import type { UsePostNavigationResult } from './usePostNavigation.types';
 import { parseCompositeId } from '@/models/models.utils';
+import type { UsePostNavigationResult } from './usePostNavigation.types';
+
 /**
  * usePostNavigation
  *

@@ -1,5 +1,3 @@
-import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
-import { Logger } from '@/libs/logger/logger';
 import type {
   TFetchStreamFromNexusParams,
   TFetchUserStreamChunkParams,
@@ -7,10 +5,13 @@ import type {
   TMissingUsersParams,
   TUserStreamChunkResponse,
 } from '@/application/stream/users/users.types';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { TCacheUserStreamParams } from '@/services/local/stream/users/users.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
+
 /**
  * Internal type for fetchStreamFromNexus parameters
  * Extends the internal fetch params type with optional cached stream data

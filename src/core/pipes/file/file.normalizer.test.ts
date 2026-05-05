@@ -1,18 +1,19 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BlobResult, FileResult } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  TEST_PUBKY,
-  setupUnitTestMocks,
-  setupIntegrationTestMocks,
-  restoreMocks,
-  buildPubkyUri,
-} from '../pipes.test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { asOpaque } from '@/test-utils/type-assertions';
+import {
+  buildPubkyUri,
+  restoreMocks,
+  setupIntegrationTestMocks,
+  setupUnitTestMocks,
+  TEST_PUBKY,
+} from '../pipes.test-utils';
+
 // File-specific test data
 const FILE_TEST_DATA = {
   name: 'test-image.png',

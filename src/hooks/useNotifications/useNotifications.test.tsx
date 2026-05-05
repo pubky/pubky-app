@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { useNotifications } from './useNotifications';
-import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationController } from '@/controllers/notification/notification';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import { useNotifications } from './useNotifications';
 
 function createAllEnabledNotificationPreferences() {
   return {

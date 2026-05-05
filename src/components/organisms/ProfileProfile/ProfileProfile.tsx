@@ -1,12 +1,12 @@
 'use client';
 
+import * as React from 'react';
+import { Container } from '@/atoms/Container/Container';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTagged } from '@/hooks/useTagged/useTagged';
-import * as React from 'react';
-import { Container } from '@/atoms/Container/Container';
 import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks';
 import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';

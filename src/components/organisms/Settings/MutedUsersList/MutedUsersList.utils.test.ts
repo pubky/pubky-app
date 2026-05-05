@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
+import { describe, expect, it } from 'vitest';
 import type { UserMapEntry } from './MutedUsersList.types';
+import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
 
 describe('mapUserIdsToMutedUsers', () => {
   it('returns empty array for empty userIds', () => {

@@ -1,7 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dexie, { Table } from 'dexie';
-import { indexedDB, IDBKeyRange } from 'fake-indexeddb';
-import { TagCollection } from './tagCollection';
+import { IDBKeyRange, indexedDB } from 'fake-indexeddb';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -10,6 +9,8 @@ import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type'
 import { TagModel } from '@/models/shared/tag/tag';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import { TagCollection } from './tagCollection';
+
 type TestTagSchema = TagCollectionModelSchema<string>;
 
 type TestTagTuple = NexusModelTuple<NexusTag[]>;

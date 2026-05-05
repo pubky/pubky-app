@@ -1,10 +1,10 @@
 'use client';
 
+import { Bell } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { SettingsSectionCard } from '@/molecules/Settings/SettingsSectionCard/SettingsSectionCard';
 import { NotificationSettings } from '@/organisms/Settings/NotificationSettings/NotificationSettings';
 
-import { Bell } from 'lucide-react';
 export function Notifications() {
   const t = useTranslations('settings.notifications');
   return (

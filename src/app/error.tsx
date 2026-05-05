@@ -1,12 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-
 import * as Sentry from '@sentry/nextjs';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import { AppError } from '@/libs/error/error';
 import { Logger } from '@/libs/logger/logger';
 

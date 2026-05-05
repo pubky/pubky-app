@@ -1,20 +1,21 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
+  FeedResult,
   PubkyAppFeedLayout,
   PubkyAppFeedReach,
   PubkyAppFeedSort,
   PubkyAppPostKind,
-  FeedResult,
   PubkySpecsBuilder,
 } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import type { Pubky } from '@/models/models.types';
 import { FeedNormalizer } from '@/pipes/feed/feed.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { asOpaque } from '@/test-utils/type-assertions';
+
 describe('FeedNormalizer', () => {
   const testData = {
     userPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,

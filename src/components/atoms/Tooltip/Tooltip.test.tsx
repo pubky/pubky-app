@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipPortal, TooltipContent } from './Tooltip';
+import { describe, expect, it } from 'vitest';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipProvider, TooltipTrigger } from './Tooltip';
 
 describe('Tooltip', () => {
   it('renders tooltip content when open', () => {

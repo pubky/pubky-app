@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { UseBulkUserAvatarsResult, UserWithAvatar } from './useBulkUserAvatars.types';
-import { Logger } from '@/libs/logger/logger';
 import { FileController } from '@/controllers/file/file';
 import { StreamUserController } from '@/controllers/stream/users/users';
 import { UserController } from '@/controllers/user/user';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import type { UseBulkUserAvatarsResult, UserWithAvatar } from './useBulkUserAvatars.types';
+
 /**
  * Hook to get user details with avatar URLs for multiple users.
  * Fetches user details from local DB and computes CDN avatar URLs.

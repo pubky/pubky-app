@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useEnrichedTags } from './useEnrichedTags';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
+import { useEnrichedTags } from './useEnrichedTags';
 
 // Mock useBulkUserAvatars
 const mockUsersMap = new Map();

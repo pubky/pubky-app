@@ -1,7 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { SearchRecentSection } from './SearchRecentSection';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
+import { SearchRecentSection } from './SearchRecentSection';
+
 vi.mock('@/atoms/Button/Button', () => {
   return {
     Button: ({

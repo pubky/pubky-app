@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useStreamIdFromFilters } from './useStreamIdFromFilters';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
+import { useStreamIdFromFilters } from './useStreamIdFromFilters';
+
 describe('useStreamIdFromFilters', () => {
   // Reset filters before each test
   beforeEach(() => {

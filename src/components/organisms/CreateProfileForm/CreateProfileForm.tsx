@@ -1,12 +1,7 @@
 'use client';
 
-import { useProfileForm } from '@/hooks/useProfileForm/useProfileForm';
-import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
-import { InputField } from '@/molecules/InputField/InputField';
-import { ProfileNavigation } from '@/molecules/ProfileNavigation/ProfileNavigation';
-import { TextareaField } from '@/molecules/TextareaField/TextareaField';
-import { DialogAddLink } from '../DialogAddLink/DialogAddLink';
-import { DialogCropImage } from '../DialogCropImage/DialogCropImage';
+import { File, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
@@ -14,13 +9,18 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import { USER_MAX_LINKS } from '@/config/user';
-import { useTranslations } from 'next-intl';
-import { Trash2, File } from 'lucide-react';
+import { useProfileForm } from '@/hooks/useProfileForm/useProfileForm';
 import { extractInitials } from '@/libs/utils/utils';
+import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
+import { InputField } from '@/molecules/InputField/InputField';
+import { ProfileNavigation } from '@/molecules/ProfileNavigation/ProfileNavigation';
+import { TextareaField } from '@/molecules/TextareaField/TextareaField';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { DialogAddLink } from '../DialogAddLink/DialogAddLink';
+import { DialogCropImage } from '../DialogCropImage/DialogCropImage';
+
 export const CreateProfileForm = () => {
   const t = useTranslations('forms.profile');
   const tCommon = useTranslations('common');

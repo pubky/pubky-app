@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useToast } from '@/molecules/Toaster/use-toast';
-
-import type { ArticleJSON } from './usePostArticle.types';
 import { FileController } from '@/controllers/file/file';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
+import { useToast } from '@/molecules/Toaster/use-toast';
 import type { FileVariant } from '@/services/nexus/file/file.types';
+import type { ArticleJSON } from './usePostArticle.types';
+
 interface CoverImage {
   src: string;
   alt: string;

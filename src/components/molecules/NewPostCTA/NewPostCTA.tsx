@@ -1,15 +1,14 @@
 'use client';
 
+import { useState } from 'react';
+import { Plus } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
+import { Dialog, DialogTrigger } from '@/atoms/Dialog/Dialog';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { useState } from 'react';
-import { Button } from '@/atoms/Button/Button';
-import { Dialog, DialogTrigger } from '@/atoms/Dialog/Dialog';
-import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
-
-import { Plus } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
 
 /**
  * Floating Action Button (FAB) for creating new posts.

@@ -1,8 +1,7 @@
 'use client';
-import { Container } from '@/atoms/Container/Container';
-
-import { useSelectedLayoutSegments } from 'next/navigation';
 import { useEffect } from 'react';
+import { useSelectedLayoutSegments } from 'next/navigation';
+import { Container } from '@/atoms/Container/Container';
 
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 

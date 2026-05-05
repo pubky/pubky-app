@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { HotController } from './hot';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HotApplication } from '@/application/hot/hot';
 import type { Pubky } from '@/models/models.types';
-import { UserStreamReach, UserStreamTimeframe, type NexusHotTag } from '@/services/nexus/nexus.types';
+import { type NexusHotTag, UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { HotController } from './hot';
+
 const mockCurrentUserPubky = 'current-user-pubky' as Pubky;
 
 describe('HotController', () => {

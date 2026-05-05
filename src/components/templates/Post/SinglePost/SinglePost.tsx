@@ -1,10 +1,9 @@
 'use client';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
-
-import type { SinglePostProps } from './SinglePost.types';
 import { SinglePostContent } from '@/organisms/SinglePostContent/SinglePostContent';
 import { SinglePostLeftDrawer, SinglePostLeftSidebar } from '@/organisms/SinglePostLeftSidebar/SinglePostLeftSidebar';
 import { SinglePostRightPanel } from '@/organisms/SinglePostRightPanel/SinglePostRightPanel';
+import type { SinglePostProps } from './SinglePost.types';
 
 /**
  * SinglePost Template

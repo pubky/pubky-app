@@ -1,10 +1,10 @@
+import { X } from 'lucide-react';
 import { Tag } from '@/atoms/Tag/Tag';
 import { Toggle } from '@/atoms/Toggle/Toggle';
-
 import { COLORS } from '@/config/theme';
-import type { PostTagProps } from './PostTag.types';
-import { X } from 'lucide-react';
 import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
+import type { PostTagProps } from './PostTag.types';
+
 export function PostTag({
   label,
   count,

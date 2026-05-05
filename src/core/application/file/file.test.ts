@@ -1,15 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { BlobResult, FileResult } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod } from '@/libs/http/http.types';
-import { FileVariant } from '@/services/nexus/file/file.types';
-import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { FileDetailsModel } from '@/models/file/fileDetails';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
+import { FileVariant } from '@/services/nexus/file/file.types';
+import type { NexusFileDetails } from '@/services/nexus/nexus.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({
   getValidMimeTypes: () => ['image/jpeg', 'image/png'],

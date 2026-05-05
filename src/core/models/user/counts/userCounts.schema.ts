@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserCounts } from '@/services/nexus/nexus.types';
+
 export interface UserCountsModelSchema extends NexusUserCounts {
   id: Pubky;
 }

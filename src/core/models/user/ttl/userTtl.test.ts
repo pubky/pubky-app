@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { resetDatabase } from '@/database/franky/franky.helpers';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { generateTestUserId } from '@/models/user/users.helpers';
+
 describe('UserTtlModel', () => {
   beforeEach(async () => {
     await resetDatabase();

@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PostPageBreadcrumb } from './PostPageBreadcrumb';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Ancestor } from '@/hooks/usePostAncestors/usePostAncestors.types';
+import { PostPageBreadcrumb } from './PostPageBreadcrumb';
 
 describe('PostPageBreadcrumb', () => {
   const mockOnNavigate = vi.fn();

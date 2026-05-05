@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { InstallCard, InstallHeader, InstallNavigation } from './Install';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
+import { InstallCard, InstallHeader, InstallNavigation } from './Install';
 
 // Mock Next.js Image
 vi.mock('next/image', () => ({

@@ -4,7 +4,6 @@ import { Tag } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ProfilePageEmptyState } from '../ProfilePageEmptyState/ProfilePageEmptyState';
 import { TagInput } from '../TagInput/TagInput';
-
 import type { TaggedEmptyProps } from './TaggedEmpty.types';
 
 export function TaggedEmpty({ onTagAdd }: TaggedEmptyProps) {

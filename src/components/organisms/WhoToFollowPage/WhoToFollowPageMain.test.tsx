@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ElementType, ReactNode } from 'react';
-import { WhoToFollowPageMain } from './WhoToFollowPageMain';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
-import { asOpaque } from '@/test-utils/type-assertions';
 import type { Pubky } from '@/models/models.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { WhoToFollowPageMain } from './WhoToFollowPageMain';
+
 // Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {

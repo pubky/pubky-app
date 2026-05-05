@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
-import type { UseNotificationsResult } from './useNotifications.types';
-import { Logger } from '@/libs/logger/logger';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NotificationController } from '@/controllers/notification/notification';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { Logger } from '@/libs/logger/logger';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+import type { UseNotificationsResult } from './useNotifications.types';
+
 /**
  * Hook for notifications with infinite scroll pagination.
  * Fetches directly from NotificationController using timestamp-based pagination.

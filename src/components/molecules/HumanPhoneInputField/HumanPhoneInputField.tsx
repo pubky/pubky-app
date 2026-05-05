@@ -1,7 +1,6 @@
-import type * as React from 'react';
-
-import { useTranslations } from 'next-intl';
 import { CheckCircle2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type * as React from 'react';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';

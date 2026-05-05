@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { persist, devtools } from 'zustand/middleware';
-import { HotStore, hotInitialState } from './hot.types';
-import { createHotActions } from './hot.actions';
+import { devtools, persist } from 'zustand/middleware';
 import { HOT_PERSIST_KEY } from '../persistedKeys';
+import { createHotActions } from './hot.actions';
+import { hotInitialState, HotStore } from './hot.types';
 
 // Store creation
 export const useHotStore = create<HotStore>()(

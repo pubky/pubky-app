@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { ProfileNavigation } from './ProfileNavigation';
 
 describe('ProfileNavigation - Snapshots', () => {

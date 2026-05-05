@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { useTagged } from '@/hooks/useTagged/useTagged';
-import { usePostTags } from '@/hooks/usePostTags/usePostTags';
-import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
-import type { UseEntityTagsOptions, UseEntityTagsResult } from './useEntityTags.types';
 import { TagKind } from '@/application/tag/tag.types';
+import { usePostTags } from '@/hooks/usePostTags/usePostTags';
+import { useTagged } from '@/hooks/useTagged/useTagged';
+import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import type { UseEntityTagsOptions, UseEntityTagsResult } from './useEntityTags.types';
+
 /**
  * Unified hook for fetching and managing entity tags (USER or POST).
  * Automatically selects the appropriate underlying hook based on taggedKind.

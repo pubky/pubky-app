@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { persist, devtools } from 'zustand/middleware';
-import { type SettingsStore, settingsInitialState } from './settings.types';
-import { createSettingsActions } from './settings.actions';
+import { devtools, persist } from 'zustand/middleware';
 import { SETTINGS_PERSIST_KEY } from '../persistedKeys';
+import { createSettingsActions } from './settings.actions';
+import { settingsInitialState, type SettingsStore } from './settings.types';
 
 // Store creation
 export const useSettingsStore = create<SettingsStore>()(

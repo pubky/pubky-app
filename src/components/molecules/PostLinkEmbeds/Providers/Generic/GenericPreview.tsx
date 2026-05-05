@@ -1,15 +1,14 @@
 'use client';
 
-import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { Globe } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
-
+import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { GenericPreviewSkeleton } from './GenericPreview.skeleton';
-import { Globe } from 'lucide-react';
 
 interface GenericPreviewProps {
   url: string;

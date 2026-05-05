@@ -1,9 +1,8 @@
 'use client';
-import { useEffect, useRef, type ReactNode } from 'react';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
-
-import { Logger } from '@/libs/logger/logger';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { getErrorMessage } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 
 interface GlobalErrorHandlerProviderProps {
   children: ReactNode;

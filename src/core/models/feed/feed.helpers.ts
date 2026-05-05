@@ -4,6 +4,7 @@ import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+
 export function reachToString(reach: PubkyAppFeedReach): string {
   const map: Record<PubkyAppFeedReach, string> = {
     [PubkyAppFeedReach.Following]: 'following',

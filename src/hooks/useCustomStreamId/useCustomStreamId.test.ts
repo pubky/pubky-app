@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useCustomStreamId } from './useCustomStreamId';
-import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout, PubkyAppPostKind } from 'pubky-app-specs';
+import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { useCustomStreamId } from './useCustomStreamId';
+
 const mockUseCustomFeed = vi.hoisted(() => vi.fn());
 
 vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({

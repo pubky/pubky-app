@@ -11,6 +11,7 @@ import type {
   TUserStreamWithUserIdParams,
 } from '@/services/nexus/stream/users/userStream.types';
 import { createUserStreamParams } from '@/services/nexus/stream/users/userStream.utils';
+
 /**
  * Nexus User Stream Service
  *

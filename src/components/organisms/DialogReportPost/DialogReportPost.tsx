@@ -1,15 +1,13 @@
 'use client';
 
-import { useReportPost } from '@/hooks/useReportPost/useReportPost';
 import { useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
-
+import { useReportPost } from '@/hooks/useReportPost/useReportPost';
 import { REPORT_POST_STEPS } from '@/hooks/useReportPost/useReportPost.constants';
+import type { DialogReportPostProps } from './DialogReportPost.types';
 import { DialogReportPostIssueStep } from './DialogReportPostIssueStep/DialogReportPostIssueStep';
 import { DialogReportPostReasonStep } from './DialogReportPostReasonStep/DialogReportPostReasonStep';
 import { DialogReportPostSuccess } from './DialogReportPostSuccess/DialogReportPostSuccess';
-
-import type { DialogReportPostProps } from './DialogReportPost.types';
 
 export function DialogReportPost({ open, onOpenChange, postId }: DialogReportPostProps) {
   const {

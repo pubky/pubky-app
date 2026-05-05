@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, waitFor, fireEvent, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HomegateController } from '@/controllers/homegate/homegate';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { HumanLightningPayment } from './HumanLightningPayment';
 import { VerificationHandler } from './HumanLightningPayment.utils';
-import { HomegateController } from '@/controllers/homegate/homegate';
+
 const mockCopyToClipboard = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockToast = vi.hoisted(() => vi.fn());
 const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));

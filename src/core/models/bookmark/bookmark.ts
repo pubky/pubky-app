@@ -1,10 +1,11 @@
 import { Table } from 'dexie';
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { db } from '@/database/franky/franky';
 import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
 import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
+
 export class BookmarkModel extends RecordModelBase<string, BookmarkModelSchema> implements BookmarkModelSchema {
   static table: Table<BookmarkModelSchema> = db.table('bookmarks');
 

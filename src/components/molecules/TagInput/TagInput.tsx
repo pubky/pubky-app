@@ -1,24 +1,22 @@
 'use client';
 
-import { useListboxNavigation } from '@/hooks/useListboxNavigation/useListboxNavigation';
-import { useTagInput } from '@/hooks/useTagInput/useTagInput';
-import { useTagSuggestions } from '@/hooks/useTagSuggestions/useTagSuggestions';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { Smile, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { Popover, PopoverAnchor, PopoverContent } from '@/atoms/Popover/Popover';
-import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
-
+import { TAG_MAX_LENGTH } from '@/config/posts';
+import { useListboxNavigation } from '@/hooks/useListboxNavigation/useListboxNavigation';
+import { useTagInput } from '@/hooks/useTagInput/useTagInput';
 import { TAG_INPUT_BLUR_DELAY_MS } from '@/hooks/useTagInput/useTagInput.constants';
 import { mergeTagSuggestions } from '@/hooks/useTagInput/useTagInput.utils';
-import { TAG_MAX_LENGTH } from '@/config/posts';
-import type { TagInputProps, TagInputHandle } from './TagInput.types';
-import { TagSuggestionsDropdown } from './TagSuggestionsDropdown/TagSuggestionsDropdown';
-
-import { Smile, X } from 'lucide-react';
+import { useTagSuggestions } from '@/hooks/useTagSuggestions/useTagSuggestions';
 import { cn } from '@/libs/utils/utils';
+import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
+import type { TagInputHandle, TagInputProps } from './TagInput.types';
+import { TagSuggestionsDropdown } from './TagSuggestionsDropdown/TagSuggestionsDropdown';
 
 export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagInput(
   {
