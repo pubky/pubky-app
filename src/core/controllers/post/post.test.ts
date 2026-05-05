@@ -15,8 +15,7 @@ import { PostTagsModel } from '@/models/post/tags/postTags';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { FileNormalizer } from '@/pipes/file/file.normalizer';
-import { TFileAttachmentResult } from '@/pipes/file/file.types';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 // Mock HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
@@ -29,6 +28,7 @@ vi.mock('@/application/file/file', () => ({
   FileApplication: {
     upload: vi.fn(),
     delete: vi.fn(),
+    toFileAttachment: vi.fn(),
     commitCreate: vi.fn(),
     commitDelete: vi.fn(),
   },
@@ -298,7 +298,7 @@ describe('PostController', () => {
 
   describe('commitCreate', () => {
     beforeEach(() => {
-      vi.spyOn(FileNormalizer, 'toFileAttachment').mockImplementation(async ({ file }) => {
+      vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(async ({ file }) => {
         const safeName = encodeURIComponent(file.name || 'upload');
 
         return {

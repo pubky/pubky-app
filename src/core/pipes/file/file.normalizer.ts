@@ -2,19 +2,17 @@ import { BlobResult, FileResult } from 'pubky-app-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 
-import type { TToFileParams, TUploadFileParams } from '@/controllers/file/file.types';
+import type { TCreateBlobParams, TFileAttachmentWithDataParams, TToFileParams } from '@/controllers/file/file.types';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 export class FileNormalizer {
   private constructor() {}
 
-  static async toFileAttachment({ file, pubky }: TUploadFileParams): Promise<TFileAttachmentResult> {
+  static toFileAttachment({ file, blobData, pubky }: TFileAttachmentWithDataParams): TFileAttachmentResult {
     try {
-      const sanitizedFile = await stripImageMetadata(file);
-      const blobResult = await this.toBlob({ file: sanitizedFile, pubky });
-      const fileResult = this.toFile({ file: sanitizedFile, url: blobResult.meta.url, pubky });
+      const blobResult = this.toBlob({ blobData, pubky });
+      const fileResult = this.toFile({ file, url: blobResult.meta.url, pubky });
       return { blobResult, fileResult };
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
@@ -25,18 +23,15 @@ export class FileNormalizer {
     }
   }
 
-  private static async toBlob({ file, pubky }: TUploadFileParams): Promise<BlobResult> {
+  private static toBlob({ blobData, pubky }: TCreateBlobParams): BlobResult {
     try {
-      const fileContent = await file.arrayBuffer();
-      const blobData = new Uint8Array(fileContent);
-
       const builder = PubkySpecsSingleton.get(pubky);
       return builder.createBlob(blobData);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
         service: ErrorService.PubkyAppSpecs,
         operation: 'createBlob',
-        context: { file, pubky },
+        context: { pubky },
       });
     }
   }

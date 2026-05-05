@@ -6,29 +6,135 @@ const IMAGE_MIME_TYPE_TO_EXTENSION: Record<string, string> = {
   'image/svg+xml': 'svg',
 };
 
+const IMAGE_EXTENSION_TO_MIME_TYPE: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+};
+
 const MIME_TYPES_WITH_CANVAS_SANITIZATION = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MIME_TYPES_WITH_LOSSY_REENCODING = new Set(['image/jpeg', 'image/webp']);
 const LOSSY_IMAGE_ENCODE_QUALITY = 1;
+const FILE_HEADER_BYTES_LENGTH = 512;
+const TEXT_DECODER = new TextDecoder();
 
-function getImageFileExtension(file: File): string {
-  const mappedExtension = IMAGE_MIME_TYPE_TO_EXTENSION[file.type];
+function getFileExtension(file: File): string | null {
+  const parts = file.name.split('.');
+  if (parts.length <= 1) {
+    return null;
+  }
+
+  const extension = parts.at(-1)?.toLowerCase();
+  return extension ?? null;
+}
+
+function getImageMimeTypeFromFileType(file: File): string | null {
+  const normalizedType = file.type.toLowerCase();
+  return normalizedType.startsWith('image/') ? normalizedType : null;
+}
+
+function getImageMimeTypeFromExtension(file: File): string | null {
+  const extension = getFileExtension(file);
+  if (!extension) {
+    return null;
+  }
+  return IMAGE_EXTENSION_TO_MIME_TYPE[extension] ?? null;
+}
+
+function hasPrefix(bytes: Uint8Array, prefix: number[]): boolean {
+  if (bytes.length < prefix.length) {
+    return false;
+  }
+  return prefix.every((value, index) => bytes[index] === value);
+}
+
+function isPngSignature(bytes: Uint8Array): boolean {
+  return hasPrefix(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+}
+
+function isJpegSignature(bytes: Uint8Array): boolean {
+  return hasPrefix(bytes, [0xff, 0xd8, 0xff]);
+}
+
+function isGifSignature(bytes: Uint8Array): boolean {
+  return (
+    hasPrefix(bytes, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]) || hasPrefix(bytes, [0x47, 0x49, 0x46, 0x38, 0x37, 0x61])
+  );
+}
+
+function isWebpSignature(bytes: Uint8Array): boolean {
+  return (
+    hasPrefix(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+    bytes.length >= 12 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  );
+}
+
+function isSvgSignature(bytes: Uint8Array): boolean {
+  const text = TEXT_DECODER.decode(bytes);
+  const normalized = text
+    .replace(/^\uFEFF/, '')
+    .trimStart()
+    .toLowerCase();
+  return normalized.startsWith('<svg') || (normalized.startsWith('<?xml') && normalized.includes('<svg'));
+}
+
+async function getImageMimeTypeFromMagicBytes(file: File): Promise<string | null> {
+  const header = new Uint8Array(await file.slice(0, FILE_HEADER_BYTES_LENGTH).arrayBuffer());
+  if (isJpegSignature(header)) {
+    return 'image/jpeg';
+  }
+  if (isPngSignature(header)) {
+    return 'image/png';
+  }
+  if (isWebpSignature(header)) {
+    return 'image/webp';
+  }
+  if (isGifSignature(header)) {
+    return 'image/gif';
+  }
+  if (isSvgSignature(header)) {
+    return 'image/svg+xml';
+  }
+  return null;
+}
+
+async function detectImageMimeType(file: File): Promise<string | null> {
+  const mimeTypeFromFileType = getImageMimeTypeFromFileType(file);
+  if (mimeTypeFromFileType) {
+    return mimeTypeFromFileType;
+  }
+
+  const mimeTypeFromMagicBytes = await getImageMimeTypeFromMagicBytes(file);
+  if (mimeTypeFromMagicBytes) {
+    return mimeTypeFromMagicBytes;
+  }
+
+  return getImageMimeTypeFromExtension(file);
+}
+
+function getImageFileExtension(file: File, mimeType: string): string {
+  const mappedExtension = IMAGE_MIME_TYPE_TO_EXTENSION[mimeType];
   if (mappedExtension) {
     return mappedExtension;
   }
 
-  const parts = file.name.split('.');
-  if (parts.length > 1) {
-    const extension = parts.at(-1)?.toLowerCase();
-    if (extension) {
-      return extension;
-    }
+  const extension = getFileExtension(file);
+  if (extension) {
+    return extension;
   }
 
   return 'img';
 }
 
-function generateObfuscatedImageFileName(file: File): string {
-  const extension = getImageFileExtension(file);
+function generateObfuscatedImageFileName(file: File, mimeType: string): string {
+  const extension = getImageFileExtension(file, mimeType);
   const randomPart =
     typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
       ? crypto.randomUUID().replaceAll('-', '')
@@ -66,7 +172,7 @@ function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality?: num
   });
 }
 
-async function sanitizeRasterImage(file: File): Promise<Blob> {
+async function sanitizeRasterImage(file: File, mimeType: string): Promise<Blob> {
   const objectUrl = URL.createObjectURL(file);
 
   try {
@@ -81,7 +187,7 @@ async function sanitizeRasterImage(file: File): Promise<Blob> {
     }
 
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return await canvasToBlob(canvas, file.type, getCanvasEncodeQuality(file.type));
+    return await canvasToBlob(canvas, mimeType, getCanvasEncodeQuality(mimeType));
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
@@ -95,23 +201,24 @@ async function sanitizeRasterImage(file: File): Promise<Blob> {
  * - All image types: replace original filename with an obfuscated one
  */
 export async function stripImageMetadata(file: File): Promise<File> {
-  if (!file.type.startsWith('image/')) {
+  const imageMimeType = await detectImageMimeType(file);
+  if (!imageMimeType) {
     return file;
   }
 
-  const obfuscatedName = generateObfuscatedImageFileName(file);
+  const obfuscatedName = generateObfuscatedImageFileName(file, imageMimeType);
 
-  if (!MIME_TYPES_WITH_CANVAS_SANITIZATION.has(file.type)) {
+  if (!MIME_TYPES_WITH_CANVAS_SANITIZATION.has(imageMimeType)) {
     return new File([file], obfuscatedName, {
-      type: file.type,
+      type: imageMimeType,
       lastModified: file.lastModified,
     });
   }
 
-  const sanitizedBlob = await sanitizeRasterImage(file);
+  const sanitizedBlob = await sanitizeRasterImage(file, imageMimeType);
 
   return new File([sanitizedBlob], obfuscatedName, {
-    type: sanitizedBlob.type || file.type,
+    type: sanitizedBlob.type || imageMimeType,
     lastModified: file.lastModified,
   });
 }

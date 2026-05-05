@@ -88,6 +88,36 @@ describe('stripImageMetadata', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:input-image');
   });
 
+  it('detects PNG files from magic bytes when file.type is empty', async () => {
+    const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01, 0x02, 0x03, 0x04]);
+    const inputFile = new File([pngBytes], 'upload', { type: '' });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result).toBeInstanceOf(File);
+    expect(result).not.toBe(inputFile);
+    expect(result.type).toBe('image/png');
+    expect(result.name).toMatch(/^[a-z0-9]+\.png$/);
+    expect(URL.createObjectURL).toHaveBeenCalledWith(inputFile);
+    expect(mockCanvas.toBlob).toHaveBeenCalled();
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1]).toBe('image/png');
+  });
+
+  it('falls back to file extension when file.type is empty', async () => {
+    const inputFile = new File(['raw-image-bytes'], 'photo.jpeg', { type: '' });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result).toBeInstanceOf(File);
+    expect(result).not.toBe(inputFile);
+    expect(result.type).toBe('image/jpeg');
+    expect(result.name).toMatch(/^[a-z0-9]+\.jpg$/);
+    expect(URL.createObjectURL).toHaveBeenCalledWith(inputFile);
+    expect(mockCanvas.toBlob).toHaveBeenCalled();
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1]).toBe('image/jpeg');
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[2]).toBe(1);
+  });
+
   it('leaves non-image files unchanged', async () => {
     const inputFile = new File(['%PDF-1.4'], 'document.pdf', { type: 'application/pdf' });
 

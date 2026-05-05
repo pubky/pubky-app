@@ -2,17 +2,32 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { BlobResult, FileResult } from 'pubky-app-specs';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { HttpMethod } from '@/libs/http/http.types';
+import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { FileDetailsModel } from '@/models/file/fileDetails';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({
   getValidMimeTypes: () => ['image/jpeg', 'image/png'],
+}));
+
+vi.mock('@/libs/image/stripImageMetadata', () => ({
+  stripImageMetadata: vi.fn(),
+}));
+
+vi.mock('@/pipes/file/file.normalizer', () => ({
+  FileNormalizer: {
+    toFileAttachment: vi.fn(),
+  },
 }));
 
 // Mock HomeserverService methods
@@ -113,6 +128,48 @@ beforeEach(async () => {
 });
 
 describe('FileApplication', () => {
+  describe('toFileAttachment', () => {
+    it('sanitizes file before normalizing it', async () => {
+      const rawFile = new File(['raw'], 'photo.jpg', { type: 'image/jpeg' });
+      const sanitizedFile = new File(['sanitized'], 'obfuscated.jpg', { type: 'image/jpeg' });
+      const fileAttachment = {
+        blobResult: createMockBlobResult(),
+        fileResult: createMockFileResult(),
+      };
+
+      vi.mocked(stripImageMetadata).mockResolvedValueOnce(sanitizedFile);
+      vi.mocked(FileNormalizer.toFileAttachment).mockReturnValueOnce(fileAttachment);
+
+      const result = await FileApplication.toFileAttachment({ file: rawFile, pubky: TEST_PUBKY });
+
+      expect(stripImageMetadata).toHaveBeenCalledWith(rawFile);
+      expect(FileNormalizer.toFileAttachment).toHaveBeenCalledWith({
+        file: sanitizedFile,
+        blobData: expect.any(Uint8Array),
+        pubky: TEST_PUBKY,
+      });
+      expect(result).toBe(fileAttachment);
+    });
+
+    it('wraps sanitization failures as AppError', async () => {
+      const rawFile = new File(['raw'], 'photo.jpg', { type: 'image/jpeg' });
+      vi.mocked(stripImageMetadata).mockRejectedValueOnce(new Error('sanitize failed'));
+
+      try {
+        await FileApplication.toFileAttachment({ file: rawFile, pubky: TEST_PUBKY });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AppError);
+        const appError = error as AppError;
+        expect(appError.category).toBe(ErrorCategory.Validation);
+        expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
+        expect(appError.service).toBe(ErrorService.Local);
+        expect(appError.operation).toBe('toFileAttachment');
+      }
+      expect(FileNormalizer.toFileAttachment).not.toHaveBeenCalled();
+    });
+  });
+
   describe('commitCreate', () => {
     it('uploads blob and then file record to homeserver', async () => {
       const fileJson = { id: 'file-1', kind: 'image' };
