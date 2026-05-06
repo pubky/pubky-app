@@ -15,7 +15,6 @@ import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
 import { PostHeader } from '../PostHeader/PostHeader';
-import { PostReplyRepostDialogs } from '../PostReplyRepostDialogs/PostReplyRepostDialogs';
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 
@@ -30,14 +29,7 @@ interface PostArticleDetailProps {
  * Displays an article post detail page with tags always visible on mobile and desktop.
  */
 export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: PostArticleDetailProps) => {
-  const {
-    replyDialogOpen,
-    repostDialogOpen,
-    setReplyDialogOpen,
-    setRepostDialogOpen,
-    openReplyDialog,
-    openRepostDialog,
-  } = usePostReplyRepostDialogs();
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
 
@@ -98,13 +90,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
         <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="hidden lg:flex" />
       </Container>
 
-      <PostReplyRepostDialogs
-        postId={postId}
-        replyDialogOpen={replyDialogOpen}
-        repostDialogOpen={repostDialogOpen}
-        onReplyDialogOpenChange={setReplyDialogOpen}
-        onRepostDialogOpenChange={setRepostDialogOpen}
-      />
+      {dialogs}
       <DialogCheckLink open={dialogOpen} onOpenChangeAction={setDialogOpen} linkUrl={clickedLink} />
 
       <Typography className="text-2xl font-light text-muted-foreground">Replies</Typography>

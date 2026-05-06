@@ -103,32 +103,39 @@ vi.mock('../PostHeader/PostHeader', () => ({
   ),
 }));
 
-vi.mock('../PostReplyRepostDialogs/PostReplyRepostDialogs', () => ({
-  PostReplyRepostDialogs: ({
+vi.mock('@/organisms/DialogReply/DialogReply', () => ({
+  DialogReply: ({
     postId,
-    replyDialogOpen,
-    repostDialogOpen,
-    onReplyDialogOpenChange,
-    onRepostDialogOpenChange,
+    open,
+    onOpenChangeAction,
   }: {
     postId: string;
-    replyDialogOpen: boolean;
-    repostDialogOpen: boolean;
-    onReplyDialogOpenChange: (open: boolean) => void;
-    onRepostDialogOpenChange: (open: boolean) => void;
+    open: boolean;
+    onOpenChangeAction: (open: boolean) => void;
   }) => (
-    <>
-      <div data-testid="dialog-reply" data-post-id={postId} data-open={replyDialogOpen}>
-        <button data-testid="close-reply-dialog" onClick={() => onReplyDialogOpenChange(false)}>
-          Close Reply
-        </button>
-      </div>
-      <div data-testid="dialog-repost" data-post-id={postId} data-open={repostDialogOpen}>
-        <button data-testid="close-repost-dialog" onClick={() => onRepostDialogOpenChange(false)}>
-          Close Repost
-        </button>
-      </div>
-    </>
+    <div data-testid="dialog-reply" data-post-id={postId} data-open={open}>
+      <button data-testid="close-reply-dialog" onClick={() => onOpenChangeAction(false)}>
+        Close Reply
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('@/organisms/DialogRepost/DialogRepost', () => ({
+  DialogRepost: ({
+    postId,
+    open,
+    onOpenChangeAction,
+  }: {
+    postId: string;
+    open: boolean;
+    onOpenChangeAction: (open: boolean) => void;
+  }) => (
+    <div data-testid="dialog-repost" data-post-id={postId} data-open={open}>
+      <button data-testid="close-repost-dialog" onClick={() => onOpenChangeAction(false)}>
+        Close Repost
+      </button>
+    </div>
   ),
 }));
 

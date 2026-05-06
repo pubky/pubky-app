@@ -18,7 +18,6 @@ import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContent } from '../PostContent/PostContent';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInlineTagsActions } from '../PostInlineTagsActions/PostInlineTagsActions';
-import { PostReplyRepostDialogs } from '../PostReplyRepostDialogs/PostReplyRepostDialogs';
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import type { PostMainProps } from './PostMain.types';
@@ -41,14 +40,7 @@ export function PostMain({
   const isDeleted = isPostDeleted(postDetails?.content);
 
   const { showRepostHeader, shouldShowPostHeader } = usePostHeaderVisibility(postId);
-  const {
-    replyDialogOpen,
-    repostDialogOpen,
-    setReplyDialogOpen,
-    setRepostDialogOpen,
-    openReplyDialog,
-    openRepostDialog,
-  } = usePostReplyRepostDialogs();
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
 
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
@@ -135,13 +127,7 @@ export function PostMain({
           )}
         </Card>
       </Container>
-      <PostReplyRepostDialogs
-        postId={postId}
-        replyDialogOpen={replyDialogOpen}
-        repostDialogOpen={repostDialogOpen}
-        onReplyDialogOpenChange={setReplyDialogOpen}
-        onRepostDialogOpenChange={setRepostDialogOpen}
-      />
+      {dialogs}
     </>
   );
 }

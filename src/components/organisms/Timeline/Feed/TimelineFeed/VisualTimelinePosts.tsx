@@ -27,7 +27,6 @@ import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/
 import { ClickableTagsList } from '../../../ClickableTagsList/ClickableTagsList';
 import { PostActionsBar } from '../../../PostActionsBar/PostActionsBar';
 import { PostContentBlurred } from '../../../PostContentBlurred/PostContentBlurred';
-import { PostReplyRepostDialogs } from '../../../PostReplyRepostDialogs/PostReplyRepostDialogs';
 import {
   VISUAL_GRID_MAX_WIDTH_PX,
   VISUAL_TILE_ASPECT_RATIOS,
@@ -220,14 +219,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
 
 function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps) {
   const isTouchDevice = useIsTouchDevice();
-  const {
-    replyDialogOpen,
-    repostDialogOpen,
-    setReplyDialogOpen,
-    setRepostDialogOpen,
-    openReplyDialog,
-    openRepostDialog,
-  } = usePostReplyRepostDialogs();
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(tile.postId);
 
   const handleNavigate = React.useCallback(() => {
     onNavigate(tile.postId);
@@ -276,13 +268,7 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
         ) : null}
       </Container>
 
-      <PostReplyRepostDialogs
-        postId={tile.postId}
-        replyDialogOpen={replyDialogOpen}
-        repostDialogOpen={repostDialogOpen}
-        onReplyDialogOpenChange={setReplyDialogOpen}
-        onRepostDialogOpenChange={setRepostDialogOpen}
-      />
+      {dialogs}
     </>
   );
 }
