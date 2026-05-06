@@ -164,7 +164,7 @@ jobs:
             NEXT_PUBLIC_CDN_URL=http://localhost:8080/static
             NEXT_PUBLIC_TESTNET=true
             NEXT_PUBLIC_PKARR_RELAYS=["https://pkarr.pubky.app","https://pkarr.pubky.org"]
-            NEXT_PUBLIC_DEFAULT_HTTP_RELAY=http://localhost:15412/link/
+            NEXT_PUBLIC_DEFAULT_HTTP_RELAY=http://localhost:15412/inbox/
             NEXT_PUBLIC_EXCHANGE_RATE_API=https://bitkit.stag0.blocktank.to/fx/rates/btc
             NEXT_PUBLIC_HOMEGATE_URL=https://homegate.staging.pubky.app
             NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
@@ -211,7 +211,7 @@ jobs:
             NEXT_PUBLIC_CDN_URL=https://nexus.staging.pubky.app/static
             NEXT_PUBLIC_TESTNET=false
             NEXT_PUBLIC_PKARR_RELAYS=["https://pkarr.pubky.app","https://pkarr.pubky.org"]
-            NEXT_PUBLIC_DEFAULT_HTTP_RELAY=https://httprelay.staging.pubky.app/link
+            NEXT_PUBLIC_DEFAULT_HTTP_RELAY=https://httprelay.staging.pubky.app/inbox
             NEXT_PUBLIC_EXCHANGE_RATE_API=https://bitkit.stag0.blocktank.to/fx/rates/btc
             NEXT_PUBLIC_HOMEGATE_URL=https://homegate.staging.pubky.app
             NEXT_PUBLIC_PRELUDE_SDK_KEY=${{ vars.PRELUDE_SDK_KEY }}

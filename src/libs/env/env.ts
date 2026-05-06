@@ -156,8 +156,8 @@ const envSchema = z.object({
   HOMESERVER_ADMIN_URL: z.string().url().default('http://localhost:6288/generate_signup_token'),
   HOMESERVER_ADMIN_PASSWORD: z.string().default('admin'),
 
-  /** HTTP relay for pubky protocol */
-  NEXT_PUBLIC_DEFAULT_HTTP_RELAY: z.string().url().default('https://httprelay.staging.pubky.app'),
+  /** HTTP relay for pubky protocol (auth uses `/inbox` with Pubky SDK 0.7+) */
+  NEXT_PUBLIC_DEFAULT_HTTP_RELAY: z.url().default('https://httprelay.staging.pubky.app/inbox'),
   NEXT_PUBLIC_MODERATION_ID: z.string().default('euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro'),
   NEXT_PUBLIC_MODERATED_TAGS: z
     .string()
