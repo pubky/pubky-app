@@ -4,6 +4,8 @@ export interface PostMainProps {
   postId: string;
   onClick?: () => void;
   className?: string;
+  cardDataCy?: string;
   isReply?: boolean;
   isLastReply?: boolean;
+  surface?: 'timeline' | 'detail';
 }

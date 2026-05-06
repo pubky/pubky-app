@@ -6,11 +6,11 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
+import { PostArticleDetail } from '@/organisms/PostArticleDetail/PostArticleDetail';
+import { PostMain } from '@/organisms/PostMain/PostMain';
 import { getTagsLayoutForSurfaceLayout, PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
 import { useHomeStore } from '@/stores/home/home.store';
 import { PostPageHeader } from '../PostPageHeader/PostPageHeader';
-import { SinglePostArticle } from '../SinglePostArticle/SinglePostArticle';
-import { SinglePostCard } from '../SinglePostCard/SinglePostCard';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
 import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import type { SinglePostContentProps } from './SinglePostContent.types';
@@ -57,14 +57,14 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
           <PostDeleted />
         </Card>
       ) : isArticle ? (
-        <SinglePostArticle
+        <PostArticleDetail
           postId={postId}
           content={postDetails.content}
           attachments={postDetails.attachments}
           isBlurred={postDetails.is_blurred}
         />
       ) : (
-        <SinglePostCard postId={postId} />
+        <PostMain postId={postId} surface="detail" cardDataCy="single-post-card" />
       )}
 
       {/* Replies section - only visible for authenticated users */}

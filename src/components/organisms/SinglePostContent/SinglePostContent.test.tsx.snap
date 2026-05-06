@@ -10,10 +10,11 @@ exports[`SinglePostContent - Snapshots > matches snapshot when not authenticated
   </div>
   <div
     data-post-id="author:post123"
+    data-surface="detail"
     data-tags-layout="inline"
     data-testid="single-post-card"
   >
-    SinglePostCard
+    PostMain
   </div>
 </div>
 `;
@@ -77,9 +78,9 @@ exports[`SinglePostContent - Snapshots > matches snapshot with long post (articl
 Article content"
     data-is-blurred="false"
     data-post-id="author:post123"
-    data-testid="single-post-article"
+    data-testid="post-article-detail"
   >
-    SinglePostArticle
+    PostArticleDetail
   </div>
   <div
     data-class-name="mb-6 flex"
@@ -118,10 +119,11 @@ exports[`SinglePostContent - Snapshots > matches snapshot with short post and no
   </div>
   <div
     data-post-id="author:post123"
+    data-surface="detail"
     data-tags-layout="inline"
     data-testid="single-post-card"
   >
-    SinglePostCard
+    PostMain
   </div>
   <div
     data-class-name="mb-6 flex"

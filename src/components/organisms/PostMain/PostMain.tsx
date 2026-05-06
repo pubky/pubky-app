@@ -1,44 +1,56 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
-import { TagKind } from '@/application/tag/tag.types';
+import React, { useRef } from 'react';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
-import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
 import { RepostHeader } from '@/molecules/RepostHeader/RepostHeader';
-import { ClickableTagsList } from '../ClickableTagsList/ClickableTagsList';
-import { DialogReply } from '../DialogReply/DialogReply';
-import { DialogRepost } from '../DialogRepost/DialogRepost';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContent } from '../PostContent/PostContent';
 import { PostHeader } from '../PostHeader/PostHeader';
+import { PostInlineTagsActions } from '../PostInlineTagsActions/PostInlineTagsActions';
+import { PostReplyRepostDialogs } from '../PostReplyRepostDialogs/PostReplyRepostDialogs';
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import type { PostMainProps } from './PostMain.types';
-import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from './PostMainLayout';
+import { usePostMainLayout } from './PostMainLayout';
+import { WIDE_POST_BODY_TEXT_CLASS, WidePostLayout } from './WidePostLayout';
 
-export function PostMain({ postId, onClick, className, isReply = false, isLastReply = false }: PostMainProps) {
+export function PostMain({
+  postId,
+  onClick,
+  className,
+  cardDataCy,
+  isReply = false,
+  isLastReply = false,
+  surface = 'timeline',
+}: PostMainProps) {
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
   const isWideLayout = effectiveTagsLayout === 'side';
+  const isInteractive = Boolean(onClick);
   const { postDetails } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
 
   const { showRepostHeader, shouldShowPostHeader } = usePostHeaderVisibility(postId);
-
-  const [replyDialogOpen, setReplyDialogOpen] = useState(false);
-  const [repostDialogOpen, setRepostDialogOpen] = useState(false);
-  const [tagsExpanded, setTagsExpanded] = useState(false);
+  const {
+    replyDialogOpen,
+    repostDialogOpen,
+    setReplyDialogOpen,
+    setRepostDialogOpen,
+    openReplyDialog,
+    openRepostDialog,
+  } = usePostReplyRepostDialogs();
 
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
@@ -55,14 +67,6 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
   // Determine thread connector variant based on reply status
   const connectorVariant = isLastReply ? POST_THREAD_CONNECTOR_VARIANTS.LAST : POST_THREAD_CONNECTOR_VARIANTS.REGULAR;
 
-  const handleReplyClick = () => {
-    setReplyDialogOpen(true);
-  };
-
-  const handleRepostClick = () => {
-    setRepostDialogOpen(true);
-  };
-
   const handleFooterClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
   };
@@ -73,14 +77,14 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
         ref={ttlRef}
         overrideDefaults
         onClick={onClick}
-        className={cn('relative flex min-w-0 cursor-pointer', isReply && 'pl-3')}
+        className={cn('relative flex min-w-0', isInteractive && 'cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
           <Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">
             <PostThreadConnector height={postHeight} variant={connectorVariant} />
           </Container>
         )}
-        <Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
+        <Card ref={cardRef} data-cy={cardDataCy} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
           {isDeleted ? (
             <PostDeleted />
           ) : (
@@ -91,78 +95,52 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
                 </Container>
               )}
               {isWideLayout ? (
-                <Container className={WIDE_POST_LAYOUT_CLASSES.shell}>
-                  <Container className={WIDE_POST_LAYOUT_CLASSES.leftColumn}>
-                    {shouldShowPostHeader && <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />}
-                    <PostContent postId={postId} textClassName={WIDE_POST_LAYOUT_CLASSES.bodyText} />
-                    <Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
-                      <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="lg:hidden" />
-                      <PostActionsBar
-                        postId={postId}
-                        onTagClick={() => {
-                          mobileTagsPanelRef.current?.focus();
-                          desktopTagsPanelRef.current?.focus();
-                        }}
-                        onReplyClick={handleReplyClick}
-                        onRepostClick={handleRepostClick}
-                      />
-                    </Container>
-                  </Container>
-                  <Container
-                    overrideDefaults
-                    onClick={handleFooterClick}
-                    className={WIDE_POST_LAYOUT_CLASSES.rightColumn}
-                  >
+                <WidePostLayout
+                  onRightColumnClick={handleFooterClick}
+                  rightColumn={
                     <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
+                  }
+                >
+                  {shouldShowPostHeader && <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />}
+                  <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
+                  {surface === 'detail' && <Container overrideDefaults className="flex-1" />}
+                  <Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
+                    <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="lg:hidden" />
+                    <PostActionsBar
+                      postId={postId}
+                      onTagClick={() => {
+                        mobileTagsPanelRef.current?.focus();
+                        desktopTagsPanelRef.current?.focus();
+                      }}
+                      onReplyClick={openReplyDialog}
+                      onRepostClick={openRepostDialog}
+                    />
                   </Container>
-                </Container>
+                </WidePostLayout>
               ) : (
                 <>
                   {shouldShowPostHeader && <PostHeader postId={postId} />}
                   <PostContent postId={postId} />
-                  <Container
-                    onClick={handleFooterClick}
-                    className={cn(
-                      'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
-                      tagsExpanded ? 'md:items-end' : 'md:items-start',
-                    )}
-                  >
-                    {tagsExpanded ? (
-                      <PostTagsPanel
-                        postId={postId}
-                        widthMode="fit"
-                        autoFocusInput
-                        enableLoadingSkeleton={false}
-                        className="flex-1"
-                      />
-                    ) : (
-                      <ClickableTagsList
-                        taggedId={postId}
-                        taggedKind={TagKind.POST}
-                        maxTagLength={POST_TAGS_MAX_LENGTH}
-                        maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
-                        showCount={true}
-                        showInput={false}
-                        showAddButton={true}
-                        addMode={true}
-                      />
-                    )}
-                    <PostActionsBar
-                      postId={postId}
-                      onTagClick={() => setTagsExpanded((prev) => !prev)}
-                      onReplyClick={handleReplyClick}
-                      onRepostClick={handleRepostClick}
-                      className="w-full shrink-0 justify-start sm:w-auto md:justify-end"
-                    />
-                  </Container>
+                  <PostInlineTagsActions
+                    postId={postId}
+                    onFooterClick={handleFooterClick}
+                    onReplyClick={openReplyDialog}
+                    onRepostClick={openRepostDialog}
+                    actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+                  />
                 </>
               )}
             </CardContent>
           )}
         </Card>
       </Container>
-      <DialogReply postId={postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
-      <DialogRepost postId={postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
+      <PostReplyRepostDialogs
+        postId={postId}
+        replyDialogOpen={replyDialogOpen}
+        repostDialogOpen={repostDialogOpen}
+        onReplyDialogOpenChange={setReplyDialogOpen}
+        onRepostDialogOpenChange={setRepostDialogOpen}
+      />
     </>
   );
 }

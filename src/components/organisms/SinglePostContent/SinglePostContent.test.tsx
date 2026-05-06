@@ -150,8 +150,8 @@ vi.mock('@/molecules/PostDeleted/PostDeleted', () => {
 });
 
 // Mock organisms used by SinglePostContent
-vi.mock('../SinglePostArticle/SinglePostArticle', () => ({
-  SinglePostArticle: ({
+vi.mock('@/organisms/PostArticleDetail/PostArticleDetail', () => ({
+  PostArticleDetail: ({
     postId,
     content,
     isBlurred,
@@ -161,21 +161,26 @@ vi.mock('../SinglePostArticle/SinglePostArticle', () => ({
     attachments: unknown[];
     isBlurred: boolean;
   }) => (
-    <div data-testid="single-post-article" data-post-id={postId} data-content={content} data-is-blurred={isBlurred}>
-      SinglePostArticle
+    <div data-testid="post-article-detail" data-post-id={postId} data-content={content} data-is-blurred={isBlurred}>
+      PostArticleDetail
     </div>
   ),
 }));
 
-vi.mock('../SinglePostCard/SinglePostCard', async () => {
+vi.mock('@/organisms/PostMain/PostMain', async () => {
   const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayout');
 
   return {
-    SinglePostCard: ({ postId }: { postId: string }) => {
+    PostMain: ({ postId, surface, cardDataCy }: { postId: string; surface?: string; cardDataCy?: string }) => {
       const inheritedTagsLayout = usePostMainLayout();
       return (
-        <div data-testid="single-post-card" data-post-id={postId} data-tags-layout={inheritedTagsLayout}>
-          SinglePostCard
+        <div
+          data-testid={cardDataCy ?? 'post-main'}
+          data-post-id={postId}
+          data-surface={surface}
+          data-tags-layout={inheritedTagsLayout}
+        >
+          PostMain
         </div>
       );
     },
@@ -228,13 +233,14 @@ describe('SinglePostContent', () => {
   });
 
   describe('rendering', () => {
-    it('renders SinglePostCard for short posts', () => {
+    it('renders PostMain for short posts', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
       expect(screen.getByTestId('single-post-card')).toBeInTheDocument();
       expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-post-id', mockPostId);
+      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-surface', 'detail');
       expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-tags-layout', 'inline');
-      expect(screen.queryByTestId('single-post-article')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-article-detail')).not.toBeInTheDocument();
     });
 
     it('derives side tags layout for the single-post surface when the app is in wide mode', () => {
@@ -245,7 +251,7 @@ describe('SinglePostContent', () => {
       expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-tags-layout', 'side');
     });
 
-    it('renders SinglePostArticle for long posts', () => {
+    it('renders PostArticleDetail for long posts', () => {
       vi.mocked(usePostDetails).mockReturnValue({
         postDetails: {
           id: mockPostId,
@@ -262,7 +268,7 @@ describe('SinglePostContent', () => {
 
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByTestId('single-post-article')).toBeInTheDocument();
+      expect(screen.getByTestId('post-article-detail')).toBeInTheDocument();
       expect(screen.queryByTestId('single-post-card')).not.toBeInTheDocument();
     });
 
@@ -312,7 +318,7 @@ describe('SinglePostContent', () => {
 
       expect(screen.getByTestId('post-deleted')).toBeInTheDocument();
       expect(screen.queryByTestId('single-post-card')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('single-post-article')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-article-detail')).not.toBeInTheDocument();
     });
 
     it('does not render SinglePostParticipants inside content', () => {

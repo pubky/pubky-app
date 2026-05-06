@@ -5,7 +5,7 @@
 const POST_THREAD_SPACER_HEIGHT = 16;
 
 /**
- * Approximate gap between SinglePostCard and replies section in pixels.
+ * Approximate gap between the main post card and replies section in pixels.
  * This accounts for the visual spacing in the layout.
  */
 const SINGLE_POST_REPLIES_GAP = 50;
