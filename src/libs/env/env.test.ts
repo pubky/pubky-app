@@ -55,4 +55,9 @@ describe('Environment variables configuration', () => {
     expect(typeof Env.NEXT_PUBLIC_DB_VERSION).toBe('number');
     expect(typeof Env.NEXT_PUBLIC_TTL_POST_MS).toBe('number');
   });
+
+  it('should use HTTP relay inbox URL from test config', () => {
+    expect(() => new URL(Env.NEXT_PUBLIC_DEFAULT_HTTP_RELAY)).not.toThrow();
+    expect(Env.NEXT_PUBLIC_DEFAULT_HTTP_RELAY).toContain('/inbox');
+  });
 });
