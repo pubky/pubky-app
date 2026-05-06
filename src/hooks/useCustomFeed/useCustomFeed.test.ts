@@ -103,21 +103,37 @@ describe('useCustomFeed', () => {
 
     renderHook(() => useCustomFeed());
 
-    expect(mockUseLiveQuery).toHaveBeenCalledTimes(1);
-
-    // Second argument is the dependency array [isFeedRoute, id]
-    const deps = mockUseLiveQuery.mock.calls[0][1];
-    expect(deps).toEqual([true, 'feed-abc123']);
+    // Dependency array is [activeFeedId] on every render
+    const lastDeps = mockUseLiveQuery.mock.calls.at(-1)?.[1];
+    expect(lastDeps).toEqual(['feed-abc123']);
   });
 
-  it('passes isFeedRoute as false when pathname does not start with /feed', () => {
+  it('passes activeFeedId as undefined when pathname does not start with /feed and nothing was latched', () => {
     mockUsePathname.mockReturnValue('/settings');
+    mockUseParams.mockReturnValue({});
     mockUseLiveQuery.mockReturnValue(undefined);
 
     renderHook(() => useCustomFeed());
 
     const deps = mockUseLiveQuery.mock.calls[0][1];
-    expect(deps[0]).toBe(false);
+    expect(deps[0]).toBeUndefined();
+  });
+
+  it('keeps the latched feed id during intercepted post navigation (URL → /post/...)', () => {
+    mockUseLiveQuery.mockReturnValue(undefined);
+
+    // First render: on the feed route — id gets latched
+    const { rerender } = renderHook(() => useCustomFeed());
+    expect(mockUseLiveQuery.mock.calls[0][1]).toEqual(['feed-abc123']);
+
+    // Simulate intercepted navigation: URL becomes /post/..., useParams loses id
+    mockUsePathname.mockReturnValue('/post/user/post1');
+    mockUseParams.mockReturnValue({});
+    rerender();
+
+    // Latched id should still drive the query, so feed state isn't reset
+    const lastDeps = mockUseLiveQuery.mock.calls.at(-1)?.[1];
+    expect(lastDeps).toEqual(['feed-abc123']);
   });
 
   it('calls FeedController.get with correct feedId inside the query function', async () => {
