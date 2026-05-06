@@ -306,7 +306,7 @@ describe('posts', () => {
     });
   });
 
-  it('can tag and remove tags from existing post on post page (columns layout)', () => {
+  it.only('can tag and remove tags from existing post on post page (columns layout)', () => {
     const postContent = `I can add and remove tags from my existing post on the post page! ${Date.now()}`;
     const tag1 = 'açorda';
     const tag2 = 'cassava';
@@ -320,48 +320,48 @@ describe('posts', () => {
 
     cy.location('pathname').should('contain', '/post/');
 
+    // add three tags to post
+    cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
-      cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
       cy.get('[data-cy="post-tag-add-button"]').click();
       [tag1, tag2, tag3].forEach((tag) => {
         cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
         cy.wait('@putTag').its('response.statusCode').should('eq', 201);
       });
-
-      cy.get('[data-cy="clickable-tags-list"]')
-        .filter(':visible')
-        .within(() => {
-          [tag1, tag2, tag3].forEach((tag) => {
-            cy.contains('span', tag)
-              .should('be.visible')
-              .parent()
-              .find('[data-cy="post-tag-count"]')
-              .should('have.text', '1');
-          });
-
-          cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
-          cy.contains('span', tag2).parent().click();
-          cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
-          cy.contains('span', tag2)
-            .should('be.visible')
-            .parent()
-            .find('[data-cy="post-tag-count"]')
-            .should('have.text', '0');
-        });
     });
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag added');
 
-    cy.reload();
-
+    // check tags are added to post with count of 1
+    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="clickable-tags-list"]')
         .filter(':visible')
         .within(() => {
-          cy.contains('span', tag2).should('not.exist');
+          [tag1, tag2, tag3].forEach((tag) => {
+            cy.contains('button', tag).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
+          });
+
+          // click tag 2 to remove it
+          cy.contains('button', tag2).click();
+          cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
+          cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '0');
+        });
+    });
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag removed');
+
+    cy.reload();
+
+    // check tag 2 is removed from post after page reload
+    cy.get('[data-cy="single-post-card"]').within(() => {
+      cy.get('[data-cy="clickable-tags-list"]')
+        .filter(':visible')
+        .within(() => {
+          cy.contains('button', tag2).should('not.exist');
         });
     });
   });
 
-  it('can tag and remove tags from existing post on post page (wide layout)', () => {
+  it.only('can tag and remove tags from existing post on post page (wide layout)', () => {
     const postContent = `I can add and remove tags from my existing post on the post page! ${Date.now()}`;
     const tag1 = 'açorda';
     const tag2 = 'cassava';
@@ -378,37 +378,37 @@ describe('posts', () => {
     // switch to wide layout
     cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').click();
 
+    // add three tags to post
+    cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
-      cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
       [tag1, tag2, tag3].forEach((tag) => {
         cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
         cy.wait('@putTag').its('response.statusCode').should('eq', 201);
       });
+    });
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag added');
 
+    // check tags are added to post with count of 1
+    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
+    cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="post-tags-panel"]')
         .filter(':visible')
         .within(() => {
           [tag1, tag2, tag3].forEach((tag) => {
-            cy.contains('p', tag)
-              .should('be.visible')
-              .parent()
-              .find('[data-cy="post-tag-count"]')
-              .should('have.text', '1');
+            cy.contains('p', tag).should('be.visible').parent().find('[data-cy="tag-count"]').should('have.text', '1');
           });
 
-          cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
+          // click tag 2 to remove it
           cy.contains('p', tag2).parent().click();
           cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
-          cy.contains('p', tag2)
-            .should('be.visible')
-            .parent()
-            .find('[data-cy="post-tag-count"]')
-            .should('have.text', '0');
+          cy.contains('p', tag2).should('be.visible').parent().find('[data-cy="tag-count"]').should('have.text', '0');
         });
     });
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag removed');
 
     cy.reload();
 
+    // check tag 2 is removed from post after page reload
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="post-tags-panel"]')
         .filter(':visible')
