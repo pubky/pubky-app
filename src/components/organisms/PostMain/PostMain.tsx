@@ -57,10 +57,6 @@ export function PostMain({
   // Determine thread connector variant based on reply status
   const connectorVariant = isLastReply ? POST_THREAD_CONNECTOR_VARIANTS.LAST : POST_THREAD_CONNECTOR_VARIANTS.REGULAR;
 
-  const handleFooterClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-  };
-
   return (
     <>
       <Container
@@ -90,7 +86,11 @@ export function PostMain({
                     {shouldShowPostHeader && <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />}
                     <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
                     {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
-                    <Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
+                    <Container
+                      overrideDefaults
+                      onClick={(event) => event.stopPropagation()}
+                      className="flex flex-col gap-4"
+                    >
                       <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="lg:hidden" />
                       <PostActionsBar
                         postId={postId}
@@ -105,7 +105,7 @@ export function PostMain({
                   </Container>
                   <Container
                     overrideDefaults
-                    onClick={handleFooterClick}
+                    onClick={(event) => event.stopPropagation()}
                     className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
                   >
                     <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
