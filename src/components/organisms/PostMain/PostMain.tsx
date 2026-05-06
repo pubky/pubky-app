@@ -32,7 +32,7 @@ export function PostMain({
   cardDataCy,
   isReply = false,
   isLastReply = false,
-  surface = 'timeline',
+  pinActionsToBottom = false,
 }: PostMainProps) {
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
@@ -103,7 +103,7 @@ export function PostMain({
                 >
                   {shouldShowPostHeader && <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />}
                   <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
-                  {surface === 'detail' && <Container overrideDefaults className="flex-1" />}
+                  {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
                   <Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
                     <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="lg:hidden" />
                     <PostActionsBar

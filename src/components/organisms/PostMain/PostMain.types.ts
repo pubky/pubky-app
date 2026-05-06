@@ -7,5 +7,5 @@ export interface PostMainProps {
   cardDataCy?: string;
   isReply?: boolean;
   isLastReply?: boolean;
-  surface?: 'timeline' | 'detail';
+  pinActionsToBottom?: boolean;
 }

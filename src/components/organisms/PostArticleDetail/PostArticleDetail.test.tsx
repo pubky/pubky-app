@@ -3,6 +3,7 @@ import type { ElementType, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
 import { PostArticleDetail } from './PostArticleDetail';
 
 vi.mock('@/hooks/usePostArticle/usePostArticle', () => ({
@@ -65,14 +66,21 @@ vi.mock('../DialogCheckLink/DialogCheckLink', () => ({
 vi.mock('../PostActionsBar/PostActionsBar', () => ({
   PostActionsBar: ({
     postId,
+    onTagClick,
     onReplyClick,
     onRepostClick,
+    className,
   }: {
     postId: string;
+    onTagClick?: () => void;
     onReplyClick?: () => void;
     onRepostClick?: () => void;
+    className?: string;
   }) => (
-    <div data-testid="post-actions-bar" data-post-id={postId}>
+    <div data-testid="post-actions-bar" data-post-id={postId} className={className}>
+      <button data-testid="tag-button" onClick={onTagClick}>
+        Tag
+      </button>
       <button data-testid="reply-button" onClick={onReplyClick}>
         Reply
       </button>
@@ -90,7 +98,9 @@ vi.mock('../PostContentBlurred/PostContentBlurred', () => ({
 }));
 
 vi.mock('../PostHeader/PostHeader', () => ({
-  PostHeader: ({ postId }: { postId: string }) => <div data-testid="post-header" data-post-id={postId} />,
+  PostHeader: ({ postId, size, timeAgoPlacement }: { postId: string; size?: string; timeAgoPlacement?: string }) => (
+    <div data-testid="post-header" data-post-id={postId} data-size={size} data-time-placement={timeAgoPlacement} />
+  ),
 }));
 
 vi.mock('../PostReplyRepostDialogs/PostReplyRepostDialogs', () => ({
@@ -98,14 +108,26 @@ vi.mock('../PostReplyRepostDialogs/PostReplyRepostDialogs', () => ({
     postId,
     replyDialogOpen,
     repostDialogOpen,
+    onReplyDialogOpenChange,
+    onRepostDialogOpenChange,
   }: {
     postId: string;
     replyDialogOpen: boolean;
     repostDialogOpen: boolean;
+    onReplyDialogOpenChange: (open: boolean) => void;
+    onRepostDialogOpenChange: (open: boolean) => void;
   }) => (
     <>
-      <div data-testid="dialog-reply" data-post-id={postId} data-open={replyDialogOpen} />
-      <div data-testid="dialog-repost" data-post-id={postId} data-open={repostDialogOpen} />
+      <div data-testid="dialog-reply" data-post-id={postId} data-open={replyDialogOpen}>
+        <button data-testid="close-reply-dialog" onClick={() => onReplyDialogOpenChange(false)}>
+          Close Reply
+        </button>
+      </div>
+      <div data-testid="dialog-repost" data-post-id={postId} data-open={repostDialogOpen}>
+        <button data-testid="close-repost-dialog" onClick={() => onRepostDialogOpenChange(false)}>
+          Close Repost
+        </button>
+      </div>
     </>
   ),
 }));
@@ -127,6 +149,14 @@ describe('PostArticleDetail', () => {
     isBlurred: false,
   };
 
+  const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[] | undefined> = {}) => ({
+    profile: null,
+    posts,
+    setProfile: vi.fn(),
+    setPostAttachments: vi.fn(),
+    reset: vi.fn(),
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockUsePostArticle.mockReturnValue({
@@ -134,15 +164,7 @@ describe('PostArticleDetail', () => {
       body: 'Test article body content',
       coverImage: null,
     });
-    mockUseLocalFilesStore.mockImplementation((selector) =>
-      selector({
-        profile: null,
-        posts: {},
-        setProfile: vi.fn(),
-        setPostAttachments: vi.fn(),
-        reset: vi.fn(),
-      }),
-    );
+    mockUseLocalFilesStore.mockImplementation((selector) => selector(createMockLocalFilesStore()));
   });
 
   it('renders article detail content and both tag panels', () => {
@@ -153,6 +175,35 @@ describe('PostArticleDetail', () => {
     expect(screen.getByTestId('post-text')).toHaveTextContent('Test article body content');
     expect(screen.getAllByTestId('post-tags-panel')).toHaveLength(2);
     expect(screen.getByText('Replies')).toBeInTheDocument();
+  });
+
+  it('renders the article title as h1', () => {
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(screen.getByText('Test Article Title').tagName).toBe('H1');
+  });
+
+  it('renders PostHeader with the article detail props', () => {
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(screen.getByTestId('post-header')).toHaveAttribute('data-post-id', 'user123:post456');
+    expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'large');
+    expect(screen.getByTestId('post-header')).toHaveAttribute('data-time-placement', 'bottom-left');
+  });
+
+  it('passes body content and article mode to PostText', () => {
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(screen.getByTestId('post-text')).toHaveTextContent('Test article body content');
+    expect(screen.getByTestId('post-text')).toHaveAttribute('data-is-article', 'true');
+  });
+
+  it('renders dialogs in closed state initially', () => {
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(screen.getByTestId('dialog-reply')).toHaveAttribute('data-open', 'false');
+    expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-open', 'false');
+    expect(screen.getByTestId('dialog-check-link')).toHaveAttribute('data-open', 'false');
   });
 
   it('renders the cover image when one is available', () => {
@@ -171,6 +222,152 @@ describe('PostArticleDetail', () => {
     expect(screen.getByTestId('cover-image')).toHaveAttribute('alt', 'Cover image');
   });
 
+  it('does not render cover image when not available', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: null,
+    });
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
+  });
+
+  it('does not render cover image when content is blurred', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://example.com/image.jpg',
+        alt: 'Cover image',
+      },
+    });
+
+    render(<PostArticleDetail {...defaultProps} isBlurred />);
+
+    expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
+  });
+
+  it('renders local cover image when available', () => {
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(
+        createMockLocalFilesStore({
+          'user123:post456': [
+            {
+              type: 'image/jpeg',
+              name: 'local-cover.jpg',
+              urls: { main: 'blob:http://localhost/local-cover' },
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(screen.getByTestId('cover-image')).toHaveAttribute('src', 'blob:http://localhost/local-cover');
+    expect(screen.getByTestId('cover-image')).toHaveAttribute('alt', 'local-cover.jpg');
+  });
+
+  it('prefers local cover image over remote cover image', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://example.com/remote-image.jpg',
+        alt: 'Remote cover',
+      },
+    });
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(
+        createMockLocalFilesStore({
+          'user123:post456': [
+            {
+              type: 'image/png',
+              name: 'local-priority.png',
+              urls: { main: 'blob:http://localhost/local-priority' },
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(screen.getByTestId('cover-image')).toHaveAttribute('src', 'blob:http://localhost/local-priority');
+    expect(screen.getByTestId('cover-image')).toHaveAttribute('alt', 'local-priority.png');
+  });
+
+  it('ignores local cover image when first attachment is not an image', () => {
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(
+        createMockLocalFilesStore({
+          'user123:post456': [
+            {
+              type: 'video/mp4',
+              name: 'video.mp4',
+              urls: { main: 'blob:http://localhost/video' },
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
+  });
+
+  it('falls back to remote cover image when local attachment is not an image', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://example.com/remote.jpg',
+        alt: 'Remote fallback',
+      },
+    });
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(
+        createMockLocalFilesStore({
+          'user123:post456': [
+            {
+              type: 'application/pdf',
+              name: 'document.pdf',
+              urls: { main: 'blob:http://localhost/document' },
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(screen.getByTestId('cover-image')).toHaveAttribute('src', 'https://example.com/remote.jpg');
+    expect(screen.getByTestId('cover-image')).toHaveAttribute('alt', 'Remote fallback');
+  });
+
+  it('does not render local cover image when content is blurred', () => {
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(
+        createMockLocalFilesStore({
+          'user123:post456': [
+            {
+              type: 'image/jpeg',
+              name: 'local.jpg',
+              urls: { main: 'blob:http://localhost/local' },
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<PostArticleDetail {...defaultProps} isBlurred />);
+
+    expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
+  });
+
   it('renders blurred content instead of article body when blurred', () => {
     render(<PostArticleDetail {...defaultProps} isBlurred />);
 
@@ -186,5 +383,74 @@ describe('PostArticleDetail', () => {
 
     fireEvent.click(screen.getByTestId('repost-button'));
     expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-open', 'true');
+  });
+
+  it('closes reply dialog when the dialog open state changes', () => {
+    render(<PostArticleDetail {...defaultProps} />);
+
+    fireEvent.click(screen.getByTestId('reply-button'));
+    expect(screen.getByTestId('dialog-reply')).toHaveAttribute('data-open', 'true');
+
+    fireEvent.click(screen.getByTestId('close-reply-dialog'));
+    expect(screen.getByTestId('dialog-reply')).toHaveAttribute('data-open', 'false');
+  });
+
+  it('closes repost dialog when the dialog open state changes', () => {
+    render(<PostArticleDetail {...defaultProps} />);
+
+    fireEvent.click(screen.getByTestId('repost-button'));
+    expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-open', 'true');
+
+    fireEvent.click(screen.getByTestId('close-repost-dialog'));
+    expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-open', 'false');
+  });
+
+  it('calls usePostArticle with the main cover image variant', () => {
+    const propsWithAttachments = {
+      ...defaultProps,
+      attachments: ['pubky://user/pub/pubky.app/files/file-123'],
+    };
+
+    render(<PostArticleDetail {...propsWithAttachments} />);
+
+    expect(mockUsePostArticle).toHaveBeenCalledWith({
+      content: defaultProps.content,
+      attachments: propsWithAttachments.attachments,
+      coverImageVariant: 'main',
+    });
+  });
+
+  it('matches snapshot with default props', () => {
+    const { container } = render(<PostArticleDetail {...defaultProps} />);
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with cover image', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Article With Cover',
+      body: 'Article body with cover image',
+      coverImage: {
+        src: 'https://example.com/cover.jpg',
+        alt: 'Article cover',
+      },
+    });
+
+    const { container } = render(
+      <PostArticleDetail
+        postId="snapshot-user:cover-post"
+        content='{"title":"Article With Cover","body":"Article body with cover image"}'
+        attachments={['pubky://user/pub/pubky.app/files/file-123']}
+        isBlurred={false}
+      />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot when blurred', () => {
+    const { container } = render(<PostArticleDetail {...defaultProps} isBlurred />);
+
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

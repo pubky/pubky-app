@@ -64,7 +64,7 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
           isBlurred={postDetails.is_blurred}
         />
       ) : (
-        <PostMain postId={postId} surface="detail" cardDataCy="single-post-card" />
+        <PostMain postId={postId} pinActionsToBottom cardDataCy="single-post-card" />
       )}
 
       {/* Replies section - only visible for authenticated users */}
