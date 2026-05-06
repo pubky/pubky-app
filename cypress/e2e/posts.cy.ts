@@ -332,19 +332,17 @@ describe('posts', () => {
         .filter(':visible')
         .within(() => {
           [tag1, tag2, tag3].forEach((tag) => {
-            cy.contains('span', tag)
+            cy.contains('button', tag)
               .should('be.visible')
-              .parent()
               .find('[data-cy="post-tag-count"]')
               .should('have.text', '1');
           });
 
           cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
-          cy.contains('span', tag2).parent().click();
+          cy.contains('button', tag2).click();
           cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
-          cy.contains('span', tag2)
+          cy.contains('button', tag2)
             .should('be.visible')
-            .parent()
             .find('[data-cy="post-tag-count"]')
             .should('have.text', '0');
         });
@@ -356,7 +354,7 @@ describe('posts', () => {
       cy.get('[data-cy="clickable-tags-list"]')
         .filter(':visible')
         .within(() => {
-          cy.contains('span', tag2).should('not.exist');
+          cy.contains('button', tag2).should('not.exist');
         });
     });
   });
@@ -392,7 +390,7 @@ describe('posts', () => {
             cy.contains('p', tag)
               .should('be.visible')
               .parent()
-              .find('[data-cy="post-tag-count"]')
+              .find('[data-cy="tag-count"]')
               .should('have.text', '1');
           });
 
@@ -402,7 +400,7 @@ describe('posts', () => {
           cy.contains('p', tag2)
             .should('be.visible')
             .parent()
-            .find('[data-cy="post-tag-count"]')
+            .find('[data-cy="tag-count"]')
             .should('have.text', '0');
         });
     });
