@@ -9,12 +9,18 @@ exports[`SinglePostContent - Snapshots > matches snapshot when not authenticated
     PostPageHeader
   </div>
   <div
-    data-pin-actions-to-bottom="true"
-    data-post-id="author:post123"
-    data-tags-layout="inline"
-    data-testid="single-post-card"
+    data-cy="single-post-card"
+    data-override-defaults="true"
+    data-testid="container"
   >
-    PostMain
+    <div
+      data-pin-actions-to-bottom="true"
+      data-post-id="author:post123"
+      data-tags-layout="inline"
+      data-testid="post-main"
+    >
+      PostMain
+    </div>
   </div>
 </div>
 `;
@@ -118,12 +124,18 @@ exports[`SinglePostContent - Snapshots > matches snapshot with short post and no
     PostPageHeader
   </div>
   <div
-    data-pin-actions-to-bottom="true"
-    data-post-id="author:post123"
-    data-tags-layout="inline"
-    data-testid="single-post-card"
+    data-cy="single-post-card"
+    data-override-defaults="true"
+    data-testid="container"
   >
-    PostMain
+    <div
+      data-pin-actions-to-bottom="true"
+      data-post-id="author:post123"
+      data-tags-layout="inline"
+      data-testid="post-main"
+    >
+      PostMain
+    </div>
   </div>
   <div
     data-class-name="mb-6 flex"

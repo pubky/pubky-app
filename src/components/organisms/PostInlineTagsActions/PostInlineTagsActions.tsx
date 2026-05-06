@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
@@ -13,7 +13,6 @@ interface PostInlineTagsActionsProps {
   postId: string;
   onReplyClick: () => void;
   onRepostClick: () => void;
-  onFooterClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
   className?: string;
   actionsClassName?: string;
 }
@@ -22,7 +21,6 @@ export function PostInlineTagsActions({
   postId,
   onReplyClick,
   onRepostClick,
-  onFooterClick,
   className,
   actionsClassName,
 }: PostInlineTagsActionsProps) {
@@ -30,7 +28,7 @@ export function PostInlineTagsActions({
 
   return (
     <Container
-      onClick={onFooterClick}
+      onClick={(event) => event.stopPropagation()}
       className={cn(
         'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
         tagsExpanded ? 'md:items-end' : 'md:items-start',

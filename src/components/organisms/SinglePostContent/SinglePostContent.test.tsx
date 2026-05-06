@@ -99,12 +99,19 @@ vi.mock('@/atoms/Container/Container', () => {
       children,
       className,
       overrideDefaults,
+      'data-cy': dataCy,
     }: {
       children: React.ReactNode;
       className?: string;
       overrideDefaults?: boolean;
+      'data-cy'?: string;
     }) => (
-      <div data-testid="container" data-class-name={className} data-override-defaults={overrideDefaults}>
+      <div
+        data-testid="container"
+        data-cy={dataCy}
+        data-class-name={className}
+        data-override-defaults={overrideDefaults}
+      >
         {children}
       </div>
     ),
@@ -171,19 +178,11 @@ vi.mock('@/organisms/PostMain/PostMain', async () => {
   const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayout');
 
   return {
-    PostMain: ({
-      postId,
-      pinActionsToBottom,
-      cardDataCy,
-    }: {
-      postId: string;
-      pinActionsToBottom?: boolean;
-      cardDataCy?: string;
-    }) => {
+    PostMain: ({ postId, pinActionsToBottom }: { postId: string; pinActionsToBottom?: boolean }) => {
       const inheritedTagsLayout = usePostMainLayout();
       return (
         <div
-          data-testid={cardDataCy ?? 'post-main'}
+          data-testid="post-main"
           data-post-id={postId}
           data-pin-actions-to-bottom={String(pinActionsToBottom)}
           data-tags-layout={inheritedTagsLayout}
@@ -242,12 +241,12 @@ describe('SinglePostContent', () => {
 
   describe('rendering', () => {
     it('renders PostMain for short posts', () => {
-      render(<SinglePostContent postId={mockPostId} />);
+      const { container } = render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByTestId('single-post-card')).toBeInTheDocument();
-      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-post-id', mockPostId);
-      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-pin-actions-to-bottom', 'true');
-      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-tags-layout', 'inline');
+      expect(container.querySelector('[data-cy="single-post-card"]')).toBeInTheDocument();
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-post-id', mockPostId);
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-pin-actions-to-bottom', 'true');
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-tags-layout', 'inline');
       expect(screen.queryByTestId('post-article-detail')).not.toBeInTheDocument();
     });
 
@@ -256,7 +255,7 @@ describe('SinglePostContent', () => {
 
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-tags-layout', 'side');
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-tags-layout', 'side');
     });
 
     it('renders PostArticleDetail for long posts', () => {
@@ -277,7 +276,7 @@ describe('SinglePostContent', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
       expect(screen.getByTestId('post-article-detail')).toBeInTheDocument();
-      expect(screen.queryByTestId('single-post-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-main')).not.toBeInTheDocument();
     });
 
     it('renders loading text when postDetails is not available', () => {
@@ -325,7 +324,7 @@ describe('SinglePostContent', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
       expect(screen.getByTestId('post-deleted')).toBeInTheDocument();
-      expect(screen.queryByTestId('single-post-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-main')).not.toBeInTheDocument();
       expect(screen.queryByTestId('post-article-detail')).not.toBeInTheDocument();
     });
 

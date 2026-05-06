@@ -28,7 +28,6 @@ export function PostMain({
   postId,
   onClick,
   className,
-  cardDataCy,
   isReply = false,
   isLastReply = false,
   pinActionsToBottom = false,
@@ -83,7 +82,7 @@ export function PostMain({
             <PostThreadConnector height={postHeight} variant={connectorVariant} />
           </Container>
         )}
-        <Card ref={cardRef} data-cy={cardDataCy} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
+        <Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
           {isDeleted ? (
             <PostDeleted />
           ) : (
@@ -126,7 +125,6 @@ export function PostMain({
                   <PostContent postId={postId} />
                   <PostInlineTagsActions
                     postId={postId}
-                    onFooterClick={handleFooterClick}
                     onReplyClick={openReplyDialog}
                     onRepostClick={openRepostDialog}
                     actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end"
