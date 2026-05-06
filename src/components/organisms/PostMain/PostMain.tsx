@@ -22,8 +22,7 @@ import { PostReplyRepostDialogs } from '../PostReplyRepostDialogs/PostReplyRepos
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import type { PostMainProps } from './PostMain.types';
-import { usePostMainLayout } from './PostMainLayout';
-import { WIDE_POST_BODY_TEXT_CLASS, WidePostLayout } from './WidePostLayout';
+import { usePostMainLayout, WIDE_POST_BODY_TEXT_CLASS } from './PostMainLayout';
 
 export function PostMain({
   postId,
@@ -95,28 +94,32 @@ export function PostMain({
                 </Container>
               )}
               {isWideLayout ? (
-                <WidePostLayout
-                  onRightColumnClick={handleFooterClick}
-                  rightColumn={
-                    <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
-                  }
-                >
-                  {shouldShowPostHeader && <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />}
-                  <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
-                  {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
-                  <Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
-                    <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="lg:hidden" />
-                    <PostActionsBar
-                      postId={postId}
-                      onTagClick={() => {
-                        mobileTagsPanelRef.current?.focus();
-                        desktopTagsPanelRef.current?.focus();
-                      }}
-                      onReplyClick={openReplyDialog}
-                      onRepostClick={openRepostDialog}
-                    />
+                <Container className="flex min-w-0 flex-col lg:flex-row">
+                  <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
+                    {shouldShowPostHeader && <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />}
+                    <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
+                    {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
+                    <Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
+                      <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="lg:hidden" />
+                      <PostActionsBar
+                        postId={postId}
+                        onTagClick={() => {
+                          mobileTagsPanelRef.current?.focus();
+                          desktopTagsPanelRef.current?.focus();
+                        }}
+                        onReplyClick={openReplyDialog}
+                        onRepostClick={openRepostDialog}
+                      />
+                    </Container>
                   </Container>
-                </WidePostLayout>
+                  <Container
+                    overrideDefaults
+                    onClick={handleFooterClick}
+                    className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
+                  >
+                    <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
+                  </Container>
+                </Container>
               ) : (
                 <>
                   {shouldShowPostHeader && <PostHeader postId={postId} />}

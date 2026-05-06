@@ -4,6 +4,8 @@ import * as React from 'react';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import type { TagsLayout } from './PostMain.types';
 
+export const WIDE_POST_BODY_TEXT_CLASS = 'text-xl leading-7';
+
 /**
  * Canonical mapping from app layout mode to post tags layout.
  * Surface entry points derive this once, then downstream post renderers inherit it.
