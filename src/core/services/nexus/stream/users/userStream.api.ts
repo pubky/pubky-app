@@ -58,9 +58,6 @@ export const userStreamApi = {
   friends: (params: TUserStreamWithUserIdParams) =>
     buildUserStreamUrl(params, UserStreamSource.FRIENDS, USER_STREAM_PREFIX.USER_IDS),
 
-  muted: (params: TUserStreamWithUserIdParams) =>
-    buildUserStreamUrl(params, UserStreamSource.MUTED, USER_STREAM_PREFIX.USER_IDS),
-
   recommended: (params: TUserStreamWithUserIdParams) =>
     buildUserStreamUrl(params, UserStreamSource.RECOMMENDED, USER_STREAM_PREFIX.USER_IDS),
 

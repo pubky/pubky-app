@@ -21,6 +21,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
+import type { Pubky as TPubkyModel } from '@/models/models.types';
 import type {
   TGenerateAuthUrlResult,
   THomeserverRestoreSessionParams,
@@ -485,5 +486,26 @@ export class HomeserverService {
     }
 
     return data.token;
+  }
+
+  /**
+   * Subscribe to homeserver `/events-stream` for a user's pub directory subtree (SDK SSE wrapper).
+   * Used for mute-list sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
+   */
+  static async subscribeUserEventStreamForPath(params: {
+    userZ32: TPubkyModel;
+    cursor: string | null;
+    pathPrefix: string;
+  }): Promise<ReadableStream> {
+    try {
+      const pubkySdk = this.getPubkySdk();
+      const pk = PublicKey.from(params.userZ32);
+      return await pubkySdk.eventStreamForUser(pk, params.cursor).path(params.pathPrefix).live().subscribe();
+    } catch (error) {
+      return handleError({
+        error,
+        additionalContext: { pathPrefix: params.pathPrefix },
+      });
+    }
   }
 }

@@ -34,4 +34,11 @@ export class MuteController {
   static async fetchMutedUsers(pubky: Pubky): Promise<Pubky[]> {
     return MuteApplication.fetchMutedUsers(pubky);
   }
+
+  /**
+   * Live SSE (via SDK) for `/pub/pubky.app/mutes/` changes on the homeserver.
+   */
+  static subscribeMuteDirectoryEventStream(pubky: Pubky, cursor: string | null): Promise<ReadableStream> {
+    return MuteApplication.subscribeMuteDirectoryEventStream(pubky, cursor);
+  }
 }

@@ -38,6 +38,9 @@ export function createUserStreamParams(
   // If we are dealing with userId:reach format
   if (parts.length === 2) {
     const [userId, reach] = parts;
+    if (reach === 'muted') {
+      throw new Error('Muted user lists are homeserver-backed only; they are not available as Nexus user streams.');
+    }
     return {
       reach: reach as ReachType,
       apiParams: { user_id: userId as Pubky, ...baseParams } as UserStreamApiParamsMap[ReachType],
@@ -47,6 +50,9 @@ export function createUserStreamParams(
   // If we are dealing with source:timeframe:reach format
   if (parts.length === 3) {
     const [source, timeframe, reach] = parts;
+    if (source === 'muted') {
+      throw new Error('Muted user lists are homeserver-backed only; they are not available as Nexus user streams.');
+    }
 
     // Influencers need timeframe and optionally reach in params
     // Note: 'all' is not a valid API value for reach - omit it to get all users
@@ -64,7 +70,7 @@ export function createUserStreamParams(
       } as NexusParamsResult<'influencers'>;
     }
 
-    // For sources that require user_id (followers, following, friends, muted, recommended),
+    // For sources that require user_id (followers, following, friends, recommended),
     // add user_id from viewer_id when available
     if (streamRequiresUserId(streamId) && baseParams.viewer_id) {
       return {
@@ -90,7 +96,7 @@ export function createUserStreamParams(
  * Sources that require user_id parameter according to Nexus API documentation
  * https://nexus.staging.pubky.app/swagger-ui/#/Stream/stream_user_ids_handler
  */
-const SOURCES_REQUIRING_USER_ID = ['followers', 'following', 'friends', 'muted', 'recommended'] as const;
+const SOURCES_REQUIRING_USER_ID = ['followers', 'following', 'friends', 'recommended'] as const;
 
 /**
  * Check if a stream ID corresponds to a source that requires user_id
@@ -106,7 +112,6 @@ type UserStreamApiParamsMap = {
   followers: TUserStreamWithUserIdParams;
   following: TUserStreamWithUserIdParams;
   friends: TUserStreamWithUserIdParams;
-  muted: TUserStreamWithUserIdParams;
   recommended: TUserStreamWithUserIdParams;
   influencers: TUserStreamInfluencersParams;
   most_followed: TUserStreamBase;

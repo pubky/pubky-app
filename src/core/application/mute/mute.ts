@@ -1,5 +1,6 @@
 import { baseUriBuilder } from 'pubky-app-specs';
 import type { TMuteApplicationCommitParams } from '@/application/mute/mute.types';
+import { MUTE_HOMESERVER_EVENTS_PATH_PREFIX } from '@/config/mute-sync';
 import { AppError } from '@/libs/error/error';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
@@ -57,5 +58,17 @@ export class MuteApplication {
       stream,
     });
     return stream;
+  }
+
+  /**
+   * Homeserver `/events-stream` (live) for mute directory changes only.
+   * @see HomeserverService.subscribeUserEventStreamForPath
+   */
+  static subscribeMuteDirectoryEventStream(pubky: Pubky, cursor: string | null): Promise<ReadableStream> {
+    return HomeserverService.subscribeUserEventStreamForPath({
+      userZ32: pubky,
+      cursor,
+      pathPrefix: MUTE_HOMESERVER_EVENTS_PATH_PREFIX,
+    });
   }
 }
