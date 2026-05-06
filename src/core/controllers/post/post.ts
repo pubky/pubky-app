@@ -115,8 +115,8 @@ export class PostController {
    * @param params.limit - Maximum number of tags to return
    * @returns Array of tags from Nexus
    */
-  static async fetchTags({ compositeId, skip, limit }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
-    return await PostApplication.fetchTags({ compositeId, skip, limit });
+  static async fetchTags({ compositeId, skip, limit, viewerId }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
+    return await PostApplication.fetchTags({ compositeId, skip, limit, viewerId });
   }
 
   /**

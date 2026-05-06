@@ -90,6 +90,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           compositeId: postId,
           skip: 0,
           limit: TAGS_PER_PAGE,
+          viewerId: viewerId ?? undefined,
         });
 
         if (stale) return;
@@ -109,7 +110,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     return () => {
       stale = true;
     };
-  }, [postId, hasFetched]);
+  }, [postId, hasFetched, viewerId]);
 
   const isLoading = tagsCollection === undefined;
 
@@ -202,6 +203,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         compositeId: postId,
         skip,
         limit: TAGS_PER_PAGE,
+        viewerId: viewerId ?? undefined,
       });
 
       // IMPORTANT: Increment by fetched count, not by unique tags in UI.
@@ -219,7 +221,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     } finally {
       setIsLoadingMore(false);
     }
-  }, [postId, isLoadingMore, hasMore, tTags]);
+  }, [postId, isLoadingMore, hasMore, viewerId, tTags]);
 
   const handleTagAdd = useCallback(
     async (tagString: string): Promise<{ success: boolean; error?: string }> => {
