@@ -44,6 +44,8 @@ export class MuteListSyncCoordinator {
   private loopGeneration = 0;
   private activeReader: ReadableStreamDefaultReader<{ cursor: string; eventType: string; free(): void }> | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  private reconnectBackoffTimer: ReturnType<typeof setTimeout> | undefined;
+  private reconnectBackoffWake: (() => void) | undefined;
 
   private constructor() {
     this.setupListeners();
@@ -233,8 +235,32 @@ export class MuteListSyncCoordinator {
         break;
       }
 
-      await new Promise<void>((resolve) => setTimeout(resolve, MUTE_SYNC_RECONNECT_BACKOFF_MS));
+      await this.awaitReconnectBackoff();
     }
+  }
+
+  /** Schedules reconnect delay; {@link teardownReaderAndTimers} clears the timer and completes this await immediately. */
+  private awaitReconnectBackoff(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      this.cancelReconnectBackoffAwait();
+      this.reconnectBackoffWake = resolve;
+      this.reconnectBackoffTimer = setTimeout(() => {
+        this.reconnectBackoffTimer = undefined;
+        const wake = this.reconnectBackoffWake;
+        this.reconnectBackoffWake = undefined;
+        wake?.();
+      }, MUTE_SYNC_RECONNECT_BACKOFF_MS);
+    });
+  }
+
+  private cancelReconnectBackoffAwait(): void {
+    if (this.reconnectBackoffTimer !== undefined) {
+      clearTimeout(this.reconnectBackoffTimer);
+      this.reconnectBackoffTimer = undefined;
+    }
+    const wake = this.reconnectBackoffWake;
+    this.reconnectBackoffWake = undefined;
+    wake?.();
   }
 
   private scheduleDebouncedFetch(pubky: Pubky): void {
@@ -272,6 +298,7 @@ export class MuteListSyncCoordinator {
   private async teardownReaderAndTimers(): Promise<void> {
     clearTimeout(this.debounceTimer);
     this.debounceTimer = undefined;
+    this.cancelReconnectBackoffAwait();
     if (this.activeReader) {
       await this.activeReader.cancel().catch(() => {});
       this.activeReader = null;

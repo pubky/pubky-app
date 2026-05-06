@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, AUTH_ROUTES } from '@/app/routes';
-import { MUTE_SYNC_DEBOUNCE_MS } from '@/config/mute-sync';
+import { MUTE_SYNC_DEBOUNCE_MS, MUTE_SYNC_RECONNECT_BACKOFF_MS } from '@/config/mute-sync';
 import { MuteController } from '@/controllers/mute/mute';
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
 import type { Pubky } from '@/models/models.types';
@@ -103,5 +103,36 @@ describe('MuteListSyncCoordinator', () => {
 
     expect(subscribe).not.toHaveBeenCalled();
     coordinator.stop();
+  });
+
+  it('clears reconnect backoff on stop so a second subscribe is not scheduled after backoff', async () => {
+    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
+    vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
+      return new ReadableStream({
+        start(controller) {
+          controller.close();
+        },
+      });
+    });
+
+    useAuthStore.getState().init({
+      session: mockSession(),
+      currentUserPubky: pubky,
+      hasProfile: true,
+    });
+
+    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+
+    const coordinator = MuteListSyncCoordinator.getInstance();
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+
+    await flushPromises();
+    expect(subscribe).toHaveBeenCalledTimes(1);
+
+    coordinator.stop();
+
+    await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MS + 100);
+    expect(subscribe).toHaveBeenCalledTimes(1);
   });
 });
