@@ -1,18 +1,18 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 export function usePostReplyRepostDialogs() {
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = useState(false);
 
-  const openReplyDialog = useCallback(() => {
+  const openReplyDialog = () => {
     setReplyDialogOpen(true);
-  }, []);
+  };
 
-  const openRepostDialog = useCallback(() => {
+  const openRepostDialog = () => {
     setRepostDialogOpen(true);
-  }, []);
+  };
 
   return {
     replyDialogOpen,
