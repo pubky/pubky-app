@@ -185,7 +185,7 @@ vi.mock('@/organisms/PostArticleDetail/PostArticleDetail', () => ({
 }));
 
 vi.mock('@/organisms/PostMain/PostMain', async () => {
-  const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayout');
+  const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayoutContext');
 
   return {
     PostMain: ({ postId, pinActionsToBottom }: { postId: string; pinActionsToBottom?: boolean }) => {

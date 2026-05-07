@@ -437,7 +437,8 @@
     "viewOriginal": "View original post",
     "youReposted": "You reposted",
     "newPostsSingular": "See {count} new post",
-    "newPostsPlural": "See {count} new posts"
+    "newPostsPlural": "See {count} new posts",
+    "replies": "Replies"
   },
   "profile": {
     "title": "Profile",

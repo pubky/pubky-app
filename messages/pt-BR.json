@@ -443,7 +443,8 @@
     "viewOriginal": "Ver post original",
     "youReposted": "Você repostou",
     "newPostsSingular": "Ver {count} novo post",
-    "newPostsPlural": "Ver {count} novos posts"
+    "newPostsPlural": "Ver {count} novos posts",
+    "replies": "Respostas"
   },
   "profile": {
     "title": "Perfil",

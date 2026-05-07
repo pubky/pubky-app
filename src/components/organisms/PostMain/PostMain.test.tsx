@@ -6,7 +6,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { PostMain } from './PostMain';
-import { PostMainLayoutProvider } from './PostMainLayout';
+import { PostMainLayoutProvider } from './PostMainLayoutContext';
 
 // Use vi.hoisted to define mock functions before vi.mock calls (which are hoisted)
 const { mockPostHeader } = vi.hoisted(() => ({

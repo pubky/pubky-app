@@ -21,7 +21,8 @@ import { PostInlineTagsActions } from '../PostInlineTagsActions/PostInlineTagsAc
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import type { PostMainProps } from './PostMain.types';
-import { usePostMainLayout, WIDE_POST_BODY_TEXT_CLASS } from './PostMainLayout';
+import { usePostMainLayout } from './PostMainLayoutContext';
+import { WIDE_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 
 export function PostMain({
   postId,
