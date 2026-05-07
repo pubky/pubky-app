@@ -86,8 +86,8 @@ export class PostApplication {
    * @param limit - Maximum number of tags to return
    * @returns Array of tags from Nexus
    */
-  static async fetchTags({ compositeId, skip, limit }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
-    const nexusTags = await NexusPostService.getPostTags({ compositeId, skip, limit });
+  static async fetchTags({ compositeId, skip, limit, viewerId }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
+    const nexusTags = await NexusPostService.getPostTags({ compositeId, skip, limit, viewerId });
 
     // Persist new tags to local DB (merge with existing)
     if (nexusTags.length > 0) {
