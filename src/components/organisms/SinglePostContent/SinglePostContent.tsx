@@ -2,6 +2,7 @@
 
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isPostDeleted } from '@/libs/utils/utils';
@@ -74,6 +75,7 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
         <Container overrideDefaults className="mb-6 flex">
           {/* Left column - Replies thread with QuickReply at the end (larger) */}
           <Container className="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0">
+            {isArticle && <Typography className="text-2xl font-light text-muted-foreground">Replies</Typography>}
             <Container overrideDefaults className="ml-3">
               <ThreadTree key={postId} postId={postId} showQuickReply={!isDeleted} />
             </Container>

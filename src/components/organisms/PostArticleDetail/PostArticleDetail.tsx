@@ -92,8 +92,6 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
 
       {dialogs}
       <DialogCheckLink open={dialogOpen} onOpenChangeAction={setDialogOpen} linkUrl={clickedLink} />
-
-      <Typography className="text-2xl font-light text-muted-foreground">Replies</Typography>
     </>
   );
 };

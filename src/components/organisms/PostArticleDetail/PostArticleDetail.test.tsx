@@ -181,7 +181,7 @@ describe('PostArticleDetail', () => {
     expect(screen.getByTestId('post-header')).toHaveAttribute('data-post-id', 'user123:post456');
     expect(screen.getByTestId('post-text')).toHaveTextContent('Test article body content');
     expect(screen.getAllByTestId('post-tags-panel')).toHaveLength(2);
-    expect(screen.getByText('Replies')).toBeInTheDocument();
+    expect(screen.queryByText('Replies')).not.toBeInTheDocument();
   });
 
   it('renders the article title as h1', () => {

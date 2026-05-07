@@ -97,6 +97,12 @@ Article content"
       data-class-name="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0"
       data-testid="container"
     >
+      <p
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="typography"
+      >
+        Replies
+      </p>
       <div
         data-class-name="ml-3"
         data-override-defaults="true"

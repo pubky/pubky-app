@@ -128,6 +128,16 @@ vi.mock('@/atoms/PageHeader/PageHeader', () => {
   };
 });
 
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="typography" className={className}>
+        {children}
+      </p>
+    ),
+  };
+});
+
 vi.mock('@/atoms/PostThreadConnector/PostThreadConnector.constants', () => {
   return {
     POST_THREAD_CONNECTOR_VARIANTS: {
@@ -277,6 +287,56 @@ describe('SinglePostContent', () => {
 
       expect(screen.getByTestId('post-article-detail')).toBeInTheDocument();
       expect(screen.queryByTestId('post-main')).not.toBeInTheDocument();
+    });
+
+    it('renders Replies heading for authenticated article posts', () => {
+      vi.mocked(usePostDetails).mockReturnValue({
+        postDetails: {
+          id: mockPostId,
+          indexed_at: Date.now(),
+          kind: 'long' as const,
+          uri: 'pubky://author/pub/pubky.app/posts/post123',
+          content: '# Article Title\n\nArticle content',
+          attachments: [],
+          is_moderated: false,
+          is_blurred: false,
+        } satisfies EnrichedPostDetails,
+        isLoading: false,
+      });
+
+      render(<SinglePostContent postId={mockPostId} />);
+
+      expect(screen.getByText('Replies')).toBeInTheDocument();
+    });
+
+    it('does not render Replies heading for unauthenticated article posts', () => {
+      vi.mocked(useRequireAuth).mockReturnValue({
+        isAuthenticated: false,
+        requireAuth: <T,>(_action: () => T) => undefined,
+      });
+      vi.mocked(usePostDetails).mockReturnValue({
+        postDetails: {
+          id: mockPostId,
+          indexed_at: Date.now(),
+          kind: 'long' as const,
+          uri: 'pubky://author/pub/pubky.app/posts/post123',
+          content: '# Article Title\n\nArticle content',
+          attachments: [],
+          is_moderated: false,
+          is_blurred: false,
+        } satisfies EnrichedPostDetails,
+        isLoading: false,
+      });
+
+      render(<SinglePostContent postId={mockPostId} />);
+
+      expect(screen.queryByText('Replies')).not.toBeInTheDocument();
+    });
+
+    it('does not render Replies heading for short posts', () => {
+      render(<SinglePostContent postId={mockPostId} />);
+
+      expect(screen.queryByText('Replies')).not.toBeInTheDocument();
     });
 
     it('renders loading text when postDetails is not available', () => {
