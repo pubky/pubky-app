@@ -78,6 +78,7 @@ export function TimelineFeedWithStream({
  */
 function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, children }: TimelineFeedContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const previousMutedUserIdSetRef = useRef<Set<string> | null>(null);
 
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
   const {
@@ -109,15 +110,32 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
   });
 
   useEffect(() => {
-    if (variant === TIMELINE_FEED_VARIANT.PROFILE) return;
-    if (mutedUserIdSet.size === 0) return;
+    const previousMutedUserIdSet = previousMutedUserIdSetRef.current;
+    const currentMutedUserIdSet = new Set(mutedUserIdSet);
+    // Store the latest set before early returns so Strict Mode reruns do not retrigger the same transition.
+    previousMutedUserIdSetRef.current = currentMutedUserIdSet;
 
-    const postIdsToRemove = rawPostIds.filter((id) => MuteFilter.isPostMuted(id, mutedUserIdSet));
+    if (variant === TIMELINE_FEED_VARIANT.PROFILE) return;
+
+    const hasUnmutedUser = previousMutedUserIdSet
+      ? [...previousMutedUserIdSet].some((userId) => !currentMutedUserIdSet.has(userId))
+      : false;
+
+    if (hasUnmutedUser) {
+      // Unmute can make posts that were removed from pagination state visible again; rebuild from the stream.
+      void refresh();
+      return;
+    }
+
+    if (currentMutedUserIdSet.size === 0) return;
+
+    // Muting only needs to remove currently visible posts, so keep this path cheaper than a full refresh.
+    const postIdsToRemove = rawPostIds.filter((id) => MuteFilter.isPostMuted(id, currentMutedUserIdSet));
 
     if (postIdsToRemove.length > 0) {
       removePosts(postIdsToRemove);
     }
-  }, [mutedUserIdSet, rawPostIds, removePosts, variant]);
+  }, [mutedUserIdSet, rawPostIds, refresh, removePosts, variant]);
 
   const contextValue: TimelineFeedContextValue = {
     prependPosts,
