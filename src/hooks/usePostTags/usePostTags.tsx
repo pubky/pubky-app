@@ -90,6 +90,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           compositeId: postId,
           skip: 0,
           limit: TAGS_PER_PAGE,
+          viewerId: viewerId ?? undefined,
         });
 
         if (stale) return;
@@ -109,7 +110,13 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     return () => {
       stale = true;
     };
-  }, [postId, hasFetched]);
+    // `viewerId` is listed for parity with the user-tags hook (`useTagged`),
+    // but the `hasFetched` guard above means a mid-mount viewer change
+    // (e.g. user logs in on the same page) will not trigger a re-fetch.
+    // This matches existing behaviour and is out of scope for #1721.
+    // To support that case in the future, reset `hasFetched` when viewerId
+    // changes — see the `prevPostIdRef` pattern below for the shape.
+  }, [postId, hasFetched, viewerId]);
 
   const isLoading = tagsCollection === undefined;
 
@@ -202,6 +209,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         compositeId: postId,
         skip,
         limit: TAGS_PER_PAGE,
+        viewerId: viewerId ?? undefined,
       });
 
       // IMPORTANT: Increment by fetched count, not by unique tags in UI.
@@ -219,7 +227,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     } finally {
       setIsLoadingMore(false);
     }
-  }, [postId, isLoadingMore, hasMore, tTags]);
+  }, [postId, isLoadingMore, hasMore, viewerId, tTags]);
 
   const handleTagAdd = useCallback(
     async (tagString: string): Promise<{ success: boolean; error?: string }> => {
