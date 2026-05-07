@@ -135,6 +135,7 @@ describe('usePostTags', () => {
           compositeId: 'author:post123',
           skip: 0,
           limit: TAGS_PER_PAGE,
+          viewerId: 'mock-user-id',
         });
       });
     });
@@ -345,6 +346,7 @@ describe('usePostTags', () => {
         compositeId: 'author:post123',
         skip: 25,
         limit: TAGS_PER_PAGE,
+        viewerId: 'viewer-123',
       });
     });
 
@@ -394,6 +396,7 @@ describe('usePostTags', () => {
         compositeId: 'author:post123',
         skip: 25,
         limit: TAGS_PER_PAGE,
+        viewerId: 'viewer-123',
       });
 
       // Second loadMore - skip should now be 25 + TAGS_PER_PAGE
@@ -402,6 +405,7 @@ describe('usePostTags', () => {
         compositeId: 'author:post123',
         skip: 25 + TAGS_PER_PAGE,
         limit: TAGS_PER_PAGE,
+        viewerId: 'viewer-123',
       });
     });
 
@@ -482,6 +486,7 @@ describe('usePostTags', () => {
         compositeId: 'author:post1',
         skip: 25,
         limit: TAGS_PER_PAGE,
+        viewerId: 'viewer-123',
       });
 
       // Change postId - this should reset the skip
@@ -505,6 +510,7 @@ describe('usePostTags', () => {
         compositeId: 'author:post2',
         skip: 15,
         limit: TAGS_PER_PAGE,
+        viewerId: 'viewer-123',
       });
     });
   });

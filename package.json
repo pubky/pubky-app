@@ -41,7 +41,7 @@
     "@prelude.so/js-sdk": "0.7.1",
     "@serwist/next": "9.5.6",
     "@swc/helpers": "0.5.18",
-    "@synonymdev/pubky": "0.6.0",
+    "@synonymdev/pubky": "0.7.0",
     "@tanstack/react-query": "5.90.21",
     "bip39": "3.1.0",
     "class-variance-authority": "0.7.1",

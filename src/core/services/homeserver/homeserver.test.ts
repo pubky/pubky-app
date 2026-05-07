@@ -460,7 +460,7 @@ describe('HomeserverService', () => {
         expect(mockState.startAuthFlow).toHaveBeenCalledWith(
           '/pub/pubky.app/:rw', // Default capabilities
           'signin-kind', // AuthFlowKind.signin()
-          expect.any(String), // HTTP relay
+          expect.stringContaining('/inbox'), // HTTP relay (Pubky 0.7+ inbox endpoint)
         );
       });
 
@@ -469,7 +469,11 @@ describe('HomeserverService', () => {
 
         await HomeserverService.generateAuthUrl(customCaps);
 
-        expect(mockState.startAuthFlow).toHaveBeenCalledWith(customCaps, 'signin-kind', expect.any(String));
+        expect(mockState.startAuthFlow).toHaveBeenCalledWith(
+          customCaps,
+          'signin-kind',
+          expect.stringContaining('/inbox'),
+        );
       });
 
       it('should throw error when flow fails', async () => {
