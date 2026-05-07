@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, AUTH_ROUTES } from '@/app/routes';
-import { MUTE_SYNC_DEBOUNCE_MS, MUTE_SYNC_RECONNECT_BACKOFF_MS } from '@/config/mute-sync';
+import {
+  MUTE_SYNC_CURSOR_STORAGE_PREFIX,
+  MUTE_SYNC_DEBOUNCE_MS,
+  MUTE_SYNC_RECONNECT_BACKOFF_MS,
+} from '@/config/mute-sync';
 import { MuteController } from '@/controllers/mute/mute';
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
 import type { Pubky } from '@/models/models.types';
@@ -82,6 +86,35 @@ describe('MuteListSyncCoordinator', () => {
     await flushPromises();
     await vi.advanceTimersByTimeAsync(MUTE_SYNC_DEBOUNCE_MS);
     expect(fetchMuted).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries failed mute refreshes and stores the cursor after success', async () => {
+    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
+    const cursorKey = `${MUTE_SYNC_CURSOR_STORAGE_PREFIX}${pubky}`;
+    vi.mocked(MuteController.fetchMutedUsers).mockRejectedValueOnce(new Error('temporary')).mockResolvedValueOnce([]);
+
+    useAuthStore.getState().init({
+      session: mockSession(),
+      currentUserPubky: pubky,
+      hasProfile: true,
+    });
+
+    const fetchMuted = vi.mocked(MuteController.fetchMutedUsers);
+
+    const coordinator = MuteListSyncCoordinator.getInstance();
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(MUTE_SYNC_DEBOUNCE_MS);
+
+    expect(fetchMuted).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem(cursorKey)).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MS);
+
+    expect(fetchMuted).toHaveBeenCalledTimes(2);
+    expect(sessionStorage.getItem(cursorKey)).toBe('c1');
   });
 
   it('does not open the homeserver stream on disabled auth routes', async () => {

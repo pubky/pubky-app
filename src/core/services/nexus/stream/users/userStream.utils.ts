@@ -1,3 +1,6 @@
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import type { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
@@ -9,6 +12,16 @@ import {
 } from '@/services/nexus/stream/users/userStream.types';
 
 const DELIMITER = ':';
+const MUTED_STREAM_UNSUPPORTED_MESSAGE =
+  'Muted user lists are homeserver-backed only; they are not available as Nexus user streams.';
+
+function throwMutedStreamUnsupported(streamId: UserStreamId): never {
+  throw Err.validation(ValidationErrorCode.INVALID_INPUT, MUTED_STREAM_UNSUPPORTED_MESSAGE, {
+    service: ErrorService.Nexus,
+    operation: 'createUserStreamParams',
+    context: { streamId },
+  });
+}
 
 /**
  * Create Nexus API parameters from a user stream ID
@@ -39,7 +52,7 @@ export function createUserStreamParams(
   if (parts.length === 2) {
     const [userId, reach] = parts;
     if (reach === 'muted') {
-      throw new Error('Muted user lists are homeserver-backed only; they are not available as Nexus user streams.');
+      throwMutedStreamUnsupported(streamId);
     }
     return {
       reach: reach as ReachType,
@@ -51,7 +64,7 @@ export function createUserStreamParams(
   if (parts.length === 3) {
     const [source, timeframe, reach] = parts;
     if (source === 'muted') {
-      throw new Error('Muted user lists are homeserver-backed only; they are not available as Nexus user streams.');
+      throwMutedStreamUnsupported(streamId);
     }
 
     // Influencers need timeframe and optionally reach in params

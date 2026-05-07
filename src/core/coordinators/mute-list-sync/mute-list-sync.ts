@@ -11,6 +11,17 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
+type HomeserverMuteEvent = {
+  cursor: string;
+  eventType: string;
+  free(): void;
+};
+
+type PendingMuteRefresh = {
+  pubky: Pubky;
+  cursor: string;
+};
+
 /**
  * Keeps the Dexie-backed mute list aligned with the homeserver when another session mutates users.
  *
@@ -42,7 +53,8 @@ export class MuteListSyncCoordinator {
   private visibilityChangeHandler: (() => void) | null = null;
 
   private loopGeneration = 0;
-  private activeReader: ReadableStreamDefaultReader<{ cursor: string; eventType: string; free(): void }> | null = null;
+  private activeReader: ReadableStreamDefaultReader<HomeserverMuteEvent> | null = null;
+  private pendingRefresh: PendingMuteRefresh | undefined;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private reconnectBackoffTimer: ReturnType<typeof setTimeout> | undefined;
   private reconnectBackoffWake: (() => void) | undefined;
@@ -173,7 +185,7 @@ export class MuteListSyncCoordinator {
   private async runStreamLoop(generation: number): Promise<void> {
     while (this.state.isStarted && generation === this.loopGeneration && this.shouldSyncMuteStream()) {
       const pubky = useAuthStore.getState().currentUserPubky as Pubky;
-      let reader: ReadableStreamDefaultReader<{ cursor: string; eventType: string; free(): void }> | undefined;
+      let reader: ReadableStreamDefaultReader<HomeserverMuteEvent> | undefined;
 
       try {
         const cursor = this.readStoredCursor(pubky);
@@ -185,11 +197,7 @@ export class MuteListSyncCoordinator {
             .catch(() => {});
           break;
         }
-        reader = stream.getReader() as ReadableStreamDefaultReader<{
-          cursor: string;
-          eventType: string;
-          free(): void;
-        }>;
+        reader = stream.getReader() as ReadableStreamDefaultReader<HomeserverMuteEvent>;
         this.activeReader = reader;
 
         for (;;) {
@@ -208,9 +216,10 @@ export class MuteListSyncCoordinator {
           }
 
           try {
-            this.persistCursor(pubky, value.cursor);
             if (value.eventType === 'PUT' || value.eventType === 'DEL') {
-              this.scheduleDebouncedFetch(pubky);
+              this.scheduleDebouncedFetch(pubky, value.cursor, MUTE_SYNC_DEBOUNCE_MS);
+            } else {
+              this.persistCursor(pubky, value.cursor);
             }
           } finally {
             try {
@@ -263,14 +272,36 @@ export class MuteListSyncCoordinator {
     wake?.();
   }
 
-  private scheduleDebouncedFetch(pubky: Pubky): void {
+  private scheduleDebouncedFetch(pubky: Pubky, cursor: string, delayMs: number): void {
+    this.pendingRefresh = { pubky, cursor };
     clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => {
       this.debounceTimer = undefined;
-      void MuteController.fetchMutedUsers(pubky).catch((error) => {
-        Logger.error('Mute list refresh after homeserver event failed', { error });
-      });
-    }, MUTE_SYNC_DEBOUNCE_MS);
+      void this.refreshMutedUsersFromHomeserver({ pubky, cursor });
+    }, delayMs);
+  }
+
+  private async refreshMutedUsersFromHomeserver(refresh: PendingMuteRefresh): Promise<void> {
+    try {
+      await MuteController.fetchMutedUsers(refresh.pubky);
+      if (this.isCurrentPendingRefresh(refresh)) {
+        this.persistCursor(refresh.pubky, refresh.cursor);
+        this.pendingRefresh = undefined;
+      }
+    } catch (error) {
+      Logger.error('Mute list refresh after homeserver event failed', { error });
+      if (this.isCurrentPendingRefresh(refresh) && this.shouldRetryRefresh(refresh.pubky)) {
+        this.scheduleDebouncedFetch(refresh.pubky, refresh.cursor, MUTE_SYNC_RECONNECT_BACKOFF_MS);
+      }
+    }
+  }
+
+  private isCurrentPendingRefresh(refresh: PendingMuteRefresh): boolean {
+    return this.pendingRefresh?.pubky === refresh.pubky && this.pendingRefresh.cursor === refresh.cursor;
+  }
+
+  private shouldRetryRefresh(pubky: Pubky): boolean {
+    return this.state.isStarted && this.shouldSyncMuteStream() && useAuthStore.getState().currentUserPubky === pubky;
   }
 
   private readStoredCursor(pubky: Pubky): string | null {
@@ -298,6 +329,7 @@ export class MuteListSyncCoordinator {
   private async teardownReaderAndTimers(): Promise<void> {
     clearTimeout(this.debounceTimer);
     this.debounceTimer = undefined;
+    this.pendingRefresh = undefined;
     this.cancelReconnectBackoffAwait();
     if (this.activeReader) {
       await this.activeReader.cancel().catch(() => {});
