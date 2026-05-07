@@ -207,9 +207,12 @@ describe('WhoToFollowPageMain', () => {
     expect(useUserStream).toHaveBeenCalledWith({
       streamId: 'recommended',
       limit: 30,
+      bufferSize: 30,
+      refillThreshold: 30,
       paginated: true,
       includeRelationships: true,
       includeCounts: true,
+      excludeFollowing: true,
     });
   });
 });

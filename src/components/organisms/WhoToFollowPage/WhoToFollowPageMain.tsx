@@ -6,12 +6,12 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
+import { WHO_TO_FOLLOW_PAGE_SIZE } from '@/hooks/useUserStream/useUserStream.constants';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
 import { UserListItem } from '../UserListItem/UserListItem';
-import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
 
 const LOAD_MORE_SKELETON_COUNT = 2;
 
@@ -25,10 +25,13 @@ export function WhoToFollowPageMain() {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { users, isLoading, isLoadingMore, hasMore, loadMore } = useUserStream({
     streamId: UserStreamTypes.RECOMMENDED,
-    limit: USERS_PER_PAGE,
+    limit: WHO_TO_FOLLOW_PAGE_SIZE,
+    bufferSize: WHO_TO_FOLLOW_PAGE_SIZE,
+    refillThreshold: WHO_TO_FOLLOW_PAGE_SIZE,
     paginated: true,
     includeRelationships: true,
     includeCounts: true,
+    excludeFollowing: true,
   });
   const { toggleFollow, isUserLoading } = useFollowUser();
 
@@ -48,7 +51,7 @@ export function WhoToFollowPageMain() {
       <Container className="mt-6 gap-4 lg:mt-0">
         <Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
           {Array.from({
-            length: USERS_PER_PAGE,
+            length: WHO_TO_FOLLOW_PAGE_SIZE,
           }).map((_, index) => (
             <FullUserListItemSkeleton key={`who-to-follow-page-skeleton-${index}`} />
           ))}

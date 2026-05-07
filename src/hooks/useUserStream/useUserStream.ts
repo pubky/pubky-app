@@ -10,8 +10,18 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import type { NexusTag, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
-import { DEFAULT_USER_STREAM_LIMIT, DEFAULT_USER_STREAM_PAGE_SIZE } from './useUserStream.constants';
-import type { UserStreamUser, UseUserStreamParams, UseUserStreamResult } from './useUserStream.types';
+import {
+  DEFAULT_USER_STREAM_BUFFER_SIZE,
+  DEFAULT_USER_STREAM_LIMIT,
+  DEFAULT_USER_STREAM_PAGE_SIZE,
+  DEFAULT_USER_STREAM_REFILL_THRESHOLD,
+} from './useUserStream.constants';
+import type {
+  RefetchUserStreamOptions,
+  UserStreamUser,
+  UseUserStreamParams,
+  UseUserStreamResult,
+} from './useUserStream.types';
 
 /**
  * useUserStream
@@ -41,8 +51,17 @@ export function useUserStream({
   includeRelationships = false,
   includeTags = false,
   paginated = false,
+  excludeFollowing = false,
+  bufferSize,
+  refillThreshold,
 }: UseUserStreamParams): UseUserStreamResult {
   const effectiveLimit = limit ?? (paginated ? DEFAULT_USER_STREAM_PAGE_SIZE : DEFAULT_USER_STREAM_LIMIT);
+  const fetchLimit = Math.max(
+    effectiveLimit,
+    bufferSize ?? (excludeFollowing ? DEFAULT_USER_STREAM_BUFFER_SIZE : effectiveLimit),
+  );
+  const effectiveRefillThreshold =
+    refillThreshold ?? (excludeFollowing ? DEFAULT_USER_STREAM_REFILL_THRESHOLD : effectiveLimit);
 
   // Pagination state
   const [userIds, setUserIds] = useState<Pubky[]>([]);
@@ -50,9 +69,11 @@ export function useUserStream({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(paginated);
   const [error, setError] = useState<string | null>(null);
+  const [isExhausted, setIsExhausted] = useState(false);
 
   // Track skip position for pagination
   const skipRef = useRef(0);
+  const refillAttemptedRef = useRef(false);
 
   // Tags state (not reactive via useLiveQuery since it requires fetch)
   const [userTagsMap, setUserTagsMap] = useState<Map<Pubky, NexusTag[]>>(new Map());
@@ -127,7 +148,7 @@ export function useUserStream({
   // Computed Users Array
   // ============================================================================
 
-  const users = useMemo((): UserStreamUser[] => {
+  const eligibleUsers = useMemo((): UserStreamUser[] => {
     const result: UserStreamUser[] = [];
 
     for (const id of userIds) {
@@ -136,6 +157,8 @@ export function useUserStream({
 
       const counts = userCountsMap.get(id);
       const relationship = userRelationshipsMap.get(id);
+      if (excludeFollowing && relationship?.following) continue;
+
       const userTags = userTagsMap.get(id);
 
       result.push({
@@ -159,29 +182,51 @@ export function useUserStream({
     }
 
     return result;
-  }, [userIds, userDetailsMap, userCountsMap, userRelationshipsMap, userTagsMap]);
+  }, [userIds, userDetailsMap, userCountsMap, userRelationshipsMap, userTagsMap, excludeFollowing]);
+
+  const users = useMemo((): UserStreamUser[] => {
+    if (excludeFollowing && !paginated) {
+      return eligibleUsers.slice(0, effectiveLimit);
+    }
+    return eligibleUsers;
+  }, [eligibleUsers, excludeFollowing, effectiveLimit, paginated]);
 
   // ============================================================================
   // Fetch Logic
   // ============================================================================
 
   const fetchStreamSlice = useCallback(
-    async (isInitial: boolean) => {
+    async (isInitial: boolean, options: RefetchUserStreamOptions = {}) => {
       // Set loading state
       if (isInitial) {
         setIsLoading(true);
         setError(null);
         skipRef.current = 0;
+        refillAttemptedRef.current = false;
+        setIsExhausted(false);
       } else {
         setIsLoadingMore(true);
       }
 
       try {
-        const { nextPageIds, skip: nextSkip } = await StreamUserController.getOrFetchStreamSlice({
+        const readStreamSlice = options.forceNetwork
+          ? StreamUserController.fetchStreamSlice
+          : StreamUserController.getOrFetchStreamSlice;
+
+        const {
+          nextPageIds,
+          skip: nextSkip,
+          isExhausted: streamExhausted,
+        } = await readStreamSlice({
           streamId,
-          limit: effectiveLimit,
+          limit: fetchLimit,
           skip: isInitial ? 0 : skipRef.current,
+          ...(excludeFollowing && { allowPartialCache: true }),
         });
+
+        if (streamExhausted) {
+          setIsExhausted(true);
+        }
 
         // Update user IDs
         if (isInitial) {
@@ -197,7 +242,7 @@ export function useUserStream({
         }
 
         // Update hasMore based on whether we got a full page
-        setHasMore(paginated && nextPageIds.length >= effectiveLimit);
+        setHasMore(paginated && !streamExhausted && nextPageIds.length >= fetchLimit);
       } catch (err) {
         if (isInitial) {
           setError(isAppError(err) ? err.message : 'Failed to fetch users');
@@ -211,7 +256,7 @@ export function useUserStream({
         }
       }
     },
-    [streamId, effectiveLimit, paginated],
+    [streamId, fetchLimit, paginated, excludeFollowing],
   );
 
   const loadMore = useCallback(async () => {
@@ -219,18 +264,45 @@ export function useUserStream({
     await fetchStreamSlice(false);
   }, [paginated, isLoadingMore, hasMore, fetchStreamSlice]);
 
-  const refetch = useCallback(async () => {
-    if (paginated) {
-      setUserIds([]);
-      setHasMore(true);
-    }
-    await fetchStreamSlice(true);
-  }, [paginated, fetchStreamSlice]);
+  const refetchWithOptions = useCallback(
+    async (options?: RefetchUserStreamOptions) => {
+      if (paginated) {
+        setUserIds([]);
+        setHasMore(true);
+      }
+      await fetchStreamSlice(true, options);
+    },
+    [paginated, fetchStreamSlice],
+  );
 
   // Initial fetch on mount or when streamId changes
   useEffect(() => {
     void fetchStreamSlice(true);
   }, [fetchStreamSlice]);
+
+  useEffect(() => {
+    if (!excludeFollowing || isLoading || isLoadingMore || isExhausted || refillAttemptedRef.current) return;
+    if (userIds.length === 0) return;
+
+    const shouldRefill =
+      eligibleUsers.length < effectiveRefillThreshold || (!paginated && eligibleUsers.length < effectiveLimit);
+
+    if (!shouldRefill) return;
+
+    refillAttemptedRef.current = true;
+    void fetchStreamSlice(false, { forceNetwork: true });
+  }, [
+    eligibleUsers.length,
+    effectiveLimit,
+    effectiveRefillThreshold,
+    excludeFollowing,
+    fetchStreamSlice,
+    isExhausted,
+    isLoading,
+    isLoadingMore,
+    paginated,
+    userIds.length,
+  ]);
 
   return {
     users,
@@ -240,6 +312,6 @@ export function useUserStream({
     hasMore,
     error,
     loadMore,
-    refetch,
+    refetch: refetchWithOptions,
   };
 }

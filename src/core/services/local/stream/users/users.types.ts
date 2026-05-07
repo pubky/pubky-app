@@ -16,4 +16,5 @@ export type TCacheUserStreamParams = {
   skip: number;
   limit: number;
   cachedStream: { stream: Pubky[] };
+  allowPartial?: boolean;
 };

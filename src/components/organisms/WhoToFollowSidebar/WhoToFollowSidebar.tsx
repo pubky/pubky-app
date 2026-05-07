@@ -6,13 +6,16 @@ import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
+import {
+  WHO_TO_FOLLOW_BUFFER_SIZE,
+  WHO_TO_FOLLOW_REFILL_THRESHOLD,
+  WHO_TO_FOLLOW_USER_LIMIT,
+} from '@/hooks/useUserStream/useUserStream.constants';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
 import { CompactUserListItemSkeleton } from '../CompactUserListItemSkeleton/CompactUserListItemSkeleton';
 import { UserListItem } from '../UserListItem/UserListItem';
-
-const USERS_LIMIT = 3;
 
 /**
  * WhoToFollowSidebar
@@ -28,8 +31,11 @@ export function WhoToFollowSidebar() {
   const router = useRouter();
   const { users, isLoading: isStreamLoading } = useUserStream({
     streamId: UserStreamTypes.RECOMMENDED,
-    limit: USERS_LIMIT,
+    limit: WHO_TO_FOLLOW_USER_LIMIT,
+    bufferSize: WHO_TO_FOLLOW_BUFFER_SIZE,
+    refillThreshold: WHO_TO_FOLLOW_REFILL_THRESHOLD,
     includeRelationships: true,
+    excludeFollowing: true,
   });
   const { toggleFollow, isUserLoading } = useFollowUser();
   const handleUserClick = (pubky: Pubky) => {
@@ -53,7 +59,7 @@ export function WhoToFollowSidebar() {
     >
       {isStreamLoading
         ? Array.from({
-            length: USERS_LIMIT,
+            length: WHO_TO_FOLLOW_USER_LIMIT,
           }).map((_, index) => <CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />)
         : users.map((user) => (
             <UserListItem
