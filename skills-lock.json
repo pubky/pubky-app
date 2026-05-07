@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "sentry-nextjs-sdk": {
+      "source": "getsentry/sentry-for-ai",
+      "sourceType": "github",
+      "computedHash": "b93586def3b25da6ce39079bdd5c665be4e024a212bc751cda1ad2a280e757d3"
+    }
+  }
+}

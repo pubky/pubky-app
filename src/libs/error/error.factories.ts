@@ -1,4 +1,5 @@
 import { Logger } from '../logger/logger';
+import { captureAppError } from '../observability/sentry';
 import { AppError, type AppErrorParams } from './error';
 import type {
   AuthErrorCode,
@@ -55,8 +56,14 @@ function createAppError<C extends ErrorCategory>(
 
   Logger.error(`[${params.service}:${params.operation}]`, error.message, params.context);
 
-  // We could send to sentry error here
-  // Sentry.captureException(err);
+  // Defensive: an AppError factory must ALWAYS return. If Sentry isn't ready (e.g. a
+  // circular-dep race during env.ts init) or the SDK throws, we log and move on so
+  // callers still get their AppError instead of a masked TypeError.
+  try {
+    captureAppError(error);
+  } catch (sentryError) {
+    Logger.warn('[Err.factory] captureAppError failed', sentryError);
+  }
 
   return error;
 }
