@@ -148,8 +148,8 @@ export function useUserStream({
   // Computed Users Array
   // ============================================================================
 
-  const eligibleUsers = useMemo((): UserStreamUser[] => {
-    const result: UserStreamUser[] = [];
+  const { users, eligibleCount } = useMemo(() => {
+    const eligible: UserStreamUser[] = [];
 
     for (const id of userIds) {
       const details = userDetailsMap.get(id);
@@ -161,7 +161,7 @@ export function useUserStream({
 
       const userTags = userTagsMap.get(id);
 
-      result.push({
+      eligible.push({
         id: details.id,
         name: details.name,
         bio: details.bio,
@@ -181,15 +181,20 @@ export function useUserStream({
       });
     }
 
-    return result;
-  }, [userIds, userDetailsMap, userCountsMap, userRelationshipsMap, userTagsMap, excludeFollowing]);
+    const eligibleCount = eligible.length;
+    const users = excludeFollowing && !paginated ? eligible.slice(0, effectiveLimit) : eligible;
 
-  const users = useMemo((): UserStreamUser[] => {
-    if (excludeFollowing && !paginated) {
-      return eligibleUsers.slice(0, effectiveLimit);
-    }
-    return eligibleUsers;
-  }, [eligibleUsers, excludeFollowing, effectiveLimit, paginated]);
+    return { users, eligibleCount };
+  }, [
+    userIds,
+    userDetailsMap,
+    userCountsMap,
+    userRelationshipsMap,
+    userTagsMap,
+    excludeFollowing,
+    effectiveLimit,
+    paginated,
+  ]);
 
   // ============================================================================
   // Fetch Logic
@@ -221,7 +226,7 @@ export function useUserStream({
           streamId,
           limit: fetchLimit,
           skip: isInitial ? 0 : skipRef.current,
-          ...(excludeFollowing && { allowPartialCache: true }),
+          ...(excludeFollowing && !options.forceNetwork && { allowPartialCache: true }),
         });
 
         if (streamExhausted) {
@@ -284,15 +289,14 @@ export function useUserStream({
     if (!excludeFollowing || isLoading || isLoadingMore || isExhausted || refillAttemptedRef.current) return;
     if (userIds.length === 0) return;
 
-    const shouldRefill =
-      eligibleUsers.length < effectiveRefillThreshold || (!paginated && eligibleUsers.length < effectiveLimit);
+    const shouldRefill = eligibleCount < effectiveRefillThreshold || (!paginated && eligibleCount < effectiveLimit);
 
     if (!shouldRefill) return;
 
     refillAttemptedRef.current = true;
     void fetchStreamSlice(false, { forceNetwork: true });
   }, [
-    eligibleUsers.length,
+    eligibleCount,
     effectiveLimit,
     effectiveRefillThreshold,
     excludeFollowing,

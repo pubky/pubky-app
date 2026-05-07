@@ -429,7 +429,6 @@ describe('useUserStream', () => {
         streamId: UserStreamTypes.RECOMMENDED,
         limit: DEFAULT_USER_STREAM_BUFFER_SIZE,
         skip: ids.length,
-        allowPartialCache: true,
       });
     });
   });
