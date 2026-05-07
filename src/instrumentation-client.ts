@@ -18,4 +18,14 @@ if (shouldEnableSentry()) {
   });
 }
 
+/**
+ * Next.js framework convention export — discovered by name from this module.
+ *
+ * Next.js's App Router instrumentation invokes `onRouterTransitionStart` on every client-side
+ * route transition; Sentry's `captureRouterTransitionStart` wires that signal into tracing so
+ * navigation transactions stitch with the originating click/back-forward event. There is no
+ * static import of this symbol in the codebase by design — it's a framework hook.
+ *
+ * See: https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
+ */
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

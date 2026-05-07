@@ -315,11 +315,17 @@ function scrubSpanJson(span: SpanJSON): SpanJSON {
 /**
  * Shared options applied to every Sentry.init() call (browser, node, edge).
  * Each runtime layers its own additions on top (e.g. replayIntegration only on browser).
+ *
+ * Enablement is gated by each runtime initializer wrapping `Sentry.init()` in
+ * `if (shouldEnableSentry())`. We deliberately do not also set `enabled: false`
+ * inside these options: the outer guard already short-circuits before option
+ * construction (and before constructing per-runtime integrations like
+ * `replayIntegration({...})`), so duplicating the flag here would only add a
+ * second enablement path readers have to reconcile.
  */
 export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions {
   return {
     dsn: Env.NEXT_PUBLIC_SENTRY_DSN,
-    enabled: shouldEnableSentry(),
     environment: getSentryEnvironment(),
     release: Env.NEXT_PUBLIC_APP_VERSION,
     debug: false,
