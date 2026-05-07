@@ -69,6 +69,23 @@ Pubky App is decentralized social — strict defaults:
 
 Never call `Sentry.setUser({ email, ... })`. If user attribution is ever needed, use the user's Pubky public key as `id` only.
 
+### Tracing scrubbing (`beforeSendTransaction`, `beforeSendSpan`)
+
+Tracing payloads carry user-controlled URL strings (route names, fetch URLs, root-span data) that
+the error-only `beforeSend` does not see. Two additional hooks in `src/libs/observability/sentry.ts`
+cover them:
+
+- **String-only walker** (mutates in place; no key-based redaction — SDK uses `name` etc. for
+  structural data) runs over: `event.transaction`, `event.request`, `event.contexts.trace.data`,
+  `span.description`, `span.data`.
+- **Keyed `sanitizeForSentry`** (copy-on-write) runs over the AppError-shaped attachments that may
+  surface on transactions: `event.extra`, `event.user`, `event.contexts['error.context']`.
+
+Deliberately untouched: `event.tags` (app-controlled operational labels — `error.category`,
+`error.code`, `error.service`, `error.operation` are enum-shaped), SDK-structural contexts
+(`browser`, `runtime`, `os`, `device`), and `event.spans[]` (each child span flows through
+`beforeSendSpan` already; double-walking would be redundant and risks double-scrubbing).
+
 ## Disabled / deferred features
 
 | Feature                      | Status   | Why                                                                                                 |
