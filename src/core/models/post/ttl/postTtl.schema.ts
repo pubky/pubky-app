@@ -1,4 +1,4 @@
-import { TtlModelSchema } from '@/core/models/shared';
+import type { TtlModelSchema } from '@/models/shared/ttl/ttl.schema';
 
 export type PostTtlModelSchema = TtlModelSchema<string>;
 

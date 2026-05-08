@@ -1,21 +1,27 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useTranslations, useLocale } from 'next-intl';
-
-import * as Hooks from '@/hooks';
-import * as Providers from '@/providers';
-import * as App from '@/app';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as Core from '@/core';
+import { type ReactNode, useEffect, useMemo, useRef } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
+import { isDynamicPublicRoute, PUBLIC_ROUTES } from '@/app/routes';
+import { Spinner } from '@/atoms/Spinner/Spinner';
+import { AuthController } from '@/controllers/auth/auth';
+import { MigrationController } from '@/controllers/migration/migration';
+import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
+import { TimeoutErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useMigrationStore } from '@/stores/migration/migration.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
 
 interface RouteGuardProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 /**
@@ -37,15 +43,15 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const t = useTranslations('common');
   const router = useRouter();
   const pathname = usePathname();
-  const { status, isLoading } = Hooks.useAuthStatus();
-  const hasHydrated = Core.useAuthStore((state) => state.hasHydrated);
-  const session = Core.useAuthStore((state) => state.session);
-  const sessionExport = Core.useAuthStore((state) => state.sessionExport);
-  const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
-  const wasDbReset = Core.useMigrationStore((state) => state.wasDbReset);
+  const { status, isLoading } = useAuthStatus();
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const session = useAuthStore((state) => state.session);
+  const sessionExport = useAuthStore((state) => state.sessionExport);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const wasDbReset = useMigrationStore((state) => state.wasDbReset);
   const serverLocale = useLocale();
 
-  const storeLanguage = Core.useSettingsStore((state) => state.language);
+  const storeLanguage = useSettingsStore((state) => state.language);
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
   const isMigrationResyncRunningRef = useRef(false);
@@ -55,8 +61,8 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (!hasHydrated) return;
     if (session) return;
     if (!sessionExport) return;
-    Core.AuthController.restorePersistedSession().catch((error) => {
-      Libs.Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
+    AuthController.restorePersistedSession().catch((error) => {
+      Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
     });
   }, [hasHydrated, session, sessionExport]);
 
@@ -68,7 +74,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (isMigrationResyncRunningRef.current) return; // No need to resync if the resync is ALREADY running
     if (!currentUserPubky) {
       // No need to resync if the user is NOT logged in
-      Core.useMigrationStore.getState().reset();
+      useMigrationStore.getState().reset();
       return;
     }
 
@@ -83,8 +89,8 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
           timeoutId = setTimeout(
             () =>
               reject(
-                Libs.Err.timeout(Libs.TimeoutErrorCode.REQUEST_TIMEOUT, 'DB re-sync timed out', {
-                  service: Libs.ErrorService.Local,
+                Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'DB re-sync timed out', {
+                  service: ErrorService.Local,
                   operation: 'migrationResync',
                 }),
               ),
@@ -92,9 +98,9 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
           );
         });
         // Unblock the app when either resync finishes or the timeout fires.
-        await Promise.race([Core.MigrationController.resync(currentUserPubky), timeoutPromise]);
+        await Promise.race([MigrationController.resync(currentUserPubky), timeoutPromise]);
       } catch (error) {
-        Libs.Logger.warn('Migration re-sync degraded', {
+        Logger.warn('Migration re-sync degraded', {
           error,
           pubky: currentUserPubky,
           durationMs: Date.now() - startedAt,
@@ -103,7 +109,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
         if (timeoutId !== undefined) {
           clearTimeout(timeoutId);
         }
-        Core.useMigrationStore.getState().reset();
+        useMigrationStore.getState().reset();
         isMigrationResyncRunningRef.current = false;
       }
     };
@@ -124,16 +130,16 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // Determine if the current route is accessible based on authentication status
   const isRouteAccessible = useMemo(() => {
     // Static public routes are ALWAYS accessible, even during loading
-    if (App.PUBLIC_ROUTES.includes(pathname)) return true;
+    if (PUBLIC_ROUTES.includes(pathname)) return true;
 
     // Dynamic public routes (e.g., /post/[x]/[y], /profile/[pubky]) are also always accessible
-    if (App.isDynamicPublicRoute(pathname)) return true;
+    if (isDynamicPublicRoute(pathname)) return true;
 
     // Wait for authentication status to be determined before allowing access to protected routes
     if (isLoading) return false;
 
     // Get the allowed routes for the current authentication status
-    const routeAccess = Providers.ROUTE_ACCESS_MAP[status];
+    const routeAccess = ROUTE_ACCESS_MAP[status];
 
     // Check if current pathname matches any allowed route (exact match or sub-route)
     return routeAccess.allowedRoutes.some((route) => {
@@ -144,10 +150,10 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // Handle automatic redirects when user tries to access unauthorized routes
   useEffect(() => {
     // Static public routes never redirect
-    if (App.PUBLIC_ROUTES.includes(pathname)) return;
+    if (PUBLIC_ROUTES.includes(pathname)) return;
 
     // Dynamic public routes never redirect
-    if (App.isDynamicPublicRoute(pathname)) return;
+    if (isDynamicPublicRoute(pathname)) return;
 
     // Wait for authentication status to be determined for protected routes
     if (isLoading) return;
@@ -156,12 +162,12 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (isRouteAccessible) return;
 
     // Redirect user to the appropriate default route for their authentication status
-    const routeAccess = Providers.ROUTE_ACCESS_MAP[status];
+    const routeAccess = ROUTE_ACCESS_MAP[status];
     const redirectTo = routeAccess.redirectTo;
 
     // Runtime validation: ensure redirect target is actually in allowed routes
     if (redirectTo && !routeAccess.allowedRoutes.includes(redirectTo)) {
-      Libs.Logger.error(
+      Logger.error(
         `RouteGuard configuration error: redirectTo "${redirectTo}" is not in allowedRoutes for status "${status}"`,
       );
       return;
@@ -181,7 +187,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <Atoms.Spinner className="mx-auto" />
+          <Spinner className="mx-auto" />
           <p className="mt-2 text-muted-foreground">{isLoading || wasDbReset ? t('loading') : t('redirecting')}</p>
         </div>
       </div>

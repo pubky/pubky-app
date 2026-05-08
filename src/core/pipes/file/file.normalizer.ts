@@ -1,11 +1,15 @@
 import { BlobResult, FileResult } from 'pubky-app-specs';
-import * as Core from '@/core';
-import { Err, ValidationErrorCode, ErrorService } from '@/libs';
+import type { TToFileParams, TUploadFileParams } from '@/controllers/file/file.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 
 export class FileNormalizer {
   private constructor() {}
 
-  static async toFileAttachment({ file, pubky }: Core.TUploadFileParams): Promise<Core.TFileAttachmentResult> {
+  static async toFileAttachment({ file, pubky }: TUploadFileParams): Promise<TFileAttachmentResult> {
     try {
       const blobResult = await this.toBlob({ file, pubky });
       const fileResult = this.toFile({ file, url: blobResult.meta.url, pubky });
@@ -19,12 +23,12 @@ export class FileNormalizer {
     }
   }
 
-  private static async toBlob({ file, pubky }: Core.TUploadFileParams): Promise<BlobResult> {
+  private static async toBlob({ file, pubky }: TUploadFileParams): Promise<BlobResult> {
     try {
       const fileContent = await file.arrayBuffer();
       const blobData = new Uint8Array(fileContent);
 
-      const builder = Core.PubkySpecsSingleton.get(pubky);
+      const builder = PubkySpecsSingleton.get(pubky);
       return builder.createBlob(blobData);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
@@ -35,9 +39,9 @@ export class FileNormalizer {
     }
   }
 
-  private static toFile({ file, url, pubky }: Core.TToFileParams): FileResult {
+  private static toFile({ file, url, pubky }: TToFileParams): FileResult {
     try {
-      const builder = Core.PubkySpecsSingleton.get(pubky);
+      const builder = PubkySpecsSingleton.get(pubky);
       return builder.createFile(file.name, url, file.type, file.size);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {

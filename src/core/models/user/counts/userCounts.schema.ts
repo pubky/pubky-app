@@ -1,7 +1,8 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
+import type { NexusUserCounts } from '@/services/nexus/nexus.types';
 
-export interface UserCountsModelSchema extends Core.NexusUserCounts {
-  id: Core.Pubky;
+export interface UserCountsModelSchema extends NexusUserCounts {
+  id: Pubky;
 }
 
 export type TUserCountsFields = keyof Omit<UserCountsModelSchema, 'id'>;

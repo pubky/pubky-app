@@ -1,9 +1,12 @@
 'use client';
 
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
+import { PostController } from '@/controllers/post/post';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import { Logger } from '@/libs/logger/logger';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import type { UseRepostInfoResult } from './useRepostInfo.types';
 
 /**
@@ -41,12 +44,12 @@ import type { UseRepostInfoResult } from './useRepostInfo.types';
  * ```
  */
 export function useRepostInfo(postId: string): UseRepostInfoResult {
-  const { currentUserPubky } = Hooks.useCurrentUserProfile();
+  const { currentUserPubky } = useCurrentUserProfile();
 
   // Read relationships via controller using local-first pattern
-  const { data: relationships, isLoading } = useLocalFirstQuery<Core.PostRelationshipsModelSchema>({
-    queryFn: () => Core.PostController.getRelationships({ compositeId: postId }),
-    fetchFn: () => Core.PostController.fetch({ compositeId: postId }),
+  const { data: relationships, isLoading } = useLocalFirstQuery<PostRelationshipsModelSchema>({
+    queryFn: () => PostController.getRelationships({ compositeId: postId }),
+    fetchFn: () => PostController.fetch({ compositeId: postId }),
     deps: [postId],
     enabled: !!postId,
   });
@@ -57,13 +60,13 @@ export function useRepostInfo(postId: string): UseRepostInfoResult {
   // Extract original post ID from reposted URI
   let originalPostId: string | null = null;
   if (relationships?.reposted) {
-    originalPostId = Core.buildCompositeIdFromPubkyUri({
+    originalPostId = buildCompositeIdFromPubkyUri({
       uri: relationships.reposted,
-      domain: Core.CompositeIdDomain.POSTS,
+      domain: CompositeIdDomain.POSTS,
     });
 
     if (!originalPostId) {
-      Libs.Logger.error('[useRepostInfo] Failed to build composite ID from reposted URI', {
+      Logger.error('[useRepostInfo] Failed to build composite ID from reposted URI', {
         postId,
         repostedUri: relationships.reposted,
       });
@@ -74,9 +77,9 @@ export function useRepostInfo(postId: string): UseRepostInfoResult {
   let repostAuthorId: string | null = null;
   if (isRepost) {
     try {
-      repostAuthorId = Core.parseCompositeId(postId).pubky;
+      repostAuthorId = parseCompositeId(postId).pubky;
     } catch (error) {
-      Libs.Logger.error('[useRepostInfo] Failed to parse composite post ID', {
+      Logger.error('[useRepostInfo] Failed to parse composite post ID', {
         postId,
         error,
       });

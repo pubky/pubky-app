@@ -1,8 +1,10 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthController } from '@/controllers/auth/auth';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { useInviteCodeSignUp } from './useInviteCodeSignUp';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
 
 const {
   mockSignUp,
@@ -24,16 +26,22 @@ const {
   mockIsAuthError: vi.fn(),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/auth/auth', () => ({
   AuthController: { signUp: mockSignUp },
+}));
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: { getState: mockOnboardingGetState },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: { getState: mockAuthGetState },
 }));
 
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => {
@@ -46,8 +54,8 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+vi.mock('@/libs/error/error.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/error/error.utils')>();
   return {
     ...actual,
     isAppError: mockIsAppError,
@@ -87,7 +95,7 @@ describe('useInviteCodeSignUp', () => {
       await result.current.validateAndSignUp(inviteCode);
     });
 
-    expect(Core.AuthController.signUp).toHaveBeenCalledWith({
+    expect(AuthController.signUp).toHaveBeenCalledWith({
       secretKey: mockSecretKey,
       signupToken: inviteCode,
     });
@@ -160,8 +168,8 @@ describe('useInviteCodeSignUp', () => {
   });
 
   it('retries transient signup failures and succeeds without clearing secrets', async () => {
-    const transientError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Network down', {
-      service: Libs.ErrorService.Local,
+    const transientError = Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Network down', {
+      service: ErrorService.Local,
       operation: 'validateAndSignUp',
       context: { retryAfter: 0.001 },
     });
@@ -180,8 +188,8 @@ describe('useInviteCodeSignUp', () => {
   });
 
   it('keeps secrets after exhausted retryable failures to allow retrying paid signup', async () => {
-    const transientError = Libs.Err.network(Libs.NetworkErrorCode.CONNECTION_FAILED, 'Network down', {
-      service: Libs.ErrorService.Local,
+    const transientError = Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Network down', {
+      service: ErrorService.Local,
       operation: 'validateAndSignUp',
       context: { retryAfter: 0.001 },
     });

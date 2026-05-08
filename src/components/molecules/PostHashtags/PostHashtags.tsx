@@ -1,21 +1,21 @@
 import { JSX } from 'react';
+import { Link } from '@/atoms/Link/Link';
+import { Bitkit, Blocktank, BTCIcon, PubkyIcon, Synonym, Tether } from '@/icons';
+import { cn } from '@/libs/utils/utils';
 import { RemarkAnchorProps } from '../PostText/PostText.types';
 import { extractTextFromChildren } from '../PostText/PostText.utils';
-import * as Libs from '@/libs';
-import * as Icons from '@/libs/icons';
-import * as Atoms from '@/atoms';
 
 type TagIcons = {
   [key: string]: JSX.Element | undefined;
 };
 
 const tagIcons: TagIcons = {
-  '#synonym': <Icons.Synonym size={24} />,
-  '#tether': <Icons.Tether size={24} />,
-  '#pubky': <Icons.PubkyIcon size={22} />,
-  '#bitkit': <Icons.Bitkit size={24} />,
-  '#blocktank': <Icons.Blocktank size={24} />,
-  '#bitcoin': <Icons.BTCIcon size={24} />,
+  '#synonym': <Synonym size={24} />,
+  '#tether': <Tether size={24} />,
+  '#pubky': <PubkyIcon size={22} />,
+  '#bitkit': <Bitkit size={24} />,
+  '#blocktank': <Blocktank size={24} />,
+  '#bitcoin': <BTCIcon size={24} />,
 };
 
 export const PostHashtags = (props: RemarkAnchorProps) => {
@@ -26,13 +26,13 @@ export const PostHashtags = (props: RemarkAnchorProps) => {
   const Icon = tagIcons[hashtagText.toLowerCase()] || null;
 
   return (
-    <Atoms.Link
+    <Link
       {...rest}
       href={href || ''}
       onClick={(e) => e.stopPropagation()}
-      className={Libs.cn(className, 'inline-flex items-center gap-x-1 text-base')}
+      className={cn(className, 'inline-flex items-center gap-x-1 text-base')}
     >
       {children} {Icon}
-    </Atoms.Link>
+    </Link>
   );
 };

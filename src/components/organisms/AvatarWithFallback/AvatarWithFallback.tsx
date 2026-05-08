@@ -1,20 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as Core from '@/core';
-import { FacehashAvatar } from '@/molecules/FacehashAvatar';
+import { EyeOff } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
+import { Container } from '@/atoms/Container/Container';
+import { ModerationController } from '@/controllers/moderation/moderation';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
+import { ModerationType } from '@/models/moderation/moderation.schema';
+import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import type { AvatarWithFallbackProps } from './AvatarWithFallback.types';
 import {
   extractUserIdFromAvatarUrl,
-  resolveAvatarFallbackSeed,
   resolveAvatarFallbackInitial,
+  resolveAvatarFallbackSeed,
 } from './AvatarWithFallback.utils';
-import type { AvatarWithFallbackProps } from './AvatarWithFallback.types';
 
 export type { AvatarWithFallbackProps };
-
 export function AvatarWithFallback({
   avatarUrl,
   name,
@@ -29,56 +34,65 @@ export function AvatarWithFallback({
 
   // Extract userId from CDN URL for moderation and local avatar resolution
   const userId = extractUserIdFromAvatarUrl(avatarUrl);
-  const resolvedFallbackSeed = resolveAvatarFallbackSeed({ fallbackSeed, userId, name });
-  const fallbackInitial = resolveAvatarFallbackInitial({ name, seed: resolvedFallbackSeed });
+  const resolvedFallbackSeed = resolveAvatarFallbackSeed({
+    fallbackSeed,
+    userId,
+    name,
+  });
+  const fallbackInitial = resolveAvatarFallbackInitial({
+    name,
+    seed: resolvedFallbackSeed,
+  });
 
   // Check if this avatar belongs to the current user
-  const currentUserPubky = Core.useAuthStore((s) => s.currentUserPubky);
+  const currentUserPubky = useAuthStore((s) => s.currentUserPubky);
   const isCurrentUser = userId === currentUserPubky;
 
   // Only subscribe to localProfile changes if this is the current user
   // Non-current-user avatars won't re-render when localProfile changes (selector returns stable null)
-  const localProfile = Core.useLocalFilesStore((s) => (isCurrentUser ? s.profile : null));
+  const localProfile = useLocalFilesStore((s) => (isCurrentUser ? s.profile : null));
 
   // Use local blob URL for current user if available, otherwise use CDN URL
   const resolvedAvatarUrl = localProfile ?? avatarUrl;
-
   const moderationStatus = useLiveQuery(async () => {
     try {
       if (!userId) return null;
-      return await Core.ModerationController.getModerationStatus(userId, Core.ModerationType.PROFILE);
+      return await ModerationController.getModerationStatus(userId, ModerationType.PROFILE);
     } catch (error) {
-      Libs.Logger.error('[AvatarWithFallback] Failed to query moderation status', { userId, error });
+      Logger.error('[AvatarWithFallback] Failed to query moderation status', {
+        userId,
+        error,
+      });
       return null;
     }
   }, [userId]);
 
   // Show image immediately, apply blur only when status confirms
   const shouldBlur = moderationStatus?.is_blurred ?? false;
-
   const handleUnblur = () => {
     if (!userId) return;
-    Core.ModerationController.unBlur(userId);
+    ModerationController.unBlur(userId);
   };
 
   // Reset error state when avatar URL changes
   useEffect(() => {
     setImageError(false);
   }, [resolvedAvatarUrl]);
-
   return (
-    <Atoms.Avatar size={size} className={className} data-testid={dataTestId}>
+    // `key` forces remount so Radix Avatar resets its 'loaded' state and shows the fallback (#526).
+    // TODO: cover with E2E/VRT — jsdom can't reproduce real image loading.
+    <Avatar key={resolvedAvatarUrl ?? 'fallback'} size={size} className={className} data-testid={dataTestId}>
       {resolvedAvatarUrl && !imageError && (
         <>
-          <Atoms.AvatarImage
+          <AvatarImage
             src={resolvedAvatarUrl}
             alt={alt || name}
             onError={() => setImageError(true)}
-            className={Libs.cn(shouldBlur && 'blur-xs')}
+            className={cn(shouldBlur && 'blur-xs')}
           />
 
           {shouldBlur && (
-            <Atoms.Container
+            <Container
               overrideDefaults
               role="button"
               tabIndex={0}
@@ -96,15 +110,15 @@ export function AvatarWithFallback({
               }}
               className="absolute inset-0 flex cursor-pointer items-center justify-center"
             >
-              <Libs.EyeOff className="size-1/2 max-h-10 max-w-10" />
-            </Atoms.Container>
+              <EyeOff className="size-1/2 max-h-10 max-w-10" />
+            </Container>
           )}
         </>
       )}
       {/* Always render fallback - Radix shows it while image loads or if image fails */}
-      <Atoms.AvatarFallback className={Libs.cn('overflow-hidden border-none', fallbackClassName)}>
+      <AvatarFallback className={cn('overflow-hidden border-none', fallbackClassName)}>
         <FacehashAvatar seed={resolvedFallbackSeed} initial={fallbackInitial} />
-      </Atoms.AvatarFallback>
-    </Atoms.Avatar>
+      </AvatarFallback>
+    </Avatar>
   );
 }

@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { ReportIssueType } from '@/core/pipes/report';
-import * as Core from '@/core';
-import { Logger, postJson } from '@/libs';
-import * as Molecules from '@/molecules';
 import { POST_ROUTES } from '@/app/routes';
-import * as Hooks from '@/hooks';
-import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { postJson } from '@/libs/api/client-request';
+import { Logger } from '@/libs/logger/logger';
+import { parseCompositeId } from '@/models/models.utils';
+import { showErrorToast as showErrorToastMessage } from '@/molecules/Toaster/showErrorToast';
+import type { ReportIssueType } from '@/pipes/report/report.types';
+import { REPORT_API_ENDPOINT, REPORT_POST_STEPS } from './useReportPost.constants';
 import type { ReportPostStep } from './useReportPost.types';
 import type { UseReportPostReturn } from './useReportPost.types';
 
@@ -23,9 +24,9 @@ import type { UseReportPostReturn } from './useReportPost.types';
  * @returns Report state and handlers
  */
 export function useReportPost(postId: string): UseReportPostReturn {
-  const { currentUserPubky, userDetails } = Hooks.useCurrentUserProfile();
+  const { currentUserPubky, userDetails } = useCurrentUserProfile();
   const tReport = useTranslations('toast.report');
-  const parsedId = Core.parseCompositeId(postId);
+  const parsedId = parseCompositeId(postId);
   const postUrl = `${window.location.origin}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;
 
   const [step, setStep] = useState<ReportPostStep>(REPORT_POST_STEPS.ISSUE_SELECTION);
@@ -35,7 +36,7 @@ export function useReportPost(postId: string): UseReportPostReturn {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const showErrorToast = (description: string) => {
-    Molecules.showErrorToast({
+    showErrorToastMessage({
       description,
     });
   };

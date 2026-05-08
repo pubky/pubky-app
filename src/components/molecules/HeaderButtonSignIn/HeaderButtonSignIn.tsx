@@ -1,23 +1,20 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as App from '@/app';
+import { useRouter } from 'next/navigation';
+import { UserRoundPlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { ONBOARDING_ROUTES } from '@/app/routes';
+import { Button } from '@/atoms/Button/Button';
 
 export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButtonElement>) {
   const t = useTranslations('header');
   const router = useRouter();
-
   const handleNewHere = () => {
-    router.push(App.ONBOARDING_ROUTES.HUMAN);
+    router.push(ONBOARDING_ROUTES.HUMAN);
   };
-
   return (
-    <Atoms.Button
+    <Button
       id="header-sign-in-btn"
       data-testid="header-sign-in-btn"
       variant="secondary"
@@ -25,8 +22,8 @@ export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButton
       className="gap-2"
       {...props}
     >
-      <Libs.UserRoundPlus className="size-4" />
+      <UserRoundPlus className="size-4" />
       {t('newHere')}
-    </Atoms.Button>
+    </Button>
   );
 }

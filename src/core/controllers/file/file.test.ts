@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TextEncoder } from 'util';
-import type { Pubky } from '@/core/models/models.types';
-import { FileVariant } from '@/core/services/nexus/file/file.types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
+import { FileVariant } from '@/services/nexus/file/file.types';
 
 const mockFileNormalizer = {
   toBlob: vi.fn(),
@@ -17,14 +17,12 @@ const mockFileApplication = {
   getMetadata: vi.fn(),
 };
 
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual('@/core');
-  return {
-    ...actual,
-    FileNormalizer: mockFileNormalizer,
-    FileApplication: mockFileApplication,
-  };
-});
+vi.mock('@/pipes/file/file.normalizer', () => ({
+  FileNormalizer: mockFileNormalizer,
+}));
+vi.mock('@/application/file/file', () => ({
+  FileApplication: mockFileApplication,
+}));
 
 class MockFile extends File {
   private readonly rawContent: string;

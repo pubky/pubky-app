@@ -1,13 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-
-// Mock @/libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './Sheet';
+import { describe, expect, it } from 'vitest';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './Sheet';
 
 describe('Sheet', () => {
   it('renders Sheet root correctly', () => {

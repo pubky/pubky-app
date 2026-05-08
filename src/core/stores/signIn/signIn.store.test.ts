@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { AppError } from '@/libs/error/error';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { useSignInStore } from './signIn.store';
-import * as Libs from '@/libs';
 
 describe('SignInStore', () => {
   beforeEach(() => {
@@ -69,11 +71,11 @@ describe('SignInStore', () => {
 
   describe('Error Handling', () => {
     it('should set error state', () => {
-      const mockError = new Libs.AppError({
-        category: Libs.ErrorCategory.Network,
-        code: Libs.NetworkErrorCode.CONNECTION_FAILED,
+      const mockError = new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
         message: 'Network failed',
-        service: Libs.ErrorService.Local,
+        service: ErrorService.Local,
         operation: 'test',
       });
 
@@ -83,11 +85,11 @@ describe('SignInStore', () => {
     });
 
     it('should clear error state', () => {
-      const mockError = new Libs.AppError({
-        category: Libs.ErrorCategory.Network,
-        code: Libs.NetworkErrorCode.CONNECTION_FAILED,
+      const mockError = new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
         message: 'Network failed',
-        service: Libs.ErrorService.Local,
+        service: ErrorService.Local,
         operation: 'test',
       });
 
@@ -101,11 +103,11 @@ describe('SignInStore', () => {
   describe('Reset', () => {
     it('should reset all state to initial values', () => {
       const store = useSignInStore.getState();
-      const mockError = new Libs.AppError({
-        category: Libs.ErrorCategory.Network,
-        code: Libs.NetworkErrorCode.CONNECTION_FAILED,
+      const mockError = new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
         message: 'Network failed',
-        service: Libs.ErrorService.Local,
+        service: ErrorService.Local,
         operation: 'test',
       });
 

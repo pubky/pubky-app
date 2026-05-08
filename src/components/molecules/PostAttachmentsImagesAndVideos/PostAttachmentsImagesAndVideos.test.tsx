@@ -1,27 +1,104 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
 import { useEffect } from 'react';
-import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
+
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({
+      children,
+      open,
+    }: {
+      children: React.ReactNode;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }) => {
+      // Only update dialogOpenState if it wasn't explicitly set by a test
+      if (!dialogOpenStateSetByTest) {
+        dialogOpenState = open;
+      }
+      return (
+        <div data-testid="dialog" data-open={dialogOpenState}>
+          {children}
+        </div>
+      );
+    },
+    DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-trigger" data-aschild={asChild}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({
+      children,
+      hiddenTitle,
+      showCloseButton,
+      overrideDefaults,
+      onClick,
+      'aria-describedby': ariaDescribedBy,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      hiddenTitle?: string;
+      showCloseButton?: boolean;
+      overrideDefaults?: boolean;
+      onClick?: (e: React.MouseEvent) => void;
+      'aria-describedby'?: string;
+      'data-testid'?: string;
+    }) => {
+      // Only render content when dialog is open (mimics real DialogContent behavior)
+      if (!dialogOpenState) {
+        return null;
+      }
+      return (
+        <div
+          data-testid={dataTestId || 'dialog-content'}
+          data-hidden-title={hiddenTitle}
+          data-show-close-button={showCloseButton}
+          data-override-defaults={overrideDefaults}
+          aria-describedby={ariaDescribedBy}
+          onClick={onClick}
+        >
+          {children}
+        </div>
+      );
+    },
+    DialogClose: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <button data-testid="dialog-close" className={className}>
+        {children}
+      </button>
+    ),
+  };
+});
 
 // Mock useToast
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: () => ({ toast: mockToast }),
-  PostAttachmentsCarouselImage: ({
-    id,
-    image,
-    'data-testid': dataTestId,
-  }: {
-    id: string;
-    image: AttachmentConstructed;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'carousel-image'} id={id}>
-      <img src={image.urls.main} alt={image.name} />
-    </div>
-  ),
-}));
+vi.mock('@/molecules/PostAttachmentsCarouselImage/PostAttachmentsCarouselImage', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/molecules/PostAttachmentsCarouselImage/PostAttachmentsCarouselImage')>();
+  return {
+    ...actual,
+    PostAttachmentsCarouselImage: ({
+      id,
+      image,
+      'data-testid': dataTestId,
+    }: {
+      id: string;
+      image: AttachmentConstructed;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'carousel-image'} id={id}>
+        <img src={image.urls.main} alt={image.name} />
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
 // Track dialog open state for conditional rendering
 // When set to true by a test, it won't be overridden by the component
@@ -29,220 +106,178 @@ let dialogOpenState = false;
 let dialogOpenStateSetByTest = false;
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    display,
-    onClick,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    display?: string;
-    onClick?: (e: React.MouseEvent) => void;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'container'} className={className} data-display={display} onClick={onClick}>
-      {children}
-    </div>
-  ),
-  Dialog: ({ children, open }: { children: React.ReactNode; open: boolean; onOpenChange: (open: boolean) => void }) => {
-    // Only update dialogOpenState if it wasn't explicitly set by a test
-    if (!dialogOpenStateSetByTest) {
-      dialogOpenState = open;
-    }
-    return (
-      <div data-testid="dialog" data-open={dialogOpenState}>
-        {children}
-      </div>
-    );
-  },
-  DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-trigger" data-aschild={asChild}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({
-    children,
-    hiddenTitle,
-    showCloseButton,
-    overrideDefaults,
-    onClick,
-    'aria-describedby': ariaDescribedBy,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    hiddenTitle?: string;
-    showCloseButton?: boolean;
-    overrideDefaults?: boolean;
-    onClick?: (e: React.MouseEvent) => void;
-    'aria-describedby'?: string;
-    'data-testid'?: string;
-  }) => {
-    // Only render content when dialog is open (mimics real DialogContent behavior)
-    if (!dialogOpenState) {
-      return null;
-    }
-    return (
-      <div
-        data-testid={dataTestId || 'dialog-content'}
-        data-hidden-title={hiddenTitle}
-        data-show-close-button={showCloseButton}
-        data-override-defaults={overrideDefaults}
-        aria-describedby={ariaDescribedBy}
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      disabled,
+      variant,
+      size,
+      className,
+      overrideDefaults,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      disabled?: boolean;
+      variant?: string;
+      size?: string;
+      className?: string;
+      overrideDefaults?: boolean;
+      'data-testid'?: string;
+    }) => (
+      <button
+        data-testid={dataTestId || 'button'}
         onClick={onClick}
-      >
-        {children}
-      </div>
-    );
-  },
-  DialogClose: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <button data-testid="dialog-close" className={className}>
-      {children}
-    </button>
-  ),
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    variant,
-    size,
-    className,
-    overrideDefaults,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    variant?: string;
-    size?: string;
-    className?: string;
-    overrideDefaults?: boolean;
-    'data-testid'?: string;
-  }) => (
-    <button
-      data-testid={dataTestId || 'button'}
-      onClick={onClick}
-      disabled={disabled}
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      data-override-defaults={overrideDefaults}
-    >
-      {children}
-    </button>
-  ),
-  Image: ({
-    src,
-    alt,
-    fill,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    alt: string;
-    fill?: boolean;
-    className?: string;
-    'data-testid'?: string;
-  }) => <img data-testid={dataTestId || 'image'} src={src} alt={alt} data-fill={fill} className={className} />,
-  Video: ({
-    src,
-    pauseVideo,
-    className,
-    id,
-    onClick,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    pauseVideo?: boolean;
-    className?: string;
-    id?: string;
-    onClick?: (e: React.MouseEvent) => void;
-    'data-testid'?: string;
-  }) => (
-    <video
-      data-testid={dataTestId || 'video'}
-      src={src}
-      data-pause-video={pauseVideo}
-      className={className}
-      id={id}
-      onClick={onClick}
-    />
-  ),
-  Carousel: ({
-    children,
-    opts,
-    setApi,
-    className,
-  }: {
-    children: React.ReactNode;
-    opts?: { startIndex?: number; loop?: boolean; duration?: number; watchDrag?: boolean };
-    setApi?: (api: unknown) => void;
-    className?: string;
-  }) => {
-    // Simulate setting the API in useEffect to avoid infinite re-renders
-    useEffect(() => {
-      if (setApi) {
-        setApi({
-          selectedScrollSnap: () => 0,
-          on: vi.fn(),
-        });
-      }
-    }, [setApi]);
-    return (
-      <div
-        data-testid="carousel"
-        data-start-index={opts?.startIndex}
-        data-loop={opts?.loop}
-        data-duration={opts?.duration}
-        data-watch-drag={opts?.watchDrag}
+        disabled={disabled}
+        data-variant={variant}
+        data-size={size}
         className={className}
+        data-override-defaults={overrideDefaults}
       >
         {children}
-      </div>
-    );
-  },
-  CarouselContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="carousel-content" className={className}>
-      {children}
-    </div>
-  ),
-  CarouselItem: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="carousel-item" className={className}>
-      {children}
-    </div>
-  ),
-  CarouselPrevious: ({ className }: { className?: string }) => (
-    <button data-testid="carousel-previous" className={className}>
-      Previous
-    </button>
-  ),
-  CarouselNext: ({ className }: { className?: string }) => (
-    <button data-testid="carousel-next" className={className}>
-      Next
-    </button>
-  ),
-  Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
-    <span data-testid="typography" data-size={size} className={className}>
-      {children}
-    </span>
-  ),
-}));
+      </button>
+    ),
+  };
+});
 
-// Mock @/libs/icons
-vi.mock('@/libs/icons', () => ({
-  X: ({ className }: { className?: string }) => (
-    <svg data-testid="icon-x" className={className}>
-      X
-    </svg>
-  ),
-  Maximize: ({ className }: { className?: string }) => (
-    <svg data-testid="icon-maximize" className={className}>
-      Maximize
-    </svg>
-  ),
-}));
+vi.mock('@/atoms/Carousel/Carousel', () => {
+  return {
+    Carousel: ({
+      children,
+      opts,
+      setApi,
+      className,
+    }: {
+      children: React.ReactNode;
+      opts?: { startIndex?: number; loop?: boolean; duration?: number; watchDrag?: boolean };
+      setApi?: (api: unknown) => void;
+      className?: string;
+    }) => {
+      // Simulate setting the API in useEffect to avoid infinite re-renders
+      useEffect(() => {
+        if (setApi) {
+          setApi({
+            selectedScrollSnap: () => 0,
+            on: vi.fn(),
+          });
+        }
+      }, [setApi]);
+      return (
+        <div
+          data-testid="carousel"
+          data-start-index={opts?.startIndex}
+          data-loop={opts?.loop}
+          data-duration={opts?.duration}
+          data-watch-drag={opts?.watchDrag}
+          className={className}
+        >
+          {children}
+        </div>
+      );
+    },
+    CarouselContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="carousel-content" className={className}>
+        {children}
+      </div>
+    ),
+    CarouselItem: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="carousel-item" className={className}>
+        {children}
+      </div>
+    ),
+    CarouselPrevious: ({ className }: { className?: string }) => (
+      <button data-testid="carousel-previous" className={className}>
+        Previous
+      </button>
+    ),
+    CarouselNext: ({ className }: { className?: string }) => (
+      <button data-testid="carousel-next" className={className}>
+        Next
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      display,
+      onClick,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      display?: string;
+      onClick?: (e: React.MouseEvent) => void;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'container'} className={className} data-display={display} onClick={onClick}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({
+      src,
+      alt,
+      fill,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      src: string;
+      alt: string;
+      fill?: boolean;
+      className?: string;
+      'data-testid'?: string;
+    }) => <img data-testid={dataTestId || 'image'} src={src} alt={alt} data-fill={fill} className={className} />,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
+      <span data-testid="typography" data-size={size} className={className}>
+        {children}
+      </span>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Video/Video', () => {
+  return {
+    Video: ({
+      src,
+      pauseVideo,
+      className,
+      id,
+      onClick,
+      'data-testid': dataTestId,
+    }: {
+      src: string;
+      pauseVideo?: boolean;
+      className?: string;
+      id?: string;
+      onClick?: (e: React.MouseEvent) => void;
+      'data-testid'?: string;
+    }) => (
+      <video
+        data-testid={dataTestId || 'video'}
+        src={src}
+        data-pause-video={pauseVideo}
+        className={className}
+        id={id}
+        onClick={onClick}
+      />
+    ),
+  };
+});
 
 const createMockImage = (overrides: Partial<AttachmentConstructed> = {}): AttachmentConstructed => ({
   type: 'image/jpeg',
@@ -455,7 +490,8 @@ describe('PostAttachmentsImagesAndVideos', () => {
       const imagesAndVideos = [createMockImage()];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
 
-      expect(screen.getByTestId('icon-x')).toBeInTheDocument();
+      const close = screen.getByTestId('dialog-close');
+      expect(close.querySelector('.lucide-x')).toBeInTheDocument();
     });
 
     it('renders dialog content with hidden title for accessibility', () => {
@@ -555,7 +591,10 @@ describe('PostAttachmentsImagesAndVideos', () => {
       const imagesAndVideos = [createMockImage()];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
 
-      expect(screen.getByTestId('icon-maximize')).toBeInTheDocument();
+      const fullscreenButton = screen
+        .getAllByTestId('button')
+        .find((btn) => btn.textContent?.includes('Fullscreen')) as HTMLButtonElement;
+      expect(fullscreenButton.querySelector('.lucide-maximize')).toBeInTheDocument();
     });
 
     it('fullscreen button is enabled when fullscreenEnabled is true', () => {

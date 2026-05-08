@@ -1,9 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
-import * as Core from '@/core';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { db } from '@/database/franky/franky';
+import { FeedModel } from '@/models/feed/feed';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { LocalFeedService } from '@/services/local/feed/feed';
 
 describe('LocalFeedService', () => {
-  const createFeedSchema = (overrides: Partial<Core.FeedModelSchema> = {}): Core.FeedModelSchema => ({
+  const createFeedSchema = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema => ({
     id: 'feed-default',
     name: 'Bitcoin News',
     tags: ['bitcoin', 'lightning'],
@@ -17,31 +20,31 @@ describe('LocalFeedService', () => {
   });
 
   beforeEach(async () => {
-    await Core.db.initialize();
-    await Core.FeedModel.table.clear();
+    await db.initialize();
+    await FeedModel.table.clear();
   });
 
   describe('persist', () => {
     it('should create a new feed', async () => {
       const feed = createFeedSchema({ id: 'feed-new' });
 
-      const persistedFeed = await Core.LocalFeedService.createOrUpdate(feed);
+      const persistedFeed = await LocalFeedService.createOrUpdate(feed);
 
       expect(persistedFeed).toBeTruthy();
       expect(persistedFeed.id).toBe('feed-new');
       expect(persistedFeed.name).toBe(feed.name);
 
-      const saved = await Core.FeedModel.table.get(persistedFeed.id);
+      const saved = await FeedModel.table.get(persistedFeed.id);
       expect(saved).toBeTruthy();
       expect(saved!.id).toBe(persistedFeed.id);
     });
 
     it('should update an existing feed', async () => {
       const feed = createFeedSchema({ id: 'feed-update' });
-      const createdFeed = await Core.LocalFeedService.createOrUpdate(feed);
+      const createdFeed = await LocalFeedService.createOrUpdate(feed);
 
       const updated = { ...createdFeed, name: 'Updated Name', tags: ['newTag'] };
-      const updatedFeed = await Core.LocalFeedService.createOrUpdate(updated);
+      const updatedFeed = await LocalFeedService.createOrUpdate(updated);
 
       expect(updatedFeed.id).toBe('feed-update');
       expect(updatedFeed.name).toBe('Updated Name');
@@ -51,10 +54,10 @@ describe('LocalFeedService', () => {
     it('should preserve created_at on update', async () => {
       const originalCreatedAt = Date.now() - 10000;
       const feed = createFeedSchema({ id: 'feed-timestamps', created_at: originalCreatedAt });
-      const createdFeed = await Core.LocalFeedService.createOrUpdate(feed);
+      const createdFeed = await LocalFeedService.createOrUpdate(feed);
 
       const updated = { ...createdFeed, name: 'Updated', updated_at: Date.now() };
-      const updatedFeed = await Core.LocalFeedService.createOrUpdate(updated);
+      const updatedFeed = await LocalFeedService.createOrUpdate(updated);
 
       expect(updatedFeed.created_at).toBe(originalCreatedAt);
       expect(updatedFeed.updated_at).toBeGreaterThan(originalCreatedAt);
@@ -65,9 +68,9 @@ describe('LocalFeedService', () => {
       const feed2 = createFeedSchema({ id: 'feed-2', name: 'Feed 2' });
       const feed3 = createFeedSchema({ id: 'feed-3', name: 'Feed 3' });
 
-      const persisted1 = await Core.LocalFeedService.createOrUpdate(feed1);
-      const persisted2 = await Core.LocalFeedService.createOrUpdate(feed2);
-      const persisted3 = await Core.LocalFeedService.createOrUpdate(feed3);
+      const persisted1 = await LocalFeedService.createOrUpdate(feed1);
+      const persisted2 = await LocalFeedService.createOrUpdate(feed2);
+      const persisted3 = await LocalFeedService.createOrUpdate(feed3);
 
       expect(persisted1.id).toBe('feed-1');
       expect(persisted2.id).toBe('feed-2');
@@ -78,25 +81,25 @@ describe('LocalFeedService', () => {
   describe('delete', () => {
     it('should delete a feed by ID', async () => {
       const feed = createFeedSchema({ id: 'feed-delete' });
-      await Core.LocalFeedService.createOrUpdate(feed);
+      await LocalFeedService.createOrUpdate(feed);
 
-      await Core.LocalFeedService.delete({ feedId: 'feed-delete' });
+      await LocalFeedService.delete({ feedId: 'feed-delete' });
 
-      const saved = await Core.FeedModel.table.get('feed-delete');
+      const saved = await FeedModel.table.get('feed-delete');
       expect(saved).toBeUndefined();
     });
 
     it('should not throw when deleting non-existent feed', async () => {
-      await expect(Core.LocalFeedService.delete({ feedId: 'nonexistent' })).resolves.not.toThrow();
+      await expect(LocalFeedService.delete({ feedId: 'nonexistent' })).resolves.not.toThrow();
     });
   });
 
   describe('read', () => {
     it('should find feed by ID', async () => {
       const feed = createFeedSchema({ id: 'feed-read' });
-      await Core.LocalFeedService.createOrUpdate(feed);
+      await LocalFeedService.createOrUpdate(feed);
 
-      const found = await Core.LocalFeedService.read({ feedId: 'feed-read' });
+      const found = await LocalFeedService.read({ feedId: 'feed-read' });
 
       expect(found).toBeTruthy();
       expect(found!.id).toBe('feed-read');
@@ -104,7 +107,7 @@ describe('LocalFeedService', () => {
     });
 
     it('should throw RECORD_NOT_FOUND error when not found', async () => {
-      await expect(Core.LocalFeedService.read({ feedId: 'nonexistent' })).rejects.toMatchObject({
+      await expect(LocalFeedService.read({ feedId: 'nonexistent' })).rejects.toMatchObject({
         name: 'AppError',
         code: 'RECORD_NOT_FOUND',
         category: 'database',
@@ -119,11 +122,11 @@ describe('LocalFeedService', () => {
       const feed2 = createFeedSchema({ id: 'feed-middle', name: 'Middle', created_at: now - 1000 });
       const feed3 = createFeedSchema({ id: 'feed-newest', name: 'Newest', created_at: now });
 
-      await Core.LocalFeedService.createOrUpdate(feed2);
-      await Core.LocalFeedService.createOrUpdate(feed1);
-      await Core.LocalFeedService.createOrUpdate(feed3);
+      await LocalFeedService.createOrUpdate(feed2);
+      await LocalFeedService.createOrUpdate(feed1);
+      await LocalFeedService.createOrUpdate(feed3);
 
-      const feeds = await Core.LocalFeedService.readAll();
+      const feeds = await LocalFeedService.readAll();
 
       expect(feeds).toHaveLength(3);
       expect(feeds[0].name).toBe('Newest');
@@ -132,7 +135,7 @@ describe('LocalFeedService', () => {
     });
 
     it('should return empty array when no feeds exist', async () => {
-      const feeds = await Core.LocalFeedService.readAll();
+      const feeds = await LocalFeedService.readAll();
 
       expect(feeds).toEqual([]);
     });
@@ -146,34 +149,34 @@ describe('LocalFeedService', () => {
         createFeedSchema({ id: 'feed-batch-3', name: 'Feed 3' }),
       ];
 
-      const result = await Core.LocalFeedService.createOrUpdateMany(feeds);
+      const result = await LocalFeedService.createOrUpdateMany(feeds);
 
       expect(result).toHaveLength(3);
       expect(result[0].id).toBe('feed-batch-1');
       expect(result[1].id).toBe('feed-batch-2');
       expect(result[2].id).toBe('feed-batch-3');
 
-      const saved = await Core.LocalFeedService.readAll();
+      const saved = await LocalFeedService.readAll();
       expect(saved).toHaveLength(3);
     });
 
     it('should upsert existing feeds by ID', async () => {
-      await Core.LocalFeedService.createOrUpdate(createFeedSchema({ id: 'feed-upsert', name: 'Original' }));
+      await LocalFeedService.createOrUpdate(createFeedSchema({ id: 'feed-upsert', name: 'Original' }));
 
-      await Core.LocalFeedService.createOrUpdateMany([
+      await LocalFeedService.createOrUpdateMany([
         createFeedSchema({ id: 'feed-upsert', name: 'Updated' }),
         createFeedSchema({ id: 'feed-new', name: 'New' }),
       ]);
 
-      const upserted = await Core.LocalFeedService.read({ feedId: 'feed-upsert' });
+      const upserted = await LocalFeedService.read({ feedId: 'feed-upsert' });
       expect(upserted.name).toBe('Updated');
 
-      const all = await Core.LocalFeedService.readAll();
+      const all = await LocalFeedService.readAll();
       expect(all).toHaveLength(2);
     });
 
     it('should return empty array when given empty input', async () => {
-      const result = await Core.LocalFeedService.createOrUpdateMany([]);
+      const result = await LocalFeedService.createOrUpdateMany([]);
 
       expect(result).toEqual([]);
     });
@@ -185,13 +188,13 @@ describe('LocalFeedService', () => {
         createFeedSchema({ id: `feed-concurrent-${i}`, name: `Feed ${i}` }),
       );
 
-      const persistedFeeds = await Promise.all(feeds.map((feed) => Core.LocalFeedService.createOrUpdate(feed)));
+      const persistedFeeds = await Promise.all(feeds.map((feed) => LocalFeedService.createOrUpdate(feed)));
 
       const ids = persistedFeeds.map((f) => f.id);
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(5);
 
-      const saved = await Core.LocalFeedService.readAll();
+      const saved = await LocalFeedService.readAll();
       expect(saved).toHaveLength(5);
     });
   });

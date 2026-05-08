@@ -1,10 +1,13 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
 import { useRouter } from 'next/navigation';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
-import { HeaderContainer, HeaderTitle, HeaderOnboarding, HeaderSocialLinks, HeaderNavigationButtons } from './Header';
-import { HeaderButtonSignIn, HeaderHome, HeaderSignIn } from '@/molecules';
+import { describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
+import { HeaderHome } from '../HeaderHome/HeaderHome';
+import { HeaderSignIn } from '../HeaderSignIn/HeaderSignIn';
+import { HeaderContainer, HeaderNavigationButtons, HeaderOnboarding, HeaderSocialLinks, HeaderTitle } from './Header';
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -20,141 +23,99 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
 
-// Mock the core
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(),
-    useNotificationStore: vi.fn(),
-    useSearchStore: vi.fn(() => ({
-      recentUsers: [],
-      recentTags: [],
-      activeTags: [],
-      addUser: vi.fn(),
-      addTag: vi.fn(),
-      setActiveTags: vi.fn(),
-      addActiveTag: vi.fn(),
-      removeActiveTag: vi.fn(),
+// Mock direct dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(),
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn(),
+}));
+vi.mock('@/stores/search/search.store', () => ({
+  useSearchStore: vi.fn(() => ({
+    recentUsers: [],
+    recentTags: [],
+    activeTags: [],
+    addUser: vi.fn(),
+    addTag: vi.fn(),
+    setActiveTags: vi.fn(),
+    addActiveTag: vi.fn(),
+    removeActiveTag: vi.fn(),
+  })),
+}));
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    read: vi.fn(() => Promise.resolve({ name: 'Test User', image: 'test-image.jpg' })),
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
+  },
+}));
+vi.mock('@/database/franky/franky', () => ({
+  db: {
+    table: vi.fn(() => ({
+      where: vi.fn(() => ({
+        equals: vi.fn(() => ({
+          first: vi.fn(),
+        })),
+      })),
     })),
-    ProfileController: {
-      read: vi.fn(() => Promise.resolve({ name: 'Test User', image: 'test-image.jpg' })),
+    user_details: {
+      get: vi.fn(),
     },
-    FileController: {
-      getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
-    },
-    db: {
-      user_details: {
-        get: vi.fn(),
-      },
-    },
-  };
-});
-
-// Mock the components
-vi.mock('@/components', () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-    variant,
-    size,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    className?: string;
-    variant?: string;
-    size?: string;
-    [key: string]: unknown;
-  }) => (
-    <button onClick={onClick} className={className} data-variant={variant} data-size={size} {...props}>
-      {children}
-    </button>
-  ),
-  Link: ({
-    children,
-    href,
-    target,
-    variant,
-    size,
-    className,
-    ...props
-  }: {
-    children: React.ReactNode;
-    href?: string;
-    target?: string;
-    variant?: string;
-    size?: string;
-    className?: string;
-    [key: string]: unknown;
-  }) => (
-    <a href={href} target={target} className={className} data-variant={variant} data-size={size} {...props}>
-      {children}
-    </a>
-  ),
-  Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  AvatarImage: ({ src }: { src?: string }) => <img data-testid="avatar-image" src={src} alt="User avatar" />,
-  AvatarFallback: ({ children }: { children: React.ReactNode }) => <div data-testid="avatar-fallback">{children}</div>,
-  Badge: ({ children, className, variant }: { children: React.ReactNode; className?: string; variant?: string }) => (
-    <div className={className} data-variant={variant}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, className, size }: { children: React.ReactNode; className?: string; size?: string }) => (
-    <span className={className} data-size={size}>
-      {children}
-    </span>
-  ),
+  },
 }));
 
 // Mock the organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({
-    name,
-    avatarUrl,
-    alt,
-    className,
-  }: {
-    name: string;
-    avatarUrl?: string;
-    alt?: string;
-    size?: string;
-    className?: string;
-  }) => (
-    <div data-testid="avatar-with-fallback" data-name={name} data-url={avatarUrl} data-alt={alt} className={className}>
-      {name}
-    </div>
-  ),
-  SearchInput: () => <div data-testid="search-input">Search Input</div>,
-}));
-
-// Mock the molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
-    ...actual,
+    AvatarWithFallback: ({
+      name,
+      avatarUrl,
+      alt,
+      className,
+    }: {
+      name: string;
+      avatarUrl?: string;
+      alt?: string;
+      size?: string;
+      className?: string;
+    }) => (
+      <div
+        data-testid="avatar-with-fallback"
+        data-name={name}
+        data-url={avatarUrl}
+        data-alt={alt}
+        className={className}
+      >
+        {name}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/SearchInput/SearchInput', () => {
+  return {
+    SearchInput: () => <div data-testid="search-input">Search Input</div>,
+  };
+});
+
+vi.mock('@/molecules/ProgressSteps/ProgressSteps', () => {
+  return {
     ProgressSteps: ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => (
       <div data-testid="progress-steps" data-current={currentStep} data-total={totalSteps}>
         Progress Steps
       </div>
     ),
-    SearchInput: () => <div data-testid="search-input">Search Input</div>,
-    HeaderSocialLinks: () => <div data-testid="header-social-links">Social Links</div>,
   };
 });
 
 // Mock the libs - keep real implementations and only stub helpers we need
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 // Mock the config
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/externalLinks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/externalLinks')>();
   return {
     ...actual,
     GITHUB_URL: 'https://github.com',
@@ -164,8 +125,8 @@ vi.mock('@/config', async (importOriginal) => {
 });
 
 // Mock the app routes
-vi.mock('@/app', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/app')>();
+vi.mock('@/app/routes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/routes')>();
   return {
     ...actual,
     AUTH_ROUTES: {
@@ -190,8 +151,8 @@ describe('Header Components', () => {
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
-    vi.mocked(Core.useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
-    vi.mocked(Core.useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
+    vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
+    vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
     vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
   });
 
@@ -460,7 +421,7 @@ describe('Header Components', () => {
 
   describe('HeaderSignIn - Avatar Logic', () => {
     beforeEach(() => {
-      vi.mocked(Core.useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
+      vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
     });
 
     it('passes name to AvatarWithFallback for valid name', () => {
@@ -537,8 +498,8 @@ describe('Header Components - Snapshots', () => {
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
-    vi.mocked(Core.useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
-    vi.mocked(Core.useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
+    vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
+    vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
     vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
   });
 

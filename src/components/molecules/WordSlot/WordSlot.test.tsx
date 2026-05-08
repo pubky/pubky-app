@@ -1,41 +1,47 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { WordSlot } from './WordSlot';
 
 // Mock external dependencies
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
+
+vi.mock('@/atoms/Badge/Badge', () => {
+  return {
+    Badge: vi.fn(({ children, variant, className }) => (
+      <span data-testid="badge" data-variant={variant} className={className}>
+        {children}
+      </span>
+    )),
+  };
 });
 
-vi.mock('@/atoms', () => ({
-  Container: vi.fn(({ children, className, ...props }) => (
-    <div data-testid="container" className={className} {...props}>
-      {children}
-    </div>
-  )),
-  Badge: vi.fn(({ children, variant, className }) => (
-    <span data-testid="badge" data-variant={variant} className={className}>
-      {children}
-    </span>
-  )),
-  Input: vi.fn(({ value, placeholder, className, onChange, onBlur, disabled, readOnly, onClick, ...props }) => (
-    <input
-      data-testid="input"
-      value={value}
-      placeholder={placeholder}
-      className={className}
-      onChange={onChange}
-      onBlur={onBlur}
-      disabled={disabled}
-      readOnly={readOnly}
-      onClick={onClick}
-      {...props}
-    />
-  )),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: vi.fn(({ children, className, ...props }) => (
+      <div data-testid="container" className={className} {...props}>
+        {children}
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/atoms/Input/Input', () => {
+  return {
+    Input: vi.fn(({ value, placeholder, className, onChange, onBlur, disabled, readOnly, onClick, ...props }) => (
+      <input
+        data-testid="input"
+        value={value}
+        placeholder={placeholder}
+        className={className}
+        onChange={onChange}
+        onBlur={onBlur}
+        disabled={disabled}
+        readOnly={readOnly}
+        onClick={onClick}
+        {...props}
+      />
+    )),
+  };
+});
 
 describe('WordSlot', () => {
   describe('Editable Mode', () => {

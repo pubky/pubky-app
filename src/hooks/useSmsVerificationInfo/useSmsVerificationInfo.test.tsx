@@ -1,17 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSmsVerificationInfo } from './useSmsVerificationInfo';
 
-// Mock @/core
+// Mock direct dependencies
 const mockGetSmsVerificationInfo = vi.fn();
 const mockGetQueryData = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/homegate/homegate', () => ({
   HomegateController: {
     getSmsVerificationInfo: () => mockGetSmsVerificationInfo(),
   },
+}));
+vi.mock('@/services/homegate/homegate.query-client', () => ({
   homegateQueryClient: {
     getQueryData: () => mockGetQueryData(),
   },
+}));
+vi.mock('@/services/homegate/homegate.constants', () => ({
   HOMEGATE_QUERY_KEYS: {
     lnVerificationInfo: ['homegate', 'ln-verification-info'],
     smsVerificationInfo: ['homegate', 'sms-verification-info'],

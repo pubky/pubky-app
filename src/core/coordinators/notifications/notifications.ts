@@ -1,12 +1,13 @@
-import * as Core from '@/core';
-import { Logger } from '@/libs';
 import { AUTH_ROUTES } from '@/app/routes';
-import {
-  Coordinator,
-  routeToRegex,
-  type NotificationCoordinatorConfig,
-  type NotificationCoordinatorState,
-} from '@/core/coordinators';
+import { NotificationController } from '@/controllers/notification/notification';
+import { Coordinator } from '@/coordinators/base/coordinator';
+import { routeToRegex } from '@/coordinators/base/coordinators.utils';
+import type {
+  NotificationCoordinatorConfig,
+  NotificationCoordinatorState,
+} from '@/coordinators/notifications/notifications.types';
+import { Logger } from '@/libs/logger/logger';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 /**
  * NotificationCoordinator
@@ -90,12 +91,12 @@ export class NotificationCoordinator extends Coordinator<NotificationCoordinator
   protected async poll(): Promise<void> {
     try {
       // Get current user ID
-      const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
+      const userId = useAuthStore.getState().selectCurrentUserPubky();
 
       Logger.debug('Polling notifications', { userId });
 
       // Coordinator calls controller to fetch notifications
-      await Core.NotificationController.fetchNotifications({ userId });
+      await NotificationController.fetchNotifications({ userId });
     } catch (error) {
       Logger.error('Error polling notifications', { error });
       // Don't stop polling on error - just log and continue

@@ -1,13 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TaggedList } from './TaggedList';
+import { describe, expect, it, vi } from 'vitest';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
+import { TaggedList } from './TaggedList';
 
 // Mock TaggedItem
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/TaggedItem/TaggedItem', () => {
   return {
-    ...actual,
     TaggedItem: ({ tag }: { tag: TagWithAvatars }) => <div data-testid="tagged-item">{tag.label}</div>,
   };
 });

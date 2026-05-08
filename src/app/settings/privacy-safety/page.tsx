@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function SettingsPrivacySafetyPage() {
-  return <Templates.Privacy />;
-}
+export { Privacy as default } from '@/templates/Settings/Privacy/Privacy';

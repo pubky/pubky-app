@@ -2,10 +2,11 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
-import { TIMEFRAME } from '@/core/stores/hot/hot.types';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { cn, generateRandomColor } from '@/libs/utils/utils';
+import { TIMEFRAME } from '@/stores/hot/hot.types';
+import { AvatarGroup } from '../AvatarGroup/AvatarGroup';
 import type { HotTagCardProps } from './HotTagCard.types';
 
 const TIMEFRAME_TRANSLATION_KEY = {
@@ -33,7 +34,7 @@ export function HotTagCard({
   'data-testid': dataTestId,
 }: HotTagCardProps) {
   const t = useTranslations('hot');
-  const tagColor = React.useMemo(() => Libs.generateRandomColor(tagName), [tagName]);
+  const tagColor = React.useMemo(() => generateRandomColor(tagName), [tagName]);
 
   const handleClick = () => {
     onClick?.(tagName);
@@ -47,9 +48,9 @@ export function HotTagCard({
   };
 
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
-      className={Libs.cn(
+      className={cn(
         'relative flex min-h-fit min-w-0 flex-1 cursor-pointer flex-col gap-4 overflow-hidden rounded-md px-0 py-6 shadow-sm transition-opacity hover:opacity-90',
         className,
       )}
@@ -63,46 +64,46 @@ export function HotTagCard({
       data-testid={dataTestId || `hot-tag-card-${rank}`}
     >
       {/* Card Content */}
-      <Atoms.Container overrideDefaults className="flex w-full flex-col gap-1 px-6 sm:gap-2.5">
+      <Container overrideDefaults className="flex w-full flex-col gap-1 px-6 sm:gap-2.5">
         {/* Rank and Tag Name */}
-        <Atoms.Container overrideDefaults className="flex w-full items-center gap-2 sm:gap-3">
-          <Atoms.Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            <Atoms.Container
+        <Container overrideDefaults className="flex w-full items-center gap-2 sm:gap-3">
+          <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+            <Container
               overrideDefaults
               className="flex size-6 shrink-0 items-center justify-center rounded-full border border-accent-foreground"
             >
-              <Atoms.Typography size="sm" className="font-bold">
+              <Typography size="sm" className="font-bold">
                 {rank}
-              </Atoms.Typography>
-            </Atoms.Container>
-            <Atoms.Typography as="h4" size="lg" className="max-w-48 truncate lg:leading-normal">
+              </Typography>
+            </Container>
+            <Typography as="h4" size="lg" className="max-w-48 truncate lg:leading-normal">
               {tagName}
-            </Atoms.Typography>
-          </Atoms.Container>
+            </Typography>
+          </Container>
 
           {taggers.length > 0 && (
-            <Atoms.Container
+            <Container
               overrideDefaults
               className="flex shrink-0 items-center sm:hidden"
               data-testid="hot-tag-card-mobile-avatars"
             >
-              <Molecules.AvatarGroup items={taggers} totalCount={postCount} maxAvatars={maxAvatars} />
-            </Atoms.Container>
+              <AvatarGroup items={taggers} totalCount={postCount} maxAvatars={maxAvatars} />
+            </Container>
           )}
-        </Atoms.Container>
+        </Container>
 
         {/* Post Count */}
-        <Atoms.Typography size="md" className="text-secondary-foreground">
+        <Typography size="md" className="text-secondary-foreground">
           {t(TIMEFRAME_TRANSLATION_KEY[timeframe], { count: postCount.toLocaleString() })}
-        </Atoms.Typography>
-      </Atoms.Container>
+        </Typography>
+      </Container>
 
       {/* Card Footer - Avatar Group */}
       {taggers.length > 0 && (
-        <Atoms.Container overrideDefaults className="hidden px-6 sm:flex" data-testid="hot-tag-card-desktop-avatars">
-          <Molecules.AvatarGroup items={taggers} totalCount={postCount} maxAvatars={maxAvatars} />
-        </Atoms.Container>
+        <Container overrideDefaults className="hidden px-6 sm:flex" data-testid="hot-tag-card-desktop-avatars">
+          <AvatarGroup items={taggers} totalCount={postCount} maxAvatars={maxAvatars} />
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

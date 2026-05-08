@@ -1,76 +1,82 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostContentBlurred } from './PostContentBlurred';
 
-// Mock Core
+// Mock dependencies
 const mockUnblur = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/moderation/moderation', () => ({
   ModerationController: {
     unBlur: (...args: unknown[]) => mockUnblur(...args),
   },
 }));
 
-// Mock Libs
-vi.mock('@/libs', () => ({
-  cn: (...classes: (string | undefined)[]) => classes.filter(Boolean).join(' '),
-  EyeOff: ({ className }: { className?: string }) => <svg data-testid="eye-off-icon" className={className} />,
-}));
-
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: (e: React.MouseEvent) => void;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <button
-      data-testid="blurred-content-button"
-      data-override-defaults={overrideDefaults}
-      onClick={onClick}
-      className={className}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    className,
-    as: Component = 'span',
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    as?: React.ElementType;
-    overrideDefaults?: boolean;
-  }) => (
-    <Component data-testid="typography" data-override-defaults={overrideDefaults} className={className} {...props}>
-      {children}
-    </Component>
-  ),
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" data-override-defaults={overrideDefaults} className={className} {...props}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      onClick?: (e: React.MouseEvent) => void;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <button
+        data-testid="blurred-content-button"
+        data-override-defaults={overrideDefaults}
+        onClick={onClick}
+        className={className}
+        {...props}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" data-override-defaults={overrideDefaults} className={className} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      as: Component = 'span',
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      as?: React.ElementType;
+      overrideDefaults?: boolean;
+    }) => (
+      <Component data-testid="typography" data-override-defaults={overrideDefaults} className={className} {...props}>
+        {children}
+      </Component>
+    ),
+  };
+});
 
 describe('PostContentBlurred', () => {
   const defaultProps = {
@@ -91,7 +97,8 @@ describe('PostContentBlurred', () => {
   it('renders the eye-off icon', () => {
     render(<PostContentBlurred {...defaultProps} />);
 
-    expect(screen.getByTestId('eye-off-icon')).toBeInTheDocument();
+    const button = screen.getByTestId('blurred-content-button');
+    expect(button.querySelector('.lucide-eye-off')).toBeInTheDocument();
   });
 
   it('displays the moderated post message', () => {

@@ -1,12 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   extractUserIdFromAvatarUrl,
-  resolveAvatarFallbackSeed,
   resolveAvatarFallbackInitial,
+  resolveAvatarFallbackSeed,
 } from './AvatarWithFallback.utils';
 
 // Mock the config module
-vi.mock('@/config', () => ({
+vi.mock('@/config/nexus', () => ({
   CDN_URL: 'https://nexus.staging.pubky.app/static',
 }));
 

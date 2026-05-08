@@ -1,17 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { httpStatusCodeToError } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import {
+  defaultNotificationPreferences,
+  defaultPrivacyPreferences,
+  type SettingsState,
+} from '@/stores/settings/settings.types';
 import { SettingsApplication } from './settings';
-import * as Core from '@/core';
-import { HttpMethod, Logger, Err, ServerErrorCode, ErrorService, httpStatusCodeToError } from '@/libs';
 
 // Mock the HomeserverService
-vi.mock('@/core/services/homeserver', () => ({
+vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     request: vi.fn(),
   },
 }));
 
 // Mock the SettingsNormalizer
-vi.mock('@/core/pipes/settings', () => ({
+vi.mock('@/pipes/settings/settings.normalizer', () => ({
   SettingsNormalizer: {
     to: vi.fn(),
     from: vi.fn(),
@@ -20,12 +32,12 @@ vi.mock('@/core/pipes/settings', () => ({
 }));
 
 describe('SettingsApplication', () => {
-  const testPubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky;
+  const testPubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
 
   // Test data factory
-  const createMockSettingsState = (overrides?: Partial<Core.SettingsState>): Core.SettingsState => ({
-    notifications: Core.defaultNotificationPreferences,
-    privacy: Core.defaultPrivacyPreferences,
+  const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsState => ({
+    notifications: defaultNotificationPreferences,
+    privacy: defaultPrivacyPreferences,
     muted: [],
     language: 'en',
     updatedAt: 1700000000000,
@@ -33,7 +45,7 @@ describe('SettingsApplication', () => {
     ...overrides,
   });
 
-  const createMockNormalizerResult = (settings: Core.SettingsState) => ({
+  const createMockNormalizerResult = (settings: SettingsState) => ({
     settings: {
       notifications: settings.notifications,
       privacy: settings.privacy,
@@ -55,10 +67,10 @@ describe('SettingsApplication', () => {
     vi.spyOn(Logger, 'error').mockImplementation(() => {});
 
     return {
-      requestSpy: vi.spyOn(Core.HomeserverService, 'request'),
-      normalizerToSpy: vi.spyOn(Core.SettingsNormalizer, 'to'),
-      normalizerFromSpy: vi.spyOn(Core.SettingsNormalizer, 'from'),
-      normalizerBuildUrlSpy: vi.spyOn(Core.SettingsNormalizer, 'buildUrl'),
+      requestSpy: vi.spyOn(HomeserverService, 'request'),
+      normalizerToSpy: vi.spyOn(SettingsNormalizer, 'to'),
+      normalizerFromSpy: vi.spyOn(SettingsNormalizer, 'from'),
+      normalizerBuildUrlSpy: vi.spyOn(SettingsNormalizer, 'buildUrl'),
     };
   };
 

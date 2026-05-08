@@ -1,9 +1,9 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
-import { useVisualFeedTiles } from './useVisualFeedTiles';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolvePreferredVisualTileSize } from './TimelineFeedVisual.helpers';
 import type { VisualTile } from './TimelineFeedVisual.types';
 import { resetVisualTileCaches } from './TimelineFeedVisualMedia.utils';
+import { useVisualFeedTiles } from './useVisualFeedTiles';
 
 const { mockUseLiveQuery, mockFetchFiles, mockGetOrFetch } = vi.hoisted(() => ({
   mockUseLiveQuery: vi.fn(),
@@ -64,24 +64,22 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (...args: unknown[]) => mockUseLiveQuery(...args),
 }));
 
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual<typeof import('@/core')>('@/core');
-  return {
-    ...actual,
-    useLocalFilesStore: (selector: (state: { posts: Record<string, unknown[]> }) => unknown) => selector({ posts: {} }),
-    PostController: {
-      ...actual.PostController,
-      getOrFetch: (...args: unknown[]) => mockGetOrFetch(...args),
-    },
-    FileController: {
-      ...actual.FileController,
-      fetchFiles: (...args: unknown[]) => mockFetchFiles(...args),
-    },
-  };
-});
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: (selector: (state: { posts: Record<string, unknown[]> }) => unknown) => selector({ posts: {} }),
+}));
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    getOrFetch: (...args: unknown[]) => mockGetOrFetch(...args),
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    fetchFiles: (...args: unknown[]) => mockFetchFiles(...args),
+  },
+}));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual<typeof import('@/libs')>('@/libs');
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
     ...actual,
     Logger: {

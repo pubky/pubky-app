@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { asOpaque } from '@/test-utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 const mockDispatchSignals = vi.fn();
 vi.mock('@prelude.so/js-sdk/signals', () => ({
   dispatchSignals: mockDispatchSignals,
 }));
 
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+vi.mock('@/libs/env/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/env/env')>();
   return {
     ...actual,
     Env: {

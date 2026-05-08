@@ -1,5 +1,14 @@
-import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
+import { HttpMethod } from '@/libs/http/http.types';
+import type { NexusPostsKeyStream, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
+import { postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
+import {
+  StreamSource,
+  type TPostStreamFetchParams,
+  type TStreamAuthorParams,
+  type TStreamPostRepliesParams,
+  type TStreamPostsByIdsParams,
+} from '@/services/nexus/stream/posts/postStream.types';
 
 /**
  * Nexus Post Stream Service
@@ -13,9 +22,9 @@ export class NexusPostStreamService {
    * @param params - Parameters containing post IDs and optional viewer ID
    * @returns Array of posts
    */
-  static async fetchByIds(params: Core.TStreamPostsByIdsParams): Promise<Core.NexusPostWithAttachmentMetadata[]> {
-    const { url, body } = Core.postStreamApi.postsByIds(params);
-    return await Core.queryNexus<Core.NexusPostWithAttachmentMetadata[]>({
+  static async fetchByIds(params: TStreamPostsByIdsParams): Promise<NexusPostWithAttachmentMetadata[]> {
+    const { url, body } = postStreamApi.postsByIds(params);
+    return await queryNexus<NexusPostWithAttachmentMetadata[]>({
       url,
       method: HttpMethod.POST,
       body: JSON.stringify(body),
@@ -28,38 +37,34 @@ export class NexusPostStreamService {
    * @param params - Parameters for fetching post stream data
    * @returns Post stream data
    */
-  static async fetch({
-    params,
-    invokeEndpoint,
-    extraParams,
-  }: Core.TPostStreamFetchParams): Promise<Core.NexusPostsKeyStream> {
+  static async fetch({ params, invokeEndpoint, extraParams }: TPostStreamFetchParams): Promise<NexusPostsKeyStream> {
     let nexusEndpoint: string;
     switch (invokeEndpoint) {
-      case Core.StreamSource.ALL:
-        nexusEndpoint = Core.postStreamApi.all(params);
+      case StreamSource.ALL:
+        nexusEndpoint = postStreamApi.all(params);
         break;
-      case Core.StreamSource.FOLLOWING:
-      case Core.StreamSource.FRIENDS:
-      case Core.StreamSource.BOOKMARKS:
+      case StreamSource.FOLLOWING:
+      case StreamSource.FRIENDS:
+      case StreamSource.BOOKMARKS:
         // TODO: from now, always is going to be
         if (!params.viewer_id) {
           throw new Error('Viewer ID is required for friends stream');
         }
-        nexusEndpoint = Core.postStreamApi[invokeEndpoint]({ ...params, observer_id: params.viewer_id });
+        nexusEndpoint = postStreamApi[invokeEndpoint]({ ...params, observer_id: params.viewer_id });
         break;
-      case Core.StreamSource.REPLIES:
-        nexusEndpoint = Core.postStreamApi[invokeEndpoint]({
+      case StreamSource.REPLIES:
+        nexusEndpoint = postStreamApi[invokeEndpoint]({
           ...params,
           ...extraParams,
-        } as Core.TStreamPostRepliesParams);
+        } as TStreamPostRepliesParams);
         break;
-      case Core.StreamSource.AUTHOR:
-      case Core.StreamSource.AUTHOR_REPLIES:
-        nexusEndpoint = Core.postStreamApi[invokeEndpoint]({ ...params, ...extraParams } as Core.TStreamAuthorParams);
+      case StreamSource.AUTHOR:
+      case StreamSource.AUTHOR_REPLIES:
+        nexusEndpoint = postStreamApi[invokeEndpoint]({ ...params, ...extraParams } as TStreamAuthorParams);
         break;
       default:
         throw new Error(`Invalid stream type: ${invokeEndpoint}`);
     }
-    return await Core.queryNexus<Core.NexusPostsKeyStream>({ url: nexusEndpoint });
+    return await queryNexus<NexusPostsKeyStream>({ url: nexusEndpoint });
   }
 }

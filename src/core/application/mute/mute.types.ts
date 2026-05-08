@@ -1,7 +1,7 @@
-import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
+import type { TMuteParams } from '@/controllers/mute/mute.types';
+import { HttpMethod } from '@/libs/http/http.types';
 
-export type TMuteApplicationCommitParams = Core.TMuteParams & {
+export type TMuteApplicationCommitParams = TMuteParams & {
   eventType: HttpMethod;
   muteUrl: string;
   muteJson: Record<string, unknown>;

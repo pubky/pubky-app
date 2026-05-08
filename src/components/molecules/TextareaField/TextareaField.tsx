@@ -1,5 +1,7 @@
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { Container } from '@/atoms/Container/Container';
+import { Textarea } from '@/atoms/Textarea/Textarea';
+import { Typography } from '@/atoms/Typography/Typography';
+import { cn } from '@/libs/utils/utils';
 
 interface TextareaFieldProps {
   id?: string;
@@ -49,10 +51,10 @@ export function TextareaField({
     error: 'border-red-500 text-red-500',
   };
 
-  const textAreaClasses = Libs.cn('px-5 py-4 h-25', textareaClassName);
-  const containerClasses = Libs.cn(
-    'flex-1 cursor-pointer w-full items-center flex-row border gap-0 rounded-md font-medium',
-    variant === 'dashed' && 'border-dashed !bg-alpha-90/10',
+  const textAreaClasses = cn('h-25 px-5 py-4', textareaClassName);
+  const containerClasses = cn(
+    'w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium',
+    variant === 'dashed' && '!bg-alpha-90/10 border-dashed',
   );
   const messageClasses = {
     default: 'text-muted-foreground',
@@ -64,8 +66,8 @@ export function TextareaField({
 
   return (
     <>
-      <Atoms.Container className={Libs.cn(containerClasses, statusClasses[status], className)}>
-        <Atoms.Textarea
+      <Container className={cn(containerClasses, statusClasses[status], className)}>
+        <Textarea
           id={id}
           name={name}
           variant="inline"
@@ -82,11 +84,11 @@ export function TextareaField({
           rows={rows}
           aria-invalid={status === 'error'}
         />
-      </Atoms.Container>
+      </Container>
       {message && (
-        <Atoms.Typography as="small" size="sm" className={Libs.cn('ml-1', messageClasses[messageType])}>
+        <Typography as="small" size="sm" className={cn('ml-1', messageClasses[messageType])}>
           {message}
-        </Atoms.Typography>
+        </Typography>
       )}
     </>
   );

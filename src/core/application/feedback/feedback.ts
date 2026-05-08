@@ -1,12 +1,12 @@
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import {
-  CHATWOOT_INBOX_IDS,
-  CHATWOOT_FEEDBACK_MESSAGE_PREFIX,
-  buildChatwootEmail,
-  extractSourceId,
-} from '@/core/services/chatwoot';
-import * as Types from './feedback.types';
+import { AppError } from '@/libs/error/error';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import { ChatwootService } from '@/services/chatwoot/chatwoot';
+import { CHATWOOT_FEEDBACK_MESSAGE_PREFIX, CHATWOOT_INBOX_IDS } from '@/services/chatwoot/chatwoot.constants';
+import { buildChatwootEmail, extractSourceId } from '@/services/chatwoot/chatwoot.utils';
+import type { TFeedbackSubmitInput } from './feedback.types';
 
 /**
  * Feedback application service.
@@ -47,7 +47,7 @@ export class FeedbackApplication {
    * @param params.name - User's display name
    * @throws AppError if submission fails
    */
-  static async submit({ pubky, comment, name }: Types.TFeedbackSubmitInput): Promise<void> {
+  static async submit({ pubky, comment, name }: TFeedbackSubmitInput): Promise<void> {
     try {
       // Build email from pubky
       const email = buildChatwootEmail(pubky);
@@ -59,17 +59,17 @@ export class FeedbackApplication {
       const content = this.formatMessageContent(comment);
 
       // Create or find contact in Chatwoot
-      const contact = await Core.ChatwootService.createOrFindContact(email, name, inboxId);
+      const contact = await ChatwootService.createOrFindContact(email, name, inboxId);
 
       // Extract source ID (validates inbox associations)
       const sourceId = extractSourceId(contact, email);
 
       // Create conversation with formatted message
-      await Core.ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
+      await ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
     } catch (error) {
       // Log error for observability
-      if (error instanceof Libs.AppError) {
-        Libs.Logger.error('Feedback submission failed', {
+      if (error instanceof AppError) {
+        Logger.error('Feedback submission failed', {
           category: error.category,
           code: error.code,
           service: error.service,
@@ -81,9 +81,9 @@ export class FeedbackApplication {
       }
 
       // Wrap unexpected errors
-      Libs.Logger.error('Unexpected error during feedback submission', { error });
-      throw Libs.Err.server(Libs.ServerErrorCode.UNKNOWN_ERROR, 'Failed to submit feedback', {
-        service: Libs.ErrorService.Chatwoot,
+      Logger.error('Unexpected error during feedback submission', { error });
+      throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to submit feedback', {
+        service: ErrorService.Chatwoot,
         operation: 'submit',
         cause: error,
       });

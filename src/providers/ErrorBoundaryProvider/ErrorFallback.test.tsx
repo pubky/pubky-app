@@ -1,22 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Logger } from '@/libs/logger/logger';
 import { ErrorFallback } from './ErrorFallback';
-import { Logger } from '@/libs';
-
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...actual,
-    Logger: {
-      ...actual.Logger,
-      error: vi.fn(),
-    },
-  };
-});
 
 describe('ErrorFallback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(Logger, 'error').mockImplementation(() => {});
   });
 
   it('renders error message and retry button', () => {

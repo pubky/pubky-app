@@ -1,8 +1,7 @@
 import { ComponentProps } from 'react';
-import { cva } from 'class-variance-authority';
 import NextLink from 'next/link';
-
-import * as Libs from '@/libs';
+import { cva } from 'class-variance-authority';
+import { cn } from '@/libs/utils/utils';
 
 interface LinkProps extends ComponentProps<typeof NextLink> {
   variant?: 'default' | 'muted';
@@ -56,7 +55,7 @@ export function Link({
     },
   });
 
-  const linkClassName = overrideDefaults ? className : Libs.cn(linkVariants({ variant, size }), className);
+  const linkClassName = overrideDefaults ? className : cn(linkVariants({ variant, size }), className);
 
   // Check if href is an external URL
   const href = props.href?.toString() || '';

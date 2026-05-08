@@ -1083,7 +1083,10 @@
     "failedToLoadUsers": "Benutzer konnten nicht geladen werden",
     "failedToLoadTags": "Tags konnten nicht geladen werden",
     "noUsersToShow": "Keine Benutzer anzuzeigen",
-    "noTagsToShow": "Keine Tags anzuzeigen"
+    "noTagsToShow": "Keine Tags anzuzeigen",
+    "tags": "Tags",
+    "users": "Benutzer",
+    "posts": "Beiträge"
   },
   "privacy": {
     "showConfirmation": "Bestaetigung vor Weiterleitung anzeigen",

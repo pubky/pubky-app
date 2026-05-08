@@ -1,35 +1,57 @@
 'use client';
 
-import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
+import { type ComponentType, type ReactNode, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Activity,
+  CirclePlay,
+  Columns3,
+  Delete,
+  Download,
+  Flame,
+  HeartHandshake,
+  Image,
+  Layers,
+  LayoutGrid,
+  Link,
+  Menu,
+  Newspaper,
+  Radio,
+  SquareAsterisk,
+  StickyNote,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import { useRouter } from 'next/navigation';
 import { APP_ROUTES } from '@/app/routes';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/atoms/Dialog/Dialog';
+import { Input } from '@/atoms/Input/Input';
+import { Label } from '@/atoms/Label/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
+import { FeedController } from '@/controllers/feed/feed';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { UsersRound2 } from '@/icons';
+import { Env } from '@/libs/env/env';
+import { PostTag } from '@/molecules/PostTag/PostTag';
+import { TagInput } from '@/molecules/TagInput/TagInput';
+import { useToast } from '@/molecules/Toaster/use-toast';
 
 type CustomFeedDialogProps = {
   mode: 'create' | 'edit';
   children: ReactNode;
 };
-
 type CustomFeedDialogContent = PubkyAppPostKind | 'ALL';
-
 function isVisualCustomFeedContentSupported(content?: CustomFeedDialogContent): boolean {
   return content === 'ALL' || content === PubkyAppPostKind.Image || content === PubkyAppPostKind.Video;
 }
-
 export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const router = useRouter();
-  const { toast } = Molecules.useToast();
-  const customFeed = Hooks.useCustomFeed();
+  const { toast } = useToast();
+  const customFeed = useCustomFeed();
   const tFilter = useTranslations('filters');
   const tDialog = useTranslations('dialogs.customFeed');
   const tToast = useTranslations('toast');
-
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [reach, setReach] = useState<PubkyAppFeedReach | undefined>(
@@ -44,12 +66,9 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const [content, setContent] = useState<CustomFeedDialogContent | undefined>(mode === 'create' ? 'ALL' : undefined);
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-
   const disabled = loading || (mode === 'edit' && !customFeed);
-
   useEffect(() => {
     if (open) return;
-
     if (mode === 'create') {
       setName('');
       setReach(PubkyAppFeedReach.All);
@@ -66,48 +85,105 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       setTags(customFeed?.tags ?? []);
     }
   }, [open, mode, customFeed]);
-
   const reachFilters = [
-    { value: PubkyAppFeedReach.All, label: tFilter('reach.all'), icon: Libs.Radio },
-    { value: PubkyAppFeedReach.Following, label: tFilter('reach.following'), icon: Libs.UsersRound2 },
-    { value: PubkyAppFeedReach.Friends, label: tFilter('reach.friends'), icon: Libs.HeartHandshake },
+    {
+      value: PubkyAppFeedReach.All,
+      label: tFilter('reach.all'),
+      icon: Radio,
+    },
+    {
+      value: PubkyAppFeedReach.Following,
+      label: tFilter('reach.following'),
+      icon: UsersRound2,
+    },
+    {
+      value: PubkyAppFeedReach.Friends,
+      label: tFilter('reach.friends'),
+      icon: HeartHandshake,
+    },
   ];
-
   const sortFilters = [
-    { value: PubkyAppFeedSort.Recent, label: tFilter('sort.recent'), icon: Libs.SquareAsterisk },
-    { value: PubkyAppFeedSort.Popularity, label: tFilter('sort.popularity'), icon: Libs.Flame },
+    {
+      value: PubkyAppFeedSort.Recent,
+      label: tFilter('sort.recent'),
+      icon: SquareAsterisk,
+    },
+    {
+      value: PubkyAppFeedSort.Popularity,
+      label: tFilter('sort.popularity'),
+      icon: Flame,
+    },
   ];
-
   const layoutFilters = [
-    { value: PubkyAppFeedLayout.Columns, label: tFilter('layout.columns'), icon: Libs.Columns3 },
-    { value: PubkyAppFeedLayout.Wide, label: tFilter('layout.wide'), icon: Libs.Menu },
-    { value: PubkyAppFeedLayout.Visual, label: tFilter('layout.visual'), icon: Libs.LayoutGrid },
+    {
+      value: PubkyAppFeedLayout.Columns,
+      label: tFilter('layout.columns'),
+      icon: Columns3,
+    },
+    {
+      value: PubkyAppFeedLayout.Wide,
+      label: tFilter('layout.wide'),
+      icon: Menu,
+    },
+    {
+      value: PubkyAppFeedLayout.Visual,
+      label: tFilter('layout.visual'),
+      icon: LayoutGrid,
+    },
   ];
-
-  const allContentFilters: Array<{ value: CustomFeedDialogContent; label: string; icon: ComponentType }> = [
-    { value: 'ALL', label: tFilter('content.all'), icon: Libs.Layers },
-    { value: PubkyAppPostKind.Short, label: tFilter('content.posts'), icon: Libs.StickyNote },
-    { value: PubkyAppPostKind.Long, label: tFilter('content.articles'), icon: Libs.Newspaper },
-    { value: PubkyAppPostKind.Image, label: tFilter('content.images'), icon: Libs.Image },
-    { value: PubkyAppPostKind.Video, label: tFilter('content.videos'), icon: Libs.CirclePlay },
-    { value: PubkyAppPostKind.Link, label: tFilter('content.links'), icon: Libs.Link },
-    { value: PubkyAppPostKind.File, label: tFilter('content.files'), icon: Libs.Download },
+  const allContentFilters: Array<{
+    value: CustomFeedDialogContent;
+    label: string;
+    icon: ComponentType;
+  }> = [
+    {
+      value: 'ALL',
+      label: tFilter('content.all'),
+      icon: Layers,
+    },
+    {
+      value: PubkyAppPostKind.Short,
+      label: tFilter('content.posts'),
+      icon: StickyNote,
+    },
+    {
+      value: PubkyAppPostKind.Long,
+      label: tFilter('content.articles'),
+      icon: Newspaper,
+    },
+    {
+      value: PubkyAppPostKind.Image,
+      label: tFilter('content.images'),
+      icon: Image,
+    },
+    {
+      value: PubkyAppPostKind.Video,
+      label: tFilter('content.videos'),
+      icon: CirclePlay,
+    },
+    {
+      value: PubkyAppPostKind.Link,
+      label: tFilter('content.links'),
+      icon: Link,
+    },
+    {
+      value: PubkyAppPostKind.File,
+      label: tFilter('content.files'),
+      icon: Download,
+    },
   ];
   const contentFilters =
     layout === PubkyAppFeedLayout.Visual
       ? allContentFilters.filter((filter) => isVisualCustomFeedContentSupported(filter.value))
       : allContentFilters;
-
   useEffect(() => {
     if (layout !== PubkyAppFeedLayout.Visual) return;
     if (content === undefined || isVisualCustomFeedContentSupported(content)) return;
     setContent('ALL');
   }, [content, layout]);
-
   const handleLayoutChange = (value: string) => {
     const nextLayout = Number(value) as PubkyAppFeedLayout;
     setLayout(nextLayout);
-
     if (
       nextLayout === PubkyAppFeedLayout.Visual &&
       content !== undefined &&
@@ -116,14 +192,12 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       setContent('ALL');
     }
   };
-
   const handleSaveFeed = async () => {
     if (reach === undefined || sort === undefined || layout === undefined || content === undefined) return;
-
     if (mode === 'create') {
       try {
         setLoading(true);
-        const feed = await Core.FeedController.commitCreate({
+        const feed = await FeedController.commitCreate({
           name,
           reach,
           sort,
@@ -131,11 +205,12 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           content: content === 'ALL' ? null : content,
           tags,
         });
-
         setOpen(false);
         toast({
           title: tToast('success'),
-          description: tDialog('feedCreated', { name: feed.name }),
+          description: tDialog('feedCreated', {
+            name: feed.name,
+          }),
         });
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
@@ -148,18 +223,25 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       }
     } else if (mode === 'edit') {
       if (!customFeed) return;
-
       try {
         setLoading(true);
-        const feed = await Core.FeedController.commitUpdate({
+        const feed = await FeedController.commitUpdate({
           feedId: customFeed.id,
-          changes: { name, reach, sort, layout, content: content === 'ALL' ? null : content, tags },
+          changes: {
+            name,
+            reach,
+            sort,
+            layout,
+            content: content === 'ALL' ? null : content,
+            tags,
+          },
         });
-
         setOpen(false);
         toast({
           title: tToast('success'),
-          description: tDialog('feedEdited', { name: feed.name }),
+          description: tDialog('feedEdited', {
+            name: feed.name,
+          }),
         });
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
@@ -172,18 +254,19 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       }
     }
   };
-
   const handleDeleteFeed = async () => {
     if (!customFeed) return;
-
     try {
       setLoading(true);
-      await Core.FeedController.commitDelete({ feedId: customFeed.id });
-
+      await FeedController.commitDelete({
+        feedId: customFeed.id,
+      });
       setOpen(false);
       toast({
         title: tToast('success'),
-        description: tDialog('feedDeleted', { name: customFeed.name }),
+        description: tDialog('feedDeleted', {
+          name: customFeed.name,
+        }),
       });
       router.push(APP_ROUTES.HOME);
     } catch {
@@ -195,14 +278,13 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       setLoading(false);
     }
   };
-
   return (
-    <Atoms.Dialog open={open} onOpenChange={setOpen}>
-      <Atoms.DialogTrigger asChild disabled={mode === 'edit' && !customFeed} data-testid="custom-feed-dialog-trigger">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild disabled={mode === 'edit' && !customFeed} data-testid="custom-feed-dialog-trigger">
         {children}
-      </Atoms.DialogTrigger>
+      </DialogTrigger>
 
-      <Atoms.DialogContent
+      <DialogContent
         onOpenAutoFocus={(e) => {
           if (mode === 'edit') e.preventDefault();
         }}
@@ -210,16 +292,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         className="w-3xl"
         data-testid="custom-feed-dialog-content"
       >
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle>{mode === 'create' ? tDialog('createTitle') : tDialog('editTitle')}</Atoms.DialogTitle>
-        </Atoms.DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{mode === 'create' ? tDialog('createTitle') : tDialog('editTitle')}</DialogTitle>
+        </DialogHeader>
 
-        <Atoms.Container className="gap-y-2">
-          <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-            {tDialog('feedName')}
-          </Atoms.Label>
+        <Container className="gap-y-2">
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('feedName')}</Label>
 
-          <Atoms.Input
+          <Input
             required
             placeholder={tDialog('feedNamePlaceholder')}
             value={name}
@@ -228,121 +308,113 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             className="h-14 border-dashed"
             data-testid="feed-name-input"
           />
-        </Atoms.Container>
+        </Container>
 
-        <Atoms.Container className="flex-wrap gap-x-8 gap-y-4 sm:flex-row">
-          <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="reach-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-              {tDialog('reach')}
-            </Atoms.Label>
+        <Container className="flex-wrap gap-x-8 gap-y-4 sm:flex-row">
+          <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="reach-filter-section">
+            <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('reach')}</Label>
 
-            <Atoms.Select
+            <Select
               value={reach === undefined ? reach : String(reach)}
               onValueChange={(v) => setReach(Number(v))}
               disabled={disabled}
               data-testid="reach-select"
             >
-              <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder={tDialog('reachPlaceholder')} />
-              </Atoms.SelectTrigger>
+              <SelectTrigger className="w-full sm:w-fit">
+                <SelectValue placeholder={tDialog('reachPlaceholder')} />
+              </SelectTrigger>
 
-              <Atoms.SelectContent>
+              <SelectContent>
                 {reachFilters.map((r) => (
-                  <Atoms.SelectItem key={r.value} value={String(r.value)}>
+                  <SelectItem key={r.value} value={String(r.value)}>
                     <r.icon /> {r.label}
-                  </Atoms.SelectItem>
+                  </SelectItem>
                 ))}
-              </Atoms.SelectContent>
-            </Atoms.Select>
-          </Atoms.Container>
+              </SelectContent>
+            </Select>
+          </Container>
 
-          <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="sort-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-              {tDialog('sort')}
-            </Atoms.Label>
+          <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="sort-filter-section">
+            <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('sort')}</Label>
 
-            <Atoms.Select
+            <Select
               value={sort === undefined ? sort : String(sort)}
               onValueChange={(v) => setSort(Number(v))}
               disabled={disabled}
               data-testid="sort-select"
             >
-              <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder={tDialog('sortPlaceholder')} />
-              </Atoms.SelectTrigger>
+              <SelectTrigger className="w-full sm:w-fit">
+                <SelectValue placeholder={tDialog('sortPlaceholder')} />
+              </SelectTrigger>
 
-              <Atoms.SelectContent>
+              <SelectContent>
                 {sortFilters.map((r) => (
-                  <Atoms.SelectItem key={r.value} value={String(r.value)}>
+                  <SelectItem key={r.value} value={String(r.value)}>
                     <r.icon /> {r.label}
-                  </Atoms.SelectItem>
+                  </SelectItem>
                 ))}
-              </Atoms.SelectContent>
-            </Atoms.Select>
-          </Atoms.Container>
+              </SelectContent>
+            </Select>
+          </Container>
 
-          <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="layout-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-              {tDialog('layout')}
-            </Atoms.Label>
+          <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="layout-filter-section">
+            <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('layout')}</Label>
 
-            <Atoms.Select
+            <Select
               value={layout === undefined ? layout : String(layout)}
               onValueChange={handleLayoutChange}
               disabled={disabled}
               data-testid="layout-select"
             >
-              <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder={tDialog('layoutPlaceholder')} />
-              </Atoms.SelectTrigger>
+              <SelectTrigger className="w-full sm:w-fit">
+                <SelectValue placeholder={tDialog('layoutPlaceholder')} />
+              </SelectTrigger>
 
-              <Atoms.SelectContent>
+              <SelectContent>
                 {layoutFilters.map((r) => (
-                  <Atoms.SelectItem key={r.value} value={String(r.value)}>
+                  <SelectItem key={r.value} value={String(r.value)}>
                     <r.icon /> {r.label}
-                  </Atoms.SelectItem>
+                  </SelectItem>
                 ))}
-              </Atoms.SelectContent>
-            </Atoms.Select>
-          </Atoms.Container>
+              </SelectContent>
+            </Select>
+          </Container>
 
-          <Atoms.Container overrideDefaults className="flex flex-col gap-y-2" data-testid="content-filter-section">
-            <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-              {tDialog('content')}
-            </Atoms.Label>
+          <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="content-filter-section">
+            <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('content')}</Label>
 
-            <Atoms.Select
+            <Select
               value={content === undefined ? content : String(content)}
               onValueChange={(v) => setContent(v === 'ALL' ? v : Number(v))}
               disabled={disabled}
               data-testid="content-select"
             >
-              <Atoms.SelectTrigger className="w-full sm:w-fit">
-                <Atoms.SelectValue placeholder={tDialog('contentPlaceholder')} />
-              </Atoms.SelectTrigger>
+              <SelectTrigger className="w-full sm:w-fit">
+                <SelectValue placeholder={tDialog('contentPlaceholder')} />
+              </SelectTrigger>
 
-              <Atoms.SelectContent>
+              <SelectContent>
                 {contentFilters.map((r) => (
-                  <Atoms.SelectItem key={r.value} value={String(r.value)}>
+                  <SelectItem key={r.value} value={String(r.value)}>
                     <r.icon /> {r.label}
-                  </Atoms.SelectItem>
+                  </SelectItem>
                 ))}
-              </Atoms.SelectContent>
-            </Atoms.Select>
-          </Atoms.Container>
-        </Atoms.Container>
+              </SelectContent>
+            </Select>
+          </Container>
+        </Container>
 
-        <Atoms.Container className="gap-y-2">
-          <Atoms.Label className="text-xs tracking-wide text-muted-foreground uppercase">
-            {tDialog('filterTags')}
-          </Atoms.Label>
+        <Container className="gap-y-2">
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('filterTags')}</Label>
 
-          <Molecules.TagInput
+          <TagInput
             onTagAdd={(tag) => setTags([...tags, tag])}
-            existingTags={tags.map((tag) => ({ label: tag }))}
+            existingTags={tags.map((tag) => ({
+              label: tag,
+            }))}
             showCloseButton={false}
             disabled={disabled}
-            maxTags={Libs.Env.NEXT_MAX_STREAM_TAGS}
+            maxTags={Env.NEXT_MAX_STREAM_TAGS}
             currentTagsCount={tags.length}
             enableApiSuggestions
             excludeFromApiSuggestions={tags}
@@ -352,21 +424,21 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           />
 
           {tags.length > 0 && (
-            <Atoms.Container className="flex-row flex-wrap gap-2">
+            <Container className="flex-row flex-wrap gap-2">
               {tags.map((tag, index) => (
-                <Molecules.PostTag
+                <PostTag
                   key={`${tag}-${index}`}
                   label={tag}
                   showClose={!disabled}
                   onClose={() => setTags((prevTags) => prevTags.filter((_, i) => i !== index))}
                 />
               ))}
-            </Atoms.Container>
+            </Container>
           )}
-        </Atoms.Container>
+        </Container>
 
-        <Atoms.DialogFooter>
-          <Atoms.Button
+        <DialogFooter>
+          <Button
             variant="secondary"
             size="lg"
             onClick={handleSaveFeed}
@@ -374,12 +446,12 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             className="h-15 w-full"
             data-testid="save-feed-button"
           >
-            <Libs.Activity className="size-4" />
+            <Activity className="size-4" />
             {tDialog('saveFeed')}
-          </Atoms.Button>
+          </Button>
 
           {mode === 'edit' && (
-            <Atoms.Button
+            <Button
               variant="destructive"
               size="lg"
               onClick={handleDeleteFeed}
@@ -387,12 +459,12 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
               className="h-15 w-full"
               data-testid="delete-feed-button"
             >
-              <Libs.Delete className="size-4" />
+              <Delete className="size-4" />
               {tDialog('deleteFeed')}
-            </Atoms.Button>
+            </Button>
           )}
-        </Atoms.DialogFooter>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

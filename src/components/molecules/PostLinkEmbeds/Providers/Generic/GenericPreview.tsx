@@ -1,8 +1,13 @@
 'use client';
 
-import * as Atoms from '@/atoms';
-import * as Icons from '@/libs/icons';
-import * as Hooks from '@/hooks';
+import { Globe } from 'lucide-react';
+import { Audio } from '@/atoms/Audio/Audio';
+import { Container } from '@/atoms/Container/Container';
+import { Image } from '@/atoms/Image/Image';
+import { Link } from '@/atoms/Link/Link';
+import { Typography } from '@/atoms/Typography/Typography';
+import { Video } from '@/atoms/Video/Video';
+import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { GenericPreviewSkeleton } from './GenericPreview.skeleton';
 
 interface GenericPreviewProps {
@@ -14,53 +19,46 @@ interface GenericPreviewProps {
  * Fetches OpenGraph metadata via /api/og-metadata
  */
 export function GenericPreview({ url }: GenericPreviewProps) {
-  const { metadata, isLoading, error } = Hooks.useOgMetadata(url);
-
+  const { metadata, isLoading, error } = useOgMetadata(url);
   if (isLoading) {
     return <GenericPreviewSkeleton />;
   }
-
   if (error || !metadata) {
     return null;
   }
-
   const { url: displayUrl, title, image, type } = metadata;
-
   if (type === 'image')
     return (
-      <Atoms.Link overrideDefaults href={url}>
-        <Atoms.Image src={url} alt="Image preview" className="w-full rounded-md object-contain" />
-      </Atoms.Link>
+      <Link overrideDefaults href={url}>
+        <Image src={url} alt="Image preview" className="w-full rounded-md object-contain" />
+      </Link>
     );
-
-  if (type === 'video') return <Atoms.Video src={url} className="w-full cursor-auto object-contain" />;
-
-  if (type === 'audio') return <Atoms.Audio src={url} className="cursor-auto" />;
-
+  if (type === 'video') return <Video src={url} className="w-full cursor-auto object-contain" />;
+  if (type === 'audio') return <Audio src={url} className="cursor-auto" />;
   return (
-    <Atoms.Link data-testid="generic-website-preview" href={url}>
-      <Atoms.Container className="justify-between gap-6 rounded-md bg-muted p-6 lg:flex-row">
-        <Atoms.Container className="gap-y-2">
+    <Link data-testid="generic-website-preview" href={url}>
+      <Container className="justify-between gap-6 rounded-md bg-muted p-6 lg:flex-row">
+        <Container className="gap-y-2">
           {title && (
-            <Atoms.Typography size="lg" className="wrap-break-word">
+            <Typography size="lg" className="wrap-break-word">
               {title}
-            </Atoms.Typography>
+            </Typography>
           )}
 
-          <Atoms.Container className="flex-row items-center gap-x-1">
-            <Icons.Globe size={13} className="shrink-0 text-muted-foreground" />
+          <Container className="flex-row items-center gap-x-1">
+            <Globe size={13} className="shrink-0 text-muted-foreground" />
 
-            <Atoms.Typography
+            <Typography
               size="sm"
               className="max-w-50 overflow-hidden font-medium text-ellipsis whitespace-nowrap text-muted-foreground sm:max-w-none sm:whitespace-normal"
             >
               {displayUrl}
-            </Atoms.Typography>
-          </Atoms.Container>
-        </Atoms.Container>
+            </Typography>
+          </Container>
+        </Container>
 
         {image && (
-          <Atoms.Image
+          <Image
             src={image}
             alt="Website social image"
             width={180}
@@ -71,7 +69,7 @@ export function GenericPreview({ url }: GenericPreviewProps) {
             className="h-25 w-45 shrink-0 rounded-md object-cover object-center"
           />
         )}
-      </Atoms.Container>
-    </Atoms.Link>
+      </Container>
+    </Link>
   );
 }

@@ -1,15 +1,15 @@
+import { AppError } from '@/libs/error/error';
 import {
-  Err,
-  AppError,
-  NetworkErrorCode,
   AuthErrorCode,
-  ValidationErrorCode,
   ClientErrorCode,
+  NetworkErrorCode,
   ServerErrorCode,
-  ErrorService,
-  HttpStatusCode,
-} from '@/libs';
-import { isIpSafe } from '@/libs/network';
+  ValidationErrorCode,
+} from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
+import { isIpSafe } from '@/libs/network/network';
 
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -25,8 +25,8 @@ export function isHttpProtocol(url: URL): boolean {
  * Prevents SSRF attacks by checking IP before the actual fetch.
  */
 export async function validateDns(hostname: string): Promise<void> {
-  // webpack bundles Node.js ONLY modules into client code via barrel imports
-  // (e.g., FilterContent.tsx's `import * as Core from '@/core'`). See #1435.
+  // Keep Node.js-only modules out of client bundles if this helper is imported from UI code.
+  // See #1435.
   const { isIP } = await import(/* webpackIgnore: true */ 'net');
   const dns = await import(/* webpackIgnore: true */ 'dns/promises');
 

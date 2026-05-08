@@ -1,10 +1,15 @@
 'use client';
 
-import { createContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import * as Atoms from '@/atoms';
-import { AppError, Err, ErrorService, DatabaseErrorCode } from '@/libs';
-import { DatabaseContextType } from '@/providers';
-import { db, useMigrationStore } from '@/core';
+import { createContext, type ReactNode, useEffect, useRef, useState } from 'react';
+import { Container } from '@/atoms/Container/Container';
+import { Spinner } from '@/atoms/Spinner/Spinner';
+import { db } from '@/database/franky/franky';
+import { AppError } from '@/libs/error/error';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { type DatabaseContextType } from '@/providers/DatabaseProvider/DatabaseProvider.types';
+import { useMigrationStore } from '@/stores/migration/migration.store';
 
 export const DatabaseContext = createContext<DatabaseContextType>({
   isReady: false,
@@ -74,9 +79,9 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
   // This prevents components from querying before initialization
   if (!isReady && !error) {
     return (
-      <Atoms.Container overrideDefaults className="flex min-h-screen items-center justify-center">
-        <Atoms.Spinner />
-      </Atoms.Container>
+      <Container overrideDefaults className="flex min-h-screen items-center justify-center">
+        <Spinner />
+      </Container>
     );
   }
 

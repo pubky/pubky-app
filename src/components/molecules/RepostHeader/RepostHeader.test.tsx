@@ -1,42 +1,42 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { RepostHeader } from './RepostHeader';
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    ['data-testid']: dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId ?? 'container'} className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    className,
-    ['data-testid']: dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <span data-testid={dataTestId ?? 'typography'} className={className}>
-      {children}
-    </span>
-  ),
-}));
-
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/atoms/Container/Container', () => {
   return {
-    ...actual,
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      ['data-testid']: dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId ?? 'container'} className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      ['data-testid']: dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <span data-testid={dataTestId ?? 'typography'} className={className}>
+        {children}
+      </span>
+    ),
   };
 });
 

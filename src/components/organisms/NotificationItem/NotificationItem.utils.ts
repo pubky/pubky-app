@@ -1,8 +1,9 @@
-import type { FlatNotification } from '@/core';
-import { NotificationType } from '@/core/models/notification/notification.types';
-import { buildCompositeIdFromPubkyUri, parseCompositeId, CompositeIdDomain } from '@/core';
-import { APP_ROUTES, POST_ROUTES, PROFILE_ROUTES } from '@/app';
-import { truncateString, Logger } from '@/libs';
+import { APP_ROUTES, POST_ROUTES, PROFILE_ROUTES } from '@/app/routes';
+import { Logger } from '@/libs/logger/logger';
+import { truncateString } from '@/libs/utils/utils';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { USER_CENTRIC_NOTIFICATION_TYPES } from './NotificationItem.constants';
 
 // ============================================================================
@@ -65,7 +66,7 @@ export function getUserIdFromNotification(notification: FlatNotification): strin
 
 /**
  * Convert a pubky URI or composite ID to a URL path format (userId/postId).
- * Uses Core's buildCompositeIdFromPubkyUri and parseCompositeId utilities.
+ * Uses shared composite ID utilities.
  * Supports:
  * - pubky:// URI format: pubky://userId/pub/pubky.app/posts/postId
  * - Composite ID format: userId:postId
@@ -222,7 +223,7 @@ export function getPostUriFromNotification(notification: FlatNotification): stri
 
 /**
  * Convert a pubky URI to a composite ID format.
- * Uses Core's buildCompositeIdFromPubkyUri utility.
+ * Uses the shared buildCompositeIdFromPubkyUri utility.
  * URI format: pubky://userId/pub/pubky.app/posts/postId
  * Composite format: userId:postId
  */
@@ -232,7 +233,7 @@ export function pubkyUriToCompositeId(uri: string): string | null {
     return uri;
   }
 
-  // Use Core function to convert URI to composite ID
+  // Use the shared utility to convert URI to composite ID
   return buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.POSTS });
 }
 

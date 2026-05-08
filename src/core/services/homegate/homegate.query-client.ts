@@ -1,4 +1,5 @@
-import { createQueryClient, ValidationErrorCode } from '@/libs';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { createQueryClient } from '@/libs/query-client/query-client.factory';
 
 /**
  * Homegate API Query Client

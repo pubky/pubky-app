@@ -1,12 +1,28 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
+import { FileText, FileUp, Loader2, RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-
-import * as Atoms from '@/atoms';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import * as Hooks from '@/hooks';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/atoms/Dialog/Dialog';
+import { Input } from '@/atoms/Input/Input';
+import { Label } from '@/atoms/Label/Label';
+import { Typography } from '@/atoms/Typography/Typography';
+import { AuthController } from '@/controllers/auth/auth';
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { AppError } from '@/libs/error/error';
+import { ErrorService } from '@/libs/error/error.types';
+import { formatFileName } from '@/libs/utils/utils';
 
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
   const t = useTranslations('onboarding.signIn');
@@ -16,11 +32,9 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const handleFileSelect = () => {
     fileInputRef.current?.click();
   };
-
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -33,21 +47,20 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
       setError('');
     }
   };
-
   const handleRestore = async () => {
     // Guard against double-submit race condition
     if (isRestoring) return;
-
     if (!selectedFile || !password) {
       setError(tRestore('missingFields'));
       return;
     }
-
     setIsRestoring(true);
     setError('');
-
     try {
-      await Core.AuthController.loginWithEncryptedFile({ encryptedFile: selectedFile, password });
+      await AuthController.loginWithEncryptedFile({
+        encryptedFile: selectedFile,
+        password,
+      });
       onRestore?.();
     } catch (error) {
       if (error instanceof Error) {
@@ -61,7 +74,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
           errorMessage.includes('cipher')
         ) {
           setError(tRestore('invalidPassword'));
-        } else if (error instanceof Libs.AppError && error.service === Libs.ErrorService.Nexus) {
+        } else if (error instanceof AppError && error.service === ErrorService.Nexus) {
           setError(tRestore('nexusError'));
         } else {
           setError(tRestore('restoreError'));
@@ -74,7 +87,6 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
       setIsRestoring(false);
     }
   };
-
   const handleReset = () => {
     setSelectedFile(null);
     setPassword('');
@@ -84,56 +96,50 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
       fileInputRef.current.value = '';
     }
   };
-
   const isFormValid = () => {
     return Boolean(selectedFile && password && !isRestoring);
   };
-
-  const handleKeyDown = Hooks.useEnterSubmit(isFormValid, handleRestore);
-
-  const selectedFileDisplayName = selectedFile ? Libs.formatFileName(selectedFile.name) : 'encryptedfile.pkarr';
-
+  const handleKeyDown = useEnterSubmit(isFormValid, handleRestore);
+  const selectedFileDisplayName = selectedFile ? formatFileName(selectedFile.name) : 'encryptedfile.pkarr';
   return (
-    <Atoms.Dialog>
-      <Atoms.DialogTrigger asChild>
-        <Atoms.Button
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
           id="restore-encrypted-file-btn"
           variant="outline"
           className="w-full rounded-full sm:w-auto md:flex-none"
         >
-          <Libs.FileUp className="mr-2 h-4 w-4" />
+          <FileUp className="mr-2 h-4 w-4" />
           <span>{t('useEncryptedFile')}</span>
-        </Atoms.Button>
-      </Atoms.DialogTrigger>
-      <Atoms.DialogContent className="max-w-full gap-6 overflow-hidden p-8" hiddenTitle={tRestore('title')}>
-        <Atoms.DialogHeader className="space-y-1.5 pr-6">
-          <Atoms.DialogTitle className="text-2xl leading-8 font-bold sm:text-xl sm:leading-7">
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-full gap-6 overflow-hidden p-8" hiddenTitle={tRestore('title')}>
+        <DialogHeader className="space-y-1.5 pr-6">
+          <DialogTitle className="text-2xl leading-8 font-bold sm:text-xl sm:leading-7">
             {tRestore('title')}
-          </Atoms.DialogTitle>
-          <Atoms.DialogDescription className="text-sm leading-5">{tRestore('description')}</Atoms.DialogDescription>
-        </Atoms.DialogHeader>
+          </DialogTitle>
+          <DialogDescription className="text-sm leading-5">{tRestore('description')}</DialogDescription>
+        </DialogHeader>
 
-        <Atoms.Container className="gap-6">
+        <Container className="gap-6">
           {/* File Upload Section */}
-          <Atoms.Container className="space-y-2">
-            <Atoms.Label className="text-xs font-medium tracking-widest text-muted-foreground">
+          <Container className="space-y-2">
+            <Label className="text-xs font-medium tracking-widest text-muted-foreground">
               {tRestore('uploadLabel')}
-            </Atoms.Label>
+            </Label>
 
-            <Atoms.Container
+            <Container
               className="relative flex w-full cursor-pointer flex-row items-center justify-between gap-3 overflow-hidden rounded-lg border-2 border-dashed border-border px-4 py-3 transition-colors hover:bg-card/80"
               onClick={handleFileSelect}
             >
               <span
-                className={`block min-w-0 flex-1 truncate font-medium ${
-                  selectedFile?.name ? 'text-foreground' : 'text-muted-foreground'
-                }`}
+                className={`block min-w-0 flex-1 truncate font-medium ${selectedFile?.name ? 'text-foreground' : 'text-muted-foreground'}`}
                 title={selectedFile ? selectedFile.name : undefined}
               >
                 {selectedFileDisplayName}
               </span>
 
-              <Atoms.Button
+              <Button
                 type="button"
                 variant="secondary"
                 size="sm"
@@ -143,10 +149,10 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
                   handleFileSelect();
                 }}
               >
-                <Libs.FileText className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
                 {tRestore('selectFile')}
-              </Atoms.Button>
-            </Atoms.Container>
+              </Button>
+            </Container>
 
             <input
               id="encrypted-file-input"
@@ -157,17 +163,14 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               className="hidden"
               aria-label={tRestore('selectFile')}
             />
-          </Atoms.Container>
+          </Container>
 
           {/* Password Section */}
-          <Atoms.Container className="space-y-2">
-            <Atoms.Label
-              htmlFor="restore-password"
-              className="text-xs font-medium tracking-widest text-muted-foreground"
-            >
+          <Container className="space-y-2">
+            <Label htmlFor="restore-password" className="text-xs font-medium tracking-widest text-muted-foreground">
               {tRestore('passwordLabel')}
-            </Atoms.Label>
-            <Atoms.Input
+            </Label>
+            <Input
               id="restore-password"
               type="password"
               value={password}
@@ -178,22 +181,22 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               autoComplete="current-password"
               disabled={isRestoring}
             />
-          </Atoms.Container>
+          </Container>
 
           {/* Error Message */}
           {error && (
-            <Atoms.Container className="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-              <Atoms.Typography size="sm" className="text-xs font-medium text-destructive">
+            <Container className="rounded-md border border-destructive/20 bg-destructive/10 p-3">
+              <Typography size="sm" className="text-xs font-medium text-destructive">
                 {error}
-              </Atoms.Typography>
-            </Atoms.Container>
+              </Typography>
+            </Container>
           )}
-        </Atoms.Container>
+        </Container>
 
         {/* Action Buttons */}
-        <Atoms.DialogFooter>
-          <Atoms.DialogClose asChild>
-            <Atoms.Button
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button
               variant="outline"
               size="lg"
               className="order-2 sm:order-1"
@@ -201,9 +204,9 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               disabled={isRestoring}
             >
               {tRestore('cancel')}
-            </Atoms.Button>
-          </Atoms.DialogClose>
-          <Atoms.Button
+            </Button>
+          </DialogClose>
+          <Button
             id="encrypted-file-restore-btn"
             size="lg"
             className="order-1 sm:order-2"
@@ -212,18 +215,18 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
           >
             {isRestoring ? (
               <>
-                <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {tRestore('restoring')}
               </>
             ) : (
               <>
-                <Libs.RotateCcw className="mr-2 h-4 w-4 rotate-180" />
+                <RotateCcw className="mr-2 h-4 w-4 rotate-180" />
                 {tRestore('restore')}
               </>
             )}
-          </Atoms.Button>
-        </Atoms.DialogFooter>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

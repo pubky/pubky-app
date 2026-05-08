@@ -1,4 +1,4 @@
-import { Env } from '@/libs/env';
+import { Env } from '@/libs/env/env';
 
 export const NEXUS_URL = Env.NEXT_PUBLIC_NEXUS_URL;
 export const CDN_URL = Env.NEXT_PUBLIC_CDN_URL;

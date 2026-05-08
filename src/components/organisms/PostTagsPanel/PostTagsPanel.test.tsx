@@ -1,14 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostTagsPanel } from './PostTagsPanel';
 
 // Mock hooks
 const mockUsePostTags = vi.fn();
 const mockRequireAuth = vi.fn((action: () => void) => action());
 const mockSetShowSignInDialog = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostTags/usePostTags', () => ({
   usePostTags: () => mockUsePostTags(),
+}));
+
+vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
   useEnrichedTags: (tags: unknown[]) => ({ enrichedTags: tags, isLoading: false }),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
     requireAuth: mockRequireAuth,
@@ -22,64 +28,89 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/application/tag/tag.types', () => ({
   TagKind: { POST: 'post' },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { setShowSignInDialog: (open: boolean) => void }) => unknown) =>
     selector({ setShowSignInDialog: mockSetShowSignInDialog }),
 }));
 
 // Mock molecules
 const mockTaggedList = vi.fn();
-vi.mock('@/molecules', () => ({
-  TagInput: () => <input data-testid="tag-input" />,
-  TaggedList: (props: { tags: unknown[]; hasMore?: boolean; isLoadingMore?: boolean; onLoadMore?: () => void }) => {
-    mockTaggedList(props);
-    return <div data-testid="tagged-list">Tags: {props.tags.length}</div>;
-  },
-}));
+vi.mock('@/molecules/TaggedList/TaggedList', () => {
+  return {
+    TaggedList: (props: { tags: unknown[]; hasMore?: boolean; isLoadingMore?: boolean; onLoadMore?: () => void }) => {
+      mockTaggedList(props);
+      return <div data-testid="tagged-list">Tags: {props.tags.length}</div>;
+    },
+  };
+});
+
+vi.mock('@/molecules/TagInput/TagInput', () => {
+  return {
+    TagInput: () => <input data-testid="tag-input" />,
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div className={className} data-override-defaults={overrideDefaults} {...props}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: React.ElementType }) => {
-    return <Tag>{children}</Tag>;
-  },
-  SidebarButton: ({
-    children,
-    onClick,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    'data-testid'?: string;
-  }) => (
-    <button data-testid={dataTestId} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
-  Skeleton: ({ className, ...props }: { className?: string; children?: React.ReactNode }) => (
-    <div data-slot="skeleton" className={className} {...props} />
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div className={className} data-override-defaults={overrideDefaults} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-// Mock libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
+vi.mock('@/atoms/SidebarButton/SidebarButton', () => {
+  return {
+    SidebarButton: ({
+      children,
+      onClick,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      'data-testid'?: string;
+    }) => (
+      <button data-testid={dataTestId} onClick={onClick}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className, ...props }: { className?: string; children?: React.ReactNode }) => (
+      <div data-slot="skeleton" className={className} {...props} />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, as: Tag = 'span' }: { children: React.ReactNode; as?: React.ElementType }) => {
+      return <Tag>{children}</Tag>;
+    },
+  };
 });
 
 describe('PostTagsPanel', () => {

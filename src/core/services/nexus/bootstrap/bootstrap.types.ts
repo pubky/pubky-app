@@ -1,18 +1,25 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
+import type {
+  NexusFileDetails,
+  NexusHotTag,
+  NexusNotification,
+  NexusPost,
+  NexusUser,
+} from '@/services/nexus/nexus.types';
 
 export type NexusBootstrapResponse = {
-  users: Core.NexusUser[];
-  posts: Core.NexusPost[];
-  files: Core.NexusFileDetails[];
-  ids: Core.NexusBootstrapList;
+  users: NexusUser[];
+  posts: NexusPost[];
+  files: NexusFileDetails[];
+  ids: NexusBootstrapList;
   indexed: boolean;
-  notifications: Core.NexusNotification[];
+  notifications: NexusNotification[];
 };
 
 export type NexusBootstrapList = {
   stream: string[];
-  influencers: Core.Pubky[];
-  recommended: Core.Pubky[];
-  hot_tags: Core.NexusHotTag[];
-  muted: Core.Pubky[];
+  influencers: Pubky[];
+  recommended: Pubky[];
+  hot_tags: NexusHotTag[];
+  muted: Pubky[];
 };

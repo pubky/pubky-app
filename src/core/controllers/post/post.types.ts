@@ -1,7 +1,9 @@
-import * as Core from '@/core';
+import type { TTagEventParams } from '@/controllers/tag/tag.types';
+import type { Pubky } from '@/models/models.types';
+import type { TCompositeId } from '@/services/nexus/post/post.types';
 
 export interface TCreatePostParams {
-  authorId: Core.Pubky;
+  authorId: Pubky;
   content: string;
   isArticle?: boolean;
   tags?: string[];
@@ -21,21 +23,22 @@ export interface TEditPostParams {
 
 export interface TFileAttachmentsParams {
   attachments: File[];
-  pubky: Core.Pubky;
+  pubky: Pubky;
 }
 
 export interface TNormalizeTagsParams {
-  tags: Core.TTagEventParams[];
+  tags: TTagEventParams[];
 }
 
-export interface TFetchMorePostTagsParams extends Core.TCompositeId {
+export interface TFetchMorePostTagsParams extends TCompositeId {
   skip?: number;
   limit?: number;
+  viewerId?: Pubky;
 }
 
-export interface TFetchPostTaggersParams extends Core.TCompositeId {
+export interface TFetchPostTaggersParams extends TCompositeId {
   label: string;
   skip?: number;
   limit?: number;
-  viewerId?: Core.Pubky;
+  viewerId?: Pubky;
 }

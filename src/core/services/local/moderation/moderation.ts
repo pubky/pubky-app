@@ -1,5 +1,8 @@
-import * as Core from '@/core';
-import { Err, ErrorService, DatabaseErrorCode } from '@/libs';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { ModerationModel } from '@/models/moderation/moderation';
+import type { ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
 
 export class LocalModerationService {
   private constructor() {}
@@ -9,11 +12,11 @@ export class LocalModerationService {
    */
   static async setUnBlur(id: string): Promise<void> {
     try {
-      const record = await Core.ModerationModel.findById(id);
+      const record = await ModerationModel.findById(id);
       if (!record) {
         return;
       }
-      await Core.ModerationModel.update(id, { is_blurred: false });
+      await ModerationModel.update(id, { is_blurred: false });
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to unblur item', {
         service: ErrorService.Local,
@@ -29,9 +32,9 @@ export class LocalModerationService {
    * Returns null if the item is not moderated.
    * Optionally filters by type.
    */
-  static async getModerationRecord(id: string, type?: Core.ModerationType): Promise<Core.ModerationModelSchema | null> {
+  static async getModerationRecord(id: string, type?: ModerationType): Promise<ModerationModelSchema | null> {
     try {
-      const record = await Core.ModerationModel.findById(id);
+      const record = await ModerationModel.findById(id);
       if (!record) return null;
       if (type && record.type !== type) return null;
       return record;
@@ -49,9 +52,9 @@ export class LocalModerationService {
    * Gets the moderation records for multiple items.
    * Optionally filters by type.
    */
-  static async getModerationRecords(ids: string[], type?: Core.ModerationType): Promise<Core.ModerationModelSchema[]> {
+  static async getModerationRecords(ids: string[], type?: ModerationType): Promise<ModerationModelSchema[]> {
     try {
-      const records = await Core.ModerationModel.findByIds(ids);
+      const records = await ModerationModel.findByIds(ids);
       if (type) {
         return records.filter((r) => r.type === type);
       }

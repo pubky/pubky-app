@@ -4,26 +4,31 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import * as Hooks from '@/hooks';
-import type { ArticleJSON } from '@/hooks';
-import { NotificationType } from '@/core';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { PostController } from '@/controllers/post/post';
+import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
-import {
-  getNotificationLink,
-  getUserIdFromNotification,
-  getNotificationActionKey,
-  getPostUriFromNotification,
-  pubkyUriToCompositeId,
-  formatPreviewText,
-  hasPostPreview,
-} from './NotificationItem.utils';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { Logger } from '@/libs/logger/logger';
+import { formatNotificationTime, isPostDeleted } from '@/libs/utils/utils';
+import { NotificationType } from '@/models/notification/notification.types';
+import { NotificationIcon } from '@/molecules/NotificationIcon/NotificationIcon';
+import { PostTag } from '@/molecules/PostTag/PostTag';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { resolvePubkyToNames } from './NotificationItem.helpers';
 import type { NotificationItemProps } from './NotificationItem.types';
+import {
+  formatPreviewText,
+  getNotificationActionKey,
+  getNotificationLink,
+  getPostUriFromNotification,
+  getUserIdFromNotification,
+  hasPostPreview,
+  pubkyUriToCompositeId,
+} from './NotificationItem.utils';
 
 export function NotificationItem({ notification, isUnread }: NotificationItemProps) {
   const t = useTranslations('notifications.actions');
@@ -33,7 +38,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const tPostToast = useTranslations('toast.post');
   const tPost = useTranslations('post');
   const router = useRouter();
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
 
   // Extract the user ID from the notification (the actor who triggered it)
   const actorUserId = getUserIdFromNotification(notification);
@@ -48,13 +53,13 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const [postContent, setPostContent] = useState<string | null>(null);
 
   // Use existing hook for user profile data
-  const { profile } = Hooks.useUserProfile(actorUserId || '');
+  const { profile } = useUserProfile(actorUserId || '');
 
   // Fetch post content via controller (handles caching internally)
   useEffect(() => {
     if (!postCompositeId) return;
 
-    const viewerId = Core.useAuthStore.getState().currentUserPubky;
+    const viewerId = useAuthStore.getState().currentUserPubky;
     if (!viewerId) return;
 
     let isCancelled = false;
@@ -63,10 +68,10 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     // 1. Check local DB first
     // 2. If missing, fetch from Nexus
     // 3. Write to local DB
-    Core.PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
+    PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
       .then(async (post) => {
         if (!isCancelled && post?.content) {
-          if (Libs.isPostDeleted(post.content)) {
+          if (isPostDeleted(post.content)) {
             setPostContent(tPost('deleted'));
           } else if (post.kind === 'long') {
             try {
@@ -87,7 +92,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
       })
       .catch((error) => {
         if (!isCancelled) {
-          Libs.Logger.warn('Failed to fetch notification post:', { postCompositeId, error });
+          Logger.warn('Failed to fetch notification post:', { postCompositeId, error });
         }
       });
 
@@ -109,8 +114,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const previewText = hasPostPreview(notification.type) ? formatPreviewText(postContent) : null;
 
   // Format timestamps (short for mobile, long for desktop)
-  const timestampShort = Libs.formatNotificationTime(notification.timestamp, false);
-  const timestampLong = Libs.formatNotificationTime(notification.timestamp, true);
+  const timestampShort = formatNotificationTime(notification.timestamp, false);
+  const timestampLong = formatNotificationTime(notification.timestamp, true);
 
   // Calculate notification links (business logic separated in pure function)
   const { notificationLink, userProfileLink } = getNotificationLink(notification);
@@ -132,16 +137,16 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   };
 
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults={true}
       className={`flex w-full min-w-0 items-center justify-between gap-2 ${notificationLink ? 'cursor-pointer' : ''}`}
       onClick={handleRowClick}
     >
-      <Atoms.Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
+      <Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
         {/* Avatar - links to user profile */}
         {userProfileLink ? (
           <Link href={userProfileLink} className="shrink-0 transition-opacity hover:opacity-80">
-            <Organisms.AvatarWithFallback
+            <AvatarWithFallback
               avatarUrl={avatarUrl}
               name={userName}
               fallbackSeed={actorUserId || userName}
@@ -150,7 +155,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             />
           </Link>
         ) : (
-          <Organisms.AvatarWithFallback
+          <AvatarWithFallback
             avatarUrl={avatarUrl}
             name={userName}
             fallbackSeed={actorUserId || userName}
@@ -159,8 +164,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
           />
         )}
 
-        <Atoms.Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
-          <Atoms.Typography
+        <Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
+          <Typography
             as="p"
             className="min-w-0 shrink truncate text-sm leading-none font-medium text-foreground lg:text-base lg:leading-normal"
           >
@@ -180,7 +185,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             ) : (
               <span className="text-foreground">{actionText}</span>
             )}
-          </Atoms.Typography>
+          </Typography>
 
           {/* Post preview text for desktop - dynamically fetched from database */}
           {previewText &&
@@ -192,18 +197,15 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
                 {previewText}
               </Link>
             ) : (
-              <Atoms.Typography
-                as="p"
-                className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline"
-              >
+              <Typography as="p" className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline">
                 {previewText}
-              </Atoms.Typography>
+              </Typography>
             ))}
 
           {/* Tag badge for tagged notifications - click navigates to search */}
           {(notification.type === NotificationType.TagPost || notification.type === NotificationType.TagProfile) &&
             'tag_label' in notification && (
-              <Molecules.PostTag
+              <PostTag
                 label={notification.tag_label}
                 showClose={false}
                 className="shrink-0"
@@ -213,53 +215,47 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
 
           {/* Friend notification extra text */}
           {notification.type === NotificationType.NewFriend && (
-            <Atoms.Typography as="p" className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline">
+            <Typography as="p" className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline">
               {tProfile('friendsWithYou')}
-            </Atoms.Typography>
+            </Typography>
           )}
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
 
       {/* Timestamp and icon - links to notification target */}
       {notificationLink ? (
         <Link href={notificationLink} className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80">
           {/* Short timestamp for mobile and medium screens */}
-          <Atoms.Typography
-            as="p"
-            className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden"
-          >
+          <Typography as="p" className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden">
             {timestampShort}
-          </Atoms.Typography>
+          </Typography>
           {/* Long timestamp for large desktop */}
-          <Atoms.Typography
+          <Typography
             as="p"
             className="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
           >
             {timestampLong}
-          </Atoms.Typography>
+          </Typography>
 
-          <Molecules.NotificationIcon type={notification.type} showBadge={isUnread} />
+          <NotificationIcon type={notification.type} showBadge={isUnread} />
         </Link>
       ) : (
-        <Atoms.Container overrideDefaults={true} className="flex items-center gap-2">
+        <Container overrideDefaults={true} className="flex items-center gap-2">
           {/* Short timestamp for mobile and medium screens */}
-          <Atoms.Typography
-            as="p"
-            className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden"
-          >
+          <Typography as="p" className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden">
             {timestampShort}
-          </Atoms.Typography>
+          </Typography>
           {/* Long timestamp for large desktop */}
-          <Atoms.Typography
+          <Typography
             as="p"
             className="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
           >
             {timestampLong}
-          </Atoms.Typography>
+          </Typography>
 
-          <Molecules.NotificationIcon type={notification.type} showBadge={isUnread} />
-        </Atoms.Container>
+          <NotificationIcon type={notification.type} showBadge={isUnread} />
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
+import type { Pubky } from '@/models/models.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { UseMutedUsersResult } from './useMutedUsers.types';
 
-const EMPTY_ARRAY: Core.Pubky[] = [];
+const EMPTY_ARRAY: Pubky[] = [];
 
 /**
  * useMutedUsers
@@ -19,7 +21,7 @@ const EMPTY_ARRAY: Core.Pubky[] = [];
  */
 export function useMutedUsers(): UseMutedUsersResult {
   // TODO: Use the controller instead of the service
-  const mutedStream = useLiveQuery(async () => Core.LocalStreamUsersService.findById(Core.UserStreamTypes.MUTED), []);
+  const mutedStream = useLiveQuery(async () => LocalStreamUsersService.findById(UserStreamTypes.MUTED), []);
 
   // Use stable empty array reference to avoid dependency instability
   const mutedUserIds = mutedStream?.stream ?? EMPTY_ARRAY;
@@ -31,7 +33,7 @@ export function useMutedUsers(): UseMutedUsersResult {
   // Memoize the callback to maintain referential stability.
   // Normalize userId to handle both prefixed (pubky:xxx, pk:xxx) and raw formats
   const isMuted = useCallback(
-    (userId: Core.Pubky) => mutedUserIdSet.has(Libs.stripPubkyPrefix(userId) as Core.Pubky),
+    (userId: Pubky) => mutedUserIdSet.has(stripPubkyPrefix(userId) as Pubky),
     [mutedUserIdSet],
   );
 

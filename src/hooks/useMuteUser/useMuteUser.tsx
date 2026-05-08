@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { useCallback, useState } from 'react';
+import { MuteController } from '@/controllers/mute/mute';
+import { isAppError } from '@/libs/error/error.utils';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseMuteUserResult } from './useMuteUser.types';
 
 /**
@@ -13,13 +17,13 @@ import type { UseMuteUserResult } from './useMuteUser.types';
  * local database updates and homeserver sync.
  */
 export function useMuteUser(): UseMuteUserResult {
-  const { currentUserPubky } = Core.useAuthStore();
+  const { currentUserPubky } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingUserId, setLoadingUserId] = useState<Core.Pubky | null>(null);
+  const [loadingUserId, setLoadingUserId] = useState<Pubky | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const toggleMute = useCallback(
-    async (userId: Core.Pubky, isCurrentlyMuted: boolean) => {
+    async (userId: Pubky, isCurrentlyMuted: boolean) => {
       if (!currentUserPubky) {
         setError('User not authenticated');
         return;
@@ -35,20 +39,20 @@ export function useMuteUser(): UseMuteUserResult {
       setError(null);
 
       try {
-        const action = isCurrentlyMuted ? Libs.HttpMethod.DELETE : Libs.HttpMethod.PUT;
+        const action = isCurrentlyMuted ? HttpMethod.DELETE : HttpMethod.PUT;
 
-        await Core.MuteController.commitMute(action, {
+        await MuteController.commitMute(action, {
           muter: currentUserPubky,
           mutee: userId,
         });
 
-        Libs.Logger.debug(`[useMuteUser] Successfully ${isCurrentlyMuted ? 'unmuted' : 'muted'} user`, {
+        Logger.debug(`[useMuteUser] Successfully ${isCurrentlyMuted ? 'unmuted' : 'muted'} user`, {
           userId,
         });
       } catch (err) {
-        const errorMessage = Libs.isAppError(err) ? err.message : 'Failed to update mute status';
+        const errorMessage = isAppError(err) ? err.message : 'Failed to update mute status';
         setError(errorMessage);
-        Libs.Logger.error('[useMuteUser] Failed to toggle mute:', err);
+        Logger.error('[useMuteUser] Failed to toggle mute:', err);
         throw err;
       } finally {
         setIsLoading(false);
@@ -59,7 +63,7 @@ export function useMuteUser(): UseMuteUserResult {
   );
 
   const isUserLoading = useCallback(
-    (userId: Core.Pubky) => isLoading && loadingUserId === userId,
+    (userId: Pubky) => isLoading && loadingUserId === userId,
     [isLoading, loadingUserId],
   );
 

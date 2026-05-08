@@ -1,6 +1,8 @@
 import React from 'react';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Logger } from '@/libs/logger/logger';
+import { RouteGuardProvider } from './RouteGuardProvider';
 
 // Hoisted mocks
 const mocks = vi.hoisted(() => {
@@ -43,19 +45,18 @@ vi.mock('next-intl', () => ({
   useLocale: () => mocks.serverLocale,
 }));
 
-// Mock @/hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
   useAuthStatus: () => ({ status: mocks.status, isLoading: mocks.isLoading }),
 }));
 
 // Mock @/app
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   PUBLIC_ROUTES: ['/landing'],
   isDynamicPublicRoute: (path: string) => path.startsWith('/post/') || path.startsWith('/profile/'),
 }));
 
-// Mock @/providers
-vi.mock('@/providers', () => ({
+// Mock @/providers/RouteGuardProvider/RouteGuardProvider.constants
+vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
   ROUTE_ACCESS_MAP: {
     AUTHENTICATED: { allowedRoutes: ['/feed', '/settings'], redirectTo: '/feed' },
     UNAUTHENTICATED: { allowedRoutes: ['/login', '/landing'], redirectTo: '/login' },
@@ -64,22 +65,18 @@ vi.mock('@/providers', () => ({
 }));
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Spinner: (props: Record<string, unknown>) => <div data-testid="spinner" {...props} />,
-}));
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: (props: Record<string, unknown>) => <div data-testid="spinner" {...props} />,
+  };
+});
 
-// Mock @/libs
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
-  Err: {
-    timeout: (code: string, msg: string, _opts: unknown) => new Error(msg),
-  },
-  TimeoutErrorCode: { REQUEST_TIMEOUT: 'REQUEST_TIMEOUT' },
-  ErrorService: { Local: 'Local' },
 }));
 
-// Mock @/core
-vi.mock('@/core', () => ({
+// Mock auth store
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
       hasHydrated: mocks.hasHydrated,
@@ -87,23 +84,29 @@ vi.mock('@/core', () => ({
       sessionExport: mocks.sessionExport,
       currentUserPubky: mocks.currentUserPubky,
     }),
+}));
+vi.mock('@/stores/migration/migration.store', () => ({
   useMigrationStore: Object.assign(
     (selector: (state: Record<string, unknown>) => unknown) => selector({ wasDbReset: mocks.wasDbReset }),
     {
       getState: () => ({ reset: mocks.resetMigrationStore, wasDbReset: mocks.wasDbReset }),
     },
   ),
+}));
+vi.mock('@/stores/settings/settings.store', () => ({
   useSettingsStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({ language: mocks.storeLanguage }),
+}));
+vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     restorePersistedSession: vi.fn().mockResolvedValue(true),
   },
+}));
+vi.mock('@/controllers/migration/migration', () => ({
   MigrationController: {
     resync: mocks.mockResync,
   },
 }));
-
-import { RouteGuardProvider } from './RouteGuardProvider';
 
 describe('RouteGuardProvider — migration resync', () => {
   beforeEach(() => {
@@ -182,8 +185,6 @@ describe('RouteGuardProvider — migration resync', () => {
     mocks.wasDbReset = true;
     mocks.mockResync.mockRejectedValue(new Error('resync failed'));
 
-    const { Logger } = await import('@/libs');
-
     render(
       <RouteGuardProvider>
         <div>Protected Content</div>
@@ -211,8 +212,6 @@ describe('RouteGuardProvider — migration resync', () => {
     mocks.wasDbReset = true;
     // resync never resolves — the timeout will fire
     mocks.mockResync.mockReturnValue(new Promise(() => {}));
-
-    const { Logger } = await import('@/libs');
 
     render(
       <RouteGuardProvider>

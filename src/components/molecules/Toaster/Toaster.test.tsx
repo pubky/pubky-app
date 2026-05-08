@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { Toaster } from './Toaster';
 
 // Mock the useToast hook
@@ -7,13 +7,6 @@ const mockUseToast = vi.fn();
 vi.mock('./use-toast', () => ({
   useToast: () => mockUseToast(),
 }));
-
-// Mock @/libs to intercept any icons and utilities
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 describe('Toaster', () => {
   beforeEach(() => {

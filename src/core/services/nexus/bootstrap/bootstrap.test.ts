@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
+import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
+import { bootstrapApi } from '@/services/nexus/bootstrap/bootstrap.api';
 
 describe('NexusBootstrapService', () => {
   const mockFetch = vi.fn();
@@ -156,9 +158,9 @@ describe('NexusBootstrapService', () => {
         },
       });
 
-      const result = await Core.NexusBootstrapService.fetch(pubky);
+      const result = await NexusBootstrapService.fetch(pubky);
 
-      expect(mockFetch).toHaveBeenCalledWith(Core.bootstrapApi.get(pubky), {
+      expect(mockFetch).toHaveBeenCalledWith(bootstrapApi.get(pubky), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -180,9 +182,9 @@ describe('NexusBootstrapService', () => {
         text: vi.fn().mockResolvedValue(''),
       });
 
-      await expect(Core.NexusBootstrapService.fetch(errorPubky)).rejects.toMatchObject({
-        category: Libs.ErrorCategory.Client,
-        code: Libs.ClientErrorCode.BAD_REQUEST,
+      await expect(NexusBootstrapService.fetch(errorPubky)).rejects.toMatchObject({
+        category: ErrorCategory.Client,
+        code: ClientErrorCode.BAD_REQUEST,
       });
     });
 
@@ -198,9 +200,9 @@ describe('NexusBootstrapService', () => {
         },
       });
 
-      await expect(Core.NexusBootstrapService.fetch(emptyPubky)).rejects.toMatchObject({
-        category: Libs.ErrorCategory.Server,
-        code: Libs.ServerErrorCode.INVALID_RESPONSE,
+      await expect(NexusBootstrapService.fetch(emptyPubky)).rejects.toMatchObject({
+        category: ErrorCategory.Server,
+        code: ServerErrorCode.INVALID_RESPONSE,
       });
     });
   });

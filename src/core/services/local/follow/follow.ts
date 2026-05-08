@@ -1,5 +1,16 @@
-import * as Core from '@/core';
-import { DatabaseErrorCode, Err, ErrorService, Logger } from '@/libs';
+import { db } from '@/database/franky/franky';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { UserConnectionsModel } from '@/models/user/connections/userConnections';
+import { UserConnectionsFields } from '@/models/user/connections/userConnections.schema';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { UserStreamReach } from '@/services/nexus/nexus.types';
 import { FOLLOWING_TIMELINE_STREAMS, FRIENDS_TIMELINE_STREAMS } from './follow.constants';
 import type {
   CreateFollowParams,
@@ -13,11 +24,11 @@ export class LocalFollowService {
     try {
       let becomingFriends = false;
 
-      await Core.db.transaction(
+      await db.transaction(
         'rw',
-        [Core.UserCountsModel.table, Core.UserConnectionsModel.table, Core.UserRelationshipsModel.table],
+        [UserCountsModel.table, UserConnectionsModel.table, UserRelationshipsModel.table],
         async () => {
-          const rel = await Core.UserRelationshipsModel.findById(followee);
+          const rel = await UserRelationshipsModel.findById(followee);
           // Snapshot: whether followee already follows follower
           const isFollowedBy = !!rel?.followed_by;
           // Snapshot: whether we're already following according to relationship model
@@ -25,8 +36,8 @@ export class LocalFollowService {
 
           // Connections first
           const [addedFollowing, addedFollower] = await Promise.all([
-            Core.UserConnectionsModel.createConnection(follower, followee, Core.UserConnectionsFields.FOLLOWING),
-            Core.UserConnectionsModel.createConnection(followee, follower, Core.UserConnectionsFields.FOLLOWERS),
+            UserConnectionsModel.createConnection(follower, followee, UserConnectionsFields.FOLLOWING),
+            UserConnectionsModel.createConnection(followee, follower, UserConnectionsFields.FOLLOWERS),
           ]);
 
           // Gate counts by BOTH relationship state AND connection mutations
@@ -37,26 +48,26 @@ export class LocalFollowService {
 
           const ops: Promise<unknown>[] = [];
           if (shouldIncrementFollowing) {
-            ops.push(Core.UserCountsModel.updateCounts({ userId: follower, countChanges: { following: 1 } }));
+            ops.push(UserCountsModel.updateCounts({ userId: follower, countChanges: { following: 1 } }));
           }
           if (shouldIncrementFollowers) {
-            ops.push(Core.UserCountsModel.updateCounts({ userId: followee, countChanges: { followers: 1 } }));
+            ops.push(UserCountsModel.updateCounts({ userId: followee, countChanges: { followers: 1 } }));
           }
           if (isFollowedBy && shouldIncrementFollowing) {
             becomingFriends = true;
             ops.push(
-              Core.UserCountsModel.updateCounts({ userId: follower, countChanges: { friends: 1 } }),
-              Core.UserCountsModel.updateCounts({ userId: followee, countChanges: { friends: 1 } }),
+              UserCountsModel.updateCounts({ userId: follower, countChanges: { friends: 1 } }),
+              UserCountsModel.updateCounts({ userId: followee, countChanges: { friends: 1 } }),
             );
           }
 
           // Upsert relationship (create or update)
           if (rel) {
             if (rel.following === false) {
-              ops.push(Core.UserRelationshipsModel.update(followee, { following: true }));
+              ops.push(UserRelationshipsModel.update(followee, { following: true }));
             }
           } else {
-            ops.push(Core.UserRelationshipsModel.create({ id: followee, following: true, followed_by: false }));
+            ops.push(UserRelationshipsModel.create({ id: followee, following: true, followed_by: false }));
           }
 
           await Promise.all(ops);
@@ -85,19 +96,19 @@ export class LocalFollowService {
     try {
       let breakingFriendship = false;
 
-      await Core.db.transaction(
+      await db.transaction(
         'rw',
-        [Core.UserCountsModel.table, Core.UserConnectionsModel.table, Core.UserRelationshipsModel.table],
+        [UserCountsModel.table, UserConnectionsModel.table, UserRelationshipsModel.table],
         async () => {
-          const rel = await Core.UserRelationshipsModel.findById(followee);
+          const rel = await UserRelationshipsModel.findById(followee);
           // Snapshot: whether we were following according to relationship model
           const wasFollowing = !!rel?.following;
           const wasFriends = !!rel?.followed_by && wasFollowing;
 
           // Connections first
           const [removedFollowing, removedFollower] = await Promise.all([
-            Core.UserConnectionsModel.deleteConnection(follower, followee, Core.UserConnectionsFields.FOLLOWING),
-            Core.UserConnectionsModel.deleteConnection(followee, follower, Core.UserConnectionsFields.FOLLOWERS),
+            UserConnectionsModel.deleteConnection(follower, followee, UserConnectionsFields.FOLLOWING),
+            UserConnectionsModel.deleteConnection(followee, follower, UserConnectionsFields.FOLLOWERS),
           ]);
 
           // Gate counts by BOTH relationship state AND connection mutations
@@ -108,26 +119,26 @@ export class LocalFollowService {
 
           const ops: Promise<unknown>[] = [];
           if (shouldDecrementFollowing) {
-            ops.push(Core.UserCountsModel.updateCounts({ userId: follower, countChanges: { following: -1 } }));
+            ops.push(UserCountsModel.updateCounts({ userId: follower, countChanges: { following: -1 } }));
           }
           if (shouldDecrementFollowers) {
-            ops.push(Core.UserCountsModel.updateCounts({ userId: followee, countChanges: { followers: -1 } }));
+            ops.push(UserCountsModel.updateCounts({ userId: followee, countChanges: { followers: -1 } }));
           }
           if (wasFriends || (removedFollowing && !!rel?.followed_by)) {
             breakingFriendship = true;
             ops.push(
-              Core.UserCountsModel.updateCounts({ userId: follower, countChanges: { friends: -1 } }),
-              Core.UserCountsModel.updateCounts({ userId: followee, countChanges: { friends: -1 } }),
+              UserCountsModel.updateCounts({ userId: follower, countChanges: { friends: -1 } }),
+              UserCountsModel.updateCounts({ userId: followee, countChanges: { friends: -1 } }),
             );
           }
 
           // Upsert relationship (create or update) with following=false
           if (rel) {
             if (rel.following === true) {
-              ops.push(Core.UserRelationshipsModel.update(followee, { following: false }));
+              ops.push(UserRelationshipsModel.update(followee, { following: false }));
             }
           } else {
-            ops.push(Core.UserRelationshipsModel.create({ id: followee, following: false, followed_by: false }));
+            ops.push(UserRelationshipsModel.create({ id: followee, following: false, followed_by: false }));
           }
 
           await Promise.all(ops);
@@ -166,7 +177,7 @@ export class LocalFollowService {
     includeFriends,
     activeStreamId,
   }: InvalidateTimelineStreamsParams): Promise<void> {
-    const streams: Core.PostStreamTypes[] = [...FOLLOWING_TIMELINE_STREAMS];
+    const streams: PostStreamTypes[] = [...FOLLOWING_TIMELINE_STREAMS];
 
     if (includeFriends) {
       streams.push(...FRIENDS_TIMELINE_STREAMS);
@@ -176,7 +187,7 @@ export class LocalFollowService {
     const streamsToInvalidate = streams.filter((streamId) => streamId !== activeStreamId);
 
     if (streamsToInvalidate.length > 0) {
-      await Promise.all(streamsToInvalidate.map((streamId) => Core.LocalStreamPostsService.deleteById({ streamId })));
+      await Promise.all(streamsToInvalidate.map((streamId) => LocalStreamPostsService.deleteById({ streamId })));
       Logger.debug('Invalidated timeline streams', {
         invalidated: streamsToInvalidate.length,
         preserved: activeStreamId,
@@ -205,21 +216,19 @@ export class LocalFollowService {
     const ops: Promise<unknown>[] = [];
 
     // Select the appropriate stream operation based on action
-    const streamOp = isFollowing
-      ? Core.LocalStreamUsersService.prependToStream
-      : Core.LocalStreamUsersService.removeFromStream;
+    const streamOp = isFollowing ? LocalStreamUsersService.prependToStream : LocalStreamUsersService.removeFromStream;
 
     // Update following/followers streams
     ops.push(
-      streamOp.call(Core.LocalStreamUsersService, `${follower}:${Core.UserStreamReach.FOLLOWING}`, [followee]),
-      streamOp.call(Core.LocalStreamUsersService, `${followee}:${Core.UserStreamReach.FOLLOWERS}`, [follower]),
+      streamOp.call(LocalStreamUsersService, `${follower}:${UserStreamReach.FOLLOWING}`, [followee]),
+      streamOp.call(LocalStreamUsersService, `${followee}:${UserStreamReach.FOLLOWERS}`, [follower]),
     );
 
     // Update friends streams if friendship status changed
     if (friendshipChanged) {
       ops.push(
-        streamOp.call(Core.LocalStreamUsersService, `${follower}:${Core.UserStreamReach.FRIENDS}`, [followee]),
-        streamOp.call(Core.LocalStreamUsersService, `${followee}:${Core.UserStreamReach.FRIENDS}`, [follower]),
+        streamOp.call(LocalStreamUsersService, `${follower}:${UserStreamReach.FRIENDS}`, [followee]),
+        streamOp.call(LocalStreamUsersService, `${followee}:${UserStreamReach.FRIENDS}`, [follower]),
       );
     }
 

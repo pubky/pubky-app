@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { USER_NAME_MIN_LENGTH, USER_NAME_MAX_LENGTH, USER_BIO_MAX_LENGTH } from '@/config';
+import { USER_BIO_MAX_LENGTH, USER_NAME_MAX_LENGTH, USER_NAME_MIN_LENGTH } from '@/config/user';
 
 export class UserValidator {
   static check(name: string, bio: string, links: { label: string; url: string }[], avatarFile: File | null) {

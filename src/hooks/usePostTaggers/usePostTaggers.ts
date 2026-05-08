@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { PostController } from '@/controllers/post/post';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { TAGGERS_PAGE_SIZE } from './usePostTaggers.constants';
 import type { TaggersStateMap, UsePostTaggersResult } from './usePostTaggers.types';
 
@@ -39,7 +41,7 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
    * @param totalCount - Expected total count of taggers (used for pagination control)
    */
   const fetchAllTaggers = useCallback(
-    async (label: string, initialIds: Core.Pubky[], totalCount?: number) => {
+    async (label: string, initialIds: Pubky[], totalCount?: number) => {
       if (!postId) return;
       const labelKey = label.toLowerCase();
       const existing = statesRef.current.get(labelKey);
@@ -72,12 +74,12 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
 
         while (hasMore && iterations < MAX_ITERATIONS) {
           iterations++;
-          const response = (await Core.PostController.fetchTaggers({
+          const response = (await PostController.fetchTaggers({
             compositeId: postId,
             label,
             skip,
             limit: TAGGERS_PAGE_SIZE,
-          })) as Core.NexusTaggers | Core.NexusTaggers[];
+          })) as NexusTaggers | NexusTaggers[];
 
           // Post taggers endpoint returns { users, relationship }.
           // Keep legacy array parsing as fallback for compatibility.
@@ -87,7 +89,7 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
           if (pageTaggers.length === 0) break;
 
           const uniqueBefore = new Set(collectedIds).size;
-          collectedIds = Array.from(new Set([...collectedIds, ...pageTaggers])) as Core.Pubky[];
+          collectedIds = Array.from(new Set([...collectedIds, ...pageTaggers])) as Pubky[];
           const uniqueAfter = new Set(collectedIds).size;
 
           // Only break on duplicates if we don't have a reliable totalCount
@@ -116,7 +118,7 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
           return next;
         });
       } catch (error) {
-        Libs.Logger.error('[usePostTaggers] Failed to fetch taggers', { postId, label, error });
+        Logger.error('[usePostTaggers] Failed to fetch taggers', { postId, label, error });
         setTaggerStates((prev) => {
           const next = new Map(prev);
           const currentState = next.get(labelKey);
@@ -129,7 +131,7 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
     [postId],
   );
 
-  const taggersByLabel = new Map<string, Core.Pubky[]>();
+  const taggersByLabel = new Map<string, Pubky[]>();
   taggerStates.forEach((value, key) => {
     taggersByLabel.set(key, value.ids);
   });

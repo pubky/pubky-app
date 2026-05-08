@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Env } from '@/libs/env/env';
+import { NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { ExchangerateService } from './exchangerate';
 import { exchangerateQueryClient } from './exchangerate.query-client';
-import { Env, ErrorCategory, ErrorService, NetworkErrorCode, ServerErrorCode } from '@/libs';
-import { asOpaque } from '@/test-utils';
 
 // Helper to build a minimal BlockTank ticker
 function createTicker(overrides: Partial<{ symbol: string; lastPrice: string }> = {}) {

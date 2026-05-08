@@ -1,16 +1,16 @@
-import {
-  ErrorService,
-  safeFetch,
-  httpResponseToError,
-  parseResponseOrThrow,
-  HttpMethod,
-  JSON_HEADERS,
-  Err,
-  ValidationErrorCode,
-  Env,
-} from '@/libs';
-import * as Types from './chatwoot.types';
+import { Env } from '@/libs/env/env';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
+import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { chatwootApi } from './chatwoot.api';
+import type {
+  TChatwootContact,
+  TChatwootContactSearchResponse,
+  TChatwootCreateContactResponse,
+} from './chatwoot.types';
 
 /**
  * Chatwoot API configuration
@@ -89,7 +89,7 @@ export class ChatwootService {
    * @returns Chatwoot contact object
    * @throws AppError if API calls fail
    */
-  static async createOrFindContact(email: string, name: string, inboxId: number): Promise<Types.TChatwootContact> {
+  static async createOrFindContact(email: string, name: string, inboxId: number): Promise<TChatwootContact> {
     const config = this.getBaseConfig();
 
     // Search for existing contact
@@ -105,7 +105,7 @@ export class ChatwootService {
       throw httpResponseToError(searchResponse, ErrorService.Chatwoot, 'searchContact', searchUrl);
     }
 
-    const searchData = await parseResponseOrThrow<Types.TChatwootContactSearchResponse>(
+    const searchData = await parseResponseOrThrow<TChatwootContactSearchResponse>(
       searchResponse,
       ErrorService.Chatwoot,
       'searchContact',
@@ -141,7 +141,7 @@ export class ChatwootService {
       throw httpResponseToError(createResponse, ErrorService.Chatwoot, 'createContact', createUrl);
     }
 
-    const createData = await parseResponseOrThrow<Types.TChatwootCreateContactResponse>(
+    const createData = await parseResponseOrThrow<TChatwootCreateContactResponse>(
       createResponse,
       ErrorService.Chatwoot,
       'createContact',

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef } from 'react';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { Container } from '@/atoms/Container/Container';
+import { Input } from '@/atoms/Input/Input';
+import { cn } from '@/libs/utils/utils';
 import { DIGITS } from './HumanPhoneCodeInput.constants';
 import type { HumanPhoneCodeInputProps } from './HumanPhoneCodeInput.types';
 
@@ -91,20 +92,20 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
   );
 
   return (
-    <Atoms.Container className={Libs.cn('flex-row flex-wrap gap-3')} data-testid="code-input-container">
+    <Container className={cn('flex-row flex-wrap gap-3')} data-testid="code-input-container">
       {value.map((digit, index) => (
-        <Atoms.Container
+        <Container
           key={index}
           overrideDefaults={true}
           data-testid={`human-phone-code-input-${index}`}
-          className={Libs.cn(
+          className={cn(
             'rounded-md border border-dashed border-brand',
             'px-2 py-4 shadow-xs',
             'flex items-center justify-center',
             'w-[33px] flex-shrink-0 flex-grow-0 md:w-[50px]',
           )}
         >
-          <Atoms.Input
+          <Input
             ref={(el) => {
               inputRefs.current[index] = el;
             }}
@@ -117,14 +118,14 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
             onChange={(e) => handleCodeChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={(e) => handlePaste(index, e)}
-            className={Libs.cn(
+            className={cn(
               'text-center text-base font-medium text-brand',
               '!h-auto !border-none !bg-transparent !p-0',
               'focus:ring-0 focus:outline-none',
             )}
           />
-        </Atoms.Container>
+        </Container>
       ))}
-    </Atoms.Container>
+    </Container>
   );
 };

@@ -1,15 +1,19 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import * as Core from '@/core';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { resetDatabase } from '@/database/franky/franky.helpers';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { generateTestUserId } from '@/models/user/users.helpers';
+import type { NexusUserCounts } from '@/services/nexus/nexus.types';
 
 describe('UserCountsModel', () => {
   beforeEach(async () => {
-    await Core.resetDatabase();
+    await resetDatabase();
   });
 
-  const testUserId1 = Core.generateTestUserId(1);
-  const testUserId2 = Core.generateTestUserId(2);
+  const testUserId1 = generateTestUserId(1);
+  const testUserId2 = generateTestUserId(2);
 
-  const MOCK_NEXUS_USER_COUNTS: Core.NexusUserCounts = {
+  const MOCK_NEXUS_USER_COUNTS: NexusUserCounts = {
     tagged: 3,
     tags: 7,
     unique_tags: 6,
@@ -28,7 +32,7 @@ describe('UserCountsModel', () => {
         ...MOCK_NEXUS_USER_COUNTS,
       };
 
-      const userCounts = new Core.UserCountsModel(mockUserCountsData);
+      const userCounts = new UserCountsModel(mockUserCountsData);
 
       expect(userCounts.id).toBe(mockUserCountsData.id);
       expect(userCounts.tagged).toBe(mockUserCountsData.tagged);
@@ -50,7 +54,7 @@ describe('UserCountsModel', () => {
         ...MOCK_NEXUS_USER_COUNTS,
       };
 
-      const result = await Core.UserCountsModel.create(mockUserCountsData);
+      const result = await UserCountsModel.create(mockUserCountsData);
       expect(result).toBe(mockUserCountsData.id);
     });
 
@@ -60,33 +64,33 @@ describe('UserCountsModel', () => {
         ...MOCK_NEXUS_USER_COUNTS,
       };
 
-      await Core.UserCountsModel.create(mockUserCountsData);
-      const result = await Core.UserCountsModel.findById(testUserId1);
+      await UserCountsModel.create(mockUserCountsData);
+      const result = await UserCountsModel.findById(testUserId1);
 
       expect(result).not.toBeNull();
-      expect(result!).toBeInstanceOf(Core.UserCountsModel);
+      expect(result!).toBeInstanceOf(UserCountsModel);
       expect(result!.id).toBe(testUserId1);
       expect(result!.posts).toBe(MOCK_NEXUS_USER_COUNTS.posts);
     });
 
     it('should return null for non-existent user counts', async () => {
-      const nonExistentId = Core.generateTestUserId(999);
-      const result = await Core.UserCountsModel.findById(nonExistentId);
+      const nonExistentId = generateTestUserId(999);
+      const result = await UserCountsModel.findById(nonExistentId);
       expect(result).toBeNull();
     });
 
     it('should bulk save user counts from tuples', async () => {
-      const mockNexusModelTuples: Core.NexusModelTuple<Core.NexusUserCounts>[] = [
+      const mockNexusModelTuples: NexusModelTuple<NexusUserCounts>[] = [
         [testUserId1, MOCK_NEXUS_USER_COUNTS],
         [testUserId2, { ...MOCK_NEXUS_USER_COUNTS, posts: 20 }],
       ];
 
-      const result = await Core.UserCountsModel.bulkSave(mockNexusModelTuples);
+      const result = await UserCountsModel.bulkSave(mockNexusModelTuples);
       expect(result).toBeDefined();
 
       // Verify the data was saved correctly
-      const userCounts1 = await Core.UserCountsModel.findById(testUserId1);
-      const userCounts2 = await Core.UserCountsModel.findById(testUserId2);
+      const userCounts1 = await UserCountsModel.findById(testUserId1);
+      const userCounts2 = await UserCountsModel.findById(testUserId2);
 
       expect(userCounts1).not.toBeNull();
       expect(userCounts2).not.toBeNull();
@@ -95,21 +99,21 @@ describe('UserCountsModel', () => {
     });
 
     it('should handle empty array in bulk save', async () => {
-      const result = await Core.UserCountsModel.bulkSave([]);
+      const result = await UserCountsModel.bulkSave([]);
       // bulkPut with empty array returns undefined, which is expected
       expect(result).toBeUndefined();
     });
 
     it('should handle multiple tuples with different data', async () => {
-      const mockTuples: Core.NexusModelTuple<Core.NexusUserCounts>[] = [
+      const mockTuples: NexusModelTuple<NexusUserCounts>[] = [
         [testUserId1, MOCK_NEXUS_USER_COUNTS],
         [testUserId2, { ...MOCK_NEXUS_USER_COUNTS, posts: 999, followers: 0 }],
       ];
 
-      await Core.UserCountsModel.bulkSave(mockTuples);
+      await UserCountsModel.bulkSave(mockTuples);
 
-      const userCounts1 = await Core.UserCountsModel.findById(testUserId1);
-      const userCounts2 = await Core.UserCountsModel.findById(testUserId2);
+      const userCounts1 = await UserCountsModel.findById(testUserId1);
+      const userCounts2 = await UserCountsModel.findById(testUserId2);
 
       expect(userCounts1).not.toBeNull();
       expect(userCounts2).not.toBeNull();

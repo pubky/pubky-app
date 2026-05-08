@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
-
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { cn } from '@/libs/utils/utils';
 
 interface ActionSectionProps {
   children?: ReactNode;
@@ -19,25 +19,25 @@ interface ActionSectionProps {
 
 export function ActionSection({ children, className, actions = [] }: ActionSectionProps) {
   return (
-    <Atoms.Container className={Libs.cn('w-full flex-row gap-6', className)}>
-      <Atoms.Container className="w-full flex-col items-start justify-start gap-4">{children}</Atoms.Container>
+    <Container className={cn('w-full flex-row gap-6', className)}>
+      <Container className="w-full flex-col items-start justify-start gap-4">{children}</Container>
       {actions.length > 0 && (
-        <Atoms.Container className="flex-row gap-3">
+        <Container className="flex-row gap-3">
           {actions.map((action, index) => (
-            <Atoms.Button
+            <Button
               id={action.id}
               key={index}
               variant={action.variant || 'secondary'}
-              className={Libs.cn('rounded-full', action.className)}
+              className={cn('rounded-full', action.className)}
               onClick={action.onClick}
               disabled={action.disabled}
             >
               {action.icon}
               {action.label}
-            </Atoms.Button>
+            </Button>
           ))}
-        </Atoms.Container>
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

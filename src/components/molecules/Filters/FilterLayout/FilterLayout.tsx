@@ -1,51 +1,55 @@
 'use client';
 
 import * as React from 'react';
+import { Columns3, LayoutGrid, Menu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Libs from '@/libs';
-import * as Core from '@/core';
-import * as Molecules from '@/molecules';
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
+import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
+import { BaseFilterProps, FilterListItem } from '../Filters.types';
 
-interface FilterLayoutProps extends Molecules.BaseFilterProps<Core.LayoutType> {
+interface FilterLayoutProps extends BaseFilterProps<LayoutType> {
   showVisual?: boolean;
 }
-
 export function FilterLayout({
   selectedTab,
-  defaultSelectedTab = Core.LAYOUT.COLUMNS,
+  defaultSelectedTab = LAYOUT.COLUMNS,
   onTabChange,
   disabled,
   showVisual = false,
 }: FilterLayoutProps) {
   const t = useTranslations('filters.layout');
-  const displaySelectedTab = !showVisual && selectedTab === Core.LAYOUT.VISUAL ? Core.LAYOUT.COLUMNS : selectedTab;
-
+  const displaySelectedTab = !showVisual && selectedTab === LAYOUT.VISUAL ? LAYOUT.COLUMNS : selectedTab;
   const items = React.useMemo(
     () =>
       [
         {
-          key: Core.LAYOUT.COLUMNS,
+          key: LAYOUT.COLUMNS,
           label: t('columns'),
-          icon: Libs.Columns3,
+          icon: Columns3,
           disabled,
           dataCy: 'columns-layout-toggle',
         },
-        { key: Core.LAYOUT.WIDE, label: t('wide'), icon: Libs.Menu, disabled, dataCy: 'wide-layout-toggle' },
+        {
+          key: LAYOUT.WIDE,
+          label: t('wide'),
+          icon: Menu,
+          disabled,
+          dataCy: 'wide-layout-toggle',
+        },
         showVisual
           ? {
-              key: Core.LAYOUT.VISUAL,
+              key: LAYOUT.VISUAL,
               label: t('visual'),
-              icon: Libs.LayoutGrid,
+              icon: LayoutGrid,
               disabled,
               dataCy: 'visual-layout-toggle',
             }
           : null,
-      ].filter(Boolean) as Molecules.FilterItem<Core.LayoutType>[],
+      ].filter(Boolean) as FilterListItem<LayoutType>[],
     [t, disabled, showVisual],
   );
-
   return (
-    <Molecules.FilterRadioGroup
+    <FilterRadioGroup
       title={t('title')}
       items={items}
       selectedValue={displaySelectedTab}

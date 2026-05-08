@@ -1,16 +1,15 @@
-import { clsx, type ClassValue } from 'clsx';
+import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { formatDistanceToNow } from 'date-fns';
 import type { SnapshotSerializer } from 'vitest';
+import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
+import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
+import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 import type {
-  ExtractInitialsProps,
   CopyToClipboardProps,
+  ExtractInitialsProps,
   FormatPublicKeyProps,
   GetDisplayTagsOptions,
 } from './utils.types';
-import type { PostInputVariant } from '@/organisms';
-import * as Config from '@/config';
-import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -37,7 +36,7 @@ export function stripPubkyPrefix(key: string): string {
 
 export function formatPublicKey({
   key,
-  length = Config.DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH,
+  length = DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH,
   includePrefix = false,
 }: FormatPublicKeyProps) {
   if (!key) return '';
@@ -227,19 +226,6 @@ export function clearCookies(exclude: string[] = []) {
       document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
     });
   }
-}
-
-export function timeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-
-  return formatDistanceToNow(date, { addSuffix: true });
 }
 
 /**
@@ -587,7 +573,7 @@ export function sanitizeTagInput(value: string): string {
  */
 export function isValidTagLabel(value: string): boolean {
   const charCount = getCharacterCount(value);
-  return charCount > 0 && charCount <= Config.TAG_MAX_LENGTH && sanitizeTagInput(value) === value;
+  return charCount > 0 && charCount <= TAG_MAX_LENGTH && sanitizeTagInput(value) === value;
 }
 
 /**
@@ -770,7 +756,7 @@ export function generateRandomUsername(): string {
  *
  * @example
  * // In test setup (e.g., vitest.setup.ts):
- * import { radixIdSerializer } from '@/libs/utils';
+ * import { radixIdSerializer } from '@/libs/utils/utils';
  * expect.addSnapshotSerializer(radixIdSerializer);
  */
 export const radixIdSerializer: SnapshotSerializer = {

@@ -1,11 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
-
+import { AuthController } from '@/controllers/auth/auth';
+import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import type { UseInviteCodeSignUpResult } from './useInviteCodeSignUp.types';
 
 const SIGN_UP_MAX_ATTEMPTS = 4;
@@ -26,13 +25,13 @@ const SIGN_UP_RETRY_MAX_DELAY_MS = 5000;
  * @example
  * const { validateAndSignUp } = useInviteCodeSignUp();
  * const onContinue = async () => {
- *   const inviteCode = Core.useOnboardingStore.getState().inviteCode;
+ *   const inviteCode = useOnboardingStore.getState().inviteCode;
  *   await validateAndSignUp(inviteCode);
  *   router.push(ONBOARDING_ROUTES.BACKUP);
  * };
  */
 export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const t = useTranslations('onboarding.pubky');
 
   const getRetryDelayMs = (attempt: number, retryAfterSeconds?: number): number => {
@@ -48,7 +47,7 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
   };
 
   async function validateAndSignUp(inviteCode: string) {
-    const secretKey = Core.useOnboardingStore.getState().selectSecretKey();
+    const secretKey = useOnboardingStore.getState().selectSecretKey();
 
     let lastError: unknown;
 
@@ -56,25 +55,25 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
       let description = t('signUpError');
 
       try {
-        await Core.AuthController.signUp({ secretKey, signupToken: inviteCode });
+        await AuthController.signUp({ secretKey, signupToken: inviteCode });
         return;
       } catch (error) {
         lastError = error;
 
-        const canRetry = Libs.isAppError(error) && Libs.isRetryable(error) && attempt < SIGN_UP_MAX_ATTEMPTS - 1;
+        const canRetry = isAppError(error) && isRetryable(error) && attempt < SIGN_UP_MAX_ATTEMPTS - 1;
         if (canRetry) {
-          const retryAfter = Libs.getRetryAfter(error);
+          const retryAfter = getRetryAfter(error);
           await sleep(getRetryDelayMs(attempt, retryAfter));
           continue;
         }
 
         // Keep secrets for retryable failures to avoid losing a paid signup when transport fails.
-        if (!(Libs.isAppError(error) && Libs.isRetryable(error))) {
-          Core.useOnboardingStore.getState().clearSecrets();
+        if (!(isAppError(error) && isRetryable(error))) {
+          useOnboardingStore.getState().clearSecrets();
         }
 
-        if (Libs.isAppError(error)) {
-          if (Libs.isAuthError(error)) {
+        if (isAppError(error)) {
+          if (isAuthError(error)) {
             description = t('invalidInvite');
           } else if (error.message) {
             description = error.message;

@@ -1,12 +1,13 @@
 'use client';
 
-import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import { postJson } from '@/libs';
-import { copyrightFormSchema, type CopyrightFormData } from './useCopyrightForm.types';
-import { copyrightFormDefaultValues, COPYRIGHT_ROLES } from './useCopyrightForm.constants';
+import { type FieldErrors, useForm } from 'react-hook-form';
+import { postJson } from '@/libs/api/client-request';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { toast } from '@/molecules/Toaster/use-toast';
+import { COPYRIGHT_ROLES, copyrightFormDefaultValues } from './useCopyrightForm.constants';
+import { type CopyrightFormData, copyrightFormSchema } from './useCopyrightForm.types';
 
 export function useCopyrightForm() {
   const tToast = useTranslations('toast');
@@ -27,9 +28,9 @@ export function useCopyrightForm() {
       });
 
       form.reset();
-      Molecules.toast({ title: tToast('success'), description: tCopyright('success') });
+      toast({ title: tToast('success'), description: tCopyright('success') });
     } catch (error) {
-      Molecules.showErrorToast({
+      showErrorToast({
         description: error instanceof Error ? error.message : tCopyright('error'),
       });
     }

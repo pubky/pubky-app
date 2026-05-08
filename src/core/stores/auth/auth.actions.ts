@@ -1,7 +1,7 @@
-import { AuthStore, AuthActions, authInitialState, AuthActionTypes, AuthInitParams } from './auth.types';
-import { ZustandSet } from '../stores.types';
-import * as Core from '@/core';
 import { Session } from '@synonymdev/pubky';
+import type { Pubky } from '@/models/models.types';
+import { ZustandSet } from '../stores.types';
+import { AuthActions, AuthActionTypes, authInitialState, AuthInitParams, AuthStore } from './auth.types';
 
 const safeSessionExport = (session: Session | null): string | null => {
   if (!session) return null;
@@ -43,7 +43,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
     );
   },
   // Authentication data management
-  setCurrentUserPubky: (pubky: Core.Pubky | null) => {
+  setCurrentUserPubky: (pubky: Pubky | null) => {
     set({ currentUserPubky: pubky }, false, AuthActionTypes.SET_PUBKY);
   },
 

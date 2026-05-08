@@ -1,24 +1,26 @@
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as Core from '@/core';
+import { EyeOff } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { ModerationController } from '@/controllers/moderation/moderation';
+import { cn } from '@/libs/utils/utils';
 
 interface PostContentBlurredProps {
   postId: string;
   className?: string;
 }
-
 export const PostContentBlurred = ({ postId, className }: PostContentBlurredProps) => {
   return (
-    <Atoms.Button
+    <Button
       overrideDefaults
       onClick={(e) => {
         e.stopPropagation();
-        Core.ModerationController.unBlur(postId);
+        ModerationController.unBlur(postId);
       }}
-      className={Libs.cn('group relative w-full cursor-pointer', className)}
+      className={cn('group relative w-full cursor-pointer', className)}
     >
       {/* Blurred background content to simulate hidden post */}
-      <Atoms.Typography
+      <Typography
         overrideDefaults
         as="p"
         className="p-4 text-base leading-6 font-medium text-secondary-foreground blur-2xl select-none"
@@ -27,19 +29,19 @@ export const PostContentBlurred = ({ postId, className }: PostContentBlurredProp
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore
         magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
         consequat.
-      </Atoms.Typography>
+      </Typography>
 
       {/* Overlay with icon and message */}
-      <Atoms.Container
+      <Container
         overrideDefaults
         className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground transition-colors group-hover:text-secondary-foreground"
       >
-        <Libs.EyeOff className="size-6" />
+        <EyeOff className="size-6" />
 
-        <Atoms.Typography overrideDefaults as="p" className="text-sm">
+        <Typography overrideDefaults as="p" className="text-sm">
           Post content moderated.
-        </Atoms.Typography>
-      </Atoms.Container>
-    </Atoms.Button>
+        </Typography>
+      </Container>
+    </Button>
   );
 };

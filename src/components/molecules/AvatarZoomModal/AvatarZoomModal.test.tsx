@@ -1,47 +1,55 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock/useBodyScrollLock';
 import { AvatarZoomModal } from './AvatarZoomModal';
 
 // Mock hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useBodyScrollLock/useBodyScrollLock', () => ({
   useBodyScrollLock: vi.fn(),
 }));
 
 // Mock Atoms components
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    onClick,
-    'data-testid': testId,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: () => void;
-    'data-testid'?: string;
-    [key: string]: unknown;
-  }) => {
-    return (
-      <div className={className} onClick={onClick} data-testid={testId} {...props}>
+vi.mock('@/atoms/Avatar/Avatar', () => {
+  return {
+    Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="avatar" className={className}>
         {children}
       </div>
-    );
-  },
-  Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="avatar" className={className}>
-      {children}
-    </div>
-  ),
-  AvatarImage: ({ src, alt }: { src: string; alt: string }) => <img data-testid="avatar-image" src={src} alt={alt} />,
-  AvatarFallback: ({ children }: { children: React.ReactNode }) => <div data-testid="avatar-fallback">{children}</div>,
-}));
+    ),
+    AvatarImage: ({ src, alt }: { src: string; alt: string }) => <img data-testid="avatar-image" src={src} alt={alt} />,
+    AvatarFallback: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="avatar-fallback">{children}</div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onClick,
+      'data-testid': testId,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: () => void;
+      'data-testid'?: string;
+      [key: string]: unknown;
+    }) => {
+      return (
+        <div className={className} onClick={onClick} data-testid={testId} {...props}>
+          {children}
+        </div>
+      );
+    },
+  };
+});
 
 // Mock Organisms components
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
-    ...actual,
     AvatarWithFallback: ({
       avatarUrl,
       name,
@@ -70,14 +78,6 @@ vi.mock('@/organisms', async (importOriginal) => {
         )}
       </div>
     ),
-  };
-});
-
-// Mock libs - use real extractInitials
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
   };
 });
 
@@ -159,10 +159,9 @@ describe('AvatarZoomModal', () => {
   });
 
   it('calls useBodyScrollLock with open prop', async () => {
-    const hooks = await import('@/hooks');
     render(<AvatarZoomModal {...mockProps} />);
 
-    expect(hooks.useBodyScrollLock).toHaveBeenCalledWith(true);
+    expect(useBodyScrollLock).toHaveBeenCalledWith(true);
   });
 
   describe('Accessibility and Focus Management', () => {

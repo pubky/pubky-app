@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'lodash-es';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import type { UseTagSuggestionsParams, UseTagSuggestionsResult } from './useTagSuggestions.types';
+import { SearchController } from '@/controllers/search/search';
+import { Logger } from '@/libs/logger/logger';
 import {
   TAG_SUGGESTIONS_DEBOUNCE_MS,
   TAG_SUGGESTIONS_DEFAULT_LIMIT,
   TAG_SUGGESTIONS_MIN_QUERY_LENGTH,
 } from './useTagSuggestions.constants';
+import type { UseTagSuggestionsParams, UseTagSuggestionsResult } from './useTagSuggestions.types';
 
 /**
  * Hook for fetching tag suggestions from the API
@@ -47,7 +47,7 @@ export function useTagSuggestions({
       setIsLoading(true);
 
       try {
-        const results = await Core.SearchController.getTagsByPrefix({
+        const results = await SearchController.getTagsByPrefix({
           prefix: searchQuery,
           limit: searchLimit,
         });
@@ -59,7 +59,7 @@ export function useTagSuggestions({
 
         setRawSuggestions(results);
       } catch (error) {
-        Libs.Logger.error('[useTagSuggestions] Failed to fetch tag suggestions:', error);
+        Logger.error('[useTagSuggestions] Failed to fetch tag suggestions:', error);
         if (requestId === requestIdRef.current) {
           setRawSuggestions([]);
         }

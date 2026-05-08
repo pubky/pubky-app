@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LanguageSelector } from './LanguageSelector';
 
 // Mock Next.js router
@@ -10,31 +10,23 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock @/core
+// Mock settings store
 const mockSetLanguage = vi.fn();
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useSettingsStore: Object.assign(() => ({}), {
-      getState: () => ({
-        setLanguage: mockSetLanguage,
-      }),
+vi.mock('@/stores/settings/settings.store', () => ({
+  useSettingsStore: Object.assign(() => ({}), {
+    getState: () => ({
+      setLanguage: mockSetLanguage,
     }),
-  };
-});
+  }),
+}));
 
-// Mock @/hooks
+// Mock hooks
 const mockHookSetLanguage = vi.fn();
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useSettingsActions: () => ({
-      setLanguage: mockHookSetLanguage,
-    }),
-  };
-});
+vi.mock('@/hooks/useSettingsActions/useSettingsActions', () => ({
+  useSettingsActions: () => ({
+    setLanguage: mockHookSetLanguage,
+  }),
+}));
 
 // Store original location
 const originalLocation = window.location;

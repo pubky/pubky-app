@@ -1,14 +1,15 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
+import type { FileVariant } from '@/services/nexus/file/file.types';
 
 export type TUploadFileParams = {
   file: File;
-  pubky: Core.Pubky;
+  pubky: Pubky;
 };
 
 export type TToFileParams = {
   file: File;
   url: string;
-  pubky: Core.Pubky;
+  pubky: Pubky;
 };
 
 export type TGetMetadataParams = {
@@ -22,5 +23,5 @@ export type TFetchFilesParams = {
 export type TGetFileUrlParams = {
   // Composite ID: author:fileId
   fileId: string;
-  variant: Core.FileVariant;
+  variant: FileVariant;
 };

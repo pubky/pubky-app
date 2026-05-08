@@ -1,30 +1,30 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { isAppError } from '@/libs/error/error.utils';
 import { useProfileMenuActions } from './useProfileMenuActions';
-import * as Libs from '@/libs';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 
 // Hoist mocks
 const {
   mockIsAppError,
+  mockToast,
+  mockUseTranslations,
   mockUseUserProfile,
   mockUseIsFollowing,
   mockUseFollowUser,
   mockUseMuteUser,
   mockUseMutedUsers,
   mockUseCopyToClipboard,
-  mockToast,
-  mockUseTranslations,
 } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
+  mockToast: vi.fn(),
+  mockUseTranslations: vi.fn(),
   mockUseUserProfile: vi.fn(),
   mockUseIsFollowing: vi.fn(),
   mockUseFollowUser: vi.fn(),
   mockUseMuteUser: vi.fn(),
   mockUseMutedUsers: vi.fn(),
   mockUseCopyToClipboard: vi.fn(),
-  mockToast: vi.fn(),
-  mockUseTranslations: vi.fn(),
 }));
 
 // Mock next-intl
@@ -33,31 +33,41 @@ vi.mock('next-intl', () => ({
 }));
 
 // Mock Hooks
-vi.mock('@/hooks', () => ({
-  useUserProfile: (userId: string) => mockUseUserProfile(userId),
-  useIsFollowing: (userId: string) => mockUseIsFollowing(userId),
-  useFollowUser: () => mockUseFollowUser(),
-  useMuteUser: () => mockUseMuteUser(),
-  useMutedUsers: () => mockUseMutedUsers(),
-  useCopyToClipboard: (options: unknown) => mockUseCopyToClipboard(options),
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
+  useUserProfile: mockUseUserProfile,
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
+  useIsFollowing: mockUseIsFollowing,
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
+  useFollowUser: mockUseFollowUser,
+}));
+
+vi.mock('@/hooks/useMuteUser/useMuteUser', () => ({
+  useMuteUser: mockUseMuteUser,
+}));
+
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: mockUseMutedUsers,
+}));
+
+vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
+  useCopyToClipboard: mockUseCopyToClipboard,
 }));
 
 // Mock Molecules
-vi.mock('@/molecules', () => ({
-  toast: (props: unknown) => mockToast(props),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    toast: (props: unknown) => mockToast(props),
+  };
+});
 
-// Mock Libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/error/error.utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/error/error.utils')>('@/libs/error/error.utils');
   return {
     ...actual,
-    UserRoundPlus: vi.fn(() => <span>UserRoundPlus</span>),
-    UserRoundMinus: vi.fn(() => <span>UserRoundMinus</span>),
-    Key: vi.fn(() => <span>Key</span>),
-    Link: vi.fn(() => <span>Link</span>),
-    Megaphone: vi.fn(() => <span>Megaphone</span>),
-    MegaphoneOff: vi.fn(() => <span>MegaphoneOff</span>),
     isAppError: mockIsAppError,
   };
 });
@@ -212,7 +222,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when follow fails', async () => {
       const error = new Error('Follow failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.toggleFollow.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
@@ -301,7 +311,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when mute fails', async () => {
       const error = new Error('Mute failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.toggleMute.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
@@ -364,7 +374,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when copy pubky fails', async () => {
       const error = new Error('Copy failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.copyToClipboard.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
@@ -385,7 +395,7 @@ describe('useProfileMenuActions', () => {
 
     it('shows error toast when copy link fails', async () => {
       const error = new Error('Copy failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.copyToClipboard.mockRejectedValue(error);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));

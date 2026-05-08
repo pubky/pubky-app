@@ -2,8 +2,7 @@
 
 import * as React from 'react';
 import { Switch as SwitchPrimitives } from 'radix-ui';
-
-import { cn } from '@/libs';
+import { cn } from '@/libs/utils/utils';
 import type { SwitchProps } from './Switch.types';
 
 const Switch = React.forwardRef<React.ComponentRef<typeof SwitchPrimitives.Root>, SwitchProps>(

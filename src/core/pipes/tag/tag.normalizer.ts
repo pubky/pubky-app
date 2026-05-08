@@ -1,20 +1,26 @@
-import { TagResult, postUriBuilder, userUriBuilder } from 'pubky-app-specs';
-import * as Core from '@/core';
-import { Err, ValidationErrorCode, ErrorService } from '@/libs';
+import { postUriBuilder, TagResult, userUriBuilder } from 'pubky-app-specs';
+import { TagKind } from '@/application/tag/tag.types';
+import type { TTagEventParams, TTagFromResponse } from '@/controllers/tag/tag.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import type { Pubky } from '@/models/models.types';
+import { parseCompositeId } from '@/models/models.utils';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 
 export class TagNormalizer {
   private constructor() {}
 
-  static from({ taggedKind, taggedId, label, taggerId }: Core.TTagEventParams): Core.TTagFromResponse {
+  static from({ taggedKind, taggedId, label, taggerId }: TTagEventParams): TTagFromResponse {
     try {
       let uri: string;
-      if (taggedKind === Core.TagKind.POST) {
-        const { pubky, id: postId } = Core.parseCompositeId(taggedId);
+      if (taggedKind === TagKind.POST) {
+        const { pubky, id: postId } = parseCompositeId(taggedId);
         uri = postUriBuilder(pubky, postId);
       } else {
         uri = userUriBuilder(taggedId);
       }
-      const { tag, meta } = Core.TagNormalizer.to(uri, label.trim(), taggerId);
+      const { tag, meta } = TagNormalizer.to(uri, label.trim(), taggerId);
 
       return {
         taggerId,
@@ -33,9 +39,9 @@ export class TagNormalizer {
     }
   }
 
-  static to(uri: string, label: string, pubky: Core.Pubky): TagResult {
+  static to(uri: string, label: string, pubky: Pubky): TagResult {
     try {
-      const builder = Core.PubkySpecsSingleton.get(pubky);
+      const builder = PubkySpecsSingleton.get(pubky);
       return builder.createTag(uri, label);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {

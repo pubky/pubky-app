@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
+import { BookmarkController } from '@/controllers/bookmark/bookmark';
+import { Logger } from '@/libs/logger/logger';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 export interface UseBookmarkResult {
   isBookmarked: boolean;
@@ -33,10 +34,10 @@ export interface UseBookmarkResult {
  * ```
  */
 export function useBookmark(postId: string): UseBookmarkResult {
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tToast = useTranslations('toast');
   const tBookmark = useTranslations('toast.bookmark');
-  const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,13 +52,13 @@ export function useBookmark(postId: string): UseBookmarkResult {
     }
 
     setIsLoading(true);
-    Core.BookmarkController.exists(postId)
+    BookmarkController.exists(postId)
       .then((exists) => {
         setIsBookmarked(exists);
         setIsLoading(false);
       })
       .catch((error) => {
-        Libs.Logger.error('[useBookmark] Failed to check bookmark status', { error, postId });
+        Logger.error('[useBookmark] Failed to check bookmark status', { error, postId });
         setIsBookmarked(false);
         setIsLoading(false);
       });
@@ -77,14 +78,14 @@ export function useBookmark(postId: string): UseBookmarkResult {
     setIsToggling(true);
     try {
       if (isBookmarked) {
-        await Core.BookmarkController.commitDelete({ postId, userId: currentUserPubky });
+        await BookmarkController.commitDelete({ postId, userId: currentUserPubky });
         setIsBookmarked(false);
         toast({
           title: tBookmark('removed'),
           description: tBookmark('removedDesc'),
         });
       } else {
-        await Core.BookmarkController.commitCreate({ postId, userId: currentUserPubky });
+        await BookmarkController.commitCreate({ postId, userId: currentUserPubky });
         setIsBookmarked(true);
         toast({
           title: tBookmark('added'),
@@ -92,7 +93,7 @@ export function useBookmark(postId: string): UseBookmarkResult {
         });
       }
     } catch (error) {
-      Libs.Logger.error('[useBookmark] Failed to toggle bookmark', { error, postId, currentUserPubky });
+      Logger.error('[useBookmark] Failed to toggle bookmark', { error, postId, currentUserPubky });
       toast({
         title: tToast('error'),
         description: isBookmarked ? tBookmark('removeFailed') : tBookmark('addFailed'),

@@ -1,94 +1,109 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
+import type { Pubky } from '@/models/models.types';
 import { FollowerItem } from './FollowerItem';
-import type { UserConnectionData } from '@/hooks/useProfileConnections';
-import * as Core from '@/core';
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    as: Tag = 'p',
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    className?: string;
-  }) => (
-    <Tag data-testid="typography" className={className}>
-      {children}
-    </Tag>
-  ),
-  Button: ({
-    children,
-    className,
-    onClick,
-    'aria-label': ariaLabel,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: () => void;
-    'aria-label'?: string;
-  }) => (
-    <button data-testid="button" className={className} onClick={onClick} aria-label={ariaLabel}>
-      {children}
-    </button>
-  ),
-  Link: ({ children, href, className }: { children: React.ReactNode; href: string; className?: string }) => (
-    <a data-testid="link" href={href} className={className}>
-      {children}
-    </a>
-  ),
-  Tag: ({ name }: { name: string }) => <span data-testid="tag">{name}</span>,
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      className,
+      onClick,
+      'aria-label': ariaLabel,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: () => void;
+      'aria-label'?: string;
+    }) => (
+      <button data-testid="button" className={className} onClick={onClick} aria-label={ariaLabel}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({ children, href, className }: { children: React.ReactNode; href: string; className?: string }) => (
+      <a data-testid="link" href={href} className={className}>
+        {children}
+      </a>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Tag/Tag', () => {
+  return {
+    Tag: ({ name }: { name: string }) => <span data-testid="tag">{name}</span>,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: Tag = 'p',
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      className?: string;
+    }) => (
+      <Tag data-testid="typography" className={className}>
+        {children}
+      </Tag>
+    ),
+  };
+});
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({
-    avatarUrl,
-    name,
-    size,
-    className,
-  }: {
-    avatarUrl?: string;
-    name: string;
-    size?: string;
-    className?: string;
-  }) => (
-    <div
-      data-testid="avatar-with-fallback"
-      data-name={name}
-      data-avatar={avatarUrl}
-      data-size={size}
-      className={className}
-    >
-      {avatarUrl ? <img src={avatarUrl} alt={name} /> : <span>{name[0]}</span>}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({
+      avatarUrl,
+      name,
+      size,
+      className,
+    }: {
+      avatarUrl?: string;
+      name: string;
+      size?: string;
+      className?: string;
+    }) => (
+      <div
+        data-testid="avatar-with-fallback"
+        data-name={name}
+        data-avatar={avatarUrl}
+        data-size={size}
+        className={className}
+      >
+        {avatarUrl ? <img src={avatarUrl} alt={name} /> : <span>{name[0]}</span>}
+      </div>
+    ),
+  };
+});
 
-// Mock core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/models/user/users.helpers', () => ({
   generateTestUserId: vi.fn((index: number) => `test-user-${index}`),
-}));
-
-// Mock lucide-react
-vi.mock('lucide-react', () => ({
-  Check: ({ className }: { className?: string }) => <svg data-testid="check-icon" className={className} />,
-  UserMinus: ({ className }: { className?: string }) => <svg data-testid="user-minus-icon" className={className} />,
-  UserRoundPlus: ({ className }: { className?: string }) => (
-    <svg data-testid="user-round-plus-icon" className={className} />
-  ),
 }));
 
 // Shared mock follower for all tests
 const mockFollower: UserConnectionData = {
-  id: 'test-user-1' as Core.Pubky,
+  id: 'test-user-1' as Pubky,
   name: 'John Doe',
   bio: 'Test bio',
   image: null,
@@ -156,9 +171,7 @@ describe('FollowerItem', () => {
     const buttons = screen.getAllByTestId('button');
     const followButton = buttons.find((btn) => btn.getAttribute('aria-label') === 'Follow');
     expect(followButton).toBeInTheDocument();
-    // Button appears twice (desktop and mobile), so we check for at least one
-    const plusIcons = screen.getAllByTestId('user-round-plus-icon');
-    expect(plusIcons.length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.lucide-user-round-plus').length).toBeGreaterThan(0);
   });
 
   it('renders unfollow button when following', () => {
@@ -166,9 +179,7 @@ describe('FollowerItem', () => {
     const buttons = screen.getAllByTestId('button');
     const unfollowButton = buttons.find((btn) => btn.getAttribute('aria-label') === 'Unfollow');
     expect(unfollowButton).toBeInTheDocument();
-    // Button appears twice (desktop and mobile), so we check for at least one
-    const checkIcons = screen.getAllByTestId('check-icon');
-    expect(checkIcons.length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.lucide-check').length).toBeGreaterThan(0);
   });
 
   it('calls onFollow when button is clicked', () => {

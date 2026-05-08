@@ -1,8 +1,8 @@
 import { createRef } from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { POST_ATTACHMENT_ACCEPT_STRING } from '@/config/posts';
 import { PostInputAttachments } from './PostInputAttachments';
-import { POST_ATTACHMENT_ACCEPT_STRING } from '@/config';
 
 // Mock URL.createObjectURL and URL.revokeObjectURL
 const mockCreateObjectURL = vi.fn();
@@ -19,169 +19,184 @@ afterEach(() => {
 });
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Input: vi.fn(
-    ({
-      ref,
-      type,
-      accept,
-      multiple,
-      onChange,
+vi.mock('@/atoms/Audio/Audio', () => {
+  return {
+    Audio: ({
+      src,
       className,
       'data-testid': dataTestId,
     }: {
-      ref?: React.Ref<HTMLInputElement>;
-      type?: string;
-      accept?: string;
-      multiple?: boolean;
-      onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+      src: string;
+      className?: string;
+      'data-testid'?: string;
+    }) => <audio data-testid={dataTestId || 'audio'} src={src} className={className} controls />,
+  };
+});
+
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      onClick,
+      disabled,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      onClick?: () => void;
+      disabled?: boolean;
       className?: string;
       'data-testid'?: string;
     }) => (
-      <input
-        ref={ref}
-        data-testid={dataTestId || 'file-input'}
-        type={type}
-        accept={accept}
-        multiple={multiple}
-        onChange={onChange}
+      <button
+        data-testid={dataTestId || 'button'}
+        data-variant={variant}
+        data-size={size}
+        onClick={onClick}
+        disabled={disabled}
         className={className}
-      />
+      >
+        {children}
+      </button>
     ),
-  ),
-  Container: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'container'} className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    onClick,
-    disabled,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <button
-      data-testid={dataTestId || 'button'}
-      data-variant={variant}
-      data-size={size}
-      onClick={onClick}
-      disabled={disabled}
-      className={className}
-    >
-      {children}
-    </button>
-  ),
-  Image: ({
-    src,
-    alt,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    alt?: string;
-    className?: string;
-    'data-testid'?: string;
-  }) => <img data-testid={dataTestId || 'image'} src={src} alt={alt} className={className} />,
-  Video: ({
-    src,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    className?: string;
-    'data-testid'?: string;
-  }) => <video data-testid={dataTestId || 'video'} src={src} className={className} />,
-  Audio: ({
-    src,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    className?: string;
-    'data-testid'?: string;
-  }) => <audio data-testid={dataTestId || 'audio'} src={src} className={className} controls />,
-  Typography: ({
-    children,
-    size,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    size?: string;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <span data-testid={dataTestId || 'typography'} data-size={size} className={className}>
-      {children}
-    </span>
-  ),
-  Card: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'card'} className={className}>
-      {children}
-    </div>
-  ),
-  CardContent: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'card-content'} className={className}>
-      {children}
-    </div>
-  ),
-}));
+  };
+});
 
-// Mock @/libs/icons
-vi.mock('@/libs/icons', () => ({
-  Trash2: ({ className, 'data-testid': dataTestId }: { className?: string; 'data-testid'?: string }) => (
-    <svg data-testid={dataTestId || 'trash-icon'} className={className} />
-  ),
-  FileText: ({ className, 'data-testid': dataTestId }: { className?: string; 'data-testid'?: string }) => (
-    <svg data-testid={dataTestId || 'file-text-icon'} className={className} />
-  ),
-  ImagePlus: ({ className, 'data-testid': dataTestId }: { className?: string; 'data-testid'?: string }) => (
-    <svg data-testid={dataTestId || 'image-plus-icon'} className={className} />
-  ),
-  Plus: ({ className, 'data-testid': dataTestId }: { className?: string; 'data-testid'?: string }) => (
-    <svg data-testid={dataTestId || 'plus-icon'} className={className} />
-  ),
-}));
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'card'} className={className}>
+        {children}
+      </div>
+    ),
+    CardContent: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'card-content'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-// Mock @/libs/utils
-vi.mock('@/libs/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs/utils')>();
-  return { ...actual };
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'container'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({
+      src,
+      alt,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      src: string;
+      alt?: string;
+      className?: string;
+      'data-testid'?: string;
+    }) => <img data-testid={dataTestId || 'image'} src={src} alt={alt} className={className} />,
+  };
+});
+
+vi.mock('@/atoms/Input/Input', () => {
+  return {
+    Input: vi.fn(
+      ({
+        ref,
+        type,
+        accept,
+        multiple,
+        onChange,
+        className,
+        'data-testid': dataTestId,
+      }: {
+        ref?: React.Ref<HTMLInputElement>;
+        type?: string;
+        accept?: string;
+        multiple?: boolean;
+        onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+        className?: string;
+        'data-testid'?: string;
+      }) => (
+        <input
+          ref={ref}
+          data-testid={dataTestId || 'file-input'}
+          type={type}
+          accept={accept}
+          multiple={multiple}
+          onChange={onChange}
+          className={className}
+        />
+      ),
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      size,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      size?: string;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <span data-testid={dataTestId || 'typography'} data-size={size} className={className}>
+        {children}
+      </span>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Video/Video', () => {
+  return {
+    Video: ({
+      src,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      src: string;
+      className?: string;
+      'data-testid'?: string;
+    }) => <video data-testid={dataTestId || 'video'} src={src} className={className} />,
+  };
 });
 
 const createMockFile = (name: string, type: string): File => {
@@ -277,9 +292,9 @@ describe('PostInputAttachments', () => {
     });
 
     it('renders ImagePlus icon in placeholder', () => {
-      render(<PostInputAttachments {...defaultProps} isArticle={true} />);
+      const { container } = render(<PostInputAttachments {...defaultProps} isArticle={true} />);
 
-      expect(screen.getByTestId('image-plus-icon')).toBeInTheDocument();
+      expect(container.querySelector('.lucide-image-plus')).toBeInTheDocument();
     });
 
     it('renders Add image button in placeholder', () => {
@@ -402,8 +417,7 @@ describe('PostInputAttachments', () => {
       const attachments = [createMockPdfFile('document.pdf')];
       render(<PostInputAttachments {...defaultProps} attachments={attachments} />);
 
-      const fileIcon = screen.getByTestId('file-text-icon');
-      expect(fileIcon).toBeInTheDocument();
+      expect(document.querySelector('.lucide-file-text')).toBeInTheDocument();
 
       expect(screen.getByText('document.pdf')).toBeInTheDocument();
     });
@@ -412,8 +426,7 @@ describe('PostInputAttachments', () => {
       const attachments = [createMockPdfFile('doc1.pdf'), createMockPdfFile('doc2.pdf')];
       render(<PostInputAttachments {...defaultProps} attachments={attachments} />);
 
-      const fileIcons = screen.getAllByTestId('file-text-icon');
-      expect(fileIcons).toHaveLength(2);
+      expect(document.querySelectorAll('.lucide-file-text')).toHaveLength(2);
     });
   });
 
@@ -425,7 +438,7 @@ describe('PostInputAttachments', () => {
       expect(screen.getByTestId('image')).toBeInTheDocument();
       expect(screen.getByTestId('video')).toBeInTheDocument();
       expect(screen.getByTestId('audio')).toBeInTheDocument();
-      expect(screen.getByTestId('file-text-icon')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-file-text')).toBeInTheDocument();
     });
   });
 
@@ -442,8 +455,8 @@ describe('PostInputAttachments', () => {
       const attachments = [createMockImageFile()];
       render(<PostInputAttachments {...defaultProps} attachments={attachments} />);
 
-      const trashIcon = screen.getByTestId('trash-icon');
-      expect(trashIcon).toBeInTheDocument();
+      const deleteButton = screen.getByTestId('button');
+      expect(deleteButton.querySelector('.lucide-trash-2')).toBeInTheDocument();
     });
 
     it('calls setAttachments when delete button is clicked', () => {
@@ -690,7 +703,7 @@ describe('PostInputAttachments', () => {
 
       expect(screen.queryByTestId('video')).not.toBeInTheDocument();
       expect(screen.queryByTestId('audio')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('file-text-icon')).not.toBeInTheDocument();
+      expect(document.querySelector('.lucide-file-text')).not.toBeInTheDocument();
     });
   });
 });

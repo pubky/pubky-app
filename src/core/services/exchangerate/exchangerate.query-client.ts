@@ -1,4 +1,5 @@
-import { createQueryClient, ServerErrorCode, ClientErrorCode } from '@/libs';
+import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { createQueryClient } from '@/libs/query-client/query-client.factory';
 
 /**
  * Exchange Rate API Query Client

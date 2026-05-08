@@ -15,19 +15,19 @@ Single source of truth for all project standards, conventions, and architectural
 
 ## Documentation Files
 
-| File                       | Description                                                       |
-| -------------------------- | ----------------------------------------------------------------- |
-| `architecture.md`          | Core layered architecture, dependency rules, anti-patterns        |
-| `local-first.md`           | Local-first write patterns, controller naming, useLiveQuery rules |
-| `data-patterns.md`         | Composite IDs, streams, TTL, pipes normalization                  |
-| `error-handling.md`        | Error conventions using AppError and Err.\* factories             |
-| `components.md`            | Component development patterns, Shadcn, atomic design, Figma      |
-| `component-testing.md`     | Unit test and snapshot test rules                                 |
-| `skeleton-architecture.md` | Skeleton loader placement, naming, and testing patterns           |
-| `z-index.md`               | Z-index layering conventions                                      |
-| `commit-message.md`        | Conventional commit format                                        |
-| `environment.md`           | Environment variable configuration                                |
-| `adr-guidelines.md`        | When and how to write ADRs                                        |
+| File                       | Description                                                                                           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `architecture.md`          | Core layered architecture, dependency rules, anti-patterns                                            |
+| `local-first.md`           | Local-first write patterns, controller naming, useLiveQuery rules                                     |
+| `data-patterns.md`         | Composite IDs, streams, TTL, pipes normalization                                                      |
+| `error-handling.md`        | Error conventions using AppError and Err.\* factories                                                 |
+| `components.md`            | Component patterns, Shadcn, atomic design, Figma, **icon imports** (`lucide-react`, `@/icons`, utils) |
+| `component-testing.md`     | Unit test and snapshot test rules                                                                     |
+| `skeleton-architecture.md` | Skeleton loader placement, naming, and testing patterns                                               |
+| `z-index.md`               | Z-index layering conventions                                                                          |
+| `commit-message.md`        | Conventional commit format                                                                            |
+| `environment.md`           | Environment variable configuration                                                                    |
+| `adr-guidelines.md`        | When and how to write ADRs                                                                            |
 
 ## Architecture Decision Records
 
@@ -46,7 +46,7 @@ This repository keeps documentation tool-agnostic, but some editor workflows are
 When making significant changes to:
 
 - **Core architecture**: Update `architecture.md` + create ADR
-- **Component patterns**: Update `components.md`
+- **Component patterns** (layout, Shadcn, **icon import conventions**): Update `components.md`
 - **Skeleton loaders**: Update `skeleton-architecture.md`
 - **Error handling**: Update `error-handling.md`
 - **Testing patterns**: Update `component-testing.md`

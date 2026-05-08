@@ -1,63 +1,82 @@
 'use client';
 
-import Image from 'next/image';
-import { QRCodeSVG } from 'qrcode.react';
 import { useEffect } from 'react';
+import Image from 'next/image';
+import { CheckCircle, Circle, Key, Loader2, QrCode } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
+import { QRCodeSVG } from 'qrcode.react';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
+import { Link } from '@/atoms/Link/Link';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+import { Typography } from '@/atoms/Typography/Typography';
+import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
+import { ContentCard } from '@/molecules/Content/Content';
+import { DialogAuthExpired } from '@/molecules/DialogAuthExpired/DialogAuthExpired';
+import { Logo } from '@/molecules/Logo/Logo';
+import { PageTitle } from '@/molecules/Page/Page';
+import { toast } from '@/molecules/Toaster/use-toast';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { useSignInStore } from '@/stores/signIn/signIn.store';
+import type { SignInState } from '@/stores/signIn/signIn.types';
 
 // Step configuration for the progress display (labels are translation keys)
 const SIGN_IN_STEPS = [
-  { key: 'profileChecked', labelKey: 'verifyingAccount' },
-  { key: 'bootstrapFetched', labelKey: 'loadingData' },
-  { key: 'dataPersisted', labelKey: 'buildingFeed' },
-  { key: 'homeserverSynced', labelKey: 'syncingSettings' },
+  {
+    key: 'profileChecked',
+    labelKey: 'verifyingAccount',
+  },
+  {
+    key: 'bootstrapFetched',
+    labelKey: 'loadingData',
+  },
+  {
+    key: 'dataPersisted',
+    labelKey: 'buildingFeed',
+  },
+  {
+    key: 'homeserverSynced',
+    labelKey: 'syncingSettings',
+  },
 ] as const;
-
 type StepKey = (typeof SIGN_IN_STEPS)[number]['key'];
 type StepStatus = 'completed' | 'running' | 'pending';
-
-const getStepStatus = (stepKey: StepKey, state: Core.SignInState): StepStatus => {
+const getStepStatus = (stepKey: StepKey, state: SignInState): StepStatus => {
   if (state[stepKey]) return 'completed';
 
   // Find the first false step (currently running)
   const firstPendingKey = SIGN_IN_STEPS.find((step) => !state[step.key])?.key;
   if (stepKey === firstPendingKey) return 'running';
-
   return 'pending';
 };
-
 const StepIcon = ({ status }: { status: StepStatus }) => {
   switch (status) {
     case 'completed':
-      return <Libs.CheckCircle className="h-6 w-6 text-brand" />;
+      return <CheckCircle className="h-6 w-6 text-brand" />;
     case 'running':
-      return <Libs.Loader2 className="h-6 w-6 animate-spin text-brand" />;
+      return <Loader2 className="h-6 w-6 animate-spin text-brand" />;
     case 'pending':
-      return <Libs.Circle className="h-6 w-6 text-muted-foreground" />;
+      return <Circle className="h-6 w-6 text-muted-foreground" />;
   }
 };
-
 const SignInProgress = () => {
-  const state = Core.useSignInStore();
+  const state = useSignInStore();
   const t = useTranslations('onboarding.signIn');
-
   return (
-    <Atoms.Container className="items-start justify-center">
+    <Container className="items-start justify-center">
       <div className="flex w-full max-w-sm flex-col gap-4">
         {SIGN_IN_STEPS.map((step) => {
           const status = getStepStatus(step.key, state);
           return (
             <div key={step.key} className="flex items-center gap-3">
               <StepIcon status={status} />
-              <Atoms.Typography
+              <Typography
                 as="span"
-                className={Libs.cn(
+                className={cn(
                   'text-base leading-normal font-light',
                   status === 'completed' && 'font-bold text-foreground',
                   status === 'running' && 'text-foreground',
@@ -65,55 +84,50 @@ const SignInProgress = () => {
                 )}
               >
                 {t(step.labelKey)}
-              </Atoms.Typography>
+              </Typography>
             </div>
           );
         })}
       </div>
-    </Atoms.Container>
+    </Container>
   );
 };
-
 export const SignInContent = () => {
   const t = useTranslations('onboarding.signIn');
-  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth();
-  const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
-
+  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth();
+  const authUrlResolved = useSignInStore((state) => state.authUrlResolved);
   useEffect(() => {
     // Clear onboarding storage when sign-in flow begins to prevent backup reminders from showing for existing users
-    Core.useOnboardingStore.getState().reset();
+    useOnboardingStore.getState().reset();
   }, []);
-
   const handleQRClick = async () => {
     if (!url) return;
-
     try {
       await copyAuthUrl();
-      Molecules.toast({
+      toast({
         title: t('linkCopied'),
         description: t('linkCopiedDescription'),
       });
     } catch (error) {
-      Libs.Logger.error('Failed to copy auth URL to clipboard:', error);
+      Logger.error('Failed to copy auth URL to clipboard:', error);
     }
   };
-
   const isMobileLaunching = isLoading || isOpeningRing;
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
-      <Libs.Loader2 className="mr-2 size-4 animate-spin" />
-      <Atoms.Typography as="span" overrideDefaults aria-live="polite">
+      <Loader2 className="mr-2 size-4 animate-spin" />
+      <Typography as="span" overrideDefaults aria-live="polite">
         {isOpeningRing ? t('openingRing') : t('generatingShort')}
-      </Atoms.Typography>
+      </Typography>
     </>
   ) : isExpired ? (
     <>
-      <Libs.QrCode className="mr-2 size-4" />
+      <QrCode className="mr-2 size-4" />
       {t('expired')}
     </>
   ) : (
     <>
-      <Libs.Key className="mr-2 size-4" />
+      <Key className="mr-2 size-4" />
       {t('authorize')}
     </>
   );
@@ -121,22 +135,21 @@ export const SignInContent = () => {
   // Show progress steps once auth URL is resolved
   if (authUrlResolved) {
     return (
-      <Atoms.Container size="container" className="flex flex-col">
+      <Container size="container" className="flex flex-col">
         <SignInProgressHeader />
-        <Molecules.ContentCard layout="column">
+        <ContentCard layout="column">
           <SignInProgress />
-        </Molecules.ContentCard>
-      </Atoms.Container>
+        </ContentCard>
+      </Container>
     );
   }
-
   return (
     <>
       {/** Desktop view */}
-      <Atoms.Container size="container" className="hidden md:flex">
+      <Container size="container" className="hidden md:flex">
         <SignInHeader />
-        <Molecules.ContentCard layout="column">
-          <Atoms.Container className="items-center justify-center gap-3">
+        <ContentCard layout="column">
+          <Container className="items-center justify-center gap-3">
             <button
               type="button"
               className="relative flex h-[220px] w-[220px] cursor-pointer items-center justify-center rounded-lg bg-foreground p-4 transition-opacity hover:opacity-90 active:opacity-80"
@@ -145,19 +158,19 @@ export const SignInContent = () => {
               aria-label="Copy authentication link"
             >
               {isLoading || (!url && !isExpired) ? (
-                <Atoms.Container className="items-center gap-2">
-                  <Libs.Loader2 className="size-8 animate-spin text-background" />
-                  <Atoms.Typography as="small" size="sm" className="text-background">
+                <Container className="items-center gap-2">
+                  <Loader2 className="size-8 animate-spin text-background" />
+                  <Typography as="small" size="sm" className="text-background">
                     {t('generating')}
-                  </Atoms.Typography>
-                </Atoms.Container>
+                  </Typography>
+                </Container>
               ) : isExpired ? (
-                <Atoms.Container className="items-center gap-2">
-                  <Libs.QrCode className="size-8 text-muted-foreground" />
-                  <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
+                <Container className="items-center gap-2">
+                  <QrCode className="size-8 text-muted-foreground" />
+                  <Typography as="small" size="sm" className="text-muted-foreground">
                     {t('expired')}
-                  </Atoms.Typography>
-                </Atoms.Container>
+                  </Typography>
+                </Container>
               ) : (
                 <>
                   <QRCodeSVG value={url} size={220} />
@@ -171,25 +184,25 @@ export const SignInContent = () => {
                 </>
               )}
             </button>
-            <Atoms.Container className="w-56 flex-row items-center justify-between gap-5">
-              <Atoms.Link href="https://apps.apple.com/us/app/pubky-ring/id6739356756">
+            <Container className="w-56 flex-row items-center justify-between gap-5">
+              <Link href="https://apps.apple.com/us/app/pubky-ring/id6739356756">
                 <Image src="/images/badge-apple.webp" alt="Apple Store Button Pubky Ring" width={94.5} height={28} />
-              </Atoms.Link>
-              <Atoms.Link href="https://play.google.com/store/apps/details?id=to.pubky.ring">
+              </Link>
+              <Link href="https://play.google.com/store/apps/details?id=to.pubky.ring">
                 <Image src="/images/badge-android.webp" alt="Google Store Button Pubky Ring" width={94.5} height={28} />
-              </Atoms.Link>
-            </Atoms.Container>
-          </Atoms.Container>
-        </Molecules.ContentCard>
-      </Atoms.Container>
+              </Link>
+            </Container>
+          </Container>
+        </ContentCard>
+      </Container>
 
       {/** Mobile view */}
-      <Atoms.Container size="container" className="md:hidden">
+      <Container size="container" className="md:hidden">
         <SignInHeader />
-        <Molecules.ContentCard layout="column">
-          <Atoms.Container className="flex-col items-center justify-center gap-6 lg:flex-row">
+        <ContentCard layout="column">
+          <Container className="flex-col items-center justify-center gap-6 lg:flex-row">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
-            <Atoms.Button
+            <Button
               className="w-full"
               size="lg"
               onClick={onAuthorizeClick}
@@ -198,57 +211,51 @@ export const SignInContent = () => {
               data-testid="button"
             >
               {mobileAuthorizeContent}
-            </Atoms.Button>
-          </Atoms.Container>
-        </Molecules.ContentCard>
-      </Atoms.Container>
+            </Button>
+          </Container>
+        </ContentCard>
+      </Container>
 
-      <Molecules.DialogAuthExpired open={isExpired} onRefresh={fetchUrl} isLoading={isLoading} />
+      <DialogAuthExpired open={isExpired} onRefresh={fetchUrl} isLoading={isLoading} />
     </>
   );
 };
-
 export const SignInFooter = () => {
-  const authUrlResolved = Core.useSignInStore((state) => state.authUrlResolved);
+  const authUrlResolved = useSignInStore((state) => state.authUrlResolved);
   const t = useTranslations('onboarding.signIn');
-
   if (authUrlResolved) return null;
-
   return (
-    <Atoms.FooterLinks className="py-6">
+    <FooterLinks className="py-6">
       {t.rich('recoveryHint', {
         pubkyRing: (chunks) => (
-          <Atoms.Link href="https://pubkyring.app/" target="_blank" rel="noopener noreferrer">
+          <Link href="https://pubkyring.app/" target="_blank" rel="noopener noreferrer">
             {chunks}
-          </Atoms.Link>
+          </Link>
         ),
       })}
-    </Atoms.FooterLinks>
+    </FooterLinks>
   );
 };
-
 export const SignInHeader = () => {
   const t = useTranslations('onboarding.signIn');
   return (
-    <Atoms.PageHeader>
-      <Molecules.PageTitle size="large">
+    <PageHeader>
+      <PageTitle size="large">
         {t.rich('title', {
           highlight: (chunks) => <span className="text-brand">{chunks}</span>,
         })}
-      </Molecules.PageTitle>
-      <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
-    </Atoms.PageHeader>
+      </PageTitle>
+      <PageSubtitle>{t('subtitle')}</PageSubtitle>
+    </PageHeader>
   );
 };
-
 const SignInProgressHeader = () => {
   const t = useTranslations('onboarding.signIn');
-
   return (
-    <Atoms.PageHeader>
-      <Molecules.Logo className="py-6 lg:hidden" />
-      <Molecules.PageTitle size="large">{t('progressTitle')}</Molecules.PageTitle>
-      <Atoms.PageSubtitle>{t('progressSubtitle')}</Atoms.PageSubtitle>
-    </Atoms.PageHeader>
+    <PageHeader>
+      <Logo className="py-6 lg:hidden" />
+      <PageTitle size="large">{t('progressTitle')}</PageTitle>
+      <PageSubtitle>{t('progressSubtitle')}</PageSubtitle>
+    </PageHeader>
   );
 };

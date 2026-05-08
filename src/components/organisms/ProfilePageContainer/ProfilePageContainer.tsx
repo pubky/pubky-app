@@ -1,10 +1,17 @@
 'use client';
 
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Providers from '@/providers';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
+import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
+import { useProfileNavigation } from '@/hooks/useProfileNavigation/useProfileNavigation';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
+import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
+import { ProfilePageLayoutWrapper } from '@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper';
+import { UserNotFound } from '@/molecules/UserNotFound/UserNotFound';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { ProfilePageLayout } from '../ProfilePageLayout/ProfilePageLayout';
 
 export interface ProfilePageContainerProps {
   /** Child pages to render in the main content area */
@@ -44,22 +51,22 @@ export interface ProfilePageContainerProps {
  */
 export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
   // Business logic: Get profile context (pubky and isOwnProfile)
-  const { pubky, isOwnProfile } = Providers.useProfileContext();
+  const { pubky, isOwnProfile } = useProfileContext();
 
   // Check if logout is in progress (global state to prevent flash of weird states)
-  const isLoggingOut = Core.useAuthStore((state) => state.isLoggingOut);
+  const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
 
   // Business logic: Fetch profile data and stats
   // Note: useProfileHeader guarantees a non-null profile with default values during loading
-  const { profile, stats, actions, isLoading, userNotFound } = Hooks.useProfileHeader(pubky ?? '');
+  const { profile, stats, actions, isLoading, userNotFound } = useProfileHeader(pubky ?? '');
 
   // Business logic: Handle navigation state
-  const { activePage, filterBarActivePage, navigateToPage } = Hooks.useProfileNavigation();
+  const { activePage, filterBarActivePage, navigateToPage } = useProfileNavigation();
 
   // Business logic: Handle follow/unfollow for other users' profiles (with auth check)
-  const { requireAuth } = Hooks.useRequireAuth();
-  const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = Hooks.useFollowUser();
-  const { isFollowing } = Hooks.useIsFollowing(pubky ?? '');
+  const { requireAuth } = useRequireAuth();
+  const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = useFollowUser();
+  const { isFollowing } = useIsFollowing(pubky ?? '');
 
   const handleFollowToggle = () => {
     if (!pubky) return;
@@ -81,18 +88,18 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
   if (userNotFound && !isOwnProfile && !isLoggingOut) {
     return (
       <>
-        <Molecules.MobileHeader showLeftButton={false} showRightButton={false} />
-        <Molecules.ProfilePageLayoutWrapper>
-          <Molecules.UserNotFound />
-        </Molecules.ProfilePageLayoutWrapper>
-        <Molecules.MobileFooter />
+        <MobileHeader showLeftButton={false} showRightButton={false} />
+        <ProfilePageLayoutWrapper>
+          <UserNotFound />
+        </ProfilePageLayoutWrapper>
+        <MobileFooter />
       </>
     );
   }
 
   // Delegate presentation to layout organism
   return (
-    <Organisms.ProfilePageLayout
+    <ProfilePageLayout
       profile={profile}
       stats={stats}
       actions={mergedActions}
@@ -104,6 +111,6 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
       userId={pubky ?? ''}
     >
       {children}
-    </Organisms.ProfilePageLayout>
+    </ProfilePageLayout>
   );
 }

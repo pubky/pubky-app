@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { userStreamApi, buildUserStreamBodyUrl } from './userStream.api';
-import * as Core from '@/core';
-import { asInvalid } from '@/test-utils';
+import { describe, expect, it } from 'vitest';
+import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import { asInvalid } from '@/test-utils/type-assertions';
+import { buildUserStreamBodyUrl, userStreamApi } from './userStream.api';
 
 describe('Users Stream API - Error Control', () => {
   const mockUserId = 'erztyis9oiaho93ckucetcf5xnxacecqwhbst5hnd7mmkf69dhby';
@@ -206,8 +208,8 @@ describe('Users Stream API - Error Control', () => {
     it('should handle enum values correctly', () => {
       const url = userStreamApi.influencers({
         user_id: mockUserId,
-        reach: Core.UserStreamReach.FOLLOWERS,
-        timeframe: Core.UserStreamTimeframe.THIS_MONTH,
+        reach: UserStreamReach.FOLLOWERS,
+        timeframe: UserStreamTimeframe.THIS_MONTH,
       });
 
       expect(url).toContain('reach=followers');
@@ -311,7 +313,7 @@ describe('NexusUserStreamService.fetch', () => {
 
   describe('streamId parsing and routing', () => {
     it('should parse followers composite streamId correctly', () => {
-      const streamId = Core.buildUserCompositeId({ userId: 'user-123', reach: 'followers' });
+      const streamId = buildUserCompositeId({ userId: 'user-123', reach: 'followers' });
       const streamParts = streamId.split(':');
 
       expect(streamParts[0]).toBe('user-123');
@@ -319,7 +321,7 @@ describe('NexusUserStreamService.fetch', () => {
     });
 
     it('should parse following composite streamId correctly', () => {
-      const streamId = Core.buildUserCompositeId({ userId: 'user-456', reach: 'following' });
+      const streamId = buildUserCompositeId({ userId: 'user-456', reach: 'following' });
       const streamParts = streamId.split(':');
 
       expect(streamParts[0]).toBe('user-456');
@@ -327,7 +329,7 @@ describe('NexusUserStreamService.fetch', () => {
     });
 
     it('should parse friends composite streamId correctly', () => {
-      const streamId = Core.buildUserCompositeId({ userId: 'user-789', reach: 'friends' });
+      const streamId = buildUserCompositeId({ userId: 'user-789', reach: 'friends' });
       const streamParts = streamId.split(':');
 
       expect(streamParts[0]).toBe('user-789');
@@ -335,7 +337,7 @@ describe('NexusUserStreamService.fetch', () => {
     });
 
     it('should parse influencers enum streamId correctly', () => {
-      const streamId = Core.UserStreamTypes.TODAY_INFLUENCERS_ALL;
+      const streamId = UserStreamTypes.TODAY_INFLUENCERS_ALL;
       const streamParts = streamId.split(':');
 
       expect(streamParts[0]).toBe('influencers');

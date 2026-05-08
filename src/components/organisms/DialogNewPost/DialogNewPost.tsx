@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
+import { cn } from '@/libs/utils/utils';
+import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { PostInput } from '../PostInput/PostInput';
 import type { DialogNewPostProps } from './DialogNewPost.types';
 
 export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) {
@@ -15,17 +17,17 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
   const [isArticle, setIsArticle] = useState(false);
   const title = isArticle ? t('newArticle') : t('newPost');
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
-    Hooks.useConfirmableDialog({
+    useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
 
   // Dialogs are already centered, so reduce the offset to avoid over-compensation
-  const { isKeyboardVisible, keyboardOffset } = Hooks.useKeyboardOffset({ offsetAdjustment: 200 });
+  const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset({ offsetAdjustment: 200 });
 
   return (
-    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent
-        className={Libs.cn('w-3xl', isKeyboardVisible && 'transition-transform duration-75')}
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className={cn('w-3xl', isKeyboardVisible && 'transition-transform duration-75')}
         style={
           isKeyboardVisible && keyboardOffset > 0
             ? {
@@ -35,12 +37,12 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
         }
         hiddenTitle={title}
       >
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle>{title}</Atoms.DialogTitle>
-          <Atoms.DialogDescription className="sr-only">{t('description', { title })}</Atoms.DialogDescription>
-        </Atoms.DialogHeader>
-        <Atoms.Container className="gap-3">
-          <Organisms.PostInput
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">{t('description', { title })}</DialogDescription>
+        </DialogHeader>
+        <Container className="gap-3">
+          <PostInput
             dataCy="new-post-input"
             key={resetKey}
             variant={POST_INPUT_VARIANT.POST}
@@ -49,14 +51,14 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
             onContentChange={handleContentChange}
             onArticleModeChange={setIsArticle}
           />
-        </Atoms.Container>
+        </Container>
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
-        <Molecules.DialogConfirmDiscard
+        <DialogConfirmDiscard
           open={showConfirmDialog}
           onOpenChange={() => setShowConfirmDialog(false)}
           onConfirm={handleDiscard}
         />
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,6 +1,9 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
 import { usePathname } from 'next/navigation';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { FileController } from '@/controllers/file/file';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { MobileFooter } from './MobileFooter';
 
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
@@ -20,48 +23,46 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock the organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({
-    avatarUrl,
-    name,
-    size,
-    className,
-    alt,
-  }: {
-    avatarUrl?: string;
-    name: string;
-    size?: string;
-    className?: string;
-    alt?: string;
-  }) => (
-    <div data-testid="avatar-with-fallback" className={className} data-size={size}>
-      {avatarUrl ? (
-        <img data-testid="avatar-image" src={avatarUrl} alt={alt || name} />
-      ) : (
-        <span data-testid="avatar-fallback">
-          {name
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((part) => part[0]?.toUpperCase())
-            .join('') || 'U'}
-        </span>
-      )}
-      <span data-testid="avatar-name">{name}</span>
-    </div>
-  ),
-}));
-
-// Mock the libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({
+      avatarUrl,
+      name,
+      size,
+      className,
+      alt,
+    }: {
+      avatarUrl?: string;
+      name: string;
+      size?: string;
+      className?: string;
+      alt?: string;
+    }) => (
+      <div data-testid="avatar-with-fallback" className={className} data-size={size}>
+        {avatarUrl ? (
+          <img data-testid="avatar-image" src={avatarUrl} alt={alt || name} />
+        ) : (
+          <span data-testid="avatar-fallback">
+            {name
+              .trim()
+              .split(/\s+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0]?.toUpperCase())
+              .join('') || 'U'}
+          </span>
+        )}
+        <span data-testid="avatar-name">{name}</span>
+      </div>
+    ),
+  };
 });
 
+// Mock the libs - use actual implementations
+
 // Mock the app routes
-vi.mock('@/app', async () => {
-  const actual = await vi.importActual('@/app');
+vi.mock('@/app/routes', async () => {
+  const actual = await vi.importActual('@/app/routes');
   return {
     ...actual,
     APP_ROUTES: {
@@ -81,42 +82,45 @@ vi.mock('@/app', async () => {
 });
 
 // Mock Hooks
-vi.mock('@/hooks', () => {
-  const mockUseKeyboardOffset = vi.fn(() => ({ isKeyboardVisible: false, keyboardOffset: 0 }));
-  return {
-    useCurrentUserProfile: vi.fn(() => ({
-      userDetails: { name: 'Test User', image: null, indexed_at: 123 },
-      currentUserPubky: 'pk:test-user-pubky',
-    })),
-    usePublicRoute: vi.fn(() => ({
-      isPublicRoute: false,
-    })),
-    useKeyboardOffset: mockUseKeyboardOffset,
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: vi.fn(() => ({
+    userDetails: { name: 'Test User', image: null, indexed_at: 123 },
+    currentUserPubky: 'pk:test-user-pubky',
+  })),
+}));
+
+vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
+  usePublicRoute: vi.fn(() => ({
+    isPublicRoute: false,
+  })),
+}));
+
+vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
+  useKeyboardOffset: vi.fn(() => ({ isKeyboardVisible: false, keyboardOffset: 0 })),
+}));
 
 // Track notification store mock for per-test overrides
 const mockSelectUnread = vi.fn(() => 0);
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual('@/core');
-  return {
-    ...actual,
-    FileController: {
-      getAvatarUrl: vi.fn((pubky: string, version?: string | number) =>
-        version ? `https://example.com/avatar/${pubky}?v=${version}` : `https://example.com/avatar/${pubky}`,
-      ),
-    },
-    useAuthStore: vi.fn((selector: (state: { currentUserPubky: string | null }) => unknown) =>
-      selector({ currentUserPubky: 'pk:test-user-pubky' }),
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    getAvatarUrl: vi.fn((pubky: string, version?: string | number) =>
+      version ? `https://example.com/avatar/${pubky}?v=${version}` : `https://example.com/avatar/${pubky}`,
     ),
-    useLocalFilesStore: vi.fn((selector: (state: { profile: string | null }) => unknown) =>
-      selector({ profile: null }),
-    ),
-    useNotificationStore: vi.fn((selector: (state: { selectUnread: () => number }) => unknown) =>
-      selector({ selectUnread: mockSelectUnread }),
-    ),
-  };
-});
+  },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn((selector: (state: { currentUserPubky: string | null }) => unknown) =>
+    selector({ currentUserPubky: 'pk:test-user-pubky' }),
+  ),
+}));
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: vi.fn((selector: (state: { profile: string | null }) => unknown) => selector({ profile: null })),
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn((selector: (state: { selectUnread: () => number }) => unknown) =>
+    selector({ selectUnread: mockSelectUnread }),
+  ),
+}));
 
 describe('MobileFooter', () => {
   beforeEach(async () => {
@@ -129,7 +133,6 @@ describe('MobileFooter', () => {
     });
 
     // Reset keyboard offset mock
-    const { useKeyboardOffset } = await import('@/hooks');
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
   });
 
@@ -197,14 +200,12 @@ describe('MobileFooter', () => {
   it('does not request avatar URL when user has no avatar set', async () => {
     render(<MobileFooter />);
 
-    const { FileController } = await import('@/core');
     expect(vi.mocked(FileController.getAvatarUrl)).not.toHaveBeenCalled();
     expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
     expect(screen.getByTestId('avatar-fallback')).toHaveTextContent('TU');
   });
 
   it('requests avatar URL when user has an avatar set', async () => {
-    const { useCurrentUserProfile } = await import('@/hooks');
     vi.mocked(useCurrentUserProfile).mockReturnValueOnce({
       userDetails: {
         id: 'pk:test-user-pubky',
@@ -220,7 +221,6 @@ describe('MobileFooter', () => {
 
     render(<MobileFooter />);
 
-    const { FileController } = await import('@/core');
     expect(vi.mocked(FileController.getAvatarUrl)).toHaveBeenCalledWith('pk:test-user-pubky', 456);
     expect(screen.getByTestId('avatar-image').getAttribute('src')).toBe(
       'https://example.com/avatar/pk:test-user-pubky?v=456',
@@ -354,7 +354,6 @@ describe('MobileFooter', () => {
   });
 
   it('applies transform when keyboard is visible', async () => {
-    const { useKeyboardOffset } = await import('@/hooks');
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 300 });
 
     const { container } = render(<MobileFooter />);
@@ -365,7 +364,6 @@ describe('MobileFooter', () => {
   });
 
   it('does not apply transform when keyboard is not visible', async () => {
-    const { useKeyboardOffset } = await import('@/hooks');
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
 
     const { container } = render(<MobileFooter />);
@@ -376,8 +374,6 @@ describe('MobileFooter', () => {
   });
 
   it('always applies transition classes for smooth keyboard animation', async () => {
-    const { useKeyboardOffset } = await import('@/hooks');
-
     // transition-transform and duration-75 are always present regardless of keyboard state
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
     const { container, rerender } = render(<MobileFooter />);
@@ -397,8 +393,6 @@ describe('MobileFooter - Snapshots', () => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
-
-    const { useKeyboardOffset } = await import('@/hooks');
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
   });
 

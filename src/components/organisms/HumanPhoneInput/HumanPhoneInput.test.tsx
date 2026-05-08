@@ -1,8 +1,7 @@
-import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-
+import { describe, expect, it } from 'vitest';
+import { parsePhoneNumber } from '@/libs/phone/phone';
 import { HumanPhoneInput } from './HumanPhoneInput';
-import { parsePhoneNumber } from '@/libs';
 
 describe('HumanPhoneInput', () => {
   it('matches snapshot', () => {

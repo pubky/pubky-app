@@ -1,6 +1,13 @@
-import * as Core from '@/core';
 import { baseUriBuilder } from 'pubky-app-specs';
-import { HttpMethod, Logger, AppError, HttpStatusCode } from '@/libs';
+import type { TMuteApplicationCommitParams } from '@/application/mute/mute.types';
+import { AppError } from '@/libs/error/error';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalMuteService } from '@/services/local/mute/mute';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 
 export class MuteApplication {
   private constructor() {}
@@ -10,16 +17,16 @@ export class MuteApplication {
    * Performs local database operations and syncs with the homeserver.
    * @param params - Parameters containing event type, URLs, JSON data, and user IDs
    */
-  static async commitMute({ eventType, muteUrl, muteJson, muter, mutee }: Core.TMuteApplicationCommitParams) {
+  static async commitMute({ eventType, muteUrl, muteJson, muter, mutee }: TMuteApplicationCommitParams) {
     if (eventType === HttpMethod.PUT) {
-      await Core.LocalMuteService.create({ muter, mutee });
-      await Core.HomeserverService.request({ method: eventType, url: muteUrl, bodyJson: muteJson });
+      await LocalMuteService.create({ muter, mutee });
+      await HomeserverService.request({ method: eventType, url: muteUrl, bodyJson: muteJson });
       return;
     }
 
     if (eventType === HttpMethod.DELETE) {
-      await Core.LocalMuteService.delete({ muter, mutee });
-      await Core.HomeserverService.request({ method: eventType, url: muteUrl, bodyJson: muteJson });
+      await LocalMuteService.delete({ muter, mutee });
+      await HomeserverService.request({ method: eventType, url: muteUrl, bodyJson: muteJson });
       return;
     }
   }
@@ -30,12 +37,12 @@ export class MuteApplication {
    * @param pubky - The user's pubky to fetch mutes for
    * @returns Array of muted user pubkeys
    */
-  static async fetchMutedUsers(pubky: Core.Pubky): Promise<Core.Pubky[]> {
-    let stream: Core.Pubky[] = [];
+  static async fetchMutedUsers(pubky: Pubky): Promise<Pubky[]> {
+    let stream: Pubky[] = [];
     try {
       const mutesDirectory = `${baseUriBuilder(pubky)}mutes/`;
-      const muteUris = await Core.HomeserverService.list({ baseDirectory: mutesDirectory });
-      stream = muteUris.map((uri) => uri.split('/').pop()).filter((id): id is string => !!id) as Core.Pubky[];
+      const muteUris = await HomeserverService.list({ baseDirectory: mutesDirectory });
+      stream = muteUris.map((uri) => uri.split('/').pop()).filter((id): id is string => !!id) as Pubky[];
     } catch (error) {
       if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
         Logger.info('Mutes directory not found, defaulting to empty list', { pubky });
@@ -45,8 +52,8 @@ export class MuteApplication {
     }
 
     // Persist the muted users to the local MUTED stream
-    await Core.LocalStreamUsersService.upsert({
-      streamId: Core.UserStreamTypes.MUTED,
+    await LocalStreamUsersService.upsert({
+      streamId: UserStreamTypes.MUTED,
       stream,
     });
     return stream;

@@ -1,6 +1,32 @@
-import * as Core from '@/core';
-import { HttpMethod, Err, ClientErrorCode, ErrorService, Logger } from '@/libs';
 import { postUriBuilder } from 'pubky-app-specs';
+import { FileApplication } from '@/application/file/file';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import type { TCreatePostInput, TEditPostInput, TGetOrFetchPostParams } from '@/application/post/post.types';
+import { PostStreamApplication } from '@/application/stream/posts/post';
+import { TagApplication } from '@/application/tag/tag';
+import { ModerationController } from '@/controllers/moderation/moderation';
+import type {
+  TDeletePostParams,
+  TFetchMorePostTagsParams,
+  TFetchPostTaggersParams,
+} from '@/controllers/post/post.types';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { parseCompositeId } from '@/models/models.utils';
+import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
+import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalPostService } from '@/services/local/post/post';
+import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
+import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
+import { NexusPostService } from '@/services/nexus/post/post';
+import type { TCompositeId } from '@/services/nexus/post/post.types';
 
 export class PostApplication {
   /**
@@ -8,10 +34,10 @@ export class PostApplication {
    * @param compositeId - Composite post ID in format "authorId:postId"
    * @returns Post details with moderation state or null if not found
    */
-  static async getDetails({ compositeId }: Core.TCompositeId): Promise<Core.EnrichedPostDetails | null> {
-    const post = await Core.LocalPostService.readDetails({ postId: compositeId });
+  static async getDetails({ compositeId }: TCompositeId): Promise<EnrichedPostDetails | null> {
+    const post = await LocalPostService.readDetails({ postId: compositeId });
     if (!post) return null;
-    const [enriched] = await Core.ModerationController.enrichPosts([post]);
+    const [enriched] = await ModerationController.enrichPosts([post]);
     return enriched;
   }
 
@@ -20,8 +46,8 @@ export class PostApplication {
    * @param compositeId - Composite post ID in format "authorId:postId"
    * @returns Post counts or null if not found
    */
-  static async getCounts({ compositeId }: Core.TCompositeId): Promise<Core.PostCountsModelSchema | null> {
-    return await Core.LocalPostService.readCounts(compositeId);
+  static async getCounts({ compositeId }: TCompositeId): Promise<PostCountsModelSchema | null> {
+    return await LocalPostService.readCounts(compositeId);
   }
 
   /**
@@ -29,8 +55,8 @@ export class PostApplication {
    * @param compositeId - Composite post ID in format "authorId:postId"
    * @returns Post tags
    */
-  static async getTags({ compositeId }: Core.TCompositeId): Promise<Core.TagCollectionModelSchema<string>[]> {
-    return await Core.LocalPostService.readTags(compositeId);
+  static async getTags({ compositeId }: TCompositeId): Promise<TagCollectionModelSchema<string>[]> {
+    return await LocalPostService.readTags(compositeId);
   }
 
   /**
@@ -38,8 +64,8 @@ export class PostApplication {
    * @param compositeId - Composite post ID in format "authorId:postId"
    * @returns Post relationships or null if not found
    */
-  static async getRelationships({ compositeId }: Core.TCompositeId): Promise<Core.PostRelationshipsModelSchema | null> {
-    return await Core.LocalPostService.readRelationships(compositeId);
+  static async getRelationships({ compositeId }: TCompositeId): Promise<PostRelationshipsModelSchema | null> {
+    return await LocalPostService.readRelationships(compositeId);
   }
 
   /**
@@ -47,10 +73,10 @@ export class PostApplication {
    * @param compositeId - Composite post ID to read replies for
    * @returns Array of post relationships that replied to this post
    */
-  static async getReplies({ compositeId }: Core.TCompositeId): Promise<Core.PostRelationshipsModelSchema[]> {
-    const { pubky, id } = Core.parseCompositeId(compositeId);
+  static async getReplies({ compositeId }: TCompositeId): Promise<PostRelationshipsModelSchema[]> {
+    const { pubky, id } = parseCompositeId(compositeId);
     const parentPostUri = postUriBuilder(pubky, id);
-    return await Core.LocalPostService.readReplies(parentPostUri);
+    return await LocalPostService.readReplies(parentPostUri);
   }
 
   /**
@@ -60,12 +86,12 @@ export class PostApplication {
    * @param limit - Maximum number of tags to return
    * @returns Array of tags from Nexus
    */
-  static async fetchTags({ compositeId, skip, limit }: Core.TFetchMorePostTagsParams): Promise<Core.NexusTag[]> {
-    const nexusTags = await Core.NexusPostService.getPostTags({ compositeId, skip, limit });
+  static async fetchTags({ compositeId, skip, limit, viewerId }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
+    const nexusTags = await NexusPostService.getPostTags({ compositeId, skip, limit, viewerId });
 
     // Persist new tags to local DB (merge with existing)
     if (nexusTags.length > 0) {
-      await Core.LocalPostTagService.mergeTags({ postId: compositeId, tags: nexusTags });
+      await LocalPostTagService.mergeTags({ postId: compositeId, tags: nexusTags });
     }
 
     return nexusTags;
@@ -76,8 +102,8 @@ export class PostApplication {
    * @param params - Parameters containing composite post ID, label, and pagination options
    * @returns Tagger payload for the label ({ users, relationship })
    */
-  static async fetchTaggers(params: Core.TFetchPostTaggersParams): Promise<Core.NexusTaggers> {
-    return await Core.NexusPostService.getPostTaggers(params);
+  static async fetchTaggers(params: TFetchPostTaggersParams): Promise<NexusTaggers> {
+    return await NexusPostService.getPostTaggers(params);
   }
 
   /**
@@ -87,21 +113,18 @@ export class PostApplication {
    * @param viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found
    */
-  static async getOrFetch({
-    compositeId,
-    viewerId,
-  }: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
-    const localPost = await Core.LocalPostService.readDetails({ postId: compositeId });
+  static async getOrFetch({ compositeId, viewerId }: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
+    const localPost = await LocalPostService.readDetails({ postId: compositeId });
     if (localPost) return localPost;
 
     // Reuse stream posts logic to fetch and persist single post
-    await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+    await PostStreamApplication.fetchMissingPostsFromNexus({
       cacheMissPostIds: [compositeId],
       viewerId,
     });
 
     // Return the persisted post details
-    return await Core.LocalPostService.readDetails({ postId: compositeId });
+    return await LocalPostService.readDetails({ postId: compositeId });
   }
 
   /**
@@ -112,31 +135,28 @@ export class PostApplication {
    * @param viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found on Nexus
    */
-  static async fetch({
-    compositeId,
-    viewerId,
-  }: Core.TGetOrFetchPostParams): Promise<Core.PostDetailsModelSchema | null> {
-    await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+  static async fetch({ compositeId, viewerId }: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
+    await PostStreamApplication.fetchMissingPostsFromNexus({
       cacheMissPostIds: [compositeId],
       viewerId,
     });
 
-    return await Core.LocalPostService.readDetails({ postId: compositeId });
+    return await LocalPostService.readDetails({ postId: compositeId });
   }
 
-  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags }: Core.TCreatePostInput) {
+  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags }: TCreatePostInput) {
     const hasFiles = fileAttachments != null && fileAttachments.length > 0;
 
     if (hasFiles) {
-      await Core.FileApplication.commitCreate({ fileAttachments });
+      await FileApplication.commitCreate({ fileAttachments });
     }
-    await Core.LocalPostService.create({ compositePostId, post });
+    await LocalPostService.create({ compositePostId, post });
 
     try {
-      await Core.HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
+      await HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
     } catch (error) {
       try {
-        await Core.LocalPostService.delete({ compositePostId });
+        await LocalPostService.delete({ compositePostId });
       } catch (rollbackError) {
         Logger.error('[PostApplication.commitCreate] Failed to rollback local post create', {
           compositePostId,
@@ -147,7 +167,7 @@ export class PostApplication {
       if (hasFiles) {
         try {
           const fileUris = fileAttachments.map((f) => f.fileResult.meta.url);
-          await Core.FileApplication.commitDelete(fileUris);
+          await FileApplication.commitDelete(fileUris);
         } catch (fileRollbackError) {
           Logger.error('[PostApplication.commitCreate] Failed to rollback file attachments', {
             compositePostId,
@@ -160,12 +180,12 @@ export class PostApplication {
     }
 
     if (tags && tags.length > 0) {
-      await Core.TagApplication.commitCreate({ tagList: tags });
+      await TagApplication.commitCreate({ tagList: tags });
     }
   }
 
-  static async commitDelete({ compositePostId }: Core.TDeletePostParams) {
-    const post = await Core.PostDetailsModel.findById(compositePostId);
+  static async commitDelete({ compositePostId }: TDeletePostParams) {
+    const post = await PostDetailsModel.findById(compositePostId);
 
     if (!post) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
@@ -174,28 +194,28 @@ export class PostApplication {
         context: { compositePostId },
       });
     }
-    const hadConnections = await Core.LocalPostService.delete({ compositePostId });
+    const hadConnections = await LocalPostService.delete({ compositePostId });
 
     // Always delete from homeserver, even if the post had connections (soft delete).
     // Nexus will determine the definitive state based on graph state.
     const postUrl = post.uri;
-    await Core.HomeserverService.request({ method: HttpMethod.DELETE, url: postUrl });
+    await HomeserverService.request({ method: HttpMethod.DELETE, url: postUrl });
 
     if (!hadConnections && post.attachments && post.attachments.length > 0) {
-      await Core.FileApplication.commitDelete(post.attachments);
+      await FileApplication.commitDelete(post.attachments);
     }
   }
 
-  static async commitEdit({ compositePostId, post, postUrl }: Core.TEditPostInput) {
-    const originalPost = await Core.LocalPostService.readDetails({ postId: compositePostId });
-    await Core.LocalPostService.edit({ compositePostId, content: post.content });
+  static async commitEdit({ compositePostId, post, postUrl }: TEditPostInput) {
+    const originalPost = await LocalPostService.readDetails({ postId: compositePostId });
+    await LocalPostService.edit({ compositePostId, content: post.content });
 
     try {
-      await Core.HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
+      await HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
     } catch (error) {
       if (originalPost) {
         try {
-          await Core.LocalPostService.edit({ compositePostId, content: originalPost.content });
+          await LocalPostService.edit({ compositePostId, content: originalPost.content });
         } catch (rollbackError) {
           Logger.error('[PostApplication.commitEdit] Failed to rollback local post edit', {
             compositePostId,

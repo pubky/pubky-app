@@ -1,6 +1,6 @@
-import { ProfileStats } from '@/hooks/useProfileHeader/useProfileHeader';
-import { ProfilePageType, FilterBarPageType } from '@/app/profile/types';
+import { FilterBarPageType, ProfilePageType } from '@/app/profile/types';
 import { FollowAction } from '@/hooks/useFollowUser/useFollowUser.types';
+import { ProfileStats } from '@/hooks/useProfileHeader/useProfileHeader';
 
 export interface ProfilePageLayoutActions {
   onEdit: () => void;

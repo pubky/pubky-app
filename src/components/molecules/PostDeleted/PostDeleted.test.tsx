@@ -1,20 +1,27 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { PostDeleted } from './PostDeleted';
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
-    <p data-testid="typography" data-size={size} className={className}>
-      {children}
-    </p>
-  ),
-}));
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card-content" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
+      <p data-testid="typography" data-size={size} className={className}>
+        {children}
+      </p>
+    ),
+  };
+});
 
 describe('PostDeleted', () => {
   it('renders the deleted message', () => {

@@ -1,10 +1,12 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
 import { SEARCH_EXPANDED_STYLE } from '@/config/search';
-import { MAX_RECENT_SEARCHES } from '@/core/stores/search/search.constants';
+import { MAX_RECENT_SEARCHES } from '@/stores/search/search.constants';
+import { SearchRecentSection } from '../SearchRecentSection/SearchRecentSection';
+import { SearchTagSection } from '../SearchTagSection/SearchTagSection';
+import { SearchUsersSection } from '../SearchUsersSection/SearchUsersSection';
 import type { SearchSuggestionsProps } from './SearchSuggestions.types';
 
 export function SearchSuggestions({
@@ -39,11 +41,9 @@ export function SearchSuggestions({
 
     return (
       <>
-        {hasAutocompleteTags && (
-          <Molecules.SearchTagSection title={t('tags')} tags={autocompleteTags} onTagClick={onTagClick} />
-        )}
+        {hasAutocompleteTags && <SearchTagSection title={t('tags')} tags={autocompleteTags} onTagClick={onTagClick} />}
         {hasAutocompleteUsers && (
-          <Molecules.SearchUsersSection title={t('users')} users={autocompleteUsers} onUserClick={onUserClick} />
+          <SearchUsersSection title={t('users')} users={autocompleteUsers} onUserClick={onUserClick} />
         )}
       </>
     );
@@ -55,7 +55,7 @@ export function SearchSuggestions({
     return (
       <>
         {hasRecentSearches && (
-          <Molecules.SearchRecentSection
+          <SearchRecentSection
             users={displayRecentUsers}
             tags={displayRecentTags}
             onUserClick={onUserClick}
@@ -63,13 +63,13 @@ export function SearchSuggestions({
             onClearAll={onClearRecentSearches}
           />
         )}
-        {hasHotTags && <Molecules.SearchTagSection title={t('hotTags')} tags={hotTags} onTagClick={onTagClick} />}
+        {hasHotTags && <SearchTagSection title={t('hotTags')} tags={hotTags} onTagClick={onTagClick} />}
       </>
     );
   };
 
   return (
-    <Atoms.Container
+    <Container
       id={id}
       role="region"
       aria-label={ariaLabel}
@@ -78,10 +78,10 @@ export function SearchSuggestions({
       style={SEARCH_EXPANDED_STYLE}
       overrideDefaults
     >
-      <Atoms.Container className="flex flex-col space-y-6 px-6 pt-3 pb-6" overrideDefaults>
+      <Container className="flex flex-col space-y-6 px-6 pt-3 pb-6" overrideDefaults>
         {renderAutocompleteContent()}
         {renderRecentContent()}
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

@@ -1,6 +1,6 @@
-import * as Core from '@/core';
+import type { NexusPostCounts } from '@/services/nexus/nexus.types';
 
-export interface PostCountsModelSchema extends Core.NexusPostCounts {
+export interface PostCountsModelSchema extends NexusPostCounts {
   id: string;
 }
 

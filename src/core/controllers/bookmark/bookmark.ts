@@ -1,6 +1,9 @@
-import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
 import { postUriBuilder } from 'pubky-app-specs';
+import { BookmarkApplication } from '@/application/bookmark/bookmark';
+import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { parseCompositeId } from '@/models/models.utils';
+import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
 
 export class BookmarkController {
   private constructor() {}
@@ -11,7 +14,7 @@ export class BookmarkController {
    * @returns boolean indicating if the post is bookmarked
    */
   static async exists(postId: string): Promise<boolean> {
-    return Core.BookmarkApplication.exists(postId);
+    return BookmarkApplication.exists(postId);
   }
 
   /**
@@ -20,12 +23,12 @@ export class BookmarkController {
    * @param params.userId - ID of the user creating the bookmark (current user)
    * @param params.postId - Composite post ID (authorId:postId)
    */
-  static async commitCreate({ postId, userId }: Core.TBookmarkEventParams) {
-    const { pubky: authorId, id: rawPostId } = Core.parseCompositeId(postId);
+  static async commitCreate({ postId, userId }: TBookmarkEventParams) {
+    const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
     const postUri = postUriBuilder(authorId, rawPostId);
-    const { bookmark, meta } = Core.BookmarkNormalizer.to(postUri, userId);
+    const { bookmark, meta } = BookmarkNormalizer.to(postUri, userId);
 
-    await Core.BookmarkApplication.persist(HttpMethod.PUT, {
+    await BookmarkApplication.persist(HttpMethod.PUT, {
       postId,
       bookmarkUrl: meta.url,
       bookmarkJson: bookmark.toJson(),
@@ -38,12 +41,12 @@ export class BookmarkController {
    * @param params.userId - ID of the user removing the bookmark (current user)
    * @param params.postId - Composite post ID (authorId:postId)
    */
-  static async commitDelete({ postId, userId }: Core.TBookmarkEventParams) {
-    const { pubky: authorId, id: rawPostId } = Core.parseCompositeId(postId);
+  static async commitDelete({ postId, userId }: TBookmarkEventParams) {
+    const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
     const postUri = postUriBuilder(authorId, rawPostId);
-    const { meta } = Core.BookmarkNormalizer.to(postUri, userId);
+    const { meta } = BookmarkNormalizer.to(postUri, userId);
 
-    await Core.BookmarkApplication.persist(HttpMethod.DELETE, {
+    await BookmarkApplication.persist(HttpMethod.DELETE, {
       postId,
       bookmarkUrl: meta.url,
     });

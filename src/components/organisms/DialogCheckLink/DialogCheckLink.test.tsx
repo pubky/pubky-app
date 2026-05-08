@@ -1,163 +1,173 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogCheckLink } from './DialogCheckLink';
 
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog" data-open={open} data-on-open-change={!!onOpenChange}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({
+      children,
+      className,
+      hiddenTitle,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      hiddenTitle?: string;
+      onClick?: (e: React.MouseEvent) => void;
+    }) => (
+      <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle} onClick={onClick}>
+        {hiddenTitle && (
+          <h2 className="sr-only" data-testid="dialog-hidden-title">
+            {hiddenTitle}
+          </h2>
+        )}
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-header" className={className}>
+        {children}
+      </div>
+    ),
+    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <h2 data-testid="dialog-title" className={className}>
+        {children}
+      </h2>
+    ),
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-footer" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog" data-open={open} data-on-open-change={!!onOpenChange}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({
-    children,
-    className,
-    hiddenTitle,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    hiddenTitle?: string;
-    onClick?: (e: React.MouseEvent) => void;
-  }) => (
-    <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle} onClick={onClick}>
-      {hiddenTitle && (
-        <h2 className="sr-only" data-testid="dialog-hidden-title">
-          {hiddenTitle}
-        </h2>
-      )}
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-header" className={className}>
-      {children}
-    </div>
-  ),
-  DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <h2 data-testid="dialog-title" className={className}>
-      {children}
-    </h2>
-  ),
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  ),
-  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-footer" className={className}>
-      {children}
-    </div>
-  ),
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    className,
-    as: Tag = 'p',
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    as?: React.ElementType;
-    [key: string]: unknown;
-  }) => (
-    <Tag data-testid="typography" className={className} {...props}>
-      {children}
-    </Tag>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    onClick,
-    ...props
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-    [key: string]: unknown;
-  }) => (
-    <button
-      data-testid={variant ? `button-${variant}` : 'button'}
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      onClick={onClick}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
-  Checkbox: ({
-    id,
-    checked,
-    onCheckedChange,
-    label,
-  }: {
-    id?: string;
-    checked?: boolean;
-    onCheckedChange?: (checked: boolean) => void;
-    label?: string;
-  }) => (
-    <div data-testid="checkbox-wrapper">
-      <input
-        type="checkbox"
-        id={id}
-        data-testid="checkbox"
-        checked={checked}
-        onChange={(e) => onCheckedChange?.(e.target.checked)}
-      />
-      {label && (
-        <label htmlFor={id} data-testid="checkbox-label">
-          {label}
-        </label>
-      )}
-    </div>
-  ),
-}));
-
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/atoms/Button/Button', () => {
   return {
-    ...actual,
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      onClick,
+      ...props
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      onClick?: () => void;
+      [key: string]: unknown;
+    }) => (
+      <button
+        data-testid={variant ? `button-${variant}` : 'button'}
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        onClick={onClick}
+        {...props}
+      >
+        {children}
+      </button>
+    ),
   };
 });
 
-// Mock core - mock useSettingsStore
+vi.mock('@/atoms/Checkbox/Checkbox', () => {
+  return {
+    Checkbox: ({
+      id,
+      checked,
+      onCheckedChange,
+      label,
+    }: {
+      id?: string;
+      checked?: boolean;
+      onCheckedChange?: (checked: boolean) => void;
+      label?: string;
+    }) => (
+      <div data-testid="checkbox-wrapper">
+        <input
+          type="checkbox"
+          id={id}
+          data-testid="checkbox"
+          checked={checked}
+          onChange={(e) => onCheckedChange?.(e.target.checked)}
+        />
+        {label && (
+          <label htmlFor={id} data-testid="checkbox-label">
+            {label}
+          </label>
+        )}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      as: Tag = 'p',
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      as?: React.ElementType;
+      [key: string]: unknown;
+    }) => (
+      <Tag data-testid="typography" className={className} {...props}>
+        {children}
+      </Tag>
+    ),
+  };
+});
+
+// Mock settings store
 const mockSetShowConfirm = vi.fn();
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useSettingsStore: () => ({
-      setShowConfirm: mockSetShowConfirm,
-    }),
-  };
-});
+vi.mock('@/stores/settings/settings.store', () => ({
+  useSettingsStore: () => ({
+    setShowConfirm: mockSetShowConfirm,
+  }),
+}));
 
 // Mock window.open
 const mockWindowOpen = vi.fn();

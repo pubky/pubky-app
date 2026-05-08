@@ -1,19 +1,23 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Core from '@/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { UserStreamApplication } from '@/application/stream/users/users';
+import type { Pubky } from '@/models/models.types';
+import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import type { NexusUser } from '@/services/nexus/nexus.types';
+import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 
 describe('UserStreamApplication', () => {
-  const DEFAULT_USER_ID = 'user-1' as Core.Pubky;
-  const DEFAULT_VIEWER_ID = 'viewer-123' as Core.Pubky;
+  const DEFAULT_USER_ID = 'user-1' as Pubky;
+  const DEFAULT_VIEWER_ID = 'viewer-123' as Pubky;
   const BASE_TIMESTAMP = 1000000;
 
   // ============================================================================
   // Test Helpers
   // ============================================================================
 
-  const createMockNexusUser = (
-    userId: Core.Pubky = DEFAULT_USER_ID,
-    overrides?: Partial<Core.NexusUser>,
-  ): Core.NexusUser => ({
+  const createMockNexusUser = (userId: Pubky = DEFAULT_USER_ID, overrides?: Partial<NexusUser>): NexusUser => ({
     details: {
       id: userId,
       name: `User ${userId}`,
@@ -45,10 +49,10 @@ describe('UserStreamApplication', () => {
     ...overrides,
   });
 
-  const createUserDetails = async (userIds: Core.Pubky[]) => {
+  const createUserDetails = async (userIds: Pubky[]) => {
     return Promise.all(
       userIds.map((userId) =>
-        Core.UserDetailsModel.create({
+        UserDetailsModel.create({
           id: userId,
           name: `User ${userId}`,
           bio: `Bio for ${userId}`,
@@ -71,15 +75,15 @@ describe('UserStreamApplication', () => {
 
   describe('getOrFetchStreamSlice', () => {
     it('should return users from cache when available', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
-      const cachedUserIds: Core.Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
+      const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
+      const cachedUserIds: Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
 
       // Setup: Create cache
-      await Core.LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
+      await LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
       await createUserDetails(cachedUserIds);
 
       // Test
-      const result = await Core.UserStreamApplication.getOrFetchStreamSlice({
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
         streamId,
         skip: 0,
         limit: 2,
@@ -93,14 +97,14 @@ describe('UserStreamApplication', () => {
     });
 
     it('should fetch from Nexus when cache is empty', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
-      const mockUserIds: Core.Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
+      const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
+      const mockUserIds: Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
 
       // Mock Nexus API to return user IDs only
-      const fetchSpy = vi.spyOn(Core.NexusUserStreamService, 'fetch').mockResolvedValue(mockUserIds);
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(mockUserIds);
 
       // Test
-      const result = await Core.UserStreamApplication.getOrFetchStreamSlice({
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
         streamId,
         skip: 0,
         limit: 3,
@@ -116,20 +120,20 @@ describe('UserStreamApplication', () => {
       expect(result.skip).toBe(3); // Nexus returns next skip value
 
       // Verify cache was updated
-      const cachedStream = await Core.LocalStreamUsersService.findById(streamId);
+      const cachedStream = await LocalStreamUsersService.findById(streamId);
       expect(cachedStream?.stream).toEqual(['follower-1', 'follower-2', 'follower-3']);
     });
 
     it('should handle pagination with skip/limit', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
-      const cachedUserIds: Core.Pubky[] = ['follower-1', 'follower-2', 'follower-3', 'follower-4', 'follower-5'];
+      const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
+      const cachedUserIds: Pubky[] = ['follower-1', 'follower-2', 'follower-3', 'follower-4', 'follower-5'];
 
       // Setup: Create cache
-      await Core.LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
+      await LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
       await createUserDetails(cachedUserIds);
 
       // Test: Get second page
-      const result = await Core.UserStreamApplication.getOrFetchStreamSlice({
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
         streamId,
         skip: 2,
         limit: 2,
@@ -142,13 +146,13 @@ describe('UserStreamApplication', () => {
     });
 
     it('should return empty array when no more users available', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
+      const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
 
       // Mock Nexus API to return empty
-      const fetchSpy = vi.spyOn(Core.NexusUserStreamService, 'fetch').mockResolvedValue([]);
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue([]);
 
       // Test
-      const result = await Core.UserStreamApplication.getOrFetchStreamSlice({
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
         streamId,
         skip: 0,
         limit: 20,
@@ -163,19 +167,19 @@ describe('UserStreamApplication', () => {
     });
 
     it('should fetch from Nexus when cache has insufficient data', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
-      const cachedUserIds: Core.Pubky[] = ['follower-1', 'follower-2'];
-      const newMockUserIds: Core.Pubky[] = ['follower-3', 'follower-4', 'follower-5'];
+      const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
+      const cachedUserIds: Pubky[] = ['follower-1', 'follower-2'];
+      const newMockUserIds: Pubky[] = ['follower-3', 'follower-4', 'follower-5'];
 
       // Setup: Create partial cache
-      await Core.LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
+      await LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
       await createUserDetails(cachedUserIds);
 
       // Mock Nexus API to return user IDs only
-      const fetchSpy = vi.spyOn(Core.NexusUserStreamService, 'fetch').mockResolvedValue(newMockUserIds);
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(newMockUserIds);
 
       // Test: Request more than cache has
-      const result = await Core.UserStreamApplication.getOrFetchStreamSlice({
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
         streamId,
         skip: 2,
         limit: 3,
@@ -190,23 +194,23 @@ describe('UserStreamApplication', () => {
       expect(result.nextPageIds).toEqual(['follower-3', 'follower-4', 'follower-5']);
 
       // Verify cache was appended (not replaced)
-      const cachedStream = await Core.LocalStreamUsersService.findById(streamId);
+      const cachedStream = await LocalStreamUsersService.findById(streamId);
       expect(cachedStream?.stream).toEqual(['follower-1', 'follower-2', 'follower-3', 'follower-4', 'follower-5']);
     });
 
     it('should handle cachedStream parameter correctly when appending', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
-      const existingUserIds: Core.Pubky[] = ['follower-1', 'follower-2'];
-      const newMockUserIds: Core.Pubky[] = ['follower-3', 'follower-4'];
+      const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
+      const existingUserIds: Pubky[] = ['follower-1', 'follower-2'];
+      const newMockUserIds: Pubky[] = ['follower-3', 'follower-4'];
 
       // Setup: Create existing cache
-      await Core.LocalStreamUsersService.upsert({ streamId, stream: existingUserIds });
+      await LocalStreamUsersService.upsert({ streamId, stream: existingUserIds });
 
       // Mock Nexus API to return user IDs only
-      vi.spyOn(Core.NexusUserStreamService, 'fetch').mockResolvedValue(newMockUserIds);
+      vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(newMockUserIds);
 
       // Test
-      await Core.UserStreamApplication.getOrFetchStreamSlice({
+      await UserStreamApplication.getOrFetchStreamSlice({
         streamId,
         skip: 2,
         limit: 2,
@@ -214,19 +218,19 @@ describe('UserStreamApplication', () => {
       });
 
       // Assert: Stream should be appended, not replaced
-      const cachedStream = await Core.LocalStreamUsersService.findById(streamId);
+      const cachedStream = await LocalStreamUsersService.findById(streamId);
       expect(cachedStream?.stream).toEqual(['follower-1', 'follower-2', 'follower-3', 'follower-4']);
     });
 
     it('should create new stream when cachedStream is null', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
-      const mockUserIds: Core.Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
+      const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
+      const mockUserIds: Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
 
       // Mock Nexus API to return user IDs only
-      vi.spyOn(Core.NexusUserStreamService, 'fetch').mockResolvedValue(mockUserIds);
+      vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(mockUserIds);
 
       // Test
-      await Core.UserStreamApplication.getOrFetchStreamSlice({
+      await UserStreamApplication.getOrFetchStreamSlice({
         streamId,
         skip: 0,
         limit: 3,
@@ -234,23 +238,23 @@ describe('UserStreamApplication', () => {
       });
 
       // Assert: New stream should be created
-      const cachedStream = await Core.LocalStreamUsersService.findById(streamId);
+      const cachedStream = await LocalStreamUsersService.findById(streamId);
       expect(cachedStream?.stream).toEqual(['follower-1', 'follower-2', 'follower-3']);
     });
 
     it('should return cacheMissUserIds correctly', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
-      const mockUserIds: Core.Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
+      const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
+      const mockUserIds: Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
 
       // Mock Nexus API to return user IDs only
-      vi.spyOn(Core.NexusUserStreamService, 'fetch').mockResolvedValue(mockUserIds);
+      vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(mockUserIds);
 
       // Note: Now we fetch only user IDs, so cacheMissUserIds will contain
       // all IDs that are not yet in the UserDetailsModel cache
       // These will need to be fetched separately via the by_ids endpoint
 
       // Test
-      const result = await Core.UserStreamApplication.getOrFetchStreamSlice({
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
         streamId,
         skip: 0,
         limit: 3,
@@ -262,14 +266,14 @@ describe('UserStreamApplication', () => {
     });
 
     it('should handle enum-based stream IDs (influencers)', async () => {
-      const streamId = Core.UserStreamTypes.TODAY_INFLUENCERS_ALL;
-      const mockUserIds: Core.Pubky[] = ['influencer-1', 'influencer-2', 'influencer-3'];
+      const streamId = UserStreamTypes.TODAY_INFLUENCERS_ALL;
+      const mockUserIds: Pubky[] = ['influencer-1', 'influencer-2', 'influencer-3'];
 
       // Mock Nexus API to return user IDs only
-      const fetchSpy = vi.spyOn(Core.NexusUserStreamService, 'fetch').mockResolvedValue(mockUserIds);
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(mockUserIds);
 
       // Test
-      const result = await Core.UserStreamApplication.getOrFetchStreamSlice({
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
         streamId,
         skip: 0,
         limit: 3,
@@ -285,14 +289,14 @@ describe('UserStreamApplication', () => {
     });
 
     it('should pass viewerId to Nexus API for relationship data', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
-      const mockUserIds: Core.Pubky[] = ['follower-1', 'follower-2'];
+      const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
+      const mockUserIds: Pubky[] = ['follower-1', 'follower-2'];
 
       // Mock Nexus API to return user IDs only
-      const fetchSpy = vi.spyOn(Core.NexusUserStreamService, 'fetch').mockResolvedValue(mockUserIds);
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(mockUserIds);
 
       // Test
-      await Core.UserStreamApplication.getOrFetchStreamSlice({
+      await UserStreamApplication.getOrFetchStreamSlice({
         streamId,
         skip: 0,
         limit: 2,
@@ -313,17 +317,17 @@ describe('UserStreamApplication', () => {
 
   describe('fetchMissingUsersFromNexus', () => {
     it('should fetch and persist users when cacheMissUserIds exist', async () => {
-      const cacheMissUserIds: Core.Pubky[] = ['user-1', 'user-2', 'user-3'];
+      const cacheMissUserIds: Pubky[] = ['user-1', 'user-2', 'user-3'];
       const mockUsers = cacheMissUserIds.map((id) => createMockNexusUser(id));
 
       // Mock NexusUserStreamService.fetchByIds
-      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
+      const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
 
       // Mock persistUsers to track it was called
-      const persistSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers');
+      const persistSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers');
 
       // Test
-      await Core.UserStreamApplication.fetchMissingUsersFromNexus({
+      await UserStreamApplication.fetchMissingUsersFromNexus({
         cacheMissUserIds,
         viewerId: DEFAULT_VIEWER_ID,
       });
@@ -338,10 +342,10 @@ describe('UserStreamApplication', () => {
 
     it('should not fetch when cacheMissUserIds is empty', async () => {
       // Mock NexusUserStreamService.fetchByIds to track it's not called
-      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds');
+      const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds');
 
       // Test
-      await Core.UserStreamApplication.fetchMissingUsersFromNexus({
+      await UserStreamApplication.fetchMissingUsersFromNexus({
         cacheMissUserIds: [],
         viewerId: DEFAULT_VIEWER_ID,
       });
@@ -351,14 +355,14 @@ describe('UserStreamApplication', () => {
     });
 
     it('should pass viewerId to usersByIds API', async () => {
-      const cacheMissUserIds: Core.Pubky[] = ['user-1', 'user-2'];
+      const cacheMissUserIds: Pubky[] = ['user-1', 'user-2'];
       const mockUsers = cacheMissUserIds.map((id) => createMockNexusUser(id));
 
       // Mock NexusUserStreamService.fetchByIds
-      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
+      const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
 
       // Test
-      await Core.UserStreamApplication.fetchMissingUsersFromNexus({
+      await UserStreamApplication.fetchMissingUsersFromNexus({
         cacheMissUserIds,
         viewerId: DEFAULT_VIEWER_ID,
       });
@@ -371,14 +375,14 @@ describe('UserStreamApplication', () => {
     });
 
     it('should handle missing viewerId', async () => {
-      const cacheMissUserIds: Core.Pubky[] = ['user-1'];
+      const cacheMissUserIds: Pubky[] = ['user-1'];
       const mockUsers = [createMockNexusUser('user-1')];
 
       // Mock NexusUserStreamService.fetchByIds
-      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
+      const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
 
       // Test without viewerId
-      await Core.UserStreamApplication.fetchMissingUsersFromNexus({
+      await UserStreamApplication.fetchMissingUsersFromNexus({
         cacheMissUserIds,
         viewerId: undefined,
       });
@@ -397,10 +401,10 @@ describe('UserStreamApplication', () => {
 
   describe('getOrFetchUsers', () => {
     it('should return early when userIds is empty', async () => {
-      const getNotPersistedSpy = vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache');
-      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds');
+      const getNotPersistedSpy = vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache');
+      const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds');
 
-      await Core.UserStreamApplication.getOrFetchUsers({
+      await UserStreamApplication.getOrFetchUsers({
         userIds: [],
         viewerId: DEFAULT_VIEWER_ID,
       });
@@ -410,13 +414,13 @@ describe('UserStreamApplication', () => {
     });
 
     it('should return early when all users are already cached', async () => {
-      const userIds: Core.Pubky[] = ['user-1', 'user-2'];
+      const userIds: Pubky[] = ['user-1', 'user-2'];
 
       // All users are already in cache
-      vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
-      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds');
+      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
+      const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds');
 
-      await Core.UserStreamApplication.getOrFetchUsers({
+      await UserStreamApplication.getOrFetchUsers({
         userIds,
         viewerId: DEFAULT_VIEWER_ID,
       });
@@ -425,15 +429,15 @@ describe('UserStreamApplication', () => {
     });
 
     it('should fetch missing users from Nexus when cache misses exist', async () => {
-      const userIds: Core.Pubky[] = ['user-1', 'user-2', 'user-3'];
-      const cacheMissUserIds: Core.Pubky[] = ['user-2', 'user-3'];
+      const userIds: Pubky[] = ['user-1', 'user-2', 'user-3'];
+      const cacheMissUserIds: Pubky[] = ['user-2', 'user-3'];
       const mockUsers = cacheMissUserIds.map((id) => createMockNexusUser(id));
 
-      vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue(cacheMissUserIds);
-      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
-      const persistSpy = vi.spyOn(Core.LocalStreamUsersService, 'persistUsers');
+      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue(cacheMissUserIds);
+      const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
+      const persistSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers');
 
-      await Core.UserStreamApplication.getOrFetchUsers({
+      await UserStreamApplication.getOrFetchUsers({
         userIds,
         viewerId: DEFAULT_VIEWER_ID,
       });
@@ -446,14 +450,14 @@ describe('UserStreamApplication', () => {
     });
 
     it('should pass viewerId through to fetchMissingUsersFromNexus', async () => {
-      const userIds: Core.Pubky[] = ['user-1'];
-      const cacheMissUserIds: Core.Pubky[] = ['user-1'];
+      const userIds: Pubky[] = ['user-1'];
+      const cacheMissUserIds: Pubky[] = ['user-1'];
       const mockUsers = [createMockNexusUser('user-1')];
 
-      vi.spyOn(Core.LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue(cacheMissUserIds);
-      const fetchByIdsSpy = vi.spyOn(Core.NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
+      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue(cacheMissUserIds);
+      const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockUsers);
 
-      await Core.UserStreamApplication.getOrFetchUsers({
+      await UserStreamApplication.getOrFetchUsers({
         userIds,
         viewerId: undefined,
       });

@@ -1,17 +1,24 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
-import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
+import { Container } from '@/atoms/Container/Container';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
-import { parseTagsFromUrl } from './SearchInput.utils';
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
+import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
+import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
+import { isValidTagLabel } from '@/libs/utils/utils';
+import type { Pubky } from '@/models/models.types';
+import { SearchInputBar } from '@/molecules/SearchInputBar/SearchInputBar';
+import { SearchSuggestions } from '@/molecules/SearchSuggestions/SearchSuggestions';
+import { toast } from '@/molecules/Toaster/use-toast';
+import { useSearchStore } from '@/stores/search/search.store';
 import { SearchInputProps } from './SearchInput.types';
+import { parseTagsFromUrl } from './SearchInput.utils';
 
 export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const router = useRouter();
@@ -19,13 +26,13 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const pathname = usePathname();
   const t = useTranslations('search');
 
-  const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = Hooks.useTagSearch();
-  const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = Core.useSearchStore();
-  const isMobile = Hooks.useIsMobile();
+  const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = useTagSearch();
+  const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = useSearchStore();
+  const isMobile = useIsMobile();
 
   const handleEnter = (value: string) => {
-    if (!Libs.isValidTagLabel(value.trim().toLowerCase())) {
-      Molecules.toast({ description: t('invalidTag') });
+    if (!isValidTagLabel(value.trim().toLowerCase())) {
+      toast({ description: t('invalidTag') });
       return false;
     }
 
@@ -45,7 +52,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     handleFocus,
     clearInputValue,
     setFocus,
-  } = Hooks.useSearchInput({ onEnter: handleEnter });
+  } = useSearchInput({ onEnter: handleEnter });
 
   const tagsParam = searchParams.get('tags');
   useEffect(() => {
@@ -53,15 +60,15 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     setActiveTags(urlTags);
   }, [tagsParam, setActiveTags]);
 
-  const { tags: hotTags } = Hooks.useHotTags({ limit: CLICKABLE_TAGS_DEFAULT_MAX_LENGTH });
+  const { tags: hotTags } = useHotTags({ limit: CLICKABLE_TAGS_DEFAULT_MAX_LENGTH });
 
   const hasInput = inputValue.trim().length > 0;
-  const { tags: autocompleteTags, users: autocompleteUserData } = Hooks.useSearchAutocomplete({
+  const { tags: autocompleteTags, users: autocompleteUserData } = useSearchAutocomplete({
     query: inputValue,
     enabled: isFocused && hasInput,
   });
 
-  const handleUserClick = (userId: Core.Pubky) => {
+  const handleUserClick = (userId: Pubky) => {
     addUser(userId);
     clearInputValue();
     setFocus(false);
@@ -83,9 +90,9 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const suggestionsId = 'search-suggestions';
 
   return (
-    <Atoms.Container ref={containerRef} data-testid="search-input" className="relative min-w-0">
+    <Container ref={containerRef} data-testid="search-input" className="relative min-w-0">
       {/* Input bar with active tags */}
-      <Molecules.SearchInputBar
+      <SearchInputBar
         activeTags={activeTags}
         inputValue={inputValue}
         isFocused={isFocused}
@@ -102,7 +109,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
 
       {/* Suggestions dropdown */}
       {hasSuggestions && (
-        <Molecules.SearchSuggestions
+        <SearchSuggestions
           id={suggestionsId}
           aria-label="Search suggestions"
           hotTags={hotTags}
@@ -116,6 +123,6 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
           onClearRecentSearches={clearRecentSearches}
         />
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

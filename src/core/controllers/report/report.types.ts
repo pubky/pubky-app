@@ -1,7 +1,7 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
 
 export interface TReportSubmitParams {
-  pubky: Core.Pubky;
+  pubky: Pubky;
   postUrl: string;
   issueType: string;
   reason: string;

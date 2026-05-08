@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
-import * as App from '@/app';
+import { isDynamicPublicRoute } from '@/app/routes';
 import type { UsePublicRouteResult } from './usePublicRoute.types';
 
 export type { UsePublicRouteResult } from './usePublicRoute.types';
@@ -20,7 +20,7 @@ export type { UsePublicRouteResult } from './usePublicRoute.types';
 export function usePublicRoute(): UsePublicRouteResult {
   const pathname = usePathname();
 
-  const isPublicRoute = useMemo(() => App.isDynamicPublicRoute(pathname), [pathname]);
+  const isPublicRoute = useMemo(() => isDynamicPublicRoute(pathname), [pathname]);
 
   return { isPublicRoute };
 }

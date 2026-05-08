@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useSelectedLayoutSegments } from 'next/navigation';
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HomeLayout from './layout';
 
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
@@ -9,21 +9,23 @@ vi.mock('next/navigation', () => ({
   useSelectedLayoutSegments: vi.fn(),
 }));
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" data-override-defaults={overrideDefaults ? 'true' : 'false'} className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" data-override-defaults={overrideDefaults ? 'true' : 'false'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('HomeLayout', () => {
   beforeEach(() => {

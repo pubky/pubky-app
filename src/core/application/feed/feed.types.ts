@@ -1,32 +1,34 @@
-import * as Core from '@/core';
 import { FeedResult } from 'pubky-app-specs';
-import { HttpMethod } from '@/libs';
+import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import type { Pubky } from '@/models/models.types';
 
 export interface FeedDeleteParams {
   userId: string;
-  params: Core.TFeedPersistParams;
+  params: TFeedPersistParams;
 }
 
 export interface FeedUpdateParams {
   userId: string;
-  params: Core.TFeedPersistUpdateParams;
+  params: TFeedPersistUpdateParams;
 }
 
 export interface FeedPutParams {
   userId: string;
-  params: Core.TFeedPersistParams;
+  params: TFeedPersistParams;
 }
 
 export interface PersistAndSyncParams {
   userId: string;
-  feedSchema: Core.FeedModelSchema;
+  feedSchema: FeedModelSchema;
   normalizedFeed: FeedResult;
 }
 
 export interface LocalFeedMigrationParams {
   existingId: string;
-  feedSchema: Core.FeedModelSchema;
-  oldFeed: Core.FeedModelSchema | null;
+  feedSchema: FeedModelSchema;
+  oldFeed: FeedModelSchema | null;
 }
 
 export type TFeedPersistCreateParams = {
@@ -36,7 +38,7 @@ export type TFeedPersistCreateParams = {
 
 export type TFeedPersistUpdateParams = {
   feedId: string;
-  changes: Partial<Omit<Core.TFeedCreateParams, 'name'>>;
+  changes: Partial<Omit<TFeedCreateParams, 'name'>>;
 };
 
 export type TFeedPersistDeleteParams = {
@@ -47,12 +49,12 @@ export type TFeedPersistParams = TFeedPersistCreateParams | TFeedPersistUpdatePa
 
 export type TFeedPersistInput = {
   action: HttpMethod;
-  userId: Core.Pubky;
+  userId: Pubky;
   params: TFeedPersistParams;
 };
 
 export interface RemoteFeedParams {
-  userId: Core.Pubky;
+  userId: Pubky;
   remoteFeed: HomeserverFeedJson;
 }
 

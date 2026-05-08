@@ -1,14 +1,17 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { PostPreviewCard } from './PostPreviewCard';
 
 // Mock hooks
 const mockNavigateToPost = vi.fn();
 const mockTtlRef = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
   usePostNavigation: () => ({
     navigateToPost: mockNavigateToPost,
   }),
+}));
+
+vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
   useTtlSubscription: () => ({
     ref: mockTtlRef,
     isVisible: false,
@@ -16,15 +19,8 @@ vi.mock('@/hooks', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/PostContentBase/PostContentBase', () => {
   return {
-    ...actual,
-    PostHeader: vi.fn(({ postId }: { postId: string }) => (
-      <div data-testid="post-header" data-post-id={postId}>
-        PostHeader {postId}
-      </div>
-    )),
     PostContentBase: vi.fn(({ postId }: { postId: string }) => (
       <div data-testid="post-content-base" data-post-id={postId}>
         PostContentBase {postId}
@@ -33,51 +29,57 @@ vi.mock('@/organisms', async (importOriginal) => {
   };
 });
 
-// Mock atoms
-vi.mock('@/atoms', () => ({
-  Card: ({
-    children,
-    className,
-    onClick,
-    onKeyDown,
-    role,
-    tabIndex,
-    'aria-label': ariaLabel,
-    ref,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: (e: React.MouseEvent) => void;
-    onKeyDown?: (e: React.KeyboardEvent) => void;
-    role?: string;
-    tabIndex?: number;
-    'aria-label'?: string;
-    ref?: React.Ref<HTMLDivElement>;
-  }) => (
-    <div
-      data-testid="card"
-      className={className}
-      onClick={onClick}
-      onKeyDown={onKeyDown}
-      role={role}
-      tabIndex={tabIndex}
-      aria-label={ariaLabel}
-      ref={ref}
-    >
-      {children}
-    </div>
-  ),
-  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
+  return {
+    PostHeader: vi.fn(({ postId }: { postId: string }) => (
+      <div data-testid="post-header" data-post-id={postId}>
+        PostHeader {postId}
+      </div>
+    )),
+  };
+});
 
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
+// Mock atoms
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({
+      children,
+      className,
+      onClick,
+      onKeyDown,
+      role,
+      tabIndex,
+      'aria-label': ariaLabel,
+      ref,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: (e: React.MouseEvent) => void;
+      onKeyDown?: (e: React.KeyboardEvent) => void;
+      role?: string;
+      tabIndex?: number;
+      'aria-label'?: string;
+      ref?: React.Ref<HTMLDivElement>;
+    }) => (
+      <div
+        data-testid="card"
+        className={className}
+        onClick={onClick}
+        onKeyDown={onKeyDown}
+        role={role}
+        tabIndex={tabIndex}
+        aria-label={ariaLabel}
+        ref={ref}
+      >
+        {children}
+      </div>
+    ),
+    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card-content" className={className}>
+        {children}
+      </div>
+    ),
+  };
 });
 
 describe('PostPreviewCard', () => {

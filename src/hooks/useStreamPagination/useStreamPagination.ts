@@ -1,10 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import * as Core from '@/core';
-import * as Config from '@/config';
-import * as Libs from '@/libs';
-import * as Types from './useStreamPagination.types';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
+import { NOT_FOUND_CACHED_STREAM } from '@/controllers/stream/posts/post.constants';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
+import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { SORT } from '@/stores/home/home.types';
+import { sortPostIdsByTimestamp } from '@/utils/sorting';
+import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
 
 /**
  * useStreamPagination
@@ -14,12 +19,12 @@ import * as Types from './useStreamPagination.types';
  */
 export function useStreamPagination({
   streamId,
-  limit = Config.NEXUS_POSTS_PER_PAGE,
+  limit = NEXUS_POSTS_PER_PAGE,
   resetOnStreamChange = true,
-}: Types.UseStreamPaginationOptions): Types.UseStreamPaginationResult {
+}: UseStreamPaginationOptions): UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
   const [lastPostId, setLastPostId] = useState<string | undefined>(undefined);
-  const [streamTail, setStreamTail] = useState<number>(Core.NOT_FOUND_CACHED_STREAM);
+  const [streamTail, setStreamTail] = useState<number>(NOT_FOUND_CACHED_STREAM);
 
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -48,26 +53,26 @@ export function useStreamPagination({
       setError(null);
 
       try {
-        let result: Core.TReadPostStreamChunkResponse;
+        let result: TReadPostStreamChunkResponse;
 
         if (isInitialLoad) {
           // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream
-          await Core.StreamPostsController.prepareStreamForInitialLoad({ streamId });
+          await StreamPostsController.prepareStreamForInitialLoad({ streamId });
 
-          const cachedLastPostTimestamp = await Core.StreamPostsController.getCachedLastPostTimestamp({ streamId });
+          const cachedLastPostTimestamp = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
           setStreamTail(cachedLastPostTimestamp);
 
-          result = await Core.StreamPostsController.getOrFetchStreamSlice({
+          result = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId: undefined,
             streamTail: cachedLastPostTimestamp,
             limit,
           });
         } else {
-          const isEngagementStream = streamId.startsWith(Core.SORT.ENGAGEMENT);
+          const isEngagementStream = streamId.startsWith(SORT.ENGAGEMENT);
           const cursorValue = isEngagementStream ? postIdsRef.current.length : streamTail;
 
-          result = await Core.StreamPostsController.getOrFetchStreamSlice({
+          result = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId,
             streamTail: cursorValue,
@@ -85,10 +90,10 @@ export function useStreamPagination({
           // Respect reachedEnd flag - only set hasMore to false if we actually
           // reached the end of stream, not just because filters removed all posts
           if (result.reachedEnd) {
-            Libs.Logger.debug('[useStreamPagination] Empty result, reached end of stream');
+            Logger.debug('[useStreamPagination] Empty result, reached end of stream');
             setHasMore(false);
           } else {
-            Libs.Logger.debug('[useStreamPagination] Empty result after filtering, more posts may exist');
+            Logger.debug('[useStreamPagination] Empty result after filtering, more posts may exist');
             setHasMore(true);
           }
 
@@ -126,10 +131,10 @@ export function useStreamPagination({
         postIdsRef.current = updatedPostIds;
         setPostIds(updatedPostIds);
       } catch (err) {
-        const errorMessage = Libs.isAppError(err) ? err.message : 'An unknown error occurred.';
+        const errorMessage = isAppError(err) ? err.message : 'An unknown error occurred.';
         setError(errorMessage);
         setHasMore(false);
-        Libs.Logger.error('Failed to fetch stream slice:', err);
+        Logger.error('Failed to fetch stream slice:', err);
       } finally {
         setLoadingState(isInitialLoad, false);
       }
@@ -186,11 +191,11 @@ export function useStreamPagination({
 
     try {
       // Fetch post details to get timestamps and sort
-      const sortedIds = await Core.sortPostIdsByTimestamp(allIds);
+      const sortedIds = await sortPostIdsByTimestamp(allIds);
       postIdsRef.current = sortedIds;
       setPostIds(sortedIds);
     } catch (err) {
-      Libs.Logger.error('Failed to prepend posts:', err);
+      Logger.error('Failed to prepend posts:', err);
       // Fallback: add without sorting
       postIdsRef.current = allIds;
       setPostIds(allIds);

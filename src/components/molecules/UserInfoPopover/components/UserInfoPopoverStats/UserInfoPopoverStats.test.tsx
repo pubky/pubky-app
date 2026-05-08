@@ -1,10 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { UserInfoPopoverStats } from './UserInfoPopoverStats';
 
-vi.mock('@/molecules', () => ({
-  AvatarGroup: ({ totalCount }: { totalCount: number }) => <div data-testid="avatar-group">{totalCount}</div>,
-}));
+vi.mock('@/molecules/AvatarGroup/AvatarGroup', () => {
+  return {
+    AvatarGroup: ({ totalCount }: { totalCount: number }) => <div data-testid="avatar-group">{totalCount}</div>,
+  };
+});
 
 describe('UserInfoPopoverStats', () => {
   it('renders followers/following labels and counts', () => {

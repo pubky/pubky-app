@@ -1,5 +1,14 @@
-import * as Core from '@/core';
-import * as Config from '@/config';
+import { NotificationApplication } from '@/application/notification/notification';
+import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
+import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
+import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
+import type { TReadProfileParams } from '@/controllers/profile/profile.types';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 
 export class NotificationController {
   private constructor() {} // Prevent instantiation
@@ -12,15 +21,18 @@ export class NotificationController {
    * @param userId - The user ID to fetch notifications for
    * @returns Promise resolving when notifications are updated
    */
-  static async fetchNotifications({ userId }: Core.TReadProfileParams) {
-    const notificationStore = Core.useNotificationStore.getState();
+  static async fetchNotifications({ userId }: TReadProfileParams) {
+    const notificationStore = useNotificationStore.getState();
     const lastPolledTimestamp = notificationStore.selectLastPolledTimestamp();
     const lastRead = notificationStore.selectLastRead();
+    const preferences = useSettingsStore.getState().notifications;
 
-    const { unread, nextPollCursor } = await Core.NotificationApplication.fetchNotifications({
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
+    const { unread, nextPollCursor } = await NotificationApplication.fetchNotifications({
       userId,
       lastPolledTimestamp,
       lastRead,
+      allowedTypes,
     });
 
     notificationStore.setUnread(unread);
@@ -37,19 +49,19 @@ export class NotificationController {
    * Should be called when the user enters the notifications page.
    */
   static markAllAsRead() {
-    const authStore = Core.useAuthStore.getState();
+    const authStore = useAuthStore.getState();
     const pubky = authStore.currentUserPubky;
 
     // Skip if user is not authenticated (e.g., during logout)
     if (!pubky) return;
 
     // Create new lastRead with current timestamp using normalizer
-    const lastRead = Core.LastReadNormalizer.to(pubky);
+    const lastRead = LastReadNormalizer.to(pubky);
 
-    Core.NotificationApplication.markAllAsRead(lastRead);
+    NotificationApplication.markAllAsRead(lastRead);
 
     // Update local store
-    const notificationStore = Core.useNotificationStore.getState();
+    const notificationStore = useNotificationStore.getState();
     notificationStore.setLastRead(Number(lastRead.last_read.timestamp));
     notificationStore.setUnread(0);
   }
@@ -58,38 +70,48 @@ export class NotificationController {
    * Retrieves notifications from cache if available, otherwise fetches from Nexus.
    * Uses timestamp-based pagination.
    *
+   * All notifications are stored unfiltered in IndexedDB.
+   * The controller reads NotificationPreferences from the settings store and computes
+   * allowedTypes, then delegates filtering-aware pagination to NotificationApplication.
+   * This keeps store access in the Controller layer (ADR-0004) while keeping fetch
+   * orchestration in the Application layer.
+   *
    * @param params.olderThan - Unix timestamp to get notifications older than.
    *                           Defaults to Infinity for initial load (most recent notifications).
    *                           Use the timestamp of the last notification for pagination.
    * @param params.limit - Maximum number of notifications to return. Defaults to NEXUS_NOTIFICATIONS_LIMIT.
    *
-   * @returns Promise resolving to notifications and next timestamp for pagination
+   * @returns Promise resolving to filtered notifications and next timestamp for pagination
    */
   static async getOrFetchNotifications({
     olderThan = Infinity,
-    limit = Config.NEXUS_NOTIFICATIONS_LIMIT,
-  }: Core.TGetNotificationsParams): Promise<Core.TGetOrFetchNotificationsResponse> {
-    const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
+    limit = NEXUS_NOTIFICATIONS_LIMIT,
+  }: TGetNotificationsParams): Promise<TGetOrFetchNotificationsResponse> {
+    const userId = useAuthStore.getState().selectCurrentUserPubky();
+    const preferences = useSettingsStore.getState().notifications;
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
+    const shouldFilterByPreferences = allowedTypes.length < Object.values(NotificationType).length;
 
-    return await Core.NotificationApplication.getOrFetchNotifications({
+    return await NotificationApplication.getOrFetchNotifications({
       userId,
       olderThan,
       limit,
+      allowedTypes: shouldFilterByPreferences ? allowedTypes : undefined,
     });
   }
 
   /**
-   * Retrieves all notifications from the local database.
-   * Used for reactive queries in UI components.
+   * Retrieves all notifications from the local database without preference filtering.
+   * Currently unused since filtered-notification was introduced, but kept for future use.
    *
    * @returns Promise resolving to all notifications ordered by timestamp descending
    */
-  static async getAllFromCache(): Promise<Core.FlatNotification[]> {
-    return await Core.NotificationApplication.getAllFromCache();
+  static async getAllFromCache(): Promise<FlatNotification[]> {
+    return await NotificationApplication.getAllFromCache();
   }
 
   static getNotificationsCountsNow(): number {
-    const notificationStore = Core.useNotificationStore.getState();
+    const notificationStore = useNotificationStore.getState();
     return notificationStore.selectUnread();
   }
 }

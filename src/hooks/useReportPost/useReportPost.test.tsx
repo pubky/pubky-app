@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
+import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
 import { useReportPost } from './useReportPost';
-import { REPORT_POST_STEPS, REPORT_API_ENDPOINT } from './useReportPost.constants';
-import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH } from '@/core/pipes/report';
-import { HttpMethod, JSON_HEADERS } from '@/libs';
+import { REPORT_API_ENDPOINT, REPORT_POST_STEPS } from './useReportPost.constants';
 
 // Mock fetch
 global.fetch = vi.fn();
@@ -23,39 +23,29 @@ Object.defineProperty(window, 'location', {
 
 // Mock useCurrentUserProfile hook
 const mockUseCurrentUserProfile = vi.fn();
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: () => mockUseCurrentUserProfile(),
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => mockUseCurrentUserProfile(),
+}));
 
 // Mock parseCompositeId
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    parseCompositeId: (id: string) => {
-      const [pubky, postId] = id.split(':');
-      return { pubky, id: postId };
-    },
-  };
-});
+vi.mock('@/models/models.utils', () => ({
+  parseCompositeId: (id: string) => {
+    const [pubky, postId] = id.split(':');
+    return { pubky, id: postId };
+  },
+}));
 
 // Mock toast helpers
 const mockShowErrorToast = vi.fn();
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
   return {
-    ...actual,
     showErrorToast: (params: { title?: string; description: string }) => mockShowErrorToast(params),
   };
 });
 
 // Mock Logger
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
+vi.mock('@/libs/logger/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/logger/logger')>();
   return {
     ...actual,
     Logger: {

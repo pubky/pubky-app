@@ -1,6 +1,6 @@
+import type { BaseStreamModelSchema } from '@/models/shared/stream/stream.type';
+import type { NexusHotTag } from '@/services/nexus/nexus.types';
 import { TagStreamTypes } from './tagStream.types';
-import { NexusHotTag } from '@/core/services/nexus/nexus.types';
-import { BaseStreamModelSchema } from '@/core/models/shared/stream/stream.type';
 
 export type TagStreamModelSchema = BaseStreamModelSchema<TagStreamTypes, NexusHotTag>;
 

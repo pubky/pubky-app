@@ -1,4 +1,6 @@
-import { Err, ValidationErrorCode, ErrorService } from '@/libs';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { REPORT_ISSUE_TYPE_VALUES, REPORT_REASON_MAX_LENGTH } from './report.constants';
 import type { ReportIssueType } from './report.types';
 

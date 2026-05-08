@@ -1,10 +1,11 @@
 'use client';
 
-import type { PostDetailsModel } from '@/core';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import * as Molecules from '@/molecules';
+import { FileController } from '@/controllers/file/file';
+import type { PostDetailsModel } from '@/models/post/details/postDetails';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import type { FileVariant } from '@/services/nexus/file/file.types';
 import type { ArticleJSON } from './usePostArticle.types';
 
 interface CoverImage {
@@ -15,7 +16,7 @@ interface CoverImage {
 interface UsePostArticleParams {
   content: string;
   attachments: PostDetailsModel['attachments'];
-  coverImageVariant: Core.FileVariant;
+  coverImageVariant: FileVariant;
 }
 
 interface UsePostArticleResult {
@@ -37,7 +38,7 @@ interface UsePostArticleResult {
  * const { title, body, coverImage } = usePostArticle({
  *   content: '{"title":"My Article","body":"Article content..."}',
  *   attachments: ['pubky://user/pub/pubky.app/files/file-123'],
- *   coverImageVariant: Core.FileVariant.FEED,
+ *   coverImageVariant: FileVariant.FEED,
  * });
  * ```
  */
@@ -46,7 +47,7 @@ export function usePostArticle({
   attachments,
   coverImageVariant,
 }: UsePostArticleParams): UsePostArticleResult {
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
 
@@ -75,12 +76,12 @@ export function usePostArticle({
       if (!attachments?.length) return;
 
       try {
-        const attachment = (await Core.FileController.getMetadata({ fileAttachments: attachments }))[0];
+        const attachment = (await FileController.getMetadata({ fileAttachments: attachments }))[0];
 
         if (cancelled) return;
 
         if (attachment && attachment.content_type.startsWith('image')) {
-          const src = Core.FileController.getFileUrl({ fileId: attachment.id, variant: coverImageVariant });
+          const src = FileController.getFileUrl({ fileId: attachment.id, variant: coverImageVariant });
           const coverImage = { src, alt: attachment.name };
           setCoverImage(coverImage);
         }

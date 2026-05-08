@@ -1,12 +1,14 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
+import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
+import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { scrollDialogTextareaIntoDialog } from '@/organisms/PostInput/PostInput.utils';
+import { PostInput } from '../PostInput/PostInput';
 import type { DialogReplyProps } from './DialogReply.types';
 
 const REPLY_TEXTAREA_SELECTOR = '#reply-post-input [data-slot="textarea"]';
@@ -14,7 +16,7 @@ const REPLY_TEXTAREA_SELECTOR = '#reply-post-input [data-slot="textarea"]';
 export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyProps) {
   const t = useTranslations('dialogs.reply');
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
-    Hooks.useConfirmableDialog({
+    useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
 
@@ -27,23 +29,19 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
   };
 
   return (
-    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent
-        className="w-3xl"
-        hiddenTitle={t('hiddenTitle')}
-        onAnimationEnd={handleDialogContentAnimationEnd}
-      >
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
-          <Atoms.DialogDescription className="sr-only">{t('description')}</Atoms.DialogDescription>
-        </Atoms.DialogHeader>
-        <Atoms.Container className="gap-3">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')} onAnimationEnd={handleDialogContentAnimationEnd}>
+        <DialogHeader>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription className="sr-only">{t('description')}</DialogDescription>
+        </DialogHeader>
+        <Container className="gap-3">
           {/* Post being replied to */}
-          <Molecules.PostPreviewCard postId={postId} />
+          <PostPreviewCard postId={postId} />
 
           {/* Reply input */}
-          <Atoms.Container className="relative pl-6" overrideDefaults>
-            <Organisms.PostInput
+          <Container className="relative pl-6" overrideDefaults>
+            <PostInput
               dataCy="reply-post-input"
               id="reply-post-input"
               key={resetKey}
@@ -57,15 +55,15 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
               autoFocusTextarea
               onContentChange={handleContentChange}
             />
-          </Atoms.Container>
-        </Atoms.Container>
+          </Container>
+        </Container>
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
-        <Molecules.DialogConfirmDiscard
+        <DialogConfirmDiscard
           open={showConfirmDialog}
           onOpenChange={() => setShowConfirmDialog(false)}
           onConfirm={handleDiscard}
         />
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

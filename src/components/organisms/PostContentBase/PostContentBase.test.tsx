@@ -1,12 +1,16 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
+import { PostText } from '@/molecules/PostText/PostText';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { PostArticle } from '../PostArticle/PostArticle';
+import { PostAttachments } from '../PostAttachments/PostAttachments';
+import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
 import { PostContentBase } from './PostContentBase';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
-import { asOpaque } from '@/test-utils';
 
 // Mock next/navigation for usePathname used by PostText
 vi.mock('next/navigation', () => ({
@@ -14,66 +18,84 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock hooks used by PostContentBase
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    usePostDetails: vi.fn(),
-  };
-});
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: vi.fn(),
+}));
 
-// Mock core - useLocalFilesStore
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useLocalFilesStore: vi.fn(),
-  };
-});
+// Mock local files store
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: vi.fn(),
+}));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    className,
-    overrideDefaults: _overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <button data-testid="button" className={className} {...props}>
-      {children}
-    </button>
-  ),
-  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      className,
+      overrideDefaults: _overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <button data-testid="button" className={className} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
+  };
+});
 
 // Mock molecules - PostText, PostLinkEmbeds
-vi.mock('@/molecules', () => ({
-  PostText: vi.fn(() => null),
-  PostLinkEmbeds: vi.fn(() => null),
+vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
+  return {
+    PostLinkEmbeds: vi.fn(() => null),
+  };
+});
+
+vi.mock('@/molecules/PostText/PostText', () => {
+  return {
+    PostText: vi.fn(() => null),
+  };
+});
+
+vi.mock('../PostArticle/PostArticle', () => ({
+  PostArticle: vi.fn(({ content }: { content: string }) => <div data-testid="post-article">{content}</div>),
 }));
 
-// Mock organisms - PostAttachments, PostContentBlurred, PostArticle
-vi.mock('@/organisms', () => ({
+vi.mock('../PostAttachments/PostAttachments', () => ({
   PostAttachments: vi.fn(() => <div data-testid="post-attachments" />),
-  PostContentBlurred: vi.fn(() => <div data-testid="post-content-blurred" />),
-  PostArticle: vi.fn(() => <div data-testid="post-article" />),
 }));
 
-const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
-const mockUseLocalFilesStore = vi.mocked(Core.useLocalFilesStore);
-const mockPostAttachments = vi.mocked(Organisms.PostAttachments);
-const mockPostContentBlurred = vi.mocked(Organisms.PostContentBlurred);
-const mockPostArticle = vi.mocked(Organisms.PostArticle);
+vi.mock('../PostContentBlurred/PostContentBlurred', () => ({
+  PostContentBlurred: vi.fn(({ postId }: { postId: string }) => (
+    <div data-testid="post-content-blurred" data-post-id={postId} />
+  )),
+}));
+
+const mockUsePostDetails = vi.mocked(usePostDetails);
+const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
+const mockPostAttachments = vi.mocked(PostAttachments);
+const mockPostContentBlurred = vi.mocked(PostContentBlurred);
+const mockPostArticle = vi.mocked(PostArticle);
 
 // Helper to create complete PostDetails mock
 const createMockPostDetails = (
@@ -83,7 +105,7 @@ const createMockPostDetails = (
     is_blurred: boolean;
     kind: 'short' | 'long';
   }> = {},
-): Core.EnrichedPostDetails => ({
+): EnrichedPostDetails => ({
   id: 'test-author:test-post',
   indexed_at: Date.now(),
   kind: 'short' as const,
@@ -278,19 +300,17 @@ describe('PostContentBase - Snapshots', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockUseLocalFilesStore.mockReturnValue(undefined);
-    // Import specific modules directly to avoid barrel export timeout (loading all 70+ molecules)
-    const actualPostText = await vi.importActual<{ PostText: typeof Molecules.PostText }>(
-      '@/molecules/PostText/PostText',
-    );
-    const actualPostLinkEmbeds = await vi.importActual<{ PostLinkEmbeds: typeof Molecules.PostLinkEmbeds }>(
+    // Import concrete molecule paths to avoid pulling the whole tier through one entrypoint (timeout loading 70+ modules)
+    const actualPostText = await vi.importActual<{ PostText: typeof PostText }>('@/molecules/PostText/PostText');
+    const actualPostLinkEmbeds = await vi.importActual<{ PostLinkEmbeds: typeof PostLinkEmbeds }>(
       '@/molecules/PostLinkEmbeds/PostLinkEmbeds',
     );
     // Replace the mock implementations with real ones for snapshots
     // PostText is wrapped with React.memo(), so we need to access the underlying function via .type
     const memoizedPostText = asOpaque<React.MemoExoticComponent<React.FC<unknown>>>(actualPostText.PostText);
-    const PostTextComponent = asOpaque<typeof Molecules.PostText>(memoizedPostText.type);
-    vi.mocked(Molecules.PostText).mockImplementation(PostTextComponent);
-    vi.mocked(Molecules.PostLinkEmbeds).mockImplementation(actualPostLinkEmbeds.PostLinkEmbeds);
+    const PostTextComponent = asOpaque<typeof PostText>(memoizedPostText.type);
+    vi.mocked(PostText).mockImplementation(PostTextComponent);
+    vi.mocked(PostLinkEmbeds).mockImplementation(actualPostLinkEmbeds.PostLinkEmbeds);
     // PostAttachments stays mocked - it has its own test file
   }, 30000); // Increase timeout to 30 seconds
 

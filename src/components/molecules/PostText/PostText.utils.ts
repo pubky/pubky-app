@@ -1,7 +1,7 @@
-import type { Root, Paragraph, Text, Link, PhrasingContent, Parent, RootContent } from 'mdast';
 import { ReactNode } from 'react';
+import type { Link, Paragraph, Parent, PhrasingContent, Root, RootContent, Text } from 'mdast';
 import { visit } from 'unist-util-visit';
-import { Identity } from '@/libs';
+import { Identity } from '@/libs/identity/identity';
 import { TRUNCATION_LIMIT } from './PostText.constants';
 
 // We assign full code blocks without a language specified as plaintext (ex. ```...```)

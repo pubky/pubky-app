@@ -1,4 +1,12 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
+import type { UserStreamId } from '@/models/stream/user/userStream.types';
+import type { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import {
+  type TUserStreamBase,
+  type TUserStreamInfluencersParams,
+  type TUserStreamWithUserIdParams,
+  UserStreamSource,
+} from '@/services/nexus/stream/users/userStream.types';
 
 const DELIMITER = ':';
 
@@ -22,8 +30,8 @@ const DELIMITER = ':';
  * const url = userStreamApi[reach](apiParams); // Fully type-safe!
  */
 export function createUserStreamParams(
-  streamId: Core.UserStreamId,
-  baseParams: Core.TUserStreamBase,
+  streamId: UserStreamId,
+  baseParams: TUserStreamBase,
 ): NexusParamsResult<ReachType> {
   const parts = streamId.split(DELIMITER);
 
@@ -32,7 +40,7 @@ export function createUserStreamParams(
     const [userId, reach] = parts;
     return {
       reach: reach as ReachType,
-      apiParams: { user_id: userId as Core.Pubky, ...baseParams } as UserStreamApiParamsMap[ReachType],
+      apiParams: { user_id: userId as Pubky, ...baseParams } as UserStreamApiParamsMap[ReachType],
     };
   }
 
@@ -43,14 +51,14 @@ export function createUserStreamParams(
     // Influencers need timeframe and optionally reach in params
     // Note: 'all' is not a valid API value for reach - omit it to get all users
     // API requires user_id and reach to be provided together
-    if (source === Core.UserStreamSource.INFLUENCERS) {
+    if (source === UserStreamSource.INFLUENCERS) {
       return {
         reach: source,
         apiParams: {
           ...baseParams,
-          timeframe: timeframe as Core.UserStreamTimeframe,
+          timeframe: timeframe as UserStreamTimeframe,
           // Only include reach if it's a valid API value (not 'all')
-          ...(reach !== 'all' && { reach: reach as Core.UserStreamReach }),
+          ...(reach !== 'all' && { reach: reach as UserStreamReach }),
           ...(reach !== 'all' && baseParams.viewer_id && { user_id: baseParams.viewer_id }),
         },
       } as NexusParamsResult<'influencers'>;
@@ -90,18 +98,18 @@ const SOURCES_REQUIRING_USER_ID = ['followers', 'following', 'friends', 'muted',
  * @param streamId - Stream identifier
  * @returns true if the source requires user_id parameter
  */
-export function streamRequiresUserId(streamId: Core.UserStreamId): boolean {
+export function streamRequiresUserId(streamId: UserStreamId): boolean {
   return SOURCES_REQUIRING_USER_ID.some((source) => streamId.startsWith(source));
 }
 
 type UserStreamApiParamsMap = {
-  followers: Core.TUserStreamWithUserIdParams;
-  following: Core.TUserStreamWithUserIdParams;
-  friends: Core.TUserStreamWithUserIdParams;
-  muted: Core.TUserStreamWithUserIdParams;
-  recommended: Core.TUserStreamWithUserIdParams;
-  influencers: Core.TUserStreamInfluencersParams;
-  most_followed: Core.TUserStreamBase;
+  followers: TUserStreamWithUserIdParams;
+  following: TUserStreamWithUserIdParams;
+  friends: TUserStreamWithUserIdParams;
+  muted: TUserStreamWithUserIdParams;
+  recommended: TUserStreamWithUserIdParams;
+  influencers: TUserStreamInfluencersParams;
+  most_followed: TUserStreamBase;
 };
 
 type ReachType = keyof UserStreamApiParamsMap;

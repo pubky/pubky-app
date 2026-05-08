@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-
-import { calculatePasswordStrength, getStrengthText, getStrengthColor } from './password';
+import { calculatePasswordStrength, getStrengthColor, getStrengthText } from './password';
 
 describe('Password Utilities', () => {
   describe('calculatePasswordStrength', () => {

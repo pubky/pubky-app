@@ -1,9 +1,12 @@
 'use client';
 
-import * as Atoms from '@/atoms';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { DropdownMenuItem } from '@/atoms/DropdownMenu/DropdownMenu';
+import { Typography } from '@/atoms/Typography/Typography';
 import { MENU_VARIANT } from '@/config/ui';
-import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
+import { usePostMenuActions } from '@/hooks/usePostMenuActions/usePostMenuActions';
+import { cn } from '@/libs/utils/utils';
 import { PostMenuActionsContentSkeleton } from './PostMenuActionsContent.skeleton';
 import type { PostMenuActionsContentProps } from './PostMenuActionsContent.types';
 
@@ -16,7 +19,7 @@ export function PostMenuActionsContent({
   onDeleteClick,
   isDeleting,
 }: PostMenuActionsContentProps) {
-  const { menuItems, isLoading } = Hooks.usePostMenuActions(postId, {
+  const { menuItems, isLoading } = usePostMenuActions(postId, {
     onReportClick,
     onEditClick,
     onDeleteClick,
@@ -39,7 +42,7 @@ export function PostMenuActionsContent({
         const color = item.variant === 'destructive' ? 'text-destructive' : 'text-muted-foreground';
 
         return variant === MENU_VARIANT.SHEET ? (
-          <Atoms.Button
+          <Button
             key={item.id}
             data-cy={`post-menu-action-${item.id}`}
             variant="ghost"
@@ -47,36 +50,32 @@ export function PostMenuActionsContent({
             disabled={item.disabled}
             className="justify-start overflow-hidden"
           >
-            <Atoms.Container overrideDefaults className="flex items-center gap-2 overflow-hidden">
-              <Icon className={Libs.cn('size-4 shrink-0', color)} />
-              <Atoms.Typography as="span" overrideDefaults className={Libs.cn('truncate text-base font-medium', color)}>
+            <Container overrideDefaults className="flex items-center gap-2 overflow-hidden">
+              <Icon className={cn('size-4 shrink-0', color)} />
+              <Typography as="span" overrideDefaults className={cn('truncate text-base font-medium', color)}>
                 {item.label}
-              </Atoms.Typography>
-            </Atoms.Container>
-          </Atoms.Button>
+              </Typography>
+            </Container>
+          </Button>
         ) : (
-          <Atoms.DropdownMenuItem
+          <DropdownMenuItem
             key={item.id}
             data-cy={`post-menu-action-${item.id}`}
             onClick={() => handleItemClick(item)}
             disabled={item.disabled}
             className="group p-0"
           >
-            <Atoms.Container overrideDefaults className="flex items-center gap-2 overflow-hidden p-0">
-              <Icon className={Libs.cn('size-4 shrink-0 transition-colors', color, 'group-hover:text-foreground')} />
-              <Atoms.Typography
+            <Container overrideDefaults className="flex items-center gap-2 overflow-hidden p-0">
+              <Icon className={cn('size-4 shrink-0 transition-colors', color, 'group-hover:text-foreground')} />
+              <Typography
                 as="span"
                 overrideDefaults
-                className={Libs.cn(
-                  'truncate text-base font-medium transition-colors',
-                  color,
-                  'group-hover:text-foreground',
-                )}
+                className={cn('truncate text-base font-medium transition-colors', color, 'group-hover:text-foreground')}
               >
                 {item.label}
-              </Atoms.Typography>
-            </Atoms.Container>
-          </Atoms.DropdownMenuItem>
+              </Typography>
+            </Container>
+          </DropdownMenuItem>
         );
       })}
     </>

@@ -2,7 +2,8 @@
 
 import { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 import { TimelineLoading } from '../TimelineLoading';
 
 interface TimelineStateWrapperProps {
@@ -38,11 +39,11 @@ export function TimelineStateWrapper({
     return (
       <>
         {errorComponent ?? (
-          <Atoms.Container className="flex items-center justify-center py-8">
-            <Atoms.Typography size="md" className="text-destructive">
+          <Container className="flex items-center justify-center py-8">
+            <Typography size="md" className="text-destructive">
               Error: {error}
-            </Atoms.Typography>
-          </Atoms.Container>
+            </Typography>
+          </Container>
         )}
       </>
     );
@@ -52,11 +53,11 @@ export function TimelineStateWrapper({
     return (
       <>
         {emptyComponent ?? (
-          <Atoms.Container data-cy="timeline-container" className="flex items-center justify-center py-8">
-            <Atoms.Typography size="md" className="text-muted-foreground">
+          <Container data-cy="timeline-container" className="flex items-center justify-center py-8">
+            <Typography size="md" className="text-muted-foreground">
               {t('noPosts')}
-            </Atoms.Typography>
-          </Atoms.Container>
+            </Typography>
+          </Container>
         )}
       </>
     );

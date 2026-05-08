@@ -1,14 +1,13 @@
-import * as Icons from '@/libs/icons';
-import * as Core from '@/core';
+import type { LucideProps } from 'lucide-react';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 
 export interface ProfilePageSidebarLink {
-  icon: React.ComponentType<Icons.LucideProps>;
+  icon: React.ComponentType<LucideProps>;
   url: string;
   label: string;
 }
-
 export interface ProfilePageLinksProps {
-  links?: Core.NexusUserDetails['links'];
+  links?: NexusUserDetails['links'];
   /** Whether the user is viewing their own profile */
   isOwnProfile?: boolean;
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { ReportController } from '@/controllers/report/report';
+import { handleApiError } from '@/libs/api/route-error-handler';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 /**
  * API Route for post report submission to Chatwoot
@@ -17,18 +18,18 @@ export async function POST(request: NextRequest) {
     const { pubky, postUrl, issueType, reason, name } = body;
 
     // Delegate to controller - validation happens there
-    await Core.ReportController.submit({ pubky, postUrl, issueType, reason, name });
+    await ReportController.submit({ pubky, postUrl, issueType, reason, name });
 
     return NextResponse.json({ message: 'Success' });
   } catch (error) {
-    return Libs.handleApiError(error, 'api.report.POST');
+    return handleApiError(error, 'api.report.POST');
   }
 }
 
 export async function GET() {
   return NextResponse.json(
     { error: 'Method not allowed. Use POST instead.' },
-    { status: Libs.HttpStatusCode.METHOD_NOT_ALLOWED },
+    { status: HttpStatusCode.METHOD_NOT_ALLOWED },
   );
 }
 

@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useCopyToClipboard } from './useCopyToClipboard';
 
-// Mock the dependencies before importing the hook
 const { mockCopyToClipboard } = vi.hoisted(() => ({
   mockCopyToClipboard: vi.fn(),
 }));
@@ -10,8 +10,8 @@ const { mockToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),
 }));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/utils/utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/utils/utils')>('@/libs/utils/utils');
   return {
     ...actual,
     copyToClipboard: mockCopyToClipboard,
@@ -28,7 +28,7 @@ vi.mock('next-intl', () => ({
   useTranslations: () => mockTranslate,
 }));
 
-vi.mock('@/atoms/Button', () => ({
+vi.mock('@/atoms/Button/Button', () => ({
   Button: ({
     children,
     onClick,
@@ -43,9 +43,6 @@ vi.mock('@/atoms/Button', () => ({
     </button>
   ),
 }));
-
-// Import the hook after mocking
-import { useCopyToClipboard } from './useCopyToClipboard';
 
 describe('useCopyToClipboard', () => {
   beforeEach(() => {

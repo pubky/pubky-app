@@ -1,13 +1,14 @@
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import { REPORT_ISSUE_LABELS, type ReportIssueType } from '@/core/pipes/report';
-import {
-  CHATWOOT_INBOX_IDS,
-  CHATWOOT_REPORT_MESSAGE_PREFIX,
-  buildChatwootEmail,
-  extractSourceId,
-} from '@/core/services/chatwoot';
-import * as Types from './report.types';
+import { AppError } from '@/libs/error/error';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import { REPORT_ISSUE_LABELS } from '@/pipes/report/report.constants';
+import type { ReportIssueType } from '@/pipes/report/report.types';
+import { ChatwootService } from '@/services/chatwoot/chatwoot';
+import { CHATWOOT_INBOX_IDS, CHATWOOT_REPORT_MESSAGE_PREFIX } from '@/services/chatwoot/chatwoot.constants';
+import { buildChatwootEmail, extractSourceId } from '@/services/chatwoot/chatwoot.utils';
+import type { TReportSubmitInput } from './report.types';
 
 /**
  * Report application service.
@@ -78,7 +79,7 @@ export class ReportApplication {
    * @param params.name - Reporter's display name
    * @throws AppError if submission fails
    */
-  static async submit({ pubky, postUrl, issueType, reason, name }: Types.TReportSubmitInput): Promise<void> {
+  static async submit({ pubky, postUrl, issueType, reason, name }: TReportSubmitInput): Promise<void> {
     try {
       // Build email from pubky
       const email = buildChatwootEmail(pubky);
@@ -92,17 +93,17 @@ export class ReportApplication {
       const content = this.formatMessageContent(sourceLabel, commentBody);
 
       // Create or find contact in Chatwoot
-      const contact = await Core.ChatwootService.createOrFindContact(email, name, inboxId);
+      const contact = await ChatwootService.createOrFindContact(email, name, inboxId);
 
       // Extract source ID (validates inbox associations)
       const sourceId = extractSourceId(contact, email);
 
       // Create conversation with formatted message
-      await Core.ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
+      await ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
     } catch (error) {
       // Log error for observability
-      if (error instanceof Libs.AppError) {
-        Libs.Logger.error('Report submission failed', {
+      if (error instanceof AppError) {
+        Logger.error('Report submission failed', {
           category: error.category,
           code: error.code,
           service: error.service,
@@ -114,9 +115,9 @@ export class ReportApplication {
       }
 
       // Wrap unexpected errors
-      Libs.Logger.error('Unexpected error during report submission', { error });
-      throw Libs.Err.server(Libs.ServerErrorCode.UNKNOWN_ERROR, 'Failed to submit report', {
-        service: Libs.ErrorService.Chatwoot,
+      Logger.error('Unexpected error during report submission', { error });
+      throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to submit report', {
+        service: ErrorService.Chatwoot,
         operation: 'submit',
         cause: error,
       });

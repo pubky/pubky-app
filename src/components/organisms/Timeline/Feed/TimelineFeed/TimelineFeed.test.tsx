@@ -1,12 +1,29 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { TIMELINE_FEED_VARIANT } from '@/config';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
+import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
+import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
+import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
+import { useHomeStore } from '@/stores/home/home.store';
+import { CONTENT, type ContentType, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
-import * as Hooks from '@/hooks';
-import * as Providers from '@/providers';
-import * as Core from '@/core';
-import { asInvalid } from '@/test-utils';
+
+const mockUsePullToRefresh = vi.hoisted(() =>
+  vi.fn(
+    (): UsePullToRefreshResult => ({
+      state: 'idle',
+      pullDistance: 0,
+    }),
+  ),
+);
 
 // Mock next/navigation for useSearchParams used by useSearchStreamId
 vi.mock('next/navigation', () => ({
@@ -18,105 +35,121 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock dependencies
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useStreamIdFromFilters: vi.fn(),
-    useBookmarksStreamId: vi.fn(),
-    useHotStreamId: vi.fn(() => 'total_engagement:all:all' as Core.PostStreamId),
-    useCustomFeed: vi.fn(),
-    useCustomStreamId: vi.fn(),
-    useStreamPagination: vi.fn(),
-    useFeedLayoutResolution: vi.fn(() => ({
-      requestedLayout: 'columns',
-      effectiveLayout: 'columns',
-      isVisualRequested: false,
-      isVisualActive: false,
-      isPhoneViewport: false,
-    })),
-    useMutedUsers: vi.fn(() => ({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: vi.fn(() => false),
-      isLoading: false,
-    })),
-  };
-});
+vi.mock('@/hooks/useStreamIdFromFilters/useStreamIdFromFilters', () => ({
+  useStreamIdFromFilters: vi.fn(),
+}));
+
+vi.mock('@/hooks/useBookmarksStreamId/useBookmarksStreamId', () => ({
+  useBookmarksStreamId: vi.fn(),
+}));
+
+vi.mock('@/hooks/useHotStreamId/useHotStreamId', () => ({
+  useHotStreamId: vi.fn(() => 'total_engagement:all:all' as PostStreamId),
+}));
+
+vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
+  useCustomFeed: vi.fn(),
+}));
+
+vi.mock('@/hooks/useCustomStreamId/useCustomStreamId', () => ({
+  useCustomStreamId: vi.fn(),
+}));
+
+vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
+  useStreamPagination: vi.fn(),
+}));
+
+vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
+  useFeedLayoutResolution: vi.fn(() => ({
+    requestedLayout: 'columns',
+    effectiveLayout: 'columns',
+    isVisualRequested: false,
+    isVisualActive: false,
+    isPhoneViewport: false,
+  })),
+}));
+
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: vi.fn(() => ({
+    mutedUserIds: [],
+    mutedUserIdSet: new Set(),
+    isMuted: vi.fn(() => false),
+    isLoading: false,
+  })),
+}));
 
 // Mock useSearchStreamId hook
-vi.mock('@/hooks/useSearchStreamId', () => ({
-  useSearchStreamId: vi.fn(() => 'tags:test' as Core.PostStreamId),
+vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
+  useSearchStreamId: vi.fn(() => 'tags:test' as PostStreamId),
   useSearchTags: vi.fn(() => []),
 }));
 
 // Mock the new hooks used in TimelineFeed
-vi.mock('@/hooks/useUnreadPosts', () => ({
+vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => ({
   useUnreadPosts: vi.fn(() => ({ unreadPostIds: [], unreadCount: 0 })),
 }));
 
-vi.mock('@/hooks/useIsScrolledFromTop', () => ({
+vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
   useIsScrolledFromTop: vi.fn(() => false),
 }));
 
-const { mockUsePullToRefresh } = vi.hoisted(() => ({
-  mockUsePullToRefresh: vi.fn((): import('@/hooks/usePullToRefresh/usePullToRefresh.types').UsePullToRefreshResult => ({
-    state: 'idle',
-    pullDistance: 0,
-  })),
-}));
-
-vi.mock('@/hooks/usePullToRefresh', () => ({
+vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
   usePullToRefresh: mockUsePullToRefresh,
 }));
 
-vi.mock('@/providers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/providers')>();
+// Mock components
+vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
   return {
-    ...actual,
-    ProfileContext: actual.ProfileContext,
+    NewPostsButton: ({
+      count,
+      visible,
+    }: {
+      count: number;
+      onClick: () => void;
+      visible: boolean;
+      isScrolled?: boolean;
+    }) => (visible && count > 0 ? <div data-testid="new-posts-button">{count} new posts</div> : null),
   };
 });
 
-// Mock components
-vi.mock('@/molecules', () => ({
-  TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  NewPostsButton: ({
-    count,
-    visible,
-  }: {
-    count: number;
-    onClick: () => void;
-    visible: boolean;
-    isScrolled?: boolean;
-  }) => (visible && count > 0 ? <div data-testid="new-posts-button">{count} new posts</div> : null),
-  PullToRefreshIndicator: ({ state }: { state: string; pullDistance: number }) =>
-    state !== 'idle' ? <div data-testid="pull-to-refresh-indicator">{state}</div> : null,
-}));
+vi.mock('@/molecules/PullToRefreshIndicator/PullToRefreshIndicator', () => {
+  return {
+    PullToRefreshIndicator: ({ state }: { state: string; pullDistance: number }) =>
+      state !== 'idle' ? <div data-testid="pull-to-refresh-indicator">{state}</div> : null,
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  TimelinePosts: ({
-    postIds,
-    loading,
-    loadingMore,
-    error,
-    hasMore,
-  }: {
-    postIds: string[];
-    loading: boolean;
-    loadingMore: boolean;
-    error: string | null;
-    hasMore: boolean;
-  }) => (
-    <div data-testid="timeline-posts">
-      <span data-testid="post-count">{postIds.length}</span>
-      <span data-testid="loading">{loading.toString()}</span>
-      <span data-testid="loading-more">{loadingMore.toString()}</span>
-      <span data-testid="error">{error || 'none'}</span>
-      <span data-testid="has-more">{hasMore.toString()}</span>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/Timeline/TimelineLoading', () => {
+  return {
+    TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
+  };
+});
+
+vi.mock('@/organisms/Timeline/Posts/Posts', () => {
+  return {
+    TimelinePosts: ({
+      postIds,
+      loading,
+      loadingMore,
+      error,
+      hasMore,
+    }: {
+      postIds: string[];
+      loading: boolean;
+      loadingMore: boolean;
+      error: string | null;
+      hasMore: boolean;
+    }) => (
+      <div data-testid="timeline-posts">
+        <span data-testid="post-count">{postIds.length}</span>
+        <span data-testid="loading">{loading.toString()}</span>
+        <span data-testid="loading-more">{loadingMore.toString()}</span>
+        <span data-testid="error">{error || 'none'}</span>
+        <span data-testid="has-more">{hasMore.toString()}</span>
+      </div>
+    ),
+  };
+});
 
 vi.mock('./VisualTimelinePosts', () => ({
   VisualTimelinePosts: ({
@@ -142,12 +175,12 @@ vi.mock('./VisualTimelinePosts', () => ({
   ),
 }));
 
-const mockUseStreamIdFromFilters = vi.mocked(Hooks.useStreamIdFromFilters);
-const mockUseCustomFeed = vi.mocked(Hooks.useCustomFeed);
-const mockUseCustomStreamId = vi.mocked(Hooks.useCustomStreamId);
-const mockUseBookmarksStreamId = vi.mocked(Hooks.useBookmarksStreamId);
-const mockUseStreamPagination = vi.mocked(Hooks.useStreamPagination);
-const mockUseFeedLayoutResolution = vi.mocked(Hooks.useFeedLayoutResolution);
+const mockUseStreamIdFromFilters = vi.mocked(useStreamIdFromFilters);
+const mockUseCustomFeed = vi.mocked(useCustomFeed);
+const mockUseCustomStreamId = vi.mocked(useCustomStreamId);
+const mockUseBookmarksStreamId = vi.mocked(useBookmarksStreamId);
+const mockUseStreamPagination = vi.mocked(useStreamPagination);
+const mockUseFeedLayoutResolution = vi.mocked(useFeedLayoutResolution);
 
 const mockPrependPosts = vi.fn();
 const mockLoadMore = vi.fn();
@@ -167,15 +200,15 @@ const defaultPaginationResult = {
 describe('TimelineFeed', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Core.useHomeStore.setState({
-      layout: Core.LAYOUT.COLUMNS,
-      sort: Core.SORT.TIMELINE,
-      reach: Core.REACH.ALL,
-      content: Core.CONTENT.ALL,
+    useHomeStore.setState({
+      layout: LAYOUT.COLUMNS,
+      sort: SORT.TIMELINE,
+      reach: REACH.ALL,
+      content: CONTENT.ALL,
     });
 
     // Default mock implementations
-    mockUseStreamIdFromFilters.mockReturnValue(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+    mockUseStreamIdFromFilters.mockReturnValue(PostStreamTypes.TIMELINE_ALL_ALL);
     mockUseCustomFeed.mockReturnValue({
       id: 'test-feed',
       name: 'Test Feed',
@@ -187,8 +220,8 @@ describe('TimelineFeed', () => {
       created_at: 0,
       updated_at: 0,
     });
-    mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as Core.PostStreamId);
-    mockUseBookmarksStreamId.mockReturnValue(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
+    mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as PostStreamId);
+    mockUseBookmarksStreamId.mockReturnValue(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     mockUseFeedLayoutResolution.mockReturnValue({
       requestedLayout: 'columns',
@@ -210,17 +243,17 @@ describe('TimelineFeed', () => {
 
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
-        streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
       });
     });
 
     it('should render timeline with other steam type', () => {
-      mockUseStreamIdFromFilters.mockReturnValue(Core.PostStreamTypes.TIMELINE_FRIENDS_VIDEO);
+      mockUseStreamIdFromFilters.mockReturnValue(PostStreamTypes.TIMELINE_FRIENDS_VIDEO);
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
 
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
-        streamId: Core.PostStreamTypes.TIMELINE_FRIENDS_VIDEO,
+        streamId: PostStreamTypes.TIMELINE_FRIENDS_VIDEO,
       });
     });
 
@@ -251,11 +284,9 @@ describe('TimelineFeed', () => {
     });
 
     it('should resolve the home stream against all content before persisting visual content coercion', () => {
-      Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
-      mockUseStreamIdFromFilters.mockImplementation((contentOverride?: Core.ContentType) => {
-        return contentOverride === Core.CONTENT.ALL
-          ? Core.PostStreamTypes.TIMELINE_ALL_ALL
-          : Core.PostStreamTypes.TIMELINE_ALL_SHORT;
+      useHomeStore.setState({ content: CONTENT.SHORT });
+      mockUseStreamIdFromFilters.mockImplementation((contentOverride?: ContentType) => {
+        return contentOverride === CONTENT.ALL ? PostStreamTypes.TIMELINE_ALL_ALL : PostStreamTypes.TIMELINE_ALL_SHORT;
       });
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
@@ -267,14 +298,14 @@ describe('TimelineFeed', () => {
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
 
-      expect(mockUseStreamIdFromFilters).toHaveBeenCalledWith(Core.CONTENT.ALL);
+      expect(mockUseStreamIdFromFilters).toHaveBeenCalledWith(CONTENT.ALL);
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
-        streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
       });
     });
 
     it('should persist visual content coercion from the timeline controller', async () => {
-      Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+      useHomeStore.setState({ content: CONTENT.SHORT });
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
@@ -286,7 +317,7 @@ describe('TimelineFeed', () => {
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
 
       await waitFor(() => {
-        expect(Core.useHomeStore.getState().content).toBe(Core.CONTENT.ALL);
+        expect(useHomeStore.getState().content).toBe(CONTENT.ALL);
       });
     });
 
@@ -335,7 +366,7 @@ describe('TimelineFeed', () => {
 
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
-        streamId: Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
+        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
       });
     });
 
@@ -350,11 +381,11 @@ describe('TimelineFeed', () => {
     });
 
     it('should persist visual content coercion for bookmarks feeds', async () => {
-      Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
-      mockUseBookmarksStreamId.mockImplementation((contentOverride?: Core.ContentType) => {
-        return contentOverride === Core.CONTENT.ALL
-          ? Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL
-          : Core.PostStreamTypes.TIMELINE_BOOKMARKS_SHORT;
+      useHomeStore.setState({ content: CONTENT.SHORT });
+      mockUseBookmarksStreamId.mockImplementation((contentOverride?: ContentType) => {
+        return contentOverride === CONTENT.ALL
+          ? PostStreamTypes.TIMELINE_BOOKMARKS_ALL
+          : PostStreamTypes.TIMELINE_BOOKMARKS_SHORT;
       });
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
@@ -366,10 +397,10 @@ describe('TimelineFeed', () => {
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />);
 
-      expect(mockUseBookmarksStreamId).toHaveBeenCalledWith(Core.CONTENT.ALL);
+      expect(mockUseBookmarksStreamId).toHaveBeenCalledWith(CONTENT.ALL);
 
       await waitFor(() => {
-        expect(Core.useHomeStore.getState().content).toBe(Core.CONTENT.ALL);
+        expect(useHomeStore.getState().content).toBe(CONTENT.ALL);
       });
     });
   });
@@ -395,7 +426,7 @@ describe('TimelineFeed', () => {
     });
 
     it('should not sync custom feeds into the home content store', async () => {
-      Core.useHomeStore.setState({ content: Core.CONTENT.SHORT });
+      useHomeStore.setState({ content: CONTENT.SHORT });
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
@@ -407,7 +438,7 @@ describe('TimelineFeed', () => {
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM} />);
 
       await waitFor(() => {
-        expect(Core.useHomeStore.getState().content).toBe(Core.CONTENT.SHORT);
+        expect(useHomeStore.getState().content).toBe(CONTENT.SHORT);
       });
     });
   });
@@ -496,9 +527,9 @@ describe('TimelineFeed', () => {
   describe('Profile Variant', () => {
     it('should show loading when profile context has no pubky', () => {
       render(
-        <Providers.ProfileProvider>
+        <ProfileProvider>
           <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE} />
-        </Providers.ProfileProvider>,
+        </ProfileProvider>,
       );
 
       // When pubky is not available, streamId is undefined
@@ -510,7 +541,7 @@ describe('TimelineFeed', () => {
 
   describe('Loading States', () => {
     it('should show loading when streamId is undefined', () => {
-      mockUseStreamIdFromFilters.mockReturnValue(asInvalid<Core.PostStreamTypes>(undefined));
+      mockUseStreamIdFromFilters.mockReturnValue(asInvalid<PostStreamTypes>(undefined));
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
 
@@ -611,7 +642,7 @@ describe('TimelineFeed - Snapshots', () => {
     // Ensure snapshot tests are deterministic even when the non-snapshot tests in this file run too.
     // (In CI we run the full suite, not just testNamePattern="Snapshots".)
     vi.clearAllMocks();
-    mockUseStreamIdFromFilters.mockReturnValue(Core.PostStreamTypes.TIMELINE_ALL_ALL);
+    mockUseStreamIdFromFilters.mockReturnValue(PostStreamTypes.TIMELINE_ALL_ALL);
     mockUseCustomFeed.mockReturnValue({
       id: 'test-feed',
       name: 'Test Feed',
@@ -623,8 +654,8 @@ describe('TimelineFeed - Snapshots', () => {
       created_at: 0,
       updated_at: 0,
     });
-    mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as Core.PostStreamId);
-    mockUseBookmarksStreamId.mockReturnValue(Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
+    mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as PostStreamId);
+    mockUseBookmarksStreamId.mockReturnValue(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     mockUseFeedLayoutResolution.mockReturnValue({
       requestedLayout: 'columns',
@@ -665,7 +696,7 @@ describe('TimelineFeed - Snapshots', () => {
   });
 
   it('should match snapshot for loading state', () => {
-    mockUseStreamIdFromFilters.mockReturnValue(asInvalid<Core.PostStreamTypes>(undefined));
+    mockUseStreamIdFromFilters.mockReturnValue(asInvalid<PostStreamTypes>(undefined));
 
     const { container } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
     expect(container).toMatchSnapshot();

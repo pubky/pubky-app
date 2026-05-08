@@ -1,5 +1,5 @@
-import type { Pubky } from '@/core';
-import type { RecentUserSearchItem, RecentTagSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
+import type { Pubky } from '@/models/models.types';
+import type { RecentTagSearchItem, RecentUserSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
 
 /**
  * Props for SearchRecentSection component

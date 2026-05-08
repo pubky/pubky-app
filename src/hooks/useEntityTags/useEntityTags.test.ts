@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useEntityTags } from './useEntityTags';
-import * as Core from '@/core';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TagKind } from '@/application/tag/tag.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
+import type { NexusTag } from '@/services/nexus/nexus.types';
+import { useEntityTags } from './useEntityTags';
 
 // Mock the underlying hooks
 const mockUseTaggedResult: {
-  tags: Core.NexusTag[];
+  tags: NexusTag[];
   count: number;
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -26,7 +27,7 @@ const mockUseTaggedResult: {
 };
 
 const mockUsePostTagsResult: {
-  tags: Core.NexusTag[];
+  tags: NexusTag[];
   count: number;
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -45,28 +46,24 @@ const mockUsePostTagsResult: {
   handleTagToggle: vi.fn().mockResolvedValue(undefined),
 };
 
-vi.mock('../useTagged', () => ({
+vi.mock('../useTagged/useTagged', () => ({
   useTagged: vi.fn(() => mockUseTaggedResult),
 }));
 
-vi.mock('../usePostTags', () => ({
+vi.mock('../usePostTags/usePostTags', () => ({
   usePostTags: vi.fn(() => mockUsePostTagsResult),
 }));
 
-// Mock Core auth store
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual('@/core');
-  return {
-    ...actual,
-    useAuthStore: vi.fn((selector) => {
-      const mockState = {
-        currentUserPubky: 'mock-viewer-id',
-        selectCurrentUserPubky: () => 'mock-viewer-id',
-      };
-      return selector ? selector(mockState) : mockState;
-    }),
-  };
-});
+// Mock auth store
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const mockState = {
+      currentUserPubky: 'mock-viewer-id',
+      selectCurrentUserPubky: () => 'mock-viewer-id',
+    };
+    return selector ? selector(mockState) : mockState;
+  }),
+}));
 
 describe('useEntityTags', () => {
   beforeEach(() => {
@@ -85,7 +82,7 @@ describe('useEntityTags', () => {
   // =============================================================================
 
   it('returns expected structure for USER tags', () => {
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     expect(result.current).toHaveProperty('tags');
     expect(result.current).toHaveProperty('count');
@@ -99,7 +96,7 @@ describe('useEntityTags', () => {
   });
 
   it('returns expected structure for POST tags', () => {
-    const { result } = renderHook(() => useEntityTags('post-123', Core.TagKind.POST));
+    const { result } = renderHook(() => useEntityTags('post-123', TagKind.POST));
 
     expect(result.current).toHaveProperty('tags');
     expect(result.current).toHaveProperty('count');
@@ -114,9 +111,9 @@ describe('useEntityTags', () => {
   // =============================================================================
 
   it('uses useTagged for USER kind', async () => {
-    const { useTagged } = await import('../useTagged');
+    const { useTagged } = await import('../useTagged/useTagged');
 
-    renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     expect(useTagged).toHaveBeenCalledWith(
       'user-123',
@@ -128,25 +125,25 @@ describe('useEntityTags', () => {
   });
 
   it('uses usePostTags for POST kind', async () => {
-    const { usePostTags } = await import('../usePostTags');
+    const { usePostTags } = await import('../usePostTags/usePostTags');
 
-    renderHook(() => useEntityTags('post-123', Core.TagKind.POST));
+    renderHook(() => useEntityTags('post-123', TagKind.POST));
 
     expect(usePostTags).toHaveBeenCalledWith('post-123', expect.any(Object));
   });
 
   it('passes null to useTagged when kind is POST', async () => {
-    const { useTagged } = await import('../useTagged');
+    const { useTagged } = await import('../useTagged/useTagged');
 
-    renderHook(() => useEntityTags('post-123', Core.TagKind.POST));
+    renderHook(() => useEntityTags('post-123', TagKind.POST));
 
     expect(useTagged).toHaveBeenCalledWith(null, expect.any(Object));
   });
 
   it('passes null to usePostTags when kind is USER', async () => {
-    const { usePostTags } = await import('../usePostTags');
+    const { usePostTags } = await import('../usePostTags/usePostTags');
 
-    renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     expect(usePostTags).toHaveBeenCalledWith(null, expect.any(Object));
   });
@@ -156,13 +153,11 @@ describe('useEntityTags', () => {
   // =============================================================================
 
   it('uses providedTags when available instead of fetched tags', () => {
-    const providedTags: Core.NexusTag[] = [
-      { label: 'provided-tag', taggers_count: 5, taggers: [], relationship: false },
-    ];
+    const providedTags: NexusTag[] = [{ label: 'provided-tag', taggers_count: 5, taggers: [], relationship: false }];
 
     mockUseTaggedResult.tags = [{ label: 'fetched-tag', taggers_count: 10, taggers: [], relationship: false }];
 
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER, { providedTags }));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER, { providedTags }));
 
     expect(result.current.tags).toEqual(providedTags);
     expect(result.current.tags[0].label).toBe('provided-tag');
@@ -171,7 +166,7 @@ describe('useEntityTags', () => {
   it('uses fetched tags when providedTags is undefined', () => {
     mockUseTaggedResult.tags = [{ label: 'fetched-tag', taggers_count: 10, taggers: [], relationship: false }];
 
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     expect(result.current.tags[0].label).toBe('fetched-tag');
   });
@@ -181,7 +176,7 @@ describe('useEntityTags', () => {
   // =============================================================================
 
   it('isViewerTagger returns true when tag has relationship=true', () => {
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     const tag: TagWithAvatars = {
       label: 'test',
@@ -194,7 +189,7 @@ describe('useEntityTags', () => {
   });
 
   it('isViewerTagger returns false when tag has relationship=false', () => {
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     const tag: TagWithAvatars = {
       label: 'test',
@@ -207,7 +202,7 @@ describe('useEntityTags', () => {
   });
 
   it('isViewerTagger returns true when viewer is in taggers array', () => {
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     const tag: TagWithAvatars = {
       label: 'test',
@@ -220,7 +215,7 @@ describe('useEntityTags', () => {
   });
 
   it('isViewerTagger returns false when viewer is not in taggers array', () => {
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     const tag: TagWithAvatars = {
       label: 'test',
@@ -237,7 +232,7 @@ describe('useEntityTags', () => {
   // =============================================================================
 
   it('handleTagToggle calls underlying hook with correct params', async () => {
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     const tag: TagWithAvatars = {
       label: 'bitcoin',
@@ -257,7 +252,7 @@ describe('useEntityTags', () => {
   });
 
   it('handleTagToggle uses POST hook for POST kind', async () => {
-    const { result } = renderHook(() => useEntityTags('post-123', Core.TagKind.POST));
+    const { result } = renderHook(() => useEntityTags('post-123', TagKind.POST));
 
     const tag: TagWithAvatars = {
       label: 'ethereum',
@@ -283,7 +278,7 @@ describe('useEntityTags', () => {
   it('handleTagAdd delegates to underlying hook', async () => {
     mockUseTaggedResult.handleTagAdd.mockResolvedValue({ success: true });
 
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     let addResult;
     await act(async () => {
@@ -300,7 +295,7 @@ describe('useEntityTags', () => {
       error: 'Tag already exists',
     });
 
-    const { result } = renderHook(() => useEntityTags('post-123', Core.TagKind.POST));
+    const { result } = renderHook(() => useEntityTags('post-123', TagKind.POST));
 
     let addResult;
     await act(async () => {
@@ -317,7 +312,7 @@ describe('useEntityTags', () => {
   it('reflects loading state from USER hook', () => {
     mockUseTaggedResult.isLoading = true;
 
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     expect(result.current.isLoading).toBe(true);
   });
@@ -325,7 +320,7 @@ describe('useEntityTags', () => {
   it('reflects loading state from POST hook', () => {
     mockUsePostTagsResult.isLoading = true;
 
-    const { result } = renderHook(() => useEntityTags('post-123', Core.TagKind.POST));
+    const { result } = renderHook(() => useEntityTags('post-123', TagKind.POST));
 
     expect(result.current.isLoading).toBe(true);
   });
@@ -337,7 +332,7 @@ describe('useEntityTags', () => {
   it('returns count from underlying USER hook', () => {
     mockUseTaggedResult.count = 42;
 
-    const { result } = renderHook(() => useEntityTags('user-123', Core.TagKind.USER));
+    const { result } = renderHook(() => useEntityTags('user-123', TagKind.USER));
 
     expect(result.current.count).toBe(42);
   });
@@ -345,7 +340,7 @@ describe('useEntityTags', () => {
   it('returns count from underlying POST hook', () => {
     mockUsePostTagsResult.count = 15;
 
-    const { result } = renderHook(() => useEntityTags('post-123', Core.TagKind.POST));
+    const { result } = renderHook(() => useEntityTags('post-123', TagKind.POST));
 
     expect(result.current.count).toBe(15);
   });
@@ -355,9 +350,9 @@ describe('useEntityTags', () => {
   // =============================================================================
 
   it('passes custom viewerId to underlying hooks', async () => {
-    const { useTagged } = await import('../useTagged');
+    const { useTagged } = await import('../useTagged/useTagged');
 
-    renderHook(() => useEntityTags('user-123', Core.TagKind.USER, { viewerId: 'custom-viewer' }));
+    renderHook(() => useEntityTags('user-123', TagKind.USER, { viewerId: 'custom-viewer' }));
 
     expect(useTagged).toHaveBeenCalledWith(
       'user-123',

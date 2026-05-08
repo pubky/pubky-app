@@ -1,12 +1,16 @@
 'use client';
-
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ONBOARDING_ROUTES } from '@/app';
+import { ONBOARDING_ROUTES } from '@/app/routes';
+import { AuthController } from '@/controllers/auth/auth';
+import { Logger } from '@/libs/logger/logger';
+import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
+import { HumanInviteCode } from '@/organisms/HumanInviteCode/HumanInviteCode';
+import { HumanLightningPayment } from '@/organisms/HumanLightningPayment/HumanLightningPayment';
+import { HumanPhoneCode } from '@/organisms/HumanPhoneCode/HumanPhoneCode';
+import { HumanPhoneInput } from '@/organisms/HumanPhoneInput/HumanPhoneInput';
+import { HumanSelection } from '@/organisms/HumanSelection/HumanSelection';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 enum States {
   Selection = 'selection',
@@ -19,7 +23,7 @@ enum States {
 export function Human() {
   const [state, setState] = useState<States>(States.Selection);
   const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const { setInviteCode, reset } = Core.useOnboardingStore();
+  const { setInviteCode, reset } = useOnboardingStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -34,9 +38,9 @@ export function Human() {
     router.push(ONBOARDING_ROUTES.INSTALL);
   }
   return (
-    <Molecules.OnboardingLayout testId="human-content">
+    <OnboardingLayout testId="human-content">
       {state === States.Selection && (
-        <Organisms.HumanSelection
+        <HumanSelection
           onClick={(card) => {
             if (card === 'sms') {
               setState(States.PhoneInput);
@@ -50,17 +54,17 @@ export function Human() {
               setState(States.InviteCode);
             } else if (variant === 'skip') {
               try {
-                const code = await Core.AuthController.generateSignupToken();
+                const code = await AuthController.generateSignupToken();
                 await onSuccess(code);
               } catch (error) {
-                Libs.Logger.error('[Human] Dev skip failed (generate token or signup):', error);
+                Logger.error('[Human] Dev skip failed (generate token or signup):', error);
               }
             }
           }}
         />
       )}
       {state === States.PhoneInput && (
-        <Organisms.HumanPhoneInput
+        <HumanPhoneInput
           initialPhoneNumber={phoneNumber}
           onBack={() => setState(States.Selection)}
           onCodeSent={(phoneNum) => {
@@ -70,18 +74,14 @@ export function Human() {
         />
       )}
       {state === States.PhoneCode && (
-        <Organisms.HumanPhoneCode
-          phoneNumber={phoneNumber!}
-          onBack={() => setState(States.PhoneInput)}
-          onSuccess={onSuccess}
-        />
+        <HumanPhoneCode phoneNumber={phoneNumber!} onBack={() => setState(States.PhoneInput)} onSuccess={onSuccess} />
       )}
       {state === States.Payment && (
-        <Organisms.HumanLightningPayment onBack={() => setState(States.Selection)} onSuccess={onSuccess} />
+        <HumanLightningPayment onBack={() => setState(States.Selection)} onSuccess={onSuccess} />
       )}
       {state === States.InviteCode && (
-        <Organisms.HumanInviteCode onBack={() => setState(States.Selection)} onSuccess={onSuccess} />
+        <HumanInviteCode onBack={() => setState(States.Selection)} onSuccess={onSuccess} />
       )}
-    </Molecules.OnboardingLayout>
+    </OnboardingLayout>
   );
 }

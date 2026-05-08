@@ -3,18 +3,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@synonymdev/pubky';
 import { useTranslations } from 'next-intl';
-
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
-
+import { AuthController } from '@/controllers/auth/auth';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { isAppError, isAuthError, isTimeoutError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { copyToClipboard } from '@/libs/utils/utils';
+import { toast } from '@/molecules/Toaster/use-toast';
+import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
 
 /** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
 const isAuthFlowExpiredError = (error: unknown): boolean => {
-  if (!Libs.isAppError(error)) return false;
-  if (Libs.isTimeoutError(error)) return true;
-  return Libs.isAuthError(error) && error.code === Libs.AuthErrorCode.SESSION_EXPIRED;
+  if (!isAppError(error)) return false;
+  if (isTimeoutError(error)) return true;
+  return isAuthError(error) && error.code === AuthErrorCode.SESSION_EXPIRED;
 };
 
 /**
@@ -41,9 +43,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
     try {
       // Request auth URL from controller
       const { authorizationUrl, awaitApproval } =
-        type === 'signup'
-          ? await Core.AuthController.getSignupAuthUrl(inviteCode)
-          : await Core.AuthController.getAuthUrl();
+        type === 'signup' ? await AuthController.getSignupAuthUrl(inviteCode) : await AuthController.getAuthUrl();
 
       awaitApproval
         .then(async (session: Session) => {
@@ -51,11 +51,11 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           // and must run even if the component unmounted (e.g., mobile deeplink handoff where
           // the browser may unmount/remount the page while Pubky Ring is open).
           try {
-            await Core.AuthController.initializeAuthenticatedSession({ session });
+            await AuthController.initializeAuthenticatedSession({ session });
           } catch (error) {
-            Libs.Logger.error('Failed to persist session and check profile:', error);
+            Logger.error('Failed to persist session and check profile:', error);
             if (!isMountedRef.current) return;
-            Molecules.toast({
+            toast({
               title: t('authInitFailedTitle'),
               description: t('authInitFailedDescription'),
             });
@@ -66,12 +66,12 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             typeof error === 'object' &&
             error !== null &&
             'name' in error &&
-            (error as { name?: unknown }).name === Core.AUTH_FLOW_CANCELED_ERROR_NAME
+            (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME
           ) {
             return;
           }
 
-          Libs.Logger.error('Authorization promise rejected:', error);
+          Logger.error('Authorization promise rejected:', error);
           if (!isMountedRef.current) return;
 
           if (isAuthFlowExpiredError(error)) {
@@ -80,7 +80,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             return;
           }
 
-          Molecules.toast({
+          toast({
             title: t('authNotCompletedTitle'),
             description: t('authNotCompletedDescription'),
           });
@@ -89,9 +89,9 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
       if (!isMountedRef.current) return;
       setUrl(authorizationUrl ?? '');
     } catch (error) {
-      Libs.Logger.error('Failed to generate auth URL:', error);
+      Logger.error('Failed to generate auth URL:', error);
       if (!isMountedRef.current) return;
-      Molecules.toast({
+      toast({
         title: t('qrGenerationFailedTitle'),
         description: t('qrGenerationFailedDescription'),
       });
@@ -105,9 +105,9 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   const copyAuthUrl = useCallback(async (): Promise<void> => {
     if (!url) return;
     try {
-      await Libs.copyToClipboard({ text: url });
+      await copyToClipboard({ text: url });
     } catch (error) {
-      Libs.Logger.error('Failed to copy auth URL to clipboard', error);
+      Logger.error('Failed to copy auth URL to clipboard', error);
     }
   }, [url]);
 

@@ -1,139 +1,168 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { POST_MAX_TAGS, TAG_MAX_LENGTH } from '@/config/posts';
 import { PostInputTags } from './PostInputTags';
-import { POST_MAX_TAGS, TAG_MAX_LENGTH } from '@/config';
 
 // Mock state for TagInput simulation
 let mockTagInputValue = '';
 let mockShowEmojiPicker = false;
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-  Typography: vi.fn(
-    ({
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
       children,
-      as,
-      size,
       className,
+      overrideDefaults,
     }: {
       children: React.ReactNode;
-      as?: React.ElementType;
-      size?: string;
       className?: string;
+      overrideDefaults?: boolean;
     }) => (
-      <span data-testid="typography" data-as={as} data-size={size} className={className}>
+      <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
         {children}
-      </span>
+      </div>
     ),
-  ),
-}));
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  PostTagAddButton: vi.fn(({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) => (
-    <button data-testid="add-tag-button" onClick={onClick} disabled={disabled}>
-      +
-    </button>
-  )),
-  TagInput: vi.fn(
-    ({
-      onTagAdd,
-      placeholder,
-      existingTags = [],
-      showCloseButton,
-      onClose,
-      disabled,
-      maxTags,
-      currentTagsCount,
-      onBlur,
-    }: {
-      onTagAdd: (tag: string) => void;
-      placeholder?: string;
-      existingTags?: Array<{ label: string }>;
-      showCloseButton?: boolean;
-      onClose?: () => void;
-      disabled?: boolean;
-      maxTags?: number;
-      currentTagsCount?: number;
-      limitReachedPlaceholder?: string;
-      onBlur?: () => void;
-    }) => {
-      const isAtLimit = maxTags !== undefined && (currentTagsCount ?? 0) >= maxTags;
-      return (
-        <div data-testid="tag-input-wrapper">
-          <input
-            data-testid="tag-input"
-            value={mockTagInputValue}
-            placeholder={isAtLimit ? 'limit reached' : placeholder}
-            disabled={disabled || isAtLimit}
-            onChange={(e) => {
-              mockTagInputValue = e.target.value;
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && mockTagInputValue.trim()) {
-                e.preventDefault();
-                const trimmedValue = mockTagInputValue.trim();
-                // Check for duplicates (case-insensitive) - simulating useTagInput behavior
-                const isDuplicate = existingTags.some((tag) => tag.label.toLowerCase() === trimmedValue.toLowerCase());
-                if (!isDuplicate) {
-                  onTagAdd(trimmedValue);
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: vi.fn(
+      ({
+        children,
+        as,
+        size,
+        className,
+      }: {
+        children: React.ReactNode;
+        as?: React.ElementType;
+        size?: string;
+        className?: string;
+      }) => (
+        <span data-testid="typography" data-as={as} data-size={size} className={className}>
+          {children}
+        </span>
+      ),
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
+  return {
+    PostTagAddButton: vi.fn(
+      ({ onClick, disabled, variant }: { onClick: () => void; disabled?: boolean; variant?: string }) => (
+        <button data-testid="add-tag-button" data-variant={variant} onClick={onClick} disabled={disabled}>
+          +
+        </button>
+      ),
+    ),
+  };
+});
+
+vi.mock('@/molecules/TagInput/TagInput', () => {
+  return {
+    TagInput: vi.fn(
+      ({
+        onTagAdd,
+        placeholder,
+        existingTags = [],
+        showCloseButton,
+        onClose,
+        disabled,
+        maxTags,
+        currentTagsCount,
+        onBlur,
+        containerVariant,
+      }: {
+        onTagAdd: (tag: string) => void;
+        placeholder?: string;
+        existingTags?: Array<{ label: string }>;
+        showCloseButton?: boolean;
+        onClose?: () => void;
+        disabled?: boolean;
+        maxTags?: number;
+        currentTagsCount?: number;
+        limitReachedPlaceholder?: string;
+        onBlur?: () => void;
+        containerVariant?: string;
+      }) => {
+        const isAtLimit = maxTags !== undefined && (currentTagsCount ?? 0) >= maxTags;
+        return (
+          <div data-testid="tag-input-wrapper" data-container-variant={containerVariant}>
+            <input
+              data-testid="tag-input"
+              value={mockTagInputValue}
+              placeholder={isAtLimit ? 'limit reached' : placeholder}
+              disabled={disabled || isAtLimit}
+              onChange={(e) => {
+                mockTagInputValue = e.target.value;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && mockTagInputValue.trim()) {
+                  e.preventDefault();
+                  const trimmedValue = mockTagInputValue.trim();
+                  // Check for duplicates (case-insensitive) - simulating useTagInput behavior
+                  const isDuplicate = existingTags.some(
+                    (tag) => tag.label.toLowerCase() === trimmedValue.toLowerCase(),
+                  );
+                  if (!isDuplicate) {
+                    onTagAdd(trimmedValue);
+                  }
+                  mockTagInputValue = '';
                 }
-                mockTagInputValue = '';
-              }
-            }}
-            onBlur={() => {
-              if (!mockTagInputValue && onBlur) {
-                onBlur();
-              }
-            }}
-          />
-          <button
-            data-testid="emoji-button"
-            aria-label="Open emoji picker"
-            onClick={() => {
-              mockShowEmojiPicker = true;
-            }}
-            disabled={disabled || isAtLimit}
-          >
-            😀
-          </button>
-          {showCloseButton && (
-            <button data-testid="close-button" aria-label="Close tag input" onClick={onClose}>
-              ×
+              }}
+              onBlur={() => {
+                if (!mockTagInputValue && onBlur) {
+                  onBlur();
+                }
+              }}
+            />
+            <button
+              data-testid="emoji-button"
+              aria-label="Open emoji picker"
+              onClick={() => {
+                mockShowEmojiPicker = true;
+              }}
+              disabled={disabled || isAtLimit}
+            >
+              😀
             </button>
-          )}
-          {mockShowEmojiPicker && (
-            <div data-testid="emoji-picker-dialog">
-              <button
-                data-testid="emoji-select"
-                onClick={() => {
-                  mockTagInputValue += '😀';
-                }}
-              >
-                Select Emoji
+            {showCloseButton && (
+              <button data-testid="close-button" aria-label="Close tag input" onClick={onClose}>
+                ×
               </button>
-            </div>
-          )}
-        </div>
-      );
-    },
-  ),
-}));
+            )}
+            {mockShowEmojiPicker && (
+              <div data-testid="emoji-picker-dialog">
+                <button
+                  data-testid="emoji-select"
+                  onClick={() => {
+                    mockTagInputValue += '😀';
+                  }}
+                >
+                  Select Emoji
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      },
+    ),
+  };
+});
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
+vi.mock('@/molecules/TagInputToggle/TagInputToggle', () => {
+  return {
+    TagInputToggle: ({
+      showInput,
+      inputContent,
+      addButtonContent,
+    }: {
+      showInput: boolean;
+      inputContent: React.ReactNode;
+      addButtonContent: React.ReactNode;
+    }) => <div data-testid="tag-input-toggle">{showInput ? inputContent : addButtonContent}</div>,
+  };
 });
 
 describe('PostInputTags', () => {
@@ -228,6 +257,15 @@ describe('PostInputTags', () => {
     render(<PostInputTags tags={[]} onTagsChange={mockOnTagsChange} disabled={true} />);
     const addButton = screen.getByTestId('add-tag-button');
     expect(addButton).toBeDisabled();
+  });
+
+  it('uses plain variants for both states', () => {
+    render(<PostInputTags tags={[]} onTagsChange={mockOnTagsChange} />);
+
+    expect(screen.getByTestId('add-tag-button')).toHaveAttribute('data-variant', 'plain');
+
+    fireEvent.click(screen.getByTestId('add-tag-button'));
+    expect(screen.getByTestId('tag-input-wrapper')).toHaveAttribute('data-container-variant', 'plain');
   });
 
   // todo: enable once tag input has max length implemented, see https://github.com/pubky/franky/issues/519

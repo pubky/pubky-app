@@ -1,1 +1,0 @@
-export { SettingsSectionCard } from './SettingsSectionCard';

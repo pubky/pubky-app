@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import { NotificationType, type FlatNotification } from '@/core';
-// Direct import to avoid circular dependency (this hook is exported from @/hooks)
-import { useMutedUsers } from '@/hooks/useMutedUsers';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { NotificationController } from '@/controllers/notification/notification';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { Logger } from '@/libs/logger/logger';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { UseNotificationsResult } from './useNotifications.types';
 
 /**
@@ -22,15 +24,17 @@ export function useNotifications(): UseNotificationsResult {
   const olderThanRef = useRef<number | undefined>(undefined);
   const loadingRef = useRef(false);
 
-  const { currentUserPubky } = Core.useAuthStore();
+  const { currentUserPubky } = useAuthStore();
+  const notificationPreferences = useSettingsStore((s) => s.notifications);
+  const previousPreferencesRef = useRef(notificationPreferences);
 
   /**
    * Mute filtering for notifications.
    * Ensures notifications from muted users are hidden, consistent with timeline behavior.
    */
   const { mutedUserIdSet } = useMutedUsers();
-  const lastRead = Core.useNotificationStore((s) => s.lastRead);
-  const unread = Core.useNotificationStore((s) => s.unread);
+  const lastRead = useNotificationStore((s) => s.lastRead);
+  const unread = useNotificationStore((s) => s.unread);
   const lastReadRef = useRef(lastRead);
   const previousUnreadRef = useRef<number | null>(null);
 
@@ -77,7 +81,7 @@ export function useNotifications(): UseNotificationsResult {
       // Log a warning but still pass through (fail-open for mute filter)
       default: {
         const unhandledType: never = notification;
-        Libs.Logger.warn(
+        Logger.warn(
           `[useNotifications] Unhandled notification type for mute filtering: ${(unhandledType as FlatNotification).type}`,
         );
         return '';
@@ -106,9 +110,7 @@ export function useNotifications(): UseNotificationsResult {
     setError(null);
 
     try {
-      const { flatNotifications: notifications, olderThan } = await Core.NotificationController.getOrFetchNotifications(
-        {},
-      );
+      const { flatNotifications: notifications, olderThan } = await NotificationController.getOrFetchNotifications({});
 
       setNotifications(filterMutedNotifications(notifications));
       olderThanRef.current = olderThan;
@@ -136,11 +138,9 @@ export function useNotifications(): UseNotificationsResult {
     setError(null);
 
     try {
-      const { flatNotifications: notifications, olderThan } = await Core.NotificationController.getOrFetchNotifications(
-        {
-          olderThan: olderThanRef.current,
-        },
-      );
+      const { flatNotifications: notifications, olderThan } = await NotificationController.getOrFetchNotifications({
+        olderThan: olderThanRef.current,
+      });
 
       setNotifications((prev) => {
         // Deduplicate using id (business key). Defensive code for edge cases.
@@ -172,9 +172,7 @@ export function useNotifications(): UseNotificationsResult {
     setHasMore(true);
 
     try {
-      const { flatNotifications: notifications, olderThan } = await Core.NotificationController.getOrFetchNotifications(
-        {},
-      );
+      const { flatNotifications: notifications, olderThan } = await NotificationController.getOrFetchNotifications({});
 
       setNotifications(filterMutedNotifications(notifications));
       olderThanRef.current = olderThan;
@@ -191,7 +189,7 @@ export function useNotifications(): UseNotificationsResult {
    * Mark all notifications as read
    */
   const markAllAsRead = useCallback(() => {
-    Core.NotificationController.markAllAsRead();
+    NotificationController.markAllAsRead();
   }, []);
 
   /**
@@ -215,6 +213,22 @@ export function useNotifications(): UseNotificationsResult {
     if (!currentUserPubky) return;
     performInitialLoad();
   }, [currentUserPubky, performInitialLoad]);
+
+  /**
+   * Reset pagination when notification filter preferences change.
+   * Preference changes create a new query context, so we must restart from
+   * the first page instead of continuing with the previous olderThan cursor.
+   */
+  useEffect(() => {
+    if (!currentUserPubky) return;
+
+    const hasPreferencesChanged = previousPreferencesRef.current !== notificationPreferences;
+    previousPreferencesRef.current = notificationPreferences;
+
+    if (!hasPreferencesChanged) return;
+
+    refresh();
+  }, [currentUserPubky, notificationPreferences, refresh]);
 
   /**
    * Reactively filter notifications when mute state changes.

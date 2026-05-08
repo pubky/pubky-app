@@ -3,15 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
-import * as App from '@/app';
+import { AUTH_ROUTES } from '@/app/routes';
+import { AuthController } from '@/controllers/auth/auth';
+import { Logger } from '@/libs/logger/logger';
+import { useToast } from '@/molecules/Toaster/use-toast';
 import type { UseSignOutResult } from './useSignOut.types';
 
 export function useSignOut(): UseSignOutResult {
   const router = useRouter();
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
   const tCommon = useTranslations('common');
   const tErrors = useTranslations('errors');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,10 +27,10 @@ export function useSignOut(): UseSignOutResult {
   const handleSignOut = async () => {
     setIsLoading(true);
     try {
-      await Core.AuthController.logout();
-      router.push(App.AUTH_ROUTES.LOGOUT);
+      await AuthController.logout();
+      router.push(AUTH_ROUTES.LOGOUT);
     } catch (error) {
-      Libs.Logger.error('Failed to sign out:', { error });
+      Logger.error('Failed to sign out:', { error });
       showErrorToast(tErrors('signOutFailed'));
       setIsLoading(false);
     }

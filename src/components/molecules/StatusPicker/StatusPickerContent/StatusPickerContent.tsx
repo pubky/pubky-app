@@ -1,16 +1,22 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, Smile } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Icons from '@/libs/icons';
-import * as Libs from '@/libs';
-import * as Hooks from '@/hooks';
-import * as Config from '@/config';
-import * as Types from './index';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Input } from '@/atoms/Input/Input';
+import { Label } from '@/atoms/Label/Label';
+import { Typography } from '@/atoms/Typography/Typography';
+import { USER_STATUS_MAX_LENGTH } from '@/config/user';
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { parseStatus } from '@/libs/status/status';
+import { cn } from '@/libs/utils/utils';
+import { EmojiPickerDialog } from '../../EmojiPickerDialog/EmojiPickerDialog';
+import { STATUS_OPTIONS } from './StatusPickerContent.constants';
+import { StatusPickerContentProps } from './StatusPickerContent.types';
 
-export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.StatusPickerContentProps) {
+export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPickerContentProps) {
   const t = useTranslations('status');
   const [customStatus, setCustomStatus] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('');
@@ -18,7 +24,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Parse current status to extract emoji and text if it's custom
-  const parsed = Libs.parseStatus(currentStatus || '');
+  const parsed = parseStatus(currentStatus || '');
   const isCustomStatus = parsed.isCustom;
 
   // Initialize custom status state from current status if it's custom
@@ -31,17 +37,14 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
       setSelectedEmoji('');
     }
   }, [currentStatus, isCustomStatus, parsed.emoji, parsed.text]);
-
   const handlePredefinedStatusClick = (statusValue: string) => {
     onStatusSelect(statusValue);
     setCustomStatus('');
     setSelectedEmoji('');
   };
-
   const isValidCustomStatus = () => {
     return Boolean(customStatus.trim());
   };
-
   const handleCustomStatusSave = () => {
     if (isValidCustomStatus()) {
       // If emoji is selected, prepend it; otherwise just use text
@@ -51,7 +54,6 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
       setSelectedEmoji('');
     }
   };
-
   const handleEmojiSelect = (emoji: { native: string }) => {
     setSelectedEmoji(emoji.native);
     setShowEmojiPicker(false);
@@ -60,53 +62,51 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
       inputRef.current?.focus();
     }, 0);
   };
-
-  const handleKeyDown = Hooks.useEnterSubmit(isValidCustomStatus, handleCustomStatusSave);
-
+  const handleKeyDown = useEnterSubmit(isValidCustomStatus, handleCustomStatusSave);
   return (
-    <Atoms.Container className="gap-2">
+    <Container className="gap-2">
       {/* Predefined status options */}
-      {Types.STATUS_OPTIONS.map((option) => {
+      {STATUS_OPTIONS.map((option) => {
         const isSelected = !isCustomStatus && currentStatus === option.value;
         return (
-          <Atoms.Button
+          <Button
             key={option.value}
             overrideDefaults={true}
             onClick={() => handlePredefinedStatusClick(option.value)}
-            className={Libs.cn('w-full justify-between gap-2 p-0', 'inline-flex cursor-pointer items-center', 'group')}
+            className={cn('w-full justify-between gap-2 p-0', 'inline-flex cursor-pointer items-center', 'group')}
           >
-            <Atoms.Container overrideDefaults className="flex items-center gap-2">
+            <Container overrideDefaults className="flex items-center gap-2">
               <span>{option.emoji}</span>
-              <Atoms.Typography
+              <Typography
                 as="span"
-                className={Libs.cn(
+                className={cn(
                   'text-base leading-6 font-medium transition-colors',
                   isSelected ? 'text-popover-foreground' : 'text-muted-foreground group-hover:text-popover-foreground',
                 )}
               >
                 {t(option.value as Parameters<typeof t>[0])}
-              </Atoms.Typography>
-            </Atoms.Container>
-            {isSelected && <Icons.Check className="size-5 text-popover-foreground" />}
-          </Atoms.Button>
+              </Typography>
+            </Container>
+            {isSelected && <Check className="size-5 text-popover-foreground" />}
+          </Button>
         );
       })}
 
       {/* Custom Status Section */}
-      <Atoms.Container className="gap-2.5 pt-1 pb-0">
-        <Atoms.Label className="text-xs leading-5 tracking-[1.2px] text-muted-foreground uppercase">
+      <Container className="gap-2.5 pt-1 pb-0">
+        <Label className="text-xs leading-5 tracking-[1.2px] text-muted-foreground uppercase">
           {t('customStatus')}
-        </Atoms.Label>
-        <Atoms.Container className="gap-3">
-          <Atoms.Container
+        </Label>
+        <Container className="gap-3">
+          <Container
             overrideDefaults={true}
             className="flex items-center gap-2 rounded-md border border-dashed border-input bg-background/10 px-5 py-4 shadow-sm focus-within:border-white/80"
           >
             {selectedEmoji ? (
-              <Atoms.Button
+              <Button
                 overrideDefaults={true}
                 onClick={() => setShowEmojiPicker(true)}
-                className={Libs.cn(
+                className={cn(
                   'size-9 shrink-0 rounded-full bg-secondary p-1',
                   'inline-flex cursor-pointer items-center justify-center',
                   'hover:bg-secondary/80',
@@ -114,30 +114,30 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
                 aria-label="Change emoji"
               >
                 <span className="text-2xl leading-none">{selectedEmoji}</span>
-              </Atoms.Button>
+              </Button>
             ) : (
-              <Atoms.Button
+              <Button
                 overrideDefaults={true}
                 onClick={() => setShowEmojiPicker(true)}
-                className={Libs.cn(
+                className={cn(
                   'size-9 shrink-0 rounded-full bg-secondary p-1',
                   'inline-flex cursor-pointer items-center justify-center',
                   'hover:bg-secondary/80',
                 )}
                 aria-label="Open emoji picker"
               >
-                <Icons.Smile className="size-5" strokeWidth={2} />
-              </Atoms.Button>
+                <Smile className="size-5" strokeWidth={2} />
+              </Button>
             )}
-            <Atoms.Input
+            <Input
               ref={inputRef}
               type="text"
               value={customStatus}
               placeholder={t('addStatus')}
-              maxLength={Config.USER_STATUS_MAX_LENGTH}
+              maxLength={USER_STATUS_MAX_LENGTH}
               onChange={(e) => setCustomStatus(e.target.value)}
               onKeyDown={handleKeyDown}
-              className={Libs.cn(
+              className={cn(
                 'flex-1 bg-transparent text-base leading-6 font-medium caret-white outline-none',
                 'border-none shadow-none ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none',
                 'min-h-6 p-0',
@@ -145,16 +145,12 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: Types.Sta
                 customStatus ? 'text-foreground' : 'text-input',
               )}
             />
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.Container>
+          </Container>
+        </Container>
+      </Container>
 
       {/* Emoji Picker Dialog */}
-      <Molecules.EmojiPickerDialog
-        open={showEmojiPicker}
-        onOpenChange={setShowEmojiPicker}
-        onEmojiSelect={handleEmojiSelect}
-      />
-    </Atoms.Container>
+      <EmojiPickerDialog open={showEmojiPicker} onOpenChange={setShowEmojiPicker} onEmojiSelect={handleEmojiSelect} />
+    </Container>
   );
 }

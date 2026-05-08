@@ -1,16 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { FilterTimeframe, HotFeedSidebar, HotFeedDrawer } from './HotFeedFilters';
-import * as Core from '@/core';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { TIMEFRAME } from '@/stores/hot/hot.types';
+import { FilterTimeframe, HotFeedDrawer, HotFeedSidebar } from './HotFeedFilters';
 
-// Mock Core
-vi.mock('@/core', () => ({
-  TIMEFRAME: {
-    TODAY: 'today',
-    THIS_WEEK: 'this_week',
-    THIS_MONTH: 'this_month',
-    ALL_TIME: 'all_time',
-  },
+// Mock store
+vi.mock('@/stores/hot/hot.store', () => ({
   useHotStore: vi.fn(() => ({
     reach: 'all',
     setReach: vi.fn(),
@@ -20,43 +14,41 @@ vi.mock('@/core', () => ({
 }));
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  FilterRoot: ({ children }: { children: React.ReactNode }) => <div data-testid="filter-root">{children}</div>,
-  FilterHeader: ({ title }: { title: string }) => <div data-testid="filter-header">{title}</div>,
-  FilterList: ({ children }: { children: React.ReactNode }) => <ul data-testid="filter-list">{children}</ul>,
-  FilterItem: ({
-    children,
-    isSelected,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    isSelected: boolean;
-    onClick: () => void;
-  }) => (
-    <li data-testid="filter-item" data-selected={isSelected} onClick={onClick}>
-      {children}
-    </li>
-  ),
-  FilterItemIcon: ({ icon: Icon }: { icon: React.ComponentType }) => (
-    <span data-testid="filter-icon">
-      <Icon />
-    </span>
-  ),
-  FilterItemLabel: ({ children }: { children: React.ReactNode }) => <span data-testid="filter-label">{children}</span>,
-}));
+vi.mock('@/atoms/Filter/Filter', () => {
+  return {
+    FilterRoot: ({ children }: { children: React.ReactNode }) => <div data-testid="filter-root">{children}</div>,
+    FilterHeader: ({ title }: { title: string }) => <div data-testid="filter-header">{title}</div>,
+    FilterList: ({ children }: { children: React.ReactNode }) => <ul data-testid="filter-list">{children}</ul>,
+    FilterItem: ({
+      children,
+      isSelected,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      isSelected: boolean;
+      onClick: () => void;
+    }) => (
+      <li data-testid="filter-item" data-selected={isSelected} onClick={onClick}>
+        {children}
+      </li>
+    ),
+    FilterItemIcon: ({ icon: Icon }: { icon: React.ComponentType }) => (
+      <span data-testid="filter-icon">
+        <Icon />
+      </span>
+    ),
+    FilterItemLabel: ({ children }: { children: React.ReactNode }) => (
+      <span data-testid="filter-label">{children}</span>
+    ),
+  };
+});
 
 // Mock Molecules
-vi.mock('@/molecules', () => ({
-  FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
-}));
-
-// Mock Libs icons
-vi.mock('@/libs', () => ({
-  Star: () => <span>Star</span>,
-  CalendarRange: () => <span>CalendarRange</span>,
-  Calendar: () => <span>Calendar</span>,
-  Clock: () => <span>Clock</span>,
-}));
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
+  return {
+    FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
+  };
+});
 
 describe('FilterTimeframe', () => {
   it('renders all timeframe options', () => {
@@ -70,14 +62,14 @@ describe('FilterTimeframe', () => {
 
   it('calls onTabChange when clicking an option', () => {
     const onTabChange = vi.fn();
-    render(<FilterTimeframe selectedTab={Core.TIMEFRAME.TODAY} onTabChange={onTabChange} />);
+    render(<FilterTimeframe selectedTab={TIMEFRAME.TODAY} onTabChange={onTabChange} />);
 
     fireEvent.click(screen.getByText('This Month'));
-    expect(onTabChange).toHaveBeenCalledWith(Core.TIMEFRAME.THIS_MONTH);
+    expect(onTabChange).toHaveBeenCalledWith(TIMEFRAME.THIS_MONTH);
   });
 
   it('matches snapshot', () => {
-    const { container } = render(<FilterTimeframe selectedTab={Core.TIMEFRAME.TODAY} />);
+    const { container } = render(<FilterTimeframe selectedTab={TIMEFRAME.TODAY} />);
     expect(container).toMatchSnapshot();
   });
 });

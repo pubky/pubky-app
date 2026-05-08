@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function LogoutPage() {
-  return <Templates.Logout />;
-}
+export { Logout as default } from '@/templates/Auth/Logout/Logout';

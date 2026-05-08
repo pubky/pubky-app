@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import * as Atoms from '@/atoms';
-import { getErrorMessage, Logger } from '@/libs';
+import { Button, ButtonVariant } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { getErrorMessage } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 import type { ErrorFallbackProps } from './ErrorBoundaryProvider.types';
 
 /**
@@ -19,18 +22,18 @@ export function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps)
   }, [error]);
 
   return (
-    <Atoms.Container className="flex min-h-[50vh] flex-col items-center justify-center p-8">
-      <Atoms.Container className="flex flex-col items-center gap-2 text-center">
-        <Atoms.Typography as="h2" size="lg">
+    <Container className="flex min-h-[50vh] flex-col items-center justify-center p-8">
+      <Container className="flex flex-col items-center gap-2 text-center">
+        <Typography as="h2" size="lg">
           Something went wrong
-        </Atoms.Typography>
-        <Atoms.Typography size="md" className="text-destructive">
+        </Typography>
+        <Typography size="md" className="text-destructive">
           {message}
-        </Atoms.Typography>
-        <Atoms.Button variant={Atoms.ButtonVariant.GHOST} onClick={resetErrorBoundary} className="mt-3">
+        </Typography>
+        <Button variant={ButtonVariant.GHOST} onClick={resetErrorBoundary} className="mt-3">
           Try again
-        </Atoms.Button>
-      </Atoms.Container>
-    </Atoms.Container>
+        </Button>
+      </Container>
+    </Container>
   );
 }

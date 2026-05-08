@@ -1,5 +1,8 @@
-import { TIMELINE_FEED_VARIANT } from '@/config';
-import * as Organisms from '@/organisms';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { HomeFeedRightDrawer, HomeFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
+import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organisms/HomeFeedSidebar/HomeFeedSidebar';
+import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
 /**
  * Bookmarks Page Template
@@ -12,26 +15,22 @@ import * as Organisms from '@/organisms';
  */
 export function Bookmarks() {
   return (
-    <Organisms.ContentLayout
+    <ContentLayout
       feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS}
       showRightMobileButton={false}
       leftSidebarContent={
-        <Organisms.HomeFeedSidebar hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
+        <HomeFeedSidebar hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
       }
-      rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
+      rightSidebarContent={<HomeFeedRightSidebar />}
       leftDrawerContent={
-        <Organisms.HomeFeedDrawer hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
+        <HomeFeedDrawer hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
       }
-      rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
+      rightDrawerContent={<HomeFeedRightDrawer />}
       leftDrawerContentMobile={
-        <Organisms.HomeFeedDrawerMobile
-          hideReachFilter
-          allowVisualLayout
-          feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS}
-        />
+        <HomeFeedDrawerMobile hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
       }
     >
-      <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
-    </Organisms.ContentLayout>
+      <TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
+    </ContentLayout>
   );
 }

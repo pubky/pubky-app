@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-import { HomegateController, THomegateSmsInfoResult, homegateQueryClient, HOMEGATE_QUERY_KEYS } from '@/core';
+import type { THomegateSmsInfoResult } from '@/application/homegate/homegate.types';
+import { HomegateController } from '@/controllers/homegate/homegate';
+import { HOMEGATE_QUERY_KEYS } from '@/services/homegate/homegate.constants';
+import { homegateQueryClient } from '@/services/homegate/homegate.query-client';
 
 /**
  * Fetch the SMS verification availability for the user's region.

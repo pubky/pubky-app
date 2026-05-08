@@ -1,38 +1,26 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CopyrightForm } from './CopyrightForm';
-
-// Mock @/libs
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...actual,
-    cn: (...inputs: (string | undefined | null | false)[]) => inputs.filter(Boolean).join(' '),
-  };
-});
 
 // Mock @/molecules
 const { mockToast, mockShowErrorToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),
   mockShowErrorToast: vi.fn(),
 }));
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
   return {
-    ...actual,
-    toast: mockToast,
     showErrorToast: mockShowErrorToast,
   };
 });
 
-// Mock @/atoms - provide minimal mocks for snapshot testing
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
+    toast: mockToast,
   };
 });
+
+// Mock @/atoms - provide minimal mocks for snapshot testing
 
 // Mock fetch
 global.fetch = vi.fn();

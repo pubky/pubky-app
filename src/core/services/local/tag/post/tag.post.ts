@@ -1,12 +1,22 @@
-import * as Core from '@/core';
-import { DatabaseErrorCode, Err, ErrorService, Logger } from '@/libs';
+import { db } from '@/database/franky/franky';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { PostCountsModel } from '@/models/post/counts/postCounts';
+import { PostTagsModel, type PostTagsModelSchema } from '@/models/post/tags/postTags';
+import { PostTtlModel } from '@/models/post/ttl/postTtl';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import type { TLocalTagParams } from '@/services/local/tag/tag.types';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 
 export class LocalPostTagService {
   private static readonly TAG_TABLES = [
-    Core.PostTagsModel.table,
-    Core.PostCountsModel.table,
-    Core.UserCountsModel.table,
-    Core.PostTtlModel.table,
+    PostTagsModel.table,
+    PostCountsModel.table,
+    UserCountsModel.table,
+    PostTtlModel.table,
   ] as const;
   /**
    * Adds a tag to a post and updates all related counts.
@@ -22,10 +32,10 @@ export class LocalPostTagService {
    * @throws {AppError} When user has already tagged this post with the same label
    * @throws {DatabaseError} When database operations fail
    */
-  static async create({ taggedId: postId, label, taggerId }: Core.TLocalTagParams): Promise<boolean> {
+  static async create({ taggedId: postId, label, taggerId }: TLocalTagParams): Promise<boolean> {
     try {
-      return await Core.db.transaction('rw', this.TAG_TABLES, async () => {
-        const postTagsModel = await Core.PostTagsModel.getOrCreate<string, Core.PostTagsModelSchema>(postId);
+      return await db.transaction('rw', this.TAG_TABLES, async () => {
+        const postTagsModel = await PostTagsModel.getOrCreate<string, PostTagsModelSchema>(postId);
         const status = postTagsModel.addTagger(label, taggerId);
         // Idempotent: user already tagged this post with this label
         if (status === null) {
@@ -34,8 +44,8 @@ export class LocalPostTagService {
         await Promise.all([
           this.savePostTagsModel(postId, postTagsModel),
           this.updatePostCounts(postId, postTagsModel),
-          Core.UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: 1 } }),
-          Core.PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() }),
+          UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: 1 } }),
+          PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() }),
         ]);
         return true;
       });
@@ -65,25 +75,25 @@ export class LocalPostTagService {
    * @throws {AppError} When post has no tags or user hasn't tagged with this label
    * @throws {DatabaseError} When database operations fail
    */
-  static async delete({ taggedId: postId, label, taggerId }: Core.TLocalTagParams): Promise<boolean> {
+  static async delete({ taggedId: postId, label, taggerId }: TLocalTagParams): Promise<boolean> {
     // Check if post has tags before starting transaction
-    const tagsData = await Core.PostTagsModel.findById(postId);
+    const tagsData = await PostTagsModel.findById(postId);
     if (!tagsData) {
       return false; // Nothing to delete
     }
 
-    const postTagsModel = new Core.PostTagsModel(tagsData);
+    const postTagsModel = new PostTagsModel(tagsData);
     const status = postTagsModel.removeTagger(label, taggerId);
     if (status === null) {
       return false; // User hasn't tagged this post with this label
     }
 
     try {
-      await Core.db.transaction('rw', this.TAG_TABLES, async () => {
+      await db.transaction('rw', this.TAG_TABLES, async () => {
         await this.savePostTagsModel(postId, postTagsModel);
         await this.updatePostCounts(postId, postTagsModel);
-        await Core.UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: -1 } });
-        await Core.PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() });
+        await UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: -1 } });
+        await PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() });
       });
       return true;
     } catch (error) {
@@ -103,10 +113,10 @@ export class LocalPostTagService {
    * @param postTagsModel - The PostTagsModel instance to save
    * @private
    */
-  private static async savePostTagsModel(postId: string, postTagsModel: Core.PostTagsModel) {
-    await Core.PostTagsModel.upsert({
+  private static async savePostTagsModel(postId: string, postTagsModel: PostTagsModel) {
+    await PostTagsModel.upsert({
       id: postId,
-      tags: postTagsModel.tags as Core.NexusTag[],
+      tags: postTagsModel.tags as NexusTag[],
     });
   }
 
@@ -120,13 +130,13 @@ export class LocalPostTagService {
    * @param postTagsModel - The PostTagsModel instance with current tag data
    * @private
    */
-  private static async updatePostCounts(postId: Core.Pubky, postTagsModel: Core.PostTagsModel) {
+  private static async updatePostCounts(postId: Pubky, postTagsModel: PostTagsModel) {
     const tags = postTagsModel.tags.reduce((sum, tag) => sum + tag.taggers_count, 0);
     const unique_tags = postTagsModel.tags.length;
 
-    const countsExist = await Core.PostCountsModel.findById(postId);
+    const countsExist = await PostCountsModel.findById(postId);
     if (countsExist) {
-      await Core.PostCountsModel.update(postId, {
+      await PostCountsModel.update(postId, {
         tags,
         unique_tags,
       });
@@ -143,14 +153,14 @@ export class LocalPostTagService {
    * @param postId - Unique identifier of the post
    * @param tags - Array of NexusTags to merge
    */
-  static async mergeTags({ postId, tags }: { postId: string; tags: Core.NexusTag[] }) {
+  static async mergeTags({ postId, tags }: { postId: string; tags: NexusTag[] }) {
     try {
-      await Core.db.transaction('rw', [Core.PostTagsModel.table], async () => {
-        const existing = await Core.PostTagsModel.findById(postId);
+      await db.transaction('rw', [PostTagsModel.table], async () => {
+        const existing = await PostTagsModel.findById(postId);
         const existingTags = existing?.tags ?? [];
 
         // Create a map of existing tags by label for quick lookup
-        const tagMap = new Map<string, Core.NexusTag>();
+        const tagMap = new Map<string, NexusTag>();
         for (const tag of existingTags) {
           tagMap.set(tag.label.toLowerCase(), tag);
         }
@@ -177,7 +187,7 @@ export class LocalPostTagService {
         // Convert map back to array
         const mergedTags = Array.from(tagMap.values());
 
-        await Core.PostTagsModel.upsert({
+        await PostTagsModel.upsert({
           id: postId,
           tags: mergedTags,
         });

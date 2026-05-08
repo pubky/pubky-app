@@ -1,8 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ProfilePageTaggedAs } from './ProfilePageTaggedAs';
+import { describe, expect, it, vi } from 'vitest';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
+import { ProfilePageTaggedAs } from './ProfilePageTaggedAs';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -12,10 +12,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock TaggedItem
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/TaggedItem/TaggedItem', () => {
   return {
-    ...actual,
     TaggedItem: ({ tag }: { tag: TagWithAvatars }) => <div data-testid="tagged-item">{tag.label}</div>,
   };
 });

@@ -1,13 +1,18 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { cva } from 'class-variance-authority';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as Hooks from '@/hooks';
-import * as Organisms from '@/organisms';
+import { Bookmark, Ellipsis, Loader2, MessageCircle, Repeat, Tag } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { useBookmark } from '@/hooks/useBookmark/useBookmark';
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { cn } from '@/libs/utils/utils';
+import { PostMenuActions } from '../PostMenuActions/PostMenuActions';
 import { PostActionsBarSkeleton } from './PostActionsBar.skeleton';
-import type { PostActionsBarProps, ActionButtonConfig } from './PostActionsBar.types';
+import type { ActionButtonConfig, PostActionsBarProps } from './PostActionsBar.types';
 
 const postActionsButtonVariants = cva('', {
   variants: {
@@ -20,7 +25,6 @@ const postActionsButtonVariants = cva('', {
     variant: 'default',
   },
 });
-
 const postActionsCountVariants = cva('text-xs leading-4 font-bold', {
   variants: {
     variant: {
@@ -32,7 +36,6 @@ const postActionsCountVariants = cva('text-xs leading-4 font-bold', {
     variant: 'default',
   },
 });
-
 export function PostActionsBar({
   postId,
   onTagClick,
@@ -42,55 +45,55 @@ export function PostActionsBar({
   variant = 'default',
 }: PostActionsBarProps) {
   const t = useTranslations('common');
-  const { postCounts, isLoading: isCountsLoading } = Hooks.usePostCounts(postId);
+  const { postCounts, isLoading: isCountsLoading } = usePostCounts(postId);
   const {
     isBookmarked,
     isLoading: isBookmarkLoading,
     isToggling: isBookmarkToggling,
     toggle: toggleBookmark,
-  } = Hooks.useBookmark(postId);
-  const { requireAuth } = Hooks.useRequireAuth();
-
+  } = useBookmark(postId);
+  const { requireAuth } = useRequireAuth();
   const isBookmarkBusy = isBookmarkLoading || isBookmarkToggling;
-  const buttonClassName = postActionsButtonVariants({ variant });
-  const countClassName = postActionsCountVariants({ variant });
-
+  const buttonClassName = postActionsButtonVariants({
+    variant,
+  });
+  const countClassName = postActionsCountVariants({
+    variant,
+  });
   if (isCountsLoading || !postCounts) {
     return <PostActionsBarSkeleton className={className} />;
   }
-
   const commonButtonProps = {
     variant: 'secondary' as const,
     size: 'sm' as const,
     className: buttonClassName,
   };
-
   const tagCount = postCounts.unique_tags ?? 0;
   const actionButtons: ActionButtonConfig[] = [
     {
       id: 'tag',
-      icon: Libs.Tag,
+      icon: Tag,
       count: tagCount,
       onClick: () => requireAuth(() => onTagClick?.()),
       ariaLabel: `Tag post (${tagCount})`,
     },
     {
       id: 'reply',
-      icon: Libs.MessageCircle,
+      icon: MessageCircle,
       count: postCounts.replies,
       onClick: () => requireAuth(() => onReplyClick?.()),
       ariaLabel: `Reply to post (${postCounts.replies})`,
     },
     {
       id: 'repost',
-      icon: Libs.Repeat,
+      icon: Repeat,
       count: postCounts.reposts,
       onClick: () => requireAuth(() => onRepostClick?.()),
       ariaLabel: `Repost (${postCounts.reposts})`,
     },
     {
       id: 'bookmark',
-      icon: isBookmarkBusy ? Libs.Loader2 : Libs.Bookmark,
+      icon: isBookmarkBusy ? Loader2 : Bookmark,
       onClick: () => requireAuth(() => toggleBookmark()),
       ariaLabel: isBookmarkBusy ? t('loadingBookmark') : isBookmarked ? t('removeBookmark') : t('addBookmark'),
       className: 'w-10',
@@ -101,36 +104,34 @@ export function PostActionsBar({
       disabled: isBookmarkBusy,
     },
   ];
-
   const moreButton = (
-    <Atoms.Button {...commonButtonProps} aria-label="More options" data-cy="post-more-btn">
-      <Libs.Ellipsis />
-    </Atoms.Button>
+    <Button {...commonButtonProps} aria-label="More options" data-cy="post-more-btn">
+      <Ellipsis />
+    </Button>
   );
-
   return (
-    <Atoms.Container overrideDefaults className={Libs.cn('flex flex-wrap gap-2', className)}>
+    <Container overrideDefaults className={cn('flex flex-wrap gap-2', className)}>
       {actionButtons.map(
         ({ id, icon: Icon, count, onClick, ariaLabel, className: btnClassName, iconProps, disabled }) => (
-          <Atoms.Button
+          <Button
             key={id}
             data-cy={`post-${id}-btn`}
             {...commonButtonProps}
             onClick={onClick}
             disabled={disabled}
-            className={Libs.cn(commonButtonProps.className, btnClassName)}
+            className={cn(commonButtonProps.className, btnClassName)}
             aria-label={ariaLabel}
           >
             <Icon {...iconProps} />
             {count !== undefined && (
-              <Atoms.Typography as="span" overrideDefaults className={countClassName}>
+              <Typography as="span" overrideDefaults className={countClassName}>
                 {count}
-              </Atoms.Typography>
+              </Typography>
             )}
-          </Atoms.Button>
+          </Button>
         ),
       )}
-      <Organisms.PostMenuActions postId={postId} trigger={moreButton} />
-    </Atoms.Container>
+      <PostMenuActions postId={postId} trigger={moreButton} />
+    </Container>
   );
 }

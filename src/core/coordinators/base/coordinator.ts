@@ -1,8 +1,9 @@
-import * as Core from '@/core';
-import { Env, Logger } from '@/libs';
+import { Env } from '@/libs/env/env';
+import { Logger } from '@/libs/logger/logger';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import {
-  PollingInactiveReason,
   type CoordinatorInitOptions,
+  PollingInactiveReason,
   type PollingServiceConfig,
   type PollingServiceState,
 } from './coordinators.types';
@@ -157,7 +158,7 @@ export abstract class Coordinator<Config extends PollingServiceConfig, State ext
    */
   protected setupListeners() {
     // Listen to auth store changes
-    this.authStoreUnsubscribe = Core.useAuthStore.subscribe((state, prevState) => {
+    this.authStoreUnsubscribe = useAuthStore.subscribe((state, prevState) => {
       const isAuthenticated = state.selectIsAuthenticated();
       const wasAuthenticated = prevState.selectIsAuthenticated();
       if (isAuthenticated !== wasAuthenticated) {
@@ -260,7 +261,7 @@ export abstract class Coordinator<Config extends PollingServiceConfig, State ext
     }
 
     // Must have a session with a profile
-    const authState = Core.useAuthStore.getState();
+    const authState = useAuthStore.getState();
     if (!authState.selectIsAuthenticated() || !authState.hasProfile) {
       return false;
     }
@@ -312,7 +313,7 @@ export abstract class Coordinator<Config extends PollingServiceConfig, State ext
       return PollingInactiveReason.NOT_STARTED;
     }
 
-    const authState = Core.useAuthStore.getState();
+    const authState = useAuthStore.getState();
     if (!authState.selectIsAuthenticated()) {
       return PollingInactiveReason.NOT_AUTHENTICATED;
     }

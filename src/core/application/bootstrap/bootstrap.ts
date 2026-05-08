@@ -1,8 +1,28 @@
-import { Env } from '@/libs/env';
-import { Logger } from '@/libs/logger';
-import { AppError } from '@/libs/error';
-import { HttpMethod, HttpStatusCode } from '@/libs/http';
-import * as Core from '@/core';
+import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
+import { FeedApplication } from '@/application/feed/feed';
+import { FileApplication } from '@/application/file/file';
+import { MuteApplication } from '@/application/mute/mute';
+import { NotificationApplication } from '@/application/notification/notification';
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
+import { Env } from '@/libs/env/env';
+import { AppError } from '@/libs/error/error';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { buildHotTagsId } from '@/models/hot/hot.helper';
+import type { NotificationType } from '@/models/notification/notification.types';
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalHotService } from '@/services/local/hot/hot';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { LocalStreamTagsService } from '@/services/local/stream/tags/tags';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { LocalUserService } from '@/services/local/user/user';
+import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
+import { UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import type { NotificationState } from '@/stores/notification/notification.types';
 
 /**
  * Callback type for reporting bootstrap progress to the Controller layer.
@@ -20,20 +40,18 @@ export class BootstrapApplication {
    * @param params.pubky, The user's public key identifier
    * @param params.lastReadUrl, URL to fetch user's last read timestamp from homeserver
    * @param onProgress, Optional callback to report progress to the Controller layer
-   * @returns Promise resolving to notification state with unread count and last read timestamp
+   * @returns Promise resolving to notification state with preference-filtered unread count
    */
   static async initialize(
-    params: Core.TBootstrapParams & { localSettings: Core.SettingsState },
+    params: TBootstrapParams & { allowedTypes: NotificationType[] },
     onProgress?: BootstrapProgressCallback,
-  ): Promise<Core.TBootstrapResponse> {
+  ): Promise<NotificationState> {
     const pubky = params.pubky;
-    const [bootstrapData, userLastRead, remoteSettings] = await Promise.all([
-      Core.NexusBootstrapService.fetch(pubky),
+    const [bootstrapData, userLastRead] = await Promise.all([
+      NexusBootstrapService.fetch(pubky),
       this.fetchOrPutLastRead(params),
-      // Initialize settings from homeserver (non-blocking, errors are logged but don't fail bootstrap)
-      this.syncSettings(pubky, params.localSettings),
-      Core.MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
-      Core.FeedApplication.fetchFeeds(pubky),
+      MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
+      FeedApplication.fetchFeeds(pubky),
     ]);
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
@@ -44,67 +62,42 @@ export class BootstrapApplication {
       });
 
       // Write TTL record to become stale after configured retry delay
-      await Core.LocalUserService.upsertTtlWithDelay(pubky, Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS);
+      await LocalUserService.upsertTtlWithDelay(pubky, Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS);
 
       // Subscribe to TTL coordinator for periodic staleness checks
-      Core.TtlCoordinator.getInstance().subscribeUser({ pubky });
+      TtlCoordinator.getInstance().subscribeUser({ pubky });
     }
+
     const [{ unread, nextPollCursor }] = await Promise.all([
-      Core.NotificationApplication.persistAndSummarize({
+      NotificationApplication.persistAndSummarize({
         notifications: bootstrapData.notifications,
         lastRead: userLastRead,
+        allowedTypes: params.allowedTypes,
       }),
-      Core.LocalStreamUsersService.persistUsers(bootstrapData.users),
-      Core.LocalStreamPostsService.persistPosts({ posts: bootstrapData.posts }),
-      Core.LocalStreamPostsService.upsert({
-        streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
+      LocalStreamUsersService.persistUsers(bootstrapData.users),
+      LocalStreamPostsService.persistPosts({ posts: bootstrapData.posts }),
+      LocalStreamPostsService.upsert({
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
         stream: bootstrapData.ids.stream,
       }),
-      Core.LocalStreamUsersService.upsert({
-        streamId: Core.UserStreamTypes.TODAY_INFLUENCERS_ALL,
+      LocalStreamUsersService.upsert({
+        streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL,
         stream: bootstrapData.ids.influencers,
       }),
-      Core.LocalStreamUsersService.upsert({
-        streamId: Core.UserStreamTypes.RECOMMENDED,
+      LocalStreamUsersService.upsert({
+        streamId: UserStreamTypes.RECOMMENDED,
         stream: bootstrapData.ids.recommended,
       }),
-      Core.FileApplication.persistFiles(bootstrapData.files),
+      FileApplication.persistFiles(bootstrapData.files),
       // Both features: hot tags and tag streams
-      Core.LocalHotService.upsert(
-        Core.buildHotTagsId(Core.UserStreamTimeframe.TODAY, 'all'),
-        bootstrapData.ids.hot_tags,
-      ),
-      Core.LocalStreamTagsService.upsert(Core.TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags),
+      LocalHotService.upsert(buildHotTagsId(UserStreamTimeframe.TODAY, 'all'), bootstrapData.ids.hot_tags),
+      LocalStreamTagsService.upsert(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags),
     ]);
     onProgress?.('dataPersisted'); // Step 4 complete (80%)
     // TODO: We will not have that step, but we will add HomeserverSignIn step before step 1 to catch errors
     onProgress?.('homeserverSynced'); // Step 5 complete (100%)
 
-    const notification = { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
-
-    return { notification, remoteSettings: remoteSettings ?? null };
-  }
-
-  /**
-   * Syncs user settings with the homeserver.
-   * Returns remote settings if newer, null otherwise.
-   * Errors are caught and logged — settings failure must not block bootstrap.
-   *
-   * @private
-   * @param pubky - The user's public key identifier
-   * @param localSettings - Current local settings state (passed from Controller layer)
-   */
-  private static async syncSettings(
-    pubky: Core.Pubky,
-    localSettings: Core.SettingsState,
-  ): Promise<Core.SettingsState | null> {
-    try {
-      return await Core.SettingsApplication.initializeSettings(pubky, localSettings);
-    } catch (error) {
-      // Log but don't throw, settings sync failure shouldn't block bootstrap
-      Logger.error('Failed to initialize settings during bootstrap', { error, pubky });
-      return null;
-    }
+    return { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
   }
 
   /**
@@ -117,9 +110,9 @@ export class BootstrapApplication {
    * @param params.lastReadUrl, URL to fetch user's last read timestamp from homeserver
    * @returns Promise resolving to notification list and last read timestamp
    */
-  private static async fetchOrPutLastRead({ pubky, lastReadUrl }: Core.TBootstrapParams): Promise<number> {
+  private static async fetchOrPutLastRead({ pubky, lastReadUrl }: TBootstrapParams): Promise<number> {
     try {
-      const { timestamp } = await Core.HomeserverService.request<{ timestamp: number }>({
+      const { timestamp } = await HomeserverService.request<{ timestamp: number }>({
         method: HttpMethod.GET,
         url: lastReadUrl,
       });
@@ -128,8 +121,8 @@ export class BootstrapApplication {
       // Only handle 404 errors (resource not found), rethrow everything else
       if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
         Logger.info('Last read file not found, creating new one...', { pubky });
-        const lastRead = Core.LastReadNormalizer.to(pubky);
-        void Core.HomeserverService.request({
+        const lastRead = LastReadNormalizer.to(pubky);
+        void HomeserverService.request({
           method: HttpMethod.PUT,
           url: lastRead.meta.url,
           bodyJson: lastRead.last_read.toJson(),

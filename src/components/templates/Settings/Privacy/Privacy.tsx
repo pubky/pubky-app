@@ -1,16 +1,15 @@
 'use client';
 
+import { Shield } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
+import { SettingsSectionCard } from '@/molecules/Settings/SettingsSectionCard/SettingsSectionCard';
+import { PrivacySettings } from '@/organisms/Settings/PrivacySettings/PrivacySettings';
 
 export function Privacy() {
   const t = useTranslations('settings.privacy');
-
   return (
-    <Molecules.SettingsSectionCard icon={Libs.Shield} title={t('title')} description={t('description')}>
-      <Organisms.PrivacySettings />
-    </Molecules.SettingsSectionCard>
+    <SettingsSectionCard icon={Shield} title={t('title')} description={t('description')}>
+      <PrivacySettings />
+    </SettingsSectionCard>
   );
 }

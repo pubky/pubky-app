@@ -1,4 +1,4 @@
-import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
+import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 
 export interface QuickReplyProps {
   parentPostId: string;

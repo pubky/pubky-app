@@ -1,32 +1,28 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { PostHashtags } from './PostHashtags';
 
-// Mock @/libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Link: ({
-    children,
-    href,
-    className,
-    onClick,
-    ...props
-  }: {
-    children: React.ReactNode;
-    href: string;
-    className?: string;
-    onClick?: (e: React.MouseEvent) => void;
-  }) => (
-    <a data-testid="link" href={href} className={className} onClick={onClick} {...props}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({
+      children,
+      href,
+      className,
+      onClick,
+      ...props
+    }: {
+      children: React.ReactNode;
+      href: string;
+      className?: string;
+      onClick?: (e: React.MouseEvent) => void;
+    }) => (
+      <a data-testid="link" href={href} className={className} onClick={onClick} {...props}>
+        {children}
+      </a>
+    ),
+  };
+});
 
 describe('PostHashtags', () => {
   describe('Basic rendering', () => {

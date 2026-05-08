@@ -1,8 +1,8 @@
 'use client';
 
 import { ErrorBoundary } from 'react-error-boundary';
-import { ErrorFallback } from './ErrorFallback';
 import type { ErrorBoundaryProviderProps } from './ErrorBoundaryProvider.types';
+import { ErrorFallback } from './ErrorFallback';
 
 /**
  * ErrorBoundaryProvider

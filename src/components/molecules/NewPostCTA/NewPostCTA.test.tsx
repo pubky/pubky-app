@@ -1,6 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NewPostCTA } from './NewPostCTA';
+
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(true)}>
+        {children}
+      </div>
+    ),
+    DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-trigger" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock hooks - default to authenticated user
 const mockUseAuthStatus = vi.fn(() => ({
@@ -14,9 +37,15 @@ const mockUseAuthStatus = vi.fn(() => ({
 const mockIsPublicRoute = vi.fn(() => false);
 const mockRequireAuth = vi.fn((action: () => void) => action());
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
   useAuthStatus: () => mockUseAuthStatus(),
+}));
+
+vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   usePublicRoute: () => ({ isPublicRoute: mockIsPublicRoute() }),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: mockUseAuthStatus().isFullyAuthenticated,
     requireAuth: mockRequireAuth,
@@ -24,62 +53,44 @@ vi.mock('@/hooks', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  DialogNewPost: vi.fn(
-    ({ open, onOpenChangeAction }: { open: boolean; onOpenChangeAction: (open: boolean) => void }) => (
-      <div data-testid="dialog-new-post" data-open={open}>
-        <button data-testid="mock-close-btn" onClick={() => onOpenChangeAction(false)}>
-          Close
-        </button>
-      </div>
+vi.mock('@/organisms/DialogNewPost/DialogNewPost', () => {
+  return {
+    DialogNewPost: vi.fn(
+      ({ open, onOpenChangeAction }: { open: boolean; onOpenChangeAction: (open: boolean) => void }) => (
+        <div data-testid="dialog-new-post" data-open={open}>
+          <button data-testid="mock-close-btn" onClick={() => onOpenChangeAction(false)}>
+            Close
+          </button>
+        </div>
+      ),
     ),
-  ),
-}));
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(true)}>
-      {children}
-    </div>
-  ),
-  DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-trigger" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-    'aria-label': ariaLabel,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-    'aria-label'?: string;
-    [key: string]: unknown;
-  }) => (
-    <button data-testid={dataTestId} className={className} aria-label={ariaLabel} {...props}>
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+      'aria-label': ariaLabel,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+      'aria-label'?: string;
+      [key: string]: unknown;
+    }) => (
+      <button data-testid={dataTestId} className={className} aria-label={ariaLabel} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
 
 // Use real libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 describe('NewPostCTA', () => {
   beforeEach(() => {

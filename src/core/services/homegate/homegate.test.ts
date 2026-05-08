@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { HomegateService } from './homegate';
-import { asOpaque } from '@/test-utils';
 
 const mockFetch = vi.fn();
 global.fetch = asOpaque<typeof global.fetch>(mockFetch);

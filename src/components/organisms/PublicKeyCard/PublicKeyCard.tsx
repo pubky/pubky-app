@@ -1,47 +1,53 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Copy, Key, Share } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-
-import * as Molecules from '@/molecules';
-import * as Atoms from '@/atoms';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import * as Hooks from '@/hooks';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { ProfileController } from '@/controllers/profile/profile';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
+import { Logger } from '@/libs/logger/logger';
+import { shareWithFallback } from '@/libs/share/share';
+import { withPubkyPrefix } from '@/libs/utils/utils';
+import { ActionSection } from '@/molecules/ActionSection/ActionSection';
+import { ContentCard } from '@/molecules/Content/Content';
+import { InputField } from '@/molecules/InputField/InputField';
+import { PopoverPublicKey } from '@/molecules/PopoverPublicKey/PopoverPublicKey';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 export function PublicKeyCard() {
   const t = useTranslations('onboarding.pubky');
-  const secretKey = Core.useOnboardingStore((state) => state.secretKey);
-  const pubky = Core.useAuthStore((state) => state.currentUserPubky);
-  const displayPubky = pubky ? Libs.withPubkyPrefix(pubky) : '';
-  const { copyToClipboard } = Hooks.useCopyToClipboard();
-  const { toast } = Molecules.useToast();
-
+  const secretKey = useOnboardingStore((state) => state.secretKey);
+  const pubky = useAuthStore((state) => state.currentUserPubky);
+  const displayPubky = pubky ? withPubkyPrefix(pubky) : '';
+  const { copyToClipboard } = useCopyToClipboard();
+  const { toast } = useToast();
   useEffect(() => {
     if (!secretKey) {
-      Core.ProfileController.generateSecrets();
+      ProfileController.generateSecrets();
     }
   }, [secretKey]);
-
   const handleCopyToClipboard = () => {
     if (displayPubky) {
       copyToClipboard(displayPubky);
     }
   };
-
   const handleShare = async () => {
     if (!displayPubky) return;
-
     try {
-      await Libs.shareWithFallback(
+      await shareWithFallback(
         {
           title: t('myPubky'),
-          text: t('shareText', { displayPubky }),
+          text: t('shareText', {
+            displayPubky,
+          }),
         },
         {
           onFallback: async () => {
             const copied = await copyToClipboard(displayPubky);
-
             if (!copied) {
               throw new Error('Unable to copy pubky to clipboard');
             }
@@ -65,15 +71,16 @@ export function PublicKeyCard() {
     } catch (error) {
       // Error handling is done in the onError callback
       // This catch block is here for any unexpected errors
-      Libs.Logger.error('Unexpected share error', { error });
+      Logger.error('Unexpected share error', {
+        error,
+      });
     }
   };
-
   const actions = [
     {
       id: 'copy-to-clipboard-action-btn',
       label: t('copy'),
-      icon: <Libs.Copy className="mr-2 h-4 w-4" />,
+      icon: <Copy className="mr-2 h-4 w-4" />,
       onClick: handleCopyToClipboard,
       variant: 'secondary' as const,
       disabled: !displayPubky,
@@ -83,16 +90,15 @@ export function PublicKeyCard() {
     // See issue #265: visibility based on screen size, not Web Share API support.
     {
       label: t('share'),
-      icon: <Libs.Share className="mr-2 h-4 w-4" />,
+      icon: <Share className="mr-2 h-4 w-4" />,
       onClick: handleShare,
       variant: 'secondary' as const,
       disabled: !displayPubky,
       className: 'md:hidden',
     },
   ];
-
   return (
-    <Molecules.ContentCard
+    <ContentCard
       image={{
         src: '/images/key.webp',
         alt: 'Key',
@@ -100,26 +106,26 @@ export function PublicKeyCard() {
         height: 192,
       }}
     >
-      <Atoms.Container className="flex-row items-center gap-1">
-        <Atoms.Heading level={3} size="lg">
+      <Container className="flex-row items-center gap-1">
+        <Heading level={3} size="lg">
           {t('title')}
-        </Atoms.Heading>
-        <Molecules.PopoverPublicKey />
-      </Atoms.Container>
-      <Molecules.ActionSection actions={actions} className="w-full flex-col items-start justify-start gap-3">
-        <Molecules.InputField
+        </Heading>
+        <PopoverPublicKey />
+      </Container>
+      <ActionSection actions={actions} className="w-full flex-col items-start justify-start gap-3">
+        <InputField
           value={displayPubky}
           variant="dashed"
           readOnly
           onClick={handleCopyToClipboard}
           loading={!displayPubky}
           loadingText={t('generating')}
-          icon={<Libs.Key className="h-4 w-4 text-brand" />}
+          icon={<Key className="h-4 w-4 text-brand" />}
           status={displayPubky ? 'success' : 'default'}
           className="w-full max-w-[576px]"
           dataCy="pubky-display"
         />
-      </Molecules.ActionSection>
-    </Molecules.ContentCard>
+      </ActionSection>
+    </ContentCard>
   );
 }

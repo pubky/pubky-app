@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function LandingPage() {
-  return <Templates.Landing />;
-}
+export { Landing as default } from '@/templates/Public/Landing/Landing';

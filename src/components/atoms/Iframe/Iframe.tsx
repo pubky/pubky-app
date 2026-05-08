@@ -1,17 +1,16 @@
 import { forwardRef } from 'react';
+import { cn } from '@/libs/utils/utils';
+import type { IframeProps } from './Iframe.types';
 
-import * as Libs from '@/libs';
-import * as Types from './Iframe.types';
-
-export const Iframe = forwardRef<HTMLIFrameElement, Types.IframeProps>(function Iframe(
-  { 'data-testid': dataTestId, className, width = '100%', height = '315', ...props }: Types.IframeProps,
+export const Iframe = forwardRef<HTMLIFrameElement, IframeProps>(function Iframe(
+  { 'data-testid': dataTestId, className, width = '100%', height = '315', ...props }: IframeProps,
   ref,
 ) {
   return (
     <iframe
       ref={ref}
       data-testid={dataTestId || 'iframe'}
-      className={Libs.cn('rounded-md', className)}
+      className={cn('rounded-md', className)}
       loading="lazy"
       allowFullScreen
       width={width}

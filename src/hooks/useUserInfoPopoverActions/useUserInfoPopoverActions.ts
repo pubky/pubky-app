@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import * as App from '@/app';
-import * as Hooks from '@/hooks';
+import { SETTINGS_ROUTES } from '@/app/routes';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 
 interface UseUserInfoPopoverActionsResult {
   isLoading: boolean;
@@ -22,14 +22,14 @@ export function useUserInfoPopoverActions({
   isFollowingStatusLoading: boolean;
 }): UseUserInfoPopoverActionsResult {
   const router = useRouter();
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
+  const { toggleFollow, isUserLoading } = useFollowUser();
 
   const isLoading = isUserLoading(userId) || isFollowingStatusLoading;
 
   const onEditClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    router.push(App.SETTINGS_ROUTES.EDIT);
+    router.push(SETTINGS_ROUTES.EDIT);
   };
 
   const onFollowClick = async (e: React.MouseEvent) => {

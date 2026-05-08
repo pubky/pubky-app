@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
-import { HttpMethod } from '@/libs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BookmarkApplication } from '@/application/bookmark/bookmark';
+import { HttpMethod } from '@/libs/http/http.types';
+import type { Pubky } from '@/models/models.types';
+import { buildCompositeId } from '@/models/models.utils';
 import type { TBookmarkEventParams } from './bookmark.types';
 
 // Mock pubky-app-specs
@@ -20,11 +22,11 @@ vi.mock('pubky-app-specs', () => ({
 
 // Test data
 const testData = {
-  userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
-  authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Core.Pubky,
+  userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
+  authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,
   postId: 'abc123xyz',
   get compositePostId() {
-    return Core.buildCompositeId({ pubky: this.authorPubky, id: this.postId });
+    return buildCompositeId({ pubky: this.authorPubky, id: this.postId });
   },
 };
 
@@ -41,7 +43,7 @@ describe('BookmarkController', () => {
     vi.clearAllMocks();
 
     // Mock BookmarkApplication
-    vi.spyOn(Core.BookmarkApplication, 'persist').mockResolvedValue(undefined);
+    vi.spyOn(BookmarkApplication, 'persist').mockResolvedValue(undefined);
 
     // Import BookmarkController
     const bookmarkModule = await import('./bookmark');
@@ -50,7 +52,7 @@ describe('BookmarkController', () => {
 
   describe('commitCreate', () => {
     it('should call BookmarkApplication.persist with correct parameters', async () => {
-      const persistSpy = vi.spyOn(Core.BookmarkApplication, 'persist');
+      const persistSpy = vi.spyOn(BookmarkApplication, 'persist');
 
       await BookmarkController.commitCreate(createBookmarkParams());
 
@@ -64,7 +66,7 @@ describe('BookmarkController', () => {
 
   describe('commitDelete', () => {
     it('should call BookmarkApplication.persist with correct parameters', async () => {
-      const persistSpy = vi.spyOn(Core.BookmarkApplication, 'persist');
+      const persistSpy = vi.spyOn(BookmarkApplication, 'persist');
 
       await BookmarkController.commitDelete(createBookmarkParams());
 

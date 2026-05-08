@@ -1,8 +1,57 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HOME_ROUTES } from '@/app/routes';
+import { AuthController } from '@/controllers/auth/auth';
+import { FileController } from '@/controllers/file/file';
+import { ProfileController } from '@/controllers/profile/profile';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { UserValidator } from '@/pipes/user/user.validator';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { CreateProfileForm } from './CreateProfileForm';
-import * as App from '@/app';
+
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
+      <div data-testid="dialog" data-open={open}>
+        {children}
+      </div>
+    ),
+    DialogTrigger: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-trigger">{children}</div>,
+    DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-content" className={className}>
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-header" className={className}>
+        {children}
+      </div>
+    ),
+    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-footer" className={className}>
+        {children}
+      </div>
+    ),
+    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <h2 data-testid="dialog-title" className={className}>
+        {children}
+      </h2>
+    ),
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+    DialogClose: ({ children }: { children: React.ReactNode }) => (
+      <button data-testid="dialog-close">{children}</button>
+    ),
+    DialogOverlay: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-overlay">{children}</div>,
+  };
+});
 
 vi.mock('facehash', () => ({
   Facehash: ({ name, onRenderMouth }: { name: string; onRenderMouth?: () => React.ReactNode }) => (
@@ -12,28 +61,34 @@ vi.mock('facehash', () => ({
   ),
 }));
 
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useOnboardingStore: vi.fn(),
-    useAuthStore: vi.fn(),
-    ProfileController: {
-      upload: vi.fn(),
-      create: vi.fn(),
-      commitCreate: vi.fn(),
-    },
-    FileController: {
-      commitCreate: vi.fn(),
-    },
-    UserValidator: {
-      check: vi.fn(),
-    },
-    AuthController: {
-      bootstrapWithDelay: vi.fn(),
-    },
-  };
-});
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
+  useOnboardingStore: vi.fn(),
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(),
+}));
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    upload: vi.fn(),
+    create: vi.fn(),
+    commitCreate: vi.fn(),
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    commitCreate: vi.fn(),
+  },
+}));
+vi.mock('@/pipes/user/user.validator', () => ({
+  UserValidator: {
+    check: vi.fn(),
+  },
+}));
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    bootstrapWithDelay: vi.fn(),
+  },
+}));
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -43,14 +98,13 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
 const { mockCropImageToBlob, mockToast } = vi.hoisted(() => ({
   mockCropImageToBlob: vi.fn(async () => new Blob(['cropped-image'], { type: 'image/png' })),
   mockToast: vi.fn(),
 }));
 
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/image/cropImage', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/image/cropImage')>('@/libs/image/cropImage');
   return {
     ...actual,
     cropImageToBlob: mockCropImageToBlob,
@@ -58,190 +112,139 @@ vi.mock('@/libs', async () => {
 });
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Heading: ({ children, level, className }: { children: React.ReactNode; level?: number; className?: string }) => (
-    <div data-testid={`heading-${level || 1}`} className={className}>
-      {children}
-    </div>
-  ),
-  Avatar: ({
-    children,
-    className,
-    onClick,
-    role,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: () => void;
-    role?: string;
-    [key: string]: unknown;
-  }) => (
-    <div data-testid="avatar" className={className} onClick={onClick} role={role} {...props}>
-      {children}
-    </div>
-  ),
-  AvatarImage: ({ src, alt }: { src: string; alt: string }) => <img data-testid="avatar-image" src={src} alt={alt} />,
-  AvatarFallback: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="avatar-fallback" className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    onClick,
-    disabled,
-    ...props
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <button
-      data-testid={variant ? `button-${variant}` : 'button'}
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      onClick={onClick}
-      disabled={disabled}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    as,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    size?: string;
-    className?: string;
-  }) => {
-    if (as === 'small') {
-      return (
-        <small data-testid="typography" data-as={as} data-size={size} className={className}>
-          {children}
-        </small>
-      );
-    }
-    return (
-      <p data-testid="typography" data-as={as} data-size={size} className={className}>
-        {children}
-      </p>
-    );
-  },
-  InputField: ({
-    label,
-    placeholder,
-    value,
-    onChange,
-    error,
-  }: {
-    label: string;
-    placeholder?: string;
-    value: string;
-    onChange: (value: string) => void;
-    error?: string | null;
-  }) => (
-    <div data-testid="input-field">
-      <label>{label}</label>
-      <input data-testid="input" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
-      {error && <span data-testid="input-error">{error}</span>}
-    </div>
-  ),
-  TextareaField: ({
-    label,
-    placeholder,
-    value,
-    onChange,
-    error,
-  }: {
-    label: string;
-    placeholder?: string;
-    value: string;
-    onChange: (value: string) => void;
-    error?: string | null;
-  }) => (
-    <div data-testid="textarea-field">
-      <label>{label}</label>
-      <textarea
-        data-testid="textarea"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      {error && <span data-testid="textarea-error">{error}</span>}
-    </div>
-  ),
-  Label: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <label data-testid="label" className={className}>
-      {children}
-    </label>
-  ),
-  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
-    <div data-testid="dialog" data-open={open}>
-      {children}
-    </div>
-  ),
-  DialogTrigger: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-trigger">{children}</div>,
-  DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-content" className={className}>
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-header" className={className}>
-      {children}
-    </div>
-  ),
-  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-footer" className={className}>
-      {children}
-    </div>
-  ),
-  DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <h2 data-testid="dialog-title" className={className}>
-      {children}
-    </h2>
-  ),
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  ),
-  DialogClose: ({ children }: { children: React.ReactNode }) => <button data-testid="dialog-close">{children}</button>,
-  DialogOverlay: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-overlay">{children}</div>,
-}));
-
-// Mock molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
-
+vi.mock('@/atoms/Avatar/Avatar', () => {
   return {
-    ...actual,
-    useToast: () => ({
-      toast: mockToast,
-    }),
+    Avatar: ({
+      children,
+      className,
+      onClick,
+      role,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: () => void;
+      role?: string;
+      [key: string]: unknown;
+    }) => (
+      <div data-testid="avatar" className={className} onClick={onClick} role={role} {...props}>
+        {children}
+      </div>
+    ),
+    AvatarImage: ({ src, alt }: { src: string; alt: string }) => <img data-testid="avatar-image" src={src} alt={alt} />,
+    AvatarFallback: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="avatar-fallback" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      onClick,
+      disabled,
+      ...props
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <button
+        data-testid={variant ? `button-${variant}` : 'button'}
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        onClick={onClick}
+        disabled={disabled}
+        {...props}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children, level, className }: { children: React.ReactNode; level?: number; className?: string }) => (
+      <div data-testid={`heading-${level || 1}`} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Label/Label', () => {
+  return {
+    Label: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <label data-testid="label" className={className}>
+        {children}
+      </label>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as,
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      size?: string;
+      className?: string;
+    }) => {
+      if (as === 'small') {
+        return (
+          <small data-testid="typography" data-as={as} data-size={size} className={className}>
+            {children}
+          </small>
+        );
+      }
+      return (
+        <p data-testid="typography" data-as={as} data-size={size} className={className}>
+          {children}
+        </p>
+      );
+    },
+  };
+});
+
+vi.mock('@/molecules/InputField/InputField', () => {
+  return {
     InputField: ({
       placeholder,
       value = '',
@@ -290,6 +293,11 @@ vi.mock('@/molecules', async (importOriginal) => {
         )}
       </div>
     ),
+  };
+});
+
+vi.mock('@/molecules/TextareaField/TextareaField', () => {
+  return {
     TextareaField: ({
       placeholder,
       value = '',
@@ -318,21 +326,35 @@ vi.mock('@/molecules', async (importOriginal) => {
         />
       </div>
     ),
+  };
+});
+
+vi.mock('@/molecules/ProfileNavigation/ProfileNavigation', () => {
+  return {
     ProfileNavigation: ({
       children,
       continueButtonDisabled,
       continueButtonLoading,
       continueText,
       onContinue,
+      onHandleBackButton,
+      backText,
+      backButtonDisabled,
     }: {
       children?: React.ReactNode;
       continueButtonDisabled?: boolean;
       continueButtonLoading?: boolean;
       continueText?: string;
       onContinue?: () => void;
+      onHandleBackButton?: () => void;
+      backText?: string;
+      backButtonDisabled?: boolean;
     }) => (
       <div data-testid="profile-navigation">
         {children}
+        <button onClick={onHandleBackButton} disabled={backButtonDisabled} data-testid="back-button">
+          {backText || 'Back'}
+        </button>
         <button
           onClick={onContinue}
           disabled={continueButtonDisabled || continueButtonLoading}
@@ -345,16 +367,26 @@ vi.mock('@/molecules', async (importOriginal) => {
   };
 });
 
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
-
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
+    useToast: () => ({
+      toast: mockToast,
+    }),
+  };
+});
+
+vi.mock('@/organisms/DialogAddLink/DialogAddLink', () => {
+  return {
     DialogAddLink: ({ onSave }: { onSave: (label: string, url: string) => void }) => (
       <div data-testid="dialog-add-link">
         <button onClick={() => onSave('Test Label', 'https://test.com')}>Add Link</button>
       </div>
     ),
+  };
+});
+
+vi.mock('@/organisms/DialogCropImage/DialogCropImage', () => {
+  return {
     DialogCropImage: ({
       open,
       onClose,
@@ -422,21 +454,20 @@ describe('CreateProfileForm', () => {
     vi.clearAllMocks();
 
     // Get the mocked modules
-    const Core = await import('@/core');
-    vi.mocked(Core.useOnboardingStore).mockReturnValue({
+    vi.mocked(useOnboardingStore).mockReturnValue({
       setShowWelcomeDialog: vi.fn(),
     });
-    vi.mocked(Core.useAuthStore).mockReturnValue({
+    vi.mocked(useAuthStore).mockReturnValue({
       selectCurrentUserPubky: vi.fn(() => mockPubky),
     });
 
     // Reset all mock functions
     mockPush.mockReset();
     mockToast.mockReset();
-    vi.mocked(Core.FileController.commitCreate).mockReset();
-    vi.mocked(Core.ProfileController.commitCreate).mockReset();
-    vi.mocked(Core.UserValidator.check).mockReset();
-    vi.mocked(Core.AuthController.bootstrapWithDelay).mockReset();
+    vi.mocked(FileController.commitCreate).mockReset();
+    vi.mocked(ProfileController.commitCreate).mockReset();
+    vi.mocked(UserValidator.check).mockReset();
+    vi.mocked(AuthController.bootstrapWithDelay).mockReset();
   });
 
   it('renders with default state', () => {
@@ -765,6 +796,14 @@ describe('CreateProfileForm', () => {
   });
 
   describe('Form submission (basic tests)', () => {
+    it('renders disabled back button in profile navigation', () => {
+      render(<CreateProfileForm />);
+      const backButton = screen.getByTestId('back-button');
+      expect(backButton).toBeInTheDocument();
+      expect(backButton).toBeDisabled();
+      expect(backButton).toHaveTextContent('Back');
+    });
+
     it('should render continue button correctly', () => {
       render(<CreateProfileForm />);
       const continueButton = screen.getByTestId('continue-button');
@@ -784,21 +823,17 @@ describe('CreateProfileForm', () => {
       expect(profileNavigation).toBeInTheDocument();
     });
 
-    it('should test Core module integration exists', async () => {
-      const Core = await import('@/core');
-
+    it('should expose controller and validator integrations', async () => {
       // Verify that the mocked functions exist
-      expect(typeof Core.ProfileController.commitCreate).toBe('function');
-      expect(typeof Core.FileController.commitCreate).toBe('function');
-      expect(typeof Core.UserValidator.check).toBe('function');
-      expect(typeof Core.AuthController.bootstrapWithDelay).toBe('function');
+      expect(typeof ProfileController.commitCreate).toBe('function');
+      expect(typeof FileController.commitCreate).toBe('function');
+      expect(typeof UserValidator.check).toBe('function');
+      expect(typeof AuthController.bootstrapWithDelay).toBe('function');
     });
 
     it('should handle bootstrapWithDelay error and show error state', async () => {
-      const Core = await import('@/core');
-
       // Mock successful validation and profile save
-      vi.mocked(Core.UserValidator.check).mockReturnValue({
+      vi.mocked(UserValidator.check).mockReturnValue({
         data: {
           name: 'Test User',
           bio: 'Test bio',
@@ -807,11 +842,11 @@ describe('CreateProfileForm', () => {
         error: [],
       });
 
-      vi.mocked(Core.ProfileController.commitCreate).mockResolvedValue(undefined);
+      vi.mocked(ProfileController.commitCreate).mockResolvedValue(undefined);
 
       // Mock bootstrapWithDelay to throw an error
       const bootstrapError = new Error('Failed to fetch user data');
-      vi.mocked(Core.AuthController.bootstrapWithDelay).mockRejectedValue(bootstrapError);
+      vi.mocked(AuthController.bootstrapWithDelay).mockRejectedValue(bootstrapError);
 
       render(<CreateProfileForm />);
 
@@ -831,31 +866,30 @@ describe('CreateProfileForm', () => {
         expect(continueButton).toHaveTextContent('Try again!');
 
         // Should not navigate to feed page
-        expect(mockPush).not.toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
+        expect(mockPush).not.toHaveBeenCalledWith(HOME_ROUTES.HOME);
       });
 
       // Verify the mocks were called in the correct order
-      expect(Core.UserValidator.check).toHaveBeenCalled();
-      expect(Core.ProfileController.commitCreate).toHaveBeenCalled();
-      expect(Core.AuthController.bootstrapWithDelay).toHaveBeenCalled();
+      expect(UserValidator.check).toHaveBeenCalled();
+      expect(ProfileController.commitCreate).toHaveBeenCalled();
+      expect(AuthController.bootstrapWithDelay).toHaveBeenCalled();
     });
   });
 
   describe('Welcome Dialog Integration', () => {
     it('should call setShowWelcomeDialog(true) when profile creation is successful', async () => {
       const mockSetShowWelcomeDialog = vi.fn();
-      const Core = await import('@/core');
 
       // Mock the onboarding store to return the setShowWelcomeDialog function
-      vi.mocked(Core.useOnboardingStore).mockReturnValue({
+      vi.mocked(useOnboardingStore).mockReturnValue({
         setShowWelcomeDialog: mockSetShowWelcomeDialog,
       });
-      vi.mocked(Core.useAuthStore).mockReturnValue({
+      vi.mocked(useAuthStore).mockReturnValue({
         selectCurrentUserPubky: vi.fn(() => 'test-pubky-123'),
       });
 
       // Mock successful validation and profile save
-      vi.mocked(Core.UserValidator.check).mockReturnValue({
+      vi.mocked(UserValidator.check).mockReturnValue({
         data: {
           name: 'Test User',
           bio: 'Test bio',
@@ -864,10 +898,10 @@ describe('CreateProfileForm', () => {
         error: [],
       });
 
-      vi.mocked(Core.ProfileController.commitCreate).mockResolvedValue(undefined);
+      vi.mocked(ProfileController.commitCreate).mockResolvedValue(undefined);
 
       // Mock successful bootstrap
-      vi.mocked(Core.AuthController.bootstrapWithDelay).mockResolvedValue(undefined);
+      vi.mocked(AuthController.bootstrapWithDelay).mockResolvedValue(undefined);
 
       render(<CreateProfileForm />);
 
@@ -882,33 +916,31 @@ describe('CreateProfileForm', () => {
       // Wait for the success handling to complete
       await waitFor(() => {
         // Should navigate to feed page
-        expect(mockPush).toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
+        expect(mockPush).toHaveBeenCalledWith(HOME_ROUTES.HOME);
       });
 
       // Verify that setShowWelcomeDialog(true) was called
       expect(mockSetShowWelcomeDialog).toHaveBeenCalledWith(true);
 
       // Verify the flow was completed successfully
-      expect(Core.UserValidator.check).toHaveBeenCalled();
-      expect(Core.ProfileController.commitCreate).toHaveBeenCalled();
-      expect(Core.AuthController.bootstrapWithDelay).toHaveBeenCalled();
+      expect(UserValidator.check).toHaveBeenCalled();
+      expect(ProfileController.commitCreate).toHaveBeenCalled();
+      expect(AuthController.bootstrapWithDelay).toHaveBeenCalled();
     });
 
     it('should not call setShowWelcomeDialog when profile creation fails', async () => {
       const mockSetShowWelcomeDialog = vi.fn();
-      const Core = await import('@/core');
-      const Libs = await import('@/libs');
 
       // Mock the onboarding store to return the setShowWelcomeDialog function
-      vi.mocked(Core.useOnboardingStore).mockReturnValue({
+      vi.mocked(useOnboardingStore).mockReturnValue({
         setShowWelcomeDialog: mockSetShowWelcomeDialog,
       });
-      vi.mocked(Core.useAuthStore).mockReturnValue({
+      vi.mocked(useAuthStore).mockReturnValue({
         selectCurrentUserPubky: vi.fn(() => 'test-pubky-123'),
       });
 
       // Mock successful validation but failed profile save
-      vi.mocked(Core.UserValidator.check).mockReturnValue({
+      vi.mocked(UserValidator.check).mockReturnValue({
         data: {
           name: 'Test User',
           bio: 'Test bio',
@@ -918,12 +950,12 @@ describe('CreateProfileForm', () => {
       });
 
       // Mock ProfileController.commitCreate to throw a server error
-      const profileError = Libs.Err.server(Libs.ServerErrorCode.UNKNOWN_ERROR, 'Failed to create profile', {
-        service: Libs.ErrorService.Homeserver,
+      const profileError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to create profile', {
+        service: ErrorService.Homeserver,
         operation: 'commitCreate',
         context: { statusCode: 500 },
       });
-      vi.mocked(Core.ProfileController.commitCreate).mockRejectedValue(profileError);
+      vi.mocked(ProfileController.commitCreate).mockRejectedValue(profileError);
 
       render(<CreateProfileForm />);
 
@@ -945,23 +977,22 @@ describe('CreateProfileForm', () => {
       expect(mockSetShowWelcomeDialog).not.toHaveBeenCalled();
 
       // Verify that bootstrap was not called due to profile save failure
-      expect(Core.AuthController.bootstrapWithDelay).not.toHaveBeenCalled();
+      expect(AuthController.bootstrapWithDelay).not.toHaveBeenCalled();
     });
 
     it('should not call setShowWelcomeDialog when bootstrap fails', async () => {
       const mockSetShowWelcomeDialog = vi.fn();
-      const Core = await import('@/core');
 
       // Mock the onboarding store to return the setShowWelcomeDialog function
-      vi.mocked(Core.useOnboardingStore).mockReturnValue({
+      vi.mocked(useOnboardingStore).mockReturnValue({
         setShowWelcomeDialog: mockSetShowWelcomeDialog,
       });
-      vi.mocked(Core.useAuthStore).mockReturnValue({
+      vi.mocked(useAuthStore).mockReturnValue({
         selectCurrentUserPubky: vi.fn(() => 'test-pubky-123'),
       });
 
       // Mock successful validation and profile save
-      vi.mocked(Core.UserValidator.check).mockReturnValue({
+      vi.mocked(UserValidator.check).mockReturnValue({
         data: {
           name: 'Test User',
           bio: 'Test bio',
@@ -970,10 +1001,10 @@ describe('CreateProfileForm', () => {
         error: [],
       });
 
-      vi.mocked(Core.ProfileController.commitCreate).mockResolvedValue(undefined);
+      vi.mocked(ProfileController.commitCreate).mockResolvedValue(undefined);
 
       // Mock bootstrap failure
-      vi.mocked(Core.AuthController.bootstrapWithDelay).mockRejectedValue(new Error('Bootstrap failed'));
+      vi.mocked(AuthController.bootstrapWithDelay).mockRejectedValue(new Error('Bootstrap failed'));
 
       render(<CreateProfileForm />);
 
@@ -995,18 +1026,17 @@ describe('CreateProfileForm', () => {
       expect(mockSetShowWelcomeDialog).not.toHaveBeenCalled();
 
       // Verify bootstrap was attempted
-      expect(Core.AuthController.bootstrapWithDelay).toHaveBeenCalled();
+      expect(AuthController.bootstrapWithDelay).toHaveBeenCalled();
     });
 
     it('should have access to setShowWelcomeDialog from onboarding store', async () => {
       const mockSetShowWelcomeDialog = vi.fn();
-      const Core = await import('@/core');
 
       // Mock the onboarding store
-      vi.mocked(Core.useOnboardingStore).mockReturnValue({
+      vi.mocked(useOnboardingStore).mockReturnValue({
         setShowWelcomeDialog: mockSetShowWelcomeDialog,
       });
-      vi.mocked(Core.useAuthStore).mockReturnValue({
+      vi.mocked(useAuthStore).mockReturnValue({
         selectCurrentUserPubky: vi.fn(() => 'test-pubky-123'),
       });
 

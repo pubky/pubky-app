@@ -1,8 +1,9 @@
 'use client';
 
+import { Repeat } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 
 /**
  * RepostHeader
@@ -13,17 +14,16 @@ import * as Libs from '@/libs';
  */
 export function RepostHeader() {
   const t = useTranslations('post');
-
   return (
-    <Atoms.Container
+    <Container
       className="flex items-center gap-3 rounded-t-md bg-muted px-4 py-3"
       overrideDefaults
       data-testid="repost-header"
     >
-      <Libs.Repeat className="size-5" aria-label="Repeat" />
-      <Atoms.Typography as="span" className="text-base font-bold text-foreground" overrideDefaults>
+      <Repeat className="size-5" aria-label="Repeat" />
+      <Typography as="span" className="text-base font-bold text-foreground" overrideDefaults>
         {t('youReposted')}
-      </Atoms.Typography>
-    </Atoms.Container>
+      </Typography>
+    </Container>
   );
 }

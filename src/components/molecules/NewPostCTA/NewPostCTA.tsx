@@ -1,10 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
-import * as Organisms from '@/organisms';
+import { Plus } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
+import { Dialog, DialogTrigger } from '@/atoms/Dialog/Dialog';
+import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
+import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { cn } from '@/libs/utils/utils';
+import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
 
 /**
  * Floating Action Button (FAB) for creating new posts.
@@ -21,18 +25,16 @@ import * as Organisms from '@/organisms';
  */
 export function NewPostCTA() {
   const [open, setOpen] = useState(false);
-  const { isFullyAuthenticated, isLoading } = Hooks.useAuthStatus();
-  const { isPublicRoute } = Hooks.usePublicRoute();
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { isFullyAuthenticated, isLoading } = useAuthStatus();
+  const { isPublicRoute } = usePublicRoute();
+  const { requireAuth } = useRequireAuth();
 
   // Show FAB for authenticated users OR unauthenticated users on public routes
   const shouldShow = isFullyAuthenticated || isPublicRoute;
-
   if (isLoading || !shouldShow) {
     return null;
   }
-
-  const buttonClasses = Libs.cn(
+  const buttonClasses = cn(
     'fixed right-3 bottom-[72px] sm:right-10 md:bottom-20 lg:bottom-6',
     'size-20 rounded-full',
     'flex items-center justify-center',
@@ -43,9 +45,8 @@ export function NewPostCTA() {
     'group cursor-pointer',
     'z-40',
   );
-
   const button = (
-    <Atoms.Button
+    <Button
       data-cy="new-post-btn"
       overrideDefaults
       data-testid="new-post-cta"
@@ -53,8 +54,8 @@ export function NewPostCTA() {
       aria-label="New post"
       onClick={!isFullyAuthenticated ? () => requireAuth(() => setOpen(true)) : undefined}
     >
-      <Libs.Plus className="size-10 transition-colors group-hover:text-black" strokeWidth={0.8} />
-    </Atoms.Button>
+      <Plus className="size-10 transition-colors group-hover:text-black" strokeWidth={0.8} />
+    </Button>
   );
 
   // Unauthenticated: button opens sign-in dialog via requireAuth
@@ -64,9 +65,9 @@ export function NewPostCTA() {
 
   // Authenticated: wrap button with dialog
   return (
-    <Atoms.Dialog open={open} onOpenChange={setOpen}>
-      <Atoms.DialogTrigger asChild>{button}</Atoms.DialogTrigger>
-      <Organisms.DialogNewPost open={open} onOpenChangeAction={setOpen} />
-    </Atoms.Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{button}</DialogTrigger>
+      <DialogNewPost open={open} onOpenChangeAction={setOpen} />
+    </Dialog>
   );
 }

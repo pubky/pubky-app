@@ -1,20 +1,25 @@
 import { Table } from 'dexie';
-
-import * as Core from '@/core';
-import { TupleModelBase } from '@/core/models/shared/base/tuple/baseTuple';
-import { DatabaseErrorCode, Err, ErrorService } from '@/libs';
+import { db } from '@/database/franky/franky';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import type { Pubky } from '@/models/models.types';
+import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
+import { TupleModelBase } from '@/models/shared/base/tuple/baseTuple';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import type { NexusPostRelationships } from '@/services/nexus/nexus.types';
 
 export class PostRelationshipsModel
-  extends TupleModelBase<string, Core.PostRelationshipsModelSchema>
-  implements Core.PostRelationshipsModelSchema
+  extends TupleModelBase<string, PostRelationshipsModelSchema>
+  implements PostRelationshipsModelSchema
 {
-  static table: Table<Core.PostRelationshipsModelSchema> = Core.db.table('post_relationships');
+  static table: Table<PostRelationshipsModelSchema> = db.table('post_relationships');
 
   replied: string | null;
   reposted: string | null;
-  mentioned: Core.Pubky[];
+  mentioned: Pubky[];
 
-  constructor(postRelationships: Core.PostRelationshipsModelSchema) {
+  constructor(postRelationships: PostRelationshipsModelSchema) {
     super(postRelationships);
     this.replied = postRelationships.replied;
     this.reposted = postRelationships.reposted;
@@ -22,12 +27,12 @@ export class PostRelationshipsModel
   }
 
   // Adapter function to convert NexusPostRelationships to PostRelationshipsModelSchema
-  static toSchema(data: Core.NexusModelTuple<Core.NexusPostRelationships>): Core.PostRelationshipsModelSchema {
+  static toSchema(data: NexusModelTuple<NexusPostRelationships>): PostRelationshipsModelSchema {
     return { ...data[1], id: data[0] };
   }
 
   // Query methods
-  static async getReplies(postId: string): Promise<Core.PostRelationshipsModelSchema[]> {
+  static async getReplies(postId: string): Promise<PostRelationshipsModelSchema[]> {
     try {
       return await this.table.where('replied').equals(postId).toArray();
     } catch (error) {

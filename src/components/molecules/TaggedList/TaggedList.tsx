@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
+import { TagKind } from '@/application/tag/tag.types';
+import { Container } from '@/atoms/Container/Container';
+import { Skeleton } from '@/atoms/Skeleton/Skeleton';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
+import { TaggedItem } from '../TaggedItem/TaggedItem';
 import type { TaggedListProps } from './TaggedList.types';
 
 export function TaggedList({
@@ -19,10 +21,10 @@ export function TaggedList({
   // Track which tag is currently expanded (only one at a time - accordion behavior)
   const [expandedTagLabel, setExpandedTagLabel] = useState<string | null>(null);
 
-  const shouldFetchTaggers = taggedKind === Core.TagKind.POST && !!taggedId;
-  const { taggersByLabel, taggerStates, fetchAllTaggers } = Hooks.usePostTaggers(shouldFetchTaggers ? taggedId : null);
+  const shouldFetchTaggers = taggedKind === TagKind.POST && !!taggedId;
+  const { taggersByLabel, taggerStates, fetchAllTaggers } = usePostTaggers(shouldFetchTaggers ? taggedId : null);
 
-  const { sentinelRef } = Hooks.useInfiniteScroll({
+  const { sentinelRef } = useInfiniteScroll({
     onLoadMore: onLoadMore || (() => {}),
     hasMore,
     isLoading: isLoadingMore,
@@ -50,7 +52,7 @@ export function TaggedList({
   }, [expandedTagLabel, shouldFetchTaggers, fetchAllTaggers]);
 
   return (
-    <Atoms.Container className="gap-2">
+    <Container className="gap-2">
       {tags.map((tag) => {
         const tagLabelKey = tag.label.toLowerCase();
         const isExpanded = expandedTagLabel === tag.label;
@@ -59,7 +61,7 @@ export function TaggedList({
         const isLoadingTaggers = taggerState?.isLoading ?? false;
 
         return (
-          <Molecules.TaggedItem
+          <TaggedItem
             key={tag.label}
             tag={tag}
             onTagClick={onTagToggle}
@@ -71,20 +73,20 @@ export function TaggedList({
         );
       })}
       {hasMore && (
-        <Atoms.Container overrideDefaults ref={sentinelRef} className="w-full">
+        <Container overrideDefaults ref={sentinelRef} className="w-full">
           {isLoadingMore && (
-            <Atoms.Container overrideDefaults className="flex items-center gap-2 py-1">
-              <Atoms.Skeleton className="h-8 w-20 shrink-0 rounded-md" />
-              <Atoms.Skeleton className="size-8 shrink-0 rounded-full" />
-              <Atoms.Container overrideDefaults className="flex items-center gap-0">
-                <Atoms.Skeleton className="-mr-2 size-8 shrink-0 rounded-full" />
-                <Atoms.Skeleton className="-mr-2 size-8 shrink-0 rounded-full" />
-                <Atoms.Skeleton className="size-8 shrink-0 rounded-full" />
-              </Atoms.Container>
-            </Atoms.Container>
+            <Container overrideDefaults className="flex items-center gap-2 py-1">
+              <Skeleton className="h-8 w-20 shrink-0 rounded-md" />
+              <Skeleton className="size-8 shrink-0 rounded-full" />
+              <Container overrideDefaults className="flex items-center gap-0">
+                <Skeleton className="-mr-2 size-8 shrink-0 rounded-full" />
+                <Skeleton className="-mr-2 size-8 shrink-0 rounded-full" />
+                <Skeleton className="size-8 shrink-0 rounded-full" />
+              </Container>
+            </Container>
           )}
-        </Atoms.Container>
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

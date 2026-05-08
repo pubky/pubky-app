@@ -1,22 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import * as Atoms from '@/atoms';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
 import { DialogReportPostSuccess } from './DialogReportPostSuccess';
-
-// Mock @/libs - use actual implementations and only stub cn helper
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...actual,
-    cn: (...inputs: (string | undefined | null | false)[]) => inputs.filter(Boolean).join(' '),
-  };
-});
 
 const renderWithDialog = (component: React.ReactElement) => {
   return render(
-    <Atoms.Dialog open={true}>
-      <Atoms.DialogContent>{component}</Atoms.DialogContent>
-    </Atoms.Dialog>,
+    <Dialog open={true}>
+      <DialogContent>{component}</DialogContent>
+    </Dialog>,
   );
 };
 

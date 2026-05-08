@@ -1,20 +1,24 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { Image, Loader2, Newspaper, Send, Smile } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { cn } from '@/libs/utils/utils';
 import type { PostInputActionBarProps } from './PostInputActionBar.types';
-import { useIsMobile } from '@/hooks';
 
 interface ActionButtonContentProps {
-  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  Icon: React.ComponentType<{
+    className?: string;
+    strokeWidth?: number;
+  }>;
   iconClassName?: string;
 }
-
 function ActionButtonContent({ Icon, iconClassName }: ActionButtonContentProps) {
-  return <Icon className={Libs.cn('size-4 text-secondary-foreground', iconClassName)} strokeWidth={2} />;
+  return <Icon className={cn('size-4 text-secondary-foreground', iconClassName)} strokeWidth={2} />;
 }
-
 export function PostInputActionBar({
   onEmojiClick,
   onImageClick,
@@ -38,62 +42,59 @@ export function PostInputActionBar({
     }),
     [],
   );
-
   const getButtonDataCy = (ariaLabel: string) => `post-input-action-bar-${ariaLabel.toLowerCase().replace(' ', '-')}`;
-
-  const PostButtonIconComponent = isSubmitting ? Libs.Loader2 : (postButtonIcon ?? Libs.Send);
+  const PostButtonIconComponent = isSubmitting ? Loader2 : (postButtonIcon ?? Send);
   const postButtonAriaText = isSubmitting ? 'Posting...' : postButtonAriaLabel;
   const postButtonText = isSubmitting ? 'Posting...' : postButtonLabel;
   const postButtonIconClassName = isSubmitting ? 'animate-spin' : undefined;
-
   return (
-    <Atoms.Container className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center" overrideDefaults>
-      <Atoms.Container className="flex items-center gap-2" overrideDefaults>
+    <Container className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center" overrideDefaults>
+      <Container className="flex items-center gap-2" overrideDefaults>
         {!isArticle ? (
-          <Atoms.Button
+          <Button
             data-cy={getButtonDataCy('Add emoji')}
             {...commonButtonProps}
             onClick={onEmojiClick}
             disabled={!onEmojiClick || isSubmitting}
             aria-label="Add emoji"
           >
-            <ActionButtonContent Icon={Libs.Smile} />
-          </Atoms.Button>
+            <ActionButtonContent Icon={Smile} />
+          </Button>
         ) : null}
         {!isArticle && !isEdit ? (
-          <Atoms.Button
+          <Button
             data-cy={getButtonDataCy('Add image')}
             {...commonButtonProps}
             onClick={onImageClick}
             disabled={!onImageClick || isSubmitting}
             aria-label="Add image"
           >
-            <ActionButtonContent Icon={Libs.Image} />
-          </Atoms.Button>
+            <ActionButtonContent Icon={Image} />
+          </Button>
         ) : null}
         {!hideArticleButton ? (
-          <Atoms.Button
+          <Button
             data-cy={getButtonDataCy('Add article')}
             {...commonButtonProps}
             onClick={onArticleClick}
             disabled={!onArticleClick || isSubmitting}
             aria-label="Add article"
           >
-            <ActionButtonContent Icon={Libs.Newspaper} />
-          </Atoms.Button>
+            <ActionButtonContent Icon={Newspaper} />
+          </Button>
         ) : null}
-      </Atoms.Container>
-      <Atoms.Container className="flex items-center justify-end gap-2" overrideDefaults>
+      </Container>
+      <Container className="flex items-center justify-end gap-2" overrideDefaults>
         {characterLimit ? (
-          <Atoms.Typography
+          <Typography
             data-cy="post-input-action-bar-character-count"
-            className="hidden shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground sm:block"
+            className="hidden shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums sm:block"
             overrideDefaults
           >
             {characterLimit.count}/{characterLimit.max}
-          </Atoms.Typography>
+          </Typography>
         ) : null}
-        <Atoms.Button
+        <Button
           data-cy={getButtonDataCy(postButtonAriaText)}
           {...commonButtonProps}
           onClick={onPostClick}
@@ -103,17 +104,14 @@ export function PostInputActionBar({
           variant={'default'}
           size={isMobile ? 'default' : 'sm'}
         >
-          <Atoms.Container className="flex items-center gap-2" overrideDefaults>
-            <PostButtonIconComponent
-              className={Libs.cn('size-4 text-brand', postButtonIconClassName)}
-              strokeWidth={2}
-            />
-            <Atoms.Typography as="span" size="sm" className={'text-brand'}>
+          <Container className="flex items-center gap-2" overrideDefaults>
+            <PostButtonIconComponent className={cn('size-4 text-brand', postButtonIconClassName)} strokeWidth={2} />
+            <Typography as="span" size="sm" className={'text-brand'}>
               {postButtonText}
-            </Atoms.Typography>
-          </Atoms.Container>
-        </Atoms.Button>
-      </Atoms.Container>
-    </Atoms.Container>
+            </Typography>
+          </Container>
+        </Button>
+      </Container>
+    </Container>
   );
 }

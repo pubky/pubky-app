@@ -1,15 +1,20 @@
 'use client';
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-// Import directly to avoid circular dependency with @/hooks barrel
-import { useProfileStats } from '@/hooks/useProfileStats';
-import { toast } from '@/molecules/Toaster/use-toast';
-import type { UseTaggedResult, UseTaggedOptions } from './useTagged.types';
+import { TagKind } from '@/application/tag/tag.types';
+import { TagController } from '@/controllers/tag/tag';
+import { UserController } from '@/controllers/user/user';
+import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
 import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
+import { toast } from '@/molecules/Toaster/use-toast';
+import type { NexusTag } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { TAGS_PER_PAGE } from './useTagged.constants';
+import type { UseTaggedOptions, UseTaggedResult } from './useTagged.types';
 
 /**
  * Unified hook for fetching and managing user tags.
@@ -25,11 +30,11 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (e.g., during logout or unauthenticated views)
-  const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const viewerId = customViewerId ?? currentUserId;
 
   // Track zero-tagger tags with their original index for order preservation
-  const [zeroTaggerTags, setZeroTaggerTags] = useState<Map<string, { tag: Core.NexusTag; index: number }>>(new Map());
+  const [zeroTaggerTags, setZeroTaggerTags] = useState<Map<string, { tag: NexusTag; index: number }>>(new Map());
 
   // Track the order of tags as they were originally loaded
   const [tagOrder, setTagOrder] = useState<Map<string, number>>(new Map());
@@ -41,10 +46,10 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
   const localTags = useLiveQuery(async () => {
     try {
       if (!userId) return undefined;
-      const tags = await Core.UserController.getTags({ userId });
+      const tags = await UserController.getTags({ userId });
       return tags.length > 0 ? tags : null;
     } catch (error) {
-      Libs.Logger.error('[useTagged] Failed to query user tags', { userId, error });
+      Logger.error('[useTagged] Failed to query user tags', { userId, error });
       return null;
     }
   }, [userId]);
@@ -88,14 +93,14 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
     const fetchTags = async () => {
       try {
         // Fetch from server
-        const fetchedTags = await Core.UserController.fetchTags({
+        const fetchedTags = await UserController.fetchTags({
           user_id: userId,
           viewer_id: viewerId ?? undefined,
           ...(enablePagination && { limit_tags: TAGS_PER_PAGE, skip_tags: 0 }),
         });
 
         // Save to IndexedDB so useLiveQuery reacts
-        await Core.UserController.upsertTags(userId, fetchedTags);
+        await UserController.upsertTags(userId, fetchedTags);
 
         setHasFetched(true);
       } catch {
@@ -113,7 +118,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
     const baseTagLabels = new Set(baseTags.map((t) => t.label.toLowerCase()));
 
     // Get zero-tagger tags that aren't in baseTags
-    const zeroTagsToAdd: Array<{ tag: Core.NexusTag; index: number }> = [];
+    const zeroTagsToAdd: Array<{ tag: NexusTag; index: number }> = [];
     zeroTaggerTags.forEach((value, label) => {
       if (!baseTagLabels.has(label)) {
         zeroTagsToAdd.push(value);
@@ -156,11 +161,11 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
       try {
         // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
         // useLiveQuery will automatically react to the local change or rollback.
-        await Core.TagController.commitCreate({
-          taggedId: userId as Core.Pubky,
+        await TagController.commitCreate({
+          taggedId: userId as Pubky,
           label,
           taggerId: viewerId,
-          taggedKind: Core.TagKind.USER,
+          taggedKind: TagKind.USER,
         });
 
         // Remove from zero-tagger list if it was there
@@ -201,16 +206,16 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
       try {
         const params = {
-          taggedId: userId as Core.Pubky,
+          taggedId: userId as Pubky,
           label: tag.label,
           taggerId: viewerId,
-          taggedKind: Core.TagKind.USER,
+          taggedKind: TagKind.USER,
         };
         if (userIsTagger) {
           // Track zero-tagger tag BEFORE delete to preserve order
           if (currentTag && (currentTag.taggers_count ?? 0) <= 1) {
             const originalIndex = tagOrder.get(labelLower) ?? currentTagIndex;
-            const zeroTag: Core.NexusTag = {
+            const zeroTag: NexusTag = {
               ...currentTag,
               taggers: [],
               taggers_count: 0,
@@ -224,7 +229,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           }
 
           // TagController.commitDelete updates IndexedDB first and rolls back on homeserver failure.
-          await Core.TagController.commitDelete(params);
+          await TagController.commitDelete(params);
 
           toast({
             title: tTags('removed'),
@@ -232,7 +237,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           });
         } else {
           // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
-          await Core.TagController.commitCreate(params);
+          await TagController.commitCreate(params);
 
           // Remove from zero-tagger list
           setZeroTaggerTags((prev) => {
@@ -273,7 +278,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
     if (!enablePagination || !userId || !hasMore) return;
 
     try {
-      const moreTags = await Core.UserController.fetchTags({
+      const moreTags = await UserController.fetchTags({
         user_id: userId,
         viewer_id: viewerId ?? undefined,
         limit_tags: TAGS_PER_PAGE,
@@ -286,7 +291,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         const newTags = moreTags.filter((t) => !existingLabels.has(t.label.toLowerCase()));
         const mergedTags = [...allTags, ...newTags];
 
-        await Core.UserController.upsertTags(userId, mergedTags);
+        await UserController.upsertTags(userId, mergedTags);
       }
     } catch {
       // Ignore pagination errors

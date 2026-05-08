@@ -1,41 +1,58 @@
 import { baseUriBuilder, feedUriBuilder } from 'pubky-app-specs';
-import * as Core from '@/core';
+import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/application/feed/feed.types';
+import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from '@/controllers/feed/feed.types';
+import { db } from '@/database/franky/franky';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { FeedModel } from '@/models/feed/feed';
+import { buildFeedStreamId } from '@/models/feed/feed.helpers';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import type { Pubky } from '@/models/models.types';
+import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalFeedService } from '@/services/local/feed/feed';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type {
   FeedDeleteParams,
   FeedPutParams,
-  PersistAndSyncParams,
-  LocalFeedMigrationParams,
   HomeserverFeedJson,
+  LocalFeedMigrationParams,
+  PersistAndSyncParams,
   RemoteFeedParams,
 } from './feed.types';
-import { AppError, Err, ErrorService, HttpMethod, HttpStatusCode, Logger, ValidationErrorCode } from '@/libs';
 
 export class FeedApplication {
   private constructor() {}
   private static readonly FETCH_FEEDS_BATCH_SIZE = 10;
 
-  static async getList(): Promise<Core.FeedModelSchema[]> {
-    return Core.LocalFeedService.readAll();
+  static async getList(): Promise<FeedModelSchema[]> {
+    return LocalFeedService.readAll();
   }
 
-  static async get(params: Core.TFeedIdParam): Promise<Core.FeedModelSchema> {
-    return Core.LocalFeedService.read(params);
+  static async get(params: TFeedIdParam): Promise<FeedModelSchema> {
+    return LocalFeedService.read(params);
   }
 
-  static async persist({ userId, params }: FeedPutParams): Promise<Core.FeedModelSchema> {
-    const { feed: normalizedFeed, existingId } = params as Core.TFeedPersistCreateParams;
+  static async persist({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
+    const { feed: normalizedFeed, existingId } = params as TFeedPersistCreateParams;
     const { feed, meta } = normalizedFeed;
     const newId = meta.id;
     const idChanged = existingId != null && existingId !== newId;
 
     const now = Date.now();
     const createdAt = existingId
-      ? (await Core.LocalFeedService.read({ feedId: existingId }).catch(() => ({ created_at: now }))).created_at
+      ? (await LocalFeedService.read({ feedId: existingId }).catch(() => ({ created_at: now }))).created_at
       : now;
 
     const { tags, reach, sort, content, layout } = feed.feed;
 
-    const feedSchema: Core.FeedModelSchema = {
+    const feedSchema: FeedModelSchema = {
       id: newId,
       name: feed.name,
       tags: tags ?? [],
@@ -52,17 +69,17 @@ export class FeedApplication {
     // 1) create new homeserver resource, 2) atomically swap local feed records,
     // 3) best-effort delete old homeserver resource.
     if (idChanged) {
-      const oldFeed = await Core.LocalFeedService.read({ feedId: existingId }).catch(() => null);
+      const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch(() => null);
       const newFeedUrl = feedUriBuilder(userId, newId);
       const newFeedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
 
-      await Core.HomeserverService.request({ method: HttpMethod.PUT, url: newFeedUrl, bodyJson: newFeedJson });
+      await HomeserverService.request({ method: HttpMethod.PUT, url: newFeedUrl, bodyJson: newFeedJson });
 
       const persistedNewFeed = await this.migrateLocalFeedAtomically({ existingId, feedSchema, oldFeed });
 
       // Best-effort cleanup of old homeserver feed. Keep local new feed as source of truth if cleanup fails.
       const oldFeedUrl = feedUriBuilder(userId, existingId);
-      await Core.HomeserverService.request({ method: HttpMethod.DELETE, url: oldFeedUrl }).catch((cleanupError) => {
+      await HomeserverService.request({ method: HttpMethod.DELETE, url: oldFeedUrl }).catch((cleanupError) => {
         Logger.warn('Failed to cleanup old homeserver feed after successful migration to new feed ID', {
           oldFeedId: existingId,
           newFeedId: newId,
@@ -77,20 +94,17 @@ export class FeedApplication {
   }
 
   static async commitDelete({ userId, params }: FeedDeleteParams): Promise<void> {
-    const feedId = (params as Core.TFeedPersistDeleteParams).feedId;
+    const feedId = (params as TFeedPersistDeleteParams).feedId;
     const feedUrl = feedUriBuilder(userId, feedId);
 
-    const feed = await Core.LocalFeedService.read({ feedId }).catch(() => null);
-    const streamId = feed ? Core.buildFeedStreamId(feed) : null;
+    const feed = await LocalFeedService.read({ feedId }).catch(() => null);
+    const streamId = feed ? buildFeedStreamId(feed) : null;
 
     await Promise.all([
-      Core.LocalFeedService.delete({ feedId }),
-      Core.HomeserverService.request({ method: HttpMethod.DELETE, url: feedUrl }),
+      LocalFeedService.delete({ feedId }),
+      HomeserverService.request({ method: HttpMethod.DELETE, url: feedUrl }),
       ...(streamId
-        ? [
-            Core.LocalStreamPostsService.deleteById({ streamId }),
-            Core.LocalStreamPostsService.clearUnreadStream({ streamId }),
-          ]
+        ? [LocalStreamPostsService.deleteById({ streamId }), LocalStreamPostsService.clearUnreadStream({ streamId })]
         : []),
     ]);
   }
@@ -101,8 +115,8 @@ export class FeedApplication {
    * The result is passed to FeedNormalizer which recomputes the HashId — if any config field
    * (tags, reach, sort, content, layout) changed, the feed will get a new ID.
    */
-  static async prepareUpdateParams({ feedId, changes }: Core.TFeedUpdateParams): Promise<Core.TFeedCreateParams> {
-    const existing = await Core.LocalFeedService.read({ feedId });
+  static async prepareUpdateParams({ feedId, changes }: TFeedUpdateParams): Promise<TFeedCreateParams> {
+    const existing = await LocalFeedService.read({ feedId });
 
     return {
       name: changes.name ?? existing.name,
@@ -118,12 +132,12 @@ export class FeedApplication {
    * Fetch all feeds from the homeserver and persist them locally.
    * Used during bootstrap to hydrate the local feed cache.
    */
-  static async fetchFeeds(userId: Core.Pubky): Promise<Core.FeedModelSchema[]> {
+  static async fetchFeeds(userId: Pubky): Promise<FeedModelSchema[]> {
     const feedsDirectory = `${baseUriBuilder(userId)}feeds/`;
 
     let feedUris: string[];
     try {
-      feedUris = await Core.HomeserverService.list({ baseDirectory: feedsDirectory });
+      feedUris = await HomeserverService.list({ baseDirectory: feedsDirectory });
     } catch (error) {
       if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
         Logger.info('Feeds directory not found, defaulting to empty list', { userId });
@@ -132,13 +146,13 @@ export class FeedApplication {
       throw error;
     }
 
-    const validFeeds: Core.FeedModelSchema[] = [];
+    const validFeeds: FeedModelSchema[] = [];
 
     for (let index = 0; index < feedUris.length; index += this.FETCH_FEEDS_BATCH_SIZE) {
       const batch = feedUris.slice(index, index + this.FETCH_FEEDS_BATCH_SIZE);
       const batchResults = await Promise.allSettled(
         batch.map(async (feedUri) => {
-          const remoteFeed = await Core.HomeserverService.request<HomeserverFeedJson>({
+          const remoteFeed = await HomeserverService.request<HomeserverFeedJson>({
             method: HttpMethod.GET,
             url: feedUri,
           });
@@ -164,14 +178,14 @@ export class FeedApplication {
     }
 
     if (validFeeds.length === 0) return [];
-    return Core.LocalFeedService.createOrUpdateMany(validFeeds);
+    return LocalFeedService.createOrUpdateMany(validFeeds);
   }
 
   /**
    * Validates and transforms a single remote feed into a FeedModelSchema.
    * Returns null if the feed is invalid, logging a warning instead of throwing.
    */
-  private static normalizeRemoteFeed({ userId, remoteFeed }: RemoteFeedParams): Core.FeedModelSchema | null {
+  private static normalizeRemoteFeed({ userId, remoteFeed }: RemoteFeedParams): FeedModelSchema | null {
     try {
       const { feed, meta: feedMeta } = this.validateRemoteFeedWithSpecs({ userId, remoteFeed });
       const { tags, reach, sort, layout, content } = feed.feed;
@@ -207,7 +221,7 @@ export class FeedApplication {
       });
     }
 
-    const builder = Core.PubkySpecsSingleton.get(userId);
+    const builder = PubkySpecsSingleton.get(userId);
 
     const { tags, reach, layout, sort, content } = remoteFeed.feed;
     const normalizedTags = Array.isArray(tags) ? tags : [];
@@ -218,17 +232,13 @@ export class FeedApplication {
    * Persist feed locally and sync to homeserver
    * Extracted to avoid duplication between handlePut and handleUpdate
    */
-  private static async commit({
-    userId,
-    feedSchema,
-    normalizedFeed,
-  }: PersistAndSyncParams): Promise<Core.FeedModelSchema> {
-    const persistedFeed = await Core.LocalFeedService.createOrUpdate(feedSchema);
+  private static async commit({ userId, feedSchema, normalizedFeed }: PersistAndSyncParams): Promise<FeedModelSchema> {
+    const persistedFeed = await LocalFeedService.createOrUpdate(feedSchema);
 
     const feedUrl = feedUriBuilder(userId, persistedFeed.id);
     const feedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
 
-    await Core.HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
+    await HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
 
     return persistedFeed;
   }
@@ -241,22 +251,18 @@ export class FeedApplication {
     existingId,
     feedSchema,
     oldFeed,
-  }: LocalFeedMigrationParams): Promise<Core.FeedModelSchema> {
-    return Core.db.transaction(
-      'rw',
-      [Core.FeedModel.table, Core.PostStreamModel.table, Core.UnreadPostStreamModel.table],
-      async () => {
-        await Core.FeedModel.upsert(feedSchema);
-        await Core.FeedModel.deleteById(existingId);
+  }: LocalFeedMigrationParams): Promise<FeedModelSchema> {
+    return db.transaction('rw', [FeedModel.table, PostStreamModel.table, UnreadPostStreamModel.table], async () => {
+      await FeedModel.upsert(feedSchema);
+      await FeedModel.deleteById(existingId);
 
-        if (oldFeed) {
-          const oldStreamId = Core.buildFeedStreamId(oldFeed);
-          await Core.PostStreamModel.deleteById(oldStreamId);
-          await Core.UnreadPostStreamModel.deleteById(oldStreamId);
-        }
+      if (oldFeed) {
+        const oldStreamId = buildFeedStreamId(oldFeed);
+        await PostStreamModel.deleteById(oldStreamId);
+        await UnreadPostStreamModel.deleteById(oldStreamId);
+      }
 
-        return Core.FeedModel.findByIdOrThrow(feedSchema.id);
-      },
-    );
+      return FeedModel.findByIdOrThrow(feedSchema.id);
+    });
   }
 }

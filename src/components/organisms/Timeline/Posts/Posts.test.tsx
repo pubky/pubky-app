@@ -1,75 +1,100 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
+import { render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { TimelinePosts } from './Posts';
-import * as Hooks from '@/hooks';
 
 // Mock dependencies
 vi.mock('next/navigation');
 vi.mock('dexie-react-hooks');
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
+vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
+  usePostNavigation: vi.fn(),
+}));
+
+vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
+  useInfiniteScroll: vi.fn(),
+}));
+
+// Mock components
+vi.mock('@/atoms/Container/Container', () => {
   return {
-    ...actual,
-    usePostNavigation: vi.fn(),
-    useInfiniteScroll: vi.fn(),
+    Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+      <div data-testid="container" {...props}>
+        {children}
+      </div>
+    ),
   };
 });
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+
+vi.mock('@/molecules/Timeline/TimelineEndMessage', () => {
+  return {
+    TimelineEndMessage: () => <div data-testid="timeline-end-message">End of timeline</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineError', () => {
+  return {
+    TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">Error: {message}</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoading', () => {
+  return {
+    TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoadingMore', () => {
+  return {
+    TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper')>();
   return {
     ...actual,
-    Logger: {
-      error: vi.fn(),
+    TimelineStateWrapper: ({
+      loading,
+      error,
+      hasItems,
+      children,
+    }: {
+      loading: boolean;
+      error: string | null;
+      hasItems: boolean;
+      children: React.ReactNode;
+    }) => {
+      if (loading) return <div data-testid="timeline-loading">Loading...</div>;
+      if (error && !hasItems) return <div data-testid="timeline-initial-error">Error: {error}</div>;
+      if (!hasItems) return <div data-testid="timeline-empty">No posts</div>;
+      return <>{children}</>;
     },
   };
 });
 
-// Mock components
-vi.mock('@/atoms', () => ({
-  Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
-    <div data-testid="container" {...props}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/PostMain/PostMain', () => {
+  return {
+    PostMain: ({ postId, onClick, ...props }: { postId: string; onClick: () => void; [key: string]: unknown }) => (
+      <div data-testid={`post-${postId}`} onClick={onClick} {...props} />
+    ),
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
-  TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">Error: {message}</div>,
-  TimelineEndMessage: () => <div data-testid="timeline-end-message">End of timeline</div>,
-  TimelineStateWrapper: ({
-    loading,
-    error,
-    hasItems,
-    children,
-  }: {
-    loading: boolean;
-    error: string | null;
-    hasItems: boolean;
-    children: React.ReactNode;
-  }) => {
-    if (loading) return <div data-testid="timeline-loading">Loading...</div>;
-    if (error && !hasItems) return <div data-testid="timeline-initial-error">Error: {error}</div>;
-    if (!hasItems) return <div data-testid="timeline-empty">No posts</div>;
-    return <>{children}</>;
-  },
-}));
-
-vi.mock('@/organisms', () => ({
-  PostMain: ({ postId, onClick, ...props }: { postId: string; onClick: () => void; [key: string]: unknown }) => (
-    <div data-testid={`post-${postId}`} onClick={onClick} {...props} />
-  ),
-  TimelinePostReplies: ({ postId }: { postId: string }) => <div data-testid={`replies-${postId}`} />,
-}));
+vi.mock('@/organisms/Timeline/PostReplies/PostReplies', () => {
+  return {
+    TimelinePostReplies: ({ postId }: { postId: string }) => <div data-testid={`replies-${postId}`} />,
+  };
+});
 
 const mockPush = vi.fn();
 const mockUseLiveQuery = vi.mocked(useLiveQuery);
 const mockUseRouter = vi.mocked(useRouter);
-const mockUsePostNavigation = vi.mocked(Hooks.usePostNavigation);
-const mockUseInfiniteScroll = vi.mocked(Hooks.useInfiniteScroll);
+const mockUsePostNavigation = vi.mocked(usePostNavigation);
+const mockUseInfiniteScroll = vi.mocked(useInfiniteScroll);
 
 const mockPostIds = ['author1:post1', 'author2:post2', 'author3:post3'];
 describe('TimelinePosts', () => {

@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FeedController } from '@/controllers/feed/feed';
+import { Logger } from '@/libs/logger/logger';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { useCustomFeed } from './useCustomFeed';
-import { PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppFeedLayout } from 'pubky-app-specs';
-import type * as Core from '@/core';
 
 // --- Hoisted mocks ---
 
@@ -23,14 +25,14 @@ vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
 }));
 
-// Mock Core (FeedController + Logger)
-vi.mock('@/core', () => ({
+// Mock FeedController and Logger
+vi.mock('@/controllers/feed/feed', () => ({
   FeedController: {
     get: vi.fn(),
   },
 }));
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/logger/logger', () => ({
   Logger: {
     error: vi.fn(),
   },
@@ -38,7 +40,7 @@ vi.mock('@/libs', () => ({
 
 // --- Helpers ---
 
-const createMockFeed = (overrides: Partial<Core.FeedModelSchema> = {}): Core.FeedModelSchema => ({
+const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema => ({
   id: 'feed-abc123',
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],
@@ -101,27 +103,42 @@ describe('useCustomFeed', () => {
 
     renderHook(() => useCustomFeed());
 
-    expect(mockUseLiveQuery).toHaveBeenCalledTimes(1);
-
-    // Second argument is the dependency array [isFeedRoute, id]
-    const deps = mockUseLiveQuery.mock.calls[0][1];
-    expect(deps).toEqual([true, 'feed-abc123']);
+    // Dependency array is [activeFeedId] on every render
+    const lastDeps = mockUseLiveQuery.mock.calls.at(-1)?.[1];
+    expect(lastDeps).toEqual(['feed-abc123']);
   });
 
-  it('passes isFeedRoute as false when pathname does not start with /feed', () => {
+  it('passes activeFeedId as undefined when pathname does not start with /feed and nothing was latched', () => {
     mockUsePathname.mockReturnValue('/settings');
+    mockUseParams.mockReturnValue({});
     mockUseLiveQuery.mockReturnValue(undefined);
 
     renderHook(() => useCustomFeed());
 
     const deps = mockUseLiveQuery.mock.calls[0][1];
-    expect(deps[0]).toBe(false);
+    expect(deps[0]).toBeUndefined();
+  });
+
+  it('keeps the latched feed id during intercepted post navigation (URL → /post/...)', () => {
+    mockUseLiveQuery.mockReturnValue(undefined);
+
+    // First render: on the feed route — id gets latched
+    const { rerender } = renderHook(() => useCustomFeed());
+    expect(mockUseLiveQuery.mock.calls[0][1]).toEqual(['feed-abc123']);
+
+    // Simulate intercepted navigation: URL becomes /post/..., useParams loses id
+    mockUsePathname.mockReturnValue('/post/user/post1');
+    mockUseParams.mockReturnValue({});
+    rerender();
+
+    // Latched id should still drive the query, so feed state isn't reset
+    const lastDeps = mockUseLiveQuery.mock.calls.at(-1)?.[1];
+    expect(lastDeps).toEqual(['feed-abc123']);
   });
 
   it('calls FeedController.get with correct feedId inside the query function', async () => {
     const mockFeed = createMockFeed();
-    const Core = await import('@/core');
-    vi.mocked(Core.FeedController.get).mockResolvedValue(mockFeed);
+    vi.mocked(FeedController.get).mockResolvedValue(mockFeed);
 
     // Execute the query function that useLiveQuery receives
     mockUseLiveQuery.mockImplementation((queryFn: () => Promise<unknown>) => {
@@ -131,14 +148,12 @@ describe('useCustomFeed', () => {
 
     renderHook(() => useCustomFeed());
 
-    expect(Core.FeedController.get).toHaveBeenCalledWith({ feedId: 'feed-abc123' });
+    expect(FeedController.get).toHaveBeenCalledWith({ feedId: 'feed-abc123' });
   });
 
   it('returns undefined and logs error when FeedController.get throws', async () => {
-    const Core = await import('@/core');
-    const Libs = await import('@/libs');
     const error = new Error('DB read failed');
-    vi.mocked(Core.FeedController.get).mockRejectedValue(error);
+    vi.mocked(FeedController.get).mockRejectedValue(error);
 
     // Execute the query function and capture its return value
     let queryResult: unknown;
@@ -153,7 +168,7 @@ describe('useCustomFeed', () => {
 
     // Allow the promise to resolve
     await vi.waitFor(() => {
-      expect(Libs.Logger.error).toHaveBeenCalledWith('[useCustomFeed] Failed to query custom feed', {
+      expect(Logger.error).toHaveBeenCalledWith('[useCustomFeed] Failed to query custom feed', {
         error,
       });
     });

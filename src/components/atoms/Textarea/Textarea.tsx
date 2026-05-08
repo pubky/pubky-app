@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-
-import * as Libs from '@/libs';
+import { cn } from '@/libs/utils/utils';
 
 const textareaVariants = cva(
   'flex field-sizing-content w-full rounded-md bg-transparent text-base wrap-anywhere outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 transition-[color,box-shadow]',
@@ -25,7 +24,7 @@ function Textarea({
   variant,
   ...props
 }: React.ComponentProps<'textarea'> & VariantProps<typeof textareaVariants>) {
-  return <textarea data-slot="textarea" {...props} className={Libs.cn(textareaVariants({ variant }), className)} />;
+  return <textarea data-slot="textarea" {...props} className={cn(textareaVariants({ variant }), className)} />;
 }
 
 export { Textarea, textareaVariants };

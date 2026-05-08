@@ -2,18 +2,19 @@
  * Shared test utilities for normalizer tests.
  * Provides common test data, mock factories, and assertion helpers.
  */
-import { vi } from 'vitest';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
 import { PubkySpecsBuilder } from 'pubky-app-specs';
+import { vi } from 'vitest';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 
 /**
  * Valid z-base32 encoded public keys for testing.
  * These are the only pubky values that pass strict validation.
  */
 export const TEST_PUBKY = {
-  USER_1: '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Core.Pubky,
-  USER_2: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
+  USER_1: '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky,
+  USER_2: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
 };
 
 /**
@@ -31,8 +32,8 @@ export const TEST_POST_IDS = {
  */
 export const setupUnitTestMocks = <T extends Record<string, ReturnType<typeof vi.fn>>>(mockBuilder: T) => {
   vi.clearAllMocks();
-  vi.spyOn(Core.PubkySpecsSingleton, 'get').mockReturnValue(mockBuilder as unknown as PubkySpecsBuilder);
-  vi.spyOn(Libs.Logger, 'debug').mockImplementation(() => {});
+  vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(mockBuilder as unknown as PubkySpecsBuilder);
+  vi.spyOn(Logger, 'debug').mockImplementation(() => {});
 };
 
 /**
@@ -40,7 +41,7 @@ export const setupUnitTestMocks = <T extends Record<string, ReturnType<typeof vi
  * Only mocks Logger.debug to allow real library behavior.
  */
 export const setupIntegrationTestMocks = () => {
-  vi.spyOn(Libs.Logger, 'debug').mockImplementation(() => {});
+  vi.spyOn(Logger, 'debug').mockImplementation(() => {});
 };
 
 /**
@@ -48,23 +49,23 @@ export const setupIntegrationTestMocks = () => {
  */
 export const restoreMocks = () => {
   vi.restoreAllMocks();
-  Core.PubkySpecsSingleton.reset();
+  PubkySpecsSingleton.reset();
 };
 
 /**
  * Invalid input test cases for parameterized testing.
  */
 export const INVALID_INPUTS = {
-  EMPTY: '' as Core.Pubky,
-  NULL: null as unknown as Core.Pubky,
-  UNDEFINED: undefined as unknown as Core.Pubky,
-  INVALID_FORMAT: 'invalid-short-pubky' as Core.Pubky,
+  EMPTY: '' as Pubky,
+  NULL: null as unknown as Pubky,
+  UNDEFINED: undefined as unknown as Pubky,
+  INVALID_FORMAT: 'invalid-short-pubky' as Pubky,
 };
 
 /**
  * Helper to build a pubky URI path.
  */
-export const buildPubkyUri = (pubky: Core.Pubky, path: string) => `pubky://${pubky}/pub/pubky.app/${path}`;
+export const buildPubkyUri = (pubky: Pubky, path: string) => `pubky://${pubky}/pub/pubky.app/${path}`;
 
 /**
  * Helper to create a post URI.

@@ -1,13 +1,20 @@
-import * as Core from '@/core';
-import { DatabaseErrorCode, Err, ErrorService } from '@/libs';
+import { db } from '@/database/franky/franky';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import type { Pubky } from '@/models/models.types';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { UserTagsModel, type UserTagsModelSchema } from '@/models/user/tags/userTags';
+import type { TLocalTagParams } from '@/services/local/tag/tag.types';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 
 export class LocalUserTagService {
-  private static readonly TAG_TABLES = [Core.UserTagsModel.table, Core.UserCountsModel.table] as const;
+  private static readonly TAG_TABLES = [UserTagsModel.table, UserCountsModel.table] as const;
 
-  static async create({ taggerId, taggedId, label }: Core.TLocalTagParams): Promise<boolean> {
+  static async create({ taggerId, taggedId, label }: TLocalTagParams): Promise<boolean> {
     try {
-      return await Core.db.transaction('rw', this.TAG_TABLES, async () => {
-        const userTagsModel = await Core.UserTagsModel.getOrCreate<Core.Pubky, Core.UserTagsModelSchema>(taggedId);
+      return await db.transaction('rw', this.TAG_TABLES, async () => {
+        const userTagsModel = await UserTagsModel.getOrCreate<Pubky, UserTagsModelSchema>(taggedId);
         const tagExists = userTagsModel.addTagger(label, taggerId);
 
         // Idempotent: user already tagged this user with this label
@@ -16,8 +23,8 @@ export class LocalUserTagService {
         }
         await Promise.all([
           this.saveUserTagsModel(taggedId, userTagsModel),
-          Core.UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: 1 } }),
-          Core.UserCountsModel.updateCounts({
+          UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: 1 } }),
+          UserCountsModel.updateCounts({
             userId: taggedId,
             countChanges: { tags: 1, unique_tags: !tagExists ? 1 : undefined },
           }),
@@ -44,9 +51,9 @@ export class LocalUserTagService {
    * @returns {boolean} true if tag was deleted, false if nothing to delete (idempotent)
    * @throws {AppError} When database operations fail
    */
-  static async delete({ taggerId, taggedId, label }: Core.TLocalTagParams): Promise<boolean> {
+  static async delete({ taggerId, taggedId, label }: TLocalTagParams): Promise<boolean> {
     // Check if user has tags before starting transaction
-    const userTagsModel = await Core.UserTagsModel.findById(taggedId);
+    const userTagsModel = await UserTagsModel.findById(taggedId);
     if (!userTagsModel) {
       return false; // Nothing to delete
     }
@@ -57,11 +64,11 @@ export class LocalUserTagService {
     }
 
     try {
-      await Core.db.transaction('rw', this.TAG_TABLES, async () => {
+      await db.transaction('rw', this.TAG_TABLES, async () => {
         await Promise.all([
           this.saveUserTagsModel(taggedId, userTagsModel),
-          Core.UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: -1 } }),
-          Core.UserCountsModel.updateCounts({
+          UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: -1 } }),
+          UserCountsModel.updateCounts({
             userId: taggedId,
             countChanges: { tags: -1, unique_tags: lastTaggerOnTag ? -1 : undefined },
           }),
@@ -85,10 +92,10 @@ export class LocalUserTagService {
    * @param userTagsModel - The UserTagsModel instance to save
    * @private
    */
-  private static async saveUserTagsModel(userId: Core.Pubky, userTagsModel: Core.UserTagsModel) {
-    await Core.UserTagsModel.upsert({
+  private static async saveUserTagsModel(userId: Pubky, userTagsModel: UserTagsModel) {
+    await UserTagsModel.upsert({
       id: userId,
-      tags: userTagsModel.tags as Core.NexusTag[],
+      tags: userTagsModel.tags as NexusTag[],
     });
   }
 
@@ -98,10 +105,10 @@ export class LocalUserTagService {
    * @param userIds - Array of user IDs to check
    * @returns Array of user IDs that don't have tags in cache
    */
-  static async getNotPersistedUserTagsInCache(userIds: Core.Pubky[]): Promise<Core.Pubky[]> {
+  static async getNotPersistedUserTagsInCache(userIds: Pubky[]): Promise<Pubky[]> {
     if (userIds.length === 0) return [];
 
-    const existingTags = await Core.UserTagsModel.findByIdsPreserveOrder(userIds);
+    const existingTags = await UserTagsModel.findByIdsPreserveOrder(userIds);
     return userIds.filter((_userId, index) => existingTags[index] === undefined);
   }
 }

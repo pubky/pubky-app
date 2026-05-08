@@ -1,11 +1,55 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DialogEditPost } from './DialogEditPost';
-import * as Organisms from '@/organisms';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { PostInput } from '../PostInput/PostInput';
+import { DialogEditPost } from './DialogEditPost';
+
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({
+      children,
+      className,
+      hiddenTitle,
+      _onOpenAutoFocus,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      hiddenTitle?: string;
+      _onOpenAutoFocus?: (e: Event) => void;
+      [key: string]: unknown;
+    }) => (
+      <div data-testid="dialog-content" className={className} aria-label={hiddenTitle} {...props}>
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+  };
+});
 
 // Mock hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useConfirmableDialog/useConfirmableDialog', () => ({
   useConfirmableDialog: vi.fn(({ onClose }: { onClose: () => void }) => ({
     showConfirmDialog: false,
     setShowConfirmDialog: vi.fn(),
@@ -16,6 +60,9 @@ vi.mock('@/hooks', () => ({
     }),
     handleDiscard: vi.fn(() => onClose()),
   })),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn((postId: string) => ({
     postDetails: {
       id: postId,
@@ -27,136 +74,64 @@ vi.mock('@/hooks', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  DialogConfirmDiscard: ({
-    open,
-    onOpenChange,
-    onConfirm,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onConfirm: () => void;
-  }) => (
-    <div data-testid="dialog-confirm-discard" data-open={open}>
-      <button data-testid="mock-confirm-btn" onClick={onConfirm}>
-        Confirm
-      </button>
-      <button data-testid="mock-cancel-btn" onClick={() => onOpenChange(false)}>
-        Cancel
-      </button>
-    </div>
-  ),
-}));
-
-// Mock organisms
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
   return {
-    ...actual,
-    PostInput: vi.fn(
-      ({
-        dataCy,
-        variant,
-        onSuccess,
-        expanded,
-        onContentChange,
-        editPostId,
-        editContent,
-        editIsArticle,
-      }: {
-        dataCy?: string;
-        variant: string;
-        onSuccess?: () => void;
-        expanded?: boolean;
-        onContentChange?: (content: string, tags: string[], attachments: File[], articleTitle: string) => void;
-        editPostId?: string;
-        editContent?: string;
-        editIsArticle?: boolean;
-      }) => (
-        <div
-          data-testid="post-input"
-          data-cy={dataCy}
-          data-variant={variant}
-          data-expanded={expanded}
-          data-edit-post-id={editPostId}
-          data-edit-content={editContent}
-          data-edit-is-article={editIsArticle}
-        >
-          <button data-testid="mock-success-btn" onClick={onSuccess}>
-            Success
-          </button>
-          <button
-            data-testid="mock-content-change-btn"
-            onClick={() => onContentChange?.('updated content', ['tag1'], [], '')}
-          >
-            Change Content
-          </button>
-        </div>
-      ),
+    DialogConfirmDiscard: ({
+      open,
+      onOpenChange,
+      onConfirm,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onConfirm: () => void;
+    }) => (
+      <div data-testid="dialog-confirm-discard" data-open={open}>
+        <button data-testid="mock-confirm-btn" onClick={onConfirm}>
+          Confirm
+        </button>
+        <button data-testid="mock-cancel-btn" onClick={() => onOpenChange(false)}>
+          Cancel
+        </button>
+      </div>
     ),
   };
 });
 
-// Mock atoms
-vi.mock('@/atoms', () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({
-    children,
-    className,
-    hiddenTitle,
-    _onOpenAutoFocus,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    hiddenTitle?: string;
-    _onOpenAutoFocus?: (e: Event) => void;
-    [key: string]: unknown;
-  }) => (
-    <div data-testid="dialog-content" className={className} aria-label={hiddenTitle} {...props}>
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
+vi.mock('../PostInput/PostInput', () => ({
+  PostInput: vi.fn(
+    ({ onSuccess, onContentChange, variant, dataCy, editPostId, editContent, editIsArticle, expanded }) => (
+      <div
+        data-testid="post-input"
+        data-variant={variant}
+        data-cy={dataCy}
+        data-edit-post-id={editPostId}
+        data-edit-content={editContent}
+        data-edit-is-article={String(editIsArticle)}
+        data-expanded={String(expanded)}
+      >
+        <button data-testid="mock-success-btn" onClick={() => onSuccess?.('edited-post-id')}>
+          Success
+        </button>
+        <button data-testid="mock-content-change-btn" onClick={() => onContentChange?.('changed content')}>
+          Change Content
+        </button>
+      </div>
+    ),
   ),
 }));
 
 // Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
-// Import hooks after mocking
-import * as Hooks from '@/hooks';
 
 describe('DialogEditPost', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset to default mock implementation
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-post-123',
         content: 'Test post content',
         kind: 'short',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
   });
@@ -172,12 +147,12 @@ describe('DialogEditPost', () => {
   });
 
   it('renders with "Edit Article" title for long posts', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
         content: 'Test article content',
         kind: 'long',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
 
@@ -188,7 +163,7 @@ describe('DialogEditPost', () => {
   });
 
   it('returns null when postDetails is not available', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: null,
       isLoading: true,
     });
@@ -205,7 +180,7 @@ describe('DialogEditPost', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogEditPost postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
 
-    expect(Organisms.PostInput).toHaveBeenCalledWith(
+    expect(PostInput).toHaveBeenCalledWith(
       expect.objectContaining({
         dataCy: 'edit-post-input',
         variant: POST_INPUT_VARIANT.EDIT,
@@ -220,19 +195,19 @@ describe('DialogEditPost', () => {
   });
 
   it('renders PostInput with editIsArticle true and autoFocusTextarea false for long posts', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
         content: 'Test article content',
         kind: 'long',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
 
     const onOpenChangeAction = vi.fn();
     render(<DialogEditPost postId="test-article-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
 
-    expect(Organisms.PostInput).toHaveBeenCalledWith(
+    expect(PostInput).toHaveBeenCalledWith(
       expect.objectContaining({
         editIsArticle: true,
         autoFocusTextarea: false,
@@ -282,12 +257,12 @@ describe('DialogEditPost', () => {
   });
 
   it('displays correct description text for article', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
         content: 'Test article content',
         kind: 'long',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
 
@@ -301,14 +276,14 @@ describe('DialogEditPost', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogEditPost postId="specific-post-id" open={true} onOpenChangeAction={onOpenChangeAction} />);
 
-    expect(Hooks.usePostDetails).toHaveBeenCalledWith('specific-post-id');
+    expect(usePostDetails).toHaveBeenCalledWith('specific-post-id');
   });
 
   it('calls useConfirmableDialog with onClose callback', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogEditPost postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
 
-    expect(Hooks.useConfirmableDialog).toHaveBeenCalledWith({
+    expect(useConfirmableDialog).toHaveBeenCalledWith({
       onClose: expect.any(Function),
     });
   });
@@ -317,12 +292,12 @@ describe('DialogEditPost', () => {
 describe('DialogEditPost - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'snapshot-post-id',
         content: 'Snapshot post content',
         kind: 'short',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
   });
@@ -336,12 +311,12 @@ describe('DialogEditPost - Snapshots', () => {
   });
 
   it('matches snapshot for long post (Edit Article)', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'snapshot-article-id',
         content: 'Snapshot article content',
         kind: 'long',
-      } as ReturnType<typeof Hooks.usePostDetails>['postDetails'],
+      } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
 
@@ -361,7 +336,7 @@ describe('DialogEditPost - Snapshots', () => {
   });
 
   it('matches snapshot when postDetails is null', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: null,
       isLoading: true,
     });

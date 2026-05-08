@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { VALIDATION_MESSAGES } from '@/config/forms';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { CopyrightValidators } from './copyright.validators';
-import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
-import * as Config from '@/config';
 
 describe('CopyrightValidators', () => {
   // Test one required string validator thoroughly to verify helper behavior
@@ -162,7 +164,7 @@ describe('CopyrightValidators', () => {
         const appError = error as AppError;
         expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
         expect(appError.service).toBe(ErrorService.NextJsServer);
-        expect(appError.message).toBe(Config.VALIDATION_MESSAGES.INVALID_EMAIL);
+        expect(appError.message).toBe(VALIDATION_MESSAGES.INVALID_EMAIL);
       }
     });
   });
@@ -184,7 +186,7 @@ describe('CopyrightValidators', () => {
         const appError = error as AppError;
         expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
         expect(appError.service).toBe(ErrorService.NextJsServer);
-        expect(appError.message).toBe(Config.VALIDATION_MESSAGES.INVALID_PHONE);
+        expect(appError.message).toBe(VALIDATION_MESSAGES.INVALID_PHONE);
       }
     });
   });
@@ -206,7 +208,7 @@ describe('CopyrightValidators', () => {
         const appError = error as AppError;
         expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
         expect(appError.service).toBe(ErrorService.NextJsServer);
-        expect(appError.message).toBe(Config.VALIDATION_MESSAGES.ROLE_REQUIRED);
+        expect(appError.message).toBe(VALIDATION_MESSAGES.ROLE_REQUIRED);
       }
     });
   });

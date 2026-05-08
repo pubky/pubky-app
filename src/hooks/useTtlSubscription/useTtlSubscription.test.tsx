@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTtlSubscription } from './useTtlSubscription';
 
 // Mock TtlCoordinator
@@ -8,7 +8,7 @@ const mockUnsubscribePost = vi.fn();
 const mockSubscribeUser = vi.fn();
 const mockUnsubscribeUser = vi.fn();
 
-vi.mock('@/core', () => ({
+vi.mock('@/coordinators/ttl/ttl', () => ({
   TtlCoordinator: {
     getInstance: () => ({
       subscribePost: mockSubscribePost,

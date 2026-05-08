@@ -1,4 +1,14 @@
-import * as Core from '@/core';
+import { HomegateApplication } from '@/application/homegate/homegate';
+import type {
+  THomegateAwaitLnVerificationResult,
+  THomegateCreateLnVerificationResult,
+  THomegateLnInfoResult,
+  THomegateSendSmsCodeResult,
+  THomegateSmsInfoResult,
+  THomegateVerifySmsCodeParams,
+  THomegateVerifySmsCodeResult,
+} from '@/application/homegate/homegate.types';
+import type { BtcRate } from '@/services/exchangerate/exchangerate.types';
 
 /**
  * Controller for homegate operations.
@@ -13,8 +23,8 @@ export class HomegateController {
    * @returns The availability status
    * @throws AppError if retrieval fails
    */
-  static async getSmsVerificationInfo(): Promise<Core.THomegateSmsInfoResult> {
-    return await Core.HomegateApplication.getSmsVerificationInfo();
+  static async getSmsVerificationInfo(): Promise<THomegateSmsInfoResult> {
+    return await HomegateApplication.getSmsVerificationInfo();
   }
 
   /**
@@ -23,8 +33,8 @@ export class HomegateController {
    * @returns The availability status and price if available
    * @throws AppError if retrieval fails
    */
-  static async getLnVerificationInfo(): Promise<Core.THomegateLnInfoResult> {
-    return await Core.HomegateApplication.getLnVerificationInfo();
+  static async getLnVerificationInfo(): Promise<THomegateLnInfoResult> {
+    return await HomegateApplication.getLnVerificationInfo();
   }
 
   /**
@@ -33,8 +43,8 @@ export class HomegateController {
    * @returns The verification details including the BOLT11 invoice
    * @throws AppError if creation fails
    */
-  static async createLnVerification(): Promise<Core.THomegateCreateLnVerificationResult> {
-    return await Core.HomegateApplication.createLnVerification();
+  static async createLnVerification(): Promise<THomegateCreateLnVerificationResult> {
+    return await HomegateApplication.createLnVerification();
   }
 
   /**
@@ -49,11 +59,11 @@ export class HomegateController {
   static async awaitLnVerification(
     verificationId: string,
     signal?: AbortSignal,
-  ): Promise<Core.THomegateAwaitLnVerificationResult> {
+  ): Promise<THomegateAwaitLnVerificationResult> {
     if (signal) {
-      return await Core.HomegateApplication.awaitLnVerification(verificationId, signal);
+      return await HomegateApplication.awaitLnVerification(verificationId, signal);
     }
-    return await Core.HomegateApplication.awaitLnVerification(verificationId);
+    return await HomegateApplication.awaitLnVerification(verificationId);
   }
 
   /**
@@ -67,8 +77,8 @@ export class HomegateController {
   static async verifySmsCode({
     phoneNumber,
     code,
-  }: Core.THomegateVerifySmsCodeParams): Promise<Core.THomegateVerifySmsCodeResult> {
-    return await Core.HomegateApplication.verifySmsCode({ phoneNumber, code });
+  }: THomegateVerifySmsCodeParams): Promise<THomegateVerifySmsCodeResult> {
+    return await HomegateApplication.verifySmsCode({ phoneNumber, code });
   }
 
   /**
@@ -78,8 +88,8 @@ export class HomegateController {
    * @returns The result of the SMS send request
    * @throws AppError if sending fails
    */
-  static async sendSmsCode(phoneNumber: string): Promise<Core.THomegateSendSmsCodeResult> {
-    return await Core.HomegateApplication.sendSmsCode(phoneNumber);
+  static async sendSmsCode(phoneNumber: string): Promise<THomegateSendSmsCodeResult> {
+    return await HomegateApplication.sendSmsCode(phoneNumber);
   }
 
   /**
@@ -88,7 +98,7 @@ export class HomegateController {
    * @returns The BTC rate with satUsd, btcUsd, and lastUpdatedAt
    * @throws AppError if retrieval fails
    */
-  static async getBtcRate(): Promise<Core.BtcRate> {
-    return await Core.HomegateApplication.getBtcRate();
+  static async getBtcRate(): Promise<BtcRate> {
+    return await HomegateApplication.getBtcRate();
   }
 }

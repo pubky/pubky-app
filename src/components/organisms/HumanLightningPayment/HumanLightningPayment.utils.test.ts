@@ -1,20 +1,16 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HomegateController } from '@/controllers/homegate/homegate';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { VerificationHandler } from './HumanLightningPayment.utils';
-import { HomegateController } from '@/core';
-import { asOpaque } from '@/test-utils';
 
 type VerificationHandlerInternals = { checkPaymentStatus: () => Promise<void> };
 
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual('@/core');
-  return {
-    ...actual,
-    HomegateController: {
-      createLnVerification: vi.fn(),
-      awaitLnVerification: vi.fn(),
-    },
-  };
-});
+vi.mock('@/controllers/homegate/homegate', () => ({
+  HomegateController: {
+    createLnVerification: vi.fn(),
+    awaitLnVerification: vi.fn(),
+  },
+}));
 
 const DEFAULT_VERIFICATION_DATA = {
   id: 'test-verification-id',

@@ -1,9 +1,9 @@
-import * as Icons from '@/libs/icons';
-import { NotificationType } from '@/core/models/notification/notification.types';
-
 /**
  * Icon size in pixels
  */
+import { AtSign, HeartHandshake, MessageCircle, Repeat, StickyNote, Tag, Trash2, UserRoundPlus } from 'lucide-react';
+import { NotificationType } from '@/models/notification/notification.types';
+
 export const ICON_SIZE = 24;
 
 /**
@@ -15,13 +15,13 @@ export const BADGE_SIZE = 11;
  * Mapping of notification types to their corresponding Lucide icon components
  */
 export const NOTIFICATION_ICON_MAP = {
-  [NotificationType.Follow]: Icons.UserRoundPlus,
-  [NotificationType.NewFriend]: Icons.HeartHandshake,
-  [NotificationType.TagPost]: Icons.Tag,
-  [NotificationType.TagProfile]: Icons.Tag,
-  [NotificationType.Reply]: Icons.MessageCircle,
-  [NotificationType.Repost]: Icons.Repeat,
-  [NotificationType.Mention]: Icons.AtSign,
-  [NotificationType.PostDeleted]: Icons.Trash2,
-  [NotificationType.PostEdited]: Icons.StickyNote,
+  [NotificationType.Follow]: UserRoundPlus,
+  [NotificationType.NewFriend]: HeartHandshake,
+  [NotificationType.TagPost]: Tag,
+  [NotificationType.TagProfile]: Tag,
+  [NotificationType.Reply]: MessageCircle,
+  [NotificationType.Repost]: Repeat,
+  [NotificationType.Mention]: AtSign,
+  [NotificationType.PostDeleted]: Trash2,
+  [NotificationType.PostEdited]: StickyNote,
 } as const;

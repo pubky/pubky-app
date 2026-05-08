@@ -1,5 +1,40 @@
-import * as Core from '@/core';
-import { Logger } from '@/libs/logger';
+import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
+import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
+import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
+import { Logger } from '@/libs/logger/logger';
+import { BookmarkModel } from '@/models/bookmark/bookmark';
+import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { ModerationModel } from '@/models/moderation/moderation';
+import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
+import { PostCountsModel } from '@/models/post/counts/postCounts';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
+import { PostTagsModel } from '@/models/post/tags/postTags';
+import { PostTtlModel } from '@/models/post/ttl/postTtl';
+import type { RecordModelBase } from '@/models/shared/base/record/baseRecord';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import {
+  buildPostReplyStreamId,
+  type PostStreamId,
+  type ReplyStreamCompositeId,
+} from '@/models/stream/post/postStream.types';
+import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import type {
+  TAddReplyToStreamParams,
+  TPersistPostsParams,
+  TPostDetailsTimestampParams,
+  TPostStreamBulkParams,
+  TPostStreamPersistResult,
+  TPostStreamUpsertParams,
+  TPrependToStreamParams,
+  TStreamResult,
+} from '@/services/local/stream/posts/post.types';
+import type { NexusFileDetails, NexusPostCounts, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
+import { sortPostIdsByTimestamp } from '@/utils/sorting';
 
 /**
  * Local Stream Posts Service
@@ -10,37 +45,37 @@ import { Logger } from '@/libs/logger';
 export class LocalStreamPostsService {
   private constructor() {}
 
-  static async readUnreadStream({ streamId }: Core.TStreamIdParams): Promise<Core.TStreamResult | null> {
-    return await Core.UnreadPostStreamModel.findById(streamId);
+  static async readUnreadStream({ streamId }: TStreamIdParams): Promise<TStreamResult | null> {
+    return await UnreadPostStreamModel.findById(streamId);
   }
 
   /**
    * Save or update a stream of post IDs
    */
-  static async upsert({ streamId, stream }: Core.TPostStreamUpsertParams): Promise<void> {
-    await Core.PostStreamModel.upsert(streamId, stream);
+  static async upsert({ streamId, stream }: TPostStreamUpsertParams): Promise<void> {
+    await PostStreamModel.upsert(streamId, stream);
   }
 
   /**
    *
    * @param postStreams - Array of post streams to upsert
    */
-  static async bulkSave({ postStreams }: Core.TPostStreamBulkParams): Promise<void> {
+  static async bulkSave({ postStreams }: TPostStreamBulkParams): Promise<void> {
     await Promise.all(postStreams.map(({ streamId, stream }) => this.upsert({ streamId, stream })));
   }
 
   /**
    * Get a stream of post IDs by stream ID
    */
-  static async read({ streamId }: Core.TStreamIdParams): Promise<{ stream: string[] } | null> {
-    return await Core.PostStreamModel.findById(streamId);
+  static async read({ streamId }: TStreamIdParams): Promise<{ stream: string[] } | null> {
+    return await PostStreamModel.findById(streamId);
   }
 
   /**
    * Delete a stream from cache
    */
-  static async deleteById({ streamId }: Core.TStreamIdParams): Promise<void> {
-    await Core.PostStreamModel.deleteById(streamId);
+  static async deleteById({ streamId }: TStreamIdParams): Promise<void> {
+    await PostStreamModel.deleteById(streamId);
   }
 
   /**
@@ -51,16 +86,16 @@ export class LocalStreamPostsService {
    * 1 means that there is no posts in the cache but force to fetch from Nexus new posts
    * 0 means that there is no posts in the cache and no need to fetch from Nexus new posts
    */
-  static async getStreamHead({ streamId }: Core.TStreamIdParams): Promise<number> {
-    const unreadCompositePostId = await Core.UnreadPostStreamModel.getStreamHead(streamId);
+  static async getStreamHead({ streamId }: TStreamIdParams): Promise<number> {
+    const unreadCompositePostId = await UnreadPostStreamModel.getStreamHead(streamId);
     if (unreadCompositePostId) {
       return await this.getPostDetailsTimestamp({ postCompositeId: unreadCompositePostId as string });
     }
-    const postCompositeId = await Core.PostStreamModel.getStreamHead(streamId);
+    const postCompositeId = await PostStreamModel.getStreamHead(streamId);
     if (!postCompositeId) {
       // It might be a case that the stream that we want to update still does not have any posts in the cache
       // so we return 1 to indicate that there is no posts in the cache but force to fetch from Nexus new posts
-      return Core.FORCE_FETCH_NEW_POSTS;
+      return FORCE_FETCH_NEW_POSTS;
     }
     return await this.getPostDetailsTimestamp({ postCompositeId: postCompositeId as string });
   }
@@ -70,14 +105,14 @@ export class LocalStreamPostsService {
    * @param postCompositeId - The composite post ID to get the timestamp for
    * @returns The indexed_at timestamp of the post, or 0 if the post is not found in the cache
    */
-  private static async getPostDetailsTimestamp({ postCompositeId }: Core.TPostDetailsTimestampParams): Promise<number> {
-    const postDetails = await Core.PostDetailsModel.findById(postCompositeId);
+  private static async getPostDetailsTimestamp({ postCompositeId }: TPostDetailsTimestampParams): Promise<number> {
+    const postDetails = await PostDetailsModel.findById(postCompositeId);
     if (postDetails) {
       return postDetails.indexed_at;
     }
     // Avoid fetching till we have persited the missing post in the cache
     Logger.debug('Post not found in cache, avoiding fetch', { postCompositeId });
-    return Core.SKIP_FETCH_NEW_POSTS;
+    return SKIP_FETCH_NEW_POSTS;
   }
 
   /**
@@ -87,7 +122,7 @@ export class LocalStreamPostsService {
    * @param streamId - The stream to prepend to
    * @param compositePostId - The composite post ID to prepend
    */
-  static async prependToStream({ streamId, compositePostId }: Core.TPrependToStreamParams): Promise<void> {
+  static async prependToStream({ streamId, compositePostId }: TPrependToStreamParams): Promise<void> {
     const existing = await this.read({ streamId });
     const currentStream = existing?.stream || [];
 
@@ -103,7 +138,7 @@ export class LocalStreamPostsService {
    * @param streamId - The stream to remove from
    * @param compositePostId - The composite post ID to remove
    */
-  static async removeFromStream({ streamId, compositePostId }: Core.TPrependToStreamParams): Promise<void> {
+  static async removeFromStream({ streamId, compositePostId }: TPrependToStreamParams): Promise<void> {
     const existing = await this.read({ streamId });
     if (!existing) return;
 
@@ -112,7 +147,7 @@ export class LocalStreamPostsService {
   }
 
   static async getNotPersistedPostsInCache(postIds: string[]): Promise<string[]> {
-    const existingPostIds = await Core.PostDetailsModel.findByIdsPreserveOrder(postIds);
+    const existingPostIds = await PostDetailsModel.findByIdsPreserveOrder(postIds);
     return postIds.filter((_postId, index) => existingPostIds[index] === undefined);
   }
 
@@ -123,16 +158,16 @@ export class LocalStreamPostsService {
    * @param replyPostId - The composite post ID of the reply post
    * @param postReplies - The map of reply stream IDs to arrays of reply post IDs
    */
-  private static addReplyToStream({ repliedUri, replyPostId, postReplies }: Core.TAddReplyToStreamParams): void {
+  private static addReplyToStream({ repliedUri, replyPostId, postReplies }: TAddReplyToStreamParams): void {
     if (!repliedUri) return;
 
-    const parentCompositePostId = Core.buildCompositeIdFromPubkyUri({
+    const parentCompositePostId = buildCompositeIdFromPubkyUri({
       uri: repliedUri,
-      domain: Core.CompositeIdDomain.POSTS,
+      domain: CompositeIdDomain.POSTS,
     });
     if (!parentCompositePostId) return;
 
-    const replyStreamId = Core.buildPostReplyStreamId(parentCompositePostId);
+    const replyStreamId = buildPostReplyStreamId(parentCompositePostId);
     postReplies[replyStreamId] = [...(postReplies[replyStreamId] || []), replyPostId];
   }
 
@@ -142,14 +177,14 @@ export class LocalStreamPostsService {
    * @param streamId - The stream ID to merge the unread stream with the post stream
    * @returns void
    */
-  static async mergeUnreadStreamWithPostStream({ streamId }: Core.TStreamIdParams): Promise<void> {
-    const unreadPostStream = await Core.UnreadPostStreamModel.findById(streamId);
+  static async mergeUnreadStreamWithPostStream({ streamId }: TStreamIdParams): Promise<void> {
+    const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
     if (!unreadPostStream) return;
-    const postStream = await Core.PostStreamModel.findById(streamId);
+    const postStream = await PostStreamModel.findById(streamId);
     if (!postStream) return;
 
     // Filter out deleted posts from unread stream before merging
-    const validUnreadPosts = await Core.PostDetailsModel.filterDeleted(unreadPostStream.stream);
+    const validUnreadPosts = await PostDetailsModel.filterDeleted(unreadPostStream.stream);
 
     // Deduplicate: unread posts first, then existing posts (excluding duplicates)
     const existingIds = new Set(validUnreadPosts);
@@ -157,9 +192,9 @@ export class LocalStreamPostsService {
     const combinedStream = [...validUnreadPosts, ...uniqueExistingPosts];
 
     // Sort by timestamp (indexed_at) in descending order (most recent first)
-    const sortedStream = await Core.sortPostIdsByTimestamp(combinedStream);
+    const sortedStream = await sortPostIdsByTimestamp(combinedStream);
 
-    await Core.PostStreamModel.upsert(streamId, sortedStream);
+    await PostStreamModel.upsert(streamId, sortedStream);
   }
 
   /**
@@ -167,11 +202,11 @@ export class LocalStreamPostsService {
    * @param streamId - The stream ID to clear the unread stream for
    * @returns Array of post IDs that were in the unread stream
    */
-  static async clearUnreadStream({ streamId }: Core.TStreamIdParams): Promise<string[]> {
-    const unreadStream = await Core.UnreadPostStreamModel.findById(streamId);
+  static async clearUnreadStream({ streamId }: TStreamIdParams): Promise<string[]> {
+    const unreadStream = await UnreadPostStreamModel.findById(streamId);
     if (!unreadStream) return [];
     const postIds = unreadStream.stream;
-    await Core.UnreadPostStreamModel.deleteById(streamId);
+    await UnreadPostStreamModel.deleteById(streamId);
     return postIds;
   }
 
@@ -192,25 +227,25 @@ export class LocalStreamPostsService {
    * @param posts - Array of posts from Nexus API to persist
    * @returns Object containing an array of all post attachment URIs collected from the posts
    */
-  static async persistPosts({ posts }: Core.TPersistPostsParams): Promise<Core.TPostStreamPersistResult> {
+  static async persistPosts({ posts }: TPersistPostsParams): Promise<TPostStreamPersistResult> {
     // Defensive check: if posts is empty or undefined, return early
     if (!posts?.length) return { attachmentMetadata: [] };
 
-    const postCounts: Core.NexusModelTuple<Core.NexusPostCounts>[] = [];
-    const postRelationships: Core.NexusModelTuple<Core.NexusPostRelationships>[] = [];
-    const postTags: Core.NexusModelTuple<Core.NexusTag[]>[] = [];
-    const postDetails: Core.RecordModelBase<string, Core.PostDetailsModelSchema>[] = [];
-    const postBookmarks: Core.BookmarkModelSchema[] = [];
-    const postModerations: Core.ModerationModelSchema[] = [];
-    const postTtl: Core.NexusModelTuple<{ lastUpdatedAt: number }>[] = [];
+    const postCounts: NexusModelTuple<NexusPostCounts>[] = [];
+    const postRelationships: NexusModelTuple<NexusPostRelationships>[] = [];
+    const postTags: NexusModelTuple<NexusTag[]>[] = [];
+    const postDetails: RecordModelBase<string, PostDetailsModelSchema>[] = [];
+    const postBookmarks: BookmarkModelSchema[] = [];
+    const postModerations: ModerationModelSchema[] = [];
+    const postTtl: NexusModelTuple<{ lastUpdatedAt: number }>[] = [];
 
-    const postReplies: Record<Core.ReplyStreamCompositeId, string[]> = {};
-    const attachmentMetadata: Core.NexusFileDetails[] = [];
+    const postReplies: Record<ReplyStreamCompositeId, string[]> = {};
+    const attachmentMetadata: NexusFileDetails[] = [];
     const now = Date.now();
 
     for (const post of posts) {
       // Build composite ID to ensure uniqueness (authorId:postId)
-      const postId = Core.buildCompositeId({ pubky: post.details.author, id: post.details.id });
+      const postId = buildCompositeId({ pubky: post.details.author, id: post.details.id });
 
       postCounts.push([postId, post.counts]);
 
@@ -239,11 +274,11 @@ export class LocalStreamPostsService {
       postTags.push([postId, nexusTags]);
 
       // Compute moderation and store if post is moderated
-      const isModerated = Core.detectModerationFromTags(nexusTags);
+      const isModerated = detectModerationFromTags(nexusTags);
       if (isModerated) {
         postModerations.push({
           id: postId,
-          type: Core.ModerationType.POST,
+          type: ModerationType.POST,
           is_blurred: true,
           created_at: Date.now(),
         });
@@ -262,22 +297,22 @@ export class LocalStreamPostsService {
     }
 
     await Promise.all([
-      Core.PostDetailsModel.bulkSave(postDetails),
-      Core.PostCountsModel.bulkSave(postCounts),
-      Core.PostTagsModel.bulkSave(postTags),
-      Core.PostRelationshipsModel.bulkSave(postRelationships),
-      Core.PostTtlModel.bulkSave(postTtl),
+      PostDetailsModel.bulkSave(postDetails),
+      PostCountsModel.bulkSave(postCounts),
+      PostTagsModel.bulkSave(postTags),
+      PostRelationshipsModel.bulkSave(postRelationships),
+      PostTtlModel.bulkSave(postTtl),
       // Persist bookmarks from Nexus (viewer's bookmark status for each post)
-      postBookmarks.length > 0 ? Core.BookmarkModel.bulkSave(postBookmarks) : Promise.resolve(),
+      postBookmarks.length > 0 ? BookmarkModel.bulkSave(postBookmarks) : Promise.resolve(),
       // Persist moderation records for moderated posts (is_blurred defaults to true)
-      postModerations.length > 0 ? Core.ModerationModel.bulkSave(postModerations) : Promise.resolve(),
+      postModerations.length > 0 ? ModerationModel.bulkSave(postModerations) : Promise.resolve(),
     ]);
 
     if (Object.keys(postReplies).length > 0) {
       await Promise.all(
         Object.entries(postReplies).map(async ([parentCompositePostId, postIds]) => {
           await this.persistNewStreamChunk({
-            streamId: parentCompositePostId as Core.PostStreamId,
+            streamId: parentCompositePostId as PostStreamId,
             stream: postIds,
           });
         }),
@@ -296,12 +331,12 @@ export class LocalStreamPostsService {
    * @param stream - Incoming post IDs to merge into the stream cache
    * @param streamId - Stream identifier to create or update
    */
-  static async persistNewStreamChunk({ stream, streamId }: Core.TPostStreamUpsertParams) {
-    const postStream = await Core.PostStreamModel.findById(streamId);
+  static async persistNewStreamChunk({ stream, streamId }: TPostStreamUpsertParams) {
+    const postStream = await PostStreamModel.findById(streamId);
 
     if (!postStream) {
       // If stream doesn't exist (e.g., database was deleted), create it with the new chunk
-      await Core.PostStreamModel.upsert(streamId, stream);
+      await PostStreamModel.upsert(streamId, stream);
       return;
     }
 
@@ -313,9 +348,9 @@ export class LocalStreamPostsService {
     const combinedStream = [...postStream.stream, ...newPostsToAdd];
 
     // Sort by timestamp (indexed_at) in descending order (most recent first)
-    const sortedStream = await Core.sortPostIdsByTimestamp(combinedStream);
+    const sortedStream = await sortPostIdsByTimestamp(combinedStream);
 
-    await Core.PostStreamModel.upsert(streamId, sortedStream);
+    await PostStreamModel.upsert(streamId, sortedStream);
   }
 
   /**
@@ -324,17 +359,17 @@ export class LocalStreamPostsService {
    * @param streamId - The stream ID to persist the new chunk to
    * @returns The post IDs that were actually added (after deduplication)
    */
-  static async persistUnreadNewStreamChunk({ stream, streamId }: Core.TPostStreamUpsertParams): Promise<string[]> {
-    const unreadPostStream = await Core.UnreadPostStreamModel.findById(streamId);
+  static async persistUnreadNewStreamChunk({ stream, streamId }: TPostStreamUpsertParams): Promise<string[]> {
+    const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
     if (!unreadPostStream) {
-      await Core.UnreadPostStreamModel.upsert(streamId, stream);
+      await UnreadPostStreamModel.upsert(streamId, stream);
       return stream;
     }
     const existingIds = new Set(unreadPostStream.stream);
     const newPostsToAdd = stream.filter((id) => !existingIds.has(id));
     if (newPostsToAdd.length === 0) return [];
     const combinedStream = [...newPostsToAdd, ...unreadPostStream.stream];
-    await Core.UnreadPostStreamModel.upsert(streamId, combinedStream);
+    await UnreadPostStreamModel.upsert(streamId, combinedStream);
     return newPostsToAdd;
   }
 }

@@ -1,29 +1,30 @@
-import type { ReactElement } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Atoms from '@/atoms';
+import type { ReactElement } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { PostHeaderTimestamp } from './PostHeaderTimestamp';
 
 const TEST_DATE = new Date('2025-06-01T12:00:00Z');
 
-const { mockUseIsMobile } = vi.hoisted(() => ({
-  mockUseIsMobile: vi.fn(() => true),
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => true));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: mockUseIsMobile,
 }));
 
-vi.mock('@/hooks/useIsMobile', () => ({
-  useIsMobile: () => mockUseIsMobile(),
-}));
-
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
+vi.mock('@/atoms/Container/Container', () => {
   return {
-    ...actual,
     Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <div data-testid="container" className={className}>
         {children}
       </div>
     ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
     Typography: ({
       children,
       as: Tag = 'p',
@@ -40,16 +41,8 @@ vi.mock('@/atoms', async (importOriginal) => {
   };
 });
 
-vi.mock('@/libs', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...mod,
-    Clock: vi.fn(({ className }: { className?: string }) => <svg data-testid="clock-icon" className={className} />),
-  };
-});
-
 function renderWithTooltip(ui: ReactElement) {
-  return render(<Atoms.TooltipProvider delayDuration={0}>{ui}</Atoms.TooltipProvider>);
+  return render(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
 }
 
 describe('PostHeaderTimestamp', () => {
@@ -65,15 +58,15 @@ describe('PostHeaderTimestamp', () => {
   });
 
   it('renders clock icon', () => {
-    render(<PostHeaderTimestamp timeAgo="2h" indexedAt={TEST_DATE} />);
+    const { container } = render(<PostHeaderTimestamp timeAgo="2h" indexedAt={TEST_DATE} />);
 
-    expect(screen.getByTestId('clock-icon')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-clock')).toBeInTheDocument();
   });
 
   it('applies correct styling classes', () => {
-    render(<PostHeaderTimestamp timeAgo="5m" indexedAt={TEST_DATE} />);
+    const { container } = render(<PostHeaderTimestamp timeAgo="5m" indexedAt={TEST_DATE} />);
 
-    const clockIcon = screen.getByTestId('clock-icon');
+    const clockIcon = container.querySelector('.lucide-clock');
     expect(clockIcon).toHaveClass('size-4', 'text-muted-foreground');
   });
 

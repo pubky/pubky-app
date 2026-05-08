@@ -1,7 +1,38 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { formatPublicKey } from '@/libs/utils/utils';
 import { PostHeaderUserInfo } from './PostHeaderUserInfo';
-import * as Libs from '@/libs';
+
+vi.mock('@/atoms/Popover/Popover', () => {
+  return {
+    Popover: ({ children, hover }: { children: React.ReactNode; hover?: boolean }) => (
+      <div data-testid="popover" data-hover={hover}>
+        {children}
+      </div>
+    ),
+    PopoverTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="popover-trigger" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+    PopoverContent: ({
+      children,
+      className,
+      side,
+      sideOffset,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      side?: string;
+      sideOffset?: number;
+    }) => (
+      <div data-testid="popover-content" className={className} data-side={side} data-side-offset={sideOffset}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 const { mockUserInfoPopover } = vi.hoisted(() => ({
   mockUserInfoPopover: vi.fn(
@@ -41,97 +72,37 @@ const mockUseProfileStats = vi.fn();
 const mockUseProfileConnections = vi.fn();
 const mockUseCurrentUserProfile = vi.fn();
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useUserProfile: () => mockUseUserProfile(),
-    useIsFollowing: () => mockUseIsFollowing(),
-    useFollowUser: () => mockUseFollowUser(),
-    useProfileStats: () => mockUseProfileStats(),
-    useProfileConnections: () => mockUseProfileConnections(),
-    useCurrentUserProfile: () => mockUseCurrentUserProfile(),
-    CONNECTION_TYPE: {
-      FOLLOWERS: 'followers',
-      FOLLOWING: 'following',
-      FRIENDS: 'friends',
-    },
-  };
-});
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
+  useUserProfile: () => mockUseUserProfile(),
+}));
 
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: () => mockUseAuthStore(),
-  };
-});
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
+  useIsFollowing: () => mockUseIsFollowing(),
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
+  useFollowUser: () => mockUseFollowUser(),
+}));
+
+vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
+  useProfileStats: () => mockUseProfileStats(),
+}));
+
+vi.mock('@/hooks/useProfileConnections/useProfileConnections', () => ({
+  useProfileConnections: () => mockUseProfileConnections(),
+}));
+
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => mockUseCurrentUserProfile(),
+}));
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: () => mockUseAuthStore(),
+}));
 
 // Mock atoms
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
-  const React = await import('react');
+vi.mock('@/atoms/Button/Button', () => {
   return {
-    ...actual,
-    Popover: ({ children, hover }: { children: React.ReactNode; hover?: boolean }) => (
-      <div data-testid="popover" data-hover={hover}>
-        {children}
-      </div>
-    ),
-    PopoverTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-      <div data-testid="popover-trigger" data-as-child={asChild}>
-        {children}
-      </div>
-    ),
-    PopoverContent: ({
-      children,
-      className,
-      side,
-      sideOffset,
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      side?: string;
-      sideOffset?: number;
-    }) => (
-      <div data-testid="popover-content" className={className} data-side={side} data-side-offset={sideOffset}>
-        {children}
-      </div>
-    ),
-    Container: React.forwardRef<
-      HTMLDivElement,
-      {
-        children: React.ReactNode;
-        className?: string;
-        overrideDefaults?: boolean;
-      }
-    >(function MockContainer({ children, className, overrideDefaults }, ref) {
-      return (
-        <div ref={ref} data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-          {children}
-        </div>
-      );
-    }),
-    Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <p data-testid="typography" className={className}>
-        {children}
-      </p>
-    ),
-    Link: ({
-      children,
-      href,
-      onClick,
-      className,
-    }: {
-      children: React.ReactNode;
-      href: string;
-      onClick?: (e: React.MouseEvent) => void;
-      className?: string;
-    }) => (
-      <a data-testid="profile-link" href={href} onClick={onClick} className={className}>
-        {children}
-      </a>
-    ),
     Button: ({
       children,
       variant,
@@ -164,11 +135,58 @@ vi.mock('@/atoms', async (importOriginal) => {
   };
 });
 
-// Mock organisms
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/atoms/Container/Container', () => {
   return {
-    ...actual,
+    Container: React.forwardRef<
+      HTMLDivElement,
+      {
+        children: React.ReactNode;
+        className?: string;
+        overrideDefaults?: boolean;
+      }
+    >(function MockContainer({ children, className, overrideDefaults }, ref) {
+      return (
+        <div ref={ref} data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+          {children}
+        </div>
+      );
+    }),
+  };
+});
+
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({
+      children,
+      href,
+      onClick,
+      className,
+    }: {
+      children: React.ReactNode;
+      href: string;
+      onClick?: (e: React.MouseEvent) => void;
+      className?: string;
+    }) => (
+      <a data-testid="profile-link" href={href} onClick={onClick} className={className}>
+        {children}
+      </a>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="typography" className={className}>
+        {children}
+      </p>
+    ),
+  };
+});
+
+// Mock organisms
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
     AvatarWithFallback: ({ avatarUrl, name, size }: { avatarUrl?: string; name: string; size?: string }) => (
       <div data-testid="avatar" data-size={size}>
         {avatarUrl ? <img data-testid="avatar-image" src={avatarUrl} alt={name} /> : null}
@@ -179,25 +197,17 @@ vi.mock('@/organisms', async (importOriginal) => {
 });
 
 // Mock molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => {
   return {
-    ...actual,
-    UserInfoPopover: (props: React.ComponentProps<typeof actual.UserInfoPopover>) => mockUserInfoPopover(props),
     PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
       <span data-testid="post-header-timestamp">{timeAgo}</span>
     ),
   };
 });
 
-// Mock libs
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  const { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH } = await import('@/config');
+vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => {
   return {
-    ...actual,
-    cn: (...classes: (string | undefined)[]) => classes.filter(Boolean).join(' '),
-    formatPublicKey: vi.fn(({ key, length = DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH }) => key?.substring(0, length) || ''),
+    UserInfoPopover: (props: Parameters<typeof mockUserInfoPopover>[0]) => mockUserInfoPopover(props),
   };
 });
 
@@ -251,13 +261,14 @@ describe('PostHeaderUserInfo', () => {
   it('renders user name and public key', () => {
     render(<PostHeaderUserInfo userId="userpubkykey" userName="Test User" />);
 
+    const formattedPublicKey = formatPublicKey({ key: 'userpubkykey' });
+
     expect(screen.getByTestId('popover')).toBeInTheDocument();
     expect(screen.getByTestId('popover-trigger')).toBeInTheDocument();
     const avatars = screen.getAllByTestId('avatar');
     expect(avatars.length).toBeGreaterThan(0);
     expect(screen.getAllByText('Test User').length).toBeGreaterThan(0);
-    // formatPublicKey returns first 8 chars, so "userpubk"
-    expect(screen.getAllByText(/@userpubk/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(`@${formattedPublicKey}`).length).toBeGreaterThan(0);
   });
 
   it('renders avatar with image when avatarUrl is provided', () => {
@@ -282,15 +293,12 @@ describe('PostHeaderUserInfo', () => {
   });
 
   it('formats public key correctly', () => {
-    const formatSpy = vi.spyOn(Libs, 'formatPublicKey');
-    formatSpy.mockReturnValue('userpubk');
+    const formattedPublicKey = formatPublicKey({ key: 'userpubkykey' });
 
     render(<PostHeaderUserInfo userId="userpubkykey" userName="Test User" />);
 
-    expect(formatSpy).toHaveBeenCalledWith({ key: 'userpubkykey' });
-    expect(screen.getAllByText('@userpubk').length).toBeGreaterThan(0);
-
-    formatSpy.mockRestore();
+    expect(screen.getAllByText(formattedPublicKey).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(`@${formattedPublicKey}`).length).toBeGreaterThan(0);
   });
 
   it('renders popover content with user info', () => {

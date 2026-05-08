@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import * as Core from '@/core';
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { useHomeStore } from '@/stores/home/home.store';
+import { CONTENT, type ContentType, SORT, type SortType } from '@/stores/home/home.types';
 
 /**
  * Custom hook that returns the bookmarks streamId based on Sort and Content filters
@@ -24,9 +26,9 @@ import * as Core from '@/core';
  * }
  * ```
  */
-export function useBookmarksStreamId(contentOverride?: Core.ContentType): Core.PostStreamTypes {
-  const sort = Core.useHomeStore((state) => state.sort);
-  const content = Core.useHomeStore((state) => state.content);
+export function useBookmarksStreamId(contentOverride?: ContentType): PostStreamTypes {
+  const sort = useHomeStore((state) => state.sort);
+  const content = useHomeStore((state) => state.content);
   const effectiveContent = contentOverride ?? content;
 
   /**
@@ -35,24 +37,24 @@ export function useBookmarksStreamId(contentOverride?: Core.ContentType): Core.P
    * Note: Reach filter is not supported for bookmarks by the Nexus API.
    */
   const streamId = useMemo(() => {
-    const BOOKMARK_STREAM_MAP: Record<Core.SortType, Record<Core.ContentType, Core.PostStreamTypes>> = {
-      [Core.SORT.TIMELINE]: {
-        [Core.CONTENT.ALL]: Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
-        [Core.CONTENT.SHORT]: Core.PostStreamTypes.TIMELINE_BOOKMARKS_SHORT,
-        [Core.CONTENT.LONG]: Core.PostStreamTypes.TIMELINE_BOOKMARKS_LONG,
-        [Core.CONTENT.IMAGES]: Core.PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE,
-        [Core.CONTENT.VIDEOS]: Core.PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO,
-        [Core.CONTENT.LINKS]: Core.PostStreamTypes.TIMELINE_BOOKMARKS_LINK,
-        [Core.CONTENT.FILES]: Core.PostStreamTypes.TIMELINE_BOOKMARKS_FILE,
+    const BOOKMARK_STREAM_MAP: Record<SortType, Record<ContentType, PostStreamTypes>> = {
+      [SORT.TIMELINE]: {
+        [CONTENT.ALL]: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
+        [CONTENT.SHORT]: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT,
+        [CONTENT.LONG]: PostStreamTypes.TIMELINE_BOOKMARKS_LONG,
+        [CONTENT.IMAGES]: PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE,
+        [CONTENT.VIDEOS]: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO,
+        [CONTENT.LINKS]: PostStreamTypes.TIMELINE_BOOKMARKS_LINK,
+        [CONTENT.FILES]: PostStreamTypes.TIMELINE_BOOKMARKS_FILE,
       },
-      [Core.SORT.ENGAGEMENT]: {
-        [Core.CONTENT.ALL]: Core.PostStreamTypes.POPULARITY_BOOKMARKS_ALL,
-        [Core.CONTENT.SHORT]: Core.PostStreamTypes.POPULARITY_BOOKMARKS_SHORT,
-        [Core.CONTENT.LONG]: Core.PostStreamTypes.POPULARITY_BOOKMARKS_LONG,
-        [Core.CONTENT.IMAGES]: Core.PostStreamTypes.POPULARITY_BOOKMARKS_IMAGE,
-        [Core.CONTENT.VIDEOS]: Core.PostStreamTypes.POPULARITY_BOOKMARKS_VIDEO,
-        [Core.CONTENT.LINKS]: Core.PostStreamTypes.POPULARITY_BOOKMARKS_LINK,
-        [Core.CONTENT.FILES]: Core.PostStreamTypes.POPULARITY_BOOKMARKS_FILE,
+      [SORT.ENGAGEMENT]: {
+        [CONTENT.ALL]: PostStreamTypes.POPULARITY_BOOKMARKS_ALL,
+        [CONTENT.SHORT]: PostStreamTypes.POPULARITY_BOOKMARKS_SHORT,
+        [CONTENT.LONG]: PostStreamTypes.POPULARITY_BOOKMARKS_LONG,
+        [CONTENT.IMAGES]: PostStreamTypes.POPULARITY_BOOKMARKS_IMAGE,
+        [CONTENT.VIDEOS]: PostStreamTypes.POPULARITY_BOOKMARKS_VIDEO,
+        [CONTENT.LINKS]: PostStreamTypes.POPULARITY_BOOKMARKS_LINK,
+        [CONTENT.FILES]: PostStreamTypes.POPULARITY_BOOKMARKS_FILE,
       },
     };
 

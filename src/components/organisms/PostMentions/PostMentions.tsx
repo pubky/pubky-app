@@ -1,46 +1,47 @@
 'use client';
 
+import { Link } from '@/atoms/Link/Link';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { Identity } from '@/libs/identity/identity';
+import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 import { RemarkAnchorProps } from '@/molecules/PostText/PostText.types';
 import { extractTextFromChildren } from '@/molecules/PostText/PostText.utils';
-import * as Libs from '@/libs';
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import * as Molecules from '@/molecules';
+import { UserInfoPopover } from '@/molecules/UserInfoPopover/UserInfoPopover';
 
 export const PostMentions = (props: RemarkAnchorProps) => {
   const { href, children, className, node: _node, ref: _ref, ...rest } = props;
 
   const mentionText = extractTextFromChildren(children);
-  const userId = Libs.Identity.extractPubkyPublicKey(mentionText);
-  const { profile } = Hooks.useUserProfile(userId ?? '');
+  const userId = Identity.extractPubkyPublicKey(mentionText);
+  const { profile } = useUserProfile(userId ?? '');
 
   if (!userId) return null;
 
-  const fallbackMention = Libs.formatPublicKey({
-    key: Libs.withPubkyPrefix(userId),
+  const fallbackMention = formatPublicKey({
+    key: withPubkyPrefix(userId),
   });
   const userName = profile?.name ?? fallbackMention;
   const finalMention = profile?.name ? `@${profile.name}` : fallbackMention;
 
   const linkContent = (
-    <Atoms.Link
+    <Link
       {...rest}
       href={href || ''}
       onClick={(e) => e.stopPropagation()}
-      className={Libs.cn(className, 'text-base', !profile?.name && 'uppercase')}
+      className={cn(className, 'text-base', !profile?.name && 'uppercase')}
     >
       {finalMention}
-    </Atoms.Link>
+    </Link>
   );
 
   return (
-    <Molecules.UserInfoPopover
+    <UserInfoPopover
       userId={userId}
       userName={userName}
       avatarUrl={profile?.avatarUrl}
       formattedPublicKey={fallbackMention}
     >
       {linkContent}
-    </Molecules.UserInfoPopover>
+    </UserInfoPopover>
   );
 };

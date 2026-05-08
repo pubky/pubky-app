@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserInfoPopoverContent } from './UserInfoPopoverContent';
 
 vi.mock('@/hooks/useUserInfoPopoverData/useUserInfoPopoverData', () => ({
@@ -27,9 +27,11 @@ vi.mock('@/hooks/useUserInfoPopoverActions/useUserInfoPopoverActions', () => ({
   }),
 }));
 
-vi.mock('@/molecules', () => ({
-  PostText: ({ content }: { content: string }) => <div data-testid="post-text">{content}</div>,
-}));
+vi.mock('@/molecules/PostText/PostText', () => {
+  return {
+    PostText: ({ content }: { content: string }) => <div data-testid="post-text">{content}</div>,
+  };
+});
 
 vi.mock('../UserInfoPopoverHeader/UserInfoPopoverHeader', () => ({
   UserInfoPopoverHeader: () => <div data-testid="header" />,
@@ -43,11 +45,6 @@ vi.mock('../UserInfoPopoverFollowButton/UserInfoPopoverFollowButton', () => ({
 vi.mock('./UserInfoPopoverContent.skeleton', () => ({
   UserInfoPopoverSkeleton: () => <div data-testid="skeleton" />,
 }));
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return { ...actual, Pencil: () => <svg data-testid="icon-pencil" /> };
-});
-
 describe('UserInfoPopoverContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -1,19 +1,20 @@
+import { HttpStatusCode } from '../http/http.types';
+import { parseRetryAfterHeader } from '../http/response.utils';
 import { AppError } from './error';
-import { ErrorService } from './error.types';
 import {
+  AuthErrorCode,
+  ClientErrorCode,
+  NetworkErrorCode,
+  RateLimitErrorCode,
   ServerErrorCode,
   TimeoutErrorCode,
-  ClientErrorCode,
-  AuthErrorCode,
-  RateLimitErrorCode,
-  NetworkErrorCode,
 } from './error.codes';
 import { Err } from './error.factories';
-import { HttpStatusCode, parseRetryAfterHeader } from '../http';
+import { ErrorService } from './error.types';
 
 /**
  * Creates appropriate AppError from HTTP status code.
- * Core mapping function used by httpResponseToError and for cases
+ * Primary mapping function used by httpResponseToError and for cases
  * where you have a status code without a Response object.
  *
  * @param statusCode - The HTTP status code

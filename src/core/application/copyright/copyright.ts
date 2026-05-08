@@ -1,6 +1,7 @@
-import * as Core from '@/core';
-import { CHATWOOT_INBOX_IDS, extractSourceId } from '@/core/services/chatwoot';
-import * as Types from './copyright.types';
+import { ChatwootService } from '@/services/chatwoot/chatwoot';
+import { CHATWOOT_INBOX_IDS } from '@/services/chatwoot/chatwoot.constants';
+import { extractSourceId } from '@/services/chatwoot/chatwoot.utils';
+import type { TCopyrightSubmitInput } from './copyright.types';
 
 /**
  * Copyright application service.
@@ -25,7 +26,7 @@ export class CopyrightApplication {
   /**
    * Format form data as JSON string for message body
    */
-  private static formatFormData(formData: Types.TCopyrightSubmitInput): string {
+  private static formatFormData(formData: TCopyrightSubmitInput): string {
     return JSON.stringify(formData, null, 2);
   }
 
@@ -42,7 +43,7 @@ export class CopyrightApplication {
    * @param params - Parameters object with all copyright form fields
    * @throws AppError if submission fails
    */
-  static async submit(params: Types.TCopyrightSubmitInput): Promise<void> {
+  static async submit(params: TCopyrightSubmitInput): Promise<void> {
     const email = params.email;
     const inboxId = CHATWOOT_INBOX_IDS.COPYRIGHT;
     const name = `${params.firstName} ${params.lastName}`.trim();
@@ -50,9 +51,9 @@ export class CopyrightApplication {
     const formDataJson = this.formatFormData(params);
     const content = this.formatMessageContent(formDataJson);
 
-    const contact = await Core.ChatwootService.createOrFindContact(email, name, inboxId);
+    const contact = await ChatwootService.createOrFindContact(email, name, inboxId);
     const sourceId = extractSourceId(contact, email);
 
-    await Core.ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
+    await ChatwootService.createConversation(sourceId, contact.id, inboxId, content);
   }
 }

@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
-import * as Config from '@/config';
-import * as Libs from '@/libs';
-// Direct imports to avoid circular dependency (this hook is exported from @/hooks)
-import { useMutedUsers } from '@/hooks/useMutedUsers';
-import { usePostCounts } from '@/hooks/usePostCounts';
+import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
+import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
+import { Logger } from '@/libs/logger/logger';
+import { buildPostReplyStreamId } from '@/models/stream/post/postStream.types';
+import { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
 import { MAX_EXPAND_PAGES } from './useReplyStream.constants';
 import type { UseReplyStreamOptions, UseReplyStreamResult } from './useReplyStream.types';
 
@@ -69,13 +71,13 @@ export function useReplyStream(
       try {
         if (!postId || !enabled) return { replyIds: [], mutedRepliesCount: 0, localTotalCount: 0 };
 
-        const streamId = Core.buildPostReplyStreamId(postId);
-        const stream = await Core.StreamPostsController.getLocalStream({ streamId });
+        const streamId = buildPostReplyStreamId(postId);
+        const stream = await StreamPostsController.getLocalStream({ streamId });
 
         if (!stream || stream.stream.length === 0) return { replyIds: [], mutedRepliesCount: 0, localTotalCount: 0 };
 
         const chronological = [...stream.stream].reverse();
-        const filtered = Core.MuteFilter.filterPostsSafe(chronological, mutedUserIdSet);
+        const filtered = MuteFilter.filterPostsSafe(chronological, mutedUserIdSet);
         const mutedCount = chronological.length - filtered.length;
 
         return {
@@ -84,7 +86,7 @@ export function useReplyStream(
           localTotalCount: filtered.length,
         };
       } catch (error) {
-        Libs.Logger.error('[useReplyStream] Failed to query replies', { postId, error });
+        Logger.error('[useReplyStream] Failed to query replies', { postId, error });
         return { replyIds: [], mutedRepliesCount: 0, localTotalCount: 0 };
       }
     },
@@ -105,21 +107,21 @@ export function useReplyStream(
 
     const fetchReplies = async () => {
       try {
-        const streamId = Core.buildPostReplyStreamId(postId);
+        const streamId = buildPostReplyStreamId(postId);
 
-        await Core.StreamPostsController.getOrFetchStreamSlice({
+        await StreamPostsController.getOrFetchStreamSlice({
           streamId,
           streamTail: 0,
           lastPostId: undefined,
           limit: maxReplies,
-          order: Core.StreamOrder.ASCENDING,
+          order: StreamOrder.ASCENDING,
         });
 
         if (!isCancelled) {
           setHasFetched(true);
         }
       } catch (error) {
-        Libs.Logger.error('[useReplyStream] Failed to fetch replies:', error);
+        Logger.error('[useReplyStream] Failed to fetch replies:', error);
         if (!isCancelled) {
           setHasFetched(true);
         }
@@ -148,8 +150,8 @@ export function useReplyStream(
     let reachedEnd = false;
 
     try {
-      const streamId = Core.buildPostReplyStreamId(postId);
-      const pageSize = Config.NEXUS_POSTS_PER_PAGE;
+      const streamId = buildPostReplyStreamId(postId);
+      const pageSize = NEXUS_POSTS_PER_PAGE;
       let cursor = 0;
       let pagesLoaded = 0;
 
@@ -157,12 +159,12 @@ export function useReplyStream(
       while (pagesLoaded < MAX_EXPAND_PAGES) {
         pagesLoaded++;
 
-        const result = await Core.StreamPostsController.getOrFetchStreamSlice({
+        const result = await StreamPostsController.getOrFetchStreamSlice({
           streamId,
           streamTail: cursor,
           lastPostId: undefined,
           limit: pageSize,
-          order: Core.StreamOrder.ASCENDING,
+          order: StreamOrder.ASCENDING,
         });
 
         if (result.reachedEnd) {
@@ -186,7 +188,7 @@ export function useReplyStream(
       }
       completed = true;
     } catch (error) {
-      Libs.Logger.error('[useReplyStream] Failed to fetch all replies:', error);
+      Logger.error('[useReplyStream] Failed to fetch all replies:', error);
     } finally {
       isFetchingAllRef.current = false;
       if (isMountedRef.current) {

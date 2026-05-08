@@ -1,8 +1,8 @@
-import * as Core from '@/core';
-import type { ReportIssueType } from '@/core/pipes/report';
+import type { Pubky } from '@/models/models.types';
+import type { ReportIssueType } from '@/pipes/report/report.types';
 
 export interface TReportSubmitInput {
-  pubky: Core.Pubky;
+  pubky: Pubky;
   postUrl: string;
   issueType: ReportIssueType;
   reason: string;

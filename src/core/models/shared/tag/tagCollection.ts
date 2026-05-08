@@ -1,24 +1,26 @@
 import { Table } from 'dexie';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import type { Pubky } from '@/models/models.types';
+import { ModelBase } from '@/models/shared/base/baseModel';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import { TagModel } from '@/models/shared/tag/tag';
+import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 
-import { Err, DatabaseErrorCode, ErrorService } from '@/libs';
-import * as Core from '@/core';
-import { ModelBase } from '@/core/models/shared/base/baseModel';
-
-export abstract class TagCollection<Id, Schema extends Core.TagCollectionModelSchema<Id>> extends ModelBase<
-  Id,
-  Schema
-> {
+export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<Id>> extends ModelBase<Id, Schema> {
   // TODO: Consider adding multiEntry index on tag labels and if so, update Schema to use it
-  tags: Core.TagModel[];
+  tags: TagModel[];
 
   constructor(data: Schema) {
     super(data);
-    this.tags = data.tags.map((t) => new Core.TagModel(t));
+    this.tags = data.tags.map((t) => new TagModel(t));
   }
 
   // -------- Instance helpers (shared) --------
 
-  findByLabel(label: string): Core.TagModel | null {
+  findByLabel(label: string): TagModel | null {
     const found = this.tags.find((t) => t.label === label);
     return found ?? null;
   }
@@ -29,12 +31,12 @@ export abstract class TagCollection<Id, Schema extends Core.TagCollectionModelSc
     return tagsLength > this.tags.length; // true if the tag was deleted
   }
 
-  addTagger(label: string, taggerId: Core.Pubky): boolean | null {
+  addTagger(label: string, taggerId: Pubky): boolean | null {
     let tagExists = true;
     let labelTagData = this.findByLabel(label);
     // The label does not exist, create it
     if (!labelTagData) {
-      labelTagData = new Core.TagModel({ label, taggers: [], taggers_count: 0, relationship: false });
+      labelTagData = new TagModel({ label, taggers: [], taggers_count: 0, relationship: false });
       this.tags.push(labelTagData);
       tagExists = false;
     }
@@ -47,7 +49,7 @@ export abstract class TagCollection<Id, Schema extends Core.TagCollectionModelSc
     return tagExists;
   }
 
-  removeTagger(label: string, taggerId: Core.Pubky): boolean | null {
+  removeTagger(label: string, taggerId: Pubky): boolean | null {
     const labelTagData = this.findByLabel(label);
     if (!labelTagData || !labelTagData?.relationship) {
       return null;
@@ -61,9 +63,9 @@ export abstract class TagCollection<Id, Schema extends Core.TagCollectionModelSc
 
   // -------- Static CRUD (inherited from ModelBase) --------
 
-  static async bulkSave<TId, TSchema extends Core.TagCollectionModelSchema<TId>>(
+  static async bulkSave<TId, TSchema extends TagCollectionModelSchema<TId>>(
     this: { table: Table<TSchema> },
-    tuples: Core.NexusModelTuple<Core.NexusTag[]>[],
+    tuples: NexusModelTuple<NexusTag[]>[],
   ) {
     try {
       const toSave = tuples.map((t) => ({ id: t[0] as TId, tags: t[1] }) as TSchema);
@@ -85,7 +87,7 @@ export abstract class TagCollection<Id, Schema extends Core.TagCollectionModelSc
    * @returns TagCollection model instance with existing or empty tags
    * @private
    */
-  static async getOrCreate<TId, TSchema extends Core.TagCollectionModelSchema<TId>>(
+  static async getOrCreate<TId, TSchema extends TagCollectionModelSchema<TId>>(
     this: {
       table: Table<TSchema>;
       new (data: TSchema): TagCollection<TId, TSchema>;

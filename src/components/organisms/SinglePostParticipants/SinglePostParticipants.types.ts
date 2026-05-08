@@ -1,4 +1,4 @@
-import type * as Hooks from '@/hooks';
+import type { PostParticipant } from '@/hooks/usePostParticipants/usePostParticipants.types';
 
 export interface SinglePostParticipantsProps {
   /** The composite post ID (format: authorId:postId) */
@@ -9,7 +9,7 @@ export interface SinglePostParticipantsProps {
 
 export interface ParticipantItemProps {
   /** Participant data */
-  participant: Hooks.PostParticipant;
+  participant: PostParticipant;
   /** Current user ID to check if participant is self */
   currentUserId: string | null;
   /** Callback when user is clicked */

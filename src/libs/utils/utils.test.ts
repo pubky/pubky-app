@@ -1,34 +1,33 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { asInvalid } from '@/test-utils/type-assertions';
 import {
-  cn,
-  formatInviteCode,
-  formatPublicKey,
-  isPubkyIdentifier,
-  copyToClipboard,
-  clearCookies,
-  generateRandomColor,
-  hexToRgba,
-  extractInitials,
-  truncateString,
-  minutesAgo,
-  hoursAgo,
-  daysAgo,
-  formatNotificationTime,
-  isPostDeleted,
-  isSameDomain,
-  shouldBypassLinkConfirmation,
-  getCharacterCount,
-  sanitizeTagInput,
-  isValidTagLabel,
   canSubmitPost,
+  clearCookies,
+  cn,
+  copyToClipboard,
+  daysAgo,
+  extractInitials,
+  formatInviteCode,
+  formatNotificationTime,
+  formatPublicKey,
   formatUSDate,
+  generateRandomColor,
   generateRandomUsername,
-  stripPubkyPrefix,
+  getCharacterCount,
+  hexToRgba,
+  hoursAgo,
+  isPostDeleted,
+  isPubkyIdentifier,
+  isSameDomain,
+  isValidTagLabel,
+  minutesAgo,
   radixIdSerializer,
+  sanitizeTagInput,
+  shouldBypassLinkConfirmation,
+  stripPubkyPrefix,
+  truncateString,
 } from './utils';
-import { RADIX_ID_TEST_REGEX, RADIX_ID_REGEX, TAG_BANNED_CHARS } from './utils.constants';
-import { asInvalid } from '@/test-utils';
+import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 
 describe('Utils', () => {
   describe('radixIdSerializer', () => {

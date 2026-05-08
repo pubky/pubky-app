@@ -1,5 +1,7 @@
-import { Table, IndexableType } from 'dexie';
-import { Err, DatabaseErrorCode, ErrorService } from '@/libs';
+import { IndexableType, Table } from 'dexie';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { BaseStreamModelSchema } from './stream.type';
 
 /**

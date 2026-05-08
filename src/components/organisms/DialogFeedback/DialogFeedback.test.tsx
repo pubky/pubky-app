@@ -1,40 +1,92 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogFeedback } from './DialogFeedback';
+
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({
+      children,
+      className,
+      hiddenTitle,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      hiddenTitle?: string;
+    }) => (
+      <div data-testid="dialog-content" className={className} aria-label={hiddenTitle}>
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-footer" className={className}>
+        {children}
+      </div>
+    ),
+    DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-close" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock hooks
 const mockUseCurrentUserProfile = vi.fn();
 const mockUseFeedback = vi.fn();
 const mockUseConfirmableDialog = vi.fn();
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => mockUseCurrentUserProfile(),
+}));
+
+vi.mock('@/hooks/useFeedback/useFeedback', () => ({
+  useFeedback: () => mockUseFeedback(),
+}));
+
+vi.mock('@/hooks/useConfirmableDialog/useConfirmableDialog', () => ({
+  useConfirmableDialog: (opts: unknown) => mockUseConfirmableDialog(opts),
+}));
+
+// Mock organisms
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
-    ...actual,
-    useCurrentUserProfile: () => mockUseCurrentUserProfile(),
-    useFeedback: () => mockUseFeedback(),
-    useConfirmableDialog: (opts: unknown) => mockUseConfirmableDialog(opts),
+    PostHeader: vi.fn(
+      ({ postId, characterLimit }: { postId: string; characterLimit?: { count: number; max: number } }) => (
+        <div
+          data-testid="post-header"
+          data-post-id={postId}
+          data-character-count={characterLimit?.count}
+          data-max-length={characterLimit?.max}
+        >
+          PostHeader
+        </div>
+      ),
+    ),
   };
 });
 
-// Mock organisms
-vi.mock('@/organisms', () => ({
-  PostHeader: vi.fn(
-    ({ postId, characterLimit }: { postId: string; characterLimit?: { count: number; max: number } }) => (
-      <div
-        data-testid="post-header"
-        data-post-id={postId}
-        data-character-count={characterLimit?.count}
-        data-max-length={characterLimit?.max}
-      >
-        PostHeader
-      </div>
-    ),
-  ),
-}));
-
 // Mock DialogFeedbackContent and DialogFeedbackSuccess
-vi.mock('./DialogFeedbackContent', () => ({
+vi.mock('./DialogFeedbackContent/DialogFeedbackContent', () => ({
   DialogFeedbackContent: ({ feedback, currentUserPubky }: { feedback: string; currentUserPubky: string }) => (
     <div data-testid="dialog-feedback-content" data-feedback={feedback} data-user={currentUserPubky}>
       DialogFeedbackContent
@@ -42,7 +94,7 @@ vi.mock('./DialogFeedbackContent', () => ({
   ),
 }));
 
-vi.mock('./DialogFeedbackSuccess', () => ({
+vi.mock('./DialogFeedbackSuccess/DialogFeedbackSuccess', () => ({
   DialogFeedbackSuccess: ({ onOpenChange }: { onOpenChange: (open: boolean) => void }) => (
     <div data-testid="dialog-feedback-success" onClick={() => onOpenChange(false)}>
       DialogFeedbackSuccess
@@ -51,152 +103,122 @@ vi.mock('./DialogFeedbackSuccess', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({
-    children,
-    className,
-    hiddenTitle,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    hiddenTitle?: string;
-  }) => (
-    <div data-testid="dialog-content" className={className} aria-label={hiddenTitle}>
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  ),
-  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-footer" className={className}>
-      {children}
-    </div>
-  ),
-  DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-close" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-  Textarea: ({
-    placeholder,
-    value,
-    onChange,
-    disabled,
-    maxLength,
-    className,
-  }: {
-    ref?: React.Ref<HTMLTextAreaElement>;
-    placeholder?: string;
-    value?: string;
-    onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    disabled?: boolean;
-    maxLength?: number;
-    className?: string;
-  }) => (
-    <textarea
-      data-testid="textarea"
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      maxLength={maxLength}
-      className={className}
-    />
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    onClick,
-    disabled,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-  }) => (
-    <button
-      data-testid="button"
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    as: _as,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    size?: string;
-    className?: string;
-  }) => (
-    <p data-testid="typography" data-size={size} className={className}>
-      {children}
-    </p>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      onClick,
+      disabled,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+    }) => (
+      <button
+        data-testid="button"
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
 
-// Mock molecules
-vi.mock('@/molecules', () => ({
-  DialogConfirmDiscard: vi.fn(
-    ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: () => void; onConfirm: () => void }) => (
-      <div data-testid="dialog-confirm-discard" data-open={open}>
-        <button data-testid="confirm-discard-cancel" onClick={onOpenChange}>
-          Cancel
-        </button>
-        <button data-testid="confirm-discard-confirm" onClick={onConfirm}>
-          Discard
-        </button>
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+        {children}
       </div>
     ),
-  ),
-}));
+  };
+});
 
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
+vi.mock('@/atoms/Textarea/Textarea', () => {
+  return {
+    Textarea: ({
+      placeholder,
+      value,
+      onChange,
+      disabled,
+      maxLength,
+      className,
+    }: {
+      ref?: React.Ref<HTMLTextAreaElement>;
+      placeholder?: string;
+      value?: string;
+      onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+      disabled?: boolean;
+      maxLength?: number;
+      className?: string;
+    }) => (
+      <textarea
+        data-testid="textarea"
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        maxLength={maxLength}
+        className={className}
+      />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: _as,
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      size?: string;
+      className?: string;
+    }) => (
+      <p data-testid="typography" data-size={size} className={className}>
+        {children}
+      </p>
+    ),
+  };
+});
+
+// Mock molecules
+vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
+  return {
+    DialogConfirmDiscard: vi.fn(
+      ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: () => void; onConfirm: () => void }) => (
+        <div data-testid="dialog-confirm-discard" data-open={open}>
+          <button data-testid="confirm-discard-cancel" onClick={onOpenChange}>
+            Cancel
+          </button>
+          <button data-testid="confirm-discard-confirm" onClick={onConfirm}>
+            Discard
+          </button>
+        </div>
+      ),
+    ),
+  };
 });
 
 describe('DialogFeedback', () => {

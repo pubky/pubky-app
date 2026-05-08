@@ -1,7 +1,7 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
 
 export type TFileBody = {
-  uris: Core.Pubky[];
+  uris: Pubky[];
 };
 
 export enum FileVariant {
@@ -11,7 +11,7 @@ export enum FileVariant {
 }
 
 export type TFileParams = {
-  pubky: Core.Pubky;
+  pubky: Pubky;
   file_id: string;
   variant: FileVariant;
 };

@@ -1,8 +1,8 @@
 'use client';
 
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { Logger } from '@/libs/logger/logger';
 import type { UseUnreadPostsOptions, UseUnreadPostsResult } from './useUnreadPosts.types';
 
 /**
@@ -28,9 +28,9 @@ export function useUnreadPosts({ streamId }: UseUnreadPostsOptions): UseUnreadPo
   const unreadStream = useLiveQuery(async () => {
     try {
       if (!streamId) return null;
-      return await Core.StreamPostsController.getUnreadStream({ streamId });
+      return await StreamPostsController.getUnreadStream({ streamId });
     } catch (error) {
-      Libs.Logger.error('[useUnreadPosts] Failed to query unread stream', { streamId, error });
+      Logger.error('[useUnreadPosts] Failed to query unread stream', { streamId, error });
       return null;
     }
   }, [streamId]);

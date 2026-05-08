@@ -1,4 +1,4 @@
-import type { PostDetailsModel } from '@/core';
+import type { PostDetailsModel } from '@/models/post/details/postDetails';
 
 export type PostAttachmentsProps = {
   attachments: PostDetailsModel['attachments'];

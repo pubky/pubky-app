@@ -1,13 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { HumanInviteCode } from './HumanInviteCode';
 
-vi.mock('@/molecules', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>('@/molecules');
-
+vi.mock('@/molecules/HumanFooter/HumanFooter', () => {
   return {
-    ...actual,
     HumanFooter: () => <div data-testid="mock-human-footer">Human Footer</div>,
   };
 });

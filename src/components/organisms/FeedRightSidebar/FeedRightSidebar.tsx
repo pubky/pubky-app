@@ -1,27 +1,28 @@
 'use client';
-
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-
 // ============================================================================
 // Shared Components
 // ============================================================================
-
 /**
  * HomeFeedContent
  *
  * Shared content for Home feed sidebars - WhoToFollow, ActiveUsers, HotTags, FeedbackCard.
  * Used by both HomeFeedRightSidebar (desktop) and HomeFeedRightDrawer (tablet).
  */
+import { Pencil, UsersRound } from 'lucide-react';
+import { Container } from '@/atoms/Container/Container';
+import { FeedSection } from '@/molecules/FeedSection/FeedSection';
+import { ActiveUsers } from '../ActiveUsers/ActiveUsers';
+import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
+import { HotTags } from '../HotTags/HotTags';
+import { WhoToFollowSidebar } from '../WhoToFollowSidebar/WhoToFollowSidebar';
+
 function HomeFeedContent() {
   return (
     <>
-      <Organisms.WhoToFollow />
-      <Organisms.ActiveUsers />
-      <Organisms.HotTags />
-      <Organisms.FeedbackCard />
+      <WhoToFollowSidebar />
+      <ActiveUsers />
+      <HotTags />
+      <FeedbackCard />
     </>
   );
 }
@@ -47,9 +48,9 @@ export function HomeFeedRightSidebar() {
  */
 export function HomeFeedRightDrawer() {
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-6">
+    <Container overrideDefaults className="flex flex-col gap-6">
       <HomeFeedContent />
-    </Atoms.Container>
+    </Container>
   );
 }
 
@@ -60,11 +61,20 @@ export function HomeFeedRightDrawer() {
  */
 export function HomeFeedRightDrawerMobile() {
   return (
-    <Molecules.FeedSection
+    <FeedSection
       feeds={[
-        { icon: Libs.UsersRound, label: 'Following' },
-        { icon: Libs.Pencil, label: 'Based bitcoin' },
-        { icon: Libs.Pencil, label: 'Mining industry' },
+        {
+          icon: UsersRound,
+          label: 'Following',
+        },
+        {
+          icon: Pencil,
+          label: 'Based bitcoin',
+        },
+        {
+          icon: Pencil,
+          label: 'Mining industry',
+        },
       ]}
       showCreateButton={true}
     />
@@ -84,10 +94,10 @@ export function HomeFeedRightDrawerMobile() {
 export function HotFeedRightSidebar() {
   return (
     <>
-      <Organisms.WhoToFollow />
-      <Atoms.Container overrideDefaults className="sticky top-[100px] self-start">
-        <Organisms.FeedbackCard />
-      </Atoms.Container>
+      <WhoToFollowSidebar />
+      <Container overrideDefaults className="sticky top-[100px] self-start">
+        <FeedbackCard />
+      </Container>
     </>
   );
 }
@@ -99,9 +109,9 @@ export function HotFeedRightSidebar() {
  */
 export function HotFeedRightDrawer() {
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-6">
-      <Organisms.WhoToFollow />
-      <Organisms.FeedbackCard />
-    </Atoms.Container>
+    <Container overrideDefaults className="flex flex-col gap-6">
+      <WhoToFollowSidebar />
+      <FeedbackCard />
+    </Container>
   );
 }

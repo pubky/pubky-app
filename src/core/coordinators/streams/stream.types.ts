@@ -1,12 +1,12 @@
+import type { PollingServiceConfig, PollingServiceState } from '@/coordinators/base/coordinators.types';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
+
 /**
  * Stream Polling Coordinator Types
  *
  * Type definitions for the stream polling coordinator that manages
  * real-time updates for post streams on /home and /post routes.
  */
-
-import type { PostStreamId } from '@/core/models/stream/post/postStream.types';
-import { type PollingServiceState, type PollingServiceConfig } from '@/core/coordinators/base';
 
 /**
  * Stream coordinator internal state

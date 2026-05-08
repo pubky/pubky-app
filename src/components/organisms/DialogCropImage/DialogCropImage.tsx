@@ -1,16 +1,24 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Cropper, { type Area } from 'react-easy-crop';
 // NOTE: CSS import is localized here since this is currently the only component using the cropper.
 // If multiple components start using react-easy-crop, consider moving this CSS import to:
 // - app/globals.css (for global availability)
 // - A shared client layout/provider (for centralized client-side loading)
 // This prevents duplicate style inclusion and ensures consistent styling across the app.
 import 'react-easy-crop/react-easy-crop.css';
-
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Cropper, { type Area } from 'react-easy-crop';
+import { Button } from '@/atoms/Button/Button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/atoms/Dialog/Dialog';
+import { cropImageToBlob } from '@/libs/image/cropImage';
+import { Logger } from '@/libs/logger/logger';
 
 type DialogCropImageProps = {
   open: boolean;
@@ -51,34 +59,34 @@ export function DialogCropImage({ open, imageSrc, fileName, fileType, onClose, o
     try {
       setIsCropping(true);
       const targetMimeType = fileType && fileType.startsWith('image/') ? fileType : 'image/png';
-      const blob = await Libs.cropImageToBlob(imageSrc, croppedAreaPixels, targetMimeType);
+      const blob = await cropImageToBlob(imageSrc, croppedAreaPixels, targetMimeType);
       const resolvedMimeType = blob.type || targetMimeType;
       const croppedFile = new File([blob], fileName || DEFAULT_FILE_NAME, { type: resolvedMimeType });
       const previewUrl = URL.createObjectURL(blob);
       onCrop(croppedFile, previewUrl);
     } catch (error) {
-      Libs.Logger.error('Failed to crop image', error);
+      Logger.error('Failed to crop image', error);
     } finally {
       setIsCropping(false);
     }
   }, [croppedAreaPixels, fileName, fileType, imageSrc, onCrop]);
 
   return (
-    <Atoms.Dialog
+    <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) onClose();
       }}
     >
-      <Atoms.DialogContent
+      <DialogContent
         className="max-w-xl gap-6 rounded-2xl border-border bg-popover p-8 sm:p-6"
         showCloseButton={false}
         hiddenTitle="Cropped Image"
       >
-        <Atoms.DialogHeader className="gap-1">
-          <Atoms.DialogTitle className="text-2xl sm:text-xl">Cropped Image</Atoms.DialogTitle>
-          <Atoms.DialogDescription>Adjust the selection to create the perfect square avatar.</Atoms.DialogDescription>
-        </Atoms.DialogHeader>
+        <DialogHeader className="gap-1">
+          <DialogTitle className="text-2xl sm:text-xl">Cropped Image</DialogTitle>
+          <DialogDescription>Adjust the selection to create the perfect square avatar.</DialogDescription>
+        </DialogHeader>
 
         <div className="flex flex-col gap-4">
           <div className="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-2xl bg-black/60">
@@ -101,7 +109,7 @@ export function DialogCropImage({ open, imageSrc, fileName, fileType, onClose, o
               </div>
             )}
 
-            <Atoms.Button
+            <Button
               type="button"
               variant="ghost"
               size="sm"
@@ -109,7 +117,7 @@ export function DialogCropImage({ open, imageSrc, fileName, fileType, onClose, o
               onClick={onBack}
             >
               ← Back
-            </Atoms.Button>
+            </Button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -129,11 +137,11 @@ export function DialogCropImage({ open, imageSrc, fileName, fileType, onClose, o
           </div>
         </div>
 
-        <Atoms.DialogFooter className="gap-4">
-          <Atoms.Button type="button" variant="outline" size="lg" className="flex-1 rounded-full" onClick={onClose}>
+        <DialogFooter className="gap-4">
+          <Button type="button" variant="outline" size="lg" className="flex-1 rounded-full" onClick={onClose}>
             Cancel
-          </Atoms.Button>
-          <Atoms.Button
+          </Button>
+          <Button
             type="button"
             size="lg"
             className="flex-1 rounded-full"
@@ -141,9 +149,9 @@ export function DialogCropImage({ open, imageSrc, fileName, fileType, onClose, o
             disabled={!hasImage || !croppedAreaPixels || isCropping}
           >
             {isCropping ? 'Processing…' : 'Done'}
-          </Atoms.Button>
-        </Atoms.DialogFooter>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

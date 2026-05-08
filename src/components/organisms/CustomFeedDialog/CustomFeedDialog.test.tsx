@@ -1,9 +1,62 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { within } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CustomFeedDialog } from './CustomFeedDialog';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import type { FeedModelSchema } from '@/core/models/feed/feed.schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { CustomFeedDialog } from './CustomFeedDialog';
+
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(!open)}>
+        {children}
+      </div>
+    ),
+    DialogTrigger: ({
+      children,
+      asChild,
+      disabled,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      asChild?: boolean;
+      disabled?: boolean;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId ?? 'dialog-trigger'} data-as-child={asChild} data-disabled={disabled}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({
+      children,
+      className,
+      _onOpenAutoFocus,
+      _onCloseAutoFocus,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      _onOpenAutoFocus?: (e: Event) => void;
+      _onCloseAutoFocus?: (e: Event) => void;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId ?? 'dialog-content'} className={className}>
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+    DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
+  };
+});
 
 // Mock router
 const mockPush = vi.fn();
@@ -15,72 +68,84 @@ vi.mock('next/navigation', () => ({
 
 // Mock hooks
 const mockUseCustomFeed = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
   useCustomFeed: () => mockUseCustomFeed(),
 }));
 
 // Mock toast
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: () => ({ toast: mockToast }),
-  TagInput: ({
-    onTagAdd,
-    existingTags,
-    disabled,
-    maxTags,
-    currentTagsCount,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    onTagAdd: (tag: string) => void;
-    existingTags: { label: string }[];
-    showCloseButton?: boolean;
-    disabled?: boolean;
-    maxTags?: number;
-    currentTagsCount?: number;
-    enableApiSuggestions?: boolean;
-    excludeFromApiSuggestions?: string[];
-    addOnSuggestionClick?: boolean;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div
-      data-testid={dataTestId ?? 'tag-input'}
-      data-disabled={disabled}
-      data-max-tags={maxTags}
-      data-current-tags-count={currentTagsCount}
-      className={className}
-    >
-      <input
-        data-testid="tag-input-field"
-        onChange={(e) => {
-          if (e.target.value) onTagAdd(e.target.value);
-        }}
-      />
-      {existingTags.map((t, i) => (
-        <span key={i} data-testid={`existing-tag-${i}`}>
-          {t.label}
-        </span>
-      ))}
-    </div>
-  ),
-  PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
-    <span data-testid={`post-tag-${label}`} data-show-close={showClose}>
-      {label}
-      {showClose && (
-        <button data-testid={`remove-tag-${label}`} onClick={onClose}>
-          ×
-        </button>
-      )}
-    </span>
-  ),
-}));
+vi.mock('@/molecules/PostTag/PostTag', () => {
+  return {
+    PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
+      <span data-testid={`post-tag-${label}`} data-show-close={showClose}>
+        {label}
+        {showClose && (
+          <button data-testid={`remove-tag-${label}`} onClick={onClose}>
+            ×
+          </button>
+        )}
+      </span>
+    ),
+  };
+});
 
-// Mock core
+vi.mock('@/molecules/TagInput/TagInput', () => {
+  return {
+    TagInput: ({
+      onTagAdd,
+      existingTags,
+      disabled,
+      maxTags,
+      currentTagsCount,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      onTagAdd: (tag: string) => void;
+      existingTags: { label: string }[];
+      showCloseButton?: boolean;
+      disabled?: boolean;
+      maxTags?: number;
+      currentTagsCount?: number;
+      enableApiSuggestions?: boolean;
+      excludeFromApiSuggestions?: string[];
+      addOnSuggestionClick?: boolean;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div
+        data-testid={dataTestId ?? 'tag-input'}
+        data-disabled={disabled}
+        data-max-tags={maxTags}
+        data-current-tags-count={currentTagsCount}
+        className={className}
+      >
+        <input
+          data-testid="tag-input-field"
+          onChange={(e) => {
+            if (e.target.value) onTagAdd(e.target.value);
+          }}
+        />
+        {existingTags.map((t, i) => (
+          <span key={i} data-testid={`existing-tag-${i}`}>
+            {t.label}
+          </span>
+        ))}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
+
+// Mock dependencies
 const mockCommitCreate = vi.fn();
 const mockCommitUpdate = vi.fn();
 const mockCommitDelete = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/feed/feed', () => ({
   FeedController: {
     commitCreate: (...args: unknown[]) => mockCommitCreate(...args),
     commitUpdate: (...args: unknown[]) => mockCommitUpdate(...args),
@@ -89,209 +154,170 @@ vi.mock('@/core', () => ({
 }));
 
 // Mock atoms — use lightweight mocks that forward data-testid attributes
-vi.mock('@/atoms', () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(!open)}>
-      {children}
-    </div>
-  ),
-  DialogTrigger: ({
-    children,
-    asChild,
-    disabled,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    asChild?: boolean;
-    disabled?: boolean;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId ?? 'dialog-trigger'} data-as-child={asChild} data-disabled={disabled}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({
-    children,
-    className,
-    _onOpenAutoFocus,
-    _onCloseAutoFocus,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    _onOpenAutoFocus?: (e: Event) => void;
-    _onCloseAutoFocus?: (e: Event) => void;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId ?? 'dialog-content'} className={className}>
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId ?? 'container'} className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </div>
-  ),
-  Label: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <label data-testid="label" className={className}>
-      {children}
-    </label>
-  ),
-  Input: ({
-    required,
-    placeholder,
-    value,
-    onChange,
-    disabled,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    required?: boolean;
-    placeholder?: string;
-    value?: string;
-    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    disabled?: boolean;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <input
-      data-testid={dataTestId ?? 'input'}
-      required={required}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      className={className}
-    />
-  ),
-  Select: ({
-    children,
-    value,
-    onValueChange,
-    disabled,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    value?: string;
-    onValueChange?: (v: string) => void;
-    disabled?: boolean;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId ?? 'select'} data-value={value} data-disabled={disabled}>
-      {children}
-      <input
-        data-testid={`${dataTestId ?? 'select'}-hidden-input`}
-        type="text"
-        hidden
-        aria-hidden="true"
-        value={value ?? ''}
-        onChange={(e) => onValueChange?.(e.target.value)}
-      />
-    </div>
-  ),
-  SelectTrigger: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="select-trigger" className={className}>
-      {children}
-    </div>
-  ),
-  SelectValue: ({ placeholder }: { placeholder?: string }) => <span data-testid="select-value">{placeholder}</span>,
-  SelectContent: ({ children }: { children: React.ReactNode }) => <div data-testid="select-content">{children}</div>,
-  SelectItem: ({ children, value }: { children: React.ReactNode; key?: string; value: string }) => (
-    <div data-testid={`select-item-${value}`} data-value={value}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    onClick,
-    disabled,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <button
-      data-testid={dataTestId ?? `button-${variant ?? 'default'}`}
-      data-variant={variant}
-      data-size={size}
-      onClick={onClick}
-      disabled={disabled}
-      className={className}
-    >
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    overrideDefaults,
-    as: _as,
-    className,
-  }: {
-    children: React.ReactNode;
-    overrideDefaults?: boolean;
-    as?: React.ElementType;
-    className?: string;
-  }) => (
-    <span data-testid="typography" data-override-defaults={overrideDefaults} className={className}>
-      {children}
-    </span>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      onClick,
+      disabled,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <button
+        data-testid={dataTestId ?? `button-${variant ?? 'default'}`}
+        data-variant={variant}
+        data-size={size}
+        onClick={onClick}
+        disabled={disabled}
+        className={className}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
 
-// Mock libs — use real implementations but provide icon stubs and Env
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  const IconStub = ({ className }: { className?: string }) => <svg data-testid="icon" className={className} />;
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId ?? 'container'} className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Input/Input', () => {
+  return {
+    Input: ({
+      required,
+      placeholder,
+      value,
+      onChange,
+      disabled,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      required?: boolean;
+      placeholder?: string;
+      value?: string;
+      onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+      disabled?: boolean;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <input
+        data-testid={dataTestId ?? 'input'}
+        required={required}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className={className}
+      />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Label/Label', () => {
+  return {
+    Label: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <label data-testid="label" className={className}>
+        {children}
+      </label>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Select/Select', () => {
+  return {
+    Select: ({
+      children,
+      value,
+      onValueChange,
+      disabled,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      value?: string;
+      onValueChange?: (v: string) => void;
+      disabled?: boolean;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId ?? 'select'} data-value={value} data-disabled={disabled}>
+        {children}
+        <input
+          data-testid={`${dataTestId ?? 'select'}-hidden-input`}
+          type="text"
+          hidden
+          aria-hidden="true"
+          value={value ?? ''}
+          onChange={(e) => onValueChange?.(e.target.value)}
+        />
+      </div>
+    ),
+    SelectTrigger: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="select-trigger" className={className}>
+        {children}
+      </div>
+    ),
+    SelectValue: ({ placeholder }: { placeholder?: string }) => <span data-testid="select-value">{placeholder}</span>,
+    SelectContent: ({ children }: { children: React.ReactNode }) => <div data-testid="select-content">{children}</div>,
+    SelectItem: ({ children, value }: { children: React.ReactNode; key?: string; value: string }) => (
+      <div data-testid={`select-item-${value}`} data-value={value}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      overrideDefaults,
+      as: _as,
+      className,
+    }: {
+      children: React.ReactNode;
+      overrideDefaults?: boolean;
+      as?: React.ElementType;
+      className?: string;
+    }) => (
+      <span data-testid="typography" data-override-defaults={overrideDefaults} className={className}>
+        {children}
+      </span>
+    ),
+  };
+});
+
+// Mock env — real implementations with Env override
+vi.mock('@/libs/env/env', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/env/env')>('@/libs/env/env');
   return {
     ...actual,
-    Radio: IconStub,
-    UsersRound2: IconStub,
-    HeartHandshake: IconStub,
-    SquareAsterisk: IconStub,
-    Flame: IconStub,
-    Columns3: IconStub,
-    Menu: IconStub,
-    LayoutGrid: IconStub,
-    Layers: IconStub,
-    StickyNote: IconStub,
-    Newspaper: IconStub,
-    Image: IconStub,
-    CirclePlay: IconStub,
-    Link: IconStub,
-    Download: IconStub,
-    Activity: IconStub,
-    Delete: IconStub,
     Env: {
-      ...((actual as Record<string, unknown>).Env ?? {}),
+      ...actual.Env,
       NEXT_MAX_STREAM_TAGS: 5,
     },
   };

@@ -1,6 +1,6 @@
-import * as Config from '@/config';
-import * as Libs from '@/libs';
-import type { ResolveAvatarFallbackSeedProps, ResolveAvatarFallbackInitialProps } from './AvatarWithFallback.types';
+import { CDN_URL } from '@/config/nexus';
+import { extractInitials } from '@/libs/utils/utils';
+import type { ResolveAvatarFallbackInitialProps, ResolveAvatarFallbackSeedProps } from './AvatarWithFallback.types';
 
 /**
  * Regex pattern for validating userId format.
@@ -26,7 +26,7 @@ const USER_ID_PATTERN = /^[a-z0-9]{52}$/;
 export function extractUserIdFromAvatarUrl(avatarUrl: string | undefined | null): string | null {
   if (!avatarUrl) return null;
 
-  const expectedPrefix = `${Config.CDN_URL}/avatar/`;
+  const expectedPrefix = `${CDN_URL}/avatar/`;
 
   if (!avatarUrl.startsWith(expectedPrefix)) return null;
 
@@ -61,7 +61,7 @@ export function resolveAvatarFallbackInitial({
   seed,
   defaultInitial = 'U',
 }: ResolveAvatarFallbackInitialProps): string {
-  const nameInitial = Libs.extractInitials({ name: name ?? '', maxLength: 1 });
+  const nameInitial = extractInitials({ name: name ?? '', maxLength: 1 });
   if (nameInitial) return nameInitial;
 
   const seedInitial = typeof seed === 'string' ? seed.trim().charAt(0).toUpperCase() : '';

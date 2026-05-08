@@ -1,27 +1,23 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UseTagSuggestionsResult } from '@/hooks/useTagSuggestions/useTagSuggestions.types';
 import { TagInput } from './TagInput';
 
-// Hoist mock for useTagSuggestions
-const { mockUseTagSuggestions } = vi.hoisted(() => ({
-  mockUseTagSuggestions: vi.fn((): UseTagSuggestionsResult => ({ suggestions: [], isLoading: false })),
-}));
+const mockUseTagSuggestions = vi.hoisted(() =>
+  vi.fn((): UseTagSuggestionsResult => ({ suggestions: [], isLoading: false })),
+);
 
 // Use real hooks, only mock useEmojiInsert and useTagSuggestions
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useEmojiInsert: vi.fn(() => vi.fn()),
-    useTagSuggestions: mockUseTagSuggestions as typeof actual.useTagSuggestions,
-  };
-});
+vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
+  useEmojiInsert: vi.fn(() => vi.fn()),
+}));
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/hooks/useTagSuggestions/useTagSuggestions', () => ({
+  useTagSuggestions: mockUseTagSuggestions,
+}));
+
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
   return {
-    ...actual,
     EmojiPickerDialog: ({ open }: { open: boolean }) => (open ? <div data-testid="emoji-picker" /> : null),
   };
 });
@@ -41,6 +37,24 @@ describe('TagInput', () => {
   it('renders emoji picker button', () => {
     render(<TagInput onTagAdd={mockOnTagAdd} />);
     expect(screen.getByLabelText('Open emoji picker')).toBeInTheDocument();
+  });
+
+  it('uses dashed container chrome by default', () => {
+    const { container } = render(<TagInput onTagAdd={mockOnTagAdd} />);
+    const tagInputContainer = container.querySelector('div.relative');
+
+    expect(tagInputContainer).toHaveClass('border-dashed');
+    expect(tagInputContainer).toHaveClass('shadow-sm');
+    expect(screen.getByLabelText('Open emoji picker')).toHaveClass('shadow-xs-dark');
+  });
+
+  it('removes dashed and shadow chrome in plain variant', () => {
+    const { container } = render(<TagInput onTagAdd={mockOnTagAdd} containerVariant="plain" />);
+    const tagInputContainer = container.querySelector('div.relative');
+
+    expect(tagInputContainer).not.toHaveClass('border-dashed');
+    expect(tagInputContainer).not.toHaveClass('shadow-sm');
+    expect(screen.getByLabelText('Open emoji picker')).not.toHaveClass('shadow-xs-dark');
   });
 
   it('calls onTagAdd when Enter is pressed with valid tag', async () => {
@@ -127,6 +141,11 @@ describe('TagInput - Snapshots', () => {
 
   it('matches snapshot', () => {
     const { container } = render(<TagInput onTagAdd={mockOnTagAdd} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot in plain variant', () => {
+    const { container } = render(<TagInput onTagAdd={mockOnTagAdd} containerVariant="plain" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

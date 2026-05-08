@@ -1,6 +1,8 @@
-import * as Atoms from '@/atoms';
-import { COLORS } from '@/config';
-import * as Libs from '@/libs';
+import { X } from 'lucide-react';
+import { Tag } from '@/atoms/Tag/Tag';
+import { Toggle } from '@/atoms/Toggle/Toggle';
+import { COLORS } from '@/config/theme';
+import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
 import type { PostTagProps } from './PostTag.types';
 
 export function PostTag({
@@ -14,16 +16,14 @@ export function PostTag({
   className,
   ...rest
 }: PostTagProps) {
-  const tagColor = color || Libs.generateRandomColor(label);
-  const backgroundGradient = `linear-gradient(90deg, ${Libs.hexToRgba(COLORS.background, 0.7)} 0%, ${Libs.hexToRgba(COLORS.background, 0.7)} 100%), linear-gradient(90deg, ${tagColor} 0%, ${tagColor} 100%)`;
-
+  const tagColor = color || generateRandomColor(label);
+  const backgroundGradient = `linear-gradient(90deg, ${hexToRgba(COLORS.background, 0.7)} 0%, ${hexToRgba(COLORS.background, 0.7)} 100%), linear-gradient(90deg, ${tagColor} 0%, ${tagColor} 100%)`;
   const handleClose = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose?.(e);
   };
-
   return (
-    <Atoms.Toggle
+    <Toggle
       {...rest}
       pressed={selected}
       onClick={(e) => {
@@ -32,9 +32,9 @@ export function PostTag({
       }}
       data-cy="post-tag"
       data-tag-label={label}
-      className={Libs.cn(
+      className={cn(
         'group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg',
-        'border-0 text-sm leading-5 font-bold text-white',
+        'border-0 text-sm leading-5 font-bold text-white subpixel-antialiased',
         'transition-all duration-200',
         // Override Toggle default hover styles - keep text white
         'hover:bg-transparent hover:text-white',
@@ -48,17 +48,13 @@ export function PostTag({
       }}
       aria-label={count !== undefined ? `${label} tag (${count} posts)` : `${label} tag`}
     >
-      {/* Tag content */}
-      <span className="flex min-w-0 items-center gap-1.5 text-sm leading-5">
-        <span data-cy="post-tag-label" className="truncate font-bold">
-          {label}
-        </span>
-        {count !== undefined && (
-          <span data-cy="post-tag-count" className="shrink-0 font-medium opacity-50">
-            {count}
-          </span>
-        )}
-      </span>
+      <Tag
+        name={label}
+        count={count}
+        countDataCy="post-tag-count"
+        className="px-0"
+        style={{ backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}
+      />
 
       {/* Close button */}
       {showClose && (
@@ -68,7 +64,7 @@ export function PostTag({
           aria-label={`Remove ${label} tag`}
           role="button"
         >
-          <Libs.X className="size-3" strokeWidth={2} />
+          <X className="size-3" strokeWidth={2} />
         </span>
       )}
 
@@ -85,10 +81,12 @@ export function PostTag({
       {selected && (
         <span
           className="pointer-events-none absolute inset-0 rounded-md border border-solid"
-          style={{ borderColor: tagColor }}
+          style={{
+            borderColor: tagColor,
+          }}
           aria-hidden="true"
         />
       )}
-    </Atoms.Toggle>
+    </Toggle>
   );
 }

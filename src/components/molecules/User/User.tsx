@@ -1,9 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
+import { StickyNote, Tag, UserRoundPlus } from 'lucide-react';
+import { Button, ButtonVariant } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { cn } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 
 export interface UserData {
   id: string;
@@ -13,32 +16,27 @@ export interface UserData {
   tagsCount?: number;
   postsCount?: number;
 }
-
 interface UserProps {
   user: UserData;
   onAction?: (userId: string) => void;
   actionIcon?: React.ReactNode;
   showAction?: boolean;
-  actionVariant?: Atoms.ButtonVariant;
+  actionVariant?: ButtonVariant;
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
   'data-testid'?: string;
 }
-
 export function User({
   user,
   onAction,
-  actionIcon = <Libs.UserRoundPlus className="h-4 w-4" />,
+  actionIcon = <UserRoundPlus className="h-4 w-4" />,
   showAction = true,
-  actionVariant = Atoms.ButtonVariant.SECONDARY,
+  actionVariant = ButtonVariant.SECONDARY,
   className,
   'data-testid': dataTestId,
 }: UserProps) {
   return (
-    <Atoms.Container
-      className={Libs.cn('flex flex-row items-center gap-2', className)}
-      data-testid={dataTestId || 'user'}
-    >
-      <Organisms.AvatarWithFallback
+    <Container className={cn('flex flex-row items-center gap-2', className)} data-testid={dataTestId || 'user'}>
+      <AvatarWithFallback
         avatarUrl={user.avatar}
         name={user.name}
         fallbackSeed={user.id}
@@ -47,36 +45,36 @@ export function User({
         data-testid="user-avatar"
       />
 
-      <Atoms.Container className="flex min-w-0 flex-1 flex-col">
-        <Atoms.Typography size="sm" className="truncate font-bold" data-testid="user-name">
+      <Container className="flex min-w-0 flex-1 flex-col">
+        <Typography size="sm" className="truncate font-bold" data-testid="user-name">
           {user.name}
-        </Atoms.Typography>
+        </Typography>
         {user.tagsCount && user.postsCount ? (
-          <Atoms.Container className="flex flex-row gap-2">
-            <Atoms.Typography
+          <Container className="flex flex-row gap-2">
+            <Typography
               className="flex items-center justify-center gap-1 truncate text-xs font-medium text-muted-foreground"
               data-testid="user-tags-count"
             >
-              <Libs.Tag className="h-2 w-2" />
+              <Tag className="h-2 w-2" />
               {user.tagsCount}
-            </Atoms.Typography>
-            <Atoms.Typography
+            </Typography>
+            <Typography
               className="flex items-center justify-center gap-1 truncate text-xs font-medium text-muted-foreground"
               data-testid="user-posts-count"
             >
-              <Libs.StickyNote className="h-2 w-2" />
+              <StickyNote className="h-2 w-2" />
               {user.postsCount}
-            </Atoms.Typography>
-          </Atoms.Container>
+            </Typography>
+          </Container>
         ) : (
-          <Atoms.Typography className="truncate text-xs font-medium text-muted-foreground" data-testid="user-handle">
+          <Typography className="truncate text-xs font-medium text-muted-foreground" data-testid="user-handle">
             {user.handle}
-          </Atoms.Typography>
+          </Typography>
         )}
-      </Atoms.Container>
+      </Container>
 
       {showAction && (
-        <Atoms.Button
+        <Button
           onClick={() => onAction?.(user.id)}
           variant={actionVariant}
           size="sm"
@@ -84,8 +82,8 @@ export function User({
           data-testid={`user-action-${user.id}`}
         >
           {actionIcon}
-        </Atoms.Button>
+        </Button>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

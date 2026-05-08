@@ -1,4 +1,4 @@
-import { Pubky } from '@/core';
+import type { Pubky } from '@/models/models.types';
 import { UserStreamModelSchema } from './userStream.schema';
 import { UserStreamCompositeId, UserStreamId } from './userStream.types';
 

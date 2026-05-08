@@ -1,15 +1,15 @@
+import type { Pubky } from '@/models/models.types';
+import { ZustandSet } from '../stores.types';
+import { MAX_ACTIVE_SEARCH_TAGS, MAX_RECENT_SEARCHES } from './search.constants';
 import {
-  SearchStore,
+  RecentTagSearch,
+  RecentUserSearch,
   SearchActions,
   SearchActionTypes,
-  RecentUserSearch,
-  RecentTagSearch,
   searchInitialState,
+  SearchStore,
 } from './search.types';
-import { ZustandSet } from '../stores.types';
-import { MAX_RECENT_SEARCHES, MAX_ACTIVE_SEARCH_TAGS } from './search.constants';
-import { addTagToArray, addItemToTop } from './search.utils';
-import type { Pubky } from '@/core/models';
+import { addItemToTop, addTagToArray } from './search.utils';
 
 /**
  * Actions/Mutators - State modification functions

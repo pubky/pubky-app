@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SinglePostParticipants } from './SinglePostParticipants';
 
 // Mock next/navigation
@@ -15,12 +15,18 @@ const mockUsePostParticipants = vi.fn();
 const mockToggleFollow = vi.fn();
 const mockIsUserLoading = vi.fn(() => false);
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostParticipants/usePostParticipants', () => ({
   usePostParticipants: () => mockUsePostParticipants(),
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: () => ({
     toggleFollow: mockToggleFollow,
     isUserLoading: mockIsUserLoading,
   }),
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
   useIsFollowing: () => ({
     isFollowing: false,
     isLoading: false,
@@ -35,65 +41,80 @@ vi.mock('@/app/routes', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  SidebarSection: ({
-    title,
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    title: string;
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId} className={className}>
-      <h2>{title}</h2>
-      {children}
-    </div>
-  ),
-}));
-
-// Mock organisms
-vi.mock('@/organisms', () => ({
-  UserListItem: ({
-    user,
-    onUserClick,
-    onFollowClick,
-  }: {
-    user: { id: string; name?: string };
-    onUserClick?: (id: string) => void;
-    onFollowClick?: (id: string, isFollowing: boolean) => void;
-  }) => (
-    <div data-testid={`user-list-item-${user.id}`}>
-      <button onClick={() => onUserClick?.(user.id)} data-testid={`user-click-${user.id}`}>
-        {user.name || user.id}
-      </button>
-      <button onClick={() => onFollowClick?.(user.id, false)} data-testid={`follow-click-${user.id}`}>
-        Follow
-      </button>
-    </div>
-  ),
-}));
-
-// Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  Typography: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
-  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
-}));
-
-// Mock libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
+vi.mock('@/molecules/SidebarSection/SidebarSection', () => {
+  return {
+    SidebarSection: ({
+      title,
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      title: string;
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId} className={className}>
+        <h2>{title}</h2>
+        {children}
+      </div>
+    ),
+  };
 });
 
-// Mock core
-vi.mock('@/core', () => ({
+// Mock organisms
+vi.mock('@/organisms/UserListItem/UserListItem', () => {
+  return {
+    UserListItem: ({
+      user,
+      onUserClick,
+      onFollowClick,
+    }: {
+      user: { id: string; name?: string };
+      onUserClick?: (id: string) => void;
+      onFollowClick?: (id: string, isFollowing: boolean) => void;
+    }) => (
+      <div data-testid={`user-list-item-${user.id}`}>
+        <button onClick={() => onUserClick?.(user.id)} data-testid={`user-click-${user.id}`}>
+          {user.name || user.id}
+        </button>
+        <button onClick={() => onFollowClick?.(user.id, false)} data-testid={`follow-click-${user.id}`}>
+          Follow
+        </button>
+      </div>
+    ),
+  };
+});
+
+// Mock atoms
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div className={className}>{children}</div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: ({ size }: { size: string }) => <div data-testid="spinner" data-size={size} />,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  };
+});
+
+// Mock dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const mockState = {
       currentUserPubky: 'mock-current-user',

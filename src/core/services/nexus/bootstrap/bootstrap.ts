@@ -1,5 +1,8 @@
-import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { bootstrapApi } from '@/services/nexus/bootstrap/bootstrap.api';
+import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 
 /**
  * Nexus Bootstrap Service
@@ -13,10 +16,10 @@ export class NexusBootstrapService {
    * @param pubky - User's public key
    * @returns Bootstrap data (users, posts, streams)
    */
-  static async fetch(pubky: Core.Pubky): Promise<Core.NexusBootstrapResponse> {
-    const url = Core.bootstrapApi.get(pubky);
-    const data = await Core.queryNexus<Core.NexusBootstrapResponse>({ url });
-    Libs.Logger.debug('Bootstrap data fetched successfully', { data });
+  static async fetch(pubky: Pubky): Promise<NexusBootstrapResponse> {
+    const url = bootstrapApi.get(pubky);
+    const data = await queryNexus<NexusBootstrapResponse>({ url });
+    Logger.debug('Bootstrap data fetched successfully', { data });
     return data;
   }
 }

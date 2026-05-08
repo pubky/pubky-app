@@ -1,16 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NEXUS_URL } from '@/config/nexus';
+import type { Pubky } from '@/models/models.types';
+import type { NexusTag, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
+import { NexusUserService } from '@/services/nexus/user/user';
+import { buildUrlWithQuery } from '../nexus.utils';
 import { userApi } from './user.api';
 import {
-  TUserViewParams,
   TUserPaginationParams,
   TUserRelationshipParams,
   TUserTaggersParams,
   TUserTagsParams,
+  TUserViewParams,
   USER_PATH_PARAMS,
 } from './user.types';
-import { buildUrlWithQuery } from '../nexus.utils';
-import * as Core from '@/core';
-import * as Config from '@/config';
+
+vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();
+  return {
+    ...actual,
+    queryNexus: vi.fn(),
+  };
+});
+
+const mockQueryNexus = vi.mocked(queryNexus);
 
 const testUserId = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 const testViewerId = 'viewer123';
@@ -26,7 +39,7 @@ describe('User API', () => {
       const baseRoute = 'v0/user/test';
 
       const result = buildUrlWithQuery({ baseRoute, params, excludeKeys: USER_PATH_PARAMS });
-      expect(result).toBe(`${Config.NEXUS_URL}/v0/user/test?depth=2&viewer_id=${testViewerId}`);
+      expect(result).toBe(`${NEXUS_URL}/v0/user/test?depth=2&viewer_id=${testViewerId}`);
     });
 
     it('should exclude path parameters from query string', () => {
@@ -44,10 +57,10 @@ describe('User API', () => {
 
   describe('USER_API endpoints', () => {
     it('should generate correct URLs for basic endpoints', () => {
-      const params: Core.TUserId = { user_id: testUserId };
+      const params: TUserId = { user_id: testUserId };
 
-      expect(userApi.counts(params)).toBe(`${Config.NEXUS_URL}/v0/user/${testUserId}/counts`);
-      expect(userApi.details(params)).toBe(`${Config.NEXUS_URL}/v0/user/${testUserId}/details`);
+      expect(userApi.counts(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/counts`);
+      expect(userApi.details(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/details`);
     });
 
     it('should generate correct URLs for view endpoints', () => {
@@ -57,12 +70,12 @@ describe('User API', () => {
         viewer_id: testViewerId,
       };
 
-      expect(userApi.view(params)).toBe(`${Config.NEXUS_URL}/v0/user/${testUserId}?depth=2&viewer_id=${testViewerId}`);
+      expect(userApi.view(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}?depth=2&viewer_id=${testViewerId}`);
       expect(userApi.followers(params)).toBe(
-        `${Config.NEXUS_URL}/v0/user/${testUserId}/followers?depth=2&viewer_id=${testViewerId}`,
+        `${NEXUS_URL}/v0/user/${testUserId}/followers?depth=2&viewer_id=${testViewerId}`,
       );
       expect(userApi.following(params)).toBe(
-        `${Config.NEXUS_URL}/v0/user/${testUserId}/following?depth=2&viewer_id=${testViewerId}`,
+        `${NEXUS_URL}/v0/user/${testUserId}/following?depth=2&viewer_id=${testViewerId}`,
       );
     });
 
@@ -72,9 +85,7 @@ describe('User API', () => {
         viewer_id: testViewerId,
       };
 
-      expect(userApi.relationship(params)).toBe(
-        `${Config.NEXUS_URL}/v0/user/${testUserId}/relationship/${testViewerId}`,
-      );
+      expect(userApi.relationship(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/relationship/${testViewerId}`);
     });
 
     it('should generate correct URL for friends endpoint', () => {
@@ -85,7 +96,7 @@ describe('User API', () => {
       };
 
       expect(userApi.friends(params)).toBe(
-        `${Config.NEXUS_URL}/v0/user/${testUserId}/friends?depth=2&viewer_id=${testViewerId}`,
+        `${NEXUS_URL}/v0/user/${testUserId}/friends?depth=2&viewer_id=${testViewerId}`,
       );
     });
 
@@ -96,9 +107,7 @@ describe('User API', () => {
         viewer_id: testViewerId,
       };
 
-      expect(userApi.muted(params)).toBe(
-        `${Config.NEXUS_URL}/v0/user/${testUserId}/muted?depth=2&viewer_id=${testViewerId}`,
-      );
+      expect(userApi.muted(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/muted?depth=2&viewer_id=${testViewerId}`);
     });
 
     it('should generate correct URL for notifications endpoint', () => {
@@ -111,7 +120,7 @@ describe('User API', () => {
       };
 
       expect(userApi.notifications(params)).toBe(
-        `${Config.NEXUS_URL}/v0/user/${testUserId}/notifications?skip=0&limit=10&start=1000&end=2000`,
+        `${NEXUS_URL}/v0/user/${testUserId}/notifications?skip=0&limit=10&start=1000&end=2000`,
       );
     });
 
@@ -123,9 +132,7 @@ describe('User API', () => {
         limit: 10,
       };
 
-      expect(userApi.taggers(params)).toBe(
-        `${Config.NEXUS_URL}/v0/user/${testUserId}/taggers/test-tag?skip=0&limit=10`,
-      );
+      expect(userApi.taggers(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/taggers/test-tag?skip=0&limit=10`);
     });
 
     it('should generate correct URL for tags endpoint', () => {
@@ -135,7 +142,7 @@ describe('User API', () => {
         limit_tags: 10,
       };
 
-      expect(userApi.tags(params)).toBe(`${Config.NEXUS_URL}/v0/user/${testUserId}/tags?skip_tags=0&limit_tags=10`);
+      expect(userApi.tags(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/tags?skip_tags=0&limit_tags=10`);
     });
   });
 
@@ -159,7 +166,7 @@ describe('User API', () => {
 });
 
 describe('NexusUserService', () => {
-  const testUserId = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry' as Core.Pubky;
+  const testUserId = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry' as Pubky;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -168,12 +175,12 @@ describe('NexusUserService', () => {
   describe('tags', () => {
     it('should construct correct URL and handle successful response', async () => {
       const mockTags = [
-        { label: 'developer', taggers: [] as Core.Pubky[], taggers_count: 0, relationship: false },
-      ] as Core.NexusTag[];
+        { label: 'developer', taggers: [] as Pubky[], taggers_count: 0, relationship: false },
+      ] as NexusTag[];
 
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockTags);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockTags);
 
-      const result = await Core.NexusUserService.tags({
+      const result = await NexusUserService.tags({
         user_id: testUserId,
         skip_tags: 5,
         limit_tags: 20,
@@ -181,16 +188,16 @@ describe('NexusUserService', () => {
 
       expect(result).toEqual(mockTags);
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: `${Config.NEXUS_URL}/v0/user/${testUserId}/tags?skip_tags=5&limit_tags=20`,
+        url: `${NEXUS_URL}/v0/user/${testUserId}/tags?skip_tags=5&limit_tags=20`,
       });
     });
   });
 
   describe('taggers', () => {
     it('should construct correct URL with encoded label', async () => {
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue([]);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
 
-      await Core.NexusUserService.taggers({
+      await NexusUserService.taggers({
         user_id: testUserId,
         label: 'rust & wasm',
         skip: 10,
@@ -206,7 +213,7 @@ describe('NexusUserService', () => {
 
   describe('details', () => {
     it('should construct correct URL and handle successful response', async () => {
-      const mockUserDetails: Core.NexusUserDetails = {
+      const mockUserDetails: NexusUserDetails = {
         id: testUserId,
         name: 'Test User',
         bio: 'Test bio',
@@ -216,16 +223,16 @@ describe('NexusUserService', () => {
         indexed_at: Date.now(),
       };
 
-      const queryNexusSpy = vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockUserDetails);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockUserDetails);
 
-      const result = await Core.NexusUserService.details({ user_id: testUserId });
+      const result = await NexusUserService.details({ user_id: testUserId });
 
       expect(result).toEqual(mockUserDetails);
-      expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${Config.NEXUS_URL}/v0/user/${testUserId}/details` });
+      expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${NEXUS_URL}/v0/user/${testUserId}/details` });
     });
 
     it('should handle user with complete profile data', async () => {
-      const mockUserDetails: Core.NexusUserDetails = {
+      const mockUserDetails: NexusUserDetails = {
         id: testUserId,
         name: 'Satoshi Nakamoto',
         bio: 'Bitcoin creator',
@@ -238,9 +245,9 @@ describe('NexusUserService', () => {
         indexed_at: 1234567890,
       };
 
-      vi.spyOn(Core, 'queryNexus').mockResolvedValue(mockUserDetails);
+      mockQueryNexus.mockResolvedValue(mockUserDetails);
 
-      const result = await Core.NexusUserService.details({ user_id: testUserId });
+      const result = await NexusUserService.details({ user_id: testUserId });
 
       expect(result).toEqual(mockUserDetails);
       expect(result.name).toBe('Satoshi Nakamoto');

@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { FileController } from '@/controllers/file/file';
+import { StreamUserController } from '@/controllers/stream/users/users';
+import { UserController } from '@/controllers/user/user';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import type { UseBulkUserAvatarsResult, UserWithAvatar } from './useBulkUserAvatars.types';
 
 /**
@@ -21,7 +25,7 @@ import type { UseBulkUserAvatarsResult, UserWithAvatar } from './useBulkUserAvat
  * const taggers = getUsersWithAvatars(tag.taggers_id);
  * ```
  */
-export function useBulkUserAvatars(userIds: Core.Pubky[]): UseBulkUserAvatarsResult {
+export function useBulkUserAvatars(userIds: Pubky[]): UseBulkUserAvatarsResult {
   // Deduplicate user IDs
   const uniqueUserIds = useMemo(() => Array.from(new Set(userIds)), [userIds]);
 
@@ -29,29 +33,29 @@ export function useBulkUserAvatars(userIds: Core.Pubky[]): UseBulkUserAvatarsRes
   const userDetailsMap = useLiveQuery(
     async () => {
       try {
-        if (uniqueUserIds.length === 0) return new Map<Core.Pubky, Core.NexusUserDetails>();
-        return await Core.UserController.getManyDetails({ userIds: uniqueUserIds });
+        if (uniqueUserIds.length === 0) return new Map<Pubky, NexusUserDetails>();
+        return await UserController.getManyDetails({ userIds: uniqueUserIds });
       } catch (error) {
-        Libs.Logger.error('[useBulkUserAvatars] Failed to query user details', { userIds: uniqueUserIds, error });
-        return new Map<Core.Pubky, Core.NexusUserDetails>();
+        Logger.error('[useBulkUserAvatars] Failed to query user details', { userIds: uniqueUserIds, error });
+        return new Map<Pubky, NexusUserDetails>();
       }
     },
     [uniqueUserIds],
-    new Map<Core.Pubky, Core.NexusUserDetails>(),
+    new Map<Pubky, NexusUserDetails>(),
   );
 
   useEffect(() => {
     if (uniqueUserIds.length > 0) {
-      Core.StreamUserController.getOrFetchUsers({ userIds: uniqueUserIds });
+      StreamUserController.getOrFetchUsers({ userIds: uniqueUserIds });
     }
   }, [uniqueUserIds]);
 
   // Build map of users with computed avatar URLs
   const usersMap = useMemo(() => {
-    const map = new Map<Core.Pubky, UserWithAvatar>();
+    const map = new Map<Pubky, UserWithAvatar>();
     for (const id of uniqueUserIds) {
       const details = userDetailsMap.get(id);
-      const avatarUrl = details?.image ? Core.FileController.getAvatarUrl(id) : undefined;
+      const avatarUrl = details?.image ? FileController.getAvatarUrl(id) : undefined;
       map.set(id, {
         id,
         name: details?.name,
@@ -63,7 +67,7 @@ export function useBulkUserAvatars(userIds: Core.Pubky[]): UseBulkUserAvatarsRes
 
   // Helper to get users with avatars for a list of IDs
   const getUsersWithAvatars = useCallback(
-    (ids: Core.Pubky[]): UserWithAvatar[] => {
+    (ids: Pubky[]): UserWithAvatar[] => {
       return ids.map((id) => usersMap.get(id) ?? { id, name: undefined, avatarUrl: undefined });
     },
     [usersMap],

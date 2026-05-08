@@ -1,34 +1,22 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { DialogConfirmBackup } from './DialogConfirmBackup';
 
-// Mock Core module
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: vi.fn(() => ({
     clearSecrets: vi.fn(),
   })),
 }));
 
 // Mock atoms - use actual implementations
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
-  return {
-    ...actual,
-  };
-});
-
-// Mock libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  DialogBackup: vi.fn(() => <div data-testid="dialog-backup">DialogBackup</div>),
-}));
+vi.mock('@/organisms/DialogBackup/DialogBackup', () => {
+  return {
+    DialogBackup: vi.fn(() => <div data-testid="dialog-backup">DialogBackup</div>),
+  };
+});
 
 describe('DialogConfirmBackup - Snapshot', () => {
   it('matches snapshot for default DialogConfirmBackup', () => {

@@ -1,14 +1,17 @@
 'use client';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
-import * as Hooks from '@/hooks';
 import { useRouter } from 'next/navigation';
+import { Search } from 'lucide-react';
 import { APP_ROUTES } from '@/app/routes';
-import type { TaggedItemProps } from './TaggedItem.types';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Tag } from '@/atoms/Tag/Tag';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { WhoTaggedExpandedList } from '../WhoTaggedExpandedList/WhoTaggedExpandedList';
 import { MAX_VISIBLE_AVATARS } from './TaggedItem.constants';
+import type { TaggedItemProps } from './TaggedItem.types';
 
 export function TaggedItem({
   tag,
@@ -21,15 +24,13 @@ export function TaggedItem({
   isLoadingTaggers,
 }: TaggedItemProps) {
   const router = useRouter();
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { requireAuth } = useRequireAuth();
   const visibleTaggers = tag.taggers.slice(0, MAX_VISIBLE_AVATARS);
   const totalTaggersCount = tag.taggers_count ?? tag.taggers.length;
   const overflowCount = Math.max(0, totalTaggersCount - MAX_VISIBLE_AVATARS);
-
   const handleTagClick = () => {
     onTagClick(tag);
   };
-
   const handleSearchClick = () => {
     requireAuth(() => {
       if (onSearchClick) {
@@ -42,17 +43,15 @@ export function TaggedItem({
       }
     });
   };
-
   const handleAvatarGroupClick = () => {
     onExpandToggle?.(tag.label);
   };
-
   return (
-    <Atoms.Container overrideDefaults={true} className="flex flex-col gap-2">
+    <Container overrideDefaults={true} className="flex flex-col gap-2">
       {/* Tag row with tag badge, search button, and avatar group */}
-      <Atoms.Container overrideDefaults={true} className="flex items-center gap-2">
+      <Container overrideDefaults={true} className="flex items-center gap-2">
         {/* Tag badge with count - clickable to toggle */}
-        <Atoms.Tag
+        <Tag
           name={tag.label}
           count={tag.taggers_count}
           clicked={!!tag.relationship}
@@ -61,13 +60,13 @@ export function TaggedItem({
         />
 
         {/* Search button */}
-        <Atoms.Button variant="secondary" className="size-8" onClick={handleSearchClick}>
-          <Libs.Search size={16} className="text-secondary-foreground" />
-        </Atoms.Button>
+        <Button variant="secondary" className="size-8" onClick={handleSearchClick}>
+          <Search size={16} className="text-secondary-foreground" />
+        </Button>
 
         {/* Avatar group - clickable to expand user list */}
         {!hideAvatars && tag.taggers.length > 0 && (
-          <Atoms.Button
+          <Button
             overrideDefaults
             onClick={handleAvatarGroupClick}
             className="flex cursor-pointer items-center pr-2 transition-opacity hover:opacity-80"
@@ -75,39 +74,44 @@ export function TaggedItem({
             aria-label={`Show ${tag.taggers_count} users who tagged`}
           >
             {visibleTaggers.map((tagger, index) => (
-              <Organisms.AvatarWithFallback
+              <AvatarWithFallback
                 key={tagger.id}
-                name={tagger.name || Libs.formatPublicKey({ key: tagger.id })}
+                name={
+                  tagger.name ||
+                  formatPublicKey({
+                    key: tagger.id,
+                  })
+                }
                 avatarUrl={tagger.avatarUrl}
                 fallbackSeed={tagger.id}
                 size="md"
-                className={Libs.cn('shrink-0', index > 0 && '-ml-2')}
+                className={cn('shrink-0', index > 0 && '-ml-2')}
               />
             ))}
             {overflowCount > 0 && (
-              <Atoms.Container
+              <Container
                 overrideDefaults={true}
-                className={Libs.cn(
+                className={cn(
                   'flex shrink-0 items-center justify-center rounded-full border border-muted-foreground bg-background shadow-sm',
                   'size-8 text-xs font-medium text-foreground',
                   visibleTaggers.length > 0 && 'z-10 -ml-2',
                 )}
               >
                 +{overflowCount}
-              </Atoms.Container>
+              </Container>
             )}
-          </Atoms.Button>
+          </Button>
         )}
-      </Atoms.Container>
+      </Container>
 
       {/* Expanded user list */}
       {isExpanded && !hideAvatars && (
-        <Molecules.WhoTaggedExpandedList
+        <WhoTaggedExpandedList
           taggerIds={expandedTaggerIds ?? tag.taggers.map((tagger) => tagger.id)}
           fallbackTaggers={tag.taggers}
           isLoadingTaggers={isLoadingTaggers}
         />
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

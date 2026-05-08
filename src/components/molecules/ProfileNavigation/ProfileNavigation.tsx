@@ -1,7 +1,8 @@
 'use client';
-
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { cn } from '@/libs/utils/utils';
 
 export const ProfileNavigation = ({
   continueButtonDisabled,
@@ -29,42 +30,41 @@ export const ProfileNavigation = ({
   const onHandleContinueButton = () => {
     onContinue();
   };
-
   return (
-    <Atoms.Container className={Libs.cn('flex-row justify-between gap-3 py-6 lg:gap-6', className)}>
+    <Container className={cn('flex-row justify-between gap-3 py-6 lg:gap-6', className)}>
       {!hiddenBackButton && (
-        <Atoms.Button
+        <Button
           size="lg"
           className="rounded-full"
           variant={'secondary'}
           onClick={onHandleBackButton}
           disabled={backButtonDisabled}
         >
-          <Libs.ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 h-4 w-4" />
           {backText}
-        </Atoms.Button>
+        </Button>
       )}
       {!hiddenContinueButton && (
-        <Atoms.Button
+        <Button
           id="profile-finish-btn"
           size="lg"
-          className={Libs.cn('w-full rounded-full sm:w-auto')}
+          className={cn('w-full rounded-full sm:w-auto')}
           onClick={onHandleContinueButton}
           disabled={continueButtonDisabled}
         >
           {continueButtonLoading ? (
             <>
-              <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               {continueText}
             </>
           ) : (
             <>
-              <Libs.ArrowRight className="mr-2 h-4 w-4" />
+              <ArrowRight className="mr-2 h-4 w-4" />
               {continueText}
             </>
           )}
-        </Atoms.Button>
+        </Button>
       )}
-    </Atoms.Container>
+    </Container>
   );
 };

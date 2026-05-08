@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PostTagPopoverWrapper } from './PostTagPopoverWrapper';
-import { POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_HOVER_CLOSE_DELAY } from '@/atoms/Popover/Popover.constants';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
+import { PostTagPopoverWrapper } from './PostTagPopoverWrapper';
+import { POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
 
 const mockRouterPush = vi.fn();
 const mockFetchAllTaggers = vi.fn();
@@ -17,38 +17,33 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush }),
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useIsTouchDevice: () => false,
-    useIsMobile: () => false,
-    usePostTaggers: () => ({
-      taggersByLabel: mockTaggersByLabel,
-      taggerStates: mockTaggerStates,
-      fetchAllTaggers: mockFetchAllTaggers,
-    }),
-  };
-});
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: () => false,
+}));
 
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: () => false,
+}));
+
+vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
+  usePostTaggers: () => ({
+    taggersByLabel: mockTaggersByLabel,
+    taggerStates: mockTaggerStates,
+    fetchAllTaggers: mockFetchAllTaggers,
+  }),
+}));
+
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
-    ...actual,
     AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
   };
 });
 
-vi.mock('../UserInfoPopover', () => ({
+vi.mock('../UserInfoPopover/UserInfoPopover', () => ({
   UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="user-info-popover">{children}</div>
   ),
 }));
-
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return { ...actual, formatPublicKey: () => 'formatted-key' };
-});
 
 const mockTaggers: TaggerWithAvatar[] = [
   { id: 'user1', avatarUrl: 'https://example.com/1.png', name: 'Alice' },

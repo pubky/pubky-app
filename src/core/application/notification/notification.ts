@@ -1,27 +1,52 @@
-import * as Core from '@/core';
-import { HttpMethod, Logger } from '@/libs';
 import { LastReadResult } from 'pubky-app-specs';
+import type {
+  TFetchMissingEntitiesParams,
+  TFetchNotificationsResult,
+  TFlatNotificationList,
+  TGetOrFetchNotificationsParams,
+  TGetOrFetchNotificationsResponse,
+  TNotificationApplicationNotificationsParams,
+  TNotificationsPartialCacheHitParams,
+  TPersistAndSummarizeParams,
+} from '@/application/notification/notification.types';
+import { PostStreamApplication } from '@/application/stream/posts/post';
+import { UserStreamApplication } from '@/application/stream/users/users';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalNotificationService } from '@/services/local/notification/notification';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import type { NexusNotification } from '@/services/nexus/nexus.types';
+import { NexusUserService } from '@/services/nexus/user/user';
+
+const MAX_FETCH_ROUNDS = 10;
 
 export class NotificationApplication {
   private constructor() {} // Prevent instantiation
 
   /**
    * Retrieves notifications from the nexus service and persists them locally,
-   * then returns the count of unread notifications and the newest notification timestamp.
+   * then returns the preference-filtered unread count and the newest notification timestamp.
    *
    * @param params.userId - The user ID to fetch notifications for
    * @param params.lastPolledTimestamp - Polling cursor passed as `end` to Nexus (advances after each poll)
    * @param params.lastRead - Read/unread boundary used to count unread notifications
-   * @returns Promise resolving to unread count and the newest notification timestamp
+   * @param params.allowedTypes - Notification types to include in the unread count
+   * @returns Promise resolving to filtered unread count and the newest notification timestamp
    */
   static async fetchNotifications({
     userId,
     lastPolledTimestamp,
     lastRead,
-  }: Core.TNotificationApplicationNotificationsParams): Promise<Core.TFetchNotificationsResult> {
-    const notifications = await Core.NexusUserService.notifications({ user_id: userId, end: lastPolledTimestamp });
+    allowedTypes,
+  }: TNotificationApplicationNotificationsParams): Promise<TFetchNotificationsResult> {
+    const notifications = await NexusUserService.notifications({ user_id: userId, end: lastPolledTimestamp });
     const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId });
-    return this.persistAndSummarize({ notifications, lastRead, flatNotifications });
+    return this.persistAndSummarize({ notifications, lastRead, allowedTypes, flatNotifications });
   }
   /**
    * Updates the lastRead timestamp on the homeserver to mark all notifications as read.
@@ -31,8 +56,8 @@ export class NotificationApplication {
    * @returns The new lastRead timestamp
    */
   static markAllAsRead({ meta, last_read }: LastReadResult) {
-    Core.HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: last_read.toJson() }).catch(
-      (error) => Logger.warn('Failed to update lastRead on homeserver', { error }),
+    HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: last_read.toJson() }).catch((error) =>
+      Logger.warn('Failed to update lastRead on homeserver', { error }),
     );
   }
 
@@ -40,31 +65,129 @@ export class NotificationApplication {
    * Retrieves all notifications from the local cache.
    * @returns Promise resolving to all notifications ordered by timestamp descending
    */
-  static async getAllFromCache(): Promise<Core.FlatNotification[]> {
-    return await Core.LocalNotificationService.getAll();
+  static async getAllFromCache(): Promise<FlatNotification[]> {
+    return await LocalNotificationService.getAll();
+  }
+
+  /**
+   * Counts unread notifications filtered by allowed types.
+   * Used by Controllers to compute the preference-filtered badge count.
+   *
+   * @param lastRead - Timestamp of the last read notification
+   * @param allowedTypes - Notification types to include in the count
+   * @returns Promise resolving to the filtered unread count
+   */
+  static async countFilteredUnreadSince(lastRead: number, allowedTypes: NotificationType[]): Promise<number> {
+    return await LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
   }
 
   /**
    * Retrieves notifications from cache if available, otherwise fetches from Nexus.
    * Follows a cache-first pattern similar to stream posts.
    *
-   * Flow:
+   * When `allowedTypes` is provided (e.g., preference filtering), continues fetching
+   * successive pages and accumulates matching notifications until reaching `limit`
+   * or until there are no more pages, capped at MAX_FETCH_ROUNDS.
+   * This handles the case where filtering removes all items from early pages —
+   * without looping, the UI would show "no notifications" even though later pages
+   * may contain matching items.
+   * Follows the same pattern as PostStreamQueue.collect().
+   *
+   * Flow (per page):
    * 1. Query cache for notifications older than the given timestamp
    * 2. If cache has enough items, return immediately (full cache hit)
    * 3. If cache has partial items, fetch remaining from Nexus (partial cache hit)
    * 4. If cache is empty, fetch all from Nexus (cache miss)
    * 5. Persist fetched notifications and return combined result
    *
-   * @param params - Parameters containing userId, olderThan timestamp, and limit
+   * @param params - Parameters containing userId, olderThan timestamp, limit, and optional allowedTypes
    * @returns Promise resolving to notifications and next olderThan for pagination
    */
   static async getOrFetchNotifications({
     userId,
     olderThan,
     limit,
-  }: Core.TGetOrFetchNotificationsParams): Promise<Core.TGetOrFetchNotificationsResponse> {
+    allowedTypes,
+  }: TGetOrFetchNotificationsParams): Promise<TGetOrFetchNotificationsResponse> {
+    if (allowedTypes === undefined) {
+      // No preference constraints are applied (e.g., all notification settings are enabled),
+      // so use the normal single-page fetch path.
+      return this.getOrFetchPage({ userId, olderThan, limit });
+    }
+    if (allowedTypes.length === 0) {
+      // All notification types are disabled by user preferences, so skip pagination calls.
+      return { flatNotifications: [], olderThan: undefined };
+    }
+    // Preference filtering - fetch filtered notifications
+    return this.collectPages({ userId, olderThan, limit, allowedTypes });
+  }
+
+  /**
+   * Get or fetch pages until `limit` filtered notifications are collected or no more pages exist.
+   * Capped at MAX_FETCH_ROUNDS to prevent runaway requests.
+   */
+  private static async collectPages({
+    userId,
+    olderThan,
+    limit,
+    allowedTypes,
+  }: {
+    userId: Pubky;
+    olderThan: number;
+    limit: number;
+    allowedTypes: NotificationType[];
+  }): Promise<TGetOrFetchNotificationsResponse> {
+    let cursor: number | undefined = olderThan;
+    const collected: FlatNotification[] = [];
+
+    // TODO(notification): #1746 - Discuss with Product/UI/UX. This can return no visible
+    // notifications while still allowing "load more" when many pages are filtered out.
+    // Example: user only enables "New Friend", but the next 10 pages (300 items) have none.
+    // Decide what users should see in that case.
+    for (let attempt = 0; attempt < MAX_FETCH_ROUNDS && collected.length < limit; attempt++) {
+      const remaining = limit - collected.length;
+      const response = await this.getOrFetchPage({
+        userId,
+        olderThan: cursor ?? Infinity,
+        limit,
+      });
+
+      const filtered = this.filterByAllowedTypes(response.flatNotifications, allowedTypes);
+
+      if (filtered.length > 0) {
+        const taken = filtered.slice(0, remaining);
+        collected.push(...taken);
+
+        // When we slice (more matches than remaining), set cursor from the last
+        // included item so skipped matches on this page are reachable on "load more".
+        if (filtered.length > remaining) {
+          cursor = taken[taken.length - 1].timestamp - 1;
+          break;
+        }
+      }
+
+      cursor = response.olderThan;
+      // cursor === undefined means no more pages to fetch
+      if (cursor === undefined) break;
+    }
+
+    return { flatNotifications: collected, olderThan: cursor };
+  }
+
+  /**
+   * Fetches a single page of notifications using cache-first strategy.
+   */
+  private static async getOrFetchPage({
+    userId,
+    olderThan,
+    limit,
+  }: {
+    userId: Pubky;
+    olderThan: number;
+    limit: number;
+  }): Promise<TGetOrFetchNotificationsResponse> {
     // Try to get notifications from cache
-    const flatNotifications = await Core.LocalNotificationService.getOlderThan({ olderThan, limit });
+    const flatNotifications = await LocalNotificationService.getOlderThan({ olderThan, limit });
 
     // Full cache hit - return cached results
     if (flatNotifications.length === limit) {
@@ -82,17 +205,18 @@ export class NotificationApplication {
   }
 
   /**
-   * Persists flat notifications to IndexedDB, counts unread, and computes the
-   * next poll cursor
+   * Persists flat notifications to IndexedDB, counts preference-filtered unread,
+   * and computes the next poll cursor.
    */
   static async persistAndSummarize({
     notifications,
     lastRead,
+    allowedTypes,
     flatNotifications: precomputed,
-  }: Core.TPersistAndSummarizeParams): Promise<Core.TFetchNotificationsResult> {
+  }: TPersistAndSummarizeParams): Promise<TFetchNotificationsResult> {
     const flatNotifications = precomputed ?? this.toSupportedFlatNotifications(notifications);
-    await Core.LocalNotificationService.bulkSave({ flatNotifications });
-    const unread = await Core.LocalNotificationService.countUnreadSince(lastRead);
+    await LocalNotificationService.bulkSave({ flatNotifications });
+    const unread = await LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
     const nextPollCursor = notifications.length > 0 ? notifications[0].timestamp + 1 : undefined;
     return { unread, nextPollCursor };
   }
@@ -108,7 +232,7 @@ export class NotificationApplication {
     userId,
     limit,
     flatNotifications,
-  }: Core.TNotificationsPartialCacheHitParams): Promise<Core.TGetOrFetchNotificationsResponse> {
+  }: TNotificationsPartialCacheHitParams): Promise<TGetOrFetchNotificationsResponse> {
     const lastCachedTimestamp = flatNotifications[flatNotifications.length - 1]?.timestamp;
     const remainingLimit = limit - flatNotifications.length;
 
@@ -135,13 +259,13 @@ export class NotificationApplication {
     olderThan,
     limit,
   }: {
-    userId: Core.Pubky;
+    userId: Pubky;
     olderThan: number;
     limit: number;
-  }): Promise<Core.TGetOrFetchNotificationsResponse> {
+  }): Promise<TGetOrFetchNotificationsResponse> {
     try {
       // Fetch from Nexus using skip/limit pagination
-      const notifications = await Core.NexusUserService.notifications({
+      const notifications = await NexusUserService.notifications({
         user_id: userId,
         limit,
         start: olderThan === Infinity ? undefined : olderThan,
@@ -158,7 +282,7 @@ export class NotificationApplication {
       // available yet, causing incomplete UI states. By persisting related entities first, everything is
       // ready when the re-render happens.
       try {
-        await Core.LocalNotificationService.bulkSave({ flatNotifications });
+        await LocalNotificationService.bulkSave({ flatNotifications });
       } catch (error) {
         Logger.warn('Failed to persist notifications to cache', { error });
         // Continue - we still return the fetched notifications for display
@@ -183,23 +307,23 @@ export class NotificationApplication {
   static async fetchMissingEntities({
     notifications,
     viewerId,
-  }: Core.TFetchMissingEntitiesParams): Promise<Core.TFlatNotificationList> {
+  }: TFetchMissingEntitiesParams): Promise<TFlatNotificationList> {
     const flatNotifications = this.toSupportedFlatNotifications(notifications);
 
-    const { relatedPostIds, relatedUserIds } = Core.LocalNotificationService.parseNotifications({ flatNotifications });
+    const { relatedPostIds, relatedUserIds } = LocalNotificationService.parseNotifications({ flatNotifications });
 
-    const notPersistedPostIds = await Core.LocalStreamPostsService.getNotPersistedPostsInCache(relatedPostIds);
-    const notPersistedUserIds = await Core.LocalStreamUsersService.getNotPersistedUsersInCache(relatedUserIds);
+    const notPersistedPostIds = await LocalStreamPostsService.getNotPersistedPostsInCache(relatedPostIds);
+    const notPersistedUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(relatedUserIds);
 
     if (notPersistedPostIds.length > 0) {
-      await Core.PostStreamApplication.fetchMissingPostsFromNexus({
+      await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds: notPersistedPostIds,
         viewerId,
       });
     }
 
     if (notPersistedUserIds.length > 0) {
-      await Core.UserStreamApplication.fetchMissingUsersFromNexus({ cacheMissUserIds: notPersistedUserIds, viewerId });
+      await UserStreamApplication.fetchMissingUsersFromNexus({ cacheMissUserIds: notPersistedUserIds, viewerId });
     }
     return flatNotifications;
   }
@@ -208,10 +332,21 @@ export class NotificationApplication {
    * Transforms Nexus notifications to flat format and filters out unsupported types
    * (e.g., lost_friend from the server).
    */
-  static toSupportedFlatNotifications(notifications: Core.NexusNotification[]): Core.TFlatNotificationList {
-    const supportedTypes = Object.values(Core.NotificationType) as string[];
+  static toSupportedFlatNotifications(notifications: NexusNotification[]): TFlatNotificationList {
+    const supportedTypes = Object.values(NotificationType) as string[];
     return notifications
-      .map((n) => Core.NotificationNormalizer.toFlatNotification(n))
+      .map((n) => NotificationNormalizer.toFlatNotification(n))
       .filter((n) => supportedTypes.includes(n.type));
+  }
+
+  /**
+   * Applies user preference filtering to a page of notifications.
+   * Only called from collectPages where allowedTypes is guaranteed non-empty.
+   */
+  private static filterByAllowedTypes(
+    notifications: FlatNotification[],
+    allowedTypes: NotificationType[],
+  ): FlatNotification[] {
+    return notifications.filter((notification) => allowedTypes.includes(notification.type));
   }
 }

@@ -1,22 +1,24 @@
-import * as Core from '@/core';
-import {
-  HttpMethod,
-  Logger,
-  Err,
-  ValidationErrorCode,
-  ErrorService,
-  toAppError,
-  isAppError,
-  isNotFound,
-  isRetryable,
-  sleep,
-} from '@/libs';
 import { userUriBuilder } from 'pubky-app-specs';
+import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
+import type { TPubkyParams } from '@/controllers/auth/auth.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { isAppError, isNotFound, isRetryable, toAppError } from '@/libs/error/error.utils';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { sleep } from '@/libs/utils/utils';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import type {
+  TGenerateAuthUrlResult,
+  THomeserverSessionResult,
+  THomeserverSignUpParams,
+} from '@/services/homeserver/homeserver.types';
 
 export class AuthApplication {
   private constructor() {} // Prevent instantiation
 
-  private static restoreSessionPromise: Core.TRestoreSessionResult | null = null;
+  private static restoreSessionPromise: TRestoreSessionResult | null = null;
 
   /** Max attempts before falling back to sign-out (~30 s with a 3 s delay between each) */
   private static readonly RESTORE_MAX_ATTEMPTS = 10;
@@ -36,7 +38,7 @@ export class AuthApplication {
    * @param authStore - The auth store object containing state and actions needed for restoration
    * @returns The restored session, or null if restoration failed
    */
-  static async restorePersistedSession({ authStore }: Core.TRestoreSessionParams): Core.TRestoreSessionResult {
+  static async restorePersistedSession({ authStore }: TRestoreSessionParams): TRestoreSessionResult {
     // If a restoration is already in progress, return the existing promise
     if (this.restoreSessionPromise) {
       return await this.restoreSessionPromise;
@@ -55,7 +57,7 @@ export class AuthApplication {
       try {
         for (let attempt = 1; attempt <= this.RESTORE_MAX_ATTEMPTS; attempt++) {
           try {
-            const session = await Core.HomeserverService.restoreSession({
+            const session = await HomeserverService.restoreSession({
               sessionExport: authStore.sessionExport!,
             });
             Logger.info('Session restored successfully');
@@ -93,8 +95,8 @@ export class AuthApplication {
    * @param params.secretKey - Secret key for homeserver service
    * @returns Session and pubky of the signed up user
    */
-  static async signUp({ keypair, signupToken }: Core.THomeserverSignUpParams): Promise<Core.THomeserverSessionResult> {
-    return await Core.HomeserverService.signUp({ keypair, signupToken });
+  static async signUp({ keypair, signupToken }: THomeserverSignUpParams): Promise<THomeserverSessionResult> {
+    return await HomeserverService.signUp({ keypair, signupToken });
   }
 
   /**
@@ -105,7 +107,7 @@ export class AuthApplication {
    * @param params.secretKey - Secret key for homeserver service
    * @returns Session and pubky of the authenticated user
    */
-  static async signIn({ keypair }: Core.TKeypairParams): Promise<Core.THomeserverSessionResult | undefined> {
+  static async signIn({ keypair }: TKeypairParams): Promise<THomeserverSessionResult | undefined> {
     if (!keypair) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
@@ -116,7 +118,7 @@ export class AuthApplication {
         },
       );
     }
-    return await Core.HomeserverService.signIn({ keypair });
+    return await HomeserverService.signIn({ keypair });
   }
 
   /**
@@ -124,8 +126,8 @@ export class AuthApplication {
    *
    * @returns Authentication URL and approval promise
    */
-  static async generateAuthUrl(): Promise<Core.TGenerateAuthUrlResult> {
-    return await Core.HomeserverService.generateAuthUrl();
+  static async generateAuthUrl(): Promise<TGenerateAuthUrlResult> {
+    return await HomeserverService.generateAuthUrl();
   }
 
   /**
@@ -135,8 +137,8 @@ export class AuthApplication {
    * @param inviteCode - The invite code for signup
    * @returns Authentication URL and approval promise
    */
-  static async generateSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
-    return await Core.HomeserverService.generateSignupAuthUrl({ inviteCode });
+  static async generateSignupAuthUrl(inviteCode: string): Promise<TGenerateAuthUrlResult> {
+    return await HomeserverService.generateSignupAuthUrl({ inviteCode });
   }
 
   /**
@@ -146,8 +148,8 @@ export class AuthApplication {
    * @param params.session - The authenticated Session
    * @returns Void
    */
-  static async logout(data: Core.THomeserverSessionResult) {
-    await Core.HomeserverService.logout(data);
+  static async logout(data: THomeserverSessionResult) {
+    await HomeserverService.logout(data);
   }
 
   /**
@@ -155,7 +157,7 @@ export class AuthApplication {
    * @returns Promise resolving to the generated signup token
    */
   static async generateSignupToken() {
-    return await Core.HomeserverService.generateSignupToken();
+    return await HomeserverService.generateSignupToken();
   }
 
   /**
@@ -168,9 +170,9 @@ export class AuthApplication {
    * @param params.pubky - The user's public key identifier
    * @returns Promise resolving to the user profile or undefined if not found
    */
-  static async userIsSignedUp({ pubky }: Core.TPubkyParams): Promise<boolean> {
+  static async userIsSignedUp({ pubky }: TPubkyParams): Promise<boolean> {
     try {
-      await Core.HomeserverService.request({ method: HttpMethod.GET, url: userUriBuilder(pubky) });
+      await HomeserverService.request({ method: HttpMethod.GET, url: userUriBuilder(pubky) });
       return true;
     } catch (error) {
       const appError = isAppError(error) ? error : toAppError(error, ErrorService.Homeserver, 'userIsSignedUp');

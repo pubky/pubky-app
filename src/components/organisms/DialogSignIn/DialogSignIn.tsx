@@ -1,11 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Icons from '@/libs/icons';
-import * as Core from '@/core';
-
 /**
  * DialogSignIn
  *
@@ -18,69 +12,77 @@ import * as Core from '@/core';
  *
  * Inspired by pubky-app's Join modal but uses Franky's design patterns.
  */
+import Link from 'next/link';
+import { KeyRound, UserPlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/atoms/Button/Button';
+import { Card } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { Typography } from '@/atoms/Typography/Typography';
+import { useAuthStore } from '@/stores/auth/auth.store';
+
 export function DialogSignIn() {
   const t = useTranslations('dialogs.signIn');
-  const showSignInDialog = Core.useAuthStore((state) => state.showSignInDialog);
-  const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
-
+  const showSignInDialog = useAuthStore((state) => state.showSignInDialog);
+  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const handleClose = () => setShowSignInDialog(false);
-
   return (
-    <Atoms.Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
-      <Atoms.DialogContent className="w-3xl gap-0">
-        <Atoms.DialogHeader className="gap-2">
-          <Atoms.DialogTitle>{t('title')}</Atoms.DialogTitle>
-          <Atoms.DialogDescription>{t('description')}</Atoms.DialogDescription>
-        </Atoms.DialogHeader>
+    <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
+      <DialogContent className="w-3xl gap-0">
+        <DialogHeader className="gap-2">
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
+        </DialogHeader>
 
-        <Atoms.Container className="mt-6 flex flex-col gap-4 sm:flex-row">
+        <Container className="mt-6 flex flex-col gap-4 sm:flex-row">
           {/* New User Card */}
-          <Atoms.Card className="flex flex-1 flex-col gap-4 p-6">
-            <Atoms.Container className="gap-2">
-              <Atoms.Typography as="h3" size="md" className="font-bold">
+          <Card className="flex flex-1 flex-col gap-4 p-6">
+            <Container className="gap-2">
+              <Typography as="h3" size="md" className="font-bold">
                 {t('newHere')}
-              </Atoms.Typography>
-              <Atoms.Typography as="p" size="sm" className="text-muted-foreground">
+              </Typography>
+              <Typography as="p" size="sm" className="text-muted-foreground">
                 {t('newHereDescription')}
-              </Atoms.Typography>
-            </Atoms.Container>
+              </Typography>
+            </Container>
 
-            <Atoms.Container className="flex flex-1 items-center justify-center py-4">
-              <Icons.UserPlus className="size-16 text-muted-foreground/50" />
-            </Atoms.Container>
+            <Container className="flex flex-1 items-center justify-center py-4">
+              <UserPlus className="size-16 text-muted-foreground/50" />
+            </Container>
 
-            <Atoms.Button asChild className="w-full">
+            <Button asChild className="w-full">
               <Link href="/" onClick={handleClose}>
-                <Icons.UserPlus className="mr-2 size-4" />
+                <UserPlus className="mr-2 size-4" />
                 {t('joinButton')}
               </Link>
-            </Atoms.Button>
-          </Atoms.Card>
+            </Button>
+          </Card>
 
           {/* Sign In Card */}
-          <Atoms.Card className="flex flex-1 flex-col gap-4 p-6">
-            <Atoms.Container className="gap-2">
-              <Atoms.Typography as="h3" size="md" className="font-bold">
+          <Card className="flex flex-1 flex-col gap-4 p-6">
+            <Container className="gap-2">
+              <Typography as="h3" size="md" className="font-bold">
                 {t('alreadyHaveAccount')}
-              </Atoms.Typography>
-              <Atoms.Typography as="p" size="sm" className="text-muted-foreground">
+              </Typography>
+              <Typography as="p" size="sm" className="text-muted-foreground">
                 {t('alreadyHaveAccountDescription')}
-              </Atoms.Typography>
-            </Atoms.Container>
+              </Typography>
+            </Container>
 
-            <Atoms.Container className="flex flex-1 items-center justify-center py-4">
-              <Icons.KeyRound className="size-16 text-muted-foreground/50" />
-            </Atoms.Container>
+            <Container className="flex flex-1 items-center justify-center py-4">
+              <KeyRound className="size-16 text-muted-foreground/50" />
+            </Container>
 
-            <Atoms.Button asChild variant="secondary" className="w-full">
+            <Button asChild variant="secondary" className="w-full">
               <Link href="/sign-in" onClick={handleClose}>
-                <Icons.KeyRound className="mr-2 size-4" />
+                <KeyRound className="mr-2 size-4" />
                 {t('signInButton')}
               </Link>
-            </Atoms.Button>
-          </Atoms.Card>
-        </Atoms.Container>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+            </Button>
+          </Card>
+        </Container>
+      </DialogContent>
+    </Dialog>
   );
 }

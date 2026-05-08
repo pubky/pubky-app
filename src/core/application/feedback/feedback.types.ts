@@ -1,7 +1,7 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
 
 export interface TFeedbackSubmitInput {
-  pubky: Core.Pubky;
+  pubky: Pubky;
   comment: string;
   name: string;
 }

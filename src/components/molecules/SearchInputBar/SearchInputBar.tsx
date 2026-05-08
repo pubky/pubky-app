@@ -1,10 +1,12 @@
 'use client';
 
+import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Libs from '@/libs';
+import { Container } from '@/atoms/Container/Container';
+import { Input } from '@/atoms/Input/Input';
 import { SEARCH_CLOSED_STYLE, SEARCH_INPUT_EXPANDED_STYLE } from '@/config/search';
+import { cn } from '@/libs/utils/utils';
+import { PostTag } from '../PostTag/PostTag';
 import type { SearchInputBarProps } from './SearchInputBar.types';
 
 export function SearchInputBar({
@@ -23,12 +25,11 @@ export function SearchInputBar({
 }: SearchInputBarProps) {
   const t = useTranslations('search');
   const hasActiveTags = activeTags.length > 0;
-
   return (
-    <Atoms.Container
+    <Container
       data-testid="search-input-bar"
       data-cy="header-search"
-      className={Libs.cn(
+      className={cn(
         'relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3',
         isFocused ? 'rounded-t-2xl rounded-b-none border-b-transparent' : 'rounded-full',
       )}
@@ -36,25 +37,19 @@ export function SearchInputBar({
       overrideDefaults
     >
       {hasActiveTags && (
-        <Atoms.Container
+        <Container
           overrideDefaults
           className="flex min-w-0 items-center gap-2.5 overflow-x-auto py-2"
           role="list"
           aria-label={t('activeTags')}
         >
           {activeTags.map((tag) => (
-            <Molecules.PostTag
-              key={tag}
-              label={tag}
-              showClose
-              onClose={() => onTagRemove(tag)}
-              className="max-w-none shrink-0"
-            />
+            <PostTag key={tag} label={tag} showClose onClose={() => onTagRemove(tag)} className="max-w-none shrink-0" />
           ))}
-        </Atoms.Container>
+        </Container>
       )}
 
-      <Atoms.Input
+      <Input
         ref={inputRef}
         type="text"
         placeholder={hasActiveTags ? '' : t('placeholder')}
@@ -70,14 +65,14 @@ export function SearchInputBar({
         aria-controls={suggestionsId || undefined}
         aria-expanded={isExpanded}
         aria-haspopup={suggestionsId ? 'dialog' : undefined}
-        className={Libs.cn(
+        className={cn(
           'h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base',
           hasActiveTags ? 'min-w-8 pl-2.5' : 'min-w-20 pl-0',
         )}
       />
 
       {/* Search icon */}
-      <Libs.Search className="pointer-events-none size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-    </Atoms.Container>
+      <Search className="pointer-events-none size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+    </Container>
   );
 }

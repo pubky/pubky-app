@@ -1,78 +1,79 @@
 'use client';
 
 import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
-import * as Icons from '@/libs/icons';
-import * as Molecules from '@/molecules';
-import * as Types from './index';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { parseStatus } from '@/libs/status/status';
+import { cn } from '@/libs/utils/utils';
+import { StatusPickerContent } from '../StatusPickerContent/StatusPickerContent';
+import { DEFAULT_POPOVER_SIDE_OFFSET } from './StatusPickerWrapper.constants';
+import { StatusPickerWrapperProps } from './StatusPickerWrapper.types';
 
 export function StatusPickerWrapper({
   emoji,
   status,
   onStatusChange,
-  sideOffset = Types.DEFAULT_POPOVER_SIDE_OFFSET,
-}: Types.StatusPickerWrapperProps) {
+  sideOffset = DEFAULT_POPOVER_SIDE_OFFSET,
+}: StatusPickerWrapperProps) {
   const t = useTranslations('status');
   const [open, setOpen] = useState(false);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
 
   // Use local status if set, otherwise use prop
   const currentStatus = localStatus ?? status;
-  const parsed = Libs.parseStatus(currentStatus, emoji);
+  const parsed = parseStatus(currentStatus, emoji);
   // Get translated text for predefined statuses
   const displayText = parsed.key ? t(parsed.key as Parameters<typeof t>[0]) : parsed.text;
-
   const handleStatusSelect = (selectedStatus: string) => {
     setLocalStatus(selectedStatus);
     onStatusChange?.(selectedStatus);
     setOpen(false);
   };
-
   const triggerButton = (
-    <Atoms.Button
+    <Button
       variant="ghost"
       overrideDefaults={true}
       className="flex h-8 cursor-pointer items-center gap-1 p-0 focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none"
     >
       {parsed.emoji && <span className="text-base leading-6">{parsed.emoji}</span>}
       <span className="text-base leading-6 font-bold text-white">{displayText}</span>
-      <Icons.ChevronDown className={Libs.cn('size-6 transition-transform duration-300', open && 'rotate-180')} />
-    </Atoms.Button>
+      <ChevronDown className={cn('size-6 transition-transform duration-300', open && 'rotate-180')} />
+    </Button>
   );
-
   if (isMobile) {
     return (
-      <Atoms.Sheet open={open} onOpenChange={setOpen}>
-        <Atoms.SheetTrigger asChild>{triggerButton}</Atoms.SheetTrigger>
-        <Atoms.SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
-          <Atoms.SheetHeader>
-            <Atoms.SheetTitle>{t('selectStatus')}</Atoms.SheetTitle>
-            <Atoms.SheetDescription className="sr-only">{t('selectStatusDescription')}</Atoms.SheetDescription>
-          </Atoms.SheetHeader>
-          <Atoms.Container overrideDefaults className="mt-4">
-            <Molecules.StatusPickerContent onStatusSelect={handleStatusSelect} currentStatus={currentStatus} />
-          </Atoms.Container>
-        </Atoms.SheetContent>
-      </Atoms.Sheet>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>{triggerButton}</SheetTrigger>
+        <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <SheetHeader>
+            <SheetTitle>{t('selectStatus')}</SheetTitle>
+            <SheetDescription className="sr-only">{t('selectStatusDescription')}</SheetDescription>
+          </SheetHeader>
+          <Container overrideDefaults className="mt-4">
+            <StatusPickerContent onStatusSelect={handleStatusSelect} currentStatus={currentStatus} />
+          </Container>
+        </SheetContent>
+      </Sheet>
     );
   }
-
   return (
-    <Atoms.Popover open={open} onOpenChange={setOpen}>
-      <Atoms.PopoverTrigger asChild>{triggerButton}</Atoms.PopoverTrigger>
-      <Atoms.PopoverContent
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+      <PopoverContent
         className="w-(--popover-width)"
         sideOffset={sideOffset}
         side="top"
         align="start"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <Molecules.StatusPickerContent onStatusSelect={handleStatusSelect} currentStatus={currentStatus} />
-      </Atoms.PopoverContent>
-    </Atoms.Popover>
+        <StatusPickerContent onStatusSelect={handleStatusSelect} currentStatus={currentStatus} />
+      </PopoverContent>
+    </Popover>
   );
 }

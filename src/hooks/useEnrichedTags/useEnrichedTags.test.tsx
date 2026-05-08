@@ -1,13 +1,13 @@
 import { renderHook } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useEnrichedTags } from './useEnrichedTags';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
+import { useEnrichedTags } from './useEnrichedTags';
 
 // Mock useBulkUserAvatars
 const mockUsersMap = new Map();
 const mockIsLoading = { value: false };
 
-vi.mock('../useBulkUserAvatars', () => ({
+vi.mock('../useBulkUserAvatars/useBulkUserAvatars', () => ({
   useBulkUserAvatars: () => ({
     usersMap: mockUsersMap,
     isLoading: mockIsLoading.value,

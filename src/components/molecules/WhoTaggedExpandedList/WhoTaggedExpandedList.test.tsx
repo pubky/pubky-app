@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { WhoTaggedExpandedList } from './WhoTaggedExpandedList';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
+import { WhoTaggedExpandedList } from './WhoTaggedExpandedList';
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -14,41 +14,37 @@ vi.mock('next/navigation', () => ({
 // Mock useFollowUser hook
 const mockToggleFollow = vi.fn();
 const mockIsUserLoading = vi.fn().mockReturnValue(false);
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useFollowUser: vi.fn(() => ({
-      toggleFollow: mockToggleFollow,
-      isUserLoading: mockIsUserLoading,
-    })),
-    useRequireAuth: vi.fn(() => ({
-      isAuthenticated: true,
-      requireAuth: vi.fn((action: () => void) => action()),
-    })),
-    useBulkUserAvatars: vi.fn((ids: string[]) => ({
-      getUsersWithAvatars: () => ids.map((id) => ({ id, name: id, avatarUrl: '' })),
-      isLoading: false,
-    })),
-  };
-});
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
+  useFollowUser: vi.fn(() => ({
+    toggleFollow: mockToggleFollow,
+    isUserLoading: mockIsUserLoading,
+  })),
+}));
 
-// Mock core auth store
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(() => ({
-      currentUserPubky: 'current-user-pubky',
-    })),
-  };
-});
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: vi.fn(() => ({
+    isAuthenticated: true,
+    requireAuth: vi.fn((action: () => void) => action()),
+  })),
+}));
+
+vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
+  useBulkUserAvatars: vi.fn((ids: string[]) => ({
+    getUsersWithAvatars: () => ids.map((id) => ({ id, name: id, avatarUrl: '' })),
+    isLoading: false,
+  })),
+}));
+
+// Mock auth store
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(() => ({
+    currentUserPubky: 'current-user-pubky',
+  })),
+}));
 
 // Mock TaggerUserRow - this is what WhoTaggedExpandedList directly uses
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/TaggerUserRow/TaggerUserRow', () => {
   return {
-    ...actual,
     TaggerUserRow: ({
       tagger,
       onUserClick,

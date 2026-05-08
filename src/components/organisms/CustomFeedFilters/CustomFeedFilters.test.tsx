@@ -1,17 +1,17 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CustomFeedFilters } from './CustomFeedFilters';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import type { FeedModelSchema } from '@/core/models/feed/feed.schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { CustomFeedFilters } from './CustomFeedFilters';
 
 // Mock hooks
 const mockUseCustomFeed = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
   useCustomFeed: () => mockUseCustomFeed(),
 }));
 
-// Mock core — provide constants and mapper functions
-vi.mock('@/core', () => ({
+// Mock store constants
+vi.mock('@/stores/home/home.types', () => ({
   REACH: {
     ALL: 'all',
     FOLLOWING: 'following',
@@ -35,141 +35,118 @@ vi.mock('@/core', () => ({
     LINKS: 'links',
     FILES: 'files',
   },
-  pubkyReachToHomeReach: vi.fn((reach: PubkyAppFeedReach) => {
-    const map: Record<number, string> = {
-      [PubkyAppFeedReach.All]: 'all',
-      [PubkyAppFeedReach.Following]: 'following',
-      [PubkyAppFeedReach.Friends]: 'friends',
-    };
-    return map[reach];
-  }),
-  pubkySortToHomeSort: vi.fn((sort: PubkyAppFeedSort) => {
-    const map: Record<number, string> = {
-      [PubkyAppFeedSort.Recent]: 'timeline',
-      [PubkyAppFeedSort.Popularity]: 'total_engagement',
-    };
-    return map[sort];
-  }),
-  pubkyLayoutToHomeLayout: vi.fn((layout: PubkyAppFeedLayout) => {
-    const map: Record<number, string> = {
-      [PubkyAppFeedLayout.Columns]: 'columns',
-      [PubkyAppFeedLayout.Wide]: 'wide',
-      [PubkyAppFeedLayout.Visual]: 'visual',
-    };
-    return map[layout];
-  }),
-  pubkyPostKindToHomeContent: vi.fn((postKind: PubkyAppPostKind) => {
-    const map: Record<number, string> = {
-      [PubkyAppPostKind.Short]: 'short',
-      [PubkyAppPostKind.Long]: 'long',
-      [PubkyAppPostKind.Image]: 'images',
-      [PubkyAppPostKind.Video]: 'videos',
-      [PubkyAppPostKind.Link]: 'links',
-      [PubkyAppPostKind.File]: 'files',
-    };
-    return map[postKind];
-  }),
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    overrideDefaults?: boolean;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId ?? 'container'} className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      overrideDefaults?: boolean;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId ?? 'container'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock molecules — filter components capture their props for assertion
-vi.mock('@/molecules', () => ({
-  FilterReach: ({
-    selectedTab,
-    defaultSelectedTab,
-    disabled,
-  }: {
-    selectedTab?: string;
-    defaultSelectedTab?: string;
-    disabled?: boolean;
-  }) => (
-    <div
-      data-testid="filter-reach"
-      data-selected-tab={selectedTab ?? ''}
-      data-default-selected-tab={defaultSelectedTab ?? ''}
-      data-disabled={disabled}
-    >
-      FilterReach
-    </div>
-  ),
-  FilterSort: ({
-    selectedTab,
-    defaultSelectedTab,
-    disabled,
-  }: {
-    selectedTab?: string;
-    defaultSelectedTab?: string;
-    disabled?: boolean;
-  }) => (
-    <div
-      data-testid="filter-sort"
-      data-selected-tab={selectedTab ?? ''}
-      data-default-selected-tab={defaultSelectedTab ?? ''}
-      data-disabled={disabled}
-    >
-      FilterSort
-    </div>
-  ),
-  FilterLayout: ({
-    selectedTab,
-    defaultSelectedTab,
-    disabled,
-  }: {
-    selectedTab?: string;
-    defaultSelectedTab?: string;
-    disabled?: boolean;
-  }) => (
-    <div
-      data-testid="filter-layout"
-      data-selected-tab={selectedTab ?? ''}
-      data-default-selected-tab={defaultSelectedTab ?? ''}
-      data-disabled={disabled}
-    >
-      FilterLayout
-    </div>
-  ),
-  FilterContent: ({
-    selectedTab,
-    defaultSelectedTab,
-    disabled,
-  }: {
-    selectedTab?: string;
-    defaultSelectedTab?: string;
-    disabled?: boolean;
-  }) => (
-    <div
-      data-testid="filter-content"
-      data-selected-tab={selectedTab ?? ''}
-      data-default-selected-tab={defaultSelectedTab ?? ''}
-      data-disabled={disabled}
-    >
-      FilterContent
-    </div>
-  ),
-}));
-
-// Mock libs — use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
   return {
-    ...actual,
+    FilterContent: ({
+      selectedTab,
+      defaultSelectedTab,
+      disabled,
+    }: {
+      selectedTab?: string;
+      defaultSelectedTab?: string;
+      disabled?: boolean;
+    }) => (
+      <div
+        data-testid="filter-content"
+        data-selected-tab={selectedTab ?? ''}
+        data-default-selected-tab={defaultSelectedTab ?? ''}
+        data-disabled={disabled}
+      >
+        FilterContent
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
+  return {
+    FilterLayout: ({
+      selectedTab,
+      defaultSelectedTab,
+      disabled,
+    }: {
+      selectedTab?: string;
+      defaultSelectedTab?: string;
+      disabled?: boolean;
+    }) => (
+      <div
+        data-testid="filter-layout"
+        data-selected-tab={selectedTab ?? ''}
+        data-default-selected-tab={defaultSelectedTab ?? ''}
+        data-disabled={disabled}
+      >
+        FilterLayout
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
+  return {
+    FilterReach: ({
+      selectedTab,
+      defaultSelectedTab,
+      disabled,
+    }: {
+      selectedTab?: string;
+      defaultSelectedTab?: string;
+      disabled?: boolean;
+    }) => (
+      <div
+        data-testid="filter-reach"
+        data-selected-tab={selectedTab ?? ''}
+        data-default-selected-tab={defaultSelectedTab ?? ''}
+        data-disabled={disabled}
+      >
+        FilterReach
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
+  return {
+    FilterSort: ({
+      selectedTab,
+      defaultSelectedTab,
+      disabled,
+    }: {
+      selectedTab?: string;
+      defaultSelectedTab?: string;
+      disabled?: boolean;
+    }) => (
+      <div
+        data-testid="filter-sort"
+        data-selected-tab={selectedTab ?? ''}
+        data-default-selected-tab={defaultSelectedTab ?? ''}
+        data-disabled={disabled}
+      >
+        FilterSort
+      </div>
+    ),
   };
 });
 

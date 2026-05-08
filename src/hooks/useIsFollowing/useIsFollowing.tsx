@@ -1,7 +1,9 @@
 'use client';
 
-import * as Core from '@/core';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
+import { UserController } from '@/controllers/user/user';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import type { NexusUserRelationship } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseIsFollowingResult } from './useIsFollowing.types';
 
 /**
@@ -26,14 +28,14 @@ import type { UseIsFollowingResult } from './useIsFollowing.types';
  * ```
  */
 export function useIsFollowing(targetUserId: string): UseIsFollowingResult {
-  const { currentUserPubky } = Core.useAuthStore();
+  const { currentUserPubky } = useAuthStore();
 
   // Don't fetch or query if targeting yourself or if either ID is missing
   const enabled = !!targetUserId && !!currentUserPubky && targetUserId !== currentUserPubky;
 
-  const { data: relationship, isLoading } = useLocalFirstQuery<Core.NexusUserRelationship>({
-    queryFn: () => Core.UserController.getRelationships({ userId: targetUserId }),
-    fetchFn: () => Core.UserController.fetch({ userId: targetUserId }),
+  const { data: relationship, isLoading } = useLocalFirstQuery<NexusUserRelationship>({
+    queryFn: () => UserController.getRelationships({ userId: targetUserId }),
+    fetchFn: () => UserController.fetch({ userId: targetUserId }),
     deps: [targetUserId, currentUserPubky],
     enabled,
   });

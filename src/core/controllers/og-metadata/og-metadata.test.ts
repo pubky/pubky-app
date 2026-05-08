@@ -1,7 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import type { TOgMetadataParams } from '@/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { OgMetadataApplication } from '@/application/og-metadata/og-metadata';
+import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
+import type { TOgMetadataParams } from '@/application/og-metadata/og-metadata.types';
+import { NetworkErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
+import { OgMetadataValidators } from '@/pipes/og-metadata/og-metadata.validators';
 
 const testData = {
   validUrl: 'https://example.com',
@@ -13,7 +18,7 @@ const createParams = (overrides: Partial<TOgMetadataParams> = {}): TOgMetadataPa
   ...overrides,
 });
 
-const createMockResult = (): Core.TOgMetadataResult => ({
+const createMockResult = (): TOgMetadataResult => ({
   url: testData.validUrl,
   type: 'website',
   title: 'Example Title',
@@ -27,8 +32,8 @@ describe('OgMetadataController', () => {
     vi.clearAllMocks();
 
     // Mock validators and application layer
-    vi.spyOn(Core.OgMetadataValidators, 'validate').mockResolvedValue(testData.parsedUrl);
-    vi.spyOn(Core.OgMetadataApplication, 'fetch').mockResolvedValue(createMockResult());
+    vi.spyOn(OgMetadataValidators, 'validate').mockResolvedValue(testData.parsedUrl);
+    vi.spyOn(OgMetadataApplication, 'fetch').mockResolvedValue(createMockResult());
 
     const controllerModule = await import('./og-metadata');
     OgMetadataController = controllerModule.OgMetadataController;
@@ -37,7 +42,7 @@ describe('OgMetadataController', () => {
   describe('fetch', () => {
     it('should call validators with the raw URL param', async () => {
       const params = createParams();
-      const validateSpy = vi.spyOn(Core.OgMetadataValidators, 'validate');
+      const validateSpy = vi.spyOn(OgMetadataValidators, 'validate');
 
       await OgMetadataController.fetch(params);
 
@@ -46,7 +51,7 @@ describe('OgMetadataController', () => {
 
     it('should pass the validated URL to the application layer', async () => {
       const params = createParams();
-      const fetchSpy = vi.spyOn(Core.OgMetadataApplication, 'fetch');
+      const fetchSpy = vi.spyOn(OgMetadataApplication, 'fetch');
 
       await OgMetadataController.fetch(params);
 
@@ -55,7 +60,7 @@ describe('OgMetadataController', () => {
 
     it('should return the application layer result', async () => {
       const mockResult = createMockResult();
-      vi.spyOn(Core.OgMetadataApplication, 'fetch').mockResolvedValue(mockResult);
+      vi.spyOn(OgMetadataApplication, 'fetch').mockResolvedValue(mockResult);
 
       const result = await OgMetadataController.fetch(createParams());
 
@@ -63,15 +68,15 @@ describe('OgMetadataController', () => {
     });
 
     it('should bubble up validation AppError from validators without wrapping', async () => {
-      const validationError = Libs.Err.validation(Libs.ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
-        service: Libs.ErrorService.NextJsServer,
+      const validationError = Err.validation(ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
+        service: ErrorService.NextJsServer,
         operation: 'validate',
-        context: { field: 'url', statusCode: Libs.HttpStatusCode.BAD_REQUEST },
+        context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
       });
       // NOTE: error-handling rules (.cursor/rules/error-handling.mdc) require that layers
       // re-throw existing AppError instances as-is (no re-wrapping / double-logging).
       // This test guards that OgMetadataController.fetch respects that contract for validator errors.
-      vi.spyOn(Core.OgMetadataValidators, 'validate').mockImplementation(() => {
+      vi.spyOn(OgMetadataValidators, 'validate').mockImplementation(() => {
         throw validationError;
       });
 
@@ -79,22 +84,22 @@ describe('OgMetadataController', () => {
     });
 
     it('should bubble up AppError from application layer without wrapping', async () => {
-      const appError = Libs.Err.network(Libs.NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
-        service: Libs.ErrorService.NextJsServer,
+      const appError = Err.network(NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
+        service: ErrorService.NextJsServer,
         operation: 'validateDns',
-        context: { hostname: 'example.com', statusCode: Libs.HttpStatusCode.BAD_REQUEST },
+        context: { hostname: 'example.com', statusCode: HttpStatusCode.BAD_REQUEST },
       });
       // NOTE: According to the error-handling rules (.cursor/rules/error-handling.mdc),
       // the controller must re-throw AppError instances coming from the Application layer
       // as-is (no re-wrapping / no mutation / no double-logging).
       // This test ensures that OgMetadataController.fetch adheres to that contract.
-      vi.spyOn(Core.OgMetadataApplication, 'fetch').mockRejectedValue(appError);
+      vi.spyOn(OgMetadataApplication, 'fetch').mockRejectedValue(appError);
 
       await expect(OgMetadataController.fetch(createParams())).rejects.toThrow(appError);
     });
 
     it('should pass null URL to validators when param is null', async () => {
-      const validateSpy = vi.spyOn(Core.OgMetadataValidators, 'validate');
+      const validateSpy = vi.spyOn(OgMetadataValidators, 'validate');
 
       await OgMetadataController.fetch(createParams({ url: null }));
 

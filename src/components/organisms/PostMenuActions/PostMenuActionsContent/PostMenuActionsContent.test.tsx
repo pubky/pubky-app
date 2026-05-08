@@ -1,104 +1,127 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { Edit, FileText, Flag, Key, Link, MegaphoneOff, Trash, UserRoundPlus } from 'lucide-react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MENU_VARIANT } from '@/config/ui';
-import { PostMenuActionsContent } from './PostMenuActionsContent';
 import {
   POST_MENU_ACTION_IDS,
   POST_MENU_ACTION_VARIANTS,
 } from '@/hooks/usePostMenuActions/usePostMenuActions.constants';
 import type { PostMenuActionItem } from '@/hooks/usePostMenuActions/usePostMenuActions.types';
+import { PostMenuActionsContent } from './PostMenuActionsContent';
+
+vi.mock('@/atoms/DropdownMenu/DropdownMenu', () => {
+  return {
+    DropdownMenuItem: ({
+      children,
+      onClick,
+      disabled,
+      className,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      disabled?: boolean;
+      className?: string;
+    }) => (
+      <div
+        onClick={disabled ? undefined : onClick}
+        className={className}
+        data-testid="dropdown-menu-item"
+        data-disabled={disabled ? 'true' : 'false'}
+      >
+        {children}
+      </div>
+    ),
+  };
+});
 
 const mockUsePostMenuActions = vi.fn(() => ({
   menuItems: [] as PostMenuActionItem[],
   isLoading: false,
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostMenuActions/usePostMenuActions', () => ({
   usePostMenuActions: (_postId: string) => mockUsePostMenuActions(),
 }));
 
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(() => ({ currentUserPubky: 'pk:current123' })),
-    parseCompositeId: vi.fn((id: string) => {
-      const [pubky, postId] = id.split(':');
-      return { pubky, id: postId };
-    }),
-    PostController: {
-      delete: vi.fn(),
-    },
-  };
-});
-
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-  };
-});
-
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div
-      data-testid="container"
-      data-class-name={className}
-      data-override-defaults={overrideDefaults ? 'true' : 'false'}
-    >
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    className,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    className?: string;
-  }) => (
-    <button onClick={onClick} disabled={disabled} className={className} data-testid="menu-button">
-      {children}
-    </button>
-  ),
-  DropdownMenuItem: ({
-    children,
-    onClick,
-    disabled,
-    className,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    className?: string;
-  }) => (
-    <div
-      onClick={disabled ? undefined : onClick}
-      className={className}
-      data-testid="dropdown-menu-item"
-      data-disabled={disabled ? 'true' : 'false'}
-    >
-      {children}
-    </div>
-  ),
-  Typography: ({ children, className }: { children: React.ReactNode; as?: React.ElementType; className?: string }) => (
-    <span data-testid="typography" className={className}>
-      {children}
-    </span>
-  ),
-  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(() => ({ currentUserPubky: 'pk:current123' })),
 }));
+vi.mock('@/models/models.utils', () => ({
+  parseCompositeId: vi.fn((id: string) => {
+    const [pubky, postId] = id.split(':');
+    return { pubky, id: postId };
+  }),
+}));
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    delete: vi.fn(),
+  },
+}));
+
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      disabled,
+      className,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      disabled?: boolean;
+      className?: string;
+    }) => (
+      <button onClick={onClick} disabled={disabled} className={className} data-testid="menu-button">
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div
+        data-testid="container"
+        data-class-name={className}
+        data-override-defaults={overrideDefaults ? 'true' : 'false'}
+      >
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      className?: string;
+    }) => (
+      <span data-testid="typography" className={className}>
+        {children}
+      </span>
+    ),
+  };
+});
 
 describe('PostMenuActionsContent', () => {
   beforeEach(() => {
@@ -106,41 +129,40 @@ describe('PostMenuActionsContent', () => {
   });
 
   it('renders menu items for own post', async () => {
-    const Libs = await import('@/libs');
     mockUsePostMenuActions.mockReturnValue({
       menuItems: [
         {
           id: POST_MENU_ACTION_IDS.COPY_PUBKY,
           label: 'Copy pubky',
-          icon: Libs.Key,
+          icon: Key,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_LINK,
           label: 'Copy link to post',
-          icon: Libs.Link,
+          icon: Link,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_TEXT,
           label: 'Copy text of post',
-          icon: Libs.FileText,
+          icon: FileText,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.EDIT,
           label: 'Edit post',
-          icon: Libs.Edit,
+          icon: Edit,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.DELETE,
           label: 'Delete post',
-          icon: Libs.Trash,
+          icon: Trash,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DESTRUCTIVE,
         },
@@ -169,48 +191,47 @@ describe('PostMenuActionsContent', () => {
   });
 
   it('renders menu items for other user post', async () => {
-    const Libs = await import('@/libs');
     mockUsePostMenuActions.mockReturnValue({
       menuItems: [
         {
           id: POST_MENU_ACTION_IDS.FOLLOW,
           label: 'Follow Test User',
-          icon: Libs.UserRoundPlus,
+          icon: UserRoundPlus,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_PUBKY,
           label: 'Copy pubky',
-          icon: Libs.Key,
+          icon: Key,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_LINK,
           label: 'Copy link to post',
-          icon: Libs.Link,
+          icon: Link,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_TEXT,
           label: 'Copy text of post',
-          icon: Libs.FileText,
+          icon: FileText,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.MUTE,
           label: 'Mute Test User',
-          icon: Libs.MegaphoneOff,
+          icon: MegaphoneOff,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.REPORT,
           label: 'Report post',
-          icon: Libs.Flag,
+          icon: Flag,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
@@ -237,41 +258,40 @@ describe('PostMenuActionsContent', () => {
   });
 
   it('hides copy text for article posts', async () => {
-    const Libs = await import('@/libs');
     mockUsePostMenuActions.mockReturnValue({
       menuItems: [
         {
           id: POST_MENU_ACTION_IDS.FOLLOW,
           label: 'Follow Test User',
-          icon: Libs.UserRoundPlus,
+          icon: UserRoundPlus,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_PUBKY,
           label: 'Copy pubky',
-          icon: Libs.Key,
+          icon: Key,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_LINK,
           label: 'Copy link to post',
-          icon: Libs.Link,
+          icon: Link,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.MUTE,
           label: 'Mute Test User',
-          icon: Libs.MegaphoneOff,
+          icon: MegaphoneOff,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.REPORT,
           label: 'Report post',
-          icon: Libs.Flag,
+          icon: Flag,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
@@ -301,48 +321,47 @@ describe('PostMenuActionsContent - Snapshots', () => {
   });
 
   it('matches snapshot for all menu items visible (other user post)', async () => {
-    const Libs = await import('@/libs');
     mockUsePostMenuActions.mockReturnValue({
       menuItems: [
         {
           id: POST_MENU_ACTION_IDS.FOLLOW,
           label: 'Follow Test User',
-          icon: Libs.UserRoundPlus,
+          icon: UserRoundPlus,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_PUBKY,
           label: 'Copy pubky',
-          icon: Libs.Key,
+          icon: Key,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_LINK,
           label: 'Copy link to post',
-          icon: Libs.Link,
+          icon: Link,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_TEXT,
           label: 'Copy text of post',
-          icon: Libs.FileText,
+          icon: FileText,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.MUTE,
           label: 'Mute Test User',
-          icon: Libs.MegaphoneOff,
+          icon: MegaphoneOff,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.REPORT,
           label: 'Report post',
-          icon: Libs.Flag,
+          icon: Flag,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
@@ -365,41 +384,40 @@ describe('PostMenuActionsContent - Snapshots', () => {
   });
 
   it('matches snapshot for own post menu items', async () => {
-    const Libs = await import('@/libs');
     mockUsePostMenuActions.mockReturnValue({
       menuItems: [
         {
           id: POST_MENU_ACTION_IDS.COPY_PUBKY,
           label: 'Copy pubky',
-          icon: Libs.Key,
+          icon: Key,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_LINK,
           label: 'Copy link to post',
-          icon: Libs.Link,
+          icon: Link,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_TEXT,
           label: 'Copy text of post',
-          icon: Libs.FileText,
+          icon: FileText,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.EDIT,
           label: 'Edit post',
-          icon: Libs.Edit,
+          icon: Edit,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.DELETE,
           label: 'Delete post',
-          icon: Libs.Trash,
+          icon: Trash,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DESTRUCTIVE,
         },
@@ -422,48 +440,47 @@ describe('PostMenuActionsContent - Snapshots', () => {
   });
 
   it('matches snapshot for mobile sheet variant', async () => {
-    const Libs = await import('@/libs');
     mockUsePostMenuActions.mockReturnValue({
       menuItems: [
         {
           id: POST_MENU_ACTION_IDS.FOLLOW,
           label: 'Follow Test User',
-          icon: Libs.UserRoundPlus,
+          icon: UserRoundPlus,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_PUBKY,
           label: 'Copy pubky',
-          icon: Libs.Key,
+          icon: Key,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_LINK,
           label: 'Copy link to post',
-          icon: Libs.Link,
+          icon: Link,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.COPY_TEXT,
           label: 'Copy text of post',
-          icon: Libs.FileText,
+          icon: FileText,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.MUTE,
           label: 'Mute Test User',
-          icon: Libs.MegaphoneOff,
+          icon: MegaphoneOff,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },
         {
           id: POST_MENU_ACTION_IDS.REPORT,
           label: 'Report post',
-          icon: Libs.Flag,
+          icon: Flag,
           onClick: vi.fn(),
           variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
         },

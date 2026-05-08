@@ -1,9 +1,10 @@
 'use client';
 
 import { Controller, FieldValues } from 'react-hook-form';
-import * as Atoms from '@/atoms';
-import * as Config from '@/config';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { Label } from '@/atoms/Label/Label';
+import { FORM_LABEL_CLASSES } from '@/config/forms';
+import { InputField } from '../InputField/InputField';
 import type { ControlledInputFieldProps } from './ControlledInputField.types';
 
 export function ControlledInputField<T extends FieldValues>({
@@ -20,16 +21,16 @@ export function ControlledInputField<T extends FieldValues>({
   disabled = false,
 }: ControlledInputFieldProps<T>) {
   return (
-    <Atoms.Container className="gap-2">
-      <Atoms.Label htmlFor={name} className={Config.FORM_LABEL_CLASSES}>
+    <Container className="gap-2">
+      <Label htmlFor={name} className={FORM_LABEL_CLASSES}>
         {label}
         {labelHint}
-      </Atoms.Label>
+      </Label>
       <Controller
         name={name}
         control={control}
         render={({ field, fieldState }) => (
-          <Molecules.InputField
+          <InputField
             id={name}
             name={field.name}
             value={field.value}
@@ -49,6 +50,6 @@ export function ControlledInputField<T extends FieldValues>({
           />
         )}
       />
-    </Atoms.Container>
+    </Container>
   );
 }

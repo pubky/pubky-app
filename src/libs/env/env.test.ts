@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { Env } from './env';
 
 /**
@@ -54,5 +54,40 @@ describe('Environment variables configuration', () => {
   it('should transform number strings correctly', () => {
     expect(typeof Env.NEXT_PUBLIC_DB_VERSION).toBe('number');
     expect(typeof Env.NEXT_PUBLIC_TTL_POST_MS).toBe('number');
+  });
+
+  it('should use HTTP relay inbox URL from test config', () => {
+    expect(() => new URL(Env.NEXT_PUBLIC_DEFAULT_HTTP_RELAY)).not.toThrow();
+    expect(Env.NEXT_PUBLIC_DEFAULT_HTTP_RELAY).toContain('/inbox');
+  });
+});
+
+describe('Sentry env vars', () => {
+  it('should leave NEXT_PUBLIC_SENTRY_DSN undefined when unset', () => {
+    expect(Env.NEXT_PUBLIC_SENTRY_DSN).toBeUndefined();
+  });
+
+  it('should leave NEXT_PUBLIC_SENTRY_ENVIRONMENT undefined when unset', () => {
+    expect(Env.NEXT_PUBLIC_SENTRY_ENVIRONMENT).toBeUndefined();
+  });
+
+  it('should default sample rates to numbers in [0, 1]', () => {
+    expect(typeof Env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE).toBe('number');
+    expect(Env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE).toBeGreaterThanOrEqual(0);
+    expect(Env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE).toBeLessThanOrEqual(1);
+
+    expect(typeof Env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE).toBe('number');
+    expect(Env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE).toBeGreaterThanOrEqual(0);
+    expect(Env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE).toBeLessThanOrEqual(1);
+
+    expect(typeof Env.NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE).toBe('number');
+    expect(Env.NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE).toBeGreaterThanOrEqual(0);
+    expect(Env.NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE).toBeLessThanOrEqual(1);
+  });
+
+  it('should leave build-only Sentry secrets undefined when unset', () => {
+    expect(Env.SENTRY_AUTH_TOKEN).toBeUndefined();
+    expect(Env.SENTRY_ORG).toBeUndefined();
+    expect(Env.SENTRY_PROJECT).toBeUndefined();
   });
 });

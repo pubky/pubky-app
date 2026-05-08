@@ -1,184 +1,196 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthController } from '@/controllers/auth/auth';
 import { DialogRestoreEncryptedFile } from './DialogRestoreEncryptedFile';
+
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
+    DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-trigger" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({
+      children,
+      className,
+      hiddenTitle,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      hiddenTitle?: string;
+    }) => (
+      <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
+        {hiddenTitle && (
+          <h2 className="sr-only" data-testid="dialog-hidden-title">
+            {hiddenTitle}
+          </h2>
+        )}
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-header" className={className}>
+        {children}
+      </div>
+    ),
+    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <h2 data-testid="dialog-title" className={className}>
+        {children}
+      </h2>
+    ),
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+    DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-close" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-footer" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock @synonymdev/pubky
 vi.mock('@synonymdev/pubky', () => ({
   decryptRecoveryFile: vi.fn(),
 }));
 
-// Mock @/core
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    AuthController: {
-      loginWithEncryptedFile: vi.fn(),
-    },
-    BootstrapController: {
-      run: vi.fn().mockResolvedValue({}),
-    },
-    useAuthStore: {
-      getState: vi.fn().mockReturnValue({
-        currentUserPubky: 'mock-user-pubkey-123',
-      }),
-    },
-  };
-});
-
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    Identity: {
-      secretKeyToHex: vi.fn((key) => `hex-${key}`),
-    },
-  };
-});
+// Mock auth controller
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    loginWithEncryptedFile: vi.fn(),
+  },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: {
+    getState: vi.fn().mockReturnValue({
+      currentUserPubky: 'mock-user-pubkey-123',
+    }),
+  },
+}));
 
 // Mock atoms
-vi.mock('@/components/atoms', () => ({
-  Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
-  DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-trigger" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({
-    children,
-    className,
-    hiddenTitle,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    hiddenTitle?: string;
-  }) => (
-    <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle}>
-      {hiddenTitle && (
-        <h2 className="sr-only" data-testid="dialog-hidden-title">
-          {hiddenTitle}
-        </h2>
-      )}
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-header" className={className}>
-      {children}
-    </div>
-  ),
-  DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <h2 data-testid="dialog-title" className={className}>
-      {children}
-    </h2>
-  ),
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  ),
-  DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-close" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-footer" className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    onClick,
-    disabled,
-    type,
-    ...props
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: (e: React.MouseEvent) => void;
-    disabled?: boolean;
-    type?: 'button' | 'submit' | 'reset';
-    [key: string]: unknown;
-  }) => (
-    <button
-      data-testid={variant ? `button-${variant}` : 'button'}
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      onClick={onClick}
-      disabled={disabled}
-      type={type}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
-  Container: ({
-    children,
-    className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: () => void;
-  }) => (
-    <div data-testid="container" className={className} onClick={onClick}>
-      {children}
-    </div>
-  ),
-  Label: ({ children, className, htmlFor }: { children: React.ReactNode; className?: string; htmlFor?: string }) => (
-    <label data-testid="label" className={className} htmlFor={htmlFor}>
-      {children}
-    </label>
-  ),
-  Input: ({
-    id,
-    type,
-    value,
-    onChange,
-    className,
-    placeholder,
-    autoComplete,
-    disabled,
-    ...props
-  }: {
-    id?: string;
-    type?: string;
-    value?: string;
-    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    className?: string;
-    placeholder?: string;
-    autoComplete?: string;
-    disabled?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <input
-      data-testid="input"
-      id={id}
-      type={type}
-      value={value}
-      onChange={onChange}
-      className={className}
-      placeholder={placeholder}
-      autoComplete={autoComplete}
-      disabled={disabled}
-      {...props}
-    />
-  ),
-  Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
-    <div data-testid="typography" data-size={size} className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      onClick,
+      disabled,
+      type,
+      ...props
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      onClick?: (e: React.MouseEvent) => void;
+      disabled?: boolean;
+      type?: 'button' | 'submit' | 'reset';
+      [key: string]: unknown;
+    }) => (
+      <button
+        data-testid={variant ? `button-${variant}` : 'button'}
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        onClick={onClick}
+        disabled={disabled}
+        type={type}
+        {...props}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: () => void;
+    }) => (
+      <div data-testid="container" className={className} onClick={onClick}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Input/Input', () => {
+  return {
+    Input: ({
+      id,
+      type,
+      value,
+      onChange,
+      className,
+      placeholder,
+      autoComplete,
+      disabled,
+      ...props
+    }: {
+      id?: string;
+      type?: string;
+      value?: string;
+      onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+      className?: string;
+      placeholder?: string;
+      autoComplete?: string;
+      disabled?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <input
+        data-testid="input"
+        id={id}
+        type={type}
+        value={value}
+        onChange={onChange}
+        className={className}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        disabled={disabled}
+        {...props}
+      />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Label/Label', () => {
+  return {
+    Label: ({ children, className, htmlFor }: { children: React.ReactNode; className?: string; htmlFor?: string }) => (
+      <label data-testid="label" className={className} htmlFor={htmlFor}>
+        {children}
+      </label>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
+      <div data-testid="typography" data-size={size} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock File API
 const mockFile = (name: string, content: string = 'mock file content') => {
@@ -195,7 +207,6 @@ File.prototype.arrayBuffer = vi.fn().mockImplementation(function (this: File) {
 });
 
 // Get the mocked functions
-const { AuthController } = await import('@/core');
 const mockLoginWithEncryptedFile = vi.mocked(AuthController.loginWithEncryptedFile);
 
 // Mock types for tests that match the actual library interfaces

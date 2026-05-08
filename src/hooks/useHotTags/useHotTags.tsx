@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import type { UseHotTagsParams, UseHotTagsResult, HotTag } from './useHotTags.types';
+import { useCallback, useEffect, useState } from 'react';
+import { HotController } from '@/controllers/hot/hot';
+import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { type NexusHotTag, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import { DEFAULT_LIMIT } from './useHotTags.constants';
+import type { HotTag, UseHotTagsParams, UseHotTagsResult } from './useHotTags.types';
 
 /**
  * useHotTags
@@ -34,10 +36,10 @@ import { DEFAULT_LIMIT } from './useHotTags.constants';
 export function useHotTags({
   limit = DEFAULT_LIMIT,
   reach,
-  timeframe = Core.UserStreamTimeframe.THIS_MONTH,
+  timeframe = UserStreamTimeframe.THIS_MONTH,
 }: UseHotTagsParams = {}): UseHotTagsResult {
   const [tags, setTags] = useState<HotTag[]>([]);
-  const [rawTags, setRawTags] = useState<Core.NexusHotTag[]>([]);
+  const [rawTags, setRawTags] = useState<NexusHotTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export function useHotTags({
     setError(null);
 
     try {
-      const hotTags = await Core.HotController.getOrFetch({
+      const hotTags = await HotController.getOrFetch({
         reach,
         timeframe,
         limit,
@@ -62,12 +64,12 @@ export function useHotTags({
       }));
 
       setTags(transformedTags);
-      Libs.Logger.debug('[useHotTags] Fetched hot tags', { count: transformedTags.length, reach, timeframe });
+      Logger.debug('[useHotTags] Fetched hot tags', { count: transformedTags.length, reach, timeframe });
     } catch (err) {
-      const errorMessage = Libs.isAppError(err) ? err.message : 'Failed to fetch hot tags';
+      const errorMessage = isAppError(err) ? err.message : 'Failed to fetch hot tags';
       setError(errorMessage);
       setRawTags([]);
-      Libs.Logger.error('[useHotTags] Failed to fetch hot tags:', err);
+      Logger.error('[useHotTags] Failed to fetch hot tags:', err);
     } finally {
       setIsLoading(false);
     }

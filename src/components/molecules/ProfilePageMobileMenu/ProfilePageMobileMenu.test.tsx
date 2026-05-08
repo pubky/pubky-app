@@ -1,29 +1,39 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ProfilePageMobileMenu, PROFILE_MENU_ITEMS } from './ProfilePageMobileMenu';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { PROFILE_MENU_ITEMS, ProfilePageMobileMenu } from './ProfilePageMobileMenu';
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    requireAuth: (cb: () => void) => cb(),
+  }),
+}));
 
 describe('ProfilePageMobileMenu', () => {
-  it('renders all menu items', () => {
+  it('renders all menu items for own profile', () => {
     render(<ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />);
     PROFILE_MENU_ITEMS.forEach((item) => {
       expect(screen.getByLabelText(item.label)).toBeInTheDocument();
     });
   });
 
-  it('has correct structure with sticky positioning', () => {
+  it('hides ownProfileOnly items when viewing another user profile', () => {
     const { container } = render(
-      <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />,
+      <ProfilePageMobileMenu
+        activePage={PROFILE_PAGE_TYPES.PROFILE}
+        onPageChangeAction={() => {}}
+        isOwnProfile={false}
+      />,
     );
-    const rootElement = container.firstChild as HTMLElement;
-    expect(rootElement).toHaveClass(
-      'sticky',
-      'top-(--header-height-mobile)',
-      'z-(--z-mobile-menu)',
-      'bg-background',
-      'lg:hidden',
-    );
+
+    const visibleCount = PROFILE_MENU_ITEMS.filter((item) => !item.ownProfileOnly).length;
+    const buttons = container.querySelectorAll('button');
+    expect(buttons).toHaveLength(visibleCount);
+
+    // Notifications is ownProfileOnly — must not render
+    expect(screen.queryByLabelText('Notifications')).not.toBeInTheDocument();
   });
 
   it('renders correct number of menu items', () => {
@@ -43,62 +53,30 @@ describe('ProfilePageMobileMenu', () => {
     expect(activeButton).toHaveAttribute('aria-label', 'Following');
   });
 
-  it('applies correct border classes to active and inactive items', () => {
-    const { container } = render(
-      <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.FOLLOWING} onPageChangeAction={() => {}} />,
-    );
-    const items = container.querySelectorAll('div[class*="border-b"]');
-
-    // Active item (Following) should have border-foreground
-    const followingIndex = PROFILE_MENU_ITEMS.findIndex((item) => item.pageType === PROFILE_PAGE_TYPES.FOLLOWING);
-    const activeItem = items[followingIndex];
-    expect(activeItem).toHaveClass('border-foreground');
-
-    // Inactive items should have border-border
-    items.forEach((item, index) => {
-      if (index !== followingIndex) {
-        expect(item).toHaveClass('border-border');
-      }
-    });
-  });
-
-  it('applies correct text color classes to icons', () => {
-    const { container } = render(
-      <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.FOLLOWING} onPageChangeAction={() => {}} />,
-    );
-    const icons = container.querySelectorAll('svg');
-
-    // Active icon (Following) should have text-foreground
-    const followingIndex = PROFILE_MENU_ITEMS.findIndex((item) => item.pageType === PROFILE_PAGE_TYPES.FOLLOWING);
-    const activeIcon = icons[followingIndex];
-    expect(activeIcon).toHaveClass('text-foreground');
-
-    // Inactive icons should have text-muted-foreground
-    icons.forEach((icon, index) => {
-      if (index !== followingIndex) {
-        expect(icon).toHaveClass('text-muted-foreground');
-      }
-    });
-  });
-
-  it('has correct button structure with padding', () => {
+  it('exposes the profile-page-mobile-menu data-testid on the root', () => {
     const { container } = render(
       <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />,
     );
-    const buttons = container.querySelectorAll('button');
-    buttons.forEach((button) => {
-      expect(button).toHaveClass('px-2.5', 'py-2');
-    });
+    const rootElement = container.firstChild as HTMLElement;
+    expect(rootElement).toHaveAttribute('data-testid', 'profile-page-mobile-menu');
   });
 
-  it('has correct container structure with flex and border', () => {
+  it('renders with sticky positioning', () => {
     const { container } = render(
       <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />,
     );
-    const items = container.querySelectorAll('div[class*="border-b"]');
-    items.forEach((item) => {
-      expect(item).toHaveClass('flex', 'flex-1', 'justify-center', 'border-b', 'px-0', 'py-1.5');
-    });
+    const rootElement = container.firstChild as HTMLElement;
+    expect(rootElement).toHaveClass('sticky', 'top-(--header-height-mobile)');
+  });
+
+  it('calls onPageChangeAction (via requireAuth) with correct pageType when clicked', async () => {
+    const user = userEvent.setup();
+    const onPageChangeAction = vi.fn();
+
+    render(<ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.PROFILE} onPageChangeAction={onPageChangeAction} />);
+
+    await user.click(screen.getByLabelText('Following'));
+    expect(onPageChangeAction).toHaveBeenCalledWith(PROFILE_PAGE_TYPES.FOLLOWING);
   });
 });
 

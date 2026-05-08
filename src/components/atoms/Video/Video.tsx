@@ -1,11 +1,10 @@
 'use client';
 
 import { forwardRef, useEffect, useRef } from 'react';
+import { cn } from '@/libs/utils/utils';
+import type { VideoProps } from './Video.types';
 
-import * as Libs from '@/libs';
-import * as Types from './Video.types';
-
-export const Video = forwardRef<HTMLVideoElement, Types.VideoProps>(function Video(
+export const Video = forwardRef<HTMLVideoElement, VideoProps>(function Video(
   {
     'data-testid': dataTestId,
     className,
@@ -14,7 +13,7 @@ export const Video = forwardRef<HTMLVideoElement, Types.VideoProps>(function Vid
     preload = 'metadata',
     pauseVideo,
     ...props
-  }: Types.VideoProps,
+  }: VideoProps,
   ref,
 ) {
   const internalRef = useRef<HTMLVideoElement>(null);
@@ -39,7 +38,7 @@ export const Video = forwardRef<HTMLVideoElement, Types.VideoProps>(function Vid
         }
       }}
       data-testid={dataTestId || 'video'}
-      className={Libs.cn('h-auto max-w-full rounded-md bg-black', className)}
+      className={cn('h-auto max-w-full rounded-md bg-black', className)}
       src={src}
       controls={controls}
       preload={preload}

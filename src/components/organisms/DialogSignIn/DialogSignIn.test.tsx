@@ -1,20 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogSignIn } from './DialogSignIn';
 
 const mockShowSignInDialog = vi.hoisted(() => ({ value: false }));
 const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
 
-// Mock @/core - partial mock to preserve other exports
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: (
-      selector: (state: { showSignInDialog: boolean; setShowSignInDialog: typeof mockSetShowSignInDialog }) => unknown,
-    ) => selector({ showSignInDialog: mockShowSignInDialog.value, setShowSignInDialog: mockSetShowSignInDialog }),
-  };
-});
+// Mock auth store
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (
+    selector: (state: { showSignInDialog: boolean; setShowSignInDialog: typeof mockSetShowSignInDialog }) => unknown,
+  ) => selector({ showSignInDialog: mockShowSignInDialog.value, setShowSignInDialog: mockSetShowSignInDialog }),
+}));
 
 // Mock next/link
 vi.mock('next/link', () => ({
@@ -24,16 +20,6 @@ vi.mock('next/link', () => ({
     </a>
   ),
 }));
-
-// Mock only the icons used by this component, preserve all others
-vi.mock('@/libs/icons', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs/icons')>();
-  return {
-    ...actual,
-    UserPlus: ({ className }: { className?: string }) => <span data-testid="user-plus-icon" className={className} />,
-    KeyRound: ({ className }: { className?: string }) => <span data-testid="key-round-icon" className={className} />,
-  };
-});
 
 describe('DialogSignIn', () => {
   beforeEach(() => {
@@ -90,8 +76,9 @@ describe('DialogSignIn', () => {
       mockShowSignInDialog.value = true;
       render(<DialogSignIn />);
 
-      expect(screen.getAllByTestId('user-plus-icon')).toHaveLength(2); // One in text, one in button
-      expect(screen.getAllByTestId('key-round-icon')).toHaveLength(2); // One in text, one in button
+      const dialog = screen.getByRole('dialog');
+      expect(dialog.querySelectorAll('.lucide-user-plus')).toHaveLength(2);
+      expect(dialog.querySelectorAll('.lucide-key-round')).toHaveLength(2);
     });
   });
 

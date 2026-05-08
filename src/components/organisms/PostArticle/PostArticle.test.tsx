@@ -1,17 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { PostArticle } from './PostArticle';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FileVariant } from '@/services/nexus/file/file.types';
 import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
-import * as Core from '@/core';
+import { PostArticle } from './PostArticle';
 
 // Mock hooks
 const mockUsePostArticle = vi.fn();
 const mockHandleLinkClick = vi.fn();
 const mockSetDialogOpen = vi.fn();
 
-vi.mock('@/hooks', () => ({
-  usePostArticle: (params: { content: string; attachments: string[]; coverImageVariant: Core.FileVariant }) =>
+vi.mock('@/hooks/usePostArticle/usePostArticle', () => ({
+  usePostArticle: (params: { content: string; attachments: string[]; coverImageVariant: FileVariant }) =>
     mockUsePostArticle(params),
+}));
+
+vi.mock('@/hooks/useLinkConfirmation/useLinkConfirmation', () => ({
   useLinkConfirmation: () => ({
     dialogOpen: false,
     setDialogOpen: mockSetDialogOpen,
@@ -21,74 +24,89 @@ vi.mock('@/hooks', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
-    <span data-testid="typography" data-size={size} className={className}>
-      {children}
-    </span>
-  ),
-  Image: ({
-    src,
-    alt,
-    className,
-    width,
-    height,
-  }: {
-    src: string;
-    alt: string;
-    className?: string;
-    width?: number;
-    height?: number;
-  }) => <img data-testid="cover-image" src={src} alt={alt} className={className} width={width} height={height} />,
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({
+      src,
+      alt,
+      className,
+      width,
+      height,
+    }: {
+      src: string;
+      alt: string;
+      className?: string;
+      width?: number;
+      height?: number;
+    }) => <img data-testid="cover-image" src={src} alt={alt} className={className} width={width} height={height} />,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
+      <span data-testid="typography" data-size={size} className={className}>
+        {children}
+      </span>
+    ),
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  PostText: ({
-    content,
-    isArticle,
-    onLinkClick,
-    className,
-  }: {
-    content: string;
-    isArticle?: boolean;
-    onLinkClick?: (url: string, e: React.MouseEvent) => void;
-    className?: string;
-  }) => (
-    <div data-testid="post-text" data-is-article={isArticle} data-has-link-click={!!onLinkClick} className={className}>
-      {content}
-    </div>
-  ),
-}));
+vi.mock('@/molecules/PostText/PostText', () => {
+  return {
+    PostText: ({
+      content,
+      isArticle,
+      onLinkClick,
+      className,
+    }: {
+      content: string;
+      isArticle?: boolean;
+      onLinkClick?: (url: string, e: React.MouseEvent) => void;
+      className?: string;
+    }) => (
+      <div
+        data-testid="post-text"
+        data-is-article={isArticle}
+        data-has-link-click={!!onLinkClick}
+        className={className}
+      >
+        {content}
+      </div>
+    ),
+  };
+});
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  DialogCheckLink: ({
-    open,
-    onOpenChangeAction,
-    linkUrl,
-  }: {
-    open: boolean;
-    onOpenChangeAction: (open: boolean) => void;
-    linkUrl: string;
-  }) => (
-    <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
-      <button data-testid="dialog-close" onClick={() => onOpenChangeAction(false)}>
-        Close
-      </button>
-    </div>
-  ),
-}));
-
-// Mock libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
+vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', () => {
+  return {
+    DialogCheckLink: ({
+      open,
+      onOpenChangeAction,
+      linkUrl,
+    }: {
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+      linkUrl: string;
+    }) => (
+      <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
+        <button data-testid="dialog-close" onClick={() => onOpenChangeAction(false)}>
+          Close
+        </button>
+      </div>
+    ),
+  };
 });
 
 describe('PostArticle', () => {
@@ -212,7 +230,7 @@ describe('PostArticle', () => {
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
         attachments: defaultProps.attachments,
-        coverImageVariant: Core.FileVariant.FEED,
+        coverImageVariant: FileVariant.FEED,
       });
     });
 
@@ -222,7 +240,7 @@ describe('PostArticle', () => {
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
         attachments: [],
-        coverImageVariant: Core.FileVariant.FEED,
+        coverImageVariant: FileVariant.FEED,
       });
     });
 
@@ -239,7 +257,7 @@ describe('PostArticle', () => {
       expect(mockUsePostArticle).toHaveBeenCalledWith({
         content: defaultProps.content,
         attachments: multipleAttachments,
-        coverImageVariant: Core.FileVariant.FEED,
+        coverImageVariant: FileVariant.FEED,
       });
     });
   });

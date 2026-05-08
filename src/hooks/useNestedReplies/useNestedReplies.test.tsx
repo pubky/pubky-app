@@ -1,21 +1,21 @@
 import { act, renderHook } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as Core from '@/core';
-import { usePostCounts } from '@/hooks/usePostCounts';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { useNestedReplies } from './useNestedReplies';
 
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
 
-vi.mock('@/hooks/useMutedUsers', () => ({
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
   useMutedUsers: vi.fn(() => ({
     mutedUserIdSet: new Set(),
   })),
 }));
 
-vi.mock('@/hooks/usePostCounts', () => ({
+vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
   usePostCounts: vi.fn(),
 }));
 
@@ -69,9 +69,8 @@ describe('useNestedReplies', () => {
       localTotalCount: 3,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:reply-1');
     const getOrFetchSpy = vi
-      .spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice')
+      .spyOn(StreamPostsController, 'getOrFetchStreamSlice')
       .mockResolvedValueOnce({
         nextPageIds: Array.from({ length: 10 }, (_, index) => `author:nested-${index + 3}`),
         timestamp: 11,
@@ -105,8 +104,7 @@ describe('useNestedReplies', () => {
       localTotalCount: 2,
     });
 
-    vi.spyOn(Core, 'buildPostReplyStreamId').mockReturnValue('post_replies:author:reply-1');
-    const getOrFetchSpy = vi.spyOn(Core.StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
+    const getOrFetchSpy = vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: Array.from({ length: 10 }, (_, index) => `author:nested-${index + 3}`),
       timestamp: 0,
       reachedEnd: false,

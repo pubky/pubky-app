@@ -1,97 +1,104 @@
 'use client';
 
-import { useLiveQuery } from 'dexie-react-hooks';
-import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import { APP_ROUTES } from '@/app/routes';
 import { usePathname } from 'next/navigation';
-
+import { useLiveQuery } from 'dexie-react-hooks';
 // Module-level cache: survives remounts within the session so that
 // navigating between /home and /feed/[id] doesn't flash empty tabs.
-let cachedFeeds: Core.FeedModelSchema[] = [];
+import { Home, Pencil, PlusCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Link } from '@/atoms/Link/Link';
+import { Typography } from '@/atoms/Typography/Typography';
+import { FeedController } from '@/controllers/feed/feed';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
 
+let cachedFeeds: FeedModelSchema[] = [];
 interface FeedNavigationProps {
   className?: string;
 }
-
 export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const pathname = usePathname();
   const tHeader = useTranslations('header');
   const tDialog = useTranslations('dialogs.customFeed');
-
   const customFeeds = useLiveQuery(
     async () => {
       try {
-        const result = await Core.FeedController.getList();
+        const result = await FeedController.getList();
         cachedFeeds = result;
         return result;
       } catch (error) {
-        Libs.Logger.error('[FeedNavigation] Failed to query custom feeds', { error });
-        return [] as Core.FeedModelSchema[];
+        Logger.error('[FeedNavigation] Failed to query custom feeds', {
+          error,
+        });
+        return [] as FeedModelSchema[];
       }
     },
     [],
     cachedFeeds,
   );
-
   const customFeedsMapped = customFeeds.map((f) => ({
     name: f.name,
-    icon: <Libs.Pencil className="size-5 shrink-0" />,
+    icon: <Pencil className="size-5 shrink-0" />,
     href: APP_ROUTES.FEED + '/' + f.id,
   }));
-
   const feeds = [
-    { name: tHeader('home'), icon: <Libs.Home className="size-5 shrink-0" />, href: APP_ROUTES.HOME },
+    {
+      name: tHeader('home'),
+      icon: <Home className="size-5 shrink-0" />,
+      href: APP_ROUTES.HOME,
+    },
     ...customFeedsMapped,
   ];
-
   return (
-    <Atoms.Container className={Libs.cn('overflow-x-auto lg:flex-row', className)}>
-      <Atoms.Heading level={2} size="lg" className="mb-2 font-light text-muted-foreground lg:hidden">
+    <Container className={cn('overflow-x-auto lg:flex-row', className)}>
+      <Heading level={2} size="lg" className="mb-2 font-light text-muted-foreground lg:hidden">
         {tHeader('feed')}
-      </Atoms.Heading>
+      </Heading>
 
       {feeds.map((f) => (
-        <Atoms.Link
+        <Link
           overrideDefaults
           key={f.href}
           href={f.href}
-          className={Libs.cn(
+          className={cn(
             'flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center',
             pathname === f.href ? 'border-white text-white' : 'border-muted-foreground text-muted-foreground',
           )}
         >
           {f.href !== APP_ROUTES.HOME && f.href === pathname ? (
-            <Organisms.CustomFeedDialog mode="edit">
-              <Atoms.Button overrideDefaults className="cursor-pointer">
+            <CustomFeedDialog mode="edit">
+              <Button overrideDefaults className="cursor-pointer">
                 {f.icon}
-              </Atoms.Button>
-            </Organisms.CustomFeedDialog>
+              </Button>
+            </CustomFeedDialog>
           ) : (
             f.icon
           )}
 
-          <Atoms.Typography overrideDefaults className="font-medium lg:text-sm">
+          <Typography overrideDefaults className="font-medium lg:text-sm">
             {f.name}
-          </Atoms.Typography>
-        </Atoms.Link>
+          </Typography>
+        </Link>
       ))}
 
-      <Organisms.CustomFeedDialog mode="create">
-        <Atoms.Button
+      <CustomFeedDialog mode="create">
+        <Button
           overrideDefaults
           className="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
         >
-          <Libs.PlusCircle className="size-5 shrink-0" />
+          <PlusCircle className="size-5 shrink-0" />
 
-          <Atoms.Typography overrideDefaults className="font-medium lg:text-sm">
+          <Typography overrideDefaults className="font-medium lg:text-sm">
             {tDialog('createTitle')}
-          </Atoms.Typography>
-        </Atoms.Button>
-      </Organisms.CustomFeedDialog>
-    </Atoms.Container>
+          </Typography>
+        </Button>
+      </CustomFeedDialog>
+    </Container>
   );
 };

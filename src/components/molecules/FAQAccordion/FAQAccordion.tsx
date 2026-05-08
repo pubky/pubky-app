@@ -1,13 +1,14 @@
 'use client';
 
+import { ChevronRight } from 'lucide-react';
 import { Accordion as AccordionPrimitive } from 'radix-ui';
 import Markdown from 'react-markdown';
-import * as Libs from '@/libs';
+import { cn } from '@/libs/utils/utils';
 import type { FAQAccordionProps } from './FAQAccordion.types';
 
 export function FAQAccordion({ items, className }: FAQAccordionProps) {
   return (
-    <AccordionPrimitive.Root type="single" collapsible className={Libs.cn('flex w-full flex-col gap-3', className)}>
+    <AccordionPrimitive.Root type="single" collapsible className={cn('flex w-full flex-col gap-3', className)}>
       {items.map((item) => (
         <AccordionPrimitive.Item
           key={item.id}
@@ -17,7 +18,7 @@ export function FAQAccordion({ items, className }: FAQAccordionProps) {
           <AccordionPrimitive.Header>
             <AccordionPrimitive.Trigger className="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5">
               <span className="text-left text-sm leading-5 font-medium text-popover-foreground">{item.question}</span>
-              <Libs.ChevronRight
+              <ChevronRight
                 size={16}
                 className="ml-4 shrink-0 transition-transform group-data-[state=open]:rotate-90"
               />

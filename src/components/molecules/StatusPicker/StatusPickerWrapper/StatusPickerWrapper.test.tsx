@@ -1,10 +1,10 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { STATUS_LABELS } from '@/libs/status/status.constants';
 import { StatusPickerWrapper } from './StatusPickerWrapper';
-import * as Libs from '@/libs';
 
 // Mock StatusPickerContent
-vi.mock('../StatusPickerContent', () => ({
+vi.mock('../StatusPickerContent/StatusPickerContent', () => ({
   StatusPickerContent: ({
     onStatusSelect,
     currentStatus,
@@ -25,13 +25,9 @@ vi.mock('../StatusPickerContent', () => ({
 }));
 
 // Mock useIsMobile hook
-vi.mock('@/hooks', async () => {
-  const actual = await vi.importActual('@/hooks');
-  return {
-    ...actual,
-    useIsMobile: () => false,
-  };
-});
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: () => false,
+}));
 
 describe('StatusPickerWrapper', () => {
   const mockOnStatusChange = vi.fn();
@@ -45,7 +41,7 @@ describe('StatusPickerWrapper', () => {
       render(<StatusPickerWrapper emoji="🌴" status="vacationing" />);
 
       expect(screen.getByText('🌴')).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_LABELS.vacationing)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_LABELS.vacationing)).toBeInTheDocument();
     });
 
     it('renders emoji and status correctly for custom status', () => {
@@ -168,13 +164,9 @@ describe('StatusPickerWrapper', () => {
   describe('Mobile Behavior', () => {
     it('uses Sheet component on mobile', async () => {
       // Mock useIsMobile to return true
-      vi.doMock('@/hooks', async () => {
-        const actual = await vi.importActual('@/hooks');
-        return {
-          ...actual,
-          useIsMobile: () => true,
-        };
-      });
+      vi.doMock('@/hooks/useIsMobile/useIsMobile', () => ({
+        useIsMobile: () => true,
+      }));
 
       // Re-import to get the mocked version
       const { StatusPickerWrapper: MobileStatusPicker } = await import('./StatusPickerWrapper');

@@ -1,9 +1,9 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { LeftSidebar } from './LeftSidebar';
 
 // Mock the home store
-vi.mock('@/core', () => ({
+vi.mock('@/stores/home/home.store', () => ({
   useHomeStore: () => ({
     reach: 'all',
     setReach: vi.fn(),
@@ -17,34 +17,47 @@ vi.mock('@/core', () => ({
 }));
 
 // Mock the molecules
-vi.mock('@/molecules', () => ({
-  FilterReach: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-reach">
-      <button onClick={() => onTabChange?.('all')}>All</button>
-    </div>
-  ),
-  FilterSort: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-sort">
-      <button onClick={() => onTabChange?.('recent')}>Recent</button>
-    </div>
-  ),
-  FilterContent: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-root">
-      <button onClick={() => onTabChange?.('all')}>All</button>
-    </div>
-  ),
-  FilterLayout: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
-    <div data-testid="filter-root">
-      <button onClick={() => onTabChange?.('columns')}>Columns</button>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
+  return {
+    FilterContent: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-root">
+        <button onClick={() => onTabChange?.('all')}>All</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
+  return {
+    FilterLayout: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-root">
+        <button onClick={() => onTabChange?.('columns')}>Columns</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
+  return {
+    FilterReach: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-reach">
+        <button onClick={() => onTabChange?.('all')}>All</button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
+  return {
+    FilterSort: ({ onTabChange }: { onTabChange?: (tab: string) => void }) => (
+      <div data-testid="filter-sort">
+        <button onClick={() => onTabChange?.('recent')}>Recent</button>
+      </div>
+    ),
+  };
+});
 
 // Mock the libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 describe('LeftSidebar', () => {
   it('renders with default props', () => {

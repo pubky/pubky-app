@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HOME_ROUTES } from '@/app/routes';
 import { SignInNavigation } from './SignInNavigation';
-import * as App from '@/app';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -12,37 +12,48 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Minimal atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" data-class-name={className}>
-      {children}
-    </div>
-  ),
-}));
-
-// Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" data-class-name={className}>
+        {children}
+      </div>
+    ),
+  };
 });
 
+// Use real libs - use actual implementations
+
 // Stub child dialogs so we can trigger onRestore
-vi.mock('@/organisms', () => ({
-  DialogRestoreRecoveryPhrase: ({ onRestore }: { onRestore?: () => void }) => (
-    <button data-testid="restore-phrase" onClick={onRestore}>
-      Restore Phrase
-    </button>
-  ),
-  DialogRestoreEncryptedFile: ({ onRestore }: { onRestore?: () => void }) => (
-    <button data-testid="restore-file" onClick={onRestore}>
-      Restore File
-    </button>
-  ),
-}));
+vi.mock('@/organisms/DialogRestoreEncryptedFile/DialogRestoreEncryptedFile', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/organisms/DialogRestoreEncryptedFile/DialogRestoreEncryptedFile')>();
+  return {
+    ...actual,
+    DialogRestoreEncryptedFile: ({ onRestore }: { onRestore?: () => void }) => (
+      <button data-testid="restore-file" onClick={onRestore}>
+        Restore File
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/organisms/DialogRestoreRecoveryPhrase/DialogRestoreRecoveryPhrase', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/organisms/DialogRestoreRecoveryPhrase/DialogRestoreRecoveryPhrase')>();
+  return {
+    ...actual,
+    DialogRestoreRecoveryPhrase: ({ onRestore }: { onRestore?: () => void }) => (
+      <button data-testid="restore-phrase" onClick={onRestore}>
+        Restore Phrase
+      </button>
+    ),
+  };
+});
 
 let mockSignInState = { authUrlResolved: false };
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/signIn/signIn.store', () => ({
   useSignInStore: vi.fn((selector) => {
     if (typeof selector === 'function') {
       return selector(mockSignInState);
@@ -68,14 +79,14 @@ describe('SignInNavigation', () => {
     render(<SignInNavigation />);
 
     fireEvent.click(screen.getByTestId('restore-phrase'));
-    expect(mockPush).toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
+    expect(mockPush).toHaveBeenCalledWith(HOME_ROUTES.HOME);
   });
 
   it('pushes to HOME on restore (file)', () => {
     render(<SignInNavigation />);
 
     fireEvent.click(screen.getByTestId('restore-file'));
-    expect(mockPush).toHaveBeenCalledWith(App.HOME_ROUTES.HOME);
+    expect(mockPush).toHaveBeenCalledWith(HOME_ROUTES.HOME);
   });
 
   it('does not render when sign-in progress is active', () => {

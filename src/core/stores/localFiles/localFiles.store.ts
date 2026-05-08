@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { LocalFilesStore, localFilesInitialState, LocalFilesActionTypes } from './localFiles.types';
+import { LocalFilesActionTypes, localFilesInitialState, LocalFilesStore } from './localFiles.types';
 
 /**
  * Safely revoke a blob URL to prevent memory leaks.

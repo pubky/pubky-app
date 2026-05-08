@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSettingsActions } from './useSettingsActions';
 
 const { mockSettingsController, mockIsAppError } = vi.hoisted(() => ({
@@ -18,11 +18,11 @@ const { mockSettingsController, mockIsAppError } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/settings/settings', () => ({
   SettingsController: mockSettingsController,
 }));
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/error/error.utils', () => ({
   isAppError: (...args: unknown[]) => mockIsAppError(...args),
 }));
 

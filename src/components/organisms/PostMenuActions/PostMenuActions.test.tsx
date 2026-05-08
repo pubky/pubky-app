@@ -1,7 +1,81 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostMenuActions } from './PostMenuActions';
+
+vi.mock('@/atoms/DropdownMenu/DropdownMenu', () => {
+  return {
+    DropdownMenu: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }) => (
+      <div data-testid="dropdown-menu" data-open={open.toString()}>
+        <button data-testid="dropdown-open-trigger" onClick={() => onOpenChange(true)} />
+        {children}
+      </div>
+    ),
+    DropdownMenuTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dropdown-trigger">{children}</div>
+    ),
+    DropdownMenuContent: ({
+      children,
+      align,
+      className,
+    }: {
+      children: React.ReactNode;
+      align: string;
+      className?: string;
+      onCloseAutoFocus?: (e: { preventDefault: () => void }) => void;
+    }) => (
+      <div data-testid="dropdown-content" data-align={align} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Sheet/Sheet', () => {
+  return {
+    Sheet: ({
+      children,
+      open,
+    }: {
+      children: React.ReactNode;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }) => (
+      <div data-testid="sheet" data-open={open.toString()}>
+        {children}
+      </div>
+    ),
+    SheetTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="sheet-trigger">{children}</div>
+    ),
+    SheetContent: ({
+      children,
+      side,
+    }: {
+      children: React.ReactNode;
+      side: string;
+      onOpenAutoFocus?: (e: { preventDefault: () => void }) => void;
+    }) => (
+      <div data-testid="sheet-content" data-side={side}>
+        {children}
+      </div>
+    ),
+    SheetHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-header">{children}</div>,
+    SheetTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="sheet-title" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 const mockUseIsMobile = vi.fn(() => false);
 const mockDeletePost = vi.fn();
@@ -11,13 +85,22 @@ const mockUsePostMenuActions = vi.fn((_postId: string) => ({
 }));
 const mockRequireAuth = vi.fn((action: () => void) => action());
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockUseIsMobile(),
+}));
+
+vi.mock('@/hooks/usePostMenuActions/usePostMenuActions', () => ({
   usePostMenuActions: (postId: string) => mockUsePostMenuActions(postId),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
     requireAuth: mockRequireAuth,
   }),
+}));
+
+vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: vi.fn(() => ({
     deletePost: mockDeletePost,
     isDeleting: false,
@@ -25,51 +108,53 @@ vi.mock('@/hooks', () => ({
 }));
 
 // Mock DialogReportPost and DialogEditPost
-vi.mock('@/organisms', () => ({
-  DialogReportPost: ({ open, postId }: { open: boolean; onOpenChange: (open: boolean) => void; postId: string }) => (
-    <div data-testid="dialog-report-post" data-open={open.toString()} data-post-id={postId}>
-      DialogReportPost
-    </div>
-  ),
-  DialogEditPost: ({
-    open,
-    postId,
-  }: {
-    open: boolean;
-    onOpenChangeAction: (open: boolean) => void;
-    postId: string;
-  }) => (
-    <div data-testid="dialog-edit-post" data-open={open.toString()} data-post-id={postId}>
-      DialogEditPost
-    </div>
-  ),
-}));
-
-vi.mock('@/molecules', () => ({
-  DialogConfirmDelete: ({
-    open,
-    onConfirm,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onConfirm: () => void;
-  }) => (
-    <div data-testid="dialog-confirm-delete" data-open={open.toString()}>
-      <button onClick={onConfirm} data-testid="confirm-delete-button">
-        Confirm Delete
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/organisms/DialogEditPost/DialogEditPost', () => {
   return {
-    ...actual,
+    DialogEditPost: ({
+      open,
+      postId,
+    }: {
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+      postId: string;
+    }) => (
+      <div data-testid="dialog-edit-post" data-open={open.toString()} data-post-id={postId}>
+        DialogEditPost
+      </div>
+    ),
   };
 });
 
-vi.mock('./PostMenuActionsContent', () => ({
+vi.mock('@/organisms/DialogReportPost/DialogReportPost', () => {
+  return {
+    DialogReportPost: ({ open, postId }: { open: boolean; onOpenChange: (open: boolean) => void; postId: string }) => (
+      <div data-testid="dialog-report-post" data-open={open.toString()} data-post-id={postId}>
+        DialogReportPost
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => {
+  return {
+    DialogConfirmDelete: ({
+      open,
+      onConfirm,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onConfirm: () => void;
+    }) => (
+      <div data-testid="dialog-confirm-delete" data-open={open.toString()}>
+        <button onClick={onConfirm} data-testid="confirm-delete-button">
+          Confirm Delete
+        </button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('./PostMenuActionsContent/PostMenuActionsContent', () => ({
   PostMenuActionsContent: ({
     postId,
     variant,
@@ -101,90 +186,40 @@ vi.mock('./PostMenuActionsContent', () => ({
   ),
 }));
 
-vi.mock('@/atoms', () => ({
-  Sheet: ({ children, open }: { children: React.ReactNode; open: boolean; onOpenChange: (open: boolean) => void }) => (
-    <div data-testid="sheet" data-open={open.toString()}>
-      {children}
-    </div>
-  ),
-  SheetTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="sheet-trigger">{children}</div>
-  ),
-  SheetContent: ({
-    children,
-    side,
-  }: {
-    children: React.ReactNode;
-    side: string;
-    onOpenAutoFocus?: (e: { preventDefault: () => void }) => void;
-  }) => (
-    <div data-testid="sheet-content" data-side={side}>
-      {children}
-    </div>
-  ),
-  SheetHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-header">{children}</div>,
-  SheetTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="sheet-title" className={className}>
-      {children}
-    </div>
-  ),
-  DropdownMenu: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-  }) => (
-    <div data-testid="dropdown-menu" data-open={open.toString()}>
-      <button data-testid="dropdown-open-trigger" onClick={() => onOpenChange(true)} />
-      {children}
-    </div>
-  ),
-  DropdownMenuTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dropdown-trigger">{children}</div>
-  ),
-  DropdownMenuContent: ({
-    children,
-    align,
-    className,
-  }: {
-    children: React.ReactNode;
-    align: string;
-    className?: string;
-    onCloseAutoFocus?: (e: { preventDefault: () => void }) => void;
-  }) => (
-    <div data-testid="dropdown-content" data-align={align} className={className}>
-      {children}
-    </div>
-  ),
-  Container: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    onClick,
-    'aria-label': ariaLabel,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    'aria-label'?: string;
-  }) => (
-    <button onClick={onClick} aria-label={ariaLabel} data-testid="button">
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      'aria-label': ariaLabel,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      'aria-label'?: string;
+    }) => (
+      <button onClick={onClick} aria-label={ariaLabel} data-testid="button">
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('PostMenuActions', () => {
   beforeEach(() => {

@@ -1,11 +1,11 @@
-import {
-  type SettingsStore,
-  type SettingsActions,
-  type SettingsState,
-  settingsInitialState,
-  SettingsActionTypes,
-} from './settings.types';
 import { type ZustandSet } from '../stores.types';
+import {
+  type SettingsActions,
+  SettingsActionTypes,
+  settingsInitialState,
+  type SettingsState,
+  type SettingsStore,
+} from './settings.types';
 
 // Helper to update state with timestamp
 const withTimestamp = <T extends object>(updates: T): T & { updatedAt: number } => ({

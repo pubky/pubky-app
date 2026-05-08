@@ -1,80 +1,92 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { UserListItem } from './UserListItem';
 import type { UserListItemData } from './UserListItem.types';
 
 // Mock Hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({ requireAuth: (fn: () => void) => fn() }),
+}));
+
+vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
   useTtlSubscription: () => ({ ref: () => {} }),
 }));
 
 // Mock Atoms - lightweight pass-through components
-vi.mock('@/atoms', () => ({
-  Button: ({
-    children,
-    variant,
-    size,
-    overrideDefaults: _overrideDefaults,
-    ...rest
-  }: React.PropsWithChildren<Record<string, unknown>>) => (
-    <button data-size={size} data-variant={variant} {...rest}>
-      {children}
-    </button>
-  ),
-  Container: ({
-    children,
-    overrideDefaults: _overrideDefaults,
-    ...rest
-  }: React.PropsWithChildren<Record<string, unknown>>) => <div {...rest}>{children}</div>,
-  Typography: ({
-    children,
-    as: Tag = 'span',
-    overrideDefaults: _overrideDefaults,
-    size: _size,
-    ...rest
-  }: React.PropsWithChildren<{ as?: React.ElementType } & Record<string, unknown>>) => {
-    const Component = Tag as React.ElementType;
-    return <Component {...rest}>{children}</Component>;
-  },
-  Link: ({
-    children,
-    overrideDefaults: _overrideDefaults,
-    ...rest
-  }: React.PropsWithChildren<Record<string, unknown>>) => <a {...rest}>{children}</a>,
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      overrideDefaults: _overrideDefaults,
+      ...rest
+    }: React.PropsWithChildren<Record<string, unknown>>) => (
+      <button data-size={size} data-variant={variant} {...rest}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      overrideDefaults: _overrideDefaults,
+      ...rest
+    }: React.PropsWithChildren<Record<string, unknown>>) => <div {...rest}>{children}</div>,
+  };
+});
+
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({
+      children,
+      overrideDefaults: _overrideDefaults,
+      ...rest
+    }: React.PropsWithChildren<Record<string, unknown>>) => <a {...rest}>{children}</a>,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: Tag = 'span',
+      overrideDefaults: _overrideDefaults,
+      size: _size,
+      ...rest
+    }: React.PropsWithChildren<{ as?: React.ElementType } & Record<string, unknown>>) => {
+      const Component = Tag as React.ElementType;
+      return <Component {...rest}>{children}</Component>;
+    },
+  };
+});
 
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: () => <div data-testid="avatar" />,
-  ClickableTagsList: () => <div data-testid="tags-list" />,
-}));
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: () => <div data-testid="avatar" />,
+  };
+});
 
-// Mock Libs
-vi.mock('@/libs', () => ({
-  formatPublicKey: ({ key }: { key: string }) => `pk:${key.slice(0, 8)}`,
-  cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
-  Check: (props: Record<string, unknown>) => <svg data-testid="check-icon" {...props} />,
-  UserMinus: (props: Record<string, unknown>) => <svg data-testid="user-minus-icon" {...props} />,
-  UserRoundPlus: (props: Record<string, unknown>) => <svg data-testid="user-round-plus-icon" {...props} />,
-  UserRound: (props: Record<string, unknown>) => <svg data-testid="user-round-icon" {...props} />,
-  CircleUserRound: (props: Record<string, unknown>) => <svg data-testid="circle-user-round" {...props} />,
-  Tag: (props: Record<string, unknown>) => <svg data-testid="tag-icon" {...props} />,
-  StickyNote: (props: Record<string, unknown>) => <svg data-testid="sticky-note-icon" {...props} />,
-  Loader2: (props: Record<string, unknown>) => <svg data-testid="loader-icon" {...props} />,
-}));
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
+  return {
+    ClickableTagsList: () => <div data-testid="tags-list" />,
+  };
+});
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/application/tag/tag.types', () => ({
   TagKind: { USER: 'user' },
 }));
 
 // Mock Config
-vi.mock('@/config', () => ({
+vi.mock('@/config/tags', () => ({
   USER_LIST_TAG_MAX_LENGTH: 8,
   USER_LIST_TAGS_MAX_TOTAL_CHARS: 20,
-  USER_LIST_TAGS_MAX_COUNT: 3,
 }));
 
 const mockUser: UserListItemData = {
@@ -115,7 +127,8 @@ describe('UserListItem - followButtonVariant', () => {
     );
 
     // iconWithText variant shows both icon and visible "Follow" text
-    expect(screen.getByTestId('user-round-plus-icon')).toBeInTheDocument();
+    const followBtn = screen.getByRole('button', { name: /^Follow$/i });
+    expect(followBtn.querySelector('.lucide-user-round-plus')).toBeInTheDocument();
     expect(screen.getAllByText('Follow').length).toBeGreaterThan(0);
   });
 
@@ -129,12 +142,12 @@ describe('UserListItem - followButtonVariant', () => {
       />,
     );
 
-    // iconWithText + isFollowing shows Check icon and "Following" text
-    expect(screen.getByTestId('check-icon')).toBeInTheDocument();
     const followingText = screen.getByText('Following');
     expect(followingText).toBeInTheDocument();
+    const followToggle = followingText.closest('button') as HTMLButtonElement;
+    expect(followToggle.querySelector('.lucide-check')).toBeInTheDocument();
     // Hover state also renders "Unfollow" text and UserMinus icon
-    expect(screen.getByTestId('user-minus-icon')).toBeInTheDocument();
+    expect(followToggle.querySelector('.lucide-user-minus')).toBeInTheDocument();
     const unfollowText = screen.getByText('Unfollow');
     expect(unfollowText).toBeInTheDocument();
 

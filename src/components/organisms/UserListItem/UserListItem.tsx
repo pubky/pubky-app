@@ -1,19 +1,25 @@
 'use client';
 
+import { Check, Loader2, StickyNote, Tag, UserMinus, UserRound, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
-import * as Core from '@/core';
+import { TagKind } from '@/application/tag/tag.types';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Link } from '@/atoms/Link/Link';
+import { Typography } from '@/atoms/Typography/Typography';
+import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
+import { ClickableTagsList } from '../ClickableTagsList/ClickableTagsList';
 import type {
-  UserListItemProps,
   FollowButtonProps,
   StatsSubtitleProps,
+  UserListItemProps,
   UserStatsProps,
   VariantProps,
 } from './UserListItem.types';
-import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS, USER_LIST_TAGS_MAX_COUNT } from '@/config';
 
 // =============================================================================
 // Internal Components
@@ -27,10 +33,9 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
   const t = useTranslations('userList');
   // Show loading if action is in progress OR if status is still being loaded
   const showLoading = isLoading || isStatusLoading;
-
   if (variant === 'icon') {
     return (
-      <Atoms.Button
+      <Button
         data-cy="user-list-item-follow-toggle-btn"
         variant="secondary"
         size="icon"
@@ -40,22 +45,22 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
         aria-label={isFollowing ? `${t('unfollow')} ${displayName}` : `${t('follow')} ${displayName}`}
       >
         {showLoading ? (
-          <Libs.Loader2 className="size-5 animate-spin" />
+          <Loader2 className="size-5 animate-spin" />
         ) : isFollowing ? (
           <>
-            <Libs.Check className="size-5 group-hover:hidden" />
-            <Libs.UserMinus className="hidden size-5 group-hover:block" />
+            <Check className="size-5 group-hover:hidden" />
+            <UserMinus className="hidden size-5 group-hover:block" />
           </>
         ) : (
-          <Libs.UserRoundPlus className="size-5" />
+          <UserRoundPlus className="size-5" />
         )}
-      </Atoms.Button>
+      </Button>
     );
   }
 
   // iconWithText variant with hover states
   return (
-    <Atoms.Button
+    <Button
       data-cy="user-list-item-follow-toggle-btn"
       variant="secondary"
       size="sm"
@@ -65,31 +70,31 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
       aria-label={isFollowing ? t('unfollow') : t('follow')}
     >
       {showLoading ? (
-        <Libs.Loader2 className="size-4 animate-spin" />
+        <Loader2 className="size-4 animate-spin" />
       ) : isFollowing ? (
         <>
-          <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
-            <Libs.Check className="size-4" />
+          <Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
+            <Check className="size-4" />
             <span>{t('following')}</span>
-          </Atoms.Container>
-          <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
-            <Libs.UserMinus className="size-4" />
+          </Container>
+          <Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
+            <UserMinus className="size-4" />
             <span>{t('unfollow')}</span>
-          </Atoms.Container>
+          </Container>
         </>
       ) : (
         <>
-          <Atoms.Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
-            <Libs.UserRoundPlus className="size-4" />
+          <Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
+            <UserRoundPlus className="size-4" />
             <span>{t('follow')}</span>
-          </Atoms.Container>
-          <Atoms.Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
-            <Libs.Check className="size-4" />
+          </Container>
+          <Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
+            <Check className="size-4" />
             <span>{t('follow')}</span>
-          </Atoms.Container>
+          </Container>
         </>
       )}
-    </Atoms.Button>
+    </Button>
   );
 }
 
@@ -100,35 +105,33 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
 function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 'icon'; className?: string }) {
   const t = useTranslations('userList');
   const tProfile = useTranslations('profile.actions');
-
   if (variant === 'icon') {
     return (
-      <Atoms.Button
+      <Button
         data-cy="user-list-item-me-btn"
         variant="secondary"
         size="icon"
-        className={Libs.cn(
+        className={cn(
           'size-8 shrink-0 cursor-not-allowed border-none bg-transparent p-1 opacity-100 hover:bg-transparent',
           className,
         )}
         aria-label={tProfile('thisIsYou')}
       >
-        <Libs.UserRound strokeWidth={2} className="size-5" />
-      </Atoms.Button>
+        <UserRound strokeWidth={2} className="size-5" />
+      </Button>
     );
   }
-
   return (
-    <Atoms.Button
+    <Button
       data-cy="user-list-item-me-btn"
       variant="secondary"
       size="sm"
-      className={Libs.cn('w-[110px] cursor-not-allowed justify-center text-muted-foreground opacity-50', className)}
+      className={cn('w-[110px] cursor-not-allowed justify-center text-muted-foreground opacity-50', className)}
       disabled
       aria-label={tProfile('thisIsYou')}
     >
       <span>{t('me')}</span>
-    </Atoms.Button>
+    </Button>
   );
 }
 
@@ -138,23 +141,23 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
  */
 function StatsSubtitle({ tags, posts }: StatsSubtitleProps) {
   return (
-    <Atoms.Container
+    <Container
       overrideDefaults
       className="flex items-center gap-3 text-xs font-medium tracking-[1.2px] text-muted-foreground"
     >
-      <Atoms.Container overrideDefaults className="flex items-center gap-1">
-        <Libs.Tag className="size-3" />
-        <Atoms.Typography as="span" overrideDefaults>
+      <Container overrideDefaults className="flex items-center gap-1">
+        <Tag className="size-3" />
+        <Typography as="span" overrideDefaults>
           {tags}
-        </Atoms.Typography>
-      </Atoms.Container>
-      <Atoms.Container overrideDefaults className="flex items-center gap-1">
-        <Libs.StickyNote className="size-3" />
-        <Atoms.Typography as="span" overrideDefaults>
+        </Typography>
+      </Container>
+      <Container overrideDefaults className="flex items-center gap-1">
+        <StickyNote className="size-3" />
+        <Typography as="span" overrideDefaults>
           {posts}
-        </Atoms.Typography>
-      </Atoms.Container>
-    </Atoms.Container>
+        </Typography>
+      </Container>
+    </Container>
   );
 }
 
@@ -164,26 +167,25 @@ function StatsSubtitle({ tags, posts }: StatsSubtitleProps) {
  */
 function UserStats({ tags, posts }: UserStatsProps) {
   const t = useTranslations('userList');
-
   return (
-    <Atoms.Container overrideDefaults className="flex shrink-0 items-center gap-3">
-      <Atoms.Container className="items-start">
-        <Atoms.Typography className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
+    <Container overrideDefaults className="flex shrink-0 items-center gap-3">
+      <Container className="items-start">
+        <Typography className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
           {t('tags')}
-        </Atoms.Typography>
-        <Atoms.Typography data-cy="profile-follower-item-tags-count" size="sm" className="font-bold">
+        </Typography>
+        <Typography data-cy="profile-follower-item-tags-count" size="sm" className="font-bold">
           {tags}
-        </Atoms.Typography>
-      </Atoms.Container>
-      <Atoms.Container className="items-start">
-        <Atoms.Typography className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
+        </Typography>
+      </Container>
+      <Container className="items-start">
+        <Typography className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
           {t('posts')}
-        </Atoms.Typography>
-        <Atoms.Typography data-cy="profile-follower-item-posts-count" size="sm" className="font-bold">
+        </Typography>
+        <Typography data-cy="profile-follower-item-posts-count" size="sm" className="font-bold">
           {posts}
-        </Atoms.Typography>
-      </Atoms.Container>
-    </Atoms.Container>
+        </Typography>
+      </Container>
+    </Container>
   );
 }
 
@@ -193,10 +195,9 @@ function UserStats({ tags, posts }: UserStatsProps) {
  */
 function TagsList({ userId, className }: { userId: string; className?: string }) {
   return (
-    <Organisms.ClickableTagsList
+    <ClickableTagsList
       taggedId={userId}
-      taggedKind={Core.TagKind.USER}
-      maxTags={USER_LIST_TAGS_MAX_COUNT}
+      taggedKind={TagKind.USER}
       maxTagLength={USER_LIST_TAG_MAX_LENGTH}
       maxTotalChars={USER_LIST_TAGS_MAX_TOTAL_CHARS}
       showCount={false}
@@ -232,20 +233,20 @@ function CompactVariant({
   ttlRef,
 }: VariantProps) {
   return (
-    <Atoms.Container
+    <Container
       ref={ttlRef}
       overrideDefaults
-      className={Libs.cn('flex w-full items-center gap-2', className)}
+      className={cn('flex w-full items-center gap-2', className)}
       data-testid={dataTestId || `user-list-item-${user.id}`}
     >
       {/* Clickable user area */}
-      <Atoms.Button
+      <Button
         overrideDefaults
         onClick={onUserClick}
         className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left transition-opacity hover:opacity-80"
         aria-label={`View ${displayName}'s profile`}
       >
-        <Organisms.AvatarWithFallback
+        <AvatarWithFallback
           avatarUrl={avatarUrl}
           name={displayName}
           fallbackSeed={user.id}
@@ -253,23 +254,23 @@ function CompactVariant({
           className="shrink-0"
         />
 
-        <Atoms.Container overrideDefaults className="flex max-w-25 min-w-0 flex-1 flex-col">
-          <Atoms.Typography as="span" overrideDefaults className="truncate text-sm font-bold text-foreground">
+        <Container overrideDefaults className="flex max-w-25 min-w-0 flex-1 flex-col">
+          <Typography as="span" overrideDefaults className="truncate text-sm font-bold text-foreground">
             {displayName}
-          </Atoms.Typography>
+          </Typography>
           {showStats ? (
             <StatsSubtitle tags={stats.tags} posts={stats.posts} />
           ) : (
-            <Atoms.Typography
+            <Typography
               as="span"
               overrideDefaults
               className="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
             >
               {formattedPublicKey}
-            </Atoms.Typography>
+            </Typography>
           )}
-        </Atoms.Container>
-      </Atoms.Button>
+        </Container>
+      </Button>
 
       {/* Follow button or Me button */}
       {isCurrentUser ? (
@@ -284,7 +285,7 @@ function CompactVariant({
           onClick={onFollowClick}
         />
       )}
-    </Atoms.Container>
+    </Container>
   );
 }
 
@@ -309,25 +310,25 @@ function FullVariant({
   ttlRef,
 }: VariantProps) {
   return (
-    <Atoms.Container
+    <Container
       ref={ttlRef}
-      className={Libs.cn('gap-3 rounded-md bg-card p-6 lg:bg-transparent lg:p-0', className)}
+      className={cn('gap-3 rounded-md bg-card p-6 lg:bg-transparent lg:p-0', className)}
       data-testid={dataTestId || `user-list-item-${user.id}`}
     >
       {/* Main row */}
-      <Atoms.Container overrideDefaults className="flex flex-wrap items-center justify-between gap-6 lg:flex-nowrap">
+      <Container overrideDefaults className="flex flex-wrap items-center justify-between gap-6 lg:flex-nowrap">
         {/* User info */}
-        <Atoms.Link href={`/profile/${user.id}`} className="flex min-w-0 flex-1 items-center gap-2">
-          <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={displayName} fallbackSeed={user.id} size="md" />
-          <Atoms.Container overrideDefaults className="min-w-0 flex-1 truncate">
-            <Atoms.Typography data-cy="profile-follower-item-name" size="sm" className="truncate font-bold">
+        <Link href={`/profile/${user.id}`} className="flex min-w-0 flex-1 items-center gap-2">
+          <AvatarWithFallback avatarUrl={avatarUrl} name={displayName} fallbackSeed={user.id} size="md" />
+          <Container overrideDefaults className="min-w-0 flex-1 truncate">
+            <Typography data-cy="profile-follower-item-name" size="sm" className="truncate font-bold">
               {displayName}
-            </Atoms.Typography>
-            <Atoms.Typography className="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
+            </Typography>
+            <Typography className="truncate text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
               {formattedPublicKey}
-            </Atoms.Typography>
-          </Atoms.Container>
-        </Atoms.Link>
+            </Typography>
+          </Container>
+        </Link>
 
         {/* Desktop: Tags — constrained pills prevent overlay */}
         <TagsList userId={user.id} className="hidden flex-nowrap justify-end *:max-w-[135px] xl:flex" />
@@ -339,7 +340,7 @@ function FullVariant({
         {isCurrentUser ? (
           <MeButton variant={followButtonVariant} className="hidden lg:flex" />
         ) : (
-          <Atoms.Container overrideDefaults className="hidden lg:flex">
+          <Container overrideDefaults className="hidden lg:flex">
             <FollowButton
               isFollowing={isFollowing}
               isLoading={isLoading}
@@ -348,14 +349,14 @@ function FullVariant({
               variant={followButtonVariant}
               onClick={onFollowClick}
             />
-          </Atoms.Container>
+          </Container>
         )}
-      </Atoms.Container>
+      </Container>
 
       {/* Mobile: Bottom row */}
-      <Atoms.Container overrideDefaults className="flex flex-wrap items-center gap-3 lg:hidden">
+      <Container overrideDefaults className="flex flex-wrap items-center gap-3 lg:hidden">
         <TagsList userId={user.id} className="flex-1" />
-        <Atoms.Container overrideDefaults className="ml-auto">
+        <Container overrideDefaults className="ml-auto">
           {isCurrentUser ? (
             <MeButton variant={followButtonVariant} />
           ) : (
@@ -368,9 +369,9 @@ function FullVariant({
               onClick={onFollowClick}
             />
           )}
-        </Atoms.Container>
-      </Atoms.Container>
-    </Atoms.Container>
+        </Container>
+      </Container>
+    </Container>
   );
 }
 
@@ -405,22 +406,31 @@ export function UserListItem({
   'data-testid': dataTestId,
 }: UserListItemProps) {
   // Auth requirement for follow action
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { requireAuth } = useRequireAuth();
 
   // Subscribe to TTL coordinator based on viewport visibility
-  const { ref: ttlRef } = Hooks.useTtlSubscription({
+  const { ref: ttlRef } = useTtlSubscription({
     type: 'user',
     id: user.id,
   });
 
   // Normalize user data
   const avatarUrl = user.avatarUrl || user.image || undefined;
-  const displayName = user.name || Libs.formatPublicKey({ key: user.id });
-  const formattedPublicKey = Libs.formatPublicKey({ key: user.id });
+  const displayName =
+    user.name ||
+    formatPublicKey({
+      key: user.id,
+    });
+  const formattedPublicKey = formatPublicKey({
+    key: user.id,
+  });
   const tags = user.tags || [];
-  const stats = user.stats || user.counts || { tags: 0, posts: 0 };
+  const stats = user.stats ||
+    user.counts || {
+      tags: 0,
+      posts: 0,
+    };
   const isFollowing = isFollowingProp ?? user.isFollowing ?? false;
-
   const handleUserClick = () => {
     onUserClick?.(user.id);
   };
@@ -431,7 +441,6 @@ export function UserListItem({
     e.stopPropagation();
     requireAuth(() => onFollowClick?.(user.id, isFollowing));
   };
-
   const commonProps: VariantProps = {
     user,
     avatarUrl,
@@ -451,10 +460,8 @@ export function UserListItem({
     onFollowClick: handleFollowClick,
     ttlRef,
   };
-
   if (variant === 'compact') {
     return <CompactVariant {...commonProps} />;
   }
-
   return <FullVariant {...commonProps} />;
 }

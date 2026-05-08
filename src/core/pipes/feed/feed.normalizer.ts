@@ -1,10 +1,15 @@
 import { FeedResult } from 'pubky-app-specs';
-import * as Core from '@/core';
-import { Err, ValidationErrorCode, ErrorService } from '@/libs';
+import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { layoutToString, postKindToString, reachToString, sortToString } from '@/models/feed/feed.helpers';
+import type { Pubky } from '@/models/models.types';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 
 export type TFeedNormalizerInput = {
-  params: Core.TFeedCreateParams;
-  userId: Core.Pubky;
+  params: TFeedCreateParams;
+  userId: Pubky;
 };
 
 export class FeedNormalizer {
@@ -15,15 +20,15 @@ export class FeedNormalizer {
       // Normalize tags to ensure consistent format: lowercase, trim whitespace, remove duplicates and empty strings
       const normalizedTags = [...new Set(params.tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0))];
 
-      const content = params.content !== null ? Core.postKindToString(params.content) : null;
+      const content = params.content !== null ? postKindToString(params.content) : null;
 
-      const builder = Core.PubkySpecsSingleton.get(userId);
+      const builder = PubkySpecsSingleton.get(userId);
 
       return builder.createFeed(
         normalizedTags,
-        Core.reachToString(params.reach),
-        Core.layoutToString(params.layout),
-        Core.sortToString(params.sort),
+        reachToString(params.reach),
+        layoutToString(params.layout),
+        sortToString(params.sort),
         content,
         params.name.trim(),
       );

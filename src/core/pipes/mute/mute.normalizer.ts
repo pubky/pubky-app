@@ -1,13 +1,17 @@
 import { MuteResult } from 'pubky-app-specs';
-import * as Core from '@/core';
-import { Err, ValidationErrorCode, ErrorService, stripPubkyPrefix } from '@/libs';
+import type { TMuteParams } from '@/controllers/mute/mute.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 
 export class MuteNormalizer {
   private constructor() {}
 
-  static to({ muter, mutee }: Core.TMuteParams): MuteResult {
+  static to({ muter, mutee }: TMuteParams): MuteResult {
     try {
-      const builder = Core.PubkySpecsSingleton.get(muter);
+      const builder = PubkySpecsSingleton.get(muter);
       // Strip any prefix (pubky or pk:) from the mutee ID before passing to createMute
       // pubky-app-specs expects a raw 52-character z-base-32 encoded public key
       const normalizedMutee = stripPubkyPrefix(mutee);

@@ -1,31 +1,34 @@
 'use client';
-
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import * as Libs from '@/libs';
-import * as Config from '@/config';
 import { useTranslations } from 'next-intl';
+import { Container } from '@/atoms/Container/Container';
+import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
+import { Link } from '@/atoms/Link/Link';
+import { PUBKY_CORE_URL } from '@/config/externalLinks';
+import { cn } from '@/libs/utils/utils';
+import { DialogAge } from '@/organisms/DialogAge/DialogAge';
+import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
+import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 
 export const HumanFooter = () => {
   const t = useTranslations('onboarding.footer');
   return (
-    <Atoms.Container className={Libs.cn('flex-col gap-0 py-6')}>
-      <Atoms.FooterLinks>
+    <Container className={cn('flex-col gap-0 py-6')}>
+      <FooterLinks>
         {t.rich('agreement', {
           pubky: () => <span className="text-brand">Pubky</span>,
         })}{' '}
-        <Organisms.DialogTerms />, <Organisms.DialogPrivacy />
-        {t('andConfirmAge')} <Organisms.DialogAge />
-      </Atoms.FooterLinks>
-      <Atoms.FooterLinks>
+        <DialogTerms />, <DialogPrivacy />
+        {t('andConfirmAge')} <DialogAge />
+      </FooterLinks>
+      <FooterLinks>
         {t.rich('copyright', {
           pubkyCore: (chunks) => (
-            <Atoms.Link href={Config.PUBKY_CORE_URL} target="_blank">
+            <Link href={PUBKY_CORE_URL} target="_blank">
               {chunks}
-            </Atoms.Link>
+            </Link>
           ),
         })}
-      </Atoms.FooterLinks>
-    </Atoms.Container>
+      </FooterLinks>
+    </Container>
   );
 };

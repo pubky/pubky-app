@@ -1,32 +1,34 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { STATUS_EMOJIS, STATUS_LABELS } from '@/libs/status/status.constants';
 import { StatusPickerContent } from './StatusPickerContent';
-import * as Libs from '@/libs';
 
 // Mock EmojiPickerDialog
-vi.mock('@/components/molecules', () => ({
-  EmojiPickerDialog: ({
-    open,
-    onOpenChange,
-    onEmojiSelect,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onEmojiSelect: (emoji: { native: string }) => void;
-  }) => {
-    if (!open) return null;
-    return (
-      <div data-testid="emoji-picker-dialog">
-        <button data-testid="emoji-select-button" onClick={() => onEmojiSelect({ native: '😊' })}>
-          Select Emoji
-        </button>
-        <button data-testid="emoji-close-button" onClick={() => onOpenChange(false)}>
-          Close
-        </button>
-      </div>
-    );
-  },
-}));
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
+  return {
+    EmojiPickerDialog: ({
+      open,
+      onOpenChange,
+      onEmojiSelect,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onEmojiSelect: (emoji: { native: string }) => void;
+    }) => {
+      if (!open) return null;
+      return (
+        <div data-testid="emoji-picker-dialog">
+          <button data-testid="emoji-select-button" onClick={() => onEmojiSelect({ native: '😊' })}>
+            Select Emoji
+          </button>
+          <button data-testid="emoji-close-button" onClick={() => onOpenChange(false)}>
+            Close
+          </button>
+        </div>
+      );
+    },
+  };
+});
 
 describe('StatusPickerContent', () => {
   const mockOnStatusSelect = vi.fn();
@@ -39,22 +41,22 @@ describe('StatusPickerContent', () => {
     it('renders all predefined status options', () => {
       render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} />);
 
-      expect(screen.getByText(Libs.STATUS_LABELS.available)).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_LABELS.away)).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_LABELS.vacationing)).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_LABELS.working)).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_LABELS.traveling)).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_LABELS.celebrating)).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_LABELS.sick)).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_LABELS.noStatus)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_LABELS.available)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_LABELS.away)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_LABELS.vacationing)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_LABELS.working)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_LABELS.traveling)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_LABELS.celebrating)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_LABELS.sick)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_LABELS.noStatus)).toBeInTheDocument();
     });
 
     it('renders emojis for predefined statuses', () => {
       render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} />);
 
-      expect(screen.getByText(Libs.STATUS_EMOJIS.available)).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_EMOJIS.away)).toBeInTheDocument();
-      expect(screen.getByText(Libs.STATUS_EMOJIS.vacationing)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_EMOJIS.available)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_EMOJIS.away)).toBeInTheDocument();
+      expect(screen.getByText(STATUS_EMOJIS.vacationing)).toBeInTheDocument();
     });
 
     it('renders custom status section', () => {
@@ -68,7 +70,7 @@ describe('StatusPickerContent', () => {
     it('shows checkmark for selected predefined status', () => {
       render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} currentStatus="available" />);
 
-      const availableButton = screen.getByText(Libs.STATUS_LABELS.available).closest('button');
+      const availableButton = screen.getByText(STATUS_LABELS.available).closest('button');
       expect(availableButton).toBeInTheDocument();
       // Check icon should be present (lucide-react Check icon)
       const checkIcon = availableButton?.querySelector('svg');
@@ -78,7 +80,7 @@ describe('StatusPickerContent', () => {
     it('does not show checkmark for non-selected statuses', () => {
       render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} currentStatus="available" />);
 
-      const awayButton = screen.getByText(Libs.STATUS_LABELS.away).closest('button');
+      const awayButton = screen.getByText(STATUS_LABELS.away).closest('button');
       const checkIcon = awayButton?.querySelector('svg');
       // Should not have check icon
       expect(checkIcon).not.toBeInTheDocument();
@@ -89,7 +91,7 @@ describe('StatusPickerContent', () => {
     it('calls onStatusSelect when a predefined status is clicked', () => {
       render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} />);
 
-      const availableButton = screen.getByText(Libs.STATUS_LABELS.available).closest('button');
+      const availableButton = screen.getByText(STATUS_LABELS.available).closest('button');
       fireEvent.click(availableButton!);
 
       expect(mockOnStatusSelect).toHaveBeenCalledTimes(1);
@@ -102,7 +104,7 @@ describe('StatusPickerContent', () => {
       const input = screen.getByPlaceholderText('Add status');
       fireEvent.change(input, { target: { value: 'Custom text' } });
 
-      const availableButton = screen.getByText(Libs.STATUS_LABELS.available).closest('button');
+      const availableButton = screen.getByText(STATUS_LABELS.available).closest('button');
       fireEvent.click(availableButton!);
 
       expect(input).toHaveValue('');
@@ -327,7 +329,7 @@ describe('StatusPickerContent', () => {
     it('initializes with predefined status when currentStatus is provided', () => {
       render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} currentStatus="available" />);
 
-      const availableButton = screen.getByText(Libs.STATUS_LABELS.available).closest('button');
+      const availableButton = screen.getByText(STATUS_LABELS.available).closest('button');
       const checkIcon = availableButton?.querySelector('svg');
       expect(checkIcon).toBeInTheDocument();
     });
@@ -345,13 +347,13 @@ describe('StatusPickerContent', () => {
         <StatusPickerContent onStatusSelect={mockOnStatusSelect} currentStatus="available" />,
       );
 
-      let availableButton = screen.getByText(Libs.STATUS_LABELS.available).closest('button');
+      let availableButton = screen.getByText(STATUS_LABELS.available).closest('button');
       let checkIcon = availableButton?.querySelector('svg');
       expect(checkIcon).toBeInTheDocument();
 
       rerender(<StatusPickerContent onStatusSelect={mockOnStatusSelect} currentStatus="away" />);
 
-      const awayButton = screen.getByText(Libs.STATUS_LABELS.away).closest('button');
+      const awayButton = screen.getByText(STATUS_LABELS.away).closest('button');
       checkIcon = awayButton?.querySelector('svg');
       expect(checkIcon).toBeInTheDocument();
     });

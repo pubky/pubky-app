@@ -1,13 +1,17 @@
 import { BookmarkResult } from 'pubky-app-specs';
-import * as Core from '@/core';
-import { Logger, Err, ValidationErrorCode, ErrorService } from '@/libs';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 
 export class BookmarkNormalizer {
   private constructor() {}
 
-  static to(postUri: string, userId: Core.Pubky): BookmarkResult {
+  static to(postUri: string, userId: Pubky): BookmarkResult {
     try {
-      const builder = Core.PubkySpecsSingleton.get(userId);
+      const builder = PubkySpecsSingleton.get(userId);
       const result = builder.createBookmark(postUri);
       Logger.debug('Bookmark validated', { result });
       return result;

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { getButtonLabel } from './PostInputExpandableSection.utils';
+import { describe, expect, it } from 'vitest';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
+import { getButtonLabel } from './PostInputExpandableSection.utils';
 
 describe('getButtonLabel', () => {
   it('returns "Post" for POST variant', () => {

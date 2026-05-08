@@ -1,57 +1,45 @@
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { sortPostIdsByTimestamp } from '@/utils/sorting';
 import { useStreamPagination } from './useStreamPagination';
-import * as Core from '@/core';
 
-// Mock Core modules
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual('@/core');
-  return {
-    ...actual,
-    StreamPostsController: {
-      getCachedLastPostTimestamp: vi.fn(),
-      getOrFetchStreamSlice: vi.fn(),
-      prepareStreamForInitialLoad: vi.fn(),
-    },
-    PostDetailsModel: {
-      findByIdsPreserveOrder: vi.fn(),
-    },
-    sortPostIdsByTimestamp: vi.fn(),
-  };
-});
-
-// Mock Libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return {
-    ...actual,
-    Logger: {
-      debug: vi.fn(),
-      error: vi.fn(),
-    },
-    isAppError: vi.fn((error: unknown) => {
-      return typeof error === 'object' && error !== null && 'message' in error && 'type' in error;
-    }),
-  };
-});
+// Mock dependencies
+vi.mock('@/controllers/stream/posts/posts', () => ({
+  StreamPostsController: {
+    getCachedLastPostTimestamp: vi.fn(),
+    getOrFetchStreamSlice: vi.fn(),
+    prepareStreamForInitialLoad: vi.fn(),
+  },
+}));
+vi.mock('@/models/post/details/postDetails', () => ({
+  PostDetailsModel: {
+    findByIdsPreserveOrder: vi.fn(),
+  },
+}));
+vi.mock('@/utils/sorting', () => ({
+  sortPostIdsByTimestamp: vi.fn(),
+}));
 
 describe('useStreamPagination', () => {
-  const mockStreamId = 'timeline:all:all' as Core.PostStreamId;
+  const mockStreamId = 'timeline:all:all' as PostStreamId;
   const mockPostIds = ['post1', 'post2', 'post3'];
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Default mock implementations
-    vi.mocked(Core.StreamPostsController.prepareStreamForInitialLoad).mockResolvedValue(undefined);
-    vi.mocked(Core.StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
-    vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+    vi.mocked(StreamPostsController.prepareStreamForInitialLoad).mockResolvedValue(undefined);
+    vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+    vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
       nextPageIds: mockPostIds,
       timestamp: Date.now(),
     });
     // Mock PostDetailsModel to return posts with timestamps that preserve input order
     // (newer posts first = higher timestamps)
-    vi.mocked(Core.PostDetailsModel.findByIdsPreserveOrder).mockImplementation(async (ids) => {
+    vi.mocked(PostDetailsModel.findByIdsPreserveOrder).mockImplementation(async (ids) => {
       const now = Date.now();
       return ids.map((id, index) => ({
         id,
@@ -60,7 +48,7 @@ describe('useStreamPagination', () => {
     });
     // Mock sortPostIdsByTimestamp to preserve input order by default
     // (simulates already-sorted posts)
-    vi.mocked(Core.sortPostIdsByTimestamp).mockImplementation(async (ids: string[]) => ids);
+    vi.mocked(sortPostIdsByTimestamp).mockImplementation(async (ids: string[]) => ids);
   });
 
   describe('Initialization', () => {
@@ -88,7 +76,7 @@ describe('useStreamPagination', () => {
       );
 
       await waitFor(() => {
-        expect(Core.StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
           expect.objectContaining({
             limit: customLimit,
           }),
@@ -120,14 +108,14 @@ describe('useStreamPagination', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      expect(Core.StreamPostsController.getCachedLastPostTimestamp).toHaveBeenCalledWith({ streamId: mockStreamId });
-      expect(Core.StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalled();
+      expect(StreamPostsController.getCachedLastPostTimestamp).toHaveBeenCalledWith({ streamId: mockStreamId });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalled();
       expect(result.current.postIds).toEqual(mockPostIds);
       expect(result.current.error).toBeNull();
     });
 
     it('should set hasMore to false when no posts are returned', async () => {
-      vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: [],
         timestamp: Date.now(),
         reachedEnd: true, // Actual end of stream
@@ -148,7 +136,7 @@ describe('useStreamPagination', () => {
     });
 
     it('should keep hasMore true when empty results but not reached end', async () => {
-      vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: [],
         timestamp: Date.now(),
         reachedEnd: false, // Filters removed all posts, but more exist
@@ -170,7 +158,7 @@ describe('useStreamPagination', () => {
 
     it('should set hasMore based on response length vs limit', async () => {
       const limit = 30;
-      vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: Array(25).fill('post'),
         timestamp: Date.now(),
         reachedEnd: true, // Less than limit (30) means end of stream
@@ -193,7 +181,7 @@ describe('useStreamPagination', () => {
 
     it('should handle fetch errors gracefully', async () => {
       const errorMessage = 'Network error';
-      vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mockRejectedValue(new Error(errorMessage));
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockRejectedValue(new Error(errorMessage));
 
       const { result } = renderHook(() =>
         useStreamPagination({
@@ -228,7 +216,7 @@ describe('useStreamPagination', () => {
     });
 
     it('should not load more when hasMore is false', async () => {
-      vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['post1', 'post2'],
         timestamp: Date.now(),
         reachedEnd: true, // Less than limit (10) means end of stream
@@ -248,13 +236,13 @@ describe('useStreamPagination', () => {
       // reachedEnd: true means no more posts
       expect(result.current.hasMore).toBe(false);
 
-      const callCountBefore = vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mock.calls.length;
+      const callCountBefore = vi.mocked(StreamPostsController.getOrFetchStreamSlice).mock.calls.length;
 
       await act(async () => {
         await result.current.loadMore();
       });
 
-      const callCountAfter = vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mock.calls.length;
+      const callCountAfter = vi.mocked(StreamPostsController.getOrFetchStreamSlice).mock.calls.length;
 
       // Should not make additional calls
       expect(callCountAfter).toBe(callCountBefore);
@@ -286,14 +274,14 @@ describe('useStreamPagination', () => {
       });
 
       // Should have called getCachedLastPostTimestamp again
-      expect(Core.StreamPostsController.getCachedLastPostTimestamp).toHaveBeenCalledTimes(2);
+      expect(StreamPostsController.getCachedLastPostTimestamp).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('Stream Change', () => {
     it('should reset state when streamId changes with resetOnStreamChange=true', async () => {
-      const firstStreamId = 'timeline:all:all' as Core.PostStreamId;
-      const secondStreamId = 'timeline:following:all' as Core.PostStreamId;
+      const firstStreamId = 'timeline:all:all' as PostStreamId;
+      const secondStreamId = 'timeline:following:all' as PostStreamId;
 
       const { result, rerender } = renderHook(
         ({ streamId }) =>
@@ -322,7 +310,7 @@ describe('useStreamPagination', () => {
       });
 
       // Should have fetched for the new stream
-      expect(Core.StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
         expect.objectContaining({
           streamId: secondStreamId,
         }),
@@ -330,8 +318,8 @@ describe('useStreamPagination', () => {
     });
 
     it('should not reset state when streamId changes with resetOnStreamChange=false', async () => {
-      const firstStreamId = 'timeline:all:all' as Core.PostStreamId;
-      const secondStreamId = 'timeline:following:all' as Core.PostStreamId;
+      const firstStreamId = 'timeline:all:all' as PostStreamId;
+      const secondStreamId = 'timeline:following:all' as PostStreamId;
 
       const { result, rerender } = renderHook(
         ({ streamId }) =>
@@ -348,7 +336,7 @@ describe('useStreamPagination', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      const callCountBefore = vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mock.calls.length;
+      const callCountBefore = vi.mocked(StreamPostsController.getOrFetchStreamSlice).mock.calls.length;
 
       // Change stream
       rerender({ streamId: secondStreamId });
@@ -357,7 +345,7 @@ describe('useStreamPagination', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      const callCountAfter = vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mock.calls.length;
+      const callCountAfter = vi.mocked(StreamPostsController.getOrFetchStreamSlice).mock.calls.length;
 
       // Should still fetch for new stream
       expect(callCountAfter).toBeGreaterThan(callCountBefore);
@@ -366,9 +354,9 @@ describe('useStreamPagination', () => {
 
   describe('Engagement Stream Handling', () => {
     it('should handle engagement streams', async () => {
-      const engagementStreamId = 'engagement:all:all' as Core.PostStreamId;
+      const engagementStreamId = 'engagement:all:all' as PostStreamId;
 
-      vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['post1', 'post2', 'post3'],
         timestamp: undefined, // Engagement streams don't use timestamp
       });
@@ -384,7 +372,7 @@ describe('useStreamPagination', () => {
       });
 
       expect(result.current.postIds).toEqual(['post1', 'post2', 'post3']);
-      expect(Core.StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
         expect.objectContaining({
           streamId: engagementStreamId,
         }),
@@ -404,7 +392,7 @@ describe('useStreamPagination', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      expect(Core.StreamPostsController.prepareStreamForInitialLoad).toHaveBeenCalledWith({
+      expect(StreamPostsController.prepareStreamForInitialLoad).toHaveBeenCalledWith({
         streamId: mockStreamId,
       });
     });
@@ -421,16 +409,16 @@ describe('useStreamPagination', () => {
       });
 
       // Stream preparation should have been called
-      expect(Core.StreamPostsController.prepareStreamForInitialLoad).toHaveBeenCalled();
+      expect(StreamPostsController.prepareStreamForInitialLoad).toHaveBeenCalled();
 
       // Posts should still be fetched
-      expect(Core.StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalled();
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalled();
       expect(result.current.postIds).toEqual(mockPostIds);
     });
 
     it('should not call prepareStreamForInitialLoad on loadMore', async () => {
       const limit = 30;
-      vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: Array(limit).fill('post'),
         timestamp: Date.now(),
       });
@@ -447,7 +435,7 @@ describe('useStreamPagination', () => {
       });
 
       // Clear the mock calls from initial load
-      vi.mocked(Core.StreamPostsController.prepareStreamForInitialLoad).mockClear();
+      vi.mocked(StreamPostsController.prepareStreamForInitialLoad).mockClear();
 
       // Load more
       await act(async () => {
@@ -455,13 +443,13 @@ describe('useStreamPagination', () => {
       });
 
       // prepareStreamForInitialLoad should NOT be called on loadMore
-      expect(Core.StreamPostsController.prepareStreamForInitialLoad).not.toHaveBeenCalled();
+      expect(StreamPostsController.prepareStreamForInitialLoad).not.toHaveBeenCalled();
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle empty results with reachedEnd true', async () => {
-      vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: [],
         timestamp: Date.now(),
         reachedEnd: true,
@@ -482,7 +470,7 @@ describe('useStreamPagination', () => {
     });
 
     it('should handle empty results with reachedEnd false', async () => {
-      vi.mocked(Core.StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: [],
         timestamp: Date.now(),
         reachedEnd: false,
@@ -610,7 +598,7 @@ describe('useStreamPagination', () => {
 
     it('should sort prepended posts by timestamp', async () => {
       // Mock sortPostIdsByTimestamp to return posts sorted by timestamp
-      vi.mocked(Core.sortPostIdsByTimestamp).mockImplementation(async (ids: string[]) => {
+      vi.mocked(sortPostIdsByTimestamp).mockImplementation(async (ids: string[]) => {
         const timestampMap: Record<string, number> = {
           'old-post': 1000, // oldest
           'new-post': 3000, // newest
@@ -638,7 +626,7 @@ describe('useStreamPagination', () => {
 
     it('should fallback to unsorted when sorting fails', async () => {
       // Mock sortPostIdsByTimestamp to throw an error
-      vi.mocked(Core.sortPostIdsByTimestamp).mockRejectedValue(new Error('IndexedDB error'));
+      vi.mocked(sortPostIdsByTimestamp).mockRejectedValue(new Error('IndexedDB error'));
 
       const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
       await waitFor(() => expect(result.current.loading).toBe(false));

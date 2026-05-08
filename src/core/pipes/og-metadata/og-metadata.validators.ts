@@ -1,4 +1,7 @@
-import { Err, ValidationErrorCode, ErrorService, HttpStatusCode } from '@/libs';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 /**
  * OG metadata input validators.
@@ -90,8 +93,8 @@ export class OgMetadataValidators {
     }
 
     // IP addresses and localhost skip domain structure checks
-    // webpack bundles Node.js ONLY modules into client code via barrel imports
-    // (e.g., FilterContent.tsx's `import * as Core from '@/core'`). See #1435.
+    // Keep Node.js-only modules out of client bundles if this validator is imported from UI code.
+    // See #1435.
     const { isIP } = await import(/* webpackIgnore: true */ 'net');
     if (isIP(hostname) || hostname === 'localhost') {
       return;

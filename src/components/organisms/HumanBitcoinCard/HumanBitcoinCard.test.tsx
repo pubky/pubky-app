@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-
+import { describe, expect, it, vi } from 'vitest';
 import { HumanBitcoinCard } from './HumanBitcoinCard';
 
 vi.mock('next/image', () => ({
@@ -13,11 +12,11 @@ vi.mock('next/image', () => ({
 const mockUseBtcRate = vi.fn();
 const mockUseLnVerificationInfo = vi.fn();
 
-vi.mock('@/hooks/useSatUsdRate', () => ({
+vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
   useBtcRate: () => mockUseBtcRate(),
 }));
 
-vi.mock('@/hooks/useLnVerificationInfo', () => ({
+vi.mock('@/hooks/useLnVerificationInfo/useLnVerificationInfo', () => ({
   useLnVerificationInfo: () => mockUseLnVerificationInfo(),
 }));
 

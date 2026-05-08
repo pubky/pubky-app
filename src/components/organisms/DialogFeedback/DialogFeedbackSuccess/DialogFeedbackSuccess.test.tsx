@@ -1,60 +1,58 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogFeedbackSuccess } from './DialogFeedbackSuccess';
 
-// Mock atoms
-vi.mock('@/atoms', () => ({
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  ),
-  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-footer" className={className}>
-      {children}
-    </div>
-  ),
-  DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-close" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    onClick,
-    disabled,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-    disabled?: boolean;
-  }) => (
-    <button
-      data-testid="button"
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  ),
-}));
-
-// Mock libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
-    ...actual,
-    Check: () => <span data-testid="check-icon">✓</span>,
+    DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-footer" className={className}>
+        {children}
+      </div>
+    ),
+    DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-close" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+// Mock atoms
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      onClick,
+      disabled,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+    }) => (
+      <button
+        data-testid="button"
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {children}
+      </button>
+    ),
   };
 });
 
@@ -83,9 +81,9 @@ describe('DialogFeedbackSuccess', () => {
   });
 
   it('renders check icon', () => {
-    render(<DialogFeedbackSuccess onOpenChange={mockOnOpenChange} />);
+    const { container } = render(<DialogFeedbackSuccess onOpenChange={mockOnOpenChange} />);
 
-    expect(screen.getByTestId('check-icon')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-check')).toBeInTheDocument();
   });
 
   it('calls onOpenChange when close button is clicked', () => {

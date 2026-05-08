@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { FeedNavigation } from './FeedNavigation';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
-import type { FeedModelSchema } from '@/core/models/feed/feed.schema';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { FeedNavigation } from './FeedNavigation';
 
 // Mock next/navigation
 const mockUsePathname = vi.fn();
@@ -20,105 +20,117 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock @/core
+// Mock feed controller
 const mockGetList = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/feed/feed', () => ({
   FeedController: {
     getList: (...args: unknown[]) => mockGetList(...args),
   },
 }));
 
 // Mock @/atoms — lightweight forwarding mocks
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Link: ({
-    children,
-    href,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    href?: string;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <a data-testid="link" href={href} className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </a>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <button
-      data-testid="button"
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      data-override-defaults={overrideDefaults}
-    >
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <span data-testid="typography" className={className} data-override-defaults={overrideDefaults}>
-      {children}
-    </span>
-  ),
-  Heading: ({
-    children,
-    level,
-    size,
-    className,
-  }: {
-    children: React.ReactNode;
-    level?: number;
-    size?: string;
-    className?: string;
-  }) => (
-    <div data-testid="heading" data-level={level} data-size={size} className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <button
+        data-testid="button"
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        data-override-defaults={overrideDefaults}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({
+      children,
+      level,
+      size,
+      className,
+    }: {
+      children: React.ReactNode;
+      level?: number;
+      size?: string;
+      className?: string;
+    }) => (
+      <div data-testid="heading" data-level={level} data-size={size} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({
+      children,
+      href,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      href?: string;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <a data-testid="link" href={href} className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </a>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <span data-testid="typography" className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </span>
+    ),
+  };
+});
 
 // Mock @/organisms — CustomFeedDialog is a complex component; mock it as a transparent wrapper
-vi.mock('@/organisms', () => ({
-  CustomFeedDialog: ({ children, mode }: { children: React.ReactNode; mode: string }) => (
-    <div data-testid={`custom-feed-dialog-${mode}`}>{children}</div>
-  ),
-}));
-
-// Keep real @/libs (cn, icons, Logger) but spy on Logger.error
-vi.mock('@/libs', async () => {
-  const actual = (await vi.importActual('@/libs')) as Record<string, unknown>;
+vi.mock('@/organisms/CustomFeedDialog/CustomFeedDialog', () => {
   return {
-    ...actual,
-    Logger: {
-      ...(actual.Logger as Record<string, unknown>),
-      error: vi.fn(),
-    },
+    CustomFeedDialog: ({ children, mode }: { children: React.ReactNode; mode: string }) => (
+      <div data-testid={`custom-feed-dialog-${mode}`}>{children}</div>
+    ),
   };
 });
 

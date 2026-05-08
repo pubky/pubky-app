@@ -1,23 +1,24 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { EditProfile } from './EditProfile';
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/OnboardingLayout/OnboardingLayout', () => {
   return {
-    ...actual,
     OnboardingLayout: ({ children, testId }: { children: React.ReactNode; testId?: string }) => (
       <div data-testid={testId}>{children}</div>
     ),
   };
 });
 
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/Settings/EditProfileForm/EditProfileForm', () => {
   return {
-    ...actual,
-    EditProfileHeader: () => <div data-testid="edit-profile-header" />,
     EditProfileForm: () => <div data-testid="edit-profile-form" />,
+  };
+});
+
+vi.mock('@/organisms/Settings/EditProfileHeader/EditProfileHeader', () => {
+  return {
+    EditProfileHeader: () => <div data-testid="edit-profile-header" />,
   };
 });
 

@@ -1,162 +1,170 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DialogReply } from './DialogReply';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DialogContent } from '@/atoms/Dialog/Dialog';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { PostInput } from '../PostInput/PostInput';
+import { DialogReply } from './DialogReply';
 
-// Mock hooks
-const mockUseConfirmableDialog = vi.fn();
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
+vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
-    ...actual,
-    useConfirmableDialog: (opts: unknown) => mockUseConfirmableDialog(opts),
+    Dialog: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
+        {children}
+      </div>
+    ),
+    DialogContent: vi.fn(
+      ({
+        children,
+        className,
+        hiddenTitle,
+        'aria-describedby': ariaDescribedBy,
+        ...props
+      }: {
+        children: React.ReactNode;
+        className?: string;
+        hiddenTitle?: string;
+        'aria-describedby'?: string;
+        [key: string]: unknown;
+      }) => (
+        <div
+          data-testid="dialog-content"
+          className={className}
+          aria-label={hiddenTitle}
+          aria-describedby={ariaDescribedBy}
+          {...props}
+        >
+          {children}
+        </div>
+      ),
+    ),
+    DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
+    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
+    DialogDescription: ({ children }: { children: React.ReactNode }) => (
+      <p data-testid="dialog-description">{children}</p>
+    ),
   };
 });
 
+// Mock hooks
+const mockUseConfirmableDialog = vi.fn();
+vi.mock('@/hooks/useConfirmableDialog/useConfirmableDialog', () => ({
+  useConfirmableDialog: (opts: unknown) => mockUseConfirmableDialog(opts),
+}));
+
 // Mock organisms
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/PostContent/PostContent', () => {
   return {
-    ...actual,
-    PostHeader: vi.fn(({ postId }: { postId: string }) => (
-      <div data-testid="post-header" data-post-id={postId}>
-        PostHeader {postId}
-      </div>
-    )),
     PostContent: vi.fn(({ postId }: { postId: string }) => (
       <div data-testid="post-content" data-post-id={postId}>
         PostContent {postId}
       </div>
     )),
-    PostInput: vi.fn(
-      ({
-        variant,
-        postId,
-        onSuccess,
-        showThreadConnector,
-        onContentChange,
-      }: {
-        variant: string;
-        postId: string;
-        onSuccess?: () => void;
-        showThreadConnector?: boolean;
-        onContentChange?: (content: string, tags: string[], attachments: File[], articleTitle: string) => void;
-      }) => (
-        <div
-          data-testid="post-input"
-          data-variant={variant}
-          data-post-id={postId}
-          data-show-thread={showThreadConnector}
-          data-has-content-change={!!onContentChange}
-        >
-          <button data-testid="mock-success-btn" onClick={onSuccess}>
-            Success
-          </button>
-        </div>
-      ),
-    ),
+  };
+});
+
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
+  return {
+    PostHeader: vi.fn(({ postId }: { postId: string }) => (
+      <div data-testid="post-header" data-post-id={postId}>
+        PostHeader {postId}
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => {
+  return {
     useTimelineFeedContext: vi.fn(() => null),
   };
 });
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Dialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
-      {children}
-    </div>
-  ),
-  DialogContent: vi.fn(
-    ({
-      children,
-      className,
-      hiddenTitle,
-      'aria-describedby': ariaDescribedBy,
-      ...props
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      hiddenTitle?: string;
-      'aria-describedby'?: string;
-      [key: string]: unknown;
-    }) => (
-      <div
-        data-testid="dialog-content"
-        className={className}
-        aria-label={hiddenTitle}
-        aria-describedby={ariaDescribedBy}
-        {...props}
-      >
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" className={className}>
         {children}
       </div>
     ),
-  ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => (
-    <p data-testid="dialog-description">{children}</p>
-  ),
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
-      {children}
+    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card-content" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" className={className} data-override-defaults={overrideDefaults}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('../PostInput/PostInput', () => ({
+  PostInput: vi.fn(({ onSuccess, onContentChange, variant, postId, showThreadConnector }) => (
+    <div
+      data-testid="post-input"
+      data-variant={variant}
+      data-post-id={postId}
+      data-show-thread={String(showThreadConnector)}
+      data-has-content-change={String(Boolean(onContentChange))}
+    >
+      <button data-testid="mock-success-btn" onClick={() => onSuccess?.('reply-post-id')}>
+        Success
+      </button>
     </div>
-  ),
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  ),
-  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  ),
+  )),
 }));
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
-    <div data-testid="post-preview-card" data-post-id={postId} className={className}>
-      PostPreviewCard {postId}
-    </div>
-  )),
-  DialogConfirmDiscard: vi.fn(
-    ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: () => void; onConfirm: () => void }) => (
-      <div data-testid="dialog-confirm-discard" data-open={open}>
-        <button data-testid="confirm-discard-cancel" onClick={onOpenChange}>
-          Cancel
-        </button>
-        <button data-testid="confirm-discard-confirm" onClick={onConfirm}>
-          Discard
-        </button>
-      </div>
+vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
+  return {
+    DialogConfirmDiscard: vi.fn(
+      ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: () => void; onConfirm: () => void }) => (
+        <div data-testid="dialog-confirm-discard" data-open={open}>
+          <button data-testid="confirm-discard-cancel" onClick={onOpenChange}>
+            Cancel
+          </button>
+          <button data-testid="confirm-discard-confirm" onClick={onConfirm}>
+            Discard
+          </button>
+        </div>
+      ),
     ),
-  ),
-}));
+  };
+});
+
+vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
+  return {
+    PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
+      <div data-testid="post-preview-card" data-post-id={postId} className={className}>
+        PostPreviewCard {postId}
+      </div>
+    )),
+  };
+});
 
 // Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 describe('DialogReply', () => {
   const mockHandleContentChange = vi.fn();
@@ -198,7 +206,7 @@ describe('DialogReply', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogReply postId="test-post-123" open={false} onOpenChangeAction={onOpenChangeAction} />);
 
-    expect(Organisms.PostInput).toHaveBeenCalledWith(
+    expect(PostInput).toHaveBeenCalledWith(
       {
         dataCy: 'reply-post-input',
         id: 'reply-post-input',
@@ -267,7 +275,7 @@ describe('DialogReply', () => {
     });
 
     postInput.appendChild(textarea);
-    const dialogContentProps = vi.mocked(Atoms.DialogContent).mock.calls.at(-1)?.[0] as {
+    const dialogContentProps = vi.mocked(DialogContent).mock.calls.at(-1)?.[0] as {
       onAnimationEnd?: React.AnimationEventHandler<HTMLDivElement>;
     };
     dialogContentProps.onAnimationEnd?.({} as React.AnimationEvent<HTMLDivElement>);

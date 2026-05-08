@@ -1,15 +1,21 @@
 'use client';
 
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { Tag } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
-import * as Libs from '@/libs';
-import * as Core from '@/core';
-import type { TagInputHandle } from '@/molecules';
-import type { PostTagsPanelProps, PostTagsPanelHandle } from './PostTagsPanel.types';
+import { TagKind } from '@/application/tag/tag.types';
+import { Container } from '@/atoms/Container/Container';
+import { SidebarButton } from '@/atoms/SidebarButton/SidebarButton';
+import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
+import { usePostTags } from '@/hooks/usePostTags/usePostTags';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { cn } from '@/libs/utils/utils';
+import { TaggedList } from '@/molecules/TaggedList/TaggedList';
+import { TagInput } from '@/molecules/TagInput/TagInput';
+import type { TagInputHandle } from '@/molecules/TagInput/TagInput.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
+import type { PostTagsPanelHandle, PostTagsPanelProps } from './PostTagsPanel.types';
 
 const INITIAL_VISIBLE_TAGS = 3;
 
@@ -35,20 +41,17 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
   const t = useTranslations('common');
   const tagInputRef = useRef<TagInputHandle>(null);
   const [isExpanded, setIsExpanded] = useState(widthMode !== 'full');
-
   useImperativeHandle(ref, () => ({
     focus: () => tagInputRef.current?.focus(),
   }));
-
-  const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
-    Hooks.usePostTags(postId);
+  const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } = usePostTags(postId);
 
   // Enrich tags with user details for proper avatar fallbacks
-  const { enrichedTags } = Hooks.useEnrichedTags(tags);
+  const { enrichedTags } = useEnrichedTags(tags);
 
   // Auth requirement for tag actions
-  const { isAuthenticated, requireAuth } = Hooks.useRequireAuth();
-  const setShowSignInDialog = Core.useAuthStore((state) => state.setShowSignInDialog);
+  const { isAuthenticated, requireAuth } = useRequireAuth();
+  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
 
   // Wrap tag toggle with auth requirement
   const handleTagToggleWithAuth = (tag: Parameters<typeof handleTagToggle>[0]) => {
@@ -76,15 +79,14 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
     isCollapsedPreview &&
     tags.length > 0 &&
     (tags.length > INITIAL_VISIBLE_TAGS || (hasMore && tags.length >= INITIAL_VISIBLE_TAGS));
-
   return (
-    <Atoms.Container data-cy="post-tags-panel" className={Libs.cn('gap-2', className)}>
-      <Atoms.Container
+    <Container data-cy="post-tags-panel" className={cn('gap-2', className)}>
+      <Container
         overrideDefaults
-        className={Libs.cn('flex flex-col gap-2', widthMode === 'fit' ? 'w-fit max-w-full' : 'w-full')}
+        className={cn('flex flex-col gap-2', widthMode === 'fit' ? 'w-fit max-w-full' : 'w-full')}
       >
         {/* TagInput visible for all users - clicking opens sign-in for unauthenticated */}
-        <Molecules.TagInput
+        <TagInput
           ref={tagInputRef}
           onTagAdd={handleTagAddWithAuth}
           existingTags={tags}
@@ -98,29 +100,29 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
         />
 
         {tags.length > 0 && (
-          <Atoms.Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
-            <Molecules.TaggedList
+          <Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
+            <TaggedList
               tags={visibleTags}
               taggedId={postId}
-              taggedKind={Core.TagKind.POST}
+              taggedKind={TagKind.POST}
               hasMore={isCollapsedPreview ? false : hasMore}
               isLoadingMore={isCollapsedPreview ? false : isLoadingMore}
               onLoadMore={isCollapsedPreview ? undefined : loadMore}
               onTagToggle={handleTagToggleWithAuth}
             />
-          </Atoms.Container>
+          </Container>
         )}
         {showSeeAllButton && (
-          <Atoms.SidebarButton
-            icon={Libs.Tag}
+          <SidebarButton
+            icon={Tag}
             onClick={() => setIsExpanded(true)}
             data-testid="post-tags-panel-see-all"
             aria-label={t('seeAll')}
           >
             {t('seeAll')}
-          </Atoms.SidebarButton>
+          </SidebarButton>
         )}
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 });

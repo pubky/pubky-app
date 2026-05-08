@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
+import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
+import { Typography } from '../Typography/Typography';
 import type { TagProps } from './Tag.types';
 
 export const Tag = ({
@@ -12,15 +12,17 @@ export const Tag = ({
   onClick,
   className,
   'data-testid': dataTestId,
+  'data-cy': dataCy,
+  countDataCy,
   ...props
 }: TagProps) => {
   const [isHovered, setIsHovered] = React.useState(false);
 
   const { backgroundColor, borderColor } = React.useMemo(() => {
-    const base = Libs.generateRandomColor(name);
+    const base = generateRandomColor(name);
     return {
-      backgroundColor: Libs.hexToRgba(base, 0.3),
-      borderColor: Libs.hexToRgba(base, 0.5),
+      backgroundColor: hexToRgba(base, 0.3),
+      borderColor: hexToRgba(base, 0.5),
     };
   }, [name]);
 
@@ -38,7 +40,7 @@ export const Tag = ({
 
   return (
     <div
-      className={Libs.cn(
+      className={cn(
         'flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md px-3 transition-all duration-200',
         className,
       )}
@@ -52,21 +54,22 @@ export const Tag = ({
       onMouseLeave={handleMouseLeave}
       title={name}
       data-testid={dataTestId || 'tag'}
+      data-cy={dataCy || 'tag'}
       {...props}
     >
-      <Atoms.Typography size="sm" className="truncate" data-testid="tag-name">
+      <Typography size="sm" className="truncate font-bold" data-testid="tag-name" data-cy={`${dataCy || 'tag'}-name`}>
         {name}
-      </Atoms.Typography>
+      </Typography>
 
       {count !== undefined && (
-        <Atoms.Typography
+        <Typography
           size="sm"
           className="ml-1.5 shrink-0 font-medium text-foreground/50"
-          data-cy="post-tag-count"
           data-testid="tag-count"
+          data-cy={countDataCy || `${dataCy || 'tag'}-count`}
         >
           {count}
-        </Atoms.Typography>
+        </Typography>
       )}
     </div>
   );

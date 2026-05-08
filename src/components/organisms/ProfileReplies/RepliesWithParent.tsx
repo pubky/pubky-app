@@ -1,15 +1,23 @@
 'use client';
 
-import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
-
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
-import * as Types from './RepliesWithParent.types';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { Container } from '@/atoms/Container/Container';
+import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
+import { PostController } from '@/controllers/post/post';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { Logger } from '@/libs/logger/logger';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
+import { TimelineError } from '@/molecules/Timeline/TimelineError';
+import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
+import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { PostMain } from '../PostMain/PostMain';
+import type { RepliesWithParentProps, ReplyWithParentProps } from './RepliesWithParent.types';
 
 /**
  * RepliesWithParent
@@ -18,12 +26,12 @@ import * as Types from './RepliesWithParent.types';
  * - Shows the parent post first (without reply line)
  * - Shows the reply post with isReply={true} (with reply line)
  */
-export function RepliesWithParent({ streamId }: Types.RepliesWithParentProps) {
-  const { postIds, loading, loadingMore, error, hasMore, loadMore } = Hooks.useStreamPagination({ streamId });
-  const { navigateToPost } = Hooks.usePostNavigation();
+export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
+  const { postIds, loading, loadingMore, error, hasMore, loadMore } = useStreamPagination({ streamId });
+  const { navigateToPost } = usePostNavigation();
 
   // Infinite scroll hook
-  const { sentinelRef } = Hooks.useInfiniteScroll({
+  const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: loadingMore,
@@ -32,27 +40,27 @@ export function RepliesWithParent({ streamId }: Types.RepliesWithParentProps) {
   });
 
   return (
-    <Molecules.TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
-      <Atoms.Container>
-        <Atoms.Container overrideDefaults className="space-y-4">
+    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
+      <Container>
+        <Container overrideDefaults className="space-y-4">
           {postIds.map((postId: string) => (
             <ReplyWithParent key={`reply_${postId}`} replyPostId={postId} onPostClick={navigateToPost} />
           ))}
 
           {/* Loading More Indicator */}
-          {loadingMore && <Molecules.TimelineLoadingMore />}
+          {loadingMore && <TimelineLoadingMore />}
 
           {/* Error on loading more */}
-          {error && postIds.length > 0 && <Molecules.TimelineError message={error} />}
+          {error && postIds.length > 0 && <TimelineError message={error} />}
 
           {/* End of posts message */}
-          {!hasMore && !loadingMore && postIds.length > 0 && <Molecules.TimelineEndMessage />}
+          {!hasMore && !loadingMore && postIds.length > 0 && <TimelineEndMessage />}
 
           {/* Infinite scroll sentinel */}
-          <Atoms.Container overrideDefaults className="h-[20px]" ref={sentinelRef} />
-        </Atoms.Container>
-      </Atoms.Container>
-    </Molecules.TimelineStateWrapper>
+          <Container overrideDefaults className="h-[20px]" ref={sentinelRef} />
+        </Container>
+      </Container>
+    </TimelineStateWrapper>
   );
 }
 
@@ -62,7 +70,7 @@ export function RepliesWithParent({ streamId }: Types.RepliesWithParentProps) {
  * Component that fetches and displays a reply post along with its parent.
  * Always shows the parent post if it exists.
  */
-function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProps) {
+function ReplyWithParent({ replyPostId, onPostClick }: ReplyWithParentProps) {
   // Component-level cache to track in-flight parent post fetches
   // Using useRef to avoid SSR memory leaks and state pollution
   const fetchingParentPostsRef = useRef(new Set<string>());
@@ -71,20 +79,20 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
   // UI → Controller → Service → Model
   const parentPostId = useLiveQuery(async () => {
     try {
-      const relationships = await Core.PostController.getRelationships({ compositeId: replyPostId });
+      const relationships = await PostController.getRelationships({ compositeId: replyPostId });
 
       if (!relationships?.replied) {
         return null;
       }
 
-      const parentCompositeId = Core.buildCompositeIdFromPubkyUri({
+      const parentCompositeId = buildCompositeIdFromPubkyUri({
         uri: relationships.replied,
-        domain: Core.CompositeIdDomain.POSTS,
+        domain: CompositeIdDomain.POSTS,
       });
 
       return parentCompositeId;
     } catch (error) {
-      Libs.Logger.error('[RepliesWithParent] Failed to query post relationships', { replyPostId, error });
+      Logger.error('[RepliesWithParent] Failed to query post relationships', { replyPostId, error });
       return null;
     }
   }, [replyPostId]);
@@ -95,11 +103,11 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
     try {
       if (!parentPostId) return null;
 
-      const post = await Core.PostController.getDetails({ compositeId: parentPostId });
+      const post = await PostController.getDetails({ compositeId: parentPostId });
 
       return post;
     } catch (error) {
-      Libs.Logger.error('[RepliesWithParent] Failed to query parent post details', { parentPostId, error });
+      Logger.error('[RepliesWithParent] Failed to query parent post details', { parentPostId, error });
       return null;
     }
   }, [parentPostId]);
@@ -112,13 +120,13 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
 
     if (parentPostId && !parentPost && !fetchingSet.has(parentPostId)) {
       fetchingSet.add(parentPostId);
-      const viewerId = Core.useAuthStore.getState().selectCurrentUserPubky();
+      const viewerId = useAuthStore.getState().selectCurrentUserPubky();
       if (!viewerId) return;
       // Parent post ID exists but post details are missing
       // Fetch via Controller (fire-and-forget, useLiveQuery will react to DB updates)
-      Core.PostController.getOrFetch({ compositeId: parentPostId, viewerId })
+      PostController.getOrFetch({ compositeId: parentPostId, viewerId })
         .catch((error) => {
-          Libs.Logger.error('[RepliesWithParent] Failed to fetch parent post details', { parentPostId, error });
+          Logger.error('[RepliesWithParent] Failed to fetch parent post details', { parentPostId, error });
         })
         .finally(() => {
           // Only clean up if this effect hasn't been cancelled (component still mounted and parentPostId unchanged)
@@ -138,26 +146,21 @@ function ReplyWithParent({ replyPostId, onPostClick }: Types.ReplyWithParentProp
   const shouldShowParent = !!parentPostId;
 
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col">
+    <Container overrideDefaults className="flex flex-col">
       {/* Show parent post if it exists */}
       {shouldShowParent && (
         <>
-          <Organisms.PostMain postId={parentPostId} onClick={() => onPostClick(parentPostId)} isReply={false} />
-          <Atoms.Container overrideDefaults className="pl-3">
-            <Atoms.PostThreadSpacer />
-          </Atoms.Container>
+          <PostMain postId={parentPostId} onClick={() => onPostClick(parentPostId)} isReply={false} />
+          <Container overrideDefaults className="pl-3">
+            <PostThreadSpacer />
+          </Container>
         </>
       )}
 
       {/* Show the reply with isReply={true} */}
-      <Atoms.Container overrideDefaults className={shouldShowParent ? 'pl-3' : ''}>
-        <Organisms.PostMain
-          postId={replyPostId}
-          onClick={() => onPostClick(replyPostId)}
-          isReply={true}
-          isLastReply={true}
-        />
-      </Atoms.Container>
-    </Atoms.Container>
+      <Container overrideDefaults className={shouldShowParent ? 'pl-3' : ''}>
+        <PostMain postId={replyPostId} onClick={() => onPostClick(replyPostId)} isReply={true} isLastReply={true} />
+      </Container>
+    </Container>
   );
 }

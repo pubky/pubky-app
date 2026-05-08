@@ -120,7 +120,7 @@ Review ONLY for these categories:
 1. **Security**: hardcoded secrets/tokens, unsafe input handling, XSS vectors in JSX (dangerouslySetInnerHTML), unescaped user content in HTML
 2. **Error handling gaps**: raw `throw new Error()` in src/core/ production code (should use `Err.*` factories — they log automatically), unhandled promise rejections (missing catch/try-catch on async calls), swallowed errors (empty catch blocks), logging before throwing `Err.*` (causes double-logging)
 3. **Type safety**: unnecessary `any` types, missing null/undefined checks before property access, type assertions that hide bugs (`as unknown as X`)
-4. **Dexie/React misuse**: network calls or TanStack Query usage inside `useLiveQuery` callbacks (breaks Dexie PSD — see docs/local-first.md, ADR-0011), direct `process.env` access instead of the validated `Env` object from `@/libs`
+4. **Dexie/React misuse**: network calls or TanStack Query usage inside `useLiveQuery` callbacks (breaks Dexie PSD — see docs/local-first.md, ADR-0011), direct `process.env` access instead of the validated `Env` object from `@/libs/env/env`
 5. **Hardcoded design values**: hardcoded hex/rgb colors in Tailwind classes (`bg-[#1a1a1a]`) instead of design tokens (`bg-primary`), arbitrary z-index values (`z-[999]`) instead of the standard scale (-z-10, z-10, z-30, z-40, z-50, z-60)
 6. **Naming**: controller methods not following fetch*/get*/getOrFetch*/commitCreate*/commitUpdate*/commitDelete* conventions, functions whose names don't match what they actually do
 7. **Missing tests**: complex functions (3+ branches or async with error paths) in src/core/ or src/components/ that have no co-located .test.tsx/.test.ts file — suggest 1-2 specific test cases
@@ -171,7 +171,7 @@ For each changed function, component, or block, ask whether it could be written 
 1. **Over-abstraction**: wrapper functions/components that add a layer without adding value, premature generalization for a single use case
 2. **Control flow**: nested if/else that could be early returns, complex ternaries that should be if statements, switch statements with fallthrough that obscure intent
 3. **Duplication within the diff**: similar logic repeated across changed files that could share a utility
-4. **Existing utilities ignored**: code that reimplements something already available in `src/libs/` — this project has `cn()` (clsx+tailwind-merge), date utilities (`timeAgo`, `formatDistanceToNow`, `minutesAgo`, `hoursAgo`, `daysAgo`), string utilities (`truncateString`, `truncateMiddle`, `formatPublicKey`, `formatFileName`), and error utilities (`toAppError`, `safeFetch`). Check `src/libs/` before flagging.
+4. **Existing utilities ignored**: code that reimplements something already available in `src/libs/` — this project has `cn()` (clsx+tailwind-merge), timestamp helpers (`minutesAgo`, `hoursAgo`, `daysAgo`), string utilities (`truncateString`, `truncateMiddle`, `formatPublicKey`, `formatFileName`), and error utilities (`toAppError`, `safeFetch`). Check `src/libs/` before flagging.
 5. **Component complexity**: React components mixing concerns that should be separated per the architecture — e.g., a component calling services directly instead of using controllers, or doing data transformation that belongs in a Pipe
 
 VERIFICATION IS MANDATORY. Read the actual source file for full context before flagging. A function may look complex in a diff but be justified by surrounding code. Never use "likely" or "probably".
@@ -191,9 +191,9 @@ Each finding:
   "line": 42,
   "category": "simplification",
   "severity": "medium",
-  "what": "Component manually formats timestamps with Date math instead of using timeAgo() from src/libs/",
-  "why": "Duplicates existing utility and diverges from the formatting used elsewhere in the app",
-  "fix": "import { timeAgo } from '@/libs' and replace the manual calculation"
+  "what": "Component manually truncates display text instead of using truncateString() from src/libs/",
+  "why": "Duplicates existing utility and diverges from truncation behavior used elsewhere in the app",
+  "fix": "import { truncateString } from '@/libs/utils/utils' and replace the manual truncation"
 }
 
 If nothing to simplify, return an empty array: []

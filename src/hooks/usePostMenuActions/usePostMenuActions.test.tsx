@@ -1,15 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
-import * as Core from '@/core';
-import { asOpaque } from '@/test-utils';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { isAppError } from '@/libs/error/error.utils';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { usePostMenuActions } from './usePostMenuActions';
-import * as Libs from '@/libs';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
 
 // Hoist mocks
 const {
   mockIsAppError,
   mockParseCompositeId,
+  mockToast,
   mockUseCurrentUserProfile,
   mockUsePostDetails,
   mockUseUserProfile,
@@ -18,10 +19,10 @@ const {
   mockUseMuteUser,
   mockUseMutedUsers,
   mockUseCopyToClipboard,
-  mockToast,
 } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
   mockParseCompositeId: vi.fn(),
+  mockToast: vi.fn(),
   mockUseCurrentUserProfile: vi.fn(),
   mockUsePostDetails: vi.fn(),
   mockUseUserProfile: vi.fn(),
@@ -30,46 +31,57 @@ const {
   mockUseMuteUser: vi.fn(),
   mockUseMutedUsers: vi.fn(),
   mockUseCopyToClipboard: vi.fn(),
-  mockToast: vi.fn(),
 }));
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/models/models.utils', () => ({
   parseCompositeId: (id: string) => mockParseCompositeId(id),
 }));
 
 // Mock Hooks
-vi.mock('@/hooks', () => ({
-  useCurrentUserProfile: (props: unknown) => mockUseCurrentUserProfile(props),
-  usePostDetails: (postId: string) => mockUsePostDetails(postId),
-  useUserProfile: (userId: string) => mockUseUserProfile(userId),
-  useIsFollowing: (userId: string) => mockUseIsFollowing(userId),
-  useFollowUser: () => mockUseFollowUser(),
-  useMuteUser: () => mockUseMuteUser(),
-  useMutedUsers: () => mockUseMutedUsers(),
-  useCopyToClipboard: (options: unknown) => mockUseCopyToClipboard(options),
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: mockUseCurrentUserProfile,
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: mockUsePostDetails,
+}));
+
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
+  useUserProfile: mockUseUserProfile,
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
+  useIsFollowing: mockUseIsFollowing,
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
+  useFollowUser: mockUseFollowUser,
+}));
+
+vi.mock('@/hooks/useMuteUser/useMuteUser', () => ({
+  useMuteUser: mockUseMuteUser,
+}));
+
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: mockUseMutedUsers,
+}));
+
+vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
+  useCopyToClipboard: mockUseCopyToClipboard,
 }));
 
 // Mock Molecules
-vi.mock('@/molecules', () => ({
-  toast: (props: unknown) => mockToast(props),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    toast: (props: unknown) => mockToast(props),
+  };
+});
 
-// Mock Libs
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/error/error.utils', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/error/error.utils')>('@/libs/error/error.utils');
   return {
     ...actual,
-    UserRoundPlus: vi.fn(() => <span>UserRoundPlus</span>),
-    UserRoundMinus: vi.fn(() => <span>UserRoundMinus</span>),
-    Key: vi.fn(() => <span>Key</span>),
-    Link: vi.fn(() => <span>Link</span>),
-    FileText: vi.fn(() => <span>FileText</span>),
-    MegaphoneOff: vi.fn(() => <span>MegaphoneOff</span>),
-    Megaphone: vi.fn(() => <span>Megaphone</span>),
-    Flag: vi.fn(() => <span>Flag</span>),
-    Edit: vi.fn(() => <span>Edit</span>),
-    Trash: vi.fn(() => <span>Trash</span>),
     isAppError: mockIsAppError,
   };
 });
@@ -98,7 +110,7 @@ describe('usePostMenuActions', () => {
       attachments: null,
       is_moderated: false,
       is_blurred: false,
-    } satisfies Core.EnrichedPostDetails,
+    } satisfies EnrichedPostDetails,
     authorProfile: { name: 'Test Author' },
     isFollowing: false,
     toggleFollow: vi.fn().mockResolvedValue(undefined),
@@ -223,7 +235,7 @@ describe('usePostMenuActions', () => {
 
     it('shows error toast when follow fails with AppError', async () => {
       const error = asOpaque<Error>({ type: 'AppError', message: 'Follow failed' });
-      vi.mocked(Libs.isAppError).mockReturnValue(true);
+      vi.mocked(isAppError).mockReturnValue(true);
       defaultMocks.toggleFollow.mockRejectedValue(error);
 
       const { result } = renderHook(() =>
@@ -246,7 +258,7 @@ describe('usePostMenuActions', () => {
 
     it('shows generic error toast when follow fails with non-AppError', async () => {
       const error = new Error('Follow failed');
-      vi.mocked(Libs.isAppError).mockReturnValue(false);
+      vi.mocked(isAppError).mockReturnValue(false);
       defaultMocks.toggleFollow.mockRejectedValue(error);
 
       const { result } = renderHook(() =>

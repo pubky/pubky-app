@@ -1,9 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { SETTINGS_ROUTES } from '@/app/routes';
 import { SettingsMobileMenu } from './SettingsMobileMenu';
-
-import { SETTINGS_ROUTES } from '@/app';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -27,6 +26,20 @@ describe('SettingsMobileMenu', () => {
   it('includes lg:hidden class by default', () => {
     const { container } = render(<SettingsMobileMenu />);
     expect(container.firstChild).toHaveClass('lg:hidden');
+  });
+
+  it('uses the mobile-menu z-index (consolidated from --z-sticky-header)', () => {
+    const { container } = render(<SettingsMobileMenu />);
+    const root = container.firstChild as HTMLElement;
+    expect(root).toHaveClass('z-(--z-mobile-menu)');
+    expect(root).not.toHaveClass('z-(--z-sticky-header)');
+  });
+
+  it('preserves fixed positioning', () => {
+    const { container } = render(<SettingsMobileMenu />);
+    const root = container.firstChild as HTMLElement;
+    expect(root).toHaveClass('fixed', 'top-(--header-height-mobile)', 'right-0', 'left-0');
+    expect(root).not.toHaveClass('sticky');
   });
 });
 

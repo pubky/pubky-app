@@ -1,8 +1,9 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useSearchAutocomplete } from './useSearchAutocomplete';
 import { AUTOCOMPLETE_DEBOUNCE_MS } from './useSearchAutocomplete.constants';
-import type * as Core from '@/core';
 
 // Hoist mock data
 const {
@@ -15,10 +16,10 @@ const {
   mockGetOrFetchDetails,
   mockGetAvatarUrl,
 } = vi.hoisted(() => {
-  const userDetailsMap = { current: new Map<Core.Pubky, Core.NexusUserDetails>() };
+  const userDetailsMap = { current: new Map<Pubky, NexusUserDetails>() };
   return {
     mockUserDetailsMap: userDetailsMap,
-    setMockUserDetailsMap: (value: Map<Core.Pubky, Core.NexusUserDetails>) => {
+    setMockUserDetailsMap: (value: Map<Pubky, NexusUserDetails>) => {
       userDetailsMap.current = value;
     },
     mockGetTagsByPrefix: vi.fn(),
@@ -41,17 +42,21 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/controllers/search/search', () => ({
   SearchController: {
     getTagsByPrefix: (...args: unknown[]) => mockGetTagsByPrefix(...args),
     getUsersByName: (...args: unknown[]) => mockGetUsersByName(...args),
     fetchUsersById: (...args: unknown[]) => mockFetchUsersById(...args),
   },
+}));
+vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getManyDetails: (...args: unknown[]) => mockGetManyDetails(...args),
     getOrFetchDetails: (...args: unknown[]) => mockGetOrFetchDetails(...args),
   },
+}));
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: (...args: unknown[]) => mockGetAvatarUrl(...args),
   },
@@ -72,17 +77,17 @@ describe('useSearchAutocomplete', () => {
     mockGetTagsByPrefix.mockResolvedValue(['tech', 'technology', 'techno']);
     mockGetUsersByName.mockResolvedValue(['pk:user1', 'pk:user2']);
     mockFetchUsersById.mockResolvedValue(['pk:abc123']);
-    mockGetManyDetails.mockImplementation(({ userIds }: { userIds: Core.Pubky[] }) => {
-      const map = new Map<Core.Pubky, Core.NexusUserDetails>();
+    mockGetManyDetails.mockImplementation(({ userIds }: { userIds: Pubky[] }) => {
+      const map = new Map<Pubky, NexusUserDetails>();
       for (const userId of userIds) {
         if (userId === 'pk:user1') {
-          map.set(userId, { id: 'pk:user1', name: 'User One', image: 'avatar1.jpg' } as Core.NexusUserDetails);
+          map.set(userId, { id: 'pk:user1', name: 'User One', image: 'avatar1.jpg' } as NexusUserDetails);
         } else if (userId === 'pk:user2') {
-          map.set(userId, { id: 'pk:user2', name: 'User Two', image: null } as Core.NexusUserDetails);
+          map.set(userId, { id: 'pk:user2', name: 'User Two', image: null } as NexusUserDetails);
         } else if (userId === 'pk:user3') {
-          map.set(userId, { id: 'pk:user3', name: 'User Three', image: null } as Core.NexusUserDetails);
+          map.set(userId, { id: 'pk:user3', name: 'User Three', image: null } as NexusUserDetails);
         } else if (userId === 'pk:abc123') {
-          map.set(userId, { id: 'pk:abc123', name: 'ABC User', image: 'avatar2.jpg' } as Core.NexusUserDetails);
+          map.set(userId, { id: 'pk:abc123', name: 'ABC User', image: 'avatar2.jpg' } as NexusUserDetails);
         }
       }
       return Promise.resolve(map);
@@ -149,9 +154,9 @@ describe('useSearchAutocomplete', () => {
     });
 
     // Set mock user details map to simulate useLiveQuery returning data
-    const userDetailsMap = new Map<Core.Pubky, Core.NexusUserDetails>();
-    userDetailsMap.set('pk:user1', { id: 'pk:user1', name: 'User One', image: 'avatar1.jpg' } as Core.NexusUserDetails);
-    userDetailsMap.set('pk:user2', { id: 'pk:user2', name: 'User Two', image: null } as Core.NexusUserDetails);
+    const userDetailsMap = new Map<Pubky, NexusUserDetails>();
+    userDetailsMap.set('pk:user1', { id: 'pk:user1', name: 'User One', image: 'avatar1.jpg' } as NexusUserDetails);
+    userDetailsMap.set('pk:user2', { id: 'pk:user2', name: 'User Two', image: null } as NexusUserDetails);
     setMockUserDetailsMap(userDetailsMap);
 
     // Re-render to trigger useLiveQuery update
@@ -252,10 +257,10 @@ describe('useSearchAutocomplete', () => {
     });
 
     // Set mock user details map for all users (including user3 from ID search)
-    const userDetailsMap = new Map<Core.Pubky, Core.NexusUserDetails>();
-    userDetailsMap.set('pk:user1', { id: 'pk:user1', name: 'User One', image: null } as Core.NexusUserDetails);
-    userDetailsMap.set('pk:user2', { id: 'pk:user2', name: 'User Two', image: null } as Core.NexusUserDetails);
-    userDetailsMap.set('pk:user3', { id: 'pk:user3', name: 'User Three', image: null } as Core.NexusUserDetails);
+    const userDetailsMap = new Map<Pubky, NexusUserDetails>();
+    userDetailsMap.set('pk:user1', { id: 'pk:user1', name: 'User One', image: null } as NexusUserDetails);
+    userDetailsMap.set('pk:user2', { id: 'pk:user2', name: 'User Two', image: null } as NexusUserDetails);
+    userDetailsMap.set('pk:user3', { id: 'pk:user3', name: 'User Three', image: null } as NexusUserDetails);
     setMockUserDetailsMap(userDetailsMap);
 
     // Re-render to trigger useLiveQuery update

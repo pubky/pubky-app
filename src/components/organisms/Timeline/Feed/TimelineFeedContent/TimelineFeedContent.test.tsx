@@ -1,76 +1,98 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TIMELINE_FEED_VARIANT } from '@/config';
-import * as Core from '@/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
+import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
+
+const mockUsePullToRefresh = vi.hoisted(() =>
+  vi.fn(
+    (): UsePullToRefreshResult => ({
+      state: 'idle',
+      pullDistance: 0,
+    }),
+  ),
+);
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useStreamPagination: vi.fn(),
-    useMutedUsers: vi.fn(() => ({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: vi.fn(() => false),
-      isLoading: false,
-    })),
-  };
-});
-
-vi.mock('@/hooks/useUnreadPosts', () => ({
-  useUnreadPosts: vi.fn(() => ({ unreadPostIds: [], unreadCount: 0 })),
+vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
+  useStreamPagination: vi.fn(),
 }));
 
-vi.mock('@/hooks/useIsScrolledFromTop', () => ({
-  useIsScrolledFromTop: vi.fn(() => false),
-}));
-
-const { mockUsePullToRefresh } = vi.hoisted(() => ({
-  mockUsePullToRefresh: vi.fn((): import('@/hooks/usePullToRefresh/usePullToRefresh.types').UsePullToRefreshResult => ({
-    state: 'idle',
-    pullDistance: 0,
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: vi.fn(() => ({
+    mutedUserIds: [],
+    mutedUserIdSet: new Set(),
+    isMuted: vi.fn(() => false),
+    isLoading: false,
   })),
 }));
 
-vi.mock('@/hooks/usePullToRefresh', () => ({
+vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => ({
+  useUnreadPosts: vi.fn(() => ({ unreadPostIds: [], unreadCount: 0 })),
+}));
+
+vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
+  useIsScrolledFromTop: vi.fn(() => false),
+}));
+
+vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
   usePullToRefresh: mockUsePullToRefresh,
 }));
 
-vi.mock('@/molecules', () => ({
-  TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  NewPostsButton: ({ visible, count }: { visible: boolean; count: number }) =>
-    visible ? <div data-testid="new-posts-button">{count} new posts</div> : null,
-  PullToRefreshIndicator: ({ state }: { state: string }) =>
-    state !== 'idle' ? <div data-testid="pull-to-refresh">{state}</div> : null,
-  showErrorToast: vi.fn(),
-}));
+vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
+  return {
+    NewPostsButton: ({ visible, count }: { visible: boolean; count: number }) =>
+      visible ? <div data-testid="new-posts-button">{count} new posts</div> : null,
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  TimelinePosts: ({
-    postIds,
-    loading,
-    hasMore,
-  }: {
-    postIds: string[];
-    loading: boolean;
-    loadingMore: boolean;
-    error: string | null;
-    hasMore: boolean;
-    loadMore: () => void;
-    tagsLayout: string;
-  }) => (
-    <div data-testid="timeline-posts">
-      <span data-testid="post-count">{postIds.length}</span>
-      <span data-testid="loading">{loading.toString()}</span>
-      <span data-testid="has-more">{hasMore.toString()}</span>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/PullToRefreshIndicator/PullToRefreshIndicator', () => {
+  return {
+    PullToRefreshIndicator: ({ state }: { state: string }) =>
+      state !== 'idle' ? <div data-testid="pull-to-refresh">{state}</div> : null,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoading', () => {
+  return {
+    TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
+  };
+});
+
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
+  return {
+    showErrorToast: vi.fn(),
+  };
+});
+
+vi.mock('@/organisms/Timeline/Posts/Posts', () => {
+  return {
+    TimelinePosts: ({
+      postIds,
+      loading,
+      hasMore,
+    }: {
+      postIds: string[];
+      loading: boolean;
+      loadingMore: boolean;
+      error: string | null;
+      hasMore: boolean;
+      loadMore: () => void;
+      tagsLayout: string;
+    }) => (
+      <div data-testid="timeline-posts">
+        <span data-testid="post-count">{postIds.length}</span>
+        <span data-testid="loading">{loading.toString()}</span>
+        <span data-testid="has-more">{hasMore.toString()}</span>
+      </div>
+    ),
+  };
+});
 
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();
@@ -88,8 +110,6 @@ const defaultPaginationResult = {
   prependPosts: mockPrependPosts,
   removePosts: mockRemovePosts,
 };
-
-const { useStreamPagination } = await import('@/hooks');
 const mockUseStreamPagination = vi.mocked(useStreamPagination);
 
 describe('TimelineFeedContent', () => {
@@ -109,7 +129,7 @@ describe('TimelineFeedContent', () => {
     it('renders content when streamId is provided', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -121,7 +141,7 @@ describe('TimelineFeedContent', () => {
     it('renders children above post list', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         >
@@ -137,13 +157,13 @@ describe('TimelineFeedContent', () => {
     it('passes streamId to useStreamPagination', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
       );
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
-        streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
       });
     });
 
@@ -154,7 +174,7 @@ describe('TimelineFeedContent', () => {
       });
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -165,7 +185,7 @@ describe('TimelineFeedContent', () => {
     it('passes post count to TimelinePosts', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -178,7 +198,7 @@ describe('TimelineFeedContent', () => {
     it('enables pull-to-refresh for home variant', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -194,7 +214,7 @@ describe('TimelineFeedContent', () => {
     it('disables pull-to-refresh for bookmarks variant', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
           variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
           tagsLayout="inline"
         />,
@@ -208,7 +228,7 @@ describe('TimelineFeedContent', () => {
       mockUsePullToRefresh.mockReturnValue({ state: 'pulling' as const, pullDistance: 50 });
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -220,7 +240,7 @@ describe('TimelineFeedContent', () => {
       mockUsePullToRefresh.mockReturnValue({ state: 'pulling' as const, pullDistance: 50 });
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
           variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
           tagsLayout="inline"
         />,
@@ -247,7 +267,7 @@ describe('TimelineFeedContent - Snapshots', () => {
   it('matches snapshot with posts', () => {
     const { container } = render(
       <TimelineFeedWithStream
-        streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
         variant={TIMELINE_FEED_VARIANT.HOME}
         tagsLayout="inline"
       />,
@@ -258,7 +278,7 @@ describe('TimelineFeedContent - Snapshots', () => {
   it('matches snapshot with children', () => {
     const { container } = render(
       <TimelineFeedWithStream
-        streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
         variant={TIMELINE_FEED_VARIANT.HOME}
         tagsLayout="inline"
       >

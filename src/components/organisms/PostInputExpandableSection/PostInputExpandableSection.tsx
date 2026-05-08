@@ -1,23 +1,23 @@
 'use client';
 
+import { Edit, MessageCircle, Repeat } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Icons from '@/libs/icons';
-import { PostInputActionBar } from '../PostInputActionBar';
-import { PostInputTags } from '../PostInputTags';
-import { getButtonLabel } from './PostInputExpandableSection.utils';
-import type { PostInputExpandableSectionProps } from './PostInputExpandableSection.types';
+import { Container } from '@/atoms/Container/Container';
+import { EmojiPickerDialog } from '@/molecules/EmojiPickerDialog/EmojiPickerDialog';
+import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
+import { PostTag } from '@/molecules/PostTag/PostTag';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
+import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
+import { PostInputTags } from '../PostInputTags/PostInputTags';
+import type { PostInputExpandableSectionProps } from './PostInputExpandableSection.types';
+import { getButtonLabel } from './PostInputExpandableSection.utils';
 
 const IconsButton = {
-  [POST_INPUT_VARIANT.EDIT]: Icons.Edit,
-  [POST_INPUT_VARIANT.REPOST]: Icons.Repeat,
+  [POST_INPUT_VARIANT.EDIT]: Edit,
+  [POST_INPUT_VARIANT.REPOST]: Repeat,
   [POST_INPUT_VARIANT.POST]: undefined,
-  [POST_INPUT_VARIANT.REPLY]: Icons.MessageCircle,
+  [POST_INPUT_VARIANT.REPLY]: MessageCircle,
 } as const;
-
 export function PostInputExpandableSection({
   isExpanded,
   content,
@@ -42,48 +42,71 @@ export function PostInputExpandableSection({
   const isUiDisabled = isSubmitting || isDisabled;
   // Use provided isPostDisabled or default to requiring content
   const isPostDisabled = isPostDisabledProp ?? (!hasContent || isUiDisabled);
-
   const postButtonLabel = getButtonLabel(submitMode, isArticle);
   const postButtonAriaLabel = postButtonLabel;
-
   const isEdit = submitMode === POST_INPUT_VARIANT.EDIT;
   const hasParentGapCompensation = parentGapPx > 0;
   const compensatedMarginTop = -parentGapPx;
-
   return (
     <>
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
+            initial={{
+              height: 0,
+              opacity: 0,
+            }}
             animate={{
               height: 'auto',
               opacity: 1,
               transition: {
-                height: { duration: 0.2, ease: 'linear' },
-                opacity: { duration: 0.4, ease: 'linear' },
+                height: {
+                  duration: 0.2,
+                  ease: 'linear',
+                },
+                opacity: {
+                  duration: 0.4,
+                  ease: 'linear',
+                },
               },
             }}
             exit={{
               height: 0,
               opacity: 0,
-              ...(hasParentGapCompensation ? { marginTop: compensatedMarginTop } : {}),
+              ...(hasParentGapCompensation
+                ? {
+                    marginTop: compensatedMarginTop,
+                  }
+                : {}),
               // Fade out quickly so less content is repainted while height collapses.
               transition: {
-                opacity: { duration: 0.3, ease: 'linear' },
-                height: { duration: 0.2, ease: 'linear' },
-                ...(hasParentGapCompensation ? { marginTop: { duration: 0.2, ease: 'linear' } } : {}),
+                opacity: {
+                  duration: 0.3,
+                  ease: 'linear',
+                },
+                height: {
+                  duration: 0.2,
+                  ease: 'linear',
+                },
+                ...(hasParentGapCompensation
+                  ? {
+                      marginTop: {
+                        duration: 0.2,
+                        ease: 'linear',
+                      },
+                    }
+                  : {}),
               },
             }}
             className={`overflow-hidden ${className || ''}`}
           >
-            <Atoms.Container className="gap-6">
-              {hasContent && !isArticle && <Molecules.PostLinkEmbeds content={content} />}
+            <Container className="gap-6">
+              {hasContent && !isArticle && <PostLinkEmbeds content={content} />}
 
               {tags.length > 0 && (
-                <Atoms.Container className="flex flex-wrap items-center gap-2" overrideDefaults>
+                <Container className="flex flex-wrap items-center gap-2" overrideDefaults>
                   {tags.map((tag, index) => (
-                    <Molecules.PostTag
+                    <PostTag
                       key={`${tag}-${index}`}
                       label={tag}
                       showClose={!isUiDisabled}
@@ -92,9 +115,9 @@ export function PostInputExpandableSection({
                       }}
                     />
                   ))}
-                </Atoms.Container>
+                </Container>
               )}
-              <Atoms.Container className="justify-between gap-4 md:flex-row md:gap-0">
+              <Container className="justify-between gap-4 md:flex-row md:gap-0">
                 <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
 
                 <PostInputActionBar
@@ -112,13 +135,13 @@ export function PostInputExpandableSection({
                   postButtonIcon={IconsButton[submitMode]}
                   characterLimit={characterLimit}
                 />
-              </Atoms.Container>
-            </Atoms.Container>
+              </Container>
+            </Container>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <Molecules.EmojiPickerDialog
+      <EmojiPickerDialog
         open={showEmojiPicker && !isUiDisabled}
         onOpenChange={setShowEmojiPicker}
         onEmojiSelect={onEmojiSelect}

@@ -1,14 +1,20 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostActionsBar } from './PostActionsBar';
 
 // Mock hooks
 const mockUsePostCounts = vi.fn();
 const mockUseBookmark = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
   usePostCounts: (postId: string) => mockUsePostCounts(postId),
+}));
+
+vi.mock('@/hooks/useBookmark/useBookmark', () => ({
   useBookmark: (postId: string) => mockUseBookmark(postId),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
     requireAuth: <T,>(action: () => T) => action(),
@@ -16,71 +22,86 @@ vi.mock('@/hooks', () => ({
 }));
 
 // Use real libs - use actual implementations
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 // Mock PostMenuActions
-vi.mock('@/organisms', () => ({
-  PostMenuActions: ({ postId, trigger }: { postId: string; trigger: React.ReactNode }) => (
-    <div data-testid="post-menu-actions" data-post-id={postId}>
-      {trigger}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/PostMenuActions/PostMenuActions', () => {
+  return {
+    PostMenuActions: ({ postId, trigger }: { postId: string; trigger: React.ReactNode }) => (
+      <div data-testid="post-menu-actions" data-post-id={postId}>
+        {trigger}
+      </div>
+    ),
+  };
+});
 
 // Minimal atoms used by PostActionsBar
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="actions-container" data-class-name={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    onClick,
-    className,
-    variant,
-    size,
-    style,
-    'aria-label': aria,
-  }: {
-    children: React.ReactNode;
-    onClick?: React.MouseEventHandler;
-    className?: string;
-    variant?: string;
-    size?: string;
-    style?: React.CSSProperties;
-    'aria-label'?: string;
-  }) => (
-    <button
-      onClick={onClick}
-      className={className}
-      data-variant={variant}
-      data-size={size}
-      style={style}
-      aria-label={aria}
-    >
-      {children}
-    </button>
-  ),
-  Typography: ({
-    children,
-    as: Tag = 'span',
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <Tag data-testid="typography" className={className}>
-      {children}
-    </Tag>
-  ),
-  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      className,
+      variant,
+      size,
+      style,
+      'aria-label': aria,
+    }: {
+      children: React.ReactNode;
+      onClick?: React.MouseEventHandler;
+      className?: string;
+      variant?: string;
+      size?: string;
+      style?: React.CSSProperties;
+      'aria-label'?: string;
+    }) => (
+      <button
+        onClick={onClick}
+        className={className}
+        data-variant={variant}
+        data-size={size}
+        style={style}
+        aria-label={aria}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="actions-container" data-class-name={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: Tag = 'span',
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <Tag data-testid="typography" className={className}>
+        {children}
+      </Tag>
+    ),
+  };
+});
 
 describe('PostActionsBar', () => {
   beforeEach(() => {

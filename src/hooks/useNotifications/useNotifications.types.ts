@@ -1,4 +1,4 @@
-import type { FlatNotification } from '@/core';
+import type { FlatNotification } from '@/models/notification/notification.types';
 
 export interface UseNotificationsResult {
   notifications: FlatNotification[];

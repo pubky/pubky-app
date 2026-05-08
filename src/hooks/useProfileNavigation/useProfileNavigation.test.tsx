@@ -1,8 +1,8 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useProfileNavigation } from './useProfileNavigation';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
-import { PROFILE_ROUTES } from '@/app';
+import { PROFILE_ROUTES } from '@/app/routes';
+import { useProfileNavigation } from './useProfileNavigation';
 
 // Mock Next.js navigation hooks
 const mockPush = vi.fn();
@@ -19,7 +19,7 @@ vi.mock('next/navigation', () => ({
 const mockPubky = 'user123';
 const mockIsOwnProfile = vi.fn(() => true);
 
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: () => ({
     pubky: mockPubky,
     isOwnProfile: mockIsOwnProfile(),
@@ -30,7 +30,7 @@ vi.mock('@/providers', () => ({
 // Mock useIsMobile - default to desktop
 const mockIsMobile = vi.fn(() => false);
 
-vi.mock('@/hooks/useIsMobile', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockIsMobile(),
 }));
 

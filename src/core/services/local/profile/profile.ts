@@ -1,6 +1,25 @@
-import * as Core from '@/core';
-import { DatabaseErrorCode, Err, ErrorService } from '@/libs';
 import { PubkyAppUser } from 'pubky-app-specs';
+import { db } from '@/database/franky/franky';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import type { Pubky } from '@/models/models.types';
+import { NotificationModel } from '@/models/notification/notification';
+import { PostCountsModel } from '@/models/post/counts/postCounts';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
+import { PostTagsModel } from '@/models/post/tags/postTags';
+import { PostTtlModel } from '@/models/post/ttl/postTtl';
+import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { TagStreamModel } from '@/models/stream/tag/tagStream';
+import { UserStreamModel } from '@/models/stream/user/userStream';
+import { UserConnectionsModel } from '@/models/user/connections/userConnections';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
+import { UserTagsModel } from '@/models/user/tags/userTags';
+import { UserTtlModel } from '@/models/user/ttl/userTtl';
+import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
 
 export class LocalProfileService {
   private constructor() {} // Prevent instantiation
@@ -10,8 +29,8 @@ export class LocalProfileService {
    * @param userDetails - The user details to upsert
    * @returns Promise resolving to void
    */
-  static async upsertDetails(userDetails: Core.NexusUserDetails): Promise<void> {
-    await Core.UserDetailsModel.upsert(userDetails);
+  static async upsertDetails(userDetails: NexusUserDetails): Promise<void> {
+    await UserDetailsModel.upsert(userDetails);
   }
 
   /**
@@ -20,8 +39,8 @@ export class LocalProfileService {
    * @param userCounts - The user counts to upsert
    * @returns Promise resolving to void
    */
-  static async upsertCounts(userId: Core.Pubky, userCounts: Core.NexusUserCounts): Promise<void> {
-    await Core.UserCountsModel.upsert({
+  static async upsertCounts(userId: Pubky, userCounts: NexusUserCounts): Promise<void> {
+    await UserCountsModel.upsert({
       id: userId,
       ...userCounts,
     });
@@ -32,8 +51,8 @@ export class LocalProfileService {
    * @param userDetails - The user details to update
    * @returns Promise resolving to void
    */
-  static async updateDetails(user: PubkyAppUser, pubky: Core.Pubky): Promise<void> {
-    await Core.UserDetailsModel.update(pubky, {
+  static async updateDetails(user: PubkyAppUser, pubky: Pubky): Promise<void> {
+    await UserDetailsModel.update(pubky, {
       name: user.name,
       bio: user.bio,
       image: user.image,
@@ -48,50 +67,50 @@ export class LocalProfileService {
    */
   static async deleteAll() {
     try {
-      await Core.db.transaction(
+      await db.transaction(
         'rw',
         [
           // User tables
-          Core.UserCountsModel.table,
-          Core.UserDetailsModel.table,
-          Core.UserRelationshipsModel.table,
-          Core.UserTagsModel.table,
-          Core.UserConnectionsModel.table,
-          Core.UserTtlModel.table,
+          UserCountsModel.table,
+          UserDetailsModel.table,
+          UserRelationshipsModel.table,
+          UserTagsModel.table,
+          UserConnectionsModel.table,
+          UserTtlModel.table,
           // Post tables
-          Core.PostCountsModel.table,
-          Core.PostDetailsModel.table,
-          Core.PostRelationshipsModel.table,
-          Core.PostTagsModel.table,
-          Core.PostTtlModel.table,
+          PostCountsModel.table,
+          PostDetailsModel.table,
+          PostRelationshipsModel.table,
+          PostTagsModel.table,
+          PostTtlModel.table,
           // Stream tables
-          Core.PostStreamModel.table,
-          Core.UserStreamModel.table,
-          Core.TagStreamModel.table,
+          PostStreamModel.table,
+          UserStreamModel.table,
+          TagStreamModel.table,
           // Notifications table
-          Core.NotificationModel.table,
+          NotificationModel.table,
         ],
         async () => {
           await Promise.all([
             // User tables
-            Core.UserCountsModel.clear(),
-            Core.UserDetailsModel.clear(),
-            Core.UserRelationshipsModel.clear(),
-            Core.UserTagsModel.clear(),
-            Core.UserConnectionsModel.clear(),
-            Core.UserTtlModel.clear(),
+            UserCountsModel.clear(),
+            UserDetailsModel.clear(),
+            UserRelationshipsModel.clear(),
+            UserTagsModel.clear(),
+            UserConnectionsModel.clear(),
+            UserTtlModel.clear(),
             // Post tables
-            Core.PostCountsModel.clear(),
-            Core.PostDetailsModel.clear(),
-            Core.PostRelationshipsModel.clear(),
-            Core.PostTagsModel.clear(),
-            Core.PostTtlModel.clear(),
+            PostCountsModel.clear(),
+            PostDetailsModel.clear(),
+            PostRelationshipsModel.clear(),
+            PostTagsModel.clear(),
+            PostTtlModel.clear(),
             // Stream tables
-            Core.PostStreamModel.clear(),
-            Core.UserStreamModel.clear(),
-            Core.TagStreamModel.clear(),
+            PostStreamModel.clear(),
+            UserStreamModel.clear(),
+            TagStreamModel.clear(),
             // Notifications table
-            Core.NotificationModel.clear(),
+            NotificationModel.clear(),
           ]);
         },
       );

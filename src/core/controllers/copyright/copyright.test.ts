@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Core from '@/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CopyrightApplication } from '@/application/copyright/copyright';
 import type { TCopyrightSubmitParams } from './copyright.types';
 
 const testData = {
@@ -31,7 +31,7 @@ describe('CopyrightController', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    vi.spyOn(Core.CopyrightApplication, 'submit').mockResolvedValue(undefined);
+    vi.spyOn(CopyrightApplication, 'submit').mockResolvedValue(undefined);
     const copyrightModule = await import('./copyright');
     CopyrightController = copyrightModule.CopyrightController;
   });
@@ -39,7 +39,7 @@ describe('CopyrightController', () => {
   describe('submit', () => {
     it('should pass validated params to application layer', async () => {
       const params = createCopyrightParams();
-      const submitSpy = vi.spyOn(Core.CopyrightApplication, 'submit');
+      const submitSpy = vi.spyOn(CopyrightApplication, 'submit');
 
       await CopyrightController.submit(params);
 
@@ -75,7 +75,7 @@ describe('CopyrightController', () => {
         lastName: '  Doe  ',
         email: '  JOHN@EXAMPLE.COM  ',
       });
-      const submitSpy = vi.spyOn(Core.CopyrightApplication, 'submit');
+      const submitSpy = vi.spyOn(CopyrightApplication, 'submit');
 
       await CopyrightController.submit(params);
 
@@ -90,7 +90,7 @@ describe('CopyrightController', () => {
     });
 
     it('should propagate application layer errors', async () => {
-      vi.spyOn(Core.CopyrightApplication, 'submit').mockRejectedValue(new Error('Application error'));
+      vi.spyOn(CopyrightApplication, 'submit').mockRejectedValue(new Error('Application error'));
       const params = createCopyrightParams();
 
       await expect(CopyrightController.submit(params)).rejects.toThrow('Application error');

@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function DynamicProfilePostsPage() {
-  return <Templates.ProfilePagePosts />;
-}
+export { ProfilePostsPage as default } from '@/templates/Profile/Posts/ProfilePostsPage';

@@ -1,80 +1,91 @@
 'use client';
 
-import Image from 'next/image';
-import { QRCodeSVG } from 'qrcode.react';
-import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { Key, Loader2, QrCode } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
-import * as Config from '@/config';
-import * as App from '@/app';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
+import { QRCodeSVG } from 'qrcode.react';
+import { ONBOARDING_ROUTES } from '@/app/routes';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
+import { Link } from '@/atoms/Link/Link';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+import { Typography } from '@/atoms/Typography/Typography';
+import { PUBKY_CORE_URL, PUBKY_RING_URL } from '@/config/externalLinks';
+import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { Logger } from '@/libs/logger/logger';
+import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
+import { ContentCard } from '@/molecules/Content/Content';
+import { DialogAuthExpired } from '@/molecules/DialogAuthExpired/DialogAuthExpired';
+import { PageTitle } from '@/molecules/Page/Page';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
   const router = useRouter();
-  const inviteCode = Core.useOnboardingStore((state) => state.inviteCode);
+  const inviteCode = useOnboardingStore((state) => state.inviteCode);
   const hasInviteCode = inviteCode.trim().length > 0;
-
   useEffect(() => {
     if (!hasInviteCode) {
-      Libs.Logger.warn('[Scan] Missing inviteCode on signup screen; redirecting to invite flow');
-      router.replace(App.ONBOARDING_ROUTES.HUMAN);
+      Logger.warn('[Scan] Missing inviteCode on signup screen; redirecting to invite flow');
+      router.replace(ONBOARDING_ROUTES.HUMAN);
     }
   }, [hasInviteCode, router]);
-
-  const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = Hooks.useMobileAuth(
-    hasInviteCode ? { type: 'signup', inviteCode } : { autoFetch: false },
+  const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth(
+    hasInviteCode
+      ? {
+          type: 'signup',
+          inviteCode,
+        }
+      : {
+          autoFetch: false,
+        },
   );
-
   if (!hasInviteCode) return null;
-
   const isMobileLaunching = isLoading || isOpeningRing;
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
-      <Libs.Loader2 className="mr-2 size-4 animate-spin" />
-      <Atoms.Typography as="span" overrideDefaults aria-live="polite">
+      <Loader2 className="mr-2 size-4 animate-spin" />
+      <Typography as="span" overrideDefaults aria-live="polite">
         {isOpeningRing ? t('openingRing') : t('generatingShort')}
-      </Atoms.Typography>
+      </Typography>
     </>
   ) : isExpired ? (
     <>
-      <Libs.QrCode className="mr-2 size-4" />
+      <QrCode className="mr-2 size-4" />
       {t('expired')}
     </>
   ) : (
     <>
-      <Libs.Key className="mr-2 size-4" />
+      <Key className="mr-2 size-4" />
       {t('authorize')}
     </>
   );
-
   return (
     <>
       {/** Desktop view */}
-      <Atoms.Container size="container" className="hidden md:flex">
+      <Container size="container" className="hidden md:flex">
         <ScanHeader isMobile={false} />
-        <Molecules.ContentCard layout="column">
-          <Atoms.Container className="items-center justify-center gap-4">
+        <ContentCard layout="column">
+          <Container className="items-center justify-center gap-4">
             <div className="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4">
               {isLoading || (!url && !isExpired) ? (
-                <Atoms.Container className="items-center gap-2">
-                  <Libs.Loader2 className="size-8 animate-spin text-background" />
-                  <Atoms.Typography as="small" size="sm" className="text-background">
+                <Container className="items-center gap-2">
+                  <Loader2 className="size-8 animate-spin text-background" />
+                  <Typography as="small" size="sm" className="text-background">
                     {t('generating')}
-                  </Atoms.Typography>
-                </Atoms.Container>
+                  </Typography>
+                </Container>
               ) : isExpired ? (
-                <Atoms.Container className="items-center gap-2">
-                  <Libs.QrCode className="size-8 text-muted-foreground" />
-                  <Atoms.Typography as="small" size="sm" className="text-muted-foreground">
+                <Container className="items-center gap-2">
+                  <QrCode className="size-8 text-muted-foreground" />
+                  <Typography as="small" size="sm" className="text-muted-foreground">
                     {t('expired')}
-                  </Atoms.Typography>
-                </Atoms.Container>
+                  </Typography>
+                </Container>
               ) : (
                 <>
                   <QRCodeSVG value={url} size={220} />
@@ -89,21 +100,21 @@ export const ScanContent = () => {
               )}
             </div>
             {inviteCode && (
-              <Atoms.Typography as="p" className="text-lg font-semibold tracking-widest text-brand">
+              <Typography as="p" className="text-lg font-semibold tracking-widest text-brand">
                 {inviteCode}
-              </Atoms.Typography>
+              </Typography>
             )}
-          </Atoms.Container>
-        </Molecules.ContentCard>
-      </Atoms.Container>
+          </Container>
+        </ContentCard>
+      </Container>
 
       {/** Mobile view */}
-      <Atoms.Container size="container" className="md:hidden">
+      <Container size="container" className="md:hidden">
         <ScanHeader isMobile={true} />
-        <Molecules.ContentCard layout="column">
-          <Atoms.Container className="flex-col items-center justify-center gap-12 lg:flex-row">
+        <ContentCard layout="column">
+          <Container className="flex-col items-center justify-center gap-12 lg:flex-row">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
-            <Atoms.Button
+            <Button
               className="w-full"
               size="lg"
               onClick={onAuthorizeClick}
@@ -112,41 +123,39 @@ export const ScanContent = () => {
               data-testid="button"
             >
               {mobileAuthorizeContent}
-            </Atoms.Button>
-          </Atoms.Container>
-        </Molecules.ContentCard>
-      </Atoms.Container>
+            </Button>
+          </Container>
+        </ContentCard>
+      </Container>
 
-      <Molecules.DialogAuthExpired open={isExpired} onRefresh={fetchUrl} isLoading={isLoading} />
+      <DialogAuthExpired open={isExpired} onRefresh={fetchUrl} isLoading={isLoading} />
     </>
   );
 };
-
 export const ScanFooter = () => {
   const t = useTranslations('onboarding.scan');
   return (
-    <Atoms.FooterLinks className="py-6">
+    <FooterLinks className="py-6">
       {t.rich('authorizeSub', {
         pubkyRing: (chunks) => (
-          <Atoms.Link href={Config.PUBKY_RING_URL} target="_blank">
+          <Link href={PUBKY_RING_URL} target="_blank">
             {chunks}
-          </Atoms.Link>
+          </Link>
         ),
         pubkyCore: (chunks) => (
-          <Atoms.Link href={Config.PUBKY_CORE_URL} target="_blank">
+          <Link href={PUBKY_CORE_URL} target="_blank">
             {chunks}
-          </Atoms.Link>
+          </Link>
         ),
       })}
-    </Atoms.FooterLinks>
+    </FooterLinks>
   );
 };
-
 export const ScanHeader = ({ isMobile }: { isMobile: boolean }) => {
   const t = useTranslations('onboarding.scan');
   return (
-    <Atoms.PageHeader>
-      <Molecules.PageTitle size="large">
+    <PageHeader>
+      <PageTitle size="large">
         {isMobile
           ? t.rich('titleMobile', {
               highlight: (chunks) => <span className="text-brand">{chunks}</span>,
@@ -154,21 +163,18 @@ export const ScanHeader = ({ isMobile }: { isMobile: boolean }) => {
           : t.rich('titleDesktop', {
               highlight: (chunks) => <span className="text-brand">{chunks}</span>,
             })}
-      </Molecules.PageTitle>
-      <Atoms.PageSubtitle>{t('subtitle')}</Atoms.PageSubtitle>
-    </Atoms.PageHeader>
+      </PageTitle>
+      <PageSubtitle>{t('subtitle')}</PageSubtitle>
+    </PageHeader>
   );
 };
-
 export const ScanNavigation = () => {
   const router = useRouter();
-
   const onHandleBackButton = () => {
-    router.push(App.ONBOARDING_ROUTES.INSTALL);
+    router.push(ONBOARDING_ROUTES.INSTALL);
   };
-
   return (
-    <Molecules.ButtonsNavigation
+    <ButtonsNavigation
       id="scan-navigation"
       continueButtonDisabled={true}
       hiddenContinueButton={true}

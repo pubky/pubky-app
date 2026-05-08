@@ -1,7 +1,7 @@
-import { renderHook } from '@testing-library/react';
 import type { Session } from '@synonymdev/pubky';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockSession as buildSession } from '@/test-utils';
+import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mockSession as buildSession } from '@/test-utils/pubky';
 import { useAuthStatus } from './useAuthStatus';
 
 const mockSession = buildSession();
@@ -28,8 +28,10 @@ const mockAuthStore = {
   setHasHydrated: vi.fn(),
 };
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: () => mockOnboardingStore,
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: () => mockAuthStore,
 }));
 

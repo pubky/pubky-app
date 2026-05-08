@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import * as Core from '@/core';
+import { useHomeStore } from '@/stores/home/home.store';
+import type { ContentType } from '@/stores/home/home.types';
 
 /**
  * Persists visual-mode content coercion for interactive feeds that are backed by the home store.
@@ -17,8 +18,8 @@ import * as Core from '@/core';
  * Custom/read-only feeds should not use this hook because their content comes from persisted
  * feed config, not from the interactive home store.
  */
-export function useSyncInteractiveVisualContent(resolvedContent: Core.ContentType) {
-  const { content, setContent } = Core.useHomeStore();
+export function useSyncInteractiveVisualContent(resolvedContent: ContentType) {
+  const { content, setContent } = useHomeStore();
 
   useEffect(() => {
     if (resolvedContent === content) return;

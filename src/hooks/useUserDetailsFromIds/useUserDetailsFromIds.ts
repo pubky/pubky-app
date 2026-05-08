@@ -1,15 +1,18 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
+import { FileController } from '@/controllers/file/file';
+import { UserController } from '@/controllers/user/user';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { FALLBACK_USER_NAME } from './useUserDetailsFromIds.constants';
 import type {
+  AutocompleteUserData,
   UseUserDetailsFromIdsParams,
   UseUserDetailsFromIdsResult,
-  AutocompleteUserData,
 } from './useUserDetailsFromIds.types';
-import { FALLBACK_USER_NAME } from './useUserDetailsFromIds.constants';
 
 /**
  * Hook to fetch and transform user details from a list of user IDs.
@@ -30,11 +33,11 @@ export function useUserDetailsFromIds({
   // Fetch user details from cache reactively
   const userDetailsMap = useLiveQuery(
     async () => {
-      if (userIds.length === 0) return new Map<Core.Pubky, Core.NexusUserDetails>();
-      return await Core.UserController.getManyDetails({ userIds });
+      if (userIds.length === 0) return new Map<Pubky, NexusUserDetails>();
+      return await UserController.getManyDetails({ userIds });
     },
     [userIds],
-    new Map<Core.Pubky, Core.NexusUserDetails>(),
+    new Map<Pubky, NexusUserDetails>(),
   );
 
   // Transform user details map to AutocompleteUserData array
@@ -45,7 +48,7 @@ export function useUserDetailsFromIds({
       for (const userId of userIds) {
         const details = userDetailsMap.get(userId);
         if (details) {
-          const avatarUrl = details.image ? Core.FileController.getAvatarUrl(details.id) : undefined;
+          const avatarUrl = details.image ? FileController.getAvatarUrl(details.id) : undefined;
           result.push({
             id: userId,
             name: details.name || FALLBACK_USER_NAME,
@@ -63,8 +66,8 @@ export function useUserDetailsFromIds({
 
     void Promise.all(
       userIds.map((userId) =>
-        Core.UserController.getOrFetchDetails({ userId }).catch((error) => {
-          Libs.Logger.error('[useUserDetailsFromIds] Failed to fetch user details:', { userId, error });
+        UserController.getOrFetchDetails({ userId }).catch((error) => {
+          Logger.error('[useUserDetailsFromIds] Failed to fetch user details:', { userId, error });
         }),
       ),
     );

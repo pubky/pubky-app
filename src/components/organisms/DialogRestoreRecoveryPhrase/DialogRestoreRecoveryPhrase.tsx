@@ -1,32 +1,39 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { AlertCircle, FileText, Loader2, RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-
-import * as Atoms from '@/atoms';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/atoms/Dialog/Dialog';
+import { AuthController } from '@/controllers/auth/auth';
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { WordSlot } from '@/molecules/WordSlot/WordSlot';
 
 interface DialogRestoreRecoveryPhraseProps {
   onRestore?: () => void;
 }
-
 export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecoveryPhraseProps) {
   const t = useTranslations('onboarding.signIn');
   const [userWords, setUserWords] = useState<string[]>(Array(12).fill(''));
   const [isRestoring, setIsRestoring] = useState(false);
   const [errors, setErrors] = useState<boolean[]>(Array(12).fill(false));
   const [touched, setTouched] = useState<boolean[]>(Array(12).fill(false));
-  const { toast } = Molecules.useToast();
-
+  const { toast } = useToast();
   const handleRestore = async () => {
     // Guard against double-submit race condition
     if (isRestoring) return;
-
     setIsRestoring(true);
-
     try {
       // Mark all fields as touched when trying to restore
       setTouched(Array(12).fill(true));
@@ -36,13 +43,12 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
         return word === '' || !/^[a-z]+$/.test(word);
       });
       setErrors(newErrors);
-
       const hasErrors = newErrors.some((error) => error);
       const allFilled = userWords.every((word) => word !== '');
-
       const mnemonic = userWords.join(' ');
-      await Core.AuthController.loginWithMnemonic({ mnemonic });
-
+      await AuthController.loginWithMnemonic({
+        mnemonic,
+      });
       if (!hasErrors && allFilled) {
         onRestore?.();
       }
@@ -56,7 +62,6 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
       setIsRestoring(false);
     }
   };
-
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setUserWords(Array(12).fill(''));
@@ -65,20 +70,19 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
       setIsRestoring(false);
     }
   };
-
   return (
-    <Atoms.Dialog onOpenChange={handleOpenChange}>
-      <Atoms.DialogTrigger asChild>
-        <Atoms.Button
+    <Dialog onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button
           id="restore-recovery-phrase-btn"
           variant="outline"
           className="w-full rounded-full sm:w-auto md:flex-none"
         >
-          <Libs.FileText className="mr-2 h-4 w-4" />
+          <FileText className="mr-2 h-4 w-4" />
           {t('useRecoveryPhrase')}
-        </Atoms.Button>
-      </Atoms.DialogTrigger>
-      <Atoms.DialogContent className="gap-6 p-8" hiddenTitle={t('restoreRecoveryPhrase.title')}>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="gap-6 p-8" hiddenTitle={t('restoreRecoveryPhrase.title')}>
         <RestoreForm
           userWords={userWords}
           errors={errors}
@@ -89,11 +93,10 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
           onTouchedChange={setTouched}
           onRestore={handleRestore}
         />
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }
-
 function RestoreForm({
   userWords,
   errors,
@@ -128,7 +131,6 @@ function RestoreForm({
         const newUserWords = [...userWords];
         const newTouched = [...touched];
         const newErrors = [...errors];
-
         words.forEach((word, offset) => {
           const targetIndex = index + offset;
           if (targetIndex < 12) {
@@ -138,7 +140,6 @@ function RestoreForm({
             newErrors[targetIndex] = false;
           }
         });
-
         onWordChange(newUserWords);
         onTouchedChange(newTouched);
         onErrorsChange(newErrors);
@@ -166,7 +167,6 @@ function RestoreForm({
     },
     [userWords, errors, touched, onWordChange, onErrorsChange, onTouchedChange],
   );
-
   const handleWordValidate = useCallback(
     (index: number, word: string) => {
       // Mark as touched when blurred
@@ -183,31 +183,27 @@ function RestoreForm({
     },
     [errors, touched, onErrorsChange, onTouchedChange],
   );
-
   const isFormValid = () => {
     const allWordsFilled = userWords.every((word) => word !== '');
     const noErrors = !errors.some((error) => error);
     const allTouched = touched.every((t) => t);
-
     return allWordsFilled && noErrors && allTouched && !isRestoring;
   };
-
-  const handleKeyDown = Hooks.useEnterSubmit(isFormValid, onRestore);
-
+  const handleKeyDown = useEnterSubmit(isFormValid, onRestore);
   return (
     <>
-      <Atoms.DialogHeader className="space-y-1.5 pr-6">
-        <Atoms.DialogTitle className="text-2xl font-bold sm:text-[24px]">{t('title')}</Atoms.DialogTitle>
-        <Atoms.DialogDescription className="text-sm text-muted-foreground">{t('description')}</Atoms.DialogDescription>
-      </Atoms.DialogHeader>
+      <DialogHeader className="space-y-1.5 pr-6">
+        <DialogTitle className="text-2xl font-bold sm:text-[24px]">{t('title')}</DialogTitle>
+        <DialogDescription className="text-sm text-muted-foreground">{t('description')}</DialogDescription>
+      </DialogHeader>
 
-      <Atoms.Container className="space-y-6">
-        <Atoms.Container display="grid" className="grid-cols-2 gap-3 sm:grid-cols-3">
+      <Container className="space-y-6">
+        <Container display="grid" className="grid-cols-2 gap-3 sm:grid-cols-3">
           {userWords.map((word, i) => {
             const isError = errors[i];
             const showError = touched[i];
             return (
-              <Molecules.WordSlot
+              <WordSlot
                 key={i}
                 mode="editable"
                 index={i}
@@ -221,26 +217,26 @@ function RestoreForm({
               />
             );
           })}
-        </Atoms.Container>
+        </Container>
 
         {errors.some((error, index) => error && touched[index]) && (
-          <Atoms.Container className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
+          <Container className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
             <div className="flex items-center gap-2 text-red-500">
-              <Libs.AlertCircle className="h-4 w-4" />
+              <AlertCircle className="h-4 w-4" />
               <span className="text-sm font-medium">{t('invalidWords')}</span>
             </div>
             <p className="mt-1 text-sm text-red-500/80">{t('invalidWordsHint')}</p>
-          </Atoms.Container>
+          </Container>
         )}
-      </Atoms.Container>
+      </Container>
 
-      <Atoms.DialogFooter>
-        <Atoms.DialogClose asChild>
-          <Atoms.Button variant="outline" size="lg" className="order-2 sm:order-1">
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button variant="outline" size="lg" className="order-2 sm:order-1">
             {t('cancel')}
-          </Atoms.Button>
-        </Atoms.DialogClose>
-        <Atoms.Button
+          </Button>
+        </DialogClose>
+        <Button
           id="recovery-phrase-restore-btn"
           size="lg"
           className="order-1 sm:order-2"
@@ -249,17 +245,17 @@ function RestoreForm({
         >
           {isRestoring ? (
             <>
-              <Libs.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               {t('restoring')}
             </>
           ) : (
             <>
-              <Libs.RotateCcw className="mr-2 h-4 w-4 rotate-180" />
+              <RotateCcw className="mr-2 h-4 w-4 rotate-180" />
               {t('restore')}
             </>
           )}
-        </Atoms.Button>
-      </Atoms.DialogFooter>
+        </Button>
+      </DialogFooter>
     </>
   );
 }

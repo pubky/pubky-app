@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import * as Core from '@/core';
-import { useViewportObserver } from '../useViewportObserver';
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
+import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
+import type { Pubky } from '@/models/models.types';
 import type { UseTtlSubscriptionOptions, UseTtlSubscriptionResult } from './useTtlSubscription.types';
 
 /**
@@ -31,13 +32,13 @@ export function useTtlSubscription(options: UseTtlSubscriptionOptions): UseTtlSu
   useEffect(() => {
     if (!id || !enabled) return;
 
-    const coordinator = Core.TtlCoordinator.getInstance();
+    const coordinator = TtlCoordinator.getInstance();
 
     const unsubscribe = (sub: { type: 'post' | 'user'; id: string }) => {
       if (sub.type === 'post') {
         coordinator.unsubscribePost({ compositePostId: sub.id });
       } else {
-        coordinator.unsubscribeUser({ pubky: sub.id as Core.Pubky });
+        coordinator.unsubscribeUser({ pubky: sub.id as Pubky });
       }
     };
 
@@ -55,7 +56,7 @@ export function useTtlSubscription(options: UseTtlSubscriptionOptions): UseTtlSu
         if (type === 'post') {
           coordinator.subscribePost({ compositePostId: id });
         } else {
-          coordinator.subscribeUser({ pubky: id as Core.Pubky });
+          coordinator.subscribeUser({ pubky: id as Pubky });
         }
         subscriptionRef.current = { type, id };
       }

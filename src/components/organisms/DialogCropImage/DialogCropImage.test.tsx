@@ -1,7 +1,36 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Area } from 'react-easy-crop';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DialogCropImage } from './DialogCropImage';
+
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
+    DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-content" className={className}>
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-header" className={className}>
+        {children}
+      </div>
+    ),
+    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <h2 data-testid="dialog-title" className={className}>
+        {children}
+      </h2>
+    ),
+    DialogDescription: ({ children }: { children: React.ReactNode }) => (
+      <p data-testid="dialog-description">{children}</p>
+    ),
+    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-footer" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 const mockCroppedPixels: Area = { width: 120, height: 120, x: 10, y: 15 };
 
@@ -27,51 +56,29 @@ const triggerCropComplete = () => {
 
 const mockCropImageToBlob = vi.fn();
 
-vi.mock('@/libs', () => ({
+vi.mock('@/libs/image/cropImage', () => ({
   cropImageToBlob: (...args: unknown[]) => mockCropImageToBlob(...args),
 }));
 
-vi.mock('@/atoms', () => ({
-  Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
-  DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-content" className={className}>
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-header" className={className}>
-      {children}
-    </div>
-  ),
-  DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <h2 data-testid="dialog-title" className={className}>
-      {children}
-    </h2>
-  ),
-  DialogDescription: ({ children }: { children: React.ReactNode }) => (
-    <p data-testid="dialog-description">{children}</p>
-  ),
-  DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-footer" className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    className,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    className?: string;
-  }) => (
-    <button type="button" data-testid="button" onClick={onClick} disabled={disabled} className={className}>
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      disabled,
+      className,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      disabled?: boolean;
+      className?: string;
+    }) => (
+      <button type="button" data-testid="button" onClick={onClick} disabled={disabled} className={className}>
+        {children}
+      </button>
+    ),
+  };
+});
 
 if (!('createObjectURL' in URL)) {
   Object.defineProperty(URL, 'createObjectURL', {

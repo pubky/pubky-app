@@ -1,13 +1,14 @@
 import { Table } from 'dexie';
-
-import * as Core from '@/core';
-import { RecordModelBase } from '@/core/models/shared/base/record/baseRecord';
+import { db } from '@/database/franky/franky';
+import { DELETED } from '@/models/post/details/postDetails.constants';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
 
 export class PostDetailsModel
-  extends RecordModelBase<string, Core.PostDetailsModelSchema>
-  implements Core.PostDetailsModelSchema
+  extends RecordModelBase<string, PostDetailsModelSchema>
+  implements PostDetailsModelSchema
 {
-  static table: Table<Core.PostDetailsModelSchema> = Core.db.table('post_details');
+  static table: Table<PostDetailsModelSchema> = db.table('post_details');
 
   content: string;
   indexed_at: number;
@@ -15,7 +16,7 @@ export class PostDetailsModel
   uri: string;
   attachments: string[] | null;
 
-  constructor(postDetails: Core.PostDetailsModelSchema) {
+  constructor(postDetails: PostDetailsModelSchema) {
     super(postDetails);
     this.content = postDetails.content;
     this.indexed_at = postDetails.indexed_at;
@@ -36,7 +37,7 @@ export class PostDetailsModel
       return postIds.filter((postId, index) => {
         const details = detailsById[index];
         // Keep posts that don't have details (fail-open) or aren't deleted
-        return !details || details.content !== Core.DELETED;
+        return !details || details.content !== DELETED;
       });
     } catch {
       // Fail-open: keep posts we can't read

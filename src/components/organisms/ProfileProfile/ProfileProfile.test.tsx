@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { AUTH_ROUTES } from '@/app/routes';
 import { ProfileProfile } from './ProfileProfile';
-import * as App from '@/app';
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -11,80 +11,87 @@ vi.mock('next/navigation', () => ({
   })),
 }));
 
-// Mock Core
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(() => ({
-      currentUserPubky: 'pubky1QX7GKW3abcdef1234567890',
-    })),
-    useNotificationStore: vi.fn(() => 0),
-  };
-});
+// Mock dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(() => ({
+    currentUserPubky: 'pubky1QX7GKW3abcdef1234567890',
+  })),
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn(() => 0),
+}));
 
 // Mock hooks
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useProfileHeader: vi.fn(() => ({
-      profile: {
-        name: 'Satoshi Nakamoto',
-        bio: 'Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.',
-        publicKey: 'pubky1QX7GKW3abcdef1234567890',
-        emoji: '🌴',
-        status: 'Vacationing',
-        avatarUrl: undefined,
-        link: 'http://localhost:3000/profile/1QX7GKW3abcdef1234567890',
-        links: [],
-      },
-      actions: {
-        onEdit: vi.fn(),
-        onCopyPublicKey: vi.fn(),
-        onCopyLink: vi.fn(),
-        onSignOut: vi.fn(() => {
-          mockPush(App.AUTH_ROUTES.LOGOUT);
-        }),
-        onStatusClick: vi.fn(),
-      },
-      isLoading: false,
-    })),
-    useRequireAuth: vi.fn(() => ({
-      isAuthenticated: true,
-      requireAuth: vi.fn((callback) => callback()),
-    })),
-    useFollowUser: vi.fn(() => ({
-      toggleFollow: vi.fn(),
-      isLoading: false,
-      loadingAction: null,
-    })),
-    useIsFollowing: vi.fn(() => ({
-      isFollowing: false,
-    })),
-    useTagged: vi.fn(() => ({
-      tags: [],
-      isLoading: false,
-      handleTagToggle: vi.fn(),
-    })),
-  };
-});
+vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
+  useProfileHeader: vi.fn(() => ({
+    profile: {
+      name: 'Satoshi Nakamoto',
+      bio: 'Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.',
+      publicKey: 'pubky1QX7GKW3abcdef1234567890',
+      emoji: '🌴',
+      status: 'Vacationing',
+      avatarUrl: undefined,
+      link: 'http://localhost:3000/profile/1QX7GKW3abcdef1234567890',
+      links: [],
+    },
+    actions: {
+      onEdit: vi.fn(),
+      onCopyPublicKey: vi.fn(),
+      onCopyLink: vi.fn(),
+      onSignOut: vi.fn(() => {
+        mockPush(AUTH_ROUTES.LOGOUT);
+      }),
+      onStatusClick: vi.fn(),
+    },
+    isLoading: false,
+  })),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: vi.fn(() => ({
+    isAuthenticated: true,
+    requireAuth: vi.fn((callback) => callback()),
+  })),
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
+  useFollowUser: vi.fn(() => ({
+    toggleFollow: vi.fn(),
+    isLoading: false,
+    loadingAction: null,
+  })),
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
+  useIsFollowing: vi.fn(() => ({
+    isFollowing: false,
+  })),
+}));
+
+vi.mock('@/hooks/useTagged/useTagged', () => ({
+  useTagged: vi.fn(() => ({
+    tags: [],
+    isLoading: false,
+    handleTagToggle: vi.fn(),
+  })),
+}));
 
 // Mock molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/ProfilePageLinks/ProfilePageLinks', () => {
   return {
-    ...actual,
-    ProfilePageTaggedAs: () => <div data-testid="profile-page-tagged-as">Tagged as section</div>,
     ProfilePageLinks: () => <div data-testid="profile-page-links">Links section</div>,
   };
 });
 
-// Mock organisms
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs', () => {
   return {
-    ...actual,
+    ProfilePageTaggedAs: () => <div data-testid="profile-page-tagged-as">Tagged as section</div>,
+  };
+});
+
+// Mock organisms
+vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', () => {
+  return {
     ProfilePageHeader: ({
       profile,
       actions,
@@ -151,7 +158,7 @@ describe('ProfileProfile', () => {
     const signOutButton = screen.getByText('Sign out');
     fireEvent.click(signOutButton);
 
-    expect(mockPush).toHaveBeenCalledWith(App.AUTH_ROUTES.LOGOUT);
+    expect(mockPush).toHaveBeenCalledWith(AUTH_ROUTES.LOGOUT);
   });
 
   it('matches snapshot', () => {

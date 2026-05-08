@@ -1,33 +1,23 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { REPORT_POST_STEPS } from '@/hooks/useReportPost/useReportPost.constants';
+import { REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
 import { DialogReportPost } from './DialogReportPost';
-import { REPORT_POST_STEPS } from '@/hooks/useReportPost';
-import { REPORT_ISSUE_TYPES } from '@/core/pipes/report';
-
-// Mock @/libs - use actual implementations and only stub cn helper
-vi.mock('@/libs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs')>();
-  return {
-    ...actual,
-    cn: (...inputs: (string | undefined | null | false)[]) => inputs.filter(Boolean).join(' '),
-  };
-});
 
 // Mock hooks
 const mockUseCurrentUserProfile = vi.fn();
 const mockUseReportPost = vi.fn();
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: () => mockUseCurrentUserProfile(),
-    useReportPost: () => mockUseReportPost(),
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => mockUseCurrentUserProfile(),
+}));
+
+vi.mock('@/hooks/useReportPost/useReportPost', () => ({
+  useReportPost: () => mockUseReportPost(),
+}));
 
 // Mock sub-components
-vi.mock('./DialogReportPostIssueStep', () => ({
+vi.mock('./DialogReportPostIssueStep/DialogReportPostIssueStep', () => ({
   DialogReportPostIssueStep: ({ onSelectIssueType }: { onSelectIssueType: (type: string) => void }) => (
     <div
       data-testid="dialog-report-post-issue-step"
@@ -38,7 +28,7 @@ vi.mock('./DialogReportPostIssueStep', () => ({
   ),
 }));
 
-vi.mock('./DialogReportPostReasonStep', () => ({
+vi.mock('./DialogReportPostReasonStep/DialogReportPostReasonStep', () => ({
   DialogReportPostReasonStep: ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: () => void }) => (
     <div data-testid="dialog-report-post-reason-step">
       <button data-testid="back-button" onClick={onCancel}>
@@ -52,7 +42,7 @@ vi.mock('./DialogReportPostReasonStep', () => ({
   ),
 }));
 
-vi.mock('./DialogReportPostSuccess', () => ({
+vi.mock('./DialogReportPostSuccess/DialogReportPostSuccess', () => ({
   DialogReportPostSuccess: ({ onOpenChange }: { onOpenChange: (open: boolean) => void }) => (
     <div data-testid="dialog-report-post-success" onClick={() => onOpenChange(false)}>
       DialogReportPostSuccess

@@ -1,15 +1,18 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as Core from '@/core';
-import { AppError, ErrorCategory, ValidationErrorCode, ErrorService } from '@/libs';
 import { FollowResult } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { asOpaque } from '@/test-utils/type-assertions';
 import {
-  TEST_PUBKY,
-  INVALID_INPUTS,
-  setupUnitTestMocks,
-  setupIntegrationTestMocks,
-  restoreMocks,
   buildPubkyUri,
+  INVALID_INPUTS,
+  restoreMocks,
+  setupIntegrationTestMocks,
+  setupUnitTestMocks,
+  TEST_PUBKY,
 } from '../pipes.test-utils';
 
 describe('FollowNormalizer', () => {
@@ -38,21 +41,21 @@ describe('FollowNormalizer', () => {
 
     describe('to - successful creation', () => {
       it('should create follow with follow and meta properties', () => {
-        const result = Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
+        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
 
         expect(result).toHaveProperty('follow');
         expect(result).toHaveProperty('meta');
       });
 
       it('should call PubkySpecsSingleton.get with follower and createFollow with followee', () => {
-        Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
+        FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
 
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
         expect(mockBuilder.createFollow).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
       });
 
       it('should return correct structure with follow and meta URL', () => {
-        const result = Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
+        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
 
         expect(result.follow).toHaveProperty('toJson');
         expect(result.meta.url).toContain('pubky://');
@@ -62,17 +65,17 @@ describe('FollowNormalizer', () => {
 
     describe('to - different inputs', () => {
       it('should handle different follower/followee combinations', () => {
-        Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
+        FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
         expect(mockBuilder.createFollow).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
 
-        Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_2, followee: TEST_PUBKY.USER_1 });
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
+        FollowNormalizer.to({ follower: TEST_PUBKY.USER_2, followee: TEST_PUBKY.USER_1 });
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
       });
 
       it('should handle self-follow scenario', () => {
-        Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_1 });
+        FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_1 });
 
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
         expect(mockBuilder.createFollow).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
       });
     });
@@ -85,7 +88,7 @@ describe('FollowNormalizer', () => {
         });
 
         try {
-          Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
+          FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -100,11 +103,11 @@ describe('FollowNormalizer', () => {
       });
 
       it('should throw AppError when PubkySpecsSingleton.get fails', () => {
-        vi.spyOn(Core.PubkySpecsSingleton, 'get').mockImplementation(() => {
+        vi.spyOn(PubkySpecsSingleton, 'get').mockImplementation(() => {
           throw 'Singleton error';
         });
 
-        expect(() => Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 })).toThrow(
+        expect(() => FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 })).toThrow(
           AppError,
         );
       });
@@ -115,7 +118,7 @@ describe('FollowNormalizer', () => {
         ['empty followee', { follower: TEST_PUBKY.USER_1, followee: INVALID_INPUTS.EMPTY }],
         ['empty follower', { follower: INVALID_INPUTS.EMPTY, followee: TEST_PUBKY.USER_2 }],
       ])('should pass %s to builder (unit test)', (_, params) => {
-        Core.FollowNormalizer.to(params);
+        FollowNormalizer.to(params);
         // In unit tests, mocks don't validate - just verify calls
         expect(mockBuilder.createFollow).toHaveBeenCalled();
       });
@@ -131,7 +134,7 @@ describe('FollowNormalizer', () => {
 
     describe('successful creation with real library', () => {
       it('should create valid result with correct URL format', () => {
-        const result = Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
+        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
 
         expect(result.follow).toBeDefined();
         expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/follows\/.+/);
@@ -139,21 +142,21 @@ describe('FollowNormalizer', () => {
       });
 
       it('should create unique URLs for different followees', () => {
-        const result1 = Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
-        const result2 = Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_1 });
+        const result1 = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
+        const result2 = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_1 });
 
         expect(result1.meta.url).not.toBe(result2.meta.url);
       });
 
       it('should allow self-follow at specs level', () => {
-        const result = Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_1 });
+        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_1 });
 
         expect(result).toBeDefined();
         expect(result.meta.url).toContain(TEST_PUBKY.USER_1);
       });
 
       it('should produce valid JSON from follow object', () => {
-        const result = Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
+        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
 
         expect(typeof result.follow.toJson).toBe('function');
         expect(result.follow.toJson()).toBeDefined();
@@ -161,7 +164,7 @@ describe('FollowNormalizer', () => {
 
       it('should handle followee with "pubky" prefix by stripping it', () => {
         const prefixedFollowee = `pubky${TEST_PUBKY.USER_2}`;
-        const result = Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: prefixedFollowee });
+        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: prefixedFollowee });
 
         expect(result.follow).toBeDefined();
         expect(result.meta.url).toContain(TEST_PUBKY.USER_2);
@@ -169,7 +172,7 @@ describe('FollowNormalizer', () => {
 
       it('should handle followee with "pk:" prefix by stripping it', () => {
         const prefixedFollowee = `pk:${TEST_PUBKY.USER_2}`;
-        const result = Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: prefixedFollowee });
+        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: prefixedFollowee });
 
         expect(result.follow).toBeDefined();
         expect(result.meta.url).toContain(TEST_PUBKY.USER_2);
@@ -188,7 +191,7 @@ describe('FollowNormalizer', () => {
         ['invalid format', INVALID_INPUTS.INVALID_FORMAT],
       ])('should throw AppError for %s followee', (_, invalidFollowee) => {
         try {
-          Core.FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: invalidFollowee });
+          FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: invalidFollowee });
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);

@@ -1,6 +1,37 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogBackupExport } from './DialogBackupExport';
+
+vi.mock('@/atoms/Dialog/Dialog', () => {
+  return {
+    Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
+    DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+      <div data-testid="dialog-trigger" data-as-child={asChild}>
+        {children}
+      </div>
+    ),
+    DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-content" className={className}>
+        {children}
+      </div>
+    ),
+    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="dialog-header" className={className}>
+        {children}
+      </div>
+    ),
+    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <h2 data-testid="dialog-title" className={className}>
+        {children}
+      </h2>
+    ),
+    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="dialog-description" className={className}>
+        {children}
+      </p>
+    ),
+  };
+});
 
 // Mock Next.js Image component
 vi.mock('next/image', () => ({
@@ -28,91 +59,71 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
-// Mock @/libs - use actual implementations (no icon stubs)
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
-
 // Mock window.open
 const mockWindowOpen = vi.fn();
 const originalOpen = window.open;
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
-  DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div data-testid="dialog-trigger" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-  DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-content" className={className}>
-      {children}
-    </div>
-  ),
-  DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="dialog-header" className={className}>
-      {children}
-    </div>
-  ),
-  DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <h2 data-testid="dialog-title" className={className}>
-      {children}
-    </h2>
-  ),
-  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p data-testid="dialog-description" className={className}>
-      {children}
-    </p>
-  ),
-  Button: ({
-    children,
-    variant,
-    size,
-    className,
-    onClick,
-    ...props
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-    [key: string]: unknown;
-  }) => (
-    <button
-      data-testid={variant ? `button-${variant}` : 'button'}
-      data-variant={variant}
-      data-size={size}
-      className={className}
-      onClick={onClick}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
-  Link: ({
-    children,
-    href,
-    target,
-    className,
-  }: {
-    children: React.ReactNode;
-    href: string;
-    target?: string;
-    className?: string;
-  }) => (
-    <a data-testid="link" href={href} target={target} className={className}>
-      {children}
-    </a>
-  ),
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      size,
+      className,
+      onClick,
+      ...props
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      size?: string;
+      className?: string;
+      onClick?: () => void;
+      [key: string]: unknown;
+    }) => (
+      <button
+        data-testid={variant ? `button-${variant}` : 'button'}
+        data-variant={variant}
+        data-size={size}
+        className={className}
+        onClick={onClick}
+        {...props}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Link/Link', () => {
+  return {
+    Link: ({
+      children,
+      href,
+      target,
+      className,
+    }: {
+      children: React.ReactNode;
+      href: string;
+      target?: string;
+      className?: string;
+    }) => (
+      <a data-testid="link" href={href} target={target} className={className}>
+        {children}
+      </a>
+    ),
+  };
+});
 
 describe('DialogBackupExport', () => {
   beforeEach(() => {

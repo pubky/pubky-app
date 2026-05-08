@@ -1,20 +1,22 @@
-import * as Core from '@/core';
 import {
-  TTL_POST_MS,
-  TTL_USER_MS,
   TTL_BATCH_INTERVAL_MS,
   TTL_POST_MAX_BATCH_SIZE,
+  TTL_POST_MS,
   TTL_USER_MAX_BATCH_SIZE,
+  TTL_USER_MS,
 } from '@/config/sync';
-import { Logger } from '@/libs';
+import { TtlController } from '@/controllers/ttl/ttl';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
+  EntityOps,
   TtlCoordinatorConfig,
   TtlCoordinatorState,
   TtlSubscribePostParams,
-  TtlUnsubscribePostParams,
   TtlSubscribeUserParams,
+  TtlUnsubscribePostParams,
   TtlUnsubscribeUserParams,
-  EntityOps,
 } from './ttl.types';
 
 /**
@@ -234,7 +236,7 @@ export class TtlCoordinator {
    */
   private setupListeners(): void {
     // Listen to auth store changes
-    this.authStoreUnsubscribe = Core.useAuthStore.subscribe((state, prevState) => {
+    this.authStoreUnsubscribe = useAuthStore.subscribe((state, prevState) => {
       const isAuthenticated = state.selectIsAuthenticated();
       const wasAuthenticated = prevState.selectIsAuthenticated();
 
@@ -311,7 +313,7 @@ export class TtlCoordinator {
     }
 
     // Must be authenticated
-    const authState = Core.useAuthStore.getState();
+    const authState = useAuthStore.getState();
     if (!authState.selectIsAuthenticated() || !authState.hasProfile) {
       return false;
     }
@@ -426,7 +428,7 @@ export class TtlCoordinator {
    * Add a user subscription with reference counting
    * Increments ref count; adds to subscribed set on first reference
    */
-  private addUserSubscription(userId: Core.Pubky): void {
+  private addUserSubscription(userId: Pubky): void {
     const currentCount = this.state.userRefCount.get(userId) ?? 0;
     this.state.userRefCount.set(userId, currentCount + 1);
 
@@ -439,7 +441,7 @@ export class TtlCoordinator {
    * Remove a user subscription with reference counting
    * Decrements ref count; removes from subscribed set when count reaches 0
    */
-  private removeUserSubscription(userId: Core.Pubky): void {
+  private removeUserSubscription(userId: Pubky): void {
     const currentCount = this.state.userRefCount.get(userId) ?? 0;
 
     if (currentCount <= 1) {
@@ -493,15 +495,15 @@ export class TtlCoordinator {
       ttlMs: this.config.postTtlMs,
       maxBatchSize: this.config.postMaxBatchSize,
       requiresViewerId: true,
-      findStaleByIds: (ids) => Core.TtlController.findStalePostsByIds({ postIds: ids, ttlMs: this.config.postTtlMs }),
-      forceRefresh: (ids, viewerId) => Core.TtlController.forceRefreshPostsByIds({ postIds: ids, viewerId: viewerId! }),
+      findStaleByIds: (ids) => TtlController.findStalePostsByIds({ postIds: ids, ttlMs: this.config.postTtlMs }),
+      forceRefresh: (ids, viewerId) => TtlController.forceRefreshPostsByIds({ postIds: ids, viewerId: viewerId! }),
     };
   }
 
   /**
    * Get entity operations config for users
    */
-  private getUserOps(): EntityOps<Core.Pubky> {
+  private getUserOps(): EntityOps<Pubky> {
     return {
       entityName: 'user',
       subscribed: this.state.subscribedUsers,
@@ -509,9 +511,9 @@ export class TtlCoordinator {
       ttlMs: this.config.userTtlMs,
       maxBatchSize: this.config.userMaxBatchSize,
       requiresViewerId: false,
-      findStaleByIds: (ids) => Core.TtlController.findStaleUsersByIds({ userIds: ids, ttlMs: this.config.userTtlMs }),
+      findStaleByIds: (ids) => TtlController.findStaleUsersByIds({ userIds: ids, ttlMs: this.config.userTtlMs }),
       forceRefresh: (ids, viewerId) =>
-        Core.TtlController.forceRefreshUsersByIds({ userIds: ids, viewerId: viewerId ?? undefined }),
+        TtlController.forceRefreshUsersByIds({ userIds: ids, viewerId: viewerId ?? undefined }),
     };
   }
 
@@ -571,7 +573,7 @@ export class TtlCoordinator {
   /**
    * Refresh stale entities in batches
    */
-  private async refreshStaleEntities<T extends string>(ops: EntityOps<T>, viewerId: Core.Pubky | null): Promise<void> {
+  private async refreshStaleEntities<T extends string>(ops: EntityOps<T>, viewerId: Pubky | null): Promise<void> {
     if (ops.batchQueue.size === 0) return;
 
     // viewerId may be required for certain entity types
@@ -614,7 +616,7 @@ export class TtlCoordinator {
    */
   private async onBatchTick(): Promise<void> {
     // Skip if not authenticated
-    const authState = Core.useAuthStore.getState();
+    const authState = useAuthStore.getState();
     if (!authState.selectIsAuthenticated()) {
       Logger.debug('TtlCoordinator: Batch tick skipped (not authenticated)');
       return;

@@ -1,13 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { SORT, type SortType } from '@/stores/home/home.types';
 import { FilterSort } from './FilterSort';
-import { SORT, type SortType } from '@/core/stores/home/home.types';
-
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
-  return { ...actual };
-});
 
 describe('FilterSort', () => {
   it('renders with default selected tab', () => {

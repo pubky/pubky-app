@@ -1,13 +1,16 @@
 'use client';
 
-import type { PostDetailsModel } from '@/core';
+import { Container } from '@/atoms/Container/Container';
+import { Image } from '@/atoms/Image/Image';
+import { Typography } from '@/atoms/Typography/Typography';
+import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
+import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
+import { cn } from '@/libs/utils/utils';
+import type { PostDetailsModel } from '@/models/post/details/postDetails';
+import { PostText } from '@/molecules/PostText/PostText';
+import { FileVariant } from '@/services/nexus/file/file.types';
+import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
 import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Core from '@/core';
-import * as Libs from '@/libs';
-import * as Hooks from '@/hooks';
 
 interface PostArticleProps {
   content: string;
@@ -17,13 +20,13 @@ interface PostArticleProps {
 }
 
 export const PostArticle = ({ content, attachments, localAttachments, className }: PostArticleProps) => {
-  const { title, body, coverImage } = Hooks.usePostArticle({
+  const { title, body, coverImage } = usePostArticle({
     content,
     attachments,
-    coverImageVariant: Core.FileVariant.FEED,
+    coverImageVariant: FileVariant.FEED,
   });
 
-  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = Hooks.useLinkConfirmation();
+  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
   const localCoverImage = localAttachments?.[0]?.type.startsWith('image')
     ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
@@ -33,22 +36,17 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
 
   return (
     <>
-      <Atoms.Container className={Libs.cn('justify-between gap-6 lg:flex-row', className)}>
-        <Atoms.Container className="gap-y-1">
-          <Atoms.Typography size="lg" className="wrap-anywhere hyphens-auto">
+      <Container className={cn('justify-between gap-6 lg:flex-row', className)}>
+        <Container className="gap-y-1">
+          <Typography size="lg" className="wrap-anywhere hyphens-auto">
             {title}
-          </Atoms.Typography>
+          </Typography>
 
-          <Molecules.PostText
-            content={body}
-            isArticle
-            onLinkClick={handleLinkClick}
-            className="text-muted-foreground"
-          />
-        </Atoms.Container>
+          <PostText content={body} isArticle onLinkClick={handleLinkClick} className="text-muted-foreground" />
+        </Container>
 
         {finalCoverImage && (
-          <Atoms.Image
+          <Image
             src={finalCoverImage.src}
             alt={finalCoverImage.alt}
             className="h-25 w-45 rounded-md object-cover object-center"
@@ -56,9 +54,9 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
             height={100}
           />
         )}
-      </Atoms.Container>
+      </Container>
 
-      <Organisms.DialogCheckLink open={dialogOpen} onOpenChangeAction={setDialogOpen} linkUrl={clickedLink} />
+      <DialogCheckLink open={dialogOpen} onOpenChangeAction={setDialogOpen} linkUrl={clickedLink} />
     </>
   );
 };

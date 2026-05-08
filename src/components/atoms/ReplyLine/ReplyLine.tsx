@@ -1,4 +1,4 @@
-import * as Libs from '@/libs';
+import { createReplyConnectorPath } from '@/libs/svg/svg';
 
 interface ReplyLineProps {
   height: number;
@@ -15,7 +15,7 @@ export const ReplyLine = ({
   strokeWidth = 2,
   'data-testid': dataTestId,
 }: ReplyLineProps) => {
-  const { path, tailPath, width, height: svgHeight } = Libs.createReplyConnectorPath(height, isLast);
+  const { path, tailPath, width, height: svgHeight } = createReplyConnectorPath(height, isLast);
 
   return (
     <svg

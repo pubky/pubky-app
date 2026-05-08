@@ -1,7 +1,9 @@
-import * as Atoms from '@/atoms';
-import * as ProviderTypes from '../Provider.types';
+import { Container } from '@/atoms/Container/Container';
+import { Iframe } from '@/atoms/Iframe/Iframe';
+import { convertHmsToSeconds } from '@/libs/utils/utils';
+import { HMS_TIMESTAMP_REGEX } from '@/libs/utils/utils.constants';
 import { VIDEO_EMBED_PROPS } from '../Provider.constants';
-import * as Libs from '@/libs';
+import type { EmbedData, EmbedProvider } from '../Provider.types';
 
 /**
  * Extract YouTube video ID from URL
@@ -65,9 +67,9 @@ const extractYouTubeTimestamp = (url: string): number | null => {
     if (!timeParam) return null;
 
     // Require at least one component using shared regex pattern
-    const hmsMatch = timeParam.match(Libs.HMS_TIMESTAMP_REGEX);
+    const hmsMatch = timeParam.match(HMS_TIMESTAMP_REGEX);
     if (hmsMatch && (hmsMatch[1] || hmsMatch[2] || hmsMatch[3])) {
-      const timestamp = Libs.convertHmsToSeconds(hmsMatch[1], hmsMatch[2], hmsMatch[3]);
+      const timestamp = convertHmsToSeconds(hmsMatch[1], hmsMatch[2], hmsMatch[3]);
       // convertHmsToSeconds returns null if any value is NaN (defense in depth)
       if (timestamp !== null) return timestamp;
     }
@@ -113,7 +115,7 @@ const YOUTUBE_DOMAINS = [
  * YouTube embed provider
  * Implements the standard EmbedProvider interface
  */
-export const Youtube: ProviderTypes.EmbedProvider = {
+export const Youtube: EmbedProvider = {
   /**
    * List of supported YouTube domains
    */
@@ -122,7 +124,7 @@ export const Youtube: ProviderTypes.EmbedProvider = {
   /**
    * Parse YouTube URL and return embed information
    */
-  parseEmbed: (url: string): ProviderTypes.EmbedData | null => {
+  parseEmbed: (url: string): EmbedData | null => {
     const id = extractYouTubeId(url);
 
     if (!id) return null;
@@ -142,7 +144,7 @@ export const Youtube: ProviderTypes.EmbedProvider = {
    * Render YouTube iframe embed with responsive aspect ratio wrapper
    * Matches Vimeo's rendering pattern for consistent 16:9 aspect ratio
    */
-  renderEmbed: (embedData: ProviderTypes.EmbedData) => {
+  renderEmbed: (embedData: EmbedData) => {
     // Type guard: ensure we have a URL type
     if (embedData.type !== 'url') return null;
 
@@ -150,8 +152,8 @@ export const Youtube: ProviderTypes.EmbedProvider = {
     const videoId = extractVideoIdFromEmbedUrl(embedUrl);
 
     return (
-      <Atoms.Container data-testid="youtube-aspect-ratio-wrapper" className="relative pt-[56.25%]">
-        <Atoms.Iframe
+      <Container data-testid="youtube-aspect-ratio-wrapper" className="relative pt-[56.25%]">
+        <Iframe
           {...VIDEO_EMBED_PROPS}
           sandbox={`${VIDEO_EMBED_PROPS.sandbox} allow-popups-to-escape-sandbox`}
           src={embedUrl}
@@ -160,7 +162,7 @@ export const Youtube: ProviderTypes.EmbedProvider = {
           height="auto"
           className="absolute top-0 left-0 h-full w-full"
         />
-      </Atoms.Container>
+      </Container>
     );
   },
 };

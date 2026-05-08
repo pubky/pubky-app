@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PublicKeyCard } from './PublicKeyCard';
 
-// Mock navigator.clipboard (not needed anymore since we mock Libs.copyToClipboard directly)
+// Mock navigator.clipboard (not needed anymore since copy is mocked directly)
 // const mockWriteText = vi.fn();
 // Object.assign(navigator, {
 //   clipboard: {
@@ -31,113 +31,147 @@ interface ActionProps {
 }
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  useToast: () => ({
+vi.mock('@/molecules/ActionSection/ActionSection', () => {
+  return {
+    ActionSection: ({
+      children,
+      actions,
+      className,
+    }: {
+      children: React.ReactNode;
+      actions?: ActionProps[];
+      className?: string;
+    }) => (
+      <div data-testid="action-section" className={className}>
+        {actions?.map((action: ActionProps, index: number) => (
+          <button
+            key={index}
+            data-testid={`action-button-${index}`}
+            onClick={action.onClick}
+            data-variant={action.variant}
+            className={action.className}
+          >
+            {action.icon}
+            {action.label}
+          </button>
+        ))}
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Content/Content', () => {
+  return {
+    ContentCard: ({ children, image }: { children: React.ReactNode; image?: ImageProps }) => (
+      <div data-testid="content-card">
+        {image && <img data-testid="content-card-image" src={image.src} alt={image.alt} data-size={image.size} />}
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/InputField/InputField', () => {
+  return {
+    InputField: ({
+      value,
+      variant,
+      readOnly,
+      onClick,
+      loading,
+      loadingText,
+      loadingIcon,
+      icon,
+    }: {
+      value?: string;
+      variant?: string;
+      readOnly?: boolean;
+      onClick?: () => void;
+      loading?: boolean;
+      loadingText?: string;
+      loadingIcon?: React.ReactNode;
+      icon?: React.ReactNode;
+    }) => (
+      <div data-testid="input-field">
+        {loading ? (
+          <div data-testid="loading">
+            {loadingIcon}
+            {loadingText}
+          </div>
+        ) : (
+          <div>
+            {icon}
+            <input data-testid="input" value={value} readOnly={readOnly} onClick={onClick} data-variant={variant} />
+          </div>
+        )}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/PopoverPublicKey/PopoverPublicKey', () => {
+  return {
+    PopoverPublicKey: () => <div data-testid="popover-public-key">Popover</div>,
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({
+      toast: mockToast,
+    }),
     toast: mockToast,
-  }),
-  toast: mockToast,
-  ContentCard: ({ children, image }: { children: React.ReactNode; image?: ImageProps }) => (
-    <div data-testid="content-card">
-      {image && <img data-testid="content-card-image" src={image.src} alt={image.alt} data-size={image.size} />}
-      {children}
-    </div>
-  ),
-  PopoverPublicKey: () => <div data-testid="popover-public-key">Popover</div>,
-  ActionSection: ({
-    children,
-    actions,
-    className,
-  }: {
-    children: React.ReactNode;
-    actions?: ActionProps[];
-    className?: string;
-  }) => (
-    <div data-testid="action-section" className={className}>
-      {actions?.map((action: ActionProps, index: number) => (
-        <button
-          key={index}
-          data-testid={`action-button-${index}`}
-          onClick={action.onClick}
-          data-variant={action.variant}
-          className={action.className}
-        >
-          {action.icon}
-          {action.label}
-        </button>
-      ))}
-      {children}
-    </div>
-  ),
-  InputField: ({
-    value,
-    variant,
-    readOnly,
-    onClick,
-    loading,
-    loadingText,
-    loadingIcon,
-    icon,
-  }: {
-    value?: string;
-    variant?: string;
-    readOnly?: boolean;
-    onClick?: () => void;
-    loading?: boolean;
-    loadingText?: string;
-    loadingIcon?: React.ReactNode;
-    icon?: React.ReactNode;
-  }) => (
-    <div data-testid="input-field">
-      {loading ? (
-        <div data-testid="loading">
-          {loadingIcon}
-          {loadingText}
-        </div>
-      ) : (
-        <div>
-          {icon}
-          <input data-testid="input" value={value} readOnly={readOnly} onClick={onClick} data-variant={variant} />
-        </div>
-      )}
-    </div>
-  ),
-}));
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Heading: ({ children, level, size }: { children: React.ReactNode; level: number; size?: string }) => (
-    <div data-testid={`heading-${level}`} data-size={size}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    variant,
-    className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    className?: string;
-    onClick?: () => void;
-  }) => (
-    <button
-      data-testid={variant ? `button-${variant}` : 'button'}
-      className={className}
-      onClick={onClick}
-      data-variant={variant}
-    >
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      variant,
+      className,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      className?: string;
+      onClick?: () => void;
+    }) => (
+      <button
+        data-testid={variant ? `button-${variant}` : 'button'}
+        className={className}
+        onClick={onClick}
+        data-variant={variant}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
 
-// Mock core
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children, level, size }: { children: React.ReactNode; level: number; size?: string }) => (
+      <div data-testid={`heading-${level}`} data-size={size}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+// Mock dependencies
 const mockSetKeypair = vi.fn();
 const mockSetMnemonic = vi.fn();
 const { mockUseOnboardingStore, mockUseAuthStore, mockProfileController } = vi.hoisted(() => ({
@@ -150,32 +184,26 @@ const { mockUseOnboardingStore, mockUseAuthStore, mockProfileController } = vi.h
 
 const mockPubky = 'pubky1234567890abcdef';
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: mockUseOnboardingStore,
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: mockUseAuthStore,
+}));
+vi.mock('@/controllers/profile/profile', () => ({
   ProfileController: mockProfileController,
 }));
 
-// Mock hooks
-const { mockCopyToClipboard, mockUseCopyToClipboard } = vi.hoisted(() => {
-  const mockCopy = vi.fn();
-  const mockUseCopy = vi.fn(() => ({
-    copyToClipboard: mockCopy,
-  }));
-
-  return {
-    mockCopyToClipboard: mockCopy,
-    mockUseCopyToClipboard: mockUseCopy,
-  };
-});
+const mockCopyToClipboard = vi.fn();
 
 const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-vi.mock('@/hooks', () => ({
+const mockUseCopyToClipboard = vi.hoisted(() => vi.fn());
+
+vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
   useCopyToClipboard: mockUseCopyToClipboard,
 }));
 
-// Mock libs
 const { mockShareWithFallback } = vi.hoisted(() => ({
   mockShareWithFallback: vi.fn(),
 }));
@@ -185,20 +213,19 @@ const { mockLoggerError, mockLoggerInfo } = vi.hoisted(() => ({
   mockLoggerInfo: vi.fn(),
 }));
 
-// Mock libs - use actual utility functions and icons from lucide-react
-vi.mock('@/libs', async () => {
-  const actual = await vi.importActual('@/libs');
+vi.mock('@/libs/share/share', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/share/share')>('@/libs/share/share');
   return {
     ...actual,
-    Identity: {
-      generateKeypair: vi.fn(() => ({
-        keypair: 'test-keypair',
-        mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-      })),
-      pubkyFromKeypair: vi.fn(() => 'generated-pubky'),
-    },
     shareWithFallback: mockShareWithFallback,
+  };
+});
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
+  return {
+    ...actual,
     Logger: {
+      ...actual.Logger,
       error: mockLoggerError,
       info: mockLoggerInfo,
     },
@@ -210,6 +237,9 @@ describe('PublicKeyCard', () => {
     vi.clearAllMocks();
     mockToast.mockReturnValue({ dismiss: mockDismiss });
     mockCopyToClipboard.mockResolvedValue(true);
+    mockUseCopyToClipboard.mockReturnValue({
+      copyToClipboard: mockCopyToClipboard,
+    });
     mockShareWithFallback.mockResolvedValue({ success: true, method: 'native' });
     mockUseOnboardingStore.mockReturnValue({
       secretKey: 'test-secret-key',

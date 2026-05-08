@@ -11,9 +11,27 @@ exports[`HeaderJoin - Snapshots > matches snapshot for default HeaderJoin 1`] = 
     variant="secondary"
   >
     <svg
-      class="size-6"
-      data-testid="user-round-icon"
-    />
+      aria-hidden="true"
+      class="lucide lucide-user-round size-6"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="8"
+        r="5"
+      />
+      <path
+        d="M20 21a8 8 0 0 0-16 0"
+      />
+    </svg>
   </button>
 </div>
 `;

@@ -1,15 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Tag as TagIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Libs from '@/libs';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
 import { APP_ROUTES } from '@/app/routes';
+import { Container } from '@/atoms/Container/Container';
+import { Tag } from '@/atoms/Tag/Tag';
+import { Typography } from '@/atoms/Typography/Typography';
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
+import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
 import { MAX_TAGS } from './HotTags.constants';
-import type { HotTagsProps } from './HotTags.types';
 import { HotTagsSkeleton } from './HotTags.skeleton';
+import type { HotTagsProps } from './HotTags.types';
 
 /**
  * HotTags
@@ -17,29 +19,25 @@ import { HotTagsSkeleton } from './HotTags.skeleton';
  * Sidebar section showing trending tags.
  * Fetches tags via useHotTags hook and handles navigation.
  *
- * Note: This is an Organism because it interacts with Core via hooks (useHotTags)
+ * Note: This is an Organism because it interacts with data hooks (useHotTags)
  * and handles routing.
  */
 export function HotTags({ className }: HotTagsProps) {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
-  const { tags, isLoading } = Hooks.useHotTags();
-
+  const { tags, isLoading } = useHotTags();
   const displayTags = tags.slice(0, MAX_TAGS);
-
   const handleTagClick = (tagName: string) => {
     router.push(`${APP_ROUTES.SEARCH}?tags=${encodeURIComponent(tagName)}`);
   };
-
   const handleSeeAll = () => {
     router.push(APP_ROUTES.HOT);
   };
-
   return (
-    <Molecules.SidebarSection
+    <SidebarSection
       title={t('hotTags')}
-      footerIcon={Libs.Tag}
+      footerIcon={TagIcon}
       footerText={tCommon('exploreAll')}
       onFooterClick={handleSeeAll}
       footerTestId="see-all-button"
@@ -50,11 +48,11 @@ export function HotTags({ className }: HotTagsProps) {
       {isLoading ? (
         <HotTagsSkeleton />
       ) : displayTags.length === 0 ? (
-        <Atoms.Typography className="font-light text-muted-foreground">{t('noTags')}</Atoms.Typography>
+        <Typography className="font-light text-muted-foreground">{t('noTags')}</Typography>
       ) : (
-        <Atoms.Container overrideDefaults className="flex w-full flex-col gap-2" data-cy="hot-tags-list">
+        <Container overrideDefaults className="flex w-full flex-col gap-2" data-cy="hot-tags-list">
           {displayTags.map((tag, index) => (
-            <Atoms.Tag
+            <Tag
               key={tag.name}
               name={tag.name}
               count={tag.count}
@@ -62,8 +60,8 @@ export function HotTags({ className }: HotTagsProps) {
               data-testid={`tag-${index}`}
             />
           ))}
-        </Atoms.Container>
+        </Container>
       )}
-    </Molecules.SidebarSection>
+    </SidebarSection>
   );
 }
