@@ -11,20 +11,14 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
     data-testid="card"
   >
     <div
+      data-testid="repost-header"
+    >
+      You reposted
+    </div>
+    <div
       data-class-name="flex min-w-0 flex-col gap-4 p-6"
       data-testid="card-content"
     >
-      <div
-        data-class-name=""
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
-          data-testid="repost-header"
-        >
-          You reposted
-        </div>
-      </div>
       <div
         data-testid="post-header"
       >
@@ -148,20 +142,14 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
     data-testid="card"
   >
     <div
+      data-testid="repost-header"
+    >
+      You reposted
+    </div>
+    <div
       data-class-name="flex min-w-0 flex-col gap-4 p-6"
       data-testid="card-content"
     >
-      <div
-        data-class-name=""
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
-          data-testid="repost-header"
-        >
-          You reposted
-        </div>
-      </div>
       <div
         data-testid="post-content"
       >

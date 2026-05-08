@@ -75,56 +75,61 @@ export function PostMain({
           {isDeleted ? (
             <PostDeleted />
           ) : (
-            <CardContent className={cn('flex min-w-0 flex-col', isWideLayout ? 'p-0' : 'gap-4 p-6')}>
-              {showRepostHeader && (
-                <Container overrideDefaults className={cn(isWideLayout && 'px-12 pt-12 pb-6')}>
-                  <RepostHeader />
-                </Container>
-              )}
-              {isWideLayout ? (
-                <Container className="flex min-w-0 flex-col lg:flex-row">
-                  <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
-                    {shouldShowPostHeader && <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />}
-                    <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
-                    {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
+            <>
+              {showRepostHeader && <RepostHeader />}
+              <CardContent className={cn('flex min-w-0 flex-col', isWideLayout ? 'p-0' : 'gap-4 p-6')}>
+                {isWideLayout ? (
+                  <Container className="flex min-w-0 flex-col lg:flex-row">
+                    <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
+                      {shouldShowPostHeader && (
+                        <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
+                      )}
+                      <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
+                      {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
+                      <Container
+                        overrideDefaults
+                        onClick={(event) => event.stopPropagation()}
+                        className="flex flex-col gap-4"
+                      >
+                        <PostTagsPanel
+                          ref={mobileTagsPanelRef}
+                          postId={postId}
+                          widthMode="full"
+                          className="lg:hidden"
+                        />
+                        <PostActionsBar
+                          postId={postId}
+                          onTagClick={() => {
+                            mobileTagsPanelRef.current?.focus();
+                            desktopTagsPanelRef.current?.focus();
+                          }}
+                          onReplyClick={openReplyDialog}
+                          onRepostClick={openRepostDialog}
+                        />
+                      </Container>
+                    </Container>
                     <Container
                       overrideDefaults
                       onClick={(event) => event.stopPropagation()}
-                      className="flex flex-col gap-4"
+                      className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
                     >
-                      <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="lg:hidden" />
-                      <PostActionsBar
-                        postId={postId}
-                        onTagClick={() => {
-                          mobileTagsPanelRef.current?.focus();
-                          desktopTagsPanelRef.current?.focus();
-                        }}
-                        onReplyClick={openReplyDialog}
-                        onRepostClick={openRepostDialog}
-                      />
+                      <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
                     </Container>
                   </Container>
-                  <Container
-                    overrideDefaults
-                    onClick={(event) => event.stopPropagation()}
-                    className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
-                  >
-                    <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
-                  </Container>
-                </Container>
-              ) : (
-                <>
-                  {shouldShowPostHeader && <PostHeader postId={postId} />}
-                  <PostContent postId={postId} />
-                  <PostInlineTagsActions
-                    postId={postId}
-                    onReplyClick={openReplyDialog}
-                    onRepostClick={openRepostDialog}
-                    actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end"
-                  />
-                </>
-              )}
-            </CardContent>
+                ) : (
+                  <>
+                    {shouldShowPostHeader && <PostHeader postId={postId} />}
+                    <PostContent postId={postId} />
+                    <PostInlineTagsActions
+                      postId={postId}
+                      onReplyClick={openReplyDialog}
+                      onRepostClick={openRepostDialog}
+                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+                    />
+                  </>
+                )}
+              </CardContent>
+            </>
           )}
         </Card>
       </Container>
