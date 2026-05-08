@@ -5,17 +5,12 @@ import {
   MUTE_SYNC_RECONNECT_BACKOFF_MS,
 } from '@/config/mute-sync';
 import { MuteController } from '@/controllers/mute/mute';
+import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
 import { Env } from '@/libs/env/env';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-
-type HomeserverMuteEvent = {
-  cursor: string;
-  eventType: string;
-  free(): void;
-};
 
 type PendingMuteRefresh = {
   pubky: Pubky;
@@ -53,7 +48,7 @@ export class MuteListSyncCoordinator {
   private visibilityChangeHandler: (() => void) | null = null;
 
   private loopGeneration = 0;
-  private activeReader: ReadableStreamDefaultReader<HomeserverMuteEvent> | null = null;
+  private activeReader: ReadableStreamDefaultReader<TMuteDirectoryEvent> | null = null;
   private pendingRefresh: PendingMuteRefresh | undefined;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private reconnectBackoffTimer: ReturnType<typeof setTimeout> | undefined;
@@ -185,7 +180,7 @@ export class MuteListSyncCoordinator {
   private async runStreamLoop(generation: number): Promise<void> {
     while (this.state.isStarted && generation === this.loopGeneration && this.shouldSyncMuteStream()) {
       const pubky = useAuthStore.getState().currentUserPubky as Pubky;
-      let reader: ReadableStreamDefaultReader<HomeserverMuteEvent> | undefined;
+      let reader: ReadableStreamDefaultReader<TMuteDirectoryEvent> | undefined;
 
       try {
         const cursor = this.readStoredCursor(pubky);
@@ -197,7 +192,7 @@ export class MuteListSyncCoordinator {
             .catch(() => {});
           break;
         }
-        reader = stream.getReader() as ReadableStreamDefaultReader<HomeserverMuteEvent>;
+        reader = stream.getReader();
         this.activeReader = reader;
 
         for (;;) {
@@ -215,18 +210,10 @@ export class MuteListSyncCoordinator {
             break;
           }
 
-          try {
-            if (value.eventType === 'PUT' || value.eventType === 'DEL') {
-              this.scheduleDebouncedFetch(pubky, value.cursor, MUTE_SYNC_DEBOUNCE_MS);
-            } else {
-              this.persistCursor(pubky, value.cursor);
-            }
-          } finally {
-            try {
-              value.free();
-            } catch {
-              // Ignore WASM dispose errors.
-            }
+          if (value.eventType === 'PUT' || value.eventType === 'DEL') {
+            this.scheduleDebouncedFetch(pubky, value.cursor, MUTE_SYNC_DEBOUNCE_MS);
+          } else {
+            this.persistCursor(pubky, value.cursor);
           }
         }
       } catch (error) {

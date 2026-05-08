@@ -16,16 +16,24 @@ async function flushPromises() {
   await Promise.resolve();
 }
 
+function setVisibilityState(visibilityState: DocumentVisibilityState): void {
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: true,
+    get: () => visibilityState,
+  });
+}
+
 describe('MuteListSyncCoordinator', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    setVisibilityState('visible');
     MuteListSyncCoordinator.resetInstance();
     useAuthStore.getState().reset();
     sessionStorage.clear();
     vi.spyOn(MuteController, 'subscribeMuteDirectoryEventStream').mockImplementation(async () => {
       return new ReadableStream({
         start(controller) {
-          controller.enqueue({ cursor: 'c1', eventType: 'PUT', free: vi.fn() });
+          controller.enqueue({ cursor: 'c1', eventType: 'PUT' });
         },
       });
     });
@@ -65,8 +73,8 @@ describe('MuteListSyncCoordinator', () => {
     vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
       return new ReadableStream({
         start(controller) {
-          controller.enqueue({ cursor: 'c1', eventType: 'PUT', free: vi.fn() });
-          controller.enqueue({ cursor: 'c2', eventType: 'PUT', free: vi.fn() });
+          controller.enqueue({ cursor: 'c1', eventType: 'PUT' });
+          controller.enqueue({ cursor: 'c2', eventType: 'PUT' });
         },
       });
     });
@@ -167,5 +175,42 @@ describe('MuteListSyncCoordinator', () => {
 
     await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MS + 100);
     expect(subscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('pauses the homeserver stream while hidden and resumes when visible', async () => {
+    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
+    const cancelFirstStream = vi.fn();
+
+    vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
+      return new ReadableStream({
+        cancel: cancelFirstStream,
+      });
+    });
+
+    useAuthStore.getState().init({
+      session: mockSession(),
+      currentUserPubky: pubky,
+      hasProfile: true,
+    });
+
+    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+    const coordinator = MuteListSyncCoordinator.getInstance();
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+
+    await flushPromises();
+    expect(subscribe).toHaveBeenCalledTimes(1);
+
+    setVisibilityState('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await flushPromises();
+
+    expect(cancelFirstStream).toHaveBeenCalledTimes(1);
+
+    setVisibilityState('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await flushPromises();
+
+    expect(subscribe).toHaveBeenCalledTimes(2);
   });
 });

@@ -70,6 +70,11 @@ export type THomeserverListParams = {
   limit?: number;
 };
 
+export type THomeserverUserEvent = {
+  cursor: string;
+  eventType: string;
+};
+
 // Utility function parameter types
 export type TParseResponseOrUndefinedParams = {
   response: Response;

@@ -50,6 +50,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - Invoke pipes for normalization/validation
 - Call application for business logic
 - Mutate stores for UI state
+- Use `subscribe*` only for long-lived live stream subscriptions; keep SDK lifecycle details below the controller boundary
 - **NEVER** call services directly
 - **NEVER** perform IO
 
