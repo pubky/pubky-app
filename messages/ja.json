@@ -443,7 +443,8 @@
     "viewOriginal": "元の投稿を見る",
     "youReposted": "リポストしました",
     "newPostsSingular": "{count}件の新しい投稿を見る",
-    "newPostsPlural": "{count}件の新しい投稿を見る"
+    "newPostsPlural": "{count}件の新しい投稿を見る",
+    "replies": "返信"
   },
   "profile": {
     "title": "プロフィール",

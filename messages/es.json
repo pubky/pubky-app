@@ -443,7 +443,8 @@
     "viewOriginal": "Ver publicación original",
     "youReposted": "Republicaste",
     "newPostsSingular": "Ver {count} nueva publicación",
-    "newPostsPlural": "Ver {count} nuevas publicaciónes"
+    "newPostsPlural": "Ver {count} nuevas publicaciónes",
+    "replies": "Respuestas"
   },
   "profile": {
     "title": "Perfil",

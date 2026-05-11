@@ -443,7 +443,8 @@
     "viewOriginal": "Originalbeitrag ansehen",
     "youReposted": "Du hast geteilt",
     "newPostsSingular": "{count} neuen Beitrag anzeigen",
-    "newPostsPlural": "{count} neue Beiträge anzeigen"
+    "newPostsPlural": "{count} neue Beiträge anzeigen",
+    "replies": "Antworten"
   },
   "profile": {
     "title": "Profil",
