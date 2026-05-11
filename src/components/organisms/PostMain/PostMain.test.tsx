@@ -6,7 +6,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { PostMain } from './PostMain';
-import { PostMainLayoutProvider } from './PostMainLayout';
+import { PostMainLayoutProvider } from './PostMainLayoutContext';
 
 // Use vi.hoisted to define mock functions before vi.mock calls (which are hoisted)
 const { mockPostHeader } = vi.hoisted(() => ({
@@ -518,7 +518,7 @@ describe('PostMain', () => {
     expect(rightSection).toBeDefined();
   });
 
-  it('applies wide repost-header padding when reposting in side layout', () => {
+  it('keeps repost header flush with the card edge in side layout', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -530,11 +530,9 @@ describe('PostMain', () => {
       </PostMainLayoutProvider>,
     );
 
-    const containers = screen.getAllByTestId('container');
-    const repostWrapper = containers.find((container) =>
-      container.getAttribute('data-class-name')?.includes('px-12 pt-12 pb-6'),
-    );
-    expect(repostWrapper).toBeDefined();
+    const repostHeader = screen.getByTestId('repost-header');
+    expect(repostHeader.parentElement).toHaveAttribute('data-testid', 'card');
+    expect(repostHeader.parentElement).not.toHaveAttribute('data-testid', 'card-content');
   });
 
   it('keeps default size and timestamp placement for inline tags layout', () => {

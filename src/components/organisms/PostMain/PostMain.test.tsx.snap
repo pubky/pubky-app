@@ -2,7 +2,7 @@
 
 exports[`PostMain - Snapshots > matches snapshot for quote repost by current user (with content) 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -11,20 +11,14 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
     data-testid="card"
   >
     <div
+      data-testid="repost-header"
+    >
+      You reposted
+    </div>
+    <div
       data-class-name="flex min-w-0 flex-col gap-4 p-6"
       data-testid="card-content"
     >
-      <div
-        data-class-name=""
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
-          data-testid="repost-header"
-        >
-          You reposted
-        </div>
-      </div>
       <div
         data-testid="post-header"
       >
@@ -76,7 +70,7 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
 
 exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -139,7 +133,7 @@ exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] 
 
 exports[`PostMain - Snapshots > matches snapshot for simple repost by current user (no content) 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -148,20 +142,14 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
     data-testid="card"
   >
     <div
+      data-testid="repost-header"
+    >
+      You reposted
+    </div>
+    <div
       data-class-name="flex min-w-0 flex-col gap-4 p-6"
       data-testid="card-content"
     >
-      <div
-        data-class-name=""
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <div
-          data-testid="repost-header"
-        >
-          You reposted
-        </div>
-      </div>
       <div
         data-testid="post-content"
       >
@@ -207,7 +195,7 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
 
 exports[`PostMain - Snapshots > matches snapshot with default state 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -270,7 +258,7 @@ exports[`PostMain - Snapshots > matches snapshot with default state 1`] = `
 
 exports[`PostMain - Snapshots > matches snapshot with deleted post 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -289,7 +277,7 @@ exports[`PostMain - Snapshots > matches snapshot with deleted post 1`] = `
 
 exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -352,7 +340,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
 
 exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer pl-3"
+  data-class-name="relative flex min-w-0 pl-3"
   data-override-defaults="true"
   data-testid="container"
 >

@@ -10,7 +10,7 @@ import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStream
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
 import type { AuthorStreamCompositeId } from '@/models/stream/post/postStream.types';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
-import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayout';
+import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
