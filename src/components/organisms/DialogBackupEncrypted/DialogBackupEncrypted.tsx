@@ -22,10 +22,27 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ProfileController } from '@/controllers/profile/profile';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
-import { calculatePasswordStrength, getStrengthColor } from '@/libs/password/password';
+import { calculatePasswordStrength, PASSPHRASE_MIN_LENGTH } from '@/libs/password/password';
 
-const MIN_ENTROPY_CHARS = 16; // ~80 bits for typical passphrase
 const PASSPHRASE_LINK_URL = 'https://www.useapassphrase.com';
+
+type PasswordStrengthKey = 'veryWeak' | 'weak' | 'moderate' | 'strong' | 'veryStrong';
+
+function getStrengthText(strength: number, t: (key: PasswordStrengthKey) => string): string {
+  if (strength === 0) return '';
+  if (strength === 1) return t('veryWeak');
+  if (strength === 2) return t('weak');
+  if (strength === 3) return t('moderate');
+  if (strength === 4) return t('strong');
+  return t('veryStrong');
+}
+
+function getStrengthColor(strength: number): string {
+  if (strength <= 2) return 'text-red-400';
+  if (strength <= 3) return 'text-yellow-400';
+  if (strength <= 4) return 'text-blue-400';
+  return 'text-green-400';
+}
 
 interface DialogBackupEncryptedProps {
   children?: React.ReactNode;
@@ -38,7 +55,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
   const [confirmPassphrase, setConfirmPassphrase] = useState('');
   const passphraseStrength = calculatePasswordStrength(passphrase);
   const passphraseMatch = passphrase === confirmPassphrase;
-  const showWeakWarning = passphrase.length < MIN_ENTROPY_CHARS;
+  const showWeakWarning = passphrase.length < PASSPHRASE_MIN_LENGTH;
 
   const handleDownload = () => {
     ProfileController.createRecoveryFile(passphrase);
@@ -48,14 +65,6 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
     return passphraseMatch;
   };
   const handleKeyDown = useEnterSubmit(isFormValid, handleDownload);
-  const getStrengthText = (strength: number): string => {
-    if (strength === 0) return '';
-    if (strength === 1) return tPassword('veryWeak');
-    if (strength === 2) return tPassword('weak');
-    if (strength === 3) return tPassword('moderate');
-    if (strength === 4) return tPassword('strong');
-    return tPassword('veryStrong');
-  };
   return (
     <>
       <DialogHeader>
@@ -115,7 +124,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
                 role="status"
                 aria-live="polite"
               >
-                {getStrengthText(passphraseStrength.strength)}
+                {getStrengthText(passphraseStrength.strength, tPassword)}
               </span>
             </Container>
           )}

@@ -11,7 +11,7 @@ export interface PasswordStrengthResult {
 }
 
 /** Minimum length to consider as passphrase (≈80 bits). */
-const PASSPHRASE_MIN_LENGTH = 16;
+export const PASSPHRASE_MIN_LENGTH = 16;
 
 /**
  * Long passphrases (e.g. "logic finite eager ratio") are more secure than short
@@ -66,20 +66,4 @@ export function calculatePasswordStrength(password: string): PasswordStrengthRes
     checks,
     percentage: (strength / 5) * 100,
   };
-}
-
-export function getStrengthText(strength: number): string {
-  if (strength === 0) return '';
-  if (strength === 1) return 'Very weak';
-  if (strength === 2) return 'Weak';
-  if (strength === 3) return 'Moderate';
-  if (strength === 4) return 'Strong';
-  return 'Very strong';
-}
-
-export function getStrengthColor(strength: number): string {
-  if (strength <= 2) return 'text-red-400';
-  if (strength <= 3) return 'text-yellow-400';
-  if (strength <= 4) return 'text-blue-400';
-  return 'text-green-400';
 }
