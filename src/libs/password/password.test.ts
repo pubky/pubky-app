@@ -98,7 +98,7 @@ describe('Password Utilities', () => {
     });
 
     it('should rate 20–23 char passphrases as good', () => {
-      const result = calculatePasswordStrength('mergers decade labeled');
+      const result = calculatePasswordStrength('four good words pass');
       expect(result.strength).toBe(4);
       expect(result.percentage).toBe(80);
     });
@@ -108,9 +108,24 @@ describe('Password Utilities', () => {
       expect(result.strength).toBe(3);
     });
 
-    it('should treat long letter-only string without spaces as passphrase', () => {
+    it('should not treat long letter-only string without spaces as passphrase', () => {
+      // Without spaces, it's a single token regardless of length: not a phrase.
       const result = calculatePasswordStrength('mergersdecadelabeledmanager');
-      expect(result.strength).toBe(5);
+      expect(result.strength).toBe(2); // length + lowercase only
+    });
+
+    it('should not treat 3-word strings as passphrase', () => {
+      // A real phrase needs at least 4 words; this falls back to standard scoring.
+      const result = calculatePasswordStrength('mergers decade labeled');
+      expect(result.strength).toBe(2);
+      expect(result.checks.length).toBe(true);
+      expect(result.checks.lowercase).toBe(true);
+    });
+
+    it('should not count consecutive spaces as multiple word separators', () => {
+      // 20 chars, only 2 words despite 4 spaces in a row — not a phrase.
+      const result = calculatePasswordStrength('helloooo    worldddd');
+      expect(result.strength).toBe(2);
     });
 
     it('should not treat short multi-word string as passphrase', () => {
@@ -118,6 +133,27 @@ describe('Password Utilities', () => {
       expect(result.strength).toBe(2);
       expect(result.checks.length).toBe(true);
       expect(result.checks.lowercase).toBe(true);
+    });
+
+    it('should not downgrade complex 16+ char passwords that contain a space', () => {
+      // Regression: previously the hasSpace branch in isPassphraseLike misclassified
+      // this as a passphrase and downgraded it from strength 5 to strength 3.
+      const result = calculatePasswordStrength('MyStr0ng!P@ss ab');
+      expect(result.strength).toBe(5);
+      expect(result.percentage).toBe(100);
+      expect(result.checks).toEqual({
+        length: true,
+        lowercase: true,
+        uppercase: true,
+        numbers: true,
+        symbols: true,
+      });
+    });
+
+    it('should not treat a 16+ char password containing digits and a space as passphrase', () => {
+      const result = calculatePasswordStrength('correct horse 1234');
+      expect(result.checks.numbers).toBe(true);
+      expect(result.strength).toBe(3);
     });
 
     it('should handle passwords with only numbers', () => {

@@ -13,15 +13,27 @@ export interface PasswordStrengthResult {
 /** Minimum length to consider as passphrase (≈80 bits). */
 export const PASSPHRASE_MIN_LENGTH = 16;
 
+/** Minimum number of whitespace-separated tokens required for an input to count as a phrase. */
+const PASSPHRASE_MIN_WORDS = 4;
+
 /**
  * Long passphrases (e.g. "logic finite eager ratio") are more secure than short
  * complex passwords. See https://www.useapassphrase.com/
+ *
+ * To qualify, an input must:
+ * 1. Be at least {@link PASSPHRASE_MIN_LENGTH} characters.
+ * 2. Consist exclusively of letters and whitespace — so a complex password that
+ *    merely happens to contain a space (e.g. "MyStr0ng!P@ss ab") is scored by
+ *    the standard complexity rules instead of being silently downgraded.
+ * 3. Contain at least {@link PASSPHRASE_MIN_WORDS} whitespace-separated tokens.
+ *    Consecutive whitespace collapses to a single separator, so padded strings
+ *    like "helloooo    worldddd" are not mistaken for phrases.
  */
 function isPassphraseLike(input: string): boolean {
   if (input.length < PASSPHRASE_MIN_LENGTH) return false;
-  const hasSpace = input.includes(' ');
-  const isLongLettersAndSpaces = /^[\sa-zA-Z]+$/.test(input);
-  return hasSpace || isLongLettersAndSpaces;
+  if (!/^[\sa-zA-Z]+$/.test(input)) return false;
+  const wordCount = input.trim().split(/\s+/).filter(Boolean).length;
+  return wordCount >= PASSPHRASE_MIN_WORDS;
 }
 
 function passphraseStrengthByLength(length: number): number {
