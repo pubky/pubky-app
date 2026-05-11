@@ -186,8 +186,7 @@ export class LocalPostTagService {
    *   user is unauthenticated, in which case Nexus values are used as-is.
    */
   static async mergeTags({ postId, tags, viewerId }: { postId: string; tags: NexusTag[]; viewerId: Pubky | null }) {
-    // Side-effect GC: drop expired markers across the board so sessionStorage
-    // doesn't accumulate them.
+    // Piggyback GC: drop expired markers so sessionStorage doesn't accumulate them.
     ViewerTagMarkerStorage.sweepExpired();
 
     try {

@@ -122,30 +122,34 @@ export class ViewerTagMarkerStorage {
   }
 
   /**
-   * Sweeps all expired or invalid marker entries across sessionStorage. Called
-   * from mergeTags as a side-effect GC so stale markers don't accumulate.
+   * Removes all expired or invalid marker entries across sessionStorage.
+   * Called from mergeTags so stale markers don't accumulate.
    */
   static sweepExpired(): void {
     if (!isStorageAvailable()) return;
     const now = Date.now();
 
-    // Collect prefix-matching keys first so removals (inside readMarkerOrNull)
-    // don't shift indices mid-iteration.
-    const keys: string[] = [];
+    const keysToRemove: string[] = [];
     try {
       for (let i = 0; i < window.sessionStorage.length; i++) {
         const key = window.sessionStorage.key(i);
-        if (key !== null && key.startsWith(VIEWER_TAG_MARKER_STORAGE_PREFIX)) keys.push(key);
+        if (key === null || !key.startsWith(VIEWER_TAG_MARKER_STORAGE_PREFIX)) continue;
+
+        const raw = window.sessionStorage.getItem(key);
+        if (raw === null) continue;
+
+        const marker = parseMarker(raw);
+        if (!marker || marker.expiresAt <= now) {
+          keysToRemove.push(key);
+        }
       }
     } catch {
       /* sessionStorage best-effort */
       return;
     }
 
-    // readMarkerOrNull lazy-deletes invalid/expired entries as a side effect,
-    // so we only need to call it — no separate removal pass.
-    for (const key of keys) {
-      readMarkerOrNull(key, now);
+    for (const key of keysToRemove) {
+      safeRemove(key);
     }
   }
 
