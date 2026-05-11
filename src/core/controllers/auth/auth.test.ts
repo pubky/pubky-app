@@ -4,6 +4,7 @@ import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
+import { MUTE_SYNC_CURSOR_STORAGE_PREFIX } from '@/config/mute-sync';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
@@ -1293,6 +1294,9 @@ describe('AuthController', () => {
       document.cookie = 'testCookie=value; path=/';
       document.cookie = 'anotherCookie=anotherValue; path=/';
 
+      const muteSyncCursorKey = `${MUTE_SYNC_CURSOR_STORAGE_PREFIX}test-pubky`;
+      sessionStorage.setItem(muteSyncCursorKey, 'cursor-value');
+
       await AuthController.logout();
 
       // Homeserver logout
@@ -1325,6 +1329,8 @@ describe('AuthController', () => {
 
       // Skip post-migration resync — full cleanup resets all state
       expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
+
+      expect(sessionStorage.getItem(muteSyncCursorKey)).toBeNull();
     });
 
     it('should log warning and clear local state even when homeserver logout fails', async () => {

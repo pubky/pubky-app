@@ -3,6 +3,7 @@ import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
+import { clearMuteSyncCursorSessionStorage } from '@/config/mute-sync';
 import type {
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
@@ -251,10 +252,14 @@ export class AuthController {
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store, clears cookies,
-   * IndexedDB, query cache, singletons, in-memory stream pagination queues, and persisted localStorage keys.
+   * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
+   * and mute-sync `sessionStorage` cursors.
    * Used by both logout() and restorePersistedSession() on failure.
    */
   private static async cleanupLocalState() {
+    // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
+    clearMuteSyncCursorSessionStorage();
+
     // Reset singletons
     PubkySpecsSingleton.reset();
     TtlCoordinator.resetInstance();

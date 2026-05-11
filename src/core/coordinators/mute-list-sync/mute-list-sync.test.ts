@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { APP_ROUTES, AUTH_ROUTES } from '@/app/routes';
+import { APP_ROUTES, AUTH_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import {
   MUTE_SYNC_CURSOR_STORAGE_PREFIX,
   MUTE_SYNC_DEBOUNCE_MS,
@@ -123,6 +123,50 @@ describe('MuteListSyncCoordinator', () => {
 
     expect(fetchMuted).toHaveBeenCalledTimes(2);
     expect(sessionStorage.getItem(cursorKey)).toBe('c1');
+  });
+
+  it('does not reconnect the homeserver stream when moving between allowed routes', async () => {
+    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
+    useAuthStore.getState().init({
+      session: mockSession(),
+      currentUserPubky: pubky,
+      hasProfile: true,
+    });
+
+    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+
+    const coordinator = MuteListSyncCoordinator.getInstance();
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+
+    await flushPromises();
+    expect(subscribe).toHaveBeenCalledTimes(1);
+
+    coordinator.setRoute(PROFILE_ROUTES.PROFILE);
+    await flushPromises();
+    expect(subscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the homeserver stream after navigating from a disabled route to an allowed route', async () => {
+    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
+    useAuthStore.getState().init({
+      session: mockSession(),
+      currentUserPubky: pubky,
+      hasProfile: true,
+    });
+
+    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+
+    const coordinator = MuteListSyncCoordinator.getInstance();
+    coordinator.setRoute(AUTH_ROUTES.SIGN_IN);
+    coordinator.start();
+
+    await flushPromises();
+    expect(subscribe).not.toHaveBeenCalled();
+
+    coordinator.setRoute(APP_ROUTES.HOME);
+    await flushPromises();
+    expect(subscribe).toHaveBeenCalledTimes(1);
   });
 
   it('does not open the homeserver stream on disabled auth routes', async () => {

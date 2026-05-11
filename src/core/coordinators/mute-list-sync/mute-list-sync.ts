@@ -24,6 +24,8 @@ type PendingMuteRefresh = {
  * - Requires authenticated session with profile and current {@link Pubky}.
  * - Disabled on onboarding / sign-in / logout routes.
  * - Uses {@link Env.NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY}: when true, pauses the SDK stream while the tab is hidden.
+ * - Route updates from the app shell (`CoordinatorsManager`) only re-open the homeserver SSE when crossing disabled vs allowed
+ *   routes (or on first pathname); moving between allowed routes keeps the existing stream to avoid churn.
  *
  * Refresh uses {@link MuteController.fetchMutedUsers} only (debounced). No polling fallback.
  */
@@ -86,9 +88,17 @@ export class MuteListSyncCoordinator {
   }
 
   public setRoute(route: string): void {
-    if (this.state.currentRoute !== route) {
-      this.state.currentRoute = route;
-      Logger.debug(`MuteListSyncCoordinator route → ${route}`);
+    if (this.state.currentRoute === route) return;
+
+    const hadPreviousRoute = this.state.currentRoute !== '';
+    const prevDisabled = hadPreviousRoute && this.isRouteStreamDisabled(this.state.currentRoute);
+    const nextDisabled = this.isRouteStreamDisabled(route);
+
+    this.state.currentRoute = route;
+    Logger.debug(`MuteListSyncCoordinator route → ${route}`);
+
+    // Opening a new SSE on every pathname change is wasteful; auth/visibility listeners still call evaluateStreaming.
+    if (!hadPreviousRoute || prevDisabled !== nextDisabled) {
       this.evaluateStreaming();
     }
   }
@@ -159,6 +169,11 @@ export class MuteListSyncCoordinator {
     });
   }
 
+  /** True for onboarding and auth routes where the mute event stream must not run. */
+  private isRouteStreamDisabled(route: string): boolean {
+    return this.disabledRoutes.some((pattern) => pattern.test(route));
+  }
+
   private shouldSyncMuteStream(): boolean {
     const auth = useAuthStore.getState();
     if (!auth.selectIsAuthenticated() || !auth.hasProfile) {
@@ -168,7 +183,7 @@ export class MuteListSyncCoordinator {
     if (!pubky) {
       return false;
     }
-    if (this.disabledRoutes.some((pattern) => pattern.test(this.state.currentRoute))) {
+    if (this.isRouteStreamDisabled(this.state.currentRoute)) {
       return false;
     }
     if (this.respectPageVisibility && !this.state.isPageVisible) {
