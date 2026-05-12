@@ -31,6 +31,7 @@ export class LocalPostTagService {
    * @param params.label - Normalized tag label (must be pre-normalized by caller)
    * @param params.taggerId - Unique identifier of the user adding the tag
    *
+   * @returns {boolean} true if local state changed; false if the tagger already had this tag (idempotent — no writes, no viewer marker)
    * @throws {AppError} When user has already tagged this post with the same label
    * @throws {DatabaseError} When database operations fail
    */

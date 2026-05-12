@@ -19,18 +19,6 @@ function userPrefix(pubky: Pubky): string {
   return `${VIEWER_TAG_MARKER_STORAGE_PREFIX}${pubky}:`;
 }
 
-function isStorageAvailable(): boolean {
-  return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
-}
-
-function safeRemove(key: string): void {
-  try {
-    window.sessionStorage.removeItem(key);
-  } catch {
-    /* sessionStorage best-effort */
-  }
-}
-
 // Parses + structurally validates a marker. Returns null for anything that
 // isn't a recognizable marker (bad JSON, wrong shape, unknown `op`, etc.).
 function parseMarker(raw: string): ViewerTagMarker | null {
@@ -55,18 +43,12 @@ function parseMarker(raw: string): ViewerTagMarker | null {
 // Reads one marker, validates it, and lazy-deletes the entry if it's invalid
 // (corrupted/unknown op/missing fields) or expired. Returns null in those cases.
 function readMarkerOrNull(key: string, now: number): ViewerTagMarker | null {
-  let raw: string | null;
-  try {
-    raw = window.sessionStorage.getItem(key);
-  } catch {
-    return null;
-  }
+  const raw = window.sessionStorage.getItem(key);
   if (raw === null) return null;
 
   const marker = parseMarker(raw);
   if (!marker || marker.expiresAt <= now) {
-    // remove the marker because it's invalid or expired
-    safeRemove(key);
+    window.sessionStorage.removeItem(key);
     return null;
   }
   return marker;
@@ -75,18 +57,13 @@ function readMarkerOrNull(key: string, now: number): ViewerTagMarker | null {
 // Iterates sessionStorage keys and removes the ones that match `predicate`.
 // Collects matching keys first so removals don't shift indices mid-iteration.
 function removeKeysMatching(predicate: (key: string) => boolean): void {
-  if (!isStorageAvailable()) return;
-  try {
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < window.sessionStorage.length; i++) {
-      const key = window.sessionStorage.key(i);
-      if (key !== null && predicate(key)) keysToRemove.push(key);
-    }
-    for (const key of keysToRemove) {
-      window.sessionStorage.removeItem(key);
-    }
-  } catch {
-    /* sessionStorage best-effort */
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < window.sessionStorage.length; i++) {
+    const key = window.sessionStorage.key(i);
+    if (key !== null && predicate(key)) keysToRemove.push(key);
+  }
+  for (const key of keysToRemove) {
+    window.sessionStorage.removeItem(key);
   }
 }
 
@@ -104,20 +81,17 @@ export class ViewerTagMarkerStorage {
     label: string;
     op: ViewerTagMarkerOp;
   }): void {
-    if (!isStorageAvailable()) return;
-
     const ts = Date.now();
     const marker: ViewerTagMarker = { op, ts, expiresAt: ts + MARKER_TTL_MS };
 
     try {
       window.sessionStorage.setItem(buildKey(pubky, postId, label), JSON.stringify(marker));
     } catch {
-      /* sessionStorage best-effort */
+      // setItem can throw QuotaExceededError; markers are best-effort, so swallow.
     }
   }
 
   static get({ pubky, postId, label }: { pubky: Pubky; postId: string; label: string }): ViewerTagMarker | null {
-    if (!isStorageAvailable()) return null;
     return readMarkerOrNull(buildKey(pubky, postId, label), Date.now());
   }
 
@@ -126,30 +100,24 @@ export class ViewerTagMarkerStorage {
    * Called from mergeTags so stale markers don't accumulate.
    */
   static sweepExpired(): void {
-    if (!isStorageAvailable()) return;
     const now = Date.now();
-
     const keysToRemove: string[] = [];
-    try {
-      for (let i = 0; i < window.sessionStorage.length; i++) {
-        const key = window.sessionStorage.key(i);
-        if (key === null || !key.startsWith(VIEWER_TAG_MARKER_STORAGE_PREFIX)) continue;
 
-        const raw = window.sessionStorage.getItem(key);
-        if (raw === null) continue;
+    for (let i = 0; i < window.sessionStorage.length; i++) {
+      const key = window.sessionStorage.key(i);
+      if (key === null || !key.startsWith(VIEWER_TAG_MARKER_STORAGE_PREFIX)) continue;
 
-        const marker = parseMarker(raw);
-        if (!marker || marker.expiresAt <= now) {
-          keysToRemove.push(key);
-        }
+      const raw = window.sessionStorage.getItem(key);
+      if (raw === null) continue;
+
+      const marker = parseMarker(raw);
+      if (!marker || marker.expiresAt <= now) {
+        keysToRemove.push(key);
       }
-    } catch {
-      /* sessionStorage best-effort */
-      return;
     }
 
     for (const key of keysToRemove) {
-      safeRemove(key);
+      window.sessionStorage.removeItem(key);
     }
   }
 
