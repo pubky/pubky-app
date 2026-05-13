@@ -202,10 +202,15 @@ vi.mock('@/molecules/SearchRecentUserItem/SearchRecentUserItem.types', () => {
 vi.mock('@/molecules/SearchSuggestions/SearchSuggestions', () => {
   return {
     SearchSuggestions: ({
+      id,
+      'aria-label': ariaLabel,
       hotTags,
+      autocompleteUsers = [],
       onTagClick,
-      ...props
+      onUserClick,
     }: {
+      id?: string;
+      'aria-label'?: string;
       hotTags: Array<{ name: string }>;
       inputValue: string;
       hasInput: boolean;
@@ -218,10 +223,15 @@ vi.mock('@/molecules/SearchSuggestions/SearchSuggestions', () => {
       onSearchAsTagClick?: (query: string) => void;
       onClearRecentSearches?: () => void;
     }) => (
-      <div data-testid="search-suggestions" {...props}>
+      <div id={id} aria-label={ariaLabel} data-testid="search-suggestions">
         {hotTags.map((tag) => (
           <button key={tag.name} data-testid={`hot-tag-${tag.name}`} onClick={() => onTagClick(tag.name)}>
             {tag.name}
+          </button>
+        ))}
+        {autocompleteUsers.map((user) => (
+          <button key={user.id} data-testid={`autocomplete-user-${user.id}`} onClick={() => onUserClick(user.id)}>
+            {user.name}
           </button>
         ))}
       </div>
@@ -482,6 +492,38 @@ describe('SearchInput', () => {
       fireEvent.click(screen.getByTestId('hot-tag-pubky'));
 
       expect(mockAddTagToSearch).toHaveBeenCalledWith('pubky', { addToRecent: true });
+    });
+  });
+
+  describe('User Click Handling', () => {
+    it('routes user suggestions to the canonical profile page', () => {
+      const clearInputValue = vi.fn();
+      const setFocus = vi.fn();
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: 'satoshi',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue,
+        setFocus,
+      });
+      vi.mocked(useSearchAutocomplete).mockReturnValue({
+        tags: [],
+        users: [{ id: 'user123', name: 'Satoshi' }],
+        isLoading: false,
+      });
+
+      render(<SearchInput />);
+
+      fireEvent.click(screen.getByTestId('autocomplete-user-user123'));
+
+      expect(mockAddUser).toHaveBeenCalledWith('user123');
+      expect(clearInputValue).toHaveBeenCalled();
+      expect(setFocus).toHaveBeenCalledWith(false);
+      expect(mockPush).toHaveBeenCalledWith('/profile/user123');
     });
   });
 

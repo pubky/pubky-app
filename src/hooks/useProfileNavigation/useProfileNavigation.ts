@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { FilterBarPageType, PROFILE_PAGE_TYPES, ProfilePageType } from '@/app/profile/types';
+import { FilterBarPageType, PROFILE_PAGE_TYPES, PROFILE_POSTS_SECTION_ID, ProfilePageType } from '@/app/profile/types';
 import { PROFILE_ROUTES } from '@/app/routes';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
@@ -108,16 +108,12 @@ const ROUTE_MAP = deriveRouteMap();
 
 /**
  * Extracts the page type from a dynamic route pathname
- * Handles paths like /profile/{pubky}/posts, /profile/{pubky}/followers, etc.
+ * Handles paths like /profile/{pubky}, /profile/{pubky}/followers, and legacy /profile/{pubky}/posts.
  *
  * Own-profile dynamic routes preserve the Notifications default.
- * Other users default to PROFILE on mobile and POSTS on desktop.
+ * Other users default to POSTS because /profile/[pubky] is the canonical posts view.
  */
-const getPageTypeFromDynamicPath = (
-  pathname: string,
-  isMobile: boolean,
-  isOwnProfile: boolean,
-): ProfilePageType | null => {
+const getPageTypeFromDynamicPath = (pathname: string, isOwnProfile: boolean): ProfilePageType | null => {
   const dynamicRouteMatch = pathname.match(/^\/profile\/[^/]+(\/.+)?$/);
 
   if (!dynamicRouteMatch) {
@@ -140,7 +136,18 @@ const getPageTypeFromDynamicPath = (
     return PROFILE_PAGE_TYPES.NOTIFICATIONS;
   }
 
-  return isMobile ? PROFILE_PAGE_TYPES.PROFILE : PROFILE_PAGE_TYPES.POSTS;
+  return PROFILE_PAGE_TYPES.POSTS;
+};
+
+const scrollToProfilePostsSection = () => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  document.getElementById(PROFILE_POSTS_SECTION_ID)?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  });
 };
 
 /**
@@ -189,19 +196,30 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
   const pathname = usePathname();
   const router = useRouter();
   const isMobile = useIsMobile();
+  const pendingPostsScrollRef = useRef(false);
 
   const { pubky, isOwnProfile } = useProfileContext();
+  const canonicalOtherUserPostsRoute = pubky ? `/profile/${pubky}` : '';
+
+  useEffect(() => {
+    if (!pendingPostsScrollRef.current || !isMobile || isOwnProfile || pathname !== canonicalOtherUserPostsRoute) {
+      return;
+    }
+
+    pendingPostsScrollRef.current = false;
+    scrollToProfilePostsSection();
+  }, [canonicalOtherUserPostsRoute, isMobile, isOwnProfile, pathname]);
 
   /**
    * Determine the active page from the current pathname
-   * Handles both static routes (/profile/posts) and dynamic routes (/profile/{pubky}/posts)
+   * Handles both static routes (/profile/posts) and dynamic routes (/profile/{pubky})
    */
   const activePage = useMemo(() => {
     if (PAGE_PATH_MAP[pathname]) {
       return PAGE_PATH_MAP[pathname];
     }
 
-    const dynamicPageType = getPageTypeFromDynamicPath(pathname, isMobile, isOwnProfile);
+    const dynamicPageType = getPageTypeFromDynamicPath(pathname, isOwnProfile);
     if (dynamicPageType) {
       return dynamicPageType;
     }
@@ -210,8 +228,8 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
       return PROFILE_PAGE_TYPES.NOTIFICATIONS;
     }
 
-    return isMobile ? PROFILE_PAGE_TYPES.PROFILE : PROFILE_PAGE_TYPES.POSTS;
-  }, [pathname, isOwnProfile, isMobile]);
+    return PROFILE_PAGE_TYPES.POSTS;
+  }, [pathname, isOwnProfile]);
 
   /**
    * Calculate the filter bar active page
@@ -243,19 +261,39 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
         return;
       }
 
+      if (!pubky) {
+        return;
+      }
+
+      const navigateToOtherUserPosts = () => {
+        if (isMobile) {
+          if (pathname === canonicalOtherUserPostsRoute) {
+            scrollToProfilePostsSection();
+            return;
+          }
+
+          pendingPostsScrollRef.current = true;
+        }
+
+        router.push(canonicalOtherUserPostsRoute);
+      };
+
       // For other users, generate dynamic route
       // Skip notifications for other users
       if (config.ownProfileOnly) {
-        // Redirect to posts instead
-        const postsRoute = `/profile/${pubky}/posts`;
-        router.push(postsRoute);
+        navigateToOtherUserPosts();
+        return;
+      }
+
+      if (page === PROFILE_PAGE_TYPES.POSTS) {
+        navigateToOtherUserPosts();
         return;
       }
 
       const dynamicRoute = `/profile/${pubky}${config.subPath}`;
       router.push(dynamicRoute);
     },
-    [router, isOwnProfile, pubky],
+    [canonicalOtherUserPostsRoute, isMobile, isOwnProfile, pathname, pubky, router],
   );
 
   return {

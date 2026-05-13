@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { PROFILE_PAGE_TYPES, PROFILE_POSTS_SECTION_ID } from '@/app/profile/types';
 import { Container } from '@/atoms/Container/Container';
 import { AvatarZoomModal } from '@/molecules/AvatarZoomModal/AvatarZoomModal';
 import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
@@ -53,6 +54,7 @@ export function ProfilePageLayout({
   userId,
 }: ProfilePageLayoutProps) {
   const [isAvatarZoomOpen, setIsAvatarZoomOpen] = useState(false);
+  const showMobilePostsProfileHeader = !isOwnProfile && activePage === PROFILE_PAGE_TYPES.POSTS;
 
   // Stabilize callbacks to prevent unnecessary re-renders in child components
   const handleAvatarClick = useCallback(() => {
@@ -90,7 +92,29 @@ export function ProfilePageLayout({
           />
 
           <Container data-cy="profile-tab-content" overrideDefaults={true} className="min-w-0 flex-1">
-            {children}
+            {showMobilePostsProfileHeader && !isLoading && (
+              <Container overrideDefaults={true} className="mb-6 flex min-w-0 flex-col overflow-hidden lg:hidden">
+                <ProfilePageHeader
+                  profile={profile}
+                  actions={headerActions}
+                  isOwnProfile={isOwnProfile}
+                  userId={userId}
+                />
+              </Container>
+            )}
+
+            {showMobilePostsProfileHeader ? (
+              <Container
+                id={PROFILE_POSTS_SECTION_ID}
+                data-cy="profile-posts-section"
+                overrideDefaults={true}
+                className="scroll-mt-[calc(var(--header-height-mobile)+3rem)]"
+              >
+                {children}
+              </Container>
+            ) : (
+              children
+            )}
           </Container>
           <ProfilePageSidebar />
         </Container>

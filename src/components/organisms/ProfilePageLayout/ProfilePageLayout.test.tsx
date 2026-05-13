@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { PROFILE_PAGE_TYPES, PROFILE_POSTS_SECTION_ID } from '@/app/profile/types';
 import { ProfilePageLayout } from './ProfilePageLayout';
 import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 
@@ -253,6 +253,41 @@ describe('ProfilePageLayout', () => {
       </ProfilePageLayout>,
     );
     expect(screen.getByTestId('custom-child')).toBeInTheDocument();
+  });
+
+  it('renders a mobile profile header above the posts section for other-user posts', () => {
+    const { container } = render(
+      <ProfilePageLayout
+        {...defaultProps}
+        activePage={PROFILE_PAGE_TYPES.POSTS}
+        filterBarActivePage={PROFILE_PAGE_TYPES.POSTS}
+        isOwnProfile={false}
+      >
+        <div data-testid="posts-content">Posts Content</div>
+      </ProfilePageLayout>,
+    );
+
+    expect(screen.getAllByTestId('profile-page-header')).toHaveLength(2);
+    const postsSection = container.querySelector<HTMLElement>(`#${PROFILE_POSTS_SECTION_ID}`);
+    if (!postsSection) {
+      throw new Error('Expected posts section to render');
+    }
+
+    expect(postsSection).toContainElement(screen.getByTestId('posts-content'));
+  });
+
+  it('does not add the mobile posts header wrapper for own-profile posts', () => {
+    const { container } = render(
+      <ProfilePageLayout
+        {...defaultProps}
+        activePage={PROFILE_PAGE_TYPES.POSTS}
+        filterBarActivePage={PROFILE_PAGE_TYPES.POSTS}
+        isOwnProfile={true}
+      />,
+    );
+
+    expect(screen.getAllByTestId('profile-page-header')).toHaveLength(1);
+    expect(container.querySelector(`#${PROFILE_POSTS_SECTION_ID}`)).not.toBeInTheDocument();
   });
 
   it('matches snapshot with default props', () => {

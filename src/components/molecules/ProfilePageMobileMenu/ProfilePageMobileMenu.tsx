@@ -28,14 +28,14 @@ export const PROFILE_MENU_ITEMS: ProfileMenuItem[] = [
     ownProfileOnly: true, // Notifications only make sense for logged-in user
   },
   {
-    icon: MessageCircle,
-    label: 'Replies',
-    pageType: PROFILE_PAGE_TYPES.REPLIES,
-  },
-  {
     icon: StickyNote,
     label: 'Posts',
     pageType: PROFILE_PAGE_TYPES.POSTS,
+  },
+  {
+    icon: MessageCircle,
+    label: 'Replies',
+    pageType: PROFILE_PAGE_TYPES.REPLIES,
   },
   {
     icon: UsersRound,
