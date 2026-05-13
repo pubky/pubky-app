@@ -1,25 +1,24 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
+import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostText } from '@/molecules/PostText/PostText';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
-import { DialogReply } from '../DialogReply/DialogReply';
-import { DialogRepost } from '../DialogRepost/DialogRepost';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 
-interface SinglePostArticleProps {
+interface PostArticleDetailProps {
   postId: string;
   content: string;
   attachments: PostDetailsModel['attachments'];
@@ -27,27 +26,16 @@ interface SinglePostArticleProps {
 }
 
 /**
- * SinglePostArticle Organism
- *
- * Displays a single article post with tags always visible on both mobile and desktop (no toggle).
+ * Displays an article post detail page with tags always visible on mobile and desktop.
  */
-export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: SinglePostArticleProps) => {
-  const [replyDialogOpen, setReplyDialogOpen] = useState(false);
-  const [repostDialogOpen, setRepostDialogOpen] = useState(false);
+export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: PostArticleDetailProps) => {
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
 
   const handleTagClick = () => {
     mobileTagsPanelRef.current?.focus();
     desktopTagsPanelRef.current?.focus();
-  };
-
-  const handleReplyClick = () => {
-    setReplyDialogOpen(true);
-  };
-
-  const handleRepostClick = () => {
-    setRepostDialogOpen(true);
   };
 
   const { title, body, coverImage } = usePostArticle({
@@ -69,7 +57,6 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
   return (
     <>
       <Container className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left column - Post content */}
         <Container className="lg:col-span-2">
           <Typography as="h1" size="2xl" className="mb-6 wrap-anywhere hyphens-auto">
             {title}
@@ -80,8 +67,8 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
           <PostActionsBar
             postId={postId}
             onTagClick={handleTagClick}
-            onReplyClick={handleReplyClick}
-            onRepostClick={handleRepostClick}
+            onReplyClick={openReplyDialog}
+            onRepostClick={openRepostDialog}
             className="mt-3 mb-6"
           />
 
@@ -97,19 +84,14 @@ export const SinglePostArticle = ({ postId, content, attachments, isBlurred }: S
             </>
           )}
 
-          {/* Tags on mobile */}
           <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="mt-6 flex lg:hidden" />
         </Container>
 
-        {/* Right column - Tags (desktop only) */}
         <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="hidden lg:flex" />
       </Container>
 
-      <DialogReply postId={postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
-      <DialogRepost postId={postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
+      {dialogs}
       <DialogCheckLink open={dialogOpen} onOpenChangeAction={setDialogOpen} linkUrl={clickedLink} />
-
-      <Typography className="text-2xl font-light text-muted-foreground">Replies</Typography>
     </>
   );
 };

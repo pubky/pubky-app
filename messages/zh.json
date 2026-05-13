@@ -443,7 +443,8 @@
     "viewOriginal": "查看原帖",
     "youReposted": "你转发了",
     "newPostsSingular": "查看 {count} 条新帖子",
-    "newPostsPlural": "查看 {count} 条新帖子"
+    "newPostsPlural": "查看 {count} 条新帖子",
+    "replies": "回复"
   },
   "profile": {
     "title": "个人资料",

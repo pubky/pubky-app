@@ -9,11 +9,18 @@ exports[`SinglePostContent - Snapshots > matches snapshot when not authenticated
     PostPageHeader
   </div>
   <div
-    data-post-id="author:post123"
-    data-tags-layout="inline"
-    data-testid="single-post-card"
+    data-cy="single-post-card"
+    data-override-defaults="true"
+    data-testid="container"
   >
-    SinglePostCard
+    <div
+      data-pin-actions-to-bottom="true"
+      data-post-id="author:post123"
+      data-tags-layout="inline"
+      data-testid="post-main"
+    >
+      PostMain
+    </div>
   </div>
 </div>
 `;
@@ -77,9 +84,9 @@ exports[`SinglePostContent - Snapshots > matches snapshot with long post (articl
 Article content"
     data-is-blurred="false"
     data-post-id="author:post123"
-    data-testid="single-post-article"
+    data-testid="post-article-detail"
   >
-    SinglePostArticle
+    PostArticleDetail
   </div>
   <div
     data-class-name="mb-6 flex"
@@ -90,6 +97,12 @@ Article content"
       data-class-name="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0"
       data-testid="container"
     >
+      <p
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="typography"
+      >
+        Replies
+      </p>
       <div
         data-class-name="ml-3"
         data-override-defaults="true"
@@ -117,11 +130,18 @@ exports[`SinglePostContent - Snapshots > matches snapshot with short post and no
     PostPageHeader
   </div>
   <div
-    data-post-id="author:post123"
-    data-tags-layout="inline"
-    data-testid="single-post-card"
+    data-cy="single-post-card"
+    data-override-defaults="true"
+    data-testid="container"
   >
-    SinglePostCard
+    <div
+      data-pin-actions-to-bottom="true"
+      data-post-id="author:post123"
+      data-tags-layout="inline"
+      data-testid="post-main"
+    >
+      PostMain
+    </div>
   </div>
   <div
     data-class-name="mb-6 flex"

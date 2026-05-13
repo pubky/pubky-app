@@ -10,6 +10,7 @@ import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
@@ -24,8 +25,6 @@ import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { ClickableTagsList } from '../../../ClickableTagsList/ClickableTagsList';
-import { DialogReply } from '../../../DialogReply/DialogReply';
-import { DialogRepost } from '../../../DialogRepost/DialogRepost';
 import { PostActionsBar } from '../../../PostActionsBar/PostActionsBar';
 import { PostContentBlurred } from '../../../PostContentBlurred/PostContentBlurred';
 import {
@@ -220,8 +219,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
 
 function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps) {
   const isTouchDevice = useIsTouchDevice();
-  const [replyDialogOpen, setReplyDialogOpen] = React.useState(false);
-  const [repostDialogOpen, setRepostDialogOpen] = React.useState(false);
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(tile.postId);
 
   const handleNavigate = React.useCallback(() => {
     onNavigate(tile.postId);
@@ -264,14 +262,13 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
           <VisualTimelineTileOverlay
             tile={tile}
             size={size}
-            onReplyClick={() => setReplyDialogOpen(true)}
-            onRepostClick={() => setRepostDialogOpen(true)}
+            onReplyClick={openReplyDialog}
+            onRepostClick={openRepostDialog}
           />
         ) : null}
       </Container>
 
-      <DialogReply postId={tile.postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
-      <DialogRepost postId={tile.postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
+      {dialogs}
     </>
   );
 }

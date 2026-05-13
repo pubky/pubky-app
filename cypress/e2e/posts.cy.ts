@@ -306,7 +306,7 @@ describe('posts', () => {
     });
   });
 
-  it.only('can tag and remove tags from existing post on post page (columns layout)', () => {
+  it('can tag and remove tags from existing post on post page (columns layout)', () => {
     const postContent = `I can add and remove tags from my existing post on the post page! ${Date.now()}`;
     const tag1 = 'açorda';
     const tag2 = 'cassava';
@@ -359,9 +359,17 @@ describe('posts', () => {
           cy.contains('button', tag2).should('not.exist');
         });
     });
+
+    // untag tag 1 after page reload to cover bug https://github.com/pubky/pubky-app/issues/1721
+    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag1');
+    cy.get('[data-cy="clickable-tags-list"]').within(() => {
+      cy.contains('button', tag1).click();
+      cy.wait('@deleteTag1').its('response.statusCode').should('eq', 204);
+    });
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag removed');
   });
 
-  it.only('can tag and remove tags from existing post on post page (wide layout)', () => {
+  it('can tag and remove tags from existing post on post page (wide layout)', () => {
     const postContent = `I can add and remove tags from my existing post on the post page! ${Date.now()}`;
     const tag1 = 'açorda';
     const tag2 = 'cassava';
@@ -416,6 +424,14 @@ describe('posts', () => {
           cy.contains('p', tag2).should('not.exist');
         });
     });
+
+    // untag tag 1 after page reload to cover bug https://github.com/pubky/pubky-app/issues/1721
+    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag1');
+    cy.get('[data-cy="post-tags-panel"]').within(() => {
+      cy.contains('p', tag1).parent().click();
+      cy.wait('@deleteTag1').its('response.statusCode').should('eq', 204);
+    });
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag removed');
   });
 
   it('can bookmark multiple posts then remove bookmarks', () => {

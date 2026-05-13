@@ -20,7 +20,8 @@ import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
-import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
+import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
+import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
@@ -222,7 +223,7 @@ export function PostInput({
               ref={textareaRef}
               placeholder={displayPlaceholder}
               variant="inline"
-              className={isWideLayout ? WIDE_POST_LAYOUT_CLASSES.bodyText : undefined}
+              className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
               value={content}
               onChange={handleChange}
               onFocus={handleExpand}

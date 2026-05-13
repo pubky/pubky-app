@@ -443,7 +443,8 @@
     "viewOriginal": "عرض المنشور الاصلي",
     "youReposted": "أعدت النشر",
     "newPostsSingular": "عرض {count} منشور جديد",
-    "newPostsPlural": "عرض {count} منشورات جديدة"
+    "newPostsPlural": "عرض {count} منشورات جديدة",
+    "replies": "الردود"
   },
   "profile": {
     "title": "الملف الشخصي",
