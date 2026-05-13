@@ -118,6 +118,31 @@ describe('WhoToFollowSidebar', () => {
       );
     });
   });
+
+  it('rolls back preserved users when follow fails', async () => {
+    hooksMocks.toggleFollow.mockRejectedValue(new Error('follow failed'));
+    hooksMocks.useUserStream.mockReturnValue({
+      users: [{ id: 'user-1', name: 'User One', image: null, avatarUrl: null, isFollowing: false }],
+      userIds: ['user-1'],
+      isLoading: false,
+      isLoadingMore: false,
+      hasMore: false,
+      error: null,
+      loadMore: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    render(<WhoToFollowSidebar />);
+    fireEvent.click(screen.getByText('User One'));
+
+    await waitFor(() => {
+      expect(hooksMocks.useUserStream).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          preserveFollowedUserIds: [],
+        }),
+      );
+    });
+  });
 });
 
 describe('WhoToFollowSidebar - Snapshots', () => {

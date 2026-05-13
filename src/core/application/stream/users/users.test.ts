@@ -352,6 +352,25 @@ describe('UserStreamApplication', () => {
       expect(cachedStream?.stream).toEqual(['new-user-1', 'new-user-2']);
     });
 
+    it('should replace the cached stream with an empty stream on empty first page refresh', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      await LocalStreamUsersService.upsert({ streamId, stream: ['old-user'] as Pubky[] });
+
+      vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue([]);
+
+      const result = await UserStreamApplication.fetchStreamSlice({
+        streamId,
+        skip: 0,
+        limit: 10,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      const cachedStream = await LocalStreamUsersService.findById(streamId);
+      expect(result.nextPageIds).toEqual([]);
+      expect(result.isExhausted).toBe(true);
+      expect(cachedStream?.stream).toEqual([]);
+    });
+
     it('should append and dedupe later pages', async () => {
       const streamId = UserStreamTypes.RECOMMENDED;
       await LocalStreamUsersService.upsert({ streamId, stream: ['user-1', 'user-2'] as Pubky[] });

@@ -46,10 +46,6 @@ export interface UseUserStreamParams {
   refillThreshold?: number;
 }
 
-export interface RefetchUserStreamOptions {
-  forceNetwork?: boolean;
-}
-
 export interface UseUserStreamResult {
   /** Array of user details */
   users: UserStreamUser[];
@@ -66,5 +62,9 @@ export interface UseUserStreamResult {
   /** Load next page of users (only works when paginated) */
   loadMore: () => Promise<void>;
   /** Re-fetch the users */
-  refetch: (options?: RefetchUserStreamOptions) => Promise<void>;
+  refetch: () => Promise<void>;
 }
+
+export type FetchUserStreamSliceOptions = {
+  forceNetwork?: boolean;
+};

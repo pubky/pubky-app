@@ -127,6 +127,9 @@ export class UserStreamApplication {
 
     // Handle empty response
     if (userIds.length === 0) {
+      if (replaceCache) {
+        await LocalStreamUsersService.upsert({ streamId, stream: [] });
+      }
       return { nextPageIds: [], cacheMissUserIds: [], skip: undefined, isExhausted };
     }
 

@@ -17,7 +17,7 @@ import {
   DEFAULT_USER_STREAM_REFILL_THRESHOLD,
 } from './useUserStream.constants';
 import type {
-  RefetchUserStreamOptions,
+  FetchUserStreamSliceOptions,
   UserStreamUser,
   UseUserStreamParams,
   UseUserStreamResult,
@@ -151,10 +151,9 @@ export function useUserStream({
   // Computed Users Array
   // ============================================================================
 
-  const preservedFollowedUsers = useMemo(() => new Set(preserveFollowedUserIds), [preserveFollowedUserIds]);
-
   const { users, eligibleCount } = useMemo(() => {
     const eligible: UserStreamUser[] = [];
+    const preservedFollowedUsers = new Set(preserveFollowedUserIds);
 
     for (const id of userIds) {
       const details = userDetailsMap.get(id);
@@ -197,7 +196,7 @@ export function useUserStream({
     userRelationshipsMap,
     userTagsMap,
     excludeFollowing,
-    preservedFollowedUsers,
+    preserveFollowedUserIds,
     effectiveLimit,
     paginated,
   ]);
@@ -207,7 +206,7 @@ export function useUserStream({
   // ============================================================================
 
   const fetchStreamSlice = useCallback(
-    async (isInitial: boolean, options: RefetchUserStreamOptions = {}) => {
+    async (isInitial: boolean, options: FetchUserStreamSliceOptions = {}) => {
       // Set loading state
       if (isInitial) {
         setIsLoading(true);
@@ -275,16 +274,13 @@ export function useUserStream({
     await fetchStreamSlice(false);
   }, [paginated, isLoadingMore, hasMore, fetchStreamSlice]);
 
-  const refetchWithOptions = useCallback(
-    async (options?: RefetchUserStreamOptions) => {
-      if (paginated) {
-        setUserIds([]);
-        setHasMore(true);
-      }
-      await fetchStreamSlice(true, options);
-    },
-    [paginated, fetchStreamSlice],
-  );
+  const refetch = useCallback(async () => {
+    if (paginated) {
+      setUserIds([]);
+      setHasMore(true);
+    }
+    await fetchStreamSlice(true);
+  }, [paginated, fetchStreamSlice]);
 
   // Initial fetch on mount or when streamId changes
   useEffect(() => {
@@ -322,6 +318,6 @@ export function useUserStream({
     hasMore,
     error,
     loadMore,
-    refetch: refetchWithOptions,
+    refetch,
   };
 }
