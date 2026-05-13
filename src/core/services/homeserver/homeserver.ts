@@ -21,6 +21,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
+import type { Pubky as TPubkyModel } from '@/models/models.types';
 import type {
   TGenerateAuthUrlResult,
   THomeserverRestoreSessionParams,
@@ -35,6 +36,7 @@ import type {
   THomeserverFetchParams,
   THomeserverListParams,
   THomeserverRequestParams,
+  THomeserverUserEvent,
   TOwnedSessionPath,
   TPutBlobParams,
 } from './homeserver.types';
@@ -54,6 +56,10 @@ const CAPABILITIES = '/pub/pubky.app/:rw';
 const PUB_PATH_PREFIX = '/pub/' as const;
 /** Default limit for list operations */
 const LIST_DEFAULT_LIMIT = 500;
+
+type HomeserverSdkUserEvent = THomeserverUserEvent & {
+  free(): void;
+};
 
 export class HomeserverService {
   private constructor() {}
@@ -485,5 +491,65 @@ export class HomeserverService {
     }
 
     return data.token;
+  }
+
+  /**
+   * Subscribe to homeserver `/events-stream` for a user's pub directory subtree (SDK SSE wrapper).
+   * Used for mute-list sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
+   */
+  static async subscribeUserEventStreamForPath(params: {
+    userZ32: TPubkyModel;
+    cursor: string | null;
+    pathPrefix: string;
+  }): Promise<ReadableStream<THomeserverUserEvent>> {
+    try {
+      const pubkySdk = this.getPubkySdk();
+      const pk = PublicKey.from(params.userZ32);
+      const stream = (await pubkySdk
+        .eventStreamForUser(pk, params.cursor)
+        .path(params.pathPrefix)
+        .live()
+        .subscribe()) as ReadableStream<HomeserverSdkUserEvent>;
+
+      return this.normalizeUserEventStream(stream);
+    } catch (error) {
+      return handleError({
+        error,
+        additionalContext: { pathPrefix: params.pathPrefix },
+      });
+    }
+  }
+
+  private static normalizeUserEventStream(
+    stream: ReadableStream<HomeserverSdkUserEvent>,
+  ): ReadableStream<THomeserverUserEvent> {
+    const reader = stream.getReader();
+
+    return new ReadableStream<THomeserverUserEvent>({
+      async pull(controller) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          controller.close();
+          return;
+        }
+
+        try {
+          controller.enqueue({
+            cursor: value.cursor,
+            eventType: value.eventType,
+          });
+        } finally {
+          try {
+            value.free();
+          } catch {
+            // Ignore WASM dispose errors.
+          }
+        }
+      },
+      async cancel(reason) {
+        await reader.cancel(reason).catch(() => {});
+      },
+    });
   }
 }

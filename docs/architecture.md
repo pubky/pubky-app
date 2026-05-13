@@ -50,6 +50,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - Invoke pipes for normalization/validation
 - Call application for business logic
 - Mutate stores for UI state
+- Use `subscribe*` only for long-lived live stream subscriptions; keep SDK lifecycle details below the controller boundary
 - **NEVER** call services directly
 - **NEVER** perform IO
 
@@ -60,6 +61,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - Call controllers (like UI does)
 - **NEVER** call application directly
 - **NEVER** call services directly
+- **Mute list (homeserver events stream)**: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/`) refreshes the local mute list when another session changes `/pub/pubky.app/mutes/`; see `docs/adr/0014-muting-system.md`.
 
 ### Application (`src/core/application/`)
 

@@ -46,7 +46,7 @@ const emptyBootstrap = (): NexusBootstrapResponse => ({
   users: [],
   posts: [],
   files: [],
-  ids: { stream: [], influencers: [], recommended: [], hot_tags: [], muted: [] },
+  ids: { stream: [], influencers: [], recommended: [], hot_tags: [] },
   indexed: true,
   notifications: [],
 });
@@ -101,7 +101,6 @@ const createMockBootstrapData = (): NexusBootstrapResponse => ({
     influencers: ['user-1'],
     recommended: ['user-2'],
     hot_tags: [{ label: 'technology', taggers_id: ['user-1'], tagged_count: 1, taggers_count: 1 }],
-    muted: [],
   },
   indexed: true,
   notifications: [],
