@@ -1,6 +1,6 @@
 import { Container } from '@/atoms/Container/Container';
 import { cn } from '@/libs/utils/utils';
-import { WhoToFollowSidebar } from '@/organisms/WhoToFollow/WhoToFollowSidebar/WhoToFollowSidebar';
+import { WhoToFollowSidebar } from '@/organisms/WhoToFollowSidebar/WhoToFollowSidebar';
 import { ActiveUsers } from '../ActiveUsers/ActiveUsers';
 import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
 import type { RightSidebarProps } from './RightSidebar.types';

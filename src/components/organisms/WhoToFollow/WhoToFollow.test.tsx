@@ -6,7 +6,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import type { Pubky } from '@/models/models.types';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { WhoToFollowPageMain } from './WhoToFollowPageMain';
+import { WhoToFollow } from './WhoToFollow';
 
 // Mock dependencies
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -174,7 +174,7 @@ const mockUsersResult = {
   refetch: vi.fn(),
 };
 
-describe('WhoToFollowPageMain', () => {
+describe('WhoToFollow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockToggleFollow.mockResolvedValue(undefined);
@@ -186,21 +186,21 @@ describe('WhoToFollowPageMain', () => {
   });
 
   it('renders empty state when no users', () => {
-    render(<WhoToFollowPageMain />);
+    render(<WhoToFollow />);
     expect(screen.getByTestId('who-to-follow-empty')).toBeInTheDocument();
     expect(screen.getByText('No recommendations yet')).toBeInTheDocument();
   });
 
   it('renders loading state when isLoading is true', () => {
     vi.mocked(useUserStream).mockReturnValue(mockLoadingResult);
-    render(<WhoToFollowPageMain />);
+    render(<WhoToFollow />);
     expect(screen.getAllByTestId('user-list-item-skeleton-full')).toHaveLength(30);
   });
 
   it('renders users when there are items', () => {
     vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
 
-    render(<WhoToFollowPageMain />);
+    render(<WhoToFollow />);
     const userItems = screen.getAllByTestId('user-list-item');
     expect(userItems).toHaveLength(2);
     expect(userItems[0]).toHaveAttribute('data-user-id', 'user-1');
@@ -210,7 +210,7 @@ describe('WhoToFollowPageMain', () => {
   it('uses default icon followButtonVariant for UserListItem', () => {
     vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
 
-    render(<WhoToFollowPageMain />);
+    render(<WhoToFollow />);
     const userItems = screen.getAllByTestId('user-list-item');
     userItems.forEach((item) => {
       // should default to icon only without text
@@ -220,7 +220,7 @@ describe('WhoToFollowPageMain', () => {
 
   it('calls useUserStream with correct params', () => {
     vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
-    render(<WhoToFollowPageMain />);
+    render(<WhoToFollow />);
 
     expect(useUserStream).toHaveBeenCalledWith({
       streamId: 'recommended',
@@ -239,7 +239,7 @@ describe('WhoToFollowPageMain', () => {
     mockToggleFollow.mockReturnValue(new Promise(() => {}));
     vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
 
-    render(<WhoToFollowPageMain />);
+    render(<WhoToFollow />);
     fireEvent.click(screen.getAllByTestId('user-list-item')[0]);
 
     expect(mockToggleFollow).toHaveBeenCalledWith('user-1', false);
@@ -253,7 +253,7 @@ describe('WhoToFollowPageMain', () => {
   });
 });
 
-describe('WhoToFollowPageMain - Snapshots', () => {
+describe('WhoToFollow - Snapshots', () => {
   beforeEach(() => {
     vi.mocked(useUserStream).mockImplementation(mockUseUserStream);
     vi.mocked(useInfiniteScroll).mockReturnValue(
@@ -263,20 +263,20 @@ describe('WhoToFollowPageMain - Snapshots', () => {
   });
 
   it('matches snapshot with no users', () => {
-    const { container } = render(<WhoToFollowPageMain />);
+    const { container } = render(<WhoToFollow />);
     expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot when loading', () => {
     vi.mocked(useUserStream).mockReturnValue(mockLoadingResult);
-    const { container } = render(<WhoToFollowPageMain />);
+    const { container } = render(<WhoToFollow />);
     expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with users', () => {
     vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
 
-    const { container } = render(<WhoToFollowPageMain />);
+    const { container } = render(<WhoToFollow />);
     expect(container).toMatchSnapshot();
   });
 });

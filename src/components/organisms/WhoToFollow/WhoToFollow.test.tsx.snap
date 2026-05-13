@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`WhoToFollowPageMain - Snapshots > matches snapshot when loading 1`] = `
+exports[`WhoToFollow - Snapshots > matches snapshot when loading 1`] = `
 <div>
   <div
     class="mt-6 gap-4 lg:mt-0"
@@ -165,7 +165,7 @@ exports[`WhoToFollowPageMain - Snapshots > matches snapshot when loading 1`] = `
 </div>
 `;
 
-exports[`WhoToFollowPageMain - Snapshots > matches snapshot with no users 1`] = `
+exports[`WhoToFollow - Snapshots > matches snapshot with no users 1`] = `
 <div>
   <div
     class="relative mt-6 items-center gap-6 px-0 py-6 lg:mt-0"
@@ -221,7 +221,7 @@ exports[`WhoToFollowPageMain - Snapshots > matches snapshot with no users 1`] = 
 </div>
 `;
 
-exports[`WhoToFollowPageMain - Snapshots > matches snapshot with users 1`] = `
+exports[`WhoToFollow - Snapshots > matches snapshot with users 1`] = `
 <div>
   <div
     class="mt-6 gap-4 lg:mt-0"

@@ -15,12 +15,12 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 const LOAD_MORE_SKELETON_COUNT = 2;
 
 /**
- * WhoToFollowPageMain
+ * WhoToFollow
  *
  * Main content component for the Who To Follow page.
  * Displays recommended users with infinite scroll pagination.
  */
-export function WhoToFollowPageMain() {
+export function WhoToFollow() {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { preservedFollowedUserIds, handleFollowClick, isUserLoading } = useWhoToFollowFollowPreservation();
   const { users, isLoading, isLoadingMore, hasMore, loadMore } = useUserStream({
