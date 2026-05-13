@@ -32,6 +32,7 @@ const mockState = vi.hoisted(() => ({
   getHomeserverOf: vi.fn(),
   startAuthFlow: vi.fn(),
   authFlowKindSignin: vi.fn(),
+  eventStreamForUser: vi.fn(),
   // Auth store session
   currentSession: null as Session | null,
 }));
@@ -76,6 +77,7 @@ vi.mock('@synonymdev/pubky', () => {
   const createMockPubkyInstance = () => ({
     getHomeserverOf: (...args: unknown[]) => mockState.getHomeserverOf(...args),
     startAuthFlow: (...args: unknown[]) => mockState.startAuthFlow(...args),
+    eventStreamForUser: (...args: unknown[]) => mockState.eventStreamForUser(...args),
     client: {
       fetch: (...args: unknown[]) => mockState.clientFetch(...args),
     },
@@ -182,6 +184,11 @@ describe('HomeserverService', () => {
       free: vi.fn(),
     });
     mockState.authFlowKindSignin.mockReturnValue('signin-kind');
+    mockState.eventStreamForUser.mockReturnValue({
+      path: vi.fn().mockReturnThis(),
+      live: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockResolvedValue(new ReadableStream()),
+    });
 
     // Reset module cache and re-import
     vi.resetModules();
@@ -207,6 +214,7 @@ describe('HomeserverService', () => {
         'delete',
         'get',
         'generateSignupToken',
+        'subscribeUserEventStreamForPath',
       ] as const;
 
       expectedMethods.forEach((method) => {
@@ -950,6 +958,40 @@ describe('HomeserverService', () => {
         const result = await HomeserverService.generateSignupToken();
 
         expect(result).toBe(expectedToken);
+      });
+    });
+
+    describe('subscribeUserEventStreamForPath', () => {
+      it('normalizes SDK events and disposes raw WASM objects internally', async () => {
+        const free = vi.fn();
+        const path = vi.fn().mockReturnThis();
+        const live = vi.fn().mockReturnThis();
+        const subscribe = vi.fn().mockResolvedValue(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue({ cursor: 'cursor-1', eventType: 'PUT', free });
+              controller.close();
+            },
+          }),
+        );
+
+        mockState.eventStreamForUser.mockReturnValue({ path, live, subscribe });
+
+        const stream = await HomeserverService.subscribeUserEventStreamForPath({
+          userZ32: 'user-pubky',
+          cursor: 'cursor-0',
+          pathPrefix: '/pub/pubky.app/mutes/',
+        });
+        const reader = stream.getReader();
+
+        const result = await reader.read();
+
+        expect(path).toHaveBeenCalledWith('/pub/pubky.app/mutes/');
+        expect(live).toHaveBeenCalled();
+        expect(subscribe).toHaveBeenCalled();
+        expect(result.value).toEqual({ cursor: 'cursor-1', eventType: 'PUT' });
+        expect(result.value).not.toHaveProperty('free');
+        expect(free).toHaveBeenCalledTimes(1);
       });
     });
 

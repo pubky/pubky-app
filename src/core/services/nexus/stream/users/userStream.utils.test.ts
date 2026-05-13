@@ -59,17 +59,10 @@ describe('createUserStreamParams', () => {
       });
     });
 
-    it('should parse muted composite ID correctly', () => {
+    it('should reject muted composite stream IDs (homeserver-only)', () => {
       const streamId = 'user-abc:muted' as UserStreamId;
 
-      const result = createUserStreamParams(streamId, baseParams);
-
-      expect(result.reach).toBe('muted');
-      expect(result.apiParams).toEqual({
-        user_id: 'user-abc',
-        skip: 0,
-        limit: 20,
-      });
+      expect(() => createUserStreamParams(streamId, baseParams)).toThrow('Muted user lists are homeserver-backed only');
     });
 
     it('should handle user IDs with special characters', () => {
@@ -258,7 +251,7 @@ describe('createUserStreamParams', () => {
     });
 
     it('should add user_id from viewer_id for all sources requiring user_id', () => {
-      const sources = ['followers', 'following', 'friends', 'muted'];
+      const sources = ['followers', 'following', 'friends'];
       const paramsWithViewer: TUserStreamBase = {
         skip: 0,
         limit: 20,
@@ -279,6 +272,12 @@ describe('createUserStreamParams', () => {
   // ============================================================================
 
   describe('edge cases and error handling', () => {
+    it('should reject 3-part muted source ids (homeserver-only)', () => {
+      expect(() => createUserStreamParams('muted:all:all' as UserStreamId, baseParams)).toThrow(
+        'Muted user lists are homeserver-backed only',
+      );
+    });
+
     it('should throw error for invalid format (1 part)', () => {
       const streamId = 'invalid-stream-id' as UserStreamId;
 
@@ -381,10 +380,9 @@ describe('createUserStreamParams', () => {
       expect(result.reach).toBe('friends');
     });
 
-    it('should handle muted', () => {
+    it('should reject muted reach (homeserver-only)', () => {
       const streamId = 'user-123:muted' as UserStreamId;
-      const result = createUserStreamParams(streamId, baseParams);
-      expect(result.reach).toBe('muted');
+      expect(() => createUserStreamParams(streamId, baseParams)).toThrow('Muted user lists are homeserver-backed only');
     });
 
     it('should handle recommended', () => {
@@ -464,8 +462,8 @@ describe('streamRequiresUserId', () => {
     expect(streamRequiresUserId('friends:all:all' as UserStreamId)).toBe(true);
   });
 
-  it('should return true for muted source', () => {
-    expect(streamRequiresUserId('muted:all:all' as UserStreamId)).toBe(true);
+  it('should return false for deprecated muted source prefix', () => {
+    expect(streamRequiresUserId('muted:all:all' as UserStreamId)).toBe(false);
   });
 
   it('should return true for recommended source', () => {

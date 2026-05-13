@@ -13,7 +13,6 @@ export enum UserStreamSource {
   FOLLOWERS = 'followers',
   FOLLOWING = 'following',
   FRIENDS = 'friends',
-  MUTED = 'muted',
   INFLUENCERS = 'influencers',
   RECOMMENDED = 'recommended',
   POST_REPLIES = 'post_replies',

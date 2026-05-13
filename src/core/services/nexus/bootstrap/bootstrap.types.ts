@@ -21,5 +21,4 @@ export type NexusBootstrapList = {
   influencers: Pubky[];
   recommended: Pubky[];
   hot_tags: NexusHotTag[];
-  muted: Pubky[];
 };

@@ -4,3 +4,8 @@ export type TMuteParams = {
   muter: Pubky;
   mutee: Pubky;
 };
+
+export type TMuteDirectoryEvent = {
+  cursor: string;
+  eventType: string;
+};

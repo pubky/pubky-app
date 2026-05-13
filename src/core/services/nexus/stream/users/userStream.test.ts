@@ -290,13 +290,12 @@ describe('Users Stream API - Error Control', () => {
   });
 
   describe('UserStreamApiEndpoint type', () => {
-    it('should have exactly 11 endpoints', () => {
+    it('should have exactly 10 endpoints', () => {
       const endpointKeys = Object.keys(userStreamApi);
-      expect(endpointKeys).toHaveLength(11);
+      expect(endpointKeys).toHaveLength(10);
       expect(endpointKeys).toContain('followers');
       expect(endpointKeys).toContain('following');
       expect(endpointKeys).toContain('friends');
-      expect(endpointKeys).toContain('muted');
       expect(endpointKeys).toContain('recommended');
       expect(endpointKeys).toContain('influencers');
       expect(endpointKeys).toContain('postReplies');
@@ -385,16 +384,6 @@ describe('NexusUserStreamService.fetch', () => {
       expect(url).toContain('source=friends');
       expect(url).toContain('skip=5');
       expect(url).toContain('limit=20');
-    });
-
-    it('should generate correct muted URL', () => {
-      const url = userStreamApi.muted({
-        user_id: mockUserId,
-        skip: 0,
-        limit: 10,
-      });
-
-      expect(url).toContain('source=muted');
     });
 
     it('should generate correct recommended URL', () => {
