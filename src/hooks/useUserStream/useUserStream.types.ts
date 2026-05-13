@@ -38,6 +38,8 @@ export interface UseUserStreamParams {
   paginated?: boolean;
   /** Hide users whose local relationship says the viewer already follows them. Default: false */
   excludeFollowing?: boolean;
+  /** Followed users to keep visible even when excludeFollowing is enabled. */
+  preserveFollowedUserIds?: Pubky[];
   /** Minimum candidate IDs to request/cache per stream fetch. Defaults to the visible limit. */
   bufferSize?: number;
   /** Refill once when the local candidate buffer drops below this size. */

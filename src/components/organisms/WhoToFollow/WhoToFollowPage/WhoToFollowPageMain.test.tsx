@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ElementType, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
@@ -37,9 +37,11 @@ const mockUseInfiniteScroll = vi.fn(() => ({
   sentinelRef: { current: null },
 }));
 
+const mockToggleFollow = vi.fn();
+const mockIsUserLoading = vi.fn(() => false);
 const mockUseFollowUser = vi.fn(() => ({
-  toggleFollow: vi.fn(),
-  isUserLoading: vi.fn(() => false),
+  toggleFollow: mockToggleFollow,
+  isUserLoading: mockIsUserLoading,
   isLoading: false,
   error: null,
 }));
@@ -105,10 +107,24 @@ vi.mock('@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton', () => {
 
 vi.mock('@/organisms/UserListItem/UserListItem', () => {
   return {
-    UserListItem: ({ user, followButtonVariant = 'icon' }: { user: { id: string }; followButtonVariant?: string }) => (
-      <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
+    UserListItem: ({
+      user,
+      followButtonVariant = 'icon',
+      onFollowClick,
+    }: {
+      user: { id: string; isFollowing?: boolean };
+      followButtonVariant?: string;
+      onFollowClick?: (userId: string, isFollowing: boolean) => void;
+    }) => (
+      <button
+        data-testid="user-list-item"
+        data-user-id={user.id}
+        data-follow-button-variant={followButtonVariant}
+        type="button"
+        onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false)}
+      >
         User item
-      </div>
+      </button>
     ),
   };
 });
@@ -160,6 +176,8 @@ const mockUsersResult = {
 
 describe('WhoToFollowPageMain', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    mockToggleFollow.mockResolvedValue(undefined);
     vi.mocked(useUserStream).mockImplementation(mockUseUserStream);
     vi.mocked(useInfiniteScroll).mockReturnValue(
       asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
@@ -213,6 +231,24 @@ describe('WhoToFollowPageMain', () => {
       includeRelationships: true,
       includeCounts: true,
       excludeFollowing: true,
+      preserveFollowedUserIds: [],
+    });
+  });
+
+  it('passes clicked users as preserved before follow resolves', async () => {
+    mockToggleFollow.mockReturnValue(new Promise(() => {}));
+    vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
+
+    render(<WhoToFollowPageMain />);
+    fireEvent.click(screen.getAllByTestId('user-list-item')[0]);
+
+    expect(mockToggleFollow).toHaveBeenCalledWith('user-1', false);
+    await waitFor(() => {
+      expect(useUserStream).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          preserveFollowedUserIds: ['user-1'],
+        }),
+      );
     });
   });
 });

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Users } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -9,9 +10,9 @@ import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { WHO_TO_FOLLOW_PAGE_SIZE } from '@/hooks/useUserStream/useUserStream.constants';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { FullUserListItemSkeleton } from '@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton';
+import { UserListItem } from '@/organisms/UserListItem/UserListItem';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
-import { UserListItem } from '../UserListItem/UserListItem';
 
 const LOAD_MORE_SKELETON_COUNT = 2;
 
@@ -23,6 +24,7 @@ const LOAD_MORE_SKELETON_COUNT = 2;
  */
 export function WhoToFollowPageMain() {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const [recentlyFollowedUserIds, setRecentlyFollowedUserIds] = useState<Pubky[]>([]);
   const { users, isLoading, isLoadingMore, hasMore, loadMore } = useUserStream({
     streamId: UserStreamTypes.RECOMMENDED,
     limit: WHO_TO_FOLLOW_PAGE_SIZE,
@@ -32,6 +34,7 @@ export function WhoToFollowPageMain() {
     includeRelationships: true,
     includeCounts: true,
     excludeFollowing: true,
+    preserveFollowedUserIds: recentlyFollowedUserIds,
   });
   const { toggleFollow, isUserLoading } = useFollowUser();
 
@@ -44,7 +47,26 @@ export function WhoToFollowPageMain() {
 
   // Handle follow/unfollow action
   const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean) => {
-    await toggleFollow(userId, isCurrentlyFollowing);
+    const updatePreservedUserIds = () =>
+      setRecentlyFollowedUserIds((prev) => {
+        if (isCurrentlyFollowing) {
+          return prev.filter((id) => id !== userId);
+        }
+        return prev.includes(userId) ? prev : [...prev, userId];
+      });
+
+    updatePreservedUserIds();
+
+    try {
+      await toggleFollow(userId, isCurrentlyFollowing);
+    } catch (err) {
+      if (isCurrentlyFollowing) {
+        setRecentlyFollowedUserIds((prev) => (prev.includes(userId) ? prev : [...prev, userId]));
+      } else {
+        setRecentlyFollowedUserIds((prev) => prev.filter((id) => id !== userId));
+      }
+      throw err;
+    }
   };
   if (isLoading) {
     return (

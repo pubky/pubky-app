@@ -23,6 +23,8 @@ import type {
   UseUserStreamResult,
 } from './useUserStream.types';
 
+const EMPTY_PRESERVED_FOLLOWED_USER_IDS: Pubky[] = [];
+
 /**
  * useUserStream
  *
@@ -52,6 +54,7 @@ export function useUserStream({
   includeTags = false,
   paginated = false,
   excludeFollowing = false,
+  preserveFollowedUserIds = EMPTY_PRESERVED_FOLLOWED_USER_IDS,
   bufferSize,
   refillThreshold,
 }: UseUserStreamParams): UseUserStreamResult {
@@ -148,6 +151,8 @@ export function useUserStream({
   // Computed Users Array
   // ============================================================================
 
+  const preservedFollowedUsers = useMemo(() => new Set(preserveFollowedUserIds), [preserveFollowedUserIds]);
+
   const { users, eligibleCount } = useMemo(() => {
     const eligible: UserStreamUser[] = [];
 
@@ -157,7 +162,7 @@ export function useUserStream({
 
       const counts = userCountsMap.get(id);
       const relationship = userRelationshipsMap.get(id);
-      if (excludeFollowing && relationship?.following) continue;
+      if (excludeFollowing && relationship?.following && !preservedFollowedUsers.has(id)) continue;
 
       const userTags = userTagsMap.get(id);
 
@@ -192,6 +197,7 @@ export function useUserStream({
     userRelationshipsMap,
     userTagsMap,
     excludeFollowing,
+    preservedFollowedUsers,
     effectiveLimit,
     paginated,
   ]);

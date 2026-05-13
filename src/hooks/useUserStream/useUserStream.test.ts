@@ -394,6 +394,43 @@ describe('useUserStream', () => {
       expect(result.current.users.map((user) => user.id)).toEqual(['user-2', 'user-3', 'user-4']);
     });
 
+    it('keeps preserved followed users visible while filtering other followed users', async () => {
+      const ids = ['user-1', 'user-2', 'user-3', 'user-4'];
+      mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: ids,
+        skip: ids.length,
+        isExhausted: false,
+      });
+      mockLiveQueryMaps({
+        details: createDetailsMap(ids),
+        relationships: new Map([
+          ['user-1', { id: 'user-1', following: true, followed_by: false }],
+          ['user-2', { id: 'user-2', following: true, followed_by: false }],
+          ['user-3', { id: 'user-3', following: false, followed_by: false }],
+          ['user-4', { id: 'user-4', following: false, followed_by: false }],
+        ]),
+      });
+
+      const { result } = renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+          preserveFollowedUserIds: ['user-1'],
+          bufferSize: 4,
+          refillThreshold: 2,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.users.map((user) => user.id)).toEqual(['user-1', 'user-3', 'user-4']);
+      expect(result.current.users[0]?.isFollowing).toBe(true);
+    });
+
     it('makes one bounded refill request when eligible recommendations fall below threshold', async () => {
       const ids = ['user-1', 'user-2', 'user-3'];
       mockGetOrFetchStreamSlice.mockResolvedValue({

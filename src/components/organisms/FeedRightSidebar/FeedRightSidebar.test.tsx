@@ -34,7 +34,7 @@ vi.mock('@/organisms/HotTags/HotTags', () => {
   };
 });
 
-vi.mock('@/organisms/WhoToFollowSidebar/WhoToFollowSidebar', () => {
+vi.mock('@/organisms/WhoToFollow/WhoToFollowSidebar/WhoToFollowSidebar', () => {
   return {
     WhoToFollowSidebar: () => <div data-testid="who-to-follow">WhoToFollowSidebar</div>,
   };

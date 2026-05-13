@@ -6,7 +6,7 @@ import { FilterSortWhoToFollow } from '@/molecules/Filters/FilterSortWhoToFollow
 import { ActiveUsers } from '@/organisms/ActiveUsers/ActiveUsers';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { FeedbackCard } from '@/organisms/FeedbackCard/FeedbackCard';
-import { WhoToFollowPageMain } from '@/organisms/WhoToFollowPage/WhoToFollowPageMain';
+import { WhoToFollowPageMain } from '@/organisms/WhoToFollow/WhoToFollowPage/WhoToFollowPageMain';
 
 /**
  * WhoToFollowPage

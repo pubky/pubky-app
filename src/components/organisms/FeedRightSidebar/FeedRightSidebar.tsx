@@ -14,7 +14,7 @@ import { FeedSection } from '@/molecules/FeedSection/FeedSection';
 import { ActiveUsers } from '../ActiveUsers/ActiveUsers';
 import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
 import { HotTags } from '../HotTags/HotTags';
-import { WhoToFollowSidebar } from '../WhoToFollowSidebar/WhoToFollowSidebar';
+import { WhoToFollowSidebar } from '../WhoToFollow/WhoToFollowSidebar/WhoToFollowSidebar';
 
 function HomeFeedContent() {
   return (

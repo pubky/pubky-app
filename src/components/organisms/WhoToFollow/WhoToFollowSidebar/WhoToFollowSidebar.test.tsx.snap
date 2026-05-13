@@ -1,0 +1,199 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`WhoToFollowSidebar - Snapshots > matches snapshot when loading 1`] = `
+<div
+  class="flex w-full min-w-0 flex-col gap-2"
+  data-cy="who-to-follow"
+  data-testid="who-to-follow"
+>
+  <div
+    class="flex w-full items-center justify-between"
+    data-testid="container"
+  >
+    <h2
+      class="text-2xl font-light text-muted-foreground"
+      data-testid="heading-2"
+    >
+      Who to follow
+    </h2>
+  </div>
+  <div
+    class="flex w-full min-w-0 flex-col gap-2"
+    data-testid="container"
+  >
+    <div
+      class="flex w-full items-center gap-3"
+      data-testid="user-list-item-skeleton-compact"
+    >
+      <div
+        class="animate-pulse bg-muted size-10 shrink-0 rounded-full"
+        data-slot="skeleton"
+      />
+      <div
+        class="flex min-w-0 flex-1 flex-col gap-2"
+        data-testid="container"
+      >
+        <div
+          class="animate-pulse bg-muted h-4 w-full max-w-[150px] rounded-md"
+          data-slot="skeleton"
+        />
+        <div
+          class="animate-pulse bg-muted h-4 w-full max-w-[130px] rounded-md"
+          data-slot="skeleton"
+        />
+      </div>
+    </div>
+    <div
+      class="flex w-full items-center gap-3"
+      data-testid="user-list-item-skeleton-compact"
+    >
+      <div
+        class="animate-pulse bg-muted size-10 shrink-0 rounded-full"
+        data-slot="skeleton"
+      />
+      <div
+        class="flex min-w-0 flex-1 flex-col gap-2"
+        data-testid="container"
+      >
+        <div
+          class="animate-pulse bg-muted h-4 w-full max-w-[150px] rounded-md"
+          data-slot="skeleton"
+        />
+        <div
+          class="animate-pulse bg-muted h-4 w-full max-w-[130px] rounded-md"
+          data-slot="skeleton"
+        />
+      </div>
+    </div>
+    <div
+      class="flex w-full items-center gap-3"
+      data-testid="user-list-item-skeleton-compact"
+    >
+      <div
+        class="animate-pulse bg-muted size-10 shrink-0 rounded-full"
+        data-slot="skeleton"
+      />
+      <div
+        class="flex min-w-0 flex-1 flex-col gap-2"
+        data-testid="container"
+      >
+        <div
+          class="animate-pulse bg-muted h-4 w-full max-w-[150px] rounded-md"
+          data-slot="skeleton"
+        />
+        <div
+          class="animate-pulse bg-muted h-4 w-full max-w-[130px] rounded-md"
+          data-slot="skeleton"
+        />
+      </div>
+    </div>
+  </div>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-white hover:bg-neutral-800 h-8 gap-1.5 px-3 has-[>svg]:px-3.5 w-full border-border bg-white/5 text-xs font-bold"
+    data-cy="who-to-follow-see-all"
+    data-size="sm"
+    data-slot="button"
+    data-variant="dark-outline"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-users-round size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 21a8 8 0 0 0-16 0"
+      />
+      <circle
+        cx="10"
+        cy="8"
+        r="5"
+      />
+      <path
+        d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"
+      />
+    </svg>
+    See all
+  </button>
+</div>
+`;
+
+exports[`WhoToFollowSidebar - Snapshots > matches snapshot with users 1`] = `
+<div
+  class="flex w-full min-w-0 flex-col gap-2"
+  data-cy="who-to-follow"
+  data-testid="who-to-follow"
+>
+  <div
+    class="flex w-full items-center justify-between"
+    data-testid="container"
+  >
+    <h2
+      class="text-2xl font-light text-muted-foreground"
+      data-testid="heading-2"
+    >
+      Who to follow
+    </h2>
+  </div>
+  <div
+    class="flex w-full min-w-0 flex-col gap-2"
+    data-testid="container"
+  >
+    <button
+      data-testid="user-list-item"
+      data-user-id="user-1"
+      type="button"
+    >
+      User One
+    </button>
+    <button
+      data-testid="user-list-item"
+      data-user-id="user-2"
+      type="button"
+    >
+      User Two
+    </button>
+  </div>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-white hover:bg-neutral-800 h-8 gap-1.5 px-3 has-[>svg]:px-3.5 w-full border-border bg-white/5 text-xs font-bold"
+    data-cy="who-to-follow-see-all"
+    data-size="sm"
+    data-slot="button"
+    data-variant="dark-outline"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-users-round size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 21a8 8 0 0 0-16 0"
+      />
+      <circle
+        cx="10"
+        cy="8"
+        r="5"
+      />
+      <path
+        d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"
+      />
+    </svg>
+    See all
+  </button>
+</div>
+`;

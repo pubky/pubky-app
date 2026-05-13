@@ -15,7 +15,7 @@ vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => {
   };
 });
 
-vi.mock('@/organisms/WhoToFollowSidebar/WhoToFollowSidebar', () => {
+vi.mock('@/organisms/WhoToFollow/WhoToFollowSidebar/WhoToFollowSidebar', () => {
   return {
     WhoToFollowSidebar: () => <div data-testid="who-to-follow">Who to Follow</div>,
   };

@@ -1,6 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { UsersRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
@@ -14,8 +15,8 @@ import {
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
-import { CompactUserListItemSkeleton } from '../CompactUserListItemSkeleton/CompactUserListItemSkeleton';
-import { UserListItem } from '../UserListItem/UserListItem';
+import { CompactUserListItemSkeleton } from '@/organisms/CompactUserListItemSkeleton/CompactUserListItemSkeleton';
+import { UserListItem } from '@/organisms/UserListItem/UserListItem';
 
 /**
  * WhoToFollowSidebar
@@ -29,6 +30,9 @@ export function WhoToFollowSidebar() {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
+  const pathname = usePathname();
+  const previousPathnameRef = useRef(pathname);
+  const [recentlyFollowedUserIds, setRecentlyFollowedUserIds] = useState<Pubky[]>([]);
   const { users, isLoading: isStreamLoading } = useUserStream({
     streamId: UserStreamTypes.RECOMMENDED,
     limit: WHO_TO_FOLLOW_USER_LIMIT,
@@ -36,13 +40,41 @@ export function WhoToFollowSidebar() {
     refillThreshold: WHO_TO_FOLLOW_REFILL_THRESHOLD,
     includeRelationships: true,
     excludeFollowing: true,
+    preserveFollowedUserIds: recentlyFollowedUserIds,
   });
   const { toggleFollow, isUserLoading } = useFollowUser();
+
+  useEffect(() => {
+    if (previousPathnameRef.current === pathname) return;
+
+    previousPathnameRef.current = pathname;
+    setRecentlyFollowedUserIds([]);
+  }, [pathname]);
+
   const handleUserClick = (pubky: Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
   };
   const handleFollowClick = async (userId: Pubky, isFollowing: boolean) => {
-    await toggleFollow(userId, isFollowing);
+    const updatePreservedUserIds = () =>
+      setRecentlyFollowedUserIds((prev) => {
+        if (isFollowing) {
+          return prev.filter((id) => id !== userId);
+        }
+        return prev.includes(userId) ? prev : [...prev, userId];
+      });
+
+    updatePreservedUserIds();
+
+    try {
+      await toggleFollow(userId, isFollowing);
+    } catch (err) {
+      if (isFollowing) {
+        setRecentlyFollowedUserIds((prev) => (prev.includes(userId) ? prev : [...prev, userId]));
+      } else {
+        setRecentlyFollowedUserIds((prev) => prev.filter((id) => id !== userId));
+      }
+      throw err;
+    }
   };
   const handleSeeAll = () => {
     router.push(APP_ROUTES.WHO_TO_FOLLOW);
