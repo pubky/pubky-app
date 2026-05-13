@@ -11,10 +11,10 @@
 import { Pencil, UsersRound } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { FeedSection } from '@/molecules/FeedSection/FeedSection';
-import { WhoToFollowSidebar } from '@/organisms/WhoToFollowSidebar/WhoToFollowSidebar';
 import { ActiveUsers } from '../ActiveUsers/ActiveUsers';
 import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
 import { HotTags } from '../HotTags/HotTags';
+import { WhoToFollowSidebar } from '../WhoToFollowSidebar/WhoToFollowSidebar';
 
 function HomeFeedContent() {
   return (
