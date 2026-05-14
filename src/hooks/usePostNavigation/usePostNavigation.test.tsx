@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mockMouseEvent } from '@/test-utils/react-events';
+import { mockKeyboardEvent, mockMouseEvent } from '@/test-utils/react-events';
 import { usePostNavigation } from './usePostNavigation';
 
 // Mock next/navigation
@@ -193,6 +193,42 @@ describe('usePostNavigation', () => {
   });
 
   describe('handlePostClick', () => {
+    it('navigates on plain post-card click', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+      act(() => {
+        result.current.handlePostClick(
+          'author1:post1',
+          mockMouseEvent({
+            target: document.createElement('div'),
+          }),
+        );
+      });
+
+      expect(mockPush).toHaveBeenCalledWith('/post/author1/post1');
+      expect(mockPush).toHaveBeenCalledTimes(1);
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it('opens a new tab on modifier-click for non-interactive areas', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+      act(() => {
+        result.current.handlePostClick(
+          'author1:post1',
+          mockMouseEvent({
+            target: document.createElement('div'),
+            metaKey: true,
+          }),
+        );
+      });
+
+      expect(openSpy).toHaveBeenCalledWith('/post/author1/post1', '_blank', 'noopener,noreferrer');
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
     it('does not hijack click on interactive elements in post content', () => {
       const { result } = renderHook(() => usePostNavigation());
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
@@ -230,6 +266,73 @@ describe('usePostNavigation', () => {
         );
       });
 
+      expect(mockPush).toHaveBeenCalledWith('/post/author1/post1');
+      expect(mockPush).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not navigate while selecting text inside the post card', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const getSelectionSpy = vi.spyOn(window, 'getSelection').mockReturnValue({
+        toString: () => 'selected text',
+      } as Selection);
+
+      act(() => {
+        result.current.handlePostClick(
+          'author1:post1',
+          mockMouseEvent({
+            target: document.createElement('div'),
+          }),
+        );
+      });
+
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+      getSelectionSpy.mockRestore();
+    });
+  });
+
+  describe('handlePostKeyDown', () => {
+    it('navigates on Enter when post wrapper has focus', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const preventDefault = vi.fn();
+      const wrapper = document.createElement('article');
+
+      act(() => {
+        result.current.handlePostKeyDown(
+          'author1:post1',
+          mockKeyboardEvent({
+            key: 'Enter',
+            target: wrapper,
+            currentTarget: wrapper,
+            preventDefault,
+          }),
+        );
+      });
+
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+      expect(mockPush).toHaveBeenCalledWith('/post/author1/post1');
+      expect(mockPush).toHaveBeenCalledTimes(1);
+    });
+
+    it('navigates on Space when post wrapper has focus', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const preventDefault = vi.fn();
+      const wrapper = document.createElement('article');
+
+      act(() => {
+        result.current.handlePostKeyDown(
+          'author1:post1',
+          mockKeyboardEvent({
+            key: ' ',
+            target: wrapper,
+            currentTarget: wrapper,
+            preventDefault,
+          }),
+        );
+      });
+
+      expect(preventDefault).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith('/post/author1/post1');
       expect(mockPush).toHaveBeenCalledTimes(1);
     });

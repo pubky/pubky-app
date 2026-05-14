@@ -27,7 +27,7 @@ interface ThreadTreeProps {
 export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
   const { replyIds, hasMore, totalCount, isExpandingAll, expandAll } = useThreadReplies(postId);
   const { handlePostKeyDown } = usePostNavigation();
-  const { setCardRef, onListKeyDown, onCardFocus } = usePostListKeyboard(replyIds.length, {
+  const { setCardRef, onListKeyDown } = usePostListKeyboard({
     // Include ShowMoreReplies (data-post-list-card="true") in j/k navigation.
     // The containment filter in the hook excludes nested ReplyWithNested depth>0
     // cards (which share the same attribute) from the list automatically.
@@ -63,7 +63,6 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
             aria-posinset={index + 1}
             aria-setsize={ariaSetSize}
             tabIndex={0}
-            onFocus={() => onCardFocus(index)}
             onKeyDown={(e) => handlePostKeyDown(replyId, e)}
             className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >

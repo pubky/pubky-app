@@ -2,11 +2,6 @@ import type React from 'react';
 
 export interface UsePostListKeyboardResult {
   /**
-   * Index of the currently focused ref-registered card.
-   * Updated on card focus and on programmatic keyboard navigation.
-   */
-  focusedIndex: number;
-  /**
    * Ref setter for each card wrapper. Pass to the wrapping element of each post:
    *   `<Container ref={setCardRef(i)} tabIndex={0} ... />`
    */
@@ -17,9 +12,4 @@ export interface UsePostListKeyboardResult {
    * item (not on a descendant input, button, or nested card).
    */
   onListKeyDown: (event: React.KeyboardEvent) => void;
-  /**
-   * Sync focused index when a card receives focus (e.g. via mouse click or Tab).
-   * Pass to each card wrapper's `onFocus`.
-   */
-  onCardFocus: (index: number) => void;
 }

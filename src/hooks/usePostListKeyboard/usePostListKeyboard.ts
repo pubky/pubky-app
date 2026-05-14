@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import type React from 'react';
 import type { UsePostListKeyboardResult } from './usePostListKeyboard.types';
 
@@ -38,11 +38,7 @@ interface UsePostListKeyboardOptions {
  * Pair with `usePostNavigation.handlePostKeyDown` on each card to handle
  * Enter/Space activation and Cmd/Ctrl/Shift+Enter new-tab opens.
  */
-export function usePostListKeyboard(
-  itemCount: number,
-  options?: UsePostListKeyboardOptions,
-): UsePostListKeyboardResult {
-  const [focusedIndex, setFocusedIndex] = useState(0);
+export function usePostListKeyboard(options?: UsePostListKeyboardOptions): UsePostListKeyboardResult {
   const cardRefs = useRef<(HTMLElement | null)[]>([]);
 
   /**
@@ -65,19 +61,12 @@ export function usePostListKeyboard(
     if (cards.length === 0) return;
     const clamped = Math.max(0, Math.min(target, cards.length - 1));
     const card = cards[clamped];
-    // Only track focusedIndex for ref-registered cards.
-    const refIndex = cardRefs.current.indexOf(card);
-    if (refIndex !== -1) setFocusedIndex(refIndex);
     card.focus();
     card.scrollIntoView?.({ block: 'nearest' });
   };
 
   const setCardRef = (index: number) => (el: HTMLElement | null) => {
     cardRefs.current[index] = el;
-  };
-
-  const onCardFocus = (index: number) => {
-    setFocusedIndex(index);
   };
 
   const onListKeyDown = (event: React.KeyboardEvent) => {
@@ -118,5 +107,5 @@ export function usePostListKeyboard(
     }
   };
 
-  return { focusedIndex, setCardRef, onListKeyDown, onCardFocus };
+  return { setCardRef, onListKeyDown };
 }

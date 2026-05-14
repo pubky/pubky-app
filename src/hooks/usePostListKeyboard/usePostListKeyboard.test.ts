@@ -28,7 +28,7 @@ const createCardFixture = (): CardFixture => {
 };
 
 const setup = (itemCount: number) => {
-  const hook = renderHook(() => usePostListKeyboard(itemCount));
+  const hook = renderHook(() => usePostListKeyboard());
   const cards = Array.from({ length: itemCount }, () => createCardFixture());
 
   act(() => {
@@ -61,7 +61,6 @@ describe('usePostListKeyboard', () => {
     });
 
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
-    expect(hook.result.current.focusedIndex).toBe(1);
     expect(cards[1].focusSpy).toHaveBeenCalledTimes(1);
     expect(cards[1].scrollIntoViewSpy).toHaveBeenCalledWith({ block: 'nearest' });
   });
@@ -75,7 +74,6 @@ describe('usePostListKeyboard', () => {
     });
 
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
-    expect(hook.result.current.focusedIndex).toBe(0);
     expect(cards[0].focusSpy).toHaveBeenCalledTimes(1);
     expect(cards[0].scrollIntoViewSpy).toHaveBeenCalledWith({ block: 'nearest' });
   });
@@ -95,7 +93,6 @@ describe('usePostListKeyboard', () => {
 
     expect(downEvent.preventDefault).toHaveBeenCalledTimes(1);
     expect(upEvent.preventDefault).toHaveBeenCalledTimes(1);
-    expect(hook.result.current.focusedIndex).toBe(0);
     expect(cards[1].focusSpy).toHaveBeenCalledTimes(1);
     expect(cards[0].focusSpy).toHaveBeenCalledTimes(1);
   });
@@ -109,7 +106,6 @@ describe('usePostListKeyboard', () => {
     });
 
     expect(endEvent.preventDefault).toHaveBeenCalledTimes(1);
-    expect(hook.result.current.focusedIndex).toBe(3);
     expect(cards[3].focusSpy).toHaveBeenCalledTimes(1);
 
     const homeEvent = createKeyboardEvent('Home', cards[3].element);
@@ -118,7 +114,6 @@ describe('usePostListKeyboard', () => {
     });
 
     expect(homeEvent.preventDefault).toHaveBeenCalledTimes(1);
-    expect(hook.result.current.focusedIndex).toBe(0);
     expect(cards[0].focusSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -131,7 +126,6 @@ describe('usePostListKeyboard', () => {
     });
 
     expect(upFromFirst.preventDefault).toHaveBeenCalledTimes(1);
-    expect(hook.result.current.focusedIndex).toBe(0);
     expect(cards[0].focusSpy).toHaveBeenCalledTimes(1);
 
     const downFromLast = createKeyboardEvent('ArrowDown', cards[1].element);
@@ -140,7 +134,6 @@ describe('usePostListKeyboard', () => {
     });
 
     expect(downFromLast.preventDefault).toHaveBeenCalledTimes(1);
-    expect(hook.result.current.focusedIndex).toBe(1);
     expect(cards[1].focusSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -166,9 +159,6 @@ describe('usePostListKeyboard', () => {
 
   it('ignores key events from descendant controls', () => {
     const { cards, hook } = setup(2);
-    act(() => {
-      hook.result.current.onCardFocus(1);
-    });
 
     const button = document.createElement('button');
     cards[0].element.appendChild(button);
@@ -179,7 +169,6 @@ describe('usePostListKeyboard', () => {
     });
 
     expect(event.preventDefault).not.toHaveBeenCalled();
-    expect(hook.result.current.focusedIndex).toBe(1);
     expect(cards[0].focusSpy).not.toHaveBeenCalled();
     expect(cards[1].focusSpy).not.toHaveBeenCalled();
   });
@@ -193,7 +182,7 @@ describe('usePostListKeyboard — cardSelector option', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
 
-    const hook = renderHook(() => usePostListKeyboard(itemCount, { cardSelector: SELECTOR }));
+    const hook = renderHook(() => usePostListKeyboard({ cardSelector: SELECTOR }));
     const cards = Array.from({ length: itemCount }, () => createCardFixture());
 
     act(() => {
