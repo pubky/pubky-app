@@ -56,6 +56,10 @@ const nexusUrl = Env.NEXT_PUBLIC_NEXUS_URL; // string (validated URL)
 const cdnUrl = Env.NEXT_PUBLIC_CDN_URL; // string (validated URL)
 ```
 
+### Homeserver mute list sync
+
+Cross-session mute alignment uses the `@synonymdev/pubky` homeserver **event stream** (SSE). Debouncing uses a fixed delay in [`src/config/mute-sync.ts`](src/config/mute-sync.ts) (`MUTE_SYNC_DEBOUNCE_MS`), not an environment variable.
+
 ## Setting Variables
 
 1. **Development**: Create a `.env.local` file in the project root
