@@ -1,6 +1,17 @@
 'use client';
 
-import { Check, Ellipsis, KeyRound, Link, Loader2, LogOut, Pencil, UserMinus, UserRoundPlus } from 'lucide-react';
+import {
+  Check,
+  Ellipsis,
+  KeyRound,
+  Link,
+  Loader2,
+  LogOut,
+  Pencil,
+  UserMinus,
+  UserRoundPlus,
+  UsersRound,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { AvatarEmojiBadge } from '@/atoms/AvatarEmojiBadge/AvatarEmojiBadge';
 import { Button } from '@/atoms/Button/Button';
@@ -25,7 +36,10 @@ import type { ProfilePageHeaderProps } from './ProfilePageHeader.types';
  * Subscribes the profile user to TTL tracking when visible in the viewport.
  * This ensures profile data gets refreshed when stale.
  */
-export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userId }: ProfilePageHeaderProps) {
+const formatFollowersLabel = (count: number) =>
+  `${new Intl.NumberFormat('en', { notation: 'compact' }).format(count)} FOLLOWERS`;
+
+export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userId, stats }: ProfilePageHeaderProps) {
   const t = useTranslations('profile.actions');
   const tStatus = useTranslations('status');
   const { avatarUrl, emoji = '🌴', name, bio, publicKey, status } = profile;
@@ -53,6 +67,9 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     key: publicKey,
   });
   const displayEmoji = extractEmojiFromStatus(status || '', emoji);
+  const parsedStatus = parseStatus(status || '', displayEmoji);
+  const statusText = parsedStatus.key ? tStatus(parsedStatus.key as Parameters<typeof tStatus>[0]) : parsedStatus.text;
+  const mobileActionButtonClassName = 'min-w-0 basis-[calc(50%_-_0.25rem)] justify-center lg:order-0 lg:basis-auto';
   const getLoadingFollowText = () => {
     if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
       return t('unfollowing');
@@ -66,10 +83,14 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     <Container
       ref={ttlRef}
       overrideDefaults={true}
-      className="flex min-w-0 flex-col items-center gap-6 rounded-lg bg-card p-6 lg:flex-row lg:items-start lg:rounded-none lg:bg-transparent lg:p-0"
+      className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 rounded-none bg-transparent p-0 lg:flex lg:items-start lg:gap-6"
       data-testid="profile-page-header"
     >
-      <Container overrideDefaults={true} className="relative cursor-pointer lg:px-4" onClick={onAvatarClick}>
+      <Container
+        overrideDefaults={true}
+        className="relative col-start-1 row-start-1 shrink-0 cursor-pointer lg:px-4"
+        onClick={onAvatarClick}
+      >
         <AvatarWithFallback
           avatarUrl={avatarUrl}
           name={name}
@@ -81,40 +102,74 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
         <AvatarEmojiBadge emoji={displayEmoji} />
       </Container>
 
-      <Container overrideDefaults={true} className="flex min-w-0 flex-1 flex-col gap-3">
+      <Container overrideDefaults={true} className="contents min-w-0 flex-1 lg:flex! lg:flex-col lg:gap-3">
         <Container
           overrideDefaults={true}
-          className={cn('flex min-w-0 flex-col text-center lg:text-left', bio && 'gap-1')}
+          className={cn(
+            'col-start-2 row-start-1 flex min-w-0 flex-col items-start self-center lg:col-auto lg:row-auto lg:self-auto lg:text-left',
+            bio && 'gap-1',
+          )}
         >
           <Typography
             data-cy="profile-username-header"
             as="h1"
             size="lg"
-            className="max-width-profile-page-header w-full truncate leading-normal text-white sm:max-w-xl lg:max-w-full lg:text-6xl lg:leading-normal"
+            className="max-width-profile-page-header w-full truncate text-2xl leading-8 text-white sm:max-w-xl lg:max-w-full lg:text-6xl lg:leading-none"
           >
             {name}
           </Typography>
-          {bio && (
-            <Container data-cy="profile-bio-header" overrideDefaults>
-              <PostText content={bio} />
+          <Container overrideDefaults className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 lg:hidden">
+            <Container overrideDefaults className="flex min-w-0 items-center gap-1">
+              <KeyRound className="size-4 shrink-0 text-muted-foreground" />
+              <Typography
+                as="span"
+                overrideDefaults
+                className="truncate text-xs leading-4 font-medium tracking-widest text-muted-foreground uppercase"
+              >
+                {formattedPublicKey}
+              </Typography>
             </Container>
-          )}
+            {isOwnProfile && stats && (
+              <Container overrideDefaults className="flex min-w-0 items-center gap-1">
+                <UsersRound className="size-4 shrink-0 text-muted-foreground" />
+                <Typography
+                  as="span"
+                  overrideDefaults
+                  className="truncate text-xs leading-4 font-medium tracking-widest text-muted-foreground uppercase"
+                >
+                  {formatFollowersLabel(stats.followers)}
+                </Typography>
+              </Container>
+            )}
+          </Container>
         </Container>
+
+        {bio && (
+          <Container data-cy="profile-bio-header" overrideDefaults className="col-span-full min-w-0 lg:col-auto">
+            <PostText content={bio} />
+          </Container>
+        )}
 
         <Container
           overrideDefaults={true}
-          className="flex flex-wrap items-center justify-center gap-3 lg:justify-start"
+          className="col-span-full flex w-full flex-wrap items-center gap-2 lg:col-auto lg:gap-3"
         >
           {/* Own profile actions */}
           {isOwnProfile && (
             <>
-              <Button data-cy="profile-edit-btn" variant="secondary" size="sm" onClick={onEdit}>
+              <Button
+                data-cy="profile-edit-btn"
+                className={cn('order-3', mobileActionButtonClassName)}
+                variant="secondary"
+                size="sm"
+                onClick={onEdit}
+              >
                 <Pencil className="size-4" />
-                {t('edit')}
+                {t('editProfile')}
               </Button>
               <Button
                 data-cy="profile-copy-pubkey-btn"
-                className="uppercase"
+                className={cn('order-1 uppercase', mobileActionButtonClassName)}
                 variant="secondary"
                 size="sm"
                 onClick={onCopyPublicKey}
@@ -122,11 +177,23 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 <KeyRound className="size-4" />
                 {formattedPublicKey}
               </Button>
-              <Button variant="secondary" size="sm" onClick={onCopyLink}>
+              <Button
+                className={cn('order-2', mobileActionButtonClassName)}
+                variant="secondary"
+                size="sm"
+                onClick={onCopyLink}
+              >
                 <Link className="size-4" />
-                {t('link')}
+                {t('profileLink')}
               </Button>
-              <Button variant="secondary" size="sm" onClick={onSignOut} id="profile-logout-btn" disabled={isLoggingOut}>
+              <Button
+                className={cn('order-4', mobileActionButtonClassName)}
+                variant="secondary"
+                size="sm"
+                onClick={onSignOut}
+                id="profile-logout-btn"
+                disabled={isLoggingOut}
+              >
                 {isLoggingOut ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
@@ -139,7 +206,11 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   </>
                 )}
               </Button>
-              <StatusPickerWrapper emoji={displayEmoji} status={status || ''} onStatusChange={onStatusChange} />
+              {status && (
+                <Container overrideDefaults className="order-first flex h-8 w-full items-center lg:order-0 lg:w-auto">
+                  <StatusPickerWrapper emoji={displayEmoji} status={status || ''} onStatusChange={onStatusChange} />
+                </Container>
+              )}
             </>
           )}
 
@@ -152,7 +223,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   data-cy="profile-follow-toggle-btn"
                   variant="secondary"
                   size="sm"
-                  className="group w-[110px] justify-center"
+                  className={cn('group justify-center lg:w-[110px]', mobileActionButtonClassName)}
                   onClick={onFollowToggle}
                   disabled={isFollowLoading}
                 >
@@ -182,7 +253,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               )}
               <Button
                 data-cy="profile-copy-pubkey-btn"
-                className="uppercase"
+                className={cn('uppercase', mobileActionButtonClassName)}
                 variant="secondary"
                 size="sm"
                 onClick={onCopyPublicKey}
@@ -190,7 +261,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 <KeyRound className="size-4" />
                 {formattedPublicKey}
               </Button>
-              <Button variant="secondary" size="sm" onClick={onCopyLink}>
+              <Button className={mobileActionButtonClassName} variant="secondary" size="sm" onClick={onCopyLink}>
                 <Link className="size-4" />
                 {t('link')}
               </Button>
@@ -210,10 +281,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                     {displayEmoji}
                   </Typography>
                   <Typography as="span" overrideDefaults className="text-base leading-6 font-bold text-white">
-                    {(() => {
-                      const parsed = parseStatus(status);
-                      return parsed.key ? tStatus(parsed.key as Parameters<typeof tStatus>[0]) : parsed.text;
-                    })()}
+                    {statusText}
                   </Typography>
                 </Container>
               )}

@@ -1,27 +1,26 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import { PROFILE_PAGE_TYPES, PROFILE_POSTS_SECTION_ID } from '@/app/profile/types';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import { ProfilePageLayout } from './ProfilePageLayout';
 import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 
 // Mock molecules and organisms
-vi.mock('@/atoms/Container/Container', () => {
+vi.mock('@/atoms/Container/Container', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+
   return {
-    Container: ({
-      children,
-      className,
-      overrideDefaults,
-      ...props
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      overrideDefaults?: boolean;
-      [key: string]: unknown;
-    }) => (
-      <div data-testid="container" data-override={overrideDefaults} className={className} {...props}>
-        {children}
-      </div>
-    ),
+    Container: React.forwardRef<
+      HTMLDivElement,
+      React.HTMLAttributes<HTMLDivElement> & {
+        overrideDefaults?: boolean;
+      }
+    >(function MockContainer({ children, className, overrideDefaults, ...props }, ref) {
+      return (
+        <div ref={ref} data-testid="container" data-override={overrideDefaults} className={className} {...props}>
+          {children}
+        </div>
+      );
+    }),
   };
 });
 
@@ -100,11 +99,18 @@ vi.mock('@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu', () => {
   return {
     ProfilePageMobileMenu: ({ activePage }: { activePage: string; onPageChangeAction: (page: string) => void }) => (
       <div data-testid="profile-mobile-menu" data-active={activePage}>
+        <div data-testid="profile-page-mobile-menu" />
         Profile Mobile Menu
       </div>
     ),
   };
 });
+
+const mockIsMobile = vi.fn(() => false);
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: () => mockIsMobile(),
+}));
 
 vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', () => {
   return {
@@ -181,6 +187,16 @@ const defaultProps: ProfilePageLayoutProps = {
 };
 
 describe('ProfilePageLayout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsMobile.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it('renders without errors', () => {
     render(<ProfilePageLayout {...defaultProps} />);
     expect(screen.getByText('Test Content')).toBeInTheDocument();
@@ -268,16 +284,81 @@ describe('ProfilePageLayout', () => {
     );
 
     expect(screen.getAllByTestId('profile-page-header')).toHaveLength(2);
-    const postsSection = container.querySelector<HTMLElement>(`#${PROFILE_POSTS_SECTION_ID}`);
-    if (!postsSection) {
-      throw new Error('Expected posts section to render');
-    }
-
-    expect(postsSection).toContainElement(screen.getByTestId('posts-content'));
+    expect(container.querySelector('[data-cy="profile-posts-feed"]')).toContainElement(
+      screen.getByTestId('posts-content'),
+    );
+    expect(screen.getByTestId('posts-content')).toBeInTheDocument();
   });
 
-  it('does not add the mobile posts header wrapper for own-profile posts', () => {
-    const { container } = render(
+  it('scrolls mobile other-user posts to the posts feed after the profile header loads', async () => {
+    mockIsMobile.mockReturnValue(true);
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const scrollBy = vi.fn();
+    vi.stubGlobal('scrollBy', scrollBy);
+
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function getBoundingClientRect(
+      this: HTMLElement,
+    ) {
+      if (this.getAttribute('data-testid') === 'profile-page-mobile-menu') {
+        return new DOMRect(0, 80, 0, 64);
+      }
+
+      if (this.getAttribute('data-cy') === 'profile-posts-feed') {
+        return new DOMRect(0, 420, 0, 300);
+      }
+
+      return new DOMRect();
+    });
+
+    const props = {
+      ...defaultProps,
+      activePage: PROFILE_PAGE_TYPES.POSTS,
+      filterBarActivePage: PROFILE_PAGE_TYPES.POSTS,
+      isOwnProfile: false,
+    };
+    const { container, rerender } = render(
+      <ProfilePageLayout {...props} isLoading={true}>
+        <div data-testid="posts-content">Posts Content</div>
+      </ProfilePageLayout>,
+    );
+
+    expect(scrollBy).not.toHaveBeenCalled();
+
+    rerender(
+      <ProfilePageLayout {...props} isLoading={false}>
+        <div data-testid="posts-content">Posts Content</div>
+      </ProfilePageLayout>,
+    );
+
+    const postsFeed = container.querySelector('[data-cy="profile-posts-feed"]');
+    expect(postsFeed).toHaveClass('min-w-0');
+    await waitFor(() => expect(scrollBy).toHaveBeenCalledWith({ top: 276, behavior: 'auto' }));
+  });
+
+  it('does not auto-scroll other-user posts on desktop', () => {
+    const scrollBy = vi.fn();
+    vi.stubGlobal('scrollBy', scrollBy);
+
+    render(
+      <ProfilePageLayout
+        {...defaultProps}
+        activePage={PROFILE_PAGE_TYPES.POSTS}
+        filterBarActivePage={PROFILE_PAGE_TYPES.POSTS}
+        isOwnProfile={false}
+      >
+        <div data-testid="posts-content">Posts Content</div>
+      </ProfilePageLayout>,
+    );
+
+    expect(scrollBy).not.toHaveBeenCalled();
+  });
+
+  it('does not add the mobile posts header for own-profile posts', () => {
+    render(
       <ProfilePageLayout
         {...defaultProps}
         activePage={PROFILE_PAGE_TYPES.POSTS}
@@ -287,7 +368,6 @@ describe('ProfilePageLayout', () => {
     );
 
     expect(screen.getAllByTestId('profile-page-header')).toHaveLength(1);
-    expect(container.querySelector(`#${PROFILE_POSTS_SECTION_ID}`)).not.toBeInTheDocument();
   });
 
   it('matches snapshot with default props', () => {

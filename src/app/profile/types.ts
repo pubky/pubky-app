@@ -9,8 +9,6 @@ export const PROFILE_PAGE_TYPES = {
   UNIQUE_TAGS: 'unique_tags',
 } as const;
 
-export const PROFILE_POSTS_SECTION_ID = 'profile-posts-section';
-
 export type ProfilePageType =
   | typeof PROFILE_PAGE_TYPES.PROFILE
   | typeof PROFILE_PAGE_TYPES.NOTIFICATIONS

@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PROFILE_PAGE_TYPES, PROFILE_POSTS_SECTION_ID } from '@/app/profile/types';
+import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import { PROFILE_ROUTES } from '@/app/routes';
 import { useProfileNavigation } from './useProfileNavigation';
 
@@ -415,14 +415,9 @@ describe('useProfileNavigation', () => {
       expect(mockPush).toHaveBeenCalledWith('/profile/user123');
     });
 
-    it('should scroll to posts when selecting Posts on the canonical mobile route', () => {
+    it('should navigate to the canonical posts route on mobile', () => {
       mockIsMobile.mockReturnValue(true);
       mockPathname.mockReturnValue('/profile/user123');
-      const scrollIntoView = vi.fn();
-      const postsSection = document.createElement('div');
-      postsSection.id = PROFILE_POSTS_SECTION_ID;
-      postsSection.scrollIntoView = scrollIntoView;
-      document.body.append(postsSection);
 
       const { result } = renderHook(() => useProfileNavigation());
 
@@ -430,38 +425,20 @@ describe('useProfileNavigation', () => {
         result.current.navigateToPage(PROFILE_PAGE_TYPES.POSTS);
       });
 
-      expect(mockPush).not.toHaveBeenCalled();
-      expect(scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'start',
-      });
+      expect(mockPush).toHaveBeenCalledWith('/profile/user123');
     });
 
-    it('should scroll to posts after mobile navigation reaches the canonical route', () => {
+    it('should navigate to the canonical posts route from another mobile profile tab', () => {
       mockIsMobile.mockReturnValue(true);
       mockPathname.mockReturnValue('/profile/user123/profile');
-      const scrollIntoView = vi.fn();
-      const postsSection = document.createElement('div');
-      postsSection.id = PROFILE_POSTS_SECTION_ID;
-      postsSection.scrollIntoView = scrollIntoView;
-      document.body.append(postsSection);
 
-      const { result, rerender } = renderHook(() => useProfileNavigation());
+      const { result } = renderHook(() => useProfileNavigation());
 
       act(() => {
         result.current.navigateToPage(PROFILE_PAGE_TYPES.POSTS);
       });
 
       expect(mockPush).toHaveBeenCalledWith('/profile/user123');
-      expect(scrollIntoView).not.toHaveBeenCalled();
-
-      mockPathname.mockReturnValue('/profile/user123');
-      rerender();
-
-      expect(scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'start',
-      });
     });
   });
 

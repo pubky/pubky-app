@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { FilterBarPageType, PROFILE_PAGE_TYPES, PROFILE_POSTS_SECTION_ID, ProfilePageType } from '@/app/profile/types';
+import { FilterBarPageType, PROFILE_PAGE_TYPES, ProfilePageType } from '@/app/profile/types';
 import { PROFILE_ROUTES } from '@/app/routes';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 
 /**
@@ -139,17 +138,6 @@ const getPageTypeFromDynamicPath = (pathname: string, isOwnProfile: boolean): Pr
   return PROFILE_PAGE_TYPES.POSTS;
 };
 
-const scrollToProfilePostsSection = () => {
-  if (typeof document === 'undefined') {
-    return;
-  }
-
-  document.getElementById(PROFILE_POSTS_SECTION_ID)?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-  });
-};
-
 /**
  * Return type for the useProfileNavigation hook
  */
@@ -195,20 +183,9 @@ export interface UseProfileNavigationReturn {
 export function useProfileNavigation(): UseProfileNavigationReturn {
   const pathname = usePathname();
   const router = useRouter();
-  const isMobile = useIsMobile();
-  const pendingPostsScrollRef = useRef(false);
 
   const { pubky, isOwnProfile } = useProfileContext();
   const canonicalOtherUserPostsRoute = pubky ? `/profile/${pubky}` : '';
-
-  useEffect(() => {
-    if (!pendingPostsScrollRef.current || !isMobile || isOwnProfile || pathname !== canonicalOtherUserPostsRoute) {
-      return;
-    }
-
-    pendingPostsScrollRef.current = false;
-    scrollToProfilePostsSection();
-  }, [canonicalOtherUserPostsRoute, isMobile, isOwnProfile, pathname]);
 
   /**
    * Determine the active page from the current pathname
@@ -266,15 +243,6 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
       }
 
       const navigateToOtherUserPosts = () => {
-        if (isMobile) {
-          if (pathname === canonicalOtherUserPostsRoute) {
-            scrollToProfilePostsSection();
-            return;
-          }
-
-          pendingPostsScrollRef.current = true;
-        }
-
         router.push(canonicalOtherUserPostsRoute);
       };
 
@@ -293,7 +261,7 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
       const dynamicRoute = `/profile/${pubky}${config.subPath}`;
       router.push(dynamicRoute);
     },
-    [canonicalOtherUserPostsRoute, isMobile, isOwnProfile, pathname, pubky, router],
+    [canonicalOtherUserPostsRoute, isOwnProfile, pubky, router],
   );
 
   return {

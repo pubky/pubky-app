@@ -2,7 +2,7 @@
 
 exports[`ProfilePageLayoutWrapper > matches snapshot 1`] = `
 <div
-  class="mx-auto mt-6 w-full max-w-(--container-max-width) px-6 pt-0 xl:px-0"
+  class="mx-auto mt-6 w-full max-w-(--container-max-width) px-6 pt-0 lg:mt-0 xl:px-0"
   data-testid="container"
 >
   <div>

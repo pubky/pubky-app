@@ -1,7 +1,7 @@
 'use client';
 
-import * as React from 'react';
 import { Bell, CircleUserRound, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
+import type { ComponentType } from 'react';
 import { PROFILE_PAGE_TYPES, type ProfilePageType } from '@/app/profile/types';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { UsersRound2 } from '@/icons';
@@ -9,7 +9,7 @@ import { MobileTabBar } from '../MobileTabBar/MobileTabBar';
 import type { MobileTabBarItem } from '../MobileTabBar/MobileTabBar.types';
 
 export interface ProfileMenuItem {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: ComponentType<{ size?: number; className?: string }>;
   label: string;
   pageType: ProfilePageType;
   /** Whether this item should only be shown for own profile */
@@ -81,15 +81,7 @@ export function ProfilePageMobileMenu({
 }: ProfilePageMobileMenuProps) {
   const { requireAuth } = useRequireAuth();
 
-  // Filter menu items based on isOwnProfile
-  const visibleItems = React.useMemo(() => {
-    return PROFILE_MENU_ITEMS.filter((item) => {
-      if (item.ownProfileOnly && !isOwnProfile) {
-        return false;
-      }
-      return true;
-    });
-  }, [isOwnProfile]);
+  const visibleItems = PROFILE_MENU_ITEMS.filter((item) => !item.ownProfileOnly || isOwnProfile);
 
   const items: MobileTabBarItem[] = visibleItems.map((item) => ({
     key: item.pageType,
