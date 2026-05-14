@@ -100,16 +100,6 @@ describe('User API', () => {
       );
     });
 
-    it('should generate correct URL for muted endpoint', () => {
-      const params: TUserViewParams = {
-        user_id: testUserId,
-        depth: 2,
-        viewer_id: testViewerId,
-      };
-
-      expect(userApi.muted(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/muted?depth=2&viewer_id=${testViewerId}`);
-    });
-
     it('should generate correct URL for notifications endpoint', () => {
       const params: TUserPaginationParams = {
         user_id: testUserId,
@@ -147,16 +137,15 @@ describe('User API', () => {
   });
 
   describe('UserApiEndpoint type', () => {
-    it('should have exactly 11 endpoints', () => {
+    it('should have exactly 10 endpoints', () => {
       const endpointKeys = Object.keys(userApi);
-      expect(endpointKeys).toHaveLength(11);
+      expect(endpointKeys).toHaveLength(10);
       expect(endpointKeys).toContain('view');
       expect(endpointKeys).toContain('counts');
       expect(endpointKeys).toContain('details');
       expect(endpointKeys).toContain('followers');
       expect(endpointKeys).toContain('following');
       expect(endpointKeys).toContain('friends');
-      expect(endpointKeys).toContain('muted');
       expect(endpointKeys).toContain('notifications');
       expect(endpointKeys).toContain('relationship');
       expect(endpointKeys).toContain('taggers');

@@ -35,7 +35,6 @@ export class NexusUserStreamService {
       case 'followers':
       case 'following':
       case 'friends':
-      case 'muted':
       case 'recommended':
         url = userStreamApi[reach](apiParams as TUserStreamWithUserIdParams);
         break;

@@ -99,12 +99,19 @@ vi.mock('@/atoms/Container/Container', () => {
       children,
       className,
       overrideDefaults,
+      'data-cy': dataCy,
     }: {
       children: React.ReactNode;
       className?: string;
       overrideDefaults?: boolean;
+      'data-cy'?: string;
     }) => (
-      <div data-testid="container" data-class-name={className} data-override-defaults={overrideDefaults}>
+      <div
+        data-testid="container"
+        data-cy={dataCy}
+        data-class-name={className}
+        data-override-defaults={overrideDefaults}
+      >
         {children}
       </div>
     ),
@@ -117,6 +124,16 @@ vi.mock('@/atoms/PageHeader/PageHeader', () => {
       <div data-testid="page-header" {...props}>
         {children}
       </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p data-testid="typography" className={className}>
+        {children}
+      </p>
     ),
   };
 });
@@ -150,8 +167,8 @@ vi.mock('@/molecules/PostDeleted/PostDeleted', () => {
 });
 
 // Mock organisms used by SinglePostContent
-vi.mock('../SinglePostArticle/SinglePostArticle', () => ({
-  SinglePostArticle: ({
+vi.mock('@/organisms/PostArticleDetail/PostArticleDetail', () => ({
+  PostArticleDetail: ({
     postId,
     content,
     isBlurred,
@@ -161,21 +178,26 @@ vi.mock('../SinglePostArticle/SinglePostArticle', () => ({
     attachments: unknown[];
     isBlurred: boolean;
   }) => (
-    <div data-testid="single-post-article" data-post-id={postId} data-content={content} data-is-blurred={isBlurred}>
-      SinglePostArticle
+    <div data-testid="post-article-detail" data-post-id={postId} data-content={content} data-is-blurred={isBlurred}>
+      PostArticleDetail
     </div>
   ),
 }));
 
-vi.mock('../SinglePostCard/SinglePostCard', async () => {
-  const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayout');
+vi.mock('@/organisms/PostMain/PostMain', async () => {
+  const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayoutContext');
 
   return {
-    SinglePostCard: ({ postId }: { postId: string }) => {
+    PostMain: ({ postId, pinActionsToBottom }: { postId: string; pinActionsToBottom?: boolean }) => {
       const inheritedTagsLayout = usePostMainLayout();
       return (
-        <div data-testid="single-post-card" data-post-id={postId} data-tags-layout={inheritedTagsLayout}>
-          SinglePostCard
+        <div
+          data-testid="post-main"
+          data-post-id={postId}
+          data-pin-actions-to-bottom={String(pinActionsToBottom)}
+          data-tags-layout={inheritedTagsLayout}
+        >
+          PostMain
         </div>
       );
     },
@@ -228,13 +250,14 @@ describe('SinglePostContent', () => {
   });
 
   describe('rendering', () => {
-    it('renders SinglePostCard for short posts', () => {
-      render(<SinglePostContent postId={mockPostId} />);
+    it('renders PostMain for short posts', () => {
+      const { container } = render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByTestId('single-post-card')).toBeInTheDocument();
-      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-post-id', mockPostId);
-      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-tags-layout', 'inline');
-      expect(screen.queryByTestId('single-post-article')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-cy="single-post-card"]')).toBeInTheDocument();
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-post-id', mockPostId);
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-pin-actions-to-bottom', 'true');
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-tags-layout', 'inline');
+      expect(screen.queryByTestId('post-article-detail')).not.toBeInTheDocument();
     });
 
     it('derives side tags layout for the single-post surface when the app is in wide mode', () => {
@@ -242,10 +265,10 @@ describe('SinglePostContent', () => {
 
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByTestId('single-post-card')).toHaveAttribute('data-tags-layout', 'side');
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-tags-layout', 'side');
     });
 
-    it('renders SinglePostArticle for long posts', () => {
+    it('renders PostArticleDetail for long posts', () => {
       vi.mocked(usePostDetails).mockReturnValue({
         postDetails: {
           id: mockPostId,
@@ -262,8 +285,58 @@ describe('SinglePostContent', () => {
 
       render(<SinglePostContent postId={mockPostId} />);
 
-      expect(screen.getByTestId('single-post-article')).toBeInTheDocument();
-      expect(screen.queryByTestId('single-post-card')).not.toBeInTheDocument();
+      expect(screen.getByTestId('post-article-detail')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-main')).not.toBeInTheDocument();
+    });
+
+    it('renders Replies heading for authenticated article posts', () => {
+      vi.mocked(usePostDetails).mockReturnValue({
+        postDetails: {
+          id: mockPostId,
+          indexed_at: Date.now(),
+          kind: 'long' as const,
+          uri: 'pubky://author/pub/pubky.app/posts/post123',
+          content: '# Article Title\n\nArticle content',
+          attachments: [],
+          is_moderated: false,
+          is_blurred: false,
+        } satisfies EnrichedPostDetails,
+        isLoading: false,
+      });
+
+      render(<SinglePostContent postId={mockPostId} />);
+
+      expect(screen.getByText('Replies')).toBeInTheDocument();
+    });
+
+    it('does not render Replies heading for unauthenticated article posts', () => {
+      vi.mocked(useRequireAuth).mockReturnValue({
+        isAuthenticated: false,
+        requireAuth: <T,>(_action: () => T) => undefined,
+      });
+      vi.mocked(usePostDetails).mockReturnValue({
+        postDetails: {
+          id: mockPostId,
+          indexed_at: Date.now(),
+          kind: 'long' as const,
+          uri: 'pubky://author/pub/pubky.app/posts/post123',
+          content: '# Article Title\n\nArticle content',
+          attachments: [],
+          is_moderated: false,
+          is_blurred: false,
+        } satisfies EnrichedPostDetails,
+        isLoading: false,
+      });
+
+      render(<SinglePostContent postId={mockPostId} />);
+
+      expect(screen.queryByText('Replies')).not.toBeInTheDocument();
+    });
+
+    it('does not render Replies heading for short posts', () => {
+      render(<SinglePostContent postId={mockPostId} />);
+
+      expect(screen.queryByText('Replies')).not.toBeInTheDocument();
     });
 
     it('renders loading text when postDetails is not available', () => {
@@ -311,8 +384,8 @@ describe('SinglePostContent', () => {
       render(<SinglePostContent postId={mockPostId} />);
 
       expect(screen.getByTestId('post-deleted')).toBeInTheDocument();
-      expect(screen.queryByTestId('single-post-card')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('single-post-article')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-main')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-article-detail')).not.toBeInTheDocument();
     });
 
     it('does not render SinglePostParticipants inside content', () => {

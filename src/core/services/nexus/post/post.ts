@@ -30,10 +30,10 @@ export class NexusPostService {
    * @returns An array of tags (empty array if post has no tags)
    * @throws {NexusError} When post is not found or request fails
    */
-  static async getPostTags({ compositeId, skip, limit }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
+  static async getPostTags({ compositeId, skip, limit, viewerId }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
     const { pubky: author_id, id: post_id } = parseCompositeId(compositeId);
 
-    const url = postApi.tags({ author_id, post_id, skip_tags: skip, limit_tags: limit });
+    const url = postApi.tags({ author_id, post_id, skip_tags: skip, limit_tags: limit, viewer_id: viewerId });
     return await queryNexus<NexusTag[]>({ url });
   }
 

@@ -5,4 +5,5 @@ export interface PostMainProps {
   className?: string;
   isReply?: boolean;
   isLastReply?: boolean;
+  pinActionsToBottom?: boolean;
 }

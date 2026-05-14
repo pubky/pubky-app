@@ -33,6 +33,7 @@ export interface TNormalizeTagsParams {
 export interface TFetchMorePostTagsParams extends TCompositeId {
   skip?: number;
   limit?: number;
+  viewerId?: Pubky;
 }
 
 export interface TFetchPostTaggersParams extends TCompositeId {

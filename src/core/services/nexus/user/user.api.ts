@@ -54,14 +54,6 @@ export const userApi = {
       excludeKeys: USER_PATH_PARAMS,
     });
   },
-  muted: (params: TUserViewParams) => {
-    const userId = encodePathSegment(params.user_id);
-    return buildUrlWithQuery({
-      baseRoute: `${PREFIX}/${userId}/muted`,
-      params,
-      excludeKeys: USER_PATH_PARAMS,
-    });
-  },
   notifications: (params: TUserPaginationParams) => {
     const userId = encodePathSegment(params.user_id);
     return buildUrlWithQuery({
