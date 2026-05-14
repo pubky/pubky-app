@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TAG_MAX_LENGTH } from '@/config/posts';
 import { PostText } from './PostText';
 import { TRUNCATION_LIMIT } from './PostText.constants';
 
@@ -604,6 +605,15 @@ describe('PostText', () => {
       expect(screen.getByText('bold').tagName).toBe('STRONG');
       expect(screen.getByTestId('post-hashtag')).toHaveTextContent('#hashtag');
     });
+
+    it('does not render overlong hashtag as PostHashtags link', () => {
+      const label = 'a'.repeat(TAG_MAX_LENGTH + 1);
+      const content = `Intro #${label} outro`;
+      const { container } = render(<PostText content={content} />);
+
+      expect(screen.queryByTestId('post-hashtag')).not.toBeInTheDocument();
+      expect(container.textContent).toContain(`#${label}`);
+    });
   });
 
   describe('Mentions', () => {
@@ -1016,7 +1026,7 @@ Third line`}
   });
 
   it('matches snapshot for hashtag with mixed hyphens and underscores', () => {
-    const { container } = render(<PostText content="Check out #hello-world_test-example tag" />);
+    const { container } = render(<PostText content="Check out #hello-world_test tag" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 

@@ -1,5 +1,6 @@
 import type { Code, Emphasis, Link, Paragraph, Root, Text } from 'mdast';
 import { describe, expect, it } from 'vitest';
+import { TAG_MAX_LENGTH } from '@/config/posts';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { TRUNCATION_LIMIT } from './PostText.constants';
 import {
@@ -31,6 +32,16 @@ const getLinks = (paragraph: Paragraph): Link[] =>
 // Helper to extract text nodes from paragraph children
 const getTextNodes = (paragraph: Paragraph): Text[] =>
   paragraph.children.filter((child): child is Text => child.type === 'text');
+
+const getParagraphPlainText = (paragraph: Paragraph): string =>
+  paragraph.children
+    .map((child) => {
+      if (child.type === 'text') return (child as Text).value;
+      if (child.type === 'link')
+        return (child as Link).children.map((c) => (c.type === 'text' ? (c as Text).value : '')).join('');
+      return '';
+    })
+    .join('');
 
 describe('remarkPlaintextCodeblock', () => {
   it('assigns plaintext to code blocks without a language', () => {
@@ -394,6 +405,47 @@ describe('remarkHashtags', () => {
       expect(textNodes[0].value).toBe('Hello ');
       expect(textNodes[1].value).toBe(' this is ');
       expect(textNodes[2].value).toBe(' right?');
+    });
+  });
+
+  describe('Hashtag tag-label validation', () => {
+    it('converts hashtag when label length equals TAG_MAX_LENGTH', () => {
+      const label = 'a'.repeat(TAG_MAX_LENGTH);
+      const paragraph = createParagraph(`#${label} trailing`);
+      const tree = createRoot([paragraph]);
+
+      remarkHashtags()(tree);
+
+      const links = getLinks(paragraph);
+      expect(links).toHaveLength(1);
+      expect(links[0].url).toBe(`/search?tags=${label}`);
+    });
+
+    it('does not convert hashtag when label exceeds TAG_MAX_LENGTH', () => {
+      const label = 'a'.repeat(TAG_MAX_LENGTH + 1);
+      const content = `before #${label} after`;
+      const paragraph = createParagraph(content);
+      const tree = createRoot([paragraph]);
+
+      remarkHashtags()(tree);
+
+      expect(getLinks(paragraph)).toHaveLength(0);
+      expect(getParagraphPlainText(paragraph)).toBe(content);
+    });
+
+    it('converts valid hashtag but leaves overlong hashtag as plain text', () => {
+      const shortLabel = 'ok';
+      const longLabel = 'b'.repeat(TAG_MAX_LENGTH + 1);
+      const content = `x #${shortLabel} middle #${longLabel} z`;
+      const paragraph = createParagraph(content);
+      const tree = createRoot([paragraph]);
+
+      remarkHashtags()(tree);
+
+      const links = getLinks(paragraph);
+      expect(links).toHaveLength(1);
+      expect(links[0].url).toBe(`/search?tags=${shortLabel}`);
+      expect(getParagraphPlainText(paragraph)).toBe(content);
     });
   });
 

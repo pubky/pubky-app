@@ -440,9 +440,9 @@ exports[`PostText - Snapshots > matches snapshot for hashtag with mixed hyphens 
     Check out 
     <a
       data-testid="post-hashtag"
-      href="/search?tags=hello-world_test-example"
+      href="/search?tags=hello-world_test"
     >
-      #hello-world_test-example
+      #hello-world_test
     </a>
      tag
   </p>
@@ -575,13 +575,7 @@ exports[`PostText - Snapshots > matches snapshot for long hashtag 1`] = `
   data-testid="container"
 >
   <p>
-    Check out this 
-    <a
-      data-testid="post-hashtag"
-      href="/search?tags=verylooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonghashtagwithlotsofcharactersandnumbers123456789"
-    >
-      #verylooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonghashtagwithlotsofcharactersandnumbers123456789
-    </a>
+    Check out this #verylooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonghashtagwithlotsofcharactersandnumbers123456789
      tag
   </p>
 </div>
