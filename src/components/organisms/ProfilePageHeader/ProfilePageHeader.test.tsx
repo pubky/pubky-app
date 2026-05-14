@@ -1,49 +1,19 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 import { ProfilePageHeader } from './ProfilePageHeader';
 import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
-import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 
 // Mock Molecules components
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/PostText/PostText', () => {
   return {
-    ...actual,
     PostText: ({ content }: { content: string }) => <div data-testid="post-text">{content}</div>,
   };
 });
 
 // Mock Organisms components
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/molecules/AvatarZoomModal/AvatarZoomModal', () => {
   return {
-    ...actual,
-    AvatarWithFallback: ({
-      avatarUrl,
-      name,
-      className,
-      fallbackClassName,
-      alt,
-    }: {
-      avatarUrl?: string;
-      name: string;
-      className?: string;
-      fallbackClassName?: string;
-      alt?: string;
-    }) => (
-      <div data-testid="avatar" className={className}>
-        {avatarUrl ? (
-          <img src={avatarUrl} alt={alt || name} data-testid="avatar-image" />
-        ) : (
-          <div data-testid="avatar-fallback" className={fallbackClassName}>
-            {name
-              .split(' ')
-              .map((n) => n[0])
-              .join('')}
-          </div>
-        )}
-      </div>
-    ),
     AvatarZoomModal: ({
       open,
       onClose,
@@ -72,6 +42,37 @@ vi.mock('@/organisms', async (importOriginal) => {
           </button>
         </div>
       ) : null,
+  };
+});
+
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({
+      avatarUrl,
+      name,
+      className,
+      fallbackClassName,
+      alt,
+    }: {
+      avatarUrl?: string;
+      name: string;
+      className?: string;
+      fallbackClassName?: string;
+      alt?: string;
+    }) => (
+      <div data-testid="avatar" className={className}>
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={alt || name} data-testid="avatar-image" />
+        ) : (
+          <div data-testid="avatar-fallback" className={fallbackClassName}>
+            {name
+              .split(' ')
+              .map((n) => n[0])
+              .join('')}
+          </div>
+        )}
+      </div>
+    ),
   };
 });
 

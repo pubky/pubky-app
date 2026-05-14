@@ -1,8 +1,15 @@
 'use client';
-
-import * as Atoms from '@/atoms';
-import { Bitcoin, Pickaxe, Zap, Palette, Plus } from 'lucide-react';
+import { Bitcoin, Palette, Pickaxe, Plus, Zap } from 'lucide-react';
+import {
+  FilterHeader,
+  FilterItem,
+  FilterItemIcon,
+  FilterItemLabel,
+  FilterList,
+  FilterRoot,
+} from '@/atoms/Filter/Filter';
 import { UsersRound2 } from '@/icons';
+
 export interface FeedItem {
   icon: React.ComponentType<{
     className?: string;
@@ -40,27 +47,27 @@ export function FeedSection({ feeds: customFeeds, showCreateButton = true, class
   ];
   const feeds = customFeeds || defaultFeeds;
   return (
-    <Atoms.FilterRoot className={className}>
-      <Atoms.FilterHeader title="Feed" />
+    <FilterRoot className={className}>
+      <FilterHeader title="Feed" />
 
-      <Atoms.FilterList>
+      <FilterList>
         {feeds.map((feed) => {
           const Icon = feed.icon;
           return (
-            <Atoms.FilterItem key={feed.label} isSelected={false} onClick={() => {}}>
-              <Atoms.FilterItemIcon icon={Icon} />
-              <Atoms.FilterItemLabel>{feed.label}</Atoms.FilterItemLabel>
-            </Atoms.FilterItem>
+            <FilterItem key={feed.label} isSelected={false} onClick={() => {}}>
+              <FilterItemIcon icon={Icon} />
+              <FilterItemLabel>{feed.label}</FilterItemLabel>
+            </FilterItem>
           );
         })}
 
         {showCreateButton && (
-          <Atoms.FilterItem isSelected={false} onClick={() => {}}>
-            <Atoms.FilterItemIcon icon={Plus} />
-            <Atoms.FilterItemLabel>Create Feed</Atoms.FilterItemLabel>
-          </Atoms.FilterItem>
+          <FilterItem isSelected={false} onClick={() => {}}>
+            <FilterItemIcon icon={Plus} />
+            <FilterItemLabel>Create Feed</FilterItemLabel>
+          </FilterItem>
         )}
-      </Atoms.FilterList>
-    </Atoms.FilterRoot>
+      </FilterList>
+    </FilterRoot>
   );
 }

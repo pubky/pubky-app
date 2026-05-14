@@ -71,8 +71,9 @@ Coordinators   Workflows
 - Created: `src/core/coordinators/notifications/NotificationCoordinator`
 - Implemented: Polling lifecycle management (start/stop based on auth, visibility, routes)
 - Integrated: Calls `NotificationController.fetchNotifications()` to fetch notifications
+- Added: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/mute-list-sync.ts`) — homeserver `/events-stream` for `/pub/pubky.app/mutes/` (via `@synonymdev/pubky`), debounced `MuteController.fetchMutedUsers`; same route/visibility/auth guards pattern as notifications
 - UI Component: `CoordinatorsManager` manages coordinator lifecycle
-- Exported via: `src/core/index.ts`
+- Consumed via direct alias imports, for example `@/coordinators/notifications/notifications`
 
 ## Consequences
 
@@ -163,9 +164,7 @@ src/core/coordinators/
 ├── notifications/
 │   ├── notifications.ts        # NotificationCoordinator
 │   ├── notifications.types.ts
-│   ├── notifications.test.ts
-│   └── index.ts
-└── index.ts
+│   └── notifications.test.ts
 ```
 
 ### Future Coordinators

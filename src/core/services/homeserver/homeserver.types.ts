@@ -1,6 +1,5 @@
 import type { Capabilities, Session } from '@synonymdev/pubky';
-
-import * as Core from '@/core';
+import type { TKeypairParams } from '@/application/auth/auth.types';
 import { HttpMethod } from '@/libs/http/http.types';
 
 export type FetchOptions = {
@@ -8,7 +7,7 @@ export type FetchOptions = {
   body?: string | Uint8Array;
 };
 
-export type THomeserverSignUpParams = Core.TKeypairParams & {
+export type THomeserverSignUpParams = TKeypairParams & {
   signupToken: string;
 };
 
@@ -69,6 +68,11 @@ export type THomeserverListParams = {
   cursor?: string;
   reverse?: boolean;
   limit?: number;
+};
+
+export type THomeserverUserEvent = {
+  cursor: string;
+  eventType: string;
 };
 
 // Utility function parameter types

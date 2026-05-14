@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AvatarWithFallback } from './AvatarWithFallback';
 
 vi.mock('facehash', () => ({
@@ -24,107 +24,125 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (...args: unknown[]) => mockUseLiveQuery(...args),
 }));
 
-// Mock Core - including stores for local avatar resolution
+// Mock stores for local avatar resolution
 const mockGetModerationStatus = vi.fn();
 const mockUnblur = vi.fn();
 const mockUseAuthStore = vi.fn();
 const mockUseLocalFilesStore = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/moderation/moderation', () => ({
   ModerationController: {
     getModerationStatus: (...args: unknown[]) => mockGetModerationStatus(...args),
     unBlur: (...args: unknown[]) => mockUnblur(...args),
   },
+}));
+vi.mock('@/models/moderation/moderation.schema', () => ({
   ModerationType: {
     PROFILE: 'PROFILE',
   },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => mockUseAuthStore(selector),
+}));
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: (selector: (state: { profile: string | null }) => unknown) => mockUseLocalFilesStore(selector),
 }));
 
 // Mock Config
-vi.mock('@/config', () => ({
+vi.mock('@/config/nexus', () => ({
   CDN_URL: 'https://cdn.example.com',
 }));
 
 // Mock Atoms components
-vi.mock('@/atoms', () => ({
-  Avatar: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'avatar'} className={className}>
-      {children}
-    </div>
-  ),
-  AvatarImage: ({
-    src,
-    alt,
-    onError,
-    className,
-  }: {
-    src: string;
-    alt: string;
-    onError?: (event: React.SyntheticEvent<HTMLImageElement>) => void;
-    className?: string;
-  }) => <img data-testid="avatar-image" src={src} alt={alt} onError={onError} className={className} />,
-  AvatarFallback: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="avatar-fallback" className={className}>
-      {children}
-    </div>
-  ),
-  Container: ({
-    children,
-    onClick,
-    onKeyDown,
-    className,
-    role,
-    tabIndex,
-    'aria-label': ariaLabel,
-  }: {
-    children: React.ReactNode;
-    onClick?: (e: React.MouseEvent) => void;
-    onKeyDown?: (e: React.KeyboardEvent) => void;
-    className?: string;
-    role?: string;
-    tabIndex?: number;
-    'aria-label'?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div
-      data-testid="unblur-button"
-      onClick={onClick}
-      onKeyDown={onKeyDown}
-      className={className}
-      role={role}
-      tabIndex={tabIndex}
-      aria-label={ariaLabel}
-    >
-      {children}
-    </div>
-  ),
-  Typography: ({
-    as: Tag = 'p',
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    as?: React.ElementType;
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-    overrideDefaults?: boolean;
-    style?: React.CSSProperties;
-  }) => (
-    <Tag data-testid={dataTestId} className={className}>
-      {children}
-    </Tag>
-  ),
-}));
+vi.mock('@/atoms/Avatar/Avatar', () => {
+  return {
+    Avatar: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'avatar'} className={className}>
+        {children}
+      </div>
+    ),
+    AvatarImage: ({
+      src,
+      alt,
+      onError,
+      className,
+    }: {
+      src: string;
+      alt: string;
+      onError?: (event: React.SyntheticEvent<HTMLImageElement>) => void;
+      className?: string;
+    }) => <img data-testid="avatar-image" src={src} alt={alt} onError={onError} className={className} />,
+    AvatarFallback: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="avatar-fallback" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      onClick,
+      onKeyDown,
+      className,
+      role,
+      tabIndex,
+      'aria-label': ariaLabel,
+    }: {
+      children: React.ReactNode;
+      onClick?: (e: React.MouseEvent) => void;
+      onKeyDown?: (e: React.KeyboardEvent) => void;
+      className?: string;
+      role?: string;
+      tabIndex?: number;
+      'aria-label'?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div
+        data-testid="unblur-button"
+        onClick={onClick}
+        onKeyDown={onKeyDown}
+        className={className}
+        role={role}
+        tabIndex={tabIndex}
+        aria-label={ariaLabel}
+      >
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      as: Tag = 'p',
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      as?: React.ElementType;
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+      overrideDefaults?: boolean;
+      style?: React.CSSProperties;
+    }) => (
+      <Tag data-testid={dataTestId} className={className}>
+        {children}
+      </Tag>
+    ),
+  };
+});
 
 describe('AvatarWithFallback', () => {
   const mockProps = {
@@ -325,6 +343,35 @@ describe('AvatarWithFallback', () => {
       // Should try new image (both image and fallback rendered, Radix handles visibility)
       expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
       expect(screen.getByTestId('avatar-fallback')).toBeInTheDocument();
+    });
+  });
+
+  describe('Avatar root key', () => {
+    // Verifies the consumer passes `key={resolvedAvatarUrl ?? 'fallback'}` to
+    // <Atoms.Avatar>. React doesn't expose `key` to the rendered component, so we
+    // assert the observable effect: the avatar DOM node is replaced when the key
+    // changes, and preserved when it doesn't. See issue #526 for the underlying
+    // Radix state issue this workaround addresses.
+    it('replaces the avatar root node when avatarUrl changes', () => {
+      const { rerender } = render(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} />);
+      const firstRoot = screen.getByTestId('avatar');
+
+      // Note: undefined avatarUrl triggers the fallback (image not shown)
+      rerender(<AvatarWithFallback {...mockProps} avatarUrl={undefined} />);
+      const secondRoot = screen.getByTestId('avatar');
+
+      expect(secondRoot).not.toBe(firstRoot);
+    });
+
+    it('preserves the avatar root node when avatarUrl is unchanged', () => {
+      const { rerender } = render(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} />);
+      const firstRoot = screen.getByTestId('avatar');
+
+      // Note: name change doesn't trigger a remount, so the avatar root node is preserved.
+      rerender(<AvatarWithFallback {...mockProps} avatarUrl={validAvatarUrl} name="Updated Name" />);
+      const secondRoot = screen.getByTestId('avatar');
+
+      expect(secondRoot).toBe(firstRoot);
     });
   });
 

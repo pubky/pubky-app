@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { persist, devtools } from 'zustand/middleware';
-import { AuthStore, authInitialState } from './auth.types';
+import { devtools, persist } from 'zustand/middleware';
+import { AUTH_PERSIST_KEY } from '../persistedKeys';
 import { createAuthActions } from './auth.actions';
 import { createAuthSelectors } from './auth.selectors';
-import { AUTH_PERSIST_KEY } from '../persistedKeys';
+import { authInitialState, AuthStore } from './auth.types';
 
 // Store creation
 export const useAuthStore = create<AuthStore>()(

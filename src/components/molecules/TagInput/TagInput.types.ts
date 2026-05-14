@@ -4,6 +4,8 @@ export interface TagInputHandle {
   focus: () => void;
 }
 
+type TagInputContainerVariant = 'dashed' | 'plain';
+
 export interface TagInputProps {
   /** Callback when a tag is added. Can return a Promise for async handling. */
   onTagAdd: (tag: string) => void | Promise<unknown>;
@@ -37,6 +39,10 @@ export interface TagInputProps {
   addOnSuggestionClick?: boolean;
   /** Whether to auto-focus the input on mount */
   autoFocus?: boolean;
+  /** Visual variant for the TagInput container chrome. */
+  containerVariant?: TagInputContainerVariant;
   /** Additional className for the container */
   className?: string;
+  /** Inline styles for the container */
+  style?: React.CSSProperties;
 }

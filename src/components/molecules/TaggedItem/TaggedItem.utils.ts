@@ -1,17 +1,19 @@
-import * as Core from '@/core';
+import { FileController } from '@/controllers/file/file';
+import type { Pubky } from '@/models/models.types';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 import type { TagWithAvatars } from './TaggedItem.types';
 
 /**
  * Transform NexusTag to TagWithAvatars by resolving avatar URLs
  */
-export function transformTagWithAvatars(tag: Core.NexusTag): TagWithAvatars {
+export function transformTagWithAvatars(tag: NexusTag): TagWithAvatars {
   return {
     label: tag.label ?? '',
     taggers_count: tag.taggers_count ?? 0,
     relationship: tag.relationship ?? false,
     taggers: (tag.taggers ?? []).map((taggerId) => ({
       id: taggerId,
-      avatarUrl: Core.FileController.getAvatarUrl(taggerId as Core.Pubky),
+      avatarUrl: FileController.getAvatarUrl(taggerId as Pubky),
     })),
   };
 }
@@ -29,7 +31,7 @@ export function transformTagWithAvatars(tag: Core.NexusTag): TagWithAvatars {
  * @param viewerId - Optional viewer ID to determine relationship status
  * @returns Array of TagWithAvatars with relationship and avatar data
  */
-export function transformTagsForViewer(tags: Core.NexusTag[], viewerId?: string | null): TagWithAvatars[] {
+export function transformTagsForViewer(tags: NexusTag[], viewerId?: string | null): TagWithAvatars[] {
   return tags
     .filter((tag) => tag.label)
     .map((tag) => {

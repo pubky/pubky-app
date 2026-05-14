@@ -1,18 +1,19 @@
 'use client';
 
 import { useEffect } from 'react';
-
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import * as Molecules from '@/molecules';
-import { DialogFeedbackContent } from './DialogFeedbackContent';
-import { DialogFeedbackSuccess } from './DialogFeedbackSuccess';
+import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useFeedback } from '@/hooks/useFeedback/useFeedback';
+import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import type { DialogFeedbackProps } from './DialogFeedback.types';
+import { DialogFeedbackContent } from './DialogFeedbackContent/DialogFeedbackContent';
+import { DialogFeedbackSuccess } from './DialogFeedbackSuccess/DialogFeedbackSuccess';
 
 export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
-  const { currentUserPubky } = Hooks.useCurrentUserProfile();
-  const { feedback, handleChange, submit, isSubmitting, isSuccess, hasContent, reset } = Hooks.useFeedback();
-  const { showConfirmDialog, setShowConfirmDialog, handleOpenChange, handleDiscard } = Hooks.useConfirmableDialog({
+  const { currentUserPubky } = useCurrentUserProfile();
+  const { feedback, handleChange, submit, isSubmitting, isSuccess, hasContent, reset } = useFeedback();
+  const { showConfirmDialog, setShowConfirmDialog, handleOpenChange, handleDiscard } = useConfirmableDialog({
     onClose: () => onOpenChange(false),
     hasContent: () => hasContent && !isSuccess,
   });
@@ -30,8 +31,8 @@ export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
   }
 
   return (
-    <Atoms.Dialog open={open} onOpenChange={handleOpenChange}>
-      <Atoms.DialogContent className="w-2xl" hiddenTitle="Provide Feedback">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="w-2xl" hiddenTitle="Provide Feedback">
         {isSuccess ? (
           <DialogFeedbackSuccess onOpenChange={onOpenChange} />
         ) : (
@@ -45,12 +46,12 @@ export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
           />
         )}
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
-        <Molecules.DialogConfirmDiscard
+        <DialogConfirmDiscard
           open={showConfirmDialog}
           onOpenChange={() => setShowConfirmDialog(false)}
           onConfirm={handleDiscard}
         />
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

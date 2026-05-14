@@ -1,6 +1,6 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
 
 export type TBookmarkEventParams = {
-  userId: Core.Pubky; // Still needed for generating homeserver URI
+  userId: Pubky; // Still needed for generating homeserver URI
   postId: string; // Composite post ID (authorId:postId)
 };

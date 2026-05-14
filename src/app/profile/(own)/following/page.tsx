@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function ProfileFollowingPage() {
-  return <Templates.ProfilePageFollowing />;
-}
+export { ProfileFollowingPage as default } from '@/templates/Profile/Following/ProfileFollowingPage';

@@ -1,7 +1,7 @@
-import * as Core from '@/core';
-import { TtlModelSchema } from '@/core/models/shared';
+import type { Pubky } from '@/models/models.types';
+import type { TtlModelSchema } from '@/models/shared/ttl/ttl.schema';
 
-export type UserTtlModelSchema = TtlModelSchema<Core.Pubky>;
+export type UserTtlModelSchema = TtlModelSchema<Pubky>;
 
 // Keep only the primary key index. TTL is checked by id lists.
 export const userTtlTableSchema = `

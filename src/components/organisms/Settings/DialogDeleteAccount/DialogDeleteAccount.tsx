@@ -1,7 +1,9 @@
 'use client';
-
-import * as Atoms from '@/atoms';
 import { Trash2 } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { Typography } from '@/atoms/Typography/Typography';
+
 interface DialogDeleteAccountProps {
   isOpen: boolean;
   onOpenChangeAction: (open: boolean) => void;
@@ -15,16 +17,16 @@ export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDelete
     onOpenChangeAction(false);
   };
   return (
-    <Atoms.Dialog open={isOpen} onOpenChange={onOpenChangeAction}>
-      <Atoms.DialogContent className="max-w-md sm:max-w-lg" hiddenTitle="Delete Account">
-        <Atoms.DialogHeader>
-          <Atoms.DialogTitle>Delete Account</Atoms.DialogTitle>
-        </Atoms.DialogHeader>
-        <Atoms.Typography className="text-base leading-6 font-normal tracking-wide text-white/80">
+    <Dialog open={isOpen} onOpenChange={onOpenChangeAction}>
+      <DialogContent className="max-w-md sm:max-w-lg" hiddenTitle="Delete Account">
+        <DialogHeader>
+          <DialogTitle>Delete Account</DialogTitle>
+        </DialogHeader>
+        <Typography className="text-base leading-6 font-normal tracking-wide text-white/80">
           Are you sure? Your account information cannot be recovered.
-        </Atoms.Typography>
-        <Atoms.DialogFooter>
-          <Atoms.Button
+        </Typography>
+        <DialogFooter>
+          <Button
             id="delete-account-confirm-btn"
             variant="destructive"
             size="lg"
@@ -33,12 +35,12 @@ export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDelete
           >
             <Trash2 className="h-4 w-4" />
             Delete Account
-          </Atoms.Button>
-          <Atoms.Button variant="outline" size="lg" onClick={handleCancel} className="order-2 sm:order-1">
+          </Button>
+          <Button variant="outline" size="lg" onClick={handleCancel} className="order-2 sm:order-1">
             Cancel
-          </Atoms.Button>
-        </Atoms.DialogFooter>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

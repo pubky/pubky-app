@@ -1,10 +1,10 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
 
 export type TFollowParams = {
-  follower: Core.Pubky;
-  followee: Core.Pubky;
+  follower: Pubky;
+  followee: Pubky;
 };
 
 export type TPubkyListParams = {
-  userIds: Core.Pubky[];
+  userIds: Pubky[];
 };

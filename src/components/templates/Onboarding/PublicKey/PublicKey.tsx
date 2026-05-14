@@ -1,11 +1,12 @@
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
+import { PublicKeyHeader, PublicKeyNavigation } from '@/molecules/PublicKey/Pubkey';
+import { PublicKeyCard } from '@/organisms/PublicKeyCard/PublicKeyCard';
 
 export function PublicKey() {
   return (
-    <Molecules.OnboardingLayout testId="public-key-content" navigation={<Molecules.PublicKeyNavigation />}>
-      <Molecules.PublicKeyHeader />
-      <Organisms.PublicKeyCard />
-    </Molecules.OnboardingLayout>
+    <OnboardingLayout testId="public-key-content" navigation={<PublicKeyNavigation />}>
+      <PublicKeyHeader />
+      <PublicKeyCard />
+    </OnboardingLayout>
   );
 }

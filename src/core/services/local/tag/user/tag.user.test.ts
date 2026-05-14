@@ -1,44 +1,49 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Core from '@/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { db } from '@/database/franky/franky';
+import type { Pubky } from '@/models/models.types';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { UserTagsModel } from '@/models/user/tags/userTags';
+import type { TLocalTagParams } from '@/services/local/tag/tag.types';
+import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
 
 // Test data
 const testData = {
-  taggerPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Core.Pubky,
-  taggedPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Core.Pubky,
-  anotherTaggerPubky: 'y4euc88xboik1ev3axy9m9ajuedo8gx1mh1n7ms8zoxm5s1b1h9y' as Core.Pubky,
+  taggerPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
+  taggedPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,
+  anotherTaggerPubky: 'y4euc88xboik1ev3axy9m9ajuedo8gx1mh1n7ms8zoxm5s1b1h9y' as Pubky,
 };
 
 // Helper functions
-const createTagParams = (label: string): Core.TLocalTagParams => ({
+const createTagParams = (label: string): TLocalTagParams => ({
   taggedId: testData.taggedPubky,
   label,
   taggerId: testData.taggerPubky,
 });
 
 const getSavedUserTags = async () => {
-  return await Core.UserTagsModel.findById(testData.taggedPubky);
+  return await UserTagsModel.findById(testData.taggedPubky);
 };
 
-const getSavedUserCounts = async (userId: Core.Pubky) => {
-  return await Core.UserCountsModel.table.get(userId);
+const getSavedUserCounts = async (userId: Pubky) => {
+  return await UserCountsModel.table.get(userId);
 };
 
-const createTagRecord = (label: string, taggers: Core.Pubky[], relationship: boolean) => ({
+const createTagRecord = (label: string, taggers: Pubky[], relationship: boolean) => ({
   label,
   taggers,
   taggers_count: taggers.length,
   relationship,
 });
 
-const setupExistingUserTag = async (label: string, taggers: Core.Pubky[], relationship: boolean) => {
-  await Core.UserTagsModel.upsert({
+const setupExistingUserTag = async (label: string, taggers: Pubky[], relationship: boolean) => {
+  await UserTagsModel.upsert({
     id: testData.taggedPubky,
     tags: [createTagRecord(label, taggers, relationship)],
   });
 };
 
-const setupUserCounts = async (userId: Core.Pubky, tags: number = 0, uniqueTags: number = 0, tagged: number = 0) => {
-  await Core.UserCountsModel.upsert({
+const setupUserCounts = async (userId: Pubky, tags: number = 0, uniqueTags: number = 0, tagged: number = 0) => {
+  await UserCountsModel.upsert({
     id: userId,
     tagged,
     tags,
@@ -54,10 +59,10 @@ const setupUserCounts = async (userId: Core.Pubky, tags: number = 0, uniqueTags:
 
 describe('LocalUserTagService', () => {
   beforeEach(async () => {
-    await Core.db.initialize();
-    await Core.db.transaction('rw', [Core.UserTagsModel.table, Core.UserCountsModel.table], async () => {
-      await Core.UserTagsModel.table.clear();
-      await Core.UserCountsModel.table.clear();
+    await db.initialize();
+    await db.transaction('rw', [UserTagsModel.table, UserCountsModel.table], async () => {
+      await UserTagsModel.table.clear();
+      await UserCountsModel.table.clear();
     });
   });
 
@@ -66,7 +71,7 @@ describe('LocalUserTagService', () => {
       await setupUserCounts(testData.taggedPubky, 0, 0);
       await setupUserCounts(testData.taggerPubky, 0, 0, 0);
 
-      await Core.LocalUserTagService.create(createTagParams('developer'));
+      await LocalUserTagService.create(createTagParams('developer'));
 
       const savedTags = await getSavedUserTags();
       const taggedCounts = await getSavedUserCounts(testData.taggedPubky);
@@ -83,7 +88,7 @@ describe('LocalUserTagService', () => {
     it('should add tagger to existing tag', async () => {
       await setupExistingUserTag('developer', [testData.taggerPubky], false);
 
-      await Core.LocalUserTagService.create({
+      await LocalUserTagService.create({
         taggedId: testData.taggedPubky,
         label: 'developer',
         taggerId: testData.anotherTaggerPubky,
@@ -99,7 +104,7 @@ describe('LocalUserTagService', () => {
       await setupUserCounts(testData.taggedPubky, 1, 1);
       await setupUserCounts(testData.taggerPubky, 0, 0, 1);
 
-      await Core.LocalUserTagService.create(createTagParams('developer'));
+      await LocalUserTagService.create(createTagParams('developer'));
 
       const savedTags = await getSavedUserTags();
       const taggedCounts = await getSavedUserCounts(testData.taggedPubky);
@@ -114,12 +119,12 @@ describe('LocalUserTagService', () => {
       await setupUserCounts(testData.taggedPubky, 0, 0);
 
       // Create first tag - should increment unique_tags
-      await Core.LocalUserTagService.create(createTagParams('developer'));
+      await LocalUserTagService.create(createTagParams('developer'));
       let savedCounts = await getSavedUserCounts(testData.taggedPubky);
       expect(savedCounts!.unique_tags).toBe(1);
 
       // Add another tagger to same tag - should NOT increment unique_tags
-      await Core.LocalUserTagService.create({
+      await LocalUserTagService.create({
         taggedId: testData.taggedPubky,
         label: 'developer',
         taggerId: testData.anotherTaggerPubky,
@@ -128,15 +133,15 @@ describe('LocalUserTagService', () => {
       expect(savedCounts!.unique_tags).toBe(1); // Should remain 1
 
       // Create different tag - should increment unique_tags
-      await Core.LocalUserTagService.create(createTagParams('javascript'));
+      await LocalUserTagService.create(createTagParams('javascript'));
       savedCounts = await getSavedUserCounts(testData.taggedPubky);
       expect(savedCounts!.unique_tags).toBe(2);
     });
 
     it('should handle database errors', async () => {
-      const spy = vi.spyOn(Core.UserTagsModel, 'getOrCreate').mockRejectedValueOnce(new Error('DB Error'));
+      const spy = vi.spyOn(UserTagsModel, 'getOrCreate').mockRejectedValueOnce(new Error('DB Error'));
 
-      await expect(Core.LocalUserTagService.create(createTagParams('developer'))).rejects.toThrow(
+      await expect(LocalUserTagService.create(createTagParams('developer'))).rejects.toThrow(
         'Failed to create user tag',
       );
 
@@ -153,7 +158,7 @@ describe('LocalUserTagService', () => {
     it('should delete tag and update counts', async () => {
       await setupUserCounts(testData.taggerPubky, 0, 0, 1);
 
-      await Core.LocalUserTagService.delete({
+      await LocalUserTagService.delete({
         taggedId: testData.taggedPubky,
         label: 'developer',
         taggerId: testData.taggerPubky,
@@ -172,7 +177,7 @@ describe('LocalUserTagService', () => {
     it('should remove only tagger when others exist', async () => {
       await setupExistingUserTag('developer', [testData.taggerPubky, testData.anotherTaggerPubky], true);
 
-      await Core.LocalUserTagService.delete({
+      await LocalUserTagService.delete({
         taggedId: testData.taggedPubky,
         label: 'developer',
         taggerId: testData.taggerPubky,
@@ -189,7 +194,7 @@ describe('LocalUserTagService', () => {
       await setupUserCounts(testData.taggedPubky, 1, 1);
 
       // Remove first tagger - should NOT decrement unique_tags (other tagger remains)
-      await Core.LocalUserTagService.delete({
+      await LocalUserTagService.delete({
         taggedId: testData.taggedPubky,
         label: 'developer',
         taggerId: testData.taggerPubky,
@@ -204,7 +209,7 @@ describe('LocalUserTagService', () => {
       await setupUserCounts(testData.taggedPubky, 1, 1);
 
       // Remove the tagger - should decrement unique_tags (last tagger removed)
-      await Core.LocalUserTagService.delete({
+      await LocalUserTagService.delete({
         taggedId: testData.taggedPubky,
         label: 'developer',
         taggerId: testData.taggerPubky,
@@ -214,9 +219,9 @@ describe('LocalUserTagService', () => {
     });
 
     it('should return false when user has no tags (idempotent)', async () => {
-      await Core.UserTagsModel.table.clear();
+      await UserTagsModel.table.clear();
 
-      const result = await Core.LocalUserTagService.delete({
+      const result = await LocalUserTagService.delete({
         taggedId: testData.taggedPubky,
         label: 'developer',
         taggerId: testData.taggerPubky,
@@ -229,7 +234,7 @@ describe('LocalUserTagService', () => {
       // Setup: User has tags but not from this tagger with this label
       await setupExistingUserTag('developer', [testData.anotherTaggerPubky], false);
 
-      const result = await Core.LocalUserTagService.delete({
+      const result = await LocalUserTagService.delete({
         taggedId: testData.taggedPubky,
         label: 'developer',
         taggerId: testData.taggerPubky, // Different tagger
@@ -241,7 +246,7 @@ describe('LocalUserTagService', () => {
     it('should return true when tag is successfully deleted', async () => {
       await setupUserCounts(testData.taggerPubky, 0, 0, 1);
 
-      const result = await Core.LocalUserTagService.delete({
+      const result = await LocalUserTagService.delete({
         taggedId: testData.taggedPubky,
         label: 'developer',
         taggerId: testData.taggerPubky,

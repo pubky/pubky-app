@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserInfoPopoverHeader } from './UserInfoPopoverHeader';
 
 // Mock next/navigation
@@ -10,14 +10,14 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({ name }: { name: string }) => <div data-testid="avatar">{name}</div>,
-}));
-
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
-    ...actual,
+    AvatarWithFallback: ({ name }: { name: string }) => <div data-testid="avatar">{name}</div>,
+  };
+});
+
+vi.mock('@/atoms/Link/Link', () => {
+  return {
     Link: ({
       children,
       href,

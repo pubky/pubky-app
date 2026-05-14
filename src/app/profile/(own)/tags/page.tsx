@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function ProfileTaggedPage() {
-  return <Templates.ProfilePageTagged />;
-}
+export { ProfileTaggedPage as default } from '@/templates/Profile/Tagged/ProfileTaggedPage';

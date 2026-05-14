@@ -1,11 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { PostStreamQueue } from './post-stream-queue';
 import type { CollectParams } from './post-stream-queue.types';
-import * as Core from '@/core';
 
 describe('PostStreamQueue', () => {
   let queue: PostStreamQueue;
-  const streamId = 'timeline:all:all' as Core.PostStreamId;
+  const streamId = 'timeline:all:all' as PostStreamId;
   const BASE_TIMESTAMP = 1000000;
 
   beforeEach(() => {
@@ -40,12 +42,12 @@ describe('PostStreamQueue', () => {
 
     it('should clear all entries', () => {
       queue['save'](streamId, ['post1'], BASE_TIMESTAMP);
-      queue['save']('timeline:following:all' as Core.PostStreamId, ['post2'], BASE_TIMESTAMP);
+      queue['save']('timeline:following:all' as PostStreamId, ['post2'], BASE_TIMESTAMP);
 
       queue.clear();
 
       expect(queue.get(streamId)).toBeUndefined();
-      expect(queue.get('timeline:following:all' as Core.PostStreamId)).toBeUndefined();
+      expect(queue.get('timeline:following:all' as PostStreamId)).toBeUndefined();
     });
 
     it('should delete empty queues instead of saving them', () => {
@@ -72,11 +74,11 @@ describe('PostStreamQueue', () => {
         content: `Post ${postId}`,
         kind: 'short' as const,
         uri: `pubky://author/${postId}`,
-        author: 'author1' as Core.Pubky,
+        author: 'author1' as Pubky,
         attachments: null,
       });
 
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockImplementation(async (id) => {
+      vi.spyOn(PostDetailsModel, 'findById').mockImplementation(async (id) => {
         const idStr = id as string;
         const index = parseInt(idStr.split('-')[1]);
         return mockPostDetails(idStr, BASE_TIMESTAMP + index);
@@ -131,7 +133,7 @@ describe('PostStreamQueue', () => {
 
     it('should not return duplicates when queue is re-filtered', async () => {
       // Setup
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockImplementation(async (id) => {
+      vi.spyOn(PostDetailsModel, 'findById').mockImplementation(async (id) => {
         const idStr = id as string;
         const index = parseInt(idStr.split('-')[1]);
         return {
@@ -140,7 +142,7 @@ describe('PostStreamQueue', () => {
           content: `Post ${idStr}`,
           kind: 'short' as const,
           uri: `pubky://author/${id}`,
-          author: 'author1' as Core.Pubky,
+          author: 'author1' as Pubky,
           attachments: null,
         };
       });
@@ -245,11 +247,11 @@ describe('PostStreamQueue', () => {
         content: `Post ${index}`,
         kind: 'short' as const,
         uri: `pubky://author/post-${index}`,
-        author: 'author1' as Core.Pubky,
+        author: 'author1' as Pubky,
         attachments: null,
       });
 
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockImplementation(async (id) => {
+      vi.spyOn(PostDetailsModel, 'findById').mockImplementation(async (id) => {
         const idStr = id as string;
         const index = parseInt(idStr.split('-')[1]);
         return mockPostDetails(index);
@@ -301,7 +303,7 @@ describe('PostStreamQueue', () => {
       // Track all posts returned across multiple calls
       const allReturnedPosts: string[] = [];
 
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockImplementation(async (id) => {
+      vi.spyOn(PostDetailsModel, 'findById').mockImplementation(async (id) => {
         const idStr = id as string;
         const index = parseInt(idStr.split('-')[1]);
         return {
@@ -310,7 +312,7 @@ describe('PostStreamQueue', () => {
           content: `Post ${idStr}`,
           kind: 'short' as const,
           uri: `pubky://author/${id}`,
-          author: 'author1' as Core.Pubky,
+          author: 'author1' as Pubky,
           attachments: null,
         };
       });
@@ -478,7 +480,7 @@ describe('PostStreamQueue', () => {
     });
 
     it('should return undefined timestamp when queue is empty and no posts found', async () => {
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockResolvedValue(null);
+      vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(null);
 
       queue['save'](streamId, [], BASE_TIMESTAMP);
 
@@ -499,21 +501,21 @@ describe('PostStreamQueue', () => {
         content: 'Test post',
         kind: 'short' as const,
         uri: 'pubky://author/post-5',
-        author: 'author1' as Core.Pubky,
+        author: 'author1' as Pubky,
         attachments: null,
       };
 
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockResolvedValue(mockPost);
+      vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(mockPost);
 
       const posts = ['post-1', 'post-2', 'post-3', 'post-4', 'post-5', 'post-6'];
       const timestamp = await queue['getLastPostTimestamp'](posts, 5);
 
       expect(timestamp).toBe(BASE_TIMESTAMP + 5);
-      expect(Core.PostDetailsModel.findById).toHaveBeenCalledWith('post-5');
+      expect(PostDetailsModel.findById).toHaveBeenCalledWith('post-5');
     });
 
     it('should return undefined when post details not found', async () => {
-      vi.spyOn(Core.PostDetailsModel, 'findById').mockResolvedValue(null);
+      vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(null);
 
       const posts = ['post-1', 'post-2'];
       const timestamp = await queue['getLastPostTimestamp'](posts, 2);

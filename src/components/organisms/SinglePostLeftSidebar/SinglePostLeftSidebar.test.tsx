@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SinglePostLeftSidebar, SinglePostLeftDrawer } from './SinglePostLeftSidebar';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { SinglePostLeftDrawer, SinglePostLeftSidebar } from './SinglePostLeftSidebar';
 
 const mockSetLayout = vi.fn();
 const mockUseHomeStore = vi.fn();
@@ -35,15 +35,11 @@ const mockFilterLayout = vi.fn(
   ),
 );
 
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useHomeStore: () => mockUseHomeStore(),
-  };
-});
+vi.mock('@/stores/home/home.store', () => ({
+  useHomeStore: () => mockUseHomeStore(),
+}));
 
-vi.mock('@/atoms/Container', () => ({
+vi.mock('@/atoms/Container/Container', () => ({
   Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="container" className={className}>
       {children}
@@ -51,10 +47,19 @@ vi.mock('@/atoms/Container', () => ({
   ),
 }));
 
-vi.mock('@/molecules/Filters/', () => ({
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => ({
   FilterReach: (props: BaseFilterMockProps) => mockFilterReach(props),
+}));
+
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => ({
   FilterSort: (props: BaseFilterMockProps) => mockFilterSort(props),
+}));
+
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => ({
   FilterContent: (props: BaseFilterMockProps) => mockFilterContent(props),
+}));
+
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => ({
   FilterLayout: ({ selectedTab, onTabChange }: { selectedTab?: string; onTabChange?: (tab: string) => void }) =>
     mockFilterLayout({ selectedTab, onTabChange }),
 }));

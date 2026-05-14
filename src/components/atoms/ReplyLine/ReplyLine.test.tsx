@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import { ReplyLine } from './ReplyLine';
+import { describe, expect, it } from 'vitest';
 import { createReplyConnectorPath } from '@/libs/svg/svg';
+import { ReplyLine } from './ReplyLine';
 
 describe('ReplyLine', () => {
   it('renders with required height prop', () => {

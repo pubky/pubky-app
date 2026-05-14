@@ -1,23 +1,21 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HumanSelection } from './HumanSelection';
 
-vi.mock('@/molecules', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>('@/molecules');
-
+vi.mock('@/molecules/HumanFooter/HumanFooter', () => {
   return {
-    ...actual,
-    HumanSmsCard: () => <div data-testid="mock-sms-card">SMS Verification Card</div>,
     HumanFooter: () => <div data-testid="mock-human-footer">Human Footer</div>,
   };
 });
 
-vi.mock('@/organisms', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>('@/organisms');
-
+vi.mock('@/molecules/HumanSmsCard/HumanSmsCard', () => {
   return {
-    ...actual,
+    HumanSmsCard: () => <div data-testid="mock-sms-card">SMS Verification Card</div>,
+  };
+});
+
+vi.mock('@/organisms/HumanBitcoinCard/HumanBitcoinCard', () => {
+  return {
     HumanBitcoinCard: () => <div data-testid="mock-bitcoin-card">Bitcoin Payment Card</div>,
   };
 });

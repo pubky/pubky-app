@@ -1,7 +1,9 @@
 'use client';
 
-import * as Core from '@/core';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
+import { UserController } from '@/controllers/user/user';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import type { NexusUserCounts } from '@/services/nexus/nexus.types';
+import { useNotificationStore } from '@/stores/notification/notification.store';
 import { ProfileStats, UseProfileStatsResult } from './useProfileStats.types';
 
 /**
@@ -21,15 +23,15 @@ import { ProfileStats, UseProfileStatsResult } from './useProfileStats.types';
  */
 export function useProfileStats(userId: string): UseProfileStatsResult {
   // Fetch user counts using local-first pattern — replaces manual useLiveQuery + buggy useEffect
-  const { data: userCounts, isLoading } = useLocalFirstQuery<Core.NexusUserCounts>({
-    queryFn: () => Core.UserController.getCounts({ userId }),
-    fetchFn: () => Core.UserController.fetchCounts({ userId }),
+  const { data: userCounts, isLoading } = useLocalFirstQuery<NexusUserCounts>({
+    queryFn: () => UserController.getCounts({ userId }),
+    fetchFn: () => UserController.fetchCounts({ userId }),
     deps: [userId],
     enabled: !!userId,
   });
 
   // Get unread notifications count reactively from Zustand store
-  const unreadNotificationsCount = Core.useNotificationStore((state) => state.selectUnread());
+  const unreadNotificationsCount = useNotificationStore((state) => state.selectUnread());
 
   // Build stats object from user counts
   // IMPORTANT: Backend counts.posts includes replies, so we subtract to get actual posts

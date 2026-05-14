@@ -1,7 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
-import { HomegateController } from '@/core';
-
+import { describe, expect, it, vi } from 'vitest';
+import { HomegateController } from '@/controllers/homegate/homegate';
 import { HumanPhoneCode } from './HumanPhoneCode';
 
 describe('HumanPhoneCode', () => {

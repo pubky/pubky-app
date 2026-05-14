@@ -1,8 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
+import { ModerationType } from '@/models/moderation/moderation.schema';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import { LocalModerationService } from '@/services/local/moderation/moderation';
 import { ModerationApplication } from './moderation';
-import * as Core from '@/core';
 
-vi.mock('@/core/services/local/moderation', () => ({
+vi.mock('@/services/local/moderation/moderation', () => ({
   LocalModerationService: {
     setUnBlur: vi.fn(),
     getModerationRecords: vi.fn(),
@@ -18,7 +22,7 @@ describe('ModerationApplication', () => {
   describe('setUnBlur', () => {
     it('should delegate to LocalModerationService', async () => {
       const id = 'author:post1';
-      const spy = vi.spyOn(Core.LocalModerationService, 'setUnBlur').mockResolvedValue(undefined);
+      const spy = vi.spyOn(LocalModerationService, 'setUnBlur').mockResolvedValue(undefined);
 
       await ModerationApplication.setUnBlur(id);
 
@@ -28,7 +32,7 @@ describe('ModerationApplication', () => {
 
   describe('enrichPostsWithModeration', () => {
     it('should return not moderated when no record exists', async () => {
-      const posts: Core.PostDetailsModelSchema[] = [
+      const posts: PostDetailsModelSchema[] = [
         {
           id: 'author:post1',
           content: 'Test content',
@@ -39,7 +43,7 @@ describe('ModerationApplication', () => {
         },
       ];
 
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecords').mockResolvedValue([]);
+      vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([]);
 
       const result = await ModerationApplication.enrichPostsWithModeration(posts, false);
 
@@ -47,7 +51,7 @@ describe('ModerationApplication', () => {
     });
 
     it('should return blurred when post is moderated and is_blurred is true', async () => {
-      const posts: Core.PostDetailsModelSchema[] = [
+      const posts: PostDetailsModelSchema[] = [
         {
           id: 'author:post1',
           content: 'Test content',
@@ -58,8 +62,8 @@ describe('ModerationApplication', () => {
         },
       ];
 
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecords').mockResolvedValue([
-        { id: posts[0].id, type: Core.ModerationType.POST, is_blurred: true, created_at: Date.now() },
+      vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([
+        { id: posts[0].id, type: ModerationType.POST, is_blurred: true, created_at: Date.now() },
       ]);
 
       const result = await ModerationApplication.enrichPostsWithModeration(posts, false);
@@ -68,7 +72,7 @@ describe('ModerationApplication', () => {
     });
 
     it('should return not blurred when post is moderated but is_blurred is false', async () => {
-      const posts: Core.PostDetailsModelSchema[] = [
+      const posts: PostDetailsModelSchema[] = [
         {
           id: 'author:post1',
           content: 'Test content',
@@ -79,8 +83,8 @@ describe('ModerationApplication', () => {
         },
       ];
 
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecords').mockResolvedValue([
-        { id: posts[0].id, type: Core.ModerationType.POST, is_blurred: false, created_at: Date.now() },
+      vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([
+        { id: posts[0].id, type: ModerationType.POST, is_blurred: false, created_at: Date.now() },
       ]);
 
       const result = await ModerationApplication.enrichPostsWithModeration(posts, false);
@@ -89,7 +93,7 @@ describe('ModerationApplication', () => {
     });
 
     it('should return not blurred when blur is disabled globally', async () => {
-      const posts: Core.PostDetailsModelSchema[] = [
+      const posts: PostDetailsModelSchema[] = [
         {
           id: 'author:post1',
           content: 'Test content',
@@ -100,8 +104,8 @@ describe('ModerationApplication', () => {
         },
       ];
 
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecords').mockResolvedValue([
-        { id: posts[0].id, type: Core.ModerationType.POST, is_blurred: true, created_at: Date.now() },
+      vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([
+        { id: posts[0].id, type: ModerationType.POST, is_blurred: true, created_at: Date.now() },
       ]);
 
       const result = await ModerationApplication.enrichPostsWithModeration(posts, true); // blur disabled
@@ -110,7 +114,7 @@ describe('ModerationApplication', () => {
     });
 
     it('should use single batch query for multiple posts with POST type filter', async () => {
-      const posts: Core.PostDetailsModelSchema[] = [
+      const posts: PostDetailsModelSchema[] = [
         {
           id: 'author:post1',
           content: 'Content 1',
@@ -130,14 +134,14 @@ describe('ModerationApplication', () => {
       ];
 
       const getModerationRecordsSpy = vi
-        .spyOn(Core.LocalModerationService, 'getModerationRecords')
+        .spyOn(LocalModerationService, 'getModerationRecords')
         .mockResolvedValue([
-          { id: 'author:post1', type: Core.ModerationType.POST, is_blurred: true, created_at: Date.now() },
+          { id: 'author:post1', type: ModerationType.POST, is_blurred: true, created_at: Date.now() },
         ]);
 
       const result = await ModerationApplication.enrichPostsWithModeration(posts, false);
 
-      expect(getModerationRecordsSpy).toHaveBeenCalledWith(['author:post1', 'author:post2'], Core.ModerationType.POST);
+      expect(getModerationRecordsSpy).toHaveBeenCalledWith(['author:post1', 'author:post2'], ModerationType.POST);
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ ...posts[0], is_moderated: true, is_blurred: true });
       expect(result[1]).toEqual({ ...posts[1], is_moderated: false, is_blurred: false });
@@ -150,7 +154,7 @@ describe('ModerationApplication', () => {
     });
 
     it('should handle mixed moderation states', async () => {
-      const posts: Core.PostDetailsModelSchema[] = [
+      const posts: PostDetailsModelSchema[] = [
         {
           id: 'author:post1',
           content: 'Moderated but unblurred',
@@ -177,9 +181,9 @@ describe('ModerationApplication', () => {
         },
       ];
 
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecords').mockResolvedValue([
-        { id: 'author:post1', type: Core.ModerationType.POST, is_blurred: false, created_at: Date.now() },
-        { id: 'author:post2', type: Core.ModerationType.POST, is_blurred: true, created_at: Date.now() },
+      vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([
+        { id: 'author:post1', type: ModerationType.POST, is_blurred: false, created_at: Date.now() },
+        { id: 'author:post2', type: ModerationType.POST, is_blurred: true, created_at: Date.now() },
       ]);
 
       const result = await ModerationApplication.enrichPostsWithModeration(posts, false);
@@ -194,8 +198,8 @@ describe('ModerationApplication', () => {
   });
 
   describe('enrichUsersWithModeration', () => {
-    const createMockUser = (id: string): Core.UserDetailsModelSchema => ({
-      id: id as Core.Pubky,
+    const createMockUser = (id: string): UserDetailsModelSchema => ({
+      id: id as Pubky,
       name: 'Test User',
       bio: 'Test bio',
       image: null,
@@ -207,7 +211,7 @@ describe('ModerationApplication', () => {
     it('should return not moderated when no record exists', async () => {
       const users = [createMockUser('pk:user1')];
 
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecords').mockResolvedValue([]);
+      vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([]);
 
       const result = await ModerationApplication.enrichUsersWithModeration(users, false);
 
@@ -217,8 +221,8 @@ describe('ModerationApplication', () => {
     it('should return blurred when user is moderated and is_blurred is true', async () => {
       const users = [createMockUser('pk:user1')];
 
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecords').mockResolvedValue([
-        { id: 'pk:user1', type: Core.ModerationType.PROFILE, is_blurred: true, created_at: Date.now() },
+      vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([
+        { id: 'pk:user1', type: ModerationType.PROFILE, is_blurred: true, created_at: Date.now() },
       ]);
 
       const result = await ModerationApplication.enrichUsersWithModeration(users, false);
@@ -229,8 +233,8 @@ describe('ModerationApplication', () => {
     it('should return not blurred when user is moderated but is_blurred is false', async () => {
       const users = [createMockUser('pk:user1')];
 
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecords').mockResolvedValue([
-        { id: 'pk:user1', type: Core.ModerationType.PROFILE, is_blurred: false, created_at: Date.now() },
+      vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([
+        { id: 'pk:user1', type: ModerationType.PROFILE, is_blurred: false, created_at: Date.now() },
       ]);
 
       const result = await ModerationApplication.enrichUsersWithModeration(users, false);
@@ -241,8 +245,8 @@ describe('ModerationApplication', () => {
     it('should return not blurred when blur is disabled globally', async () => {
       const users = [createMockUser('pk:user1')];
 
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecords').mockResolvedValue([
-        { id: 'pk:user1', type: Core.ModerationType.PROFILE, is_blurred: true, created_at: Date.now() },
+      vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([
+        { id: 'pk:user1', type: ModerationType.PROFILE, is_blurred: true, created_at: Date.now() },
       ]);
 
       const result = await ModerationApplication.enrichUsersWithModeration(users, true); // blur disabled
@@ -253,13 +257,11 @@ describe('ModerationApplication', () => {
     it('should filter by PROFILE type when calling getModerationRecords', async () => {
       const users = [createMockUser('pk:user1'), createMockUser('pk:user2')];
 
-      const getModerationRecordsSpy = vi
-        .spyOn(Core.LocalModerationService, 'getModerationRecords')
-        .mockResolvedValue([]);
+      const getModerationRecordsSpy = vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([]);
 
       await ModerationApplication.enrichUsersWithModeration(users, false);
 
-      expect(getModerationRecordsSpy).toHaveBeenCalledWith(['pk:user1', 'pk:user2'], Core.ModerationType.PROFILE);
+      expect(getModerationRecordsSpy).toHaveBeenCalledWith(['pk:user1', 'pk:user2'], ModerationType.PROFILE);
     });
 
     it('should return empty array for empty input', async () => {
@@ -271,9 +273,9 @@ describe('ModerationApplication', () => {
     it('should handle mixed moderation states', async () => {
       const users = [createMockUser('pk:user1'), createMockUser('pk:user2'), createMockUser('pk:user3')];
 
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecords').mockResolvedValue([
-        { id: 'pk:user1', type: Core.ModerationType.PROFILE, is_blurred: false, created_at: Date.now() },
-        { id: 'pk:user2', type: Core.ModerationType.PROFILE, is_blurred: true, created_at: Date.now() },
+      vi.spyOn(LocalModerationService, 'getModerationRecords').mockResolvedValue([
+        { id: 'pk:user1', type: ModerationType.PROFILE, is_blurred: false, created_at: Date.now() },
+        { id: 'pk:user2', type: ModerationType.PROFILE, is_blurred: true, created_at: Date.now() },
       ]);
 
       const result = await ModerationApplication.enrichUsersWithModeration(users, false);
@@ -289,37 +291,37 @@ describe('ModerationApplication', () => {
 
   describe('getModerationStatus', () => {
     it('should return not moderated when no record exists', async () => {
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecord').mockResolvedValue(null);
+      vi.spyOn(LocalModerationService, 'getModerationRecord').mockResolvedValue(null);
 
-      const result = await ModerationApplication.getModerationStatus('author:post1', Core.ModerationType.POST, false);
+      const result = await ModerationApplication.getModerationStatus('author:post1', ModerationType.POST, false);
 
       expect(result).toEqual({ is_moderated: false, is_blurred: false });
     });
 
     it('should return moderated and blurred when record exists with is_blurred true', async () => {
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecord').mockResolvedValue({
+      vi.spyOn(LocalModerationService, 'getModerationRecord').mockResolvedValue({
         id: 'author:post1',
-        type: Core.ModerationType.POST,
+        type: ModerationType.POST,
         is_blurred: true,
         created_at: Date.now(),
       });
 
-      const result = await ModerationApplication.getModerationStatus('author:post1', Core.ModerationType.POST, false);
+      const result = await ModerationApplication.getModerationStatus('author:post1', ModerationType.POST, false);
 
       expect(result).toEqual({ is_moderated: true, is_blurred: true });
     });
 
     it('should return not blurred when blur is disabled globally', async () => {
-      vi.spyOn(Core.LocalModerationService, 'getModerationRecord').mockResolvedValue({
+      vi.spyOn(LocalModerationService, 'getModerationRecord').mockResolvedValue({
         id: 'author:post1',
-        type: Core.ModerationType.POST,
+        type: ModerationType.POST,
         is_blurred: true,
         created_at: Date.now(),
       });
 
       const result = await ModerationApplication.getModerationStatus(
         'author:post1',
-        Core.ModerationType.POST,
+        ModerationType.POST,
         true, // blur disabled
       );
 

@@ -1,6 +1,11 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
 
 export type TMuteParams = {
-  muter: Core.Pubky;
-  mutee: Core.Pubky;
+  muter: Pubky;
+  mutee: Pubky;
+};
+
+export type TMuteDirectoryEvent = {
+  cursor: string;
+  eventType: string;
 };

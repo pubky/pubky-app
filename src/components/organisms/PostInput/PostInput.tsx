@@ -2,21 +2,30 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config';
-import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
-import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
+import { Container } from '@/atoms/Container/Container';
+import { Input } from '@/atoms/Input/Input';
+import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
+import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { Textarea } from '@/atoms/Textarea/Textarea';
+import { Typography } from '@/atoms/Typography/Typography';
+import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
+import { usePostInput } from '@/hooks/usePostInput/usePostInput';
+import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
+import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
+import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
+import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
+import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
+import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
+import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { PostHeader } from '../PostHeader/PostHeader';
+import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import type { PostInputProps } from './PostInput.types';
-import { PostInputExpandableSection } from '../PostInputExpandableSection';
-import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
-import type { ArticleJSON } from '@/hooks';
-import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
-import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 
 const EXPANDABLE_SECTION_PARENT_GAP_PX = 16;
 
@@ -85,7 +94,7 @@ export function PostInput({
     setMentionSelectedIndex,
     handleMentionSelect,
     handleMentionKeyDown,
-  } = Hooks.usePostInput({
+  } = usePostInput({
     variant,
     postId,
     originalPostId,
@@ -101,7 +110,7 @@ export function PostInput({
     return canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
   }, [variant, content, attachments, isSubmitting, isArticle, articleTitle]);
 
-  const enterSubmitHandler = Hooks.useEnterSubmit(isValid, handleSubmit, {
+  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmit, {
     requireModifier: true,
   });
 
@@ -113,7 +122,7 @@ export function PostInput({
 
   const isEdit = variant === POST_INPUT_VARIANT.EDIT;
 
-  const { toast } = Molecules.useToast();
+  const { toast } = useToast();
 
   React.useEffect(() => {
     if (isEdit) {
@@ -155,12 +164,12 @@ export function PostInput({
 
   const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
 
   return (
-    <Atoms.Container
+    <Container
       data-cy={dataCy}
       id={id}
       ref={containerRef}
@@ -177,18 +186,18 @@ export function PostInput({
     >
       {/* Drag overlay */}
       {isDragging && (
-        <Atoms.Container
+        <Container
           className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
           overrideDefaults
         >
-          <Atoms.Typography className="text-brand">{t('dropFiles')}</Atoms.Typography>
-        </Atoms.Container>
+          <Typography className="text-brand">{t('dropFiles')}</Typography>
+        </Container>
       )}
 
-      {showThreadConnector && <Atoms.PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
-      <Atoms.Container className="gap-4 contain-inline-size">
+      {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
+      <Container className="gap-4 contain-inline-size">
         {isArticle && (
-          <Atoms.Input
+          <Input
             placeholder={t('articleTitle')}
             defaultValue={articleTitle}
             onChange={handleArticleTitleChange}
@@ -199,7 +208,7 @@ export function PostInput({
         )}
 
         {currentUserPubky && (
-          <Organisms.PostHeader
+          <PostHeader
             postId={currentUserPubky}
             isReplyInput={true}
             characterLimit={characterLimit}
@@ -209,12 +218,12 @@ export function PostInput({
         )}
 
         {!isArticle && (
-          <Atoms.Container overrideDefaults className="relative">
-            <Atoms.Textarea
+          <Container overrideDefaults className="relative">
+            <Textarea
               ref={textareaRef}
               placeholder={displayPlaceholder}
               variant="inline"
-              className={isWideLayout ? WIDE_POST_LAYOUT_CLASSES.bodyText : undefined}
+              className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
               value={content}
               onChange={handleChange}
               onFocus={handleExpand}
@@ -229,14 +238,14 @@ export function PostInput({
 
             {/* Mention autocomplete popover */}
             {mentionIsOpen && (
-              <Molecules.MentionPopover
+              <MentionPopover
                 users={mentionUsers}
                 selectedIndex={mentionSelectedIndex}
                 onSelect={handleMentionSelect}
                 onHover={setMentionSelectedIndex}
               />
             )}
-          </Atoms.Container>
+          </Container>
         )}
 
         {!isEdit && (
@@ -252,7 +261,7 @@ export function PostInput({
         )}
 
         {isArticle && (
-          <Molecules.MarkdownEditor
+          <MarkdownEditor
             ref={markdownEditorRef}
             autoFocus
             markdown={sanitizeCodeBlockLanguages(content)}
@@ -263,7 +272,7 @@ export function PostInput({
 
         {/* Show original post preview for reposts */}
         {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
-          <Molecules.PostPreviewCard postId={originalPostId} className="bg-card" />
+          <PostPreviewCard postId={originalPostId} className="bg-card" />
         )}
 
         <PostInputExpandableSection
@@ -284,7 +293,7 @@ export function PostInput({
           parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
           characterLimit={characterLimit}
         />
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

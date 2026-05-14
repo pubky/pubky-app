@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TaggedItem } from './TaggedItem';
 import type { TagWithAvatars } from './TaggedItem.types';
 
@@ -12,15 +12,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock Atoms.Tag and Button
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
+vi.mock('@/atoms/Button/Button', () => {
   return {
-    ...actual,
-    Tag: ({ name, count }: { name: string; count?: number }) => (
-      <div data-testid="tag">
-        {name} {count !== undefined && `(${count})`}
-      </div>
-    ),
     Button: ({
       children,
       onClick,
@@ -48,11 +41,19 @@ vi.mock('@/atoms', async (importOriginal) => {
   };
 });
 
-// Mock AvatarWithFallback
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/atoms/Tag/Tag', () => {
   return {
-    ...actual,
+    Tag: ({ name, count }: { name: string; count?: number }) => (
+      <div data-testid="tag">
+        {name} {count !== undefined && `(${count})`}
+      </div>
+    ),
+  };
+});
+
+// Mock AvatarWithFallback
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
     AvatarWithFallback: ({ name }: { name: string }) => (
       <div data-testid="avatar" data-name={name}>
         Avatar
@@ -62,10 +63,8 @@ vi.mock('@/organisms', async (importOriginal) => {
 });
 
 // Mock WhoTaggedExpandedList
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/WhoTaggedExpandedList/WhoTaggedExpandedList', () => {
   return {
-    ...actual,
     WhoTaggedExpandedList: ({ taggerIds }: { taggerIds: Array<string> }) => (
       <div data-testid="who-tagged-expanded-list">Expanded List ({taggerIds.length} users)</div>
     ),
@@ -73,16 +72,12 @@ vi.mock('@/molecules', async (importOriginal) => {
 });
 
 // Mock hooks - useRequireAuth needs to execute the action for authenticated users
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useRequireAuth: vi.fn(() => ({
-      isAuthenticated: true,
-      requireAuth: vi.fn((action: () => void) => action()),
-    })),
-  };
-});
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: vi.fn(() => ({
+    isAuthenticated: true,
+    requireAuth: vi.fn((action: () => void) => action()),
+  })),
+}));
 
 const mockTag: TagWithAvatars = {
   label: 'bitcoin',

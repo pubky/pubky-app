@@ -1,15 +1,16 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { asOpaque, mockClipboardEvent, mockDragEvent } from '@/test-utils';
-import { usePostInput } from './usePostInput';
-import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  POST_MAX_CHARACTER_LENGTH,
-  ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
-  POST_ATTACHMENT_MAX_FILES,
   ARTICLE_ATTACHMENT_MAX_FILES,
+  ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
   ATTACHMENT_MAX_OTHER_SIZE,
-} from '@/config';
+  POST_ATTACHMENT_MAX_FILES,
+  POST_MAX_CHARACTER_LENGTH,
+} from '@/config/posts';
+import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { usePostInput } from './usePostInput';
 
 // next-intl is mocked globally in src/config/test.ts
 // Real placeholders from messages/en.json for test assertions
@@ -39,10 +40,13 @@ let mockIsSubmitting = false;
 
 const mockDeletePost = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(() => ({
     currentUserPubky: 'test-user-pubky',
   })),
+}));
+
+vi.mock('@/hooks/usePost/usePost', () => ({
   usePost: vi.fn(() => ({
     content: mockContent,
     setContent: mockSetContent,
@@ -60,11 +64,20 @@ vi.mock('@/hooks', () => ({
     edit: mockEdit,
     isSubmitting: mockIsSubmitting,
   })),
+}));
+
+vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
+}));
+
+vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
   useUserDetails: vi.fn(() => ({
     userDetails: { name: 'Test Author' },
     isLoading: false,
   })),
+}));
+
+vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: vi.fn(() => ({
     deletePost: mockDeletePost,
     isDeleting: false,
@@ -73,7 +86,7 @@ vi.mock('@/hooks', () => ({
 
 // Mock TimelineFeed context
 const mockPrependPosts = vi.fn();
-vi.mock('@/organisms/Timeline/Feed/TimelineFeed', () => ({
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: vi.fn(() => ({
     prependPosts: mockPrependPosts,
     removePosts: vi.fn(),
@@ -82,15 +95,17 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed', () => ({
 
 // Mock useToast
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: vi.fn(() => ({
-    toast: mockToast,
-  })),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: vi.fn(() => ({
+      toast: mockToast,
+    })),
+  };
+});
 
-// Mock Core.useLocalFilesStore
+// Mock useLocalFilesStore
 const mockSetPostAttachments = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: {
     getState: vi.fn(() => ({
       setPostAttachments: mockSetPostAttachments,

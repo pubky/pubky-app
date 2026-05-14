@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TagInputToggle - Snapshots > matches snapshot in button state 1`] = `
+<div
+  class="inline-flex h-full w-full items-center justify-center"
+>
+  <button
+    data-testid="button-content"
+  >
+    Add
+  </button>
+</div>
+`;
+
+exports[`TagInputToggle - Snapshots > matches snapshot in input state 1`] = `
+<div
+  class="w-full shrink-0"
+>
+  <div
+    data-testid="input-content"
+  >
+    Input
+  </div>
+</div>
+`;

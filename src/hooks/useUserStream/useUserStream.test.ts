@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { UserStreamTypes } from '@/core/models/stream/user/userStream.types';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { useUserStream } from './useUserStream';
 import { DEFAULT_USER_STREAM_LIMIT, DEFAULT_USER_STREAM_PAGE_SIZE } from './useUserStream.constants';
 
@@ -14,20 +14,26 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (...args: unknown[]) => mockUseLiveQuery(...args),
 }));
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/controllers/stream/users/users', () => ({
   StreamUserController: {
     getOrFetchStreamSlice: (...args: unknown[]) => mockGetOrFetchStreamSlice(...args),
   },
+}));
+vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getManyDetails: vi.fn().mockResolvedValue(new Map()),
     getManyCounts: vi.fn().mockResolvedValue(new Map()),
     getManyRelationships: vi.fn().mockResolvedValue(new Map()),
     getManyTagsOrFetch: vi.fn().mockResolvedValue(new Map()),
   },
+}));
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: (id: string) => `https://cdn.example.com/avatar/${id}`,
   },
+}));
+vi.mock('@/models/stream/user/userStream.types', () => ({
   UserStreamTypes: {
     RECOMMENDED: 'recommended:all:all',
     TODAY_INFLUENCERS_ALL: 'influencers:today:all',

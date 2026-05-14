@@ -1,11 +1,11 @@
+import { type ZustandSet } from '../stores.types';
 import {
-  type OnboardingStore,
   type OnboardingActions,
-  onboardingInitialState,
   OnboardingActionTypes,
+  onboardingInitialState,
+  type OnboardingStore,
   TOnboardingSecrets,
 } from './onboarding.types';
-import { type ZustandSet } from '../stores.types';
 
 export const createOnboardingActions = (set: ZustandSet<OnboardingStore>): OnboardingActions => ({
   reset: () => {

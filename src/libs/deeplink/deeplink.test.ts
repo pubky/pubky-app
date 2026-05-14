@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { generatePubkyRingDeeplink, GenerateDeeplinkOptions } from './deeplink';
+import { describe, expect, it } from 'vitest';
+import { GenerateDeeplinkOptions, generatePubkyRingDeeplink } from './deeplink';
 
 describe('generatePubkyRingDeeplink', () => {
   describe('basic functionality', () => {

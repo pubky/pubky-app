@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HotTagsCardsSection } from './HotTagsCardsSection';
 
 const mockPush = vi.fn();
@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/hot/hot.store', () => ({
   useHotStore: vi.fn(() => ({
     reach: 'all',
     timeframe: 'this_month',
@@ -18,40 +18,65 @@ vi.mock('@/core', () => ({
 
 const mockUseHotTags = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useHotTags/useHotTags', () => ({
   useHotTags: (params: unknown) => mockUseHotTags(params),
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
+}));
+
+vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
   useBulkUserAvatars: vi.fn(() => ({
     getUsersWithAvatars: vi.fn(() => []),
   })),
 }));
 
-vi.mock('@/config', () => ({
+vi.mock('@/config/tags', () => ({
   HOT_TAGS_FEATURED_COUNT: 3,
 }));
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    overrideDefaults: _overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    overrideDefaults?: boolean;
-    [key: string]: unknown;
-  }) => <div {...props}>{children}</div>,
-  Heading: ({ children }: { children: React.ReactNode }) => <h5>{children}</h5>,
-  Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p className={className}>{children}</p>
-  ),
-  Skeleton: ({ className, ...props }: { className?: string; [key: string]: unknown }) => (
-    <div className={className} data-slot="skeleton" {...props} />
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      overrideDefaults: _overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      overrideDefaults?: boolean;
+      [key: string]: unknown;
+    }) => <div {...props}>{children}</div>,
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  HotTagCard: ({ tagName }: { tagName: string }) => <div data-testid={`hot-tag-card-${tagName}`}>{tagName}</div>,
-}));
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children }: { children: React.ReactNode }) => <h5>{children}</h5>,
+  };
+});
+
+vi.mock('@/atoms/Skeleton/Skeleton', () => {
+  return {
+    Skeleton: ({ className, ...props }: { className?: string; [key: string]: unknown }) => (
+      <div className={className} data-slot="skeleton" {...props} />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <p className={className}>{children}</p>
+    ),
+  };
+});
+
+vi.mock('@/molecules/HotTagCard/HotTagCard', () => {
+  return {
+    HotTagCard: ({ tagName }: { tagName: string }) => <div data-testid={`hot-tag-card-${tagName}`}>{tagName}</div>,
+  };
+});
 
 describe('HotTagsCardsSection', () => {
   beforeEach(() => {

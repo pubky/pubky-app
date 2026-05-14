@@ -16,17 +16,16 @@
  */
 
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-
 import {
-  LAYOUT,
-  REACH,
-  SORT,
   CONTENT,
-  type LayoutType,
-  type ReachType,
-  type SortType,
   type ContentType,
-} from '@/core/stores/home/home.types';
+  LAYOUT,
+  type LayoutType,
+  REACH,
+  type ReachType,
+  SORT,
+  type SortType,
+} from '@/stores/home/home.types';
 
 // ============================================================================
 // Layout Mappers

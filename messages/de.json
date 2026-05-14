@@ -383,7 +383,7 @@
       "neverShareMobile": "Teilen Sie diese Datei und dieses Passwort niemals mit anderen.",
       "password": "PASSWORT",
       "passwordPlaceholder": "Geben Sie ein starkes Passwort ein",
-      "passwordHint": "Wir empfehlen 8 oder mehr Zeichen mit Gross- und Kleinbuchstaben, Zahlen und Symbolen.",
+      "passwordHint": "Wir empfehlen eine lange <passphraseLink>Passphrase</passphraseLink> mit <minLen>mehr als 16 Zeichen</minLen> für bessere Sicherheit.",
       "repeatPassword": "PASSWORT WIEDERHOLEN",
       "repeatPasswordPlaceholder": "Wiederholen Sie Ihr Passwort",
       "passwordsDoNotMatch": "Passwörter stimmen nicht überein",
@@ -443,7 +443,8 @@
     "viewOriginal": "Originalbeitrag ansehen",
     "youReposted": "Du hast geteilt",
     "newPostsSingular": "{count} neuen Beitrag anzeigen",
-    "newPostsPlural": "{count} neue Beiträge anzeigen"
+    "newPostsPlural": "{count} neue Beiträge anzeigen",
+    "replies": "Antworten"
   },
   "profile": {
     "title": "Profil",
@@ -1010,10 +1011,11 @@
     "couldNotFind": "Angeforderte Ressource konnte nicht gefunden werden"
   },
   "password": {
+    "veryWeak": "Sehr schwaches Passwort",
     "weak": "Schwaches Passwort",
-    "fair": "Maessiges Passwort",
-    "good": "Gutes Passwort",
-    "strong": "Starkes Passwort!"
+    "moderate": "Mittleres Passwort",
+    "strong": "Starkes Passwort",
+    "veryStrong": "Sehr starkes Passwort"
   },
   "quickReply": {
     "prompts": [

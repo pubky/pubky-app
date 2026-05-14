@@ -262,13 +262,17 @@ Wrap Dexie operations with `Err.database()`.
 
 ```typescript
 // src/core/services/local/post/post.ts
+import { db } from '@/database/franky/franky';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
+
 export class LocalPostService {
   static async create({ compositePostId, post }: TLocalSavePostParams) {
     try {
-      await Core.db.transaction('rw', [...tables], async () => {
+      await db.transaction('rw', [...tables], async () => {
         await Promise.all([
-          Core.PostDetailsModel.create(postDetails),
-          Core.PostRelationshipsModel.create(postRelationships),
+          PostDetailsModel.create(postDetails),
+          PostRelationshipsModel.create(postRelationships),
           // ...
         ]);
       });
@@ -483,10 +487,12 @@ React Error Boundaries **cannot catch** errors in:
 Errors in `useLiveQuery` must be handled with manual try/catch:
 
 ```typescript
+import { PostController } from '@/controllers/post/post';
+
 const postDetails = useLiveQuery(async () => {
   try {
     if (!compositeId) return null;
-    return await Core.PostController.getDetails({ compositeId });
+    return await PostController.getDetails({ compositeId });
   } catch (error) {
     Logger.error('[usePostDetails] Query failed', { compositeId, error });
     return null; // or undefined, depending on desired behavior

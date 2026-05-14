@@ -1,0 +1,40 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PostInlineTagsActions - Snapshots > matches snapshot with default props 1`] = `
+<div
+  class="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+  data-testid="container"
+>
+  <div
+    data-add-mode="true"
+    data-post-id="snapshot-author:post-1"
+    data-show-add-button="true"
+    data-show-count="true"
+    data-show-input="false"
+    data-testid="clickable-tags-list"
+  />
+  <div
+    data-post-id="snapshot-author:post-1"
+    data-testid="post-actions-bar"
+  >
+    <button
+      data-testid="tag-button"
+      type="button"
+    >
+      Tag
+    </button>
+    <button
+      data-testid="reply-button"
+      type="button"
+    >
+      Reply
+    </button>
+    <button
+      data-testid="repost-button"
+      type="button"
+    >
+      Repost
+    </button>
+  </div>
+</div>
+`;

@@ -3,35 +3,45 @@
 exports[`ClickableTagsList > Snapshots > matches snapshot with add button 1`] = `
 <div>
   <div
-    class="flex flex-wrap items-center gap-2"
+    class="flex flex-col gap-1"
     data-testid="container"
   >
-    <button
-      data-count="5"
-      data-selected="true"
-      data-testid="post-tag-bitcoin"
+    <div
+      class="flex flex-wrap items-center gap-2"
+      data-testid="container"
     >
-      bitcoin
-    </button>
-    <button
-      data-count="3"
-      data-selected="false"
-      data-testid="post-tag-ethereum"
-    >
-      ethereum
-    </button>
-    <button
-      data-count="10"
-      data-selected="false"
-      data-testid="post-tag-web3"
-    >
-      web3
-    </button>
-    <button
-      data-testid="post-tag-add-button"
-    >
-      Add
-    </button>
+      <button
+        data-count="5"
+        data-selected="true"
+        data-testid="post-tag-bitcoin"
+      >
+        bitcoin
+      </button>
+      <button
+        data-count="3"
+        data-selected="false"
+        data-testid="post-tag-ethereum"
+      >
+        ethereum
+      </button>
+      <button
+        data-count="10"
+        data-selected="false"
+        data-testid="post-tag-web3"
+      >
+        web3
+      </button>
+      <div
+        data-testid="tag-input-toggle"
+      >
+        <button
+          data-testid="post-tag-add-button"
+          data-variant="plain"
+        >
+          Add
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 `;
@@ -39,45 +49,50 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with add button 1`] = 
 exports[`ClickableTagsList > Snapshots > matches snapshot with close buttons 1`] = `
 <div>
   <div
-    class="flex flex-wrap items-center gap-2"
+    class="flex flex-col gap-1"
     data-testid="container"
   >
-    <button
-      data-count="5"
-      data-selected="true"
-      data-testid="post-tag-bitcoin"
+    <div
+      class="flex flex-wrap items-center gap-2"
+      data-testid="container"
     >
-      bitcoin
-      <span
-        data-testid="close-bitcoin"
+      <button
+        data-count="5"
+        data-selected="true"
+        data-testid="post-tag-bitcoin"
       >
-        ×
-      </span>
-    </button>
-    <button
-      data-count="3"
-      data-selected="false"
-      data-testid="post-tag-ethereum"
-    >
-      ethereum
-      <span
-        data-testid="close-ethereum"
+        bitcoin
+        <span
+          data-testid="close-bitcoin"
+        >
+          ×
+        </span>
+      </button>
+      <button
+        data-count="3"
+        data-selected="false"
+        data-testid="post-tag-ethereum"
       >
-        ×
-      </span>
-    </button>
-    <button
-      data-count="10"
-      data-selected="false"
-      data-testid="post-tag-web3"
-    >
-      web3
-      <span
-        data-testid="close-web3"
+        ethereum
+        <span
+          data-testid="close-ethereum"
+        >
+          ×
+        </span>
+      </button>
+      <button
+        data-count="10"
+        data-selected="false"
+        data-testid="post-tag-web3"
       >
-        ×
-      </span>
-    </button>
+        web3
+        <span
+          data-testid="close-web3"
+        >
+          ×
+        </span>
+      </button>
+    </div>
   </div>
 </div>
 `;
@@ -85,33 +100,42 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with close buttons 1`]
 exports[`ClickableTagsList > Snapshots > matches snapshot with input visible 1`] = `
 <div>
   <div
-    class="flex flex-wrap items-center gap-2"
+    class="flex flex-col gap-1"
     data-testid="container"
   >
-    <button
-      data-count="5"
-      data-selected="true"
-      data-testid="post-tag-bitcoin"
+    <div
+      class="flex flex-wrap items-center gap-2"
+      data-testid="container"
     >
-      bitcoin
-    </button>
-    <button
-      data-count="3"
-      data-selected="false"
-      data-testid="post-tag-ethereum"
-    >
-      ethereum
-    </button>
-    <button
-      data-count="10"
-      data-selected="false"
-      data-testid="post-tag-web3"
-    >
-      web3
-    </button>
-    <input
-      data-testid="tag-input"
-    />
+      <button
+        data-count="5"
+        data-selected="true"
+        data-testid="post-tag-bitcoin"
+      >
+        bitcoin
+      </button>
+      <button
+        data-count="3"
+        data-selected="false"
+        data-testid="post-tag-ethereum"
+      >
+        ethereum
+      </button>
+      <button
+        data-count="10"
+        data-selected="false"
+        data-testid="post-tag-web3"
+      >
+        web3
+      </button>
+      <div
+        data-testid="tag-input-toggle"
+      >
+        <input
+          data-testid="tag-input"
+        />
+      </div>
+    </div>
   </div>
 </div>
 `;
@@ -119,30 +143,35 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with input visible 1`]
 exports[`ClickableTagsList > Snapshots > matches snapshot with tags and count 1`] = `
 <div>
   <div
-    class="flex flex-wrap items-center gap-2"
+    class="flex flex-col gap-1"
     data-testid="container"
   >
-    <button
-      data-count="5"
-      data-selected="true"
-      data-testid="post-tag-bitcoin"
+    <div
+      class="flex flex-wrap items-center gap-2"
+      data-testid="container"
     >
-      bitcoin
-    </button>
-    <button
-      data-count="3"
-      data-selected="false"
-      data-testid="post-tag-ethereum"
-    >
-      ethereum
-    </button>
-    <button
-      data-count="10"
-      data-selected="false"
-      data-testid="post-tag-web3"
-    >
-      web3
-    </button>
+      <button
+        data-count="5"
+        data-selected="true"
+        data-testid="post-tag-bitcoin"
+      >
+        bitcoin
+      </button>
+      <button
+        data-count="3"
+        data-selected="false"
+        data-testid="post-tag-ethereum"
+      >
+        ethereum
+      </button>
+      <button
+        data-count="10"
+        data-selected="false"
+        data-testid="post-tag-web3"
+      >
+        web3
+      </button>
+    </div>
   </div>
 </div>
 `;

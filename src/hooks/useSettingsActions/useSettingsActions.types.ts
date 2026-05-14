@@ -1,4 +1,4 @@
-import type { NotificationPreferences } from '@/core';
+import type { NotificationPreferences } from '@/stores/settings/settings.types';
 
 export interface UseSettingsActionsResult {
   /** Updates a single notification preference and syncs to homeserver */

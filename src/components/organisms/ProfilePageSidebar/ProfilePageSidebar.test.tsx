@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProfilePageSidebar } from './ProfilePageSidebar';
 
 // Mock next/navigation
@@ -16,27 +16,25 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(() => null),
 }));
 
-// Mock @/core
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(() => ({
-      selectCurrentUserPubky: () => 'test-pubky-123',
-    })),
-    ProfileController: {
-      read: vi.fn().mockResolvedValue({
-        links: [
-          { title: 'Example Link', url: 'https://example.com' },
-          { title: 'GitHub', url: 'https://github.com/test' },
-        ],
-      }),
-    },
-  };
-});
+// Mock auth store
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(() => ({
+    selectCurrentUserPubky: () => 'test-pubky-123',
+  })),
+}));
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    read: vi.fn().mockResolvedValue({
+      links: [
+        { title: 'Example Link', url: 'https://example.com' },
+        { title: 'GitHub', url: 'https://github.com/test' },
+      ],
+    }),
+  },
+}));
 
 // Mock @/providers
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: vi.fn(() => ({
     pubky: 'test-pubky-123',
     isOwnProfile: true,
@@ -44,27 +42,32 @@ vi.mock('@/providers', () => ({
   })),
 }));
 
-// Mock @/hooks
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: vi.fn(() => ({
-      userDetails: null,
-      currentUserPubky: 'test-pubky-123',
-    })),
-    useTagged: vi.fn(() => ({
-      tags: [],
-      isLoading: false,
-      handleTagToggle: vi.fn(),
-    })),
-    useUserProfile: vi.fn(() => ({
-      profile: { links: null },
-      isLoading: false,
-    })),
-    useAvatarUrl: vi.fn(() => undefined),
-  };
-});
+// Mock hooks
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: vi.fn(() => ({
+    userDetails: null,
+    currentUserPubky: 'test-pubky-123',
+  })),
+}));
+
+vi.mock('@/hooks/useTagged/useTagged', () => ({
+  useTagged: vi.fn(() => ({
+    tags: [],
+    isLoading: false,
+    handleTagToggle: vi.fn(),
+  })),
+}));
+
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
+  useUserProfile: vi.fn(() => ({
+    profile: { links: null },
+    isLoading: false,
+  })),
+}));
+
+vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
+  useAvatarUrl: vi.fn(() => undefined),
+}));
 
 describe('ProfilePageSidebar', () => {
   beforeEach(() => {

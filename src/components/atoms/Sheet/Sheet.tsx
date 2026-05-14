@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { Dialog as DialogPrimitive } from 'radix-ui';
 import { X } from 'lucide-react';
+import { Dialog as DialogPrimitive } from 'radix-ui';
 import { cn } from '@/libs/utils/utils';
+
 const Sheet = DialogPrimitive.Root;
 const SheetTrigger = DialogPrimitive.Trigger;
 const SheetPortal = DialogPrimitive.Portal;
@@ -77,4 +78,4 @@ const SheetDescription = React.forwardRef<
   <DialogPrimitive.Description ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
 ));
 SheetDescription.displayName = DialogPrimitive.Description.displayName;
-export { Sheet, SheetPortal, SheetOverlay, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription };
+export { Sheet, SheetContent, SheetDescription, SheetHeader, SheetOverlay, SheetPortal, SheetTitle, SheetTrigger };

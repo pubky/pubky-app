@@ -1,12 +1,19 @@
-import { render, screen } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import DynamicProfilePage from './page';
 
-vi.mock('@/templates', () => ({
-  ProfilePagePosts: () => <div data-testid="profile-page-posts">Posts</div>,
-  ProfilePageProfile: () => <div data-testid="profile-page-profile">Profile</div>,
-}));
+vi.mock('@/templates/Profile/Posts/ProfilePostsPage', () => {
+  return {
+    ProfilePostsPage: () => <div data-testid="profile-page-posts">Posts</div>,
+  };
+});
+
+vi.mock('@/templates/Profile/Profile/ProfileOverviewPage', () => {
+  return {
+    ProfileOverviewPage: () => <div data-testid="profile-page-profile">Profile</div>,
+  };
+});
 
 describe('DynamicProfilePage', () => {
   it('renders both templates so CSS can pick the right one per viewport', () => {

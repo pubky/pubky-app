@@ -1,6 +1,6 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { asInvalid } from '@/test-utils';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { useEmojiInsert } from './useEmojiInsert';
 
 describe('useEmojiInsert', () => {

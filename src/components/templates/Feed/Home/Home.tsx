@@ -1,28 +1,33 @@
-import * as Organisms from '@/organisms';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { DialogWelcome } from '@/organisms/DialogWelcome/DialogWelcome';
+import { FeedNavigation } from '@/organisms/FeedNavigation/FeedNavigation';
+import { HomeFeedRightDrawer, HomeFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
+import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organisms/HomeFeedSidebar/HomeFeedSidebar';
+import { PostInput } from '@/organisms/PostInput/PostInput';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
 export function Home() {
   return (
     <>
-      <Organisms.DialogWelcome />
-      <Organisms.ContentLayout
+      <DialogWelcome />
+      <ContentLayout
         feedVariant={TIMELINE_FEED_VARIANT.HOME}
-        leftSidebarContent={<Organisms.HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />}
-        rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
-        leftDrawerContent={<Organisms.HomeFeedDrawer allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />}
-        rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
-        leftDrawerContentMobile={
-          <Organisms.HomeFeedDrawerMobile allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />
-        }
-        rightDrawerContentMobile={<Organisms.FeedNavigation className="lg:hidden" />}
+        leftSidebarContent={<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />}
+        rightSidebarContent={<HomeFeedRightSidebar />}
+        leftDrawerContent={<HomeFeedDrawer allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />}
+        rightDrawerContent={<HomeFeedRightDrawer />}
+        leftDrawerContentMobile={<HomeFeedDrawerMobile allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />}
+        rightDrawerContentMobile={<FeedNavigation className="lg:hidden" />}
       >
-        <Organisms.AlertBackup />
-        <Organisms.FeedNavigation className="hidden lg:flex" />
-        <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME}>
-          <Organisms.PostInput dataCy="home-post-input" variant={POST_INPUT_VARIANT.POST} />
-        </Organisms.TimelineFeed>
-      </Organisms.ContentLayout>
+        <AlertBackup />
+        <FeedNavigation className="hidden lg:flex" />
+        <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME}>
+          <PostInput dataCy="home-post-input" variant={POST_INPUT_VARIANT.POST} />
+        </TimelineFeed>
+      </ContentLayout>
     </>
   );
 }

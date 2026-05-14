@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { PostTag } from './PostTag';
 
 describe('PostTag', () => {
@@ -41,6 +41,11 @@ describe('PostTag', () => {
 
     rerender(<PostTag label="bitcoin" count={16} />);
     expect(screen.getByLabelText(/bitcoin tag \(16 posts\)/i)).toBeInTheDocument();
+  });
+
+  it('preserves post-tag count selector for e2e tests', () => {
+    render(<PostTag label="bitcoin" count={16} />);
+    expect(screen.getByText('16')).toHaveAttribute('data-cy', 'post-tag-count');
   });
 
   it('renders with custom color', () => {

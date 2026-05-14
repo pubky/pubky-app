@@ -1,3 +1,5 @@
+import type { Pubky } from '@/models/models.types';
+
 /**
  * TTL Coordinator Types
  *
@@ -9,8 +11,6 @@
  * - Coordinator tracks subscriptions and batches refresh requests
  * - Staleness is computed as: now - lastUpdatedAt > TTL_MS
  */
-
-import type * as Core from '@/core';
 
 // =============================================================================
 // Configuration
@@ -92,13 +92,13 @@ export interface TtlCoordinatorState {
   /**
    * Set of subscribed user IDs (pubky)
    */
-  subscribedUsers: Set<Core.Pubky>;
+  subscribedUsers: Set<Pubky>;
 
   /**
    * Reference count for users (multiple posts can have same author)
    * Key: user pubky, Value: number of posts referencing this user
    */
-  userRefCount: Map<Core.Pubky, number>;
+  userRefCount: Map<Pubky, number>;
 
   /**
    * Queue of post IDs pending refresh in next batch
@@ -108,7 +108,7 @@ export interface TtlCoordinatorState {
   /**
    * Queue of user IDs pending refresh in next batch
    */
-  userBatchQueue: Set<Core.Pubky>;
+  userBatchQueue: Set<Pubky>;
 }
 
 // =============================================================================
@@ -142,7 +142,7 @@ export interface TtlSubscribeUserParams {
   /**
    * User public key
    */
-  pubky: Core.Pubky;
+  pubky: Pubky;
 }
 
 /**
@@ -152,7 +152,7 @@ export interface TtlUnsubscribeUserParams {
   /**
    * User public key
    */
-  pubky: Core.Pubky;
+  pubky: Pubky;
 }
 
 // =============================================================================
@@ -179,5 +179,5 @@ export interface EntityOps<T extends string> {
   /** Find stale entities by IDs */
   findStaleByIds: (ids: T[]) => Promise<T[]>;
   /** Force refresh entities by IDs */
-  forceRefresh: (ids: T[], viewerId: Core.Pubky | null) => Promise<void>;
+  forceRefresh: (ids: T[], viewerId: Pubky | null) => Promise<void>;
 }

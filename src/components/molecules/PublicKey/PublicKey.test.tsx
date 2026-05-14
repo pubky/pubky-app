@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { PublicKeyHeader, PublicKeyNavigation } from './Pubkey';
-import * as App from '@/app';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -13,14 +13,14 @@ vi.mock('next/navigation', () => ({
 
 // Mock useInviteCodeSignUp hook
 const mockValidateAndSignUp = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useInviteCodeSignUp/useInviteCodeSignUp', () => ({
   useInviteCodeSignUp: () => ({
     validateAndSignUp: mockValidateAndSignUp,
   }),
 }));
 
 // Mock onboarding store
-vi.mock('@/core', () => ({
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: Object.assign(() => ({}), {
     getState: () => ({
       inviteCode: 'TEST-CODE-123',
@@ -29,42 +29,56 @@ vi.mock('@/core', () => ({
 }));
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
-    <div data-testid="page-title" data-size={size}>
-      {children}
-    </div>
-  ),
-  ButtonsNavigation: ({
-    onHandleBackButton,
-    onHandleContinueButton,
-    loadingContinueButton,
-  }: {
-    onHandleBackButton: () => void;
-    onHandleContinueButton: () => void;
-    loadingContinueButton?: boolean;
-  }) => (
-    <div data-testid="buttons-navigation">
-      <button data-testid="back-button" onClick={onHandleBackButton}>
-        Back
-      </button>
-      <button
-        data-testid="continue-button"
-        onClick={onHandleContinueButton}
-        disabled={loadingContinueButton}
-        data-loading={loadingContinueButton}
-      >
-        {loadingContinueButton ? 'Loading...' : 'Continue'}
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
+  return {
+    ButtonsNavigation: ({
+      onHandleBackButton,
+      onHandleContinueButton,
+      loadingContinueButton,
+    }: {
+      onHandleBackButton: () => void;
+      onHandleContinueButton: () => void;
+      loadingContinueButton?: boolean;
+    }) => (
+      <div data-testid="buttons-navigation">
+        <button data-testid="back-button" onClick={onHandleBackButton}>
+          Back
+        </button>
+        <button
+          data-testid="continue-button"
+          onClick={onHandleContinueButton}
+          disabled={loadingContinueButton}
+          data-loading={loadingContinueButton}
+        >
+          {loadingContinueButton ? 'Loading...' : 'Continue'}
+        </button>
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Page/Page', () => {
+  return {
+    PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
+      <div data-testid="page-title" data-size={size}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
-  PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
-}));
+vi.mock('@/atoms/PageHeader/PageHeader', () => {
+  return {
+    PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
+  };
+});
+
+vi.mock('@/atoms/PageSubtitle/PageSubtitle', () => {
+  return {
+    PageSubtitle: ({ children }: { children: React.ReactNode }) => <div data-testid="page-subtitle">{children}</div>,
+  };
+});
 
 describe('PublicKeyHeader', () => {
   it('renders page header with title and subtitle', () => {
@@ -96,7 +110,7 @@ describe('PublicKeyNavigation', () => {
     const backButton = screen.getByTestId('back-button');
     fireEvent.click(backButton);
 
-    expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.INSTALL);
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.INSTALL);
   });
 
   it('handles continue button click - signs up then navigates to backup', async () => {
@@ -107,7 +121,7 @@ describe('PublicKeyNavigation', () => {
 
     await waitFor(() => {
       expect(mockValidateAndSignUp).toHaveBeenCalledWith('TEST-CODE-123');
-      expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.BACKUP);
+      expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.BACKUP);
     });
   });
 
@@ -137,7 +151,7 @@ describe('PublicKeyNavigation', () => {
       expect(continueButton).toHaveAttribute('data-loading', 'false');
     });
 
-    expect(mockPush).not.toHaveBeenCalledWith(App.ONBOARDING_ROUTES.BACKUP);
+    expect(mockPush).not.toHaveBeenCalledWith(ONBOARDING_ROUTES.BACKUP);
   });
 });
 

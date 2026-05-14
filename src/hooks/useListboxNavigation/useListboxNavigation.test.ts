@@ -1,6 +1,6 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockKeyboardEvent } from '@/test-utils';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mockKeyboardEvent } from '@/test-utils/react-events';
 import { useListboxNavigation } from './useListboxNavigation';
 
 describe('useListboxNavigation', () => {

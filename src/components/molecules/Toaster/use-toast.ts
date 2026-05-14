@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { ToastActionElement, ToastProps } from '@/atoms';
+import type { ToastActionElement, ToastProps } from '@/atoms/Toast/Toast';
 
 // Max number of toasts visible at once
 const TOAST_LIMIT = 1;
@@ -198,4 +198,4 @@ function useToast() {
   };
 }
 
-export { useToast, toast };
+export { toast, useToast };

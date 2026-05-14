@@ -1,15 +1,14 @@
 'use client';
 
-// Direct import to avoid circular dependency (this hook is exported from @/hooks)
 import { useReplyStream } from '@/hooks/useReplyStream/useReplyStream';
-import { DEFAULT_MAX_NESTED, DEFAULT_MAX_DEPTH } from './useNestedReplies.constants';
+import { DEFAULT_MAX_DEPTH, DEFAULT_MAX_NESTED } from './useNestedReplies.constants';
 import type { UseNestedRepliesOptions, UseNestedRepliesResult } from './useNestedReplies.types';
 
 /**
  * Hook for fetching and displaying nested replies for a post.
  *
  * This hook:
- * - Delegates core reply stream logic to `useReplyStream`
+ * - Delegates shared reply stream logic to `useReplyStream`
  * - Adds depth gating: disables fetching when `depth >= maxDepth`
  * - Returns replies in chronological order (oldest first)
  *

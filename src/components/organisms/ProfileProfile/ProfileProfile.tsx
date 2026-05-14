@@ -1,11 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
-import * as Providers from '@/providers';
-import { ProfilePageHeader } from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
+import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useTagged } from '@/hooks/useTagged/useTagged';
+import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks';
+import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { ProfilePageHeader } from '../ProfilePageHeader/ProfilePageHeader';
 import { MAX_SIDEBAR_TAGS } from '../ProfilePageSidebar/ProfilePageSidebar.constants';
 
 /**
@@ -17,22 +22,22 @@ import { MAX_SIDEBAR_TAGS } from '../ProfilePageSidebar/ProfilePageSidebar.const
  */
 export function ProfileProfile() {
   // Get the profile pubky and isOwnProfile from context
-  const { pubky, isOwnProfile } = Providers.useProfileContext();
+  const { pubky, isOwnProfile } = useProfileContext();
 
   // Note: useProfileHeader guarantees a non-null profile with default values during loading
-  const { profile, actions, isLoading } = Hooks.useProfileHeader(pubky ?? '');
+  const { profile, actions, isLoading } = useProfileHeader(pubky ?? '');
 
   // Handle follow/unfollow for other users' profiles (with auth check)
-  const { requireAuth } = Hooks.useRequireAuth();
-  const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = Hooks.useFollowUser();
-  const { isFollowing } = Hooks.useIsFollowing(pubky ?? '');
+  const { requireAuth } = useRequireAuth();
+  const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = useFollowUser();
+  const { isFollowing } = useIsFollowing(pubky ?? '');
 
   // Get tags for the user
   const {
     tags: allTags,
     isLoading: isLoadingTags,
     handleTagToggle,
-  } = Hooks.useTagged(pubky, {
+  } = useTagged(pubky, {
     enablePagination: false,
     enableStats: false,
   });
@@ -58,24 +63,16 @@ export function ProfileProfile() {
   };
 
   return (
-    <Atoms.Container
-      overrideDefaults={true}
-      className="mt-6 flex min-w-0 flex-col gap-6 overflow-hidden lg:mt-0 lg:hidden"
-    >
+    <Container overrideDefaults={true} className="mt-6 flex min-w-0 flex-col gap-6 overflow-hidden lg:mt-0 lg:hidden">
       {!isLoading && (
         <ProfilePageHeader profile={profile} actions={mergedActions} isOwnProfile={isOwnProfile} userId={pubky ?? ''} />
       )}
 
       {/* Tagged as section */}
-      <Molecules.ProfilePageTaggedAs
-        tags={tags}
-        isLoading={isLoadingTags}
-        onTagClick={handleTagToggle}
-        pubky={pubky ?? ''}
-      />
+      <ProfilePageTaggedAs tags={tags} isLoading={isLoadingTags} onTagClick={handleTagToggle} pubky={pubky ?? ''} />
 
       {/* Links section */}
-      <Molecules.ProfilePageLinks links={profile?.links} isOwnProfile={isOwnProfile} />
-    </Atoms.Container>
+      <ProfilePageLinks links={profile?.links} isOwnProfile={isOwnProfile} />
+    </Container>
   );
 }

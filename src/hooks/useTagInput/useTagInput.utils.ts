@@ -1,5 +1,5 @@
-import { TAG_INPUT_MAX_SUGGESTIONS } from './useTagInput.constants';
 import { TAG_SUGGESTIONS_DEFAULT_LIMIT } from '../useTagSuggestions/useTagSuggestions.constants';
+import { TAG_INPUT_MAX_SUGGESTIONS } from './useTagInput.constants';
 import type { TagLabel } from './useTagInput.types';
 
 /**

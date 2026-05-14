@@ -1,5 +1,5 @@
-import { db } from '@/core';
-import { DB_NAME } from '@/config';
+import { DB_NAME } from '@/config/database';
+import { db } from '@/database/franky/franky';
 
 export async function clearDatabase(): Promise<void> {
   if (!db.isOpen()) {

@@ -1,4 +1,7 @@
-import * as Core from '@/core';
+import type { NexusHotTag } from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
+import { tagApi } from '@/services/nexus/tag/tag.api';
+import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
 
 /**
  * Nexus Hot Service
@@ -14,8 +17,8 @@ export class NexusHotService {
    * @param params - Parameters for fetching hot tags (TTagHotParams with all pagination and reach options)
    * @returns Array of hot tags with metadata
    */
-  static async fetch(params: Core.TTagHotParams): Promise<Core.NexusHotTag[]> {
-    const url = Core.tagApi.hot(params);
-    return await Core.queryNexus<Core.NexusHotTag[]>({ url });
+  static async fetch(params: TTagHotParams): Promise<NexusHotTag[]> {
+    const url = tagApi.hot(params);
+    return await queryNexus<NexusHotTag[]>({ url });
   }
 }

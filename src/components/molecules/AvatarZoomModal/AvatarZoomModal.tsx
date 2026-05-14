@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
+import { Container } from '@/atoms/Container/Container';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock/useBodyScrollLock';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 
 export interface AvatarZoomModalProps {
   open: boolean;
@@ -31,7 +31,7 @@ export function AvatarZoomModal({ open, onClose, avatarUrl, name, fallbackSeed }
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  Hooks.useBodyScrollLock(open);
+  useBodyScrollLock(open);
 
   // Focus management: move focus into modal when it opens
   useEffect(() => {
@@ -60,7 +60,7 @@ export function AvatarZoomModal({ open, onClose, avatarUrl, name, fallbackSeed }
   if (!open) return null;
 
   return (
-    <Atoms.Container
+    <Container
       ref={modalRef}
       overrideDefaults={true}
       role="dialog"
@@ -71,13 +71,13 @@ export function AvatarZoomModal({ open, onClose, avatarUrl, name, fallbackSeed }
       onClick={onClose}
       data-testid="avatar-zoom-modal-overlay"
     >
-      <Atoms.Container
+      <Container
         overrideDefaults={true}
         className="relative animate-in rounded-full shadow-2xl duration-300 ease-in-out zoom-in-95 fade-in"
         onClick={(e) => e.stopPropagation()}
         data-testid="avatar-zoom-modal-content"
       >
-        <Organisms.AvatarWithFallback
+        <AvatarWithFallback
           avatarUrl={avatarUrl}
           name={name}
           fallbackSeed={fallbackSeed}
@@ -85,7 +85,7 @@ export function AvatarZoomModal({ open, onClose, avatarUrl, name, fallbackSeed }
           fallbackClassName="text-6xl"
           alt={`${name}'s avatar`}
         />
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useUserProfile } from './useUserProfile';
-import * as Core from '@/core';
 
 // Hoist mock data using vi.hoisted
 // Note: undefined = query not executed yet (loading), null = query executed but no data found
 const mockMocks = vi.hoisted(() => {
-  const mockUserDetails = { current: undefined as Core.NexusUserDetails | null | undefined };
+  const mockUserDetails = { current: undefined as NexusUserDetails | null | undefined };
   const mockGetDetails = vi.fn();
   const mockFetchDetails = vi.fn();
   const mockGetAvatarUrl = vi.fn((userId: string) => `https://example.com/avatar/${userId}`);
@@ -29,24 +30,22 @@ vi.mock('dexie-react-hooks', () => ({
   }),
 }));
 
-// Mock Core controllers and services
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    UserController: {
-      getDetails: mockMocks.mockGetDetails,
-      fetchDetails: mockMocks.mockFetchDetails,
-    },
-    FileController: {
-      getAvatarUrl: mockMocks.mockGetAvatarUrl,
-    },
-  };
-});
+// Mock controllers and services
+vi.mock('@/controllers/user/user', () => ({
+  UserController: {
+    getDetails: mockMocks.mockGetDetails,
+    fetchDetails: mockMocks.mockFetchDetails,
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    getAvatarUrl: mockMocks.mockGetAvatarUrl,
+  },
+}));
 
 // Mock Config to provide DEFAULT_URL
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/metadata', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/metadata')>();
   return {
     ...actual,
     DEFAULT_URL: 'https://example.com',
@@ -86,8 +85,8 @@ describe('useUserProfile', () => {
     });
 
     it('returns profile data when user exists', () => {
-      const mockUser: Core.NexusUserDetails = {
-        id: 'test-user-id' as Core.Pubky,
+      const mockUser: NexusUserDetails = {
+        id: 'test-user-id' as Pubky,
         name: 'Test User',
         bio: 'Test bio',
         image: 'avatar.jpg',
@@ -108,8 +107,8 @@ describe('useUserProfile', () => {
     });
 
     it('handles missing optional fields gracefully', () => {
-      const mockUser: Core.NexusUserDetails = {
-        id: 'test-user-id' as Core.Pubky,
+      const mockUser: NexusUserDetails = {
+        id: 'test-user-id' as Pubky,
         name: 'Test User',
         bio: '',
         image: null,
@@ -131,8 +130,8 @@ describe('useUserProfile', () => {
 
   describe('Public key formatting', () => {
     it('builds correct public key format', () => {
-      const mockUser: Core.NexusUserDetails = {
-        id: 'test-user-id' as Core.Pubky,
+      const mockUser: NexusUserDetails = {
+        id: 'test-user-id' as Pubky,
         name: 'Test',
         bio: '',
         image: null,
@@ -159,8 +158,8 @@ describe('useUserProfile', () => {
 
   describe('Profile link generation', () => {
     it('builds correct profile link using config', () => {
-      const mockUser: Core.NexusUserDetails = {
-        id: 'test-user-id' as Core.Pubky,
+      const mockUser: NexusUserDetails = {
+        id: 'test-user-id' as Pubky,
         name: 'Test',
         bio: '',
         image: null,
@@ -180,8 +179,8 @@ describe('useUserProfile', () => {
 
   describe('Avatar URL generation', () => {
     it('builds avatar URL when user has image', () => {
-      const mockUser: Core.NexusUserDetails = {
-        id: 'test-user-id' as Core.Pubky,
+      const mockUser: NexusUserDetails = {
+        id: 'test-user-id' as Pubky,
         name: 'Test',
         bio: '',
         image: 'avatar.jpg',
@@ -199,8 +198,8 @@ describe('useUserProfile', () => {
     });
 
     it('returns undefined avatar URL when user has no image', () => {
-      const mockUser: Core.NexusUserDetails = {
-        id: 'test-user-id' as Core.Pubky,
+      const mockUser: NexusUserDetails = {
+        id: 'test-user-id' as Pubky,
         name: 'Test',
         bio: '',
         image: '',
@@ -217,8 +216,8 @@ describe('useUserProfile', () => {
     });
 
     it('returns undefined avatar URL when image is null', () => {
-      const mockUser: Core.NexusUserDetails = {
-        id: 'test-user-id' as Core.Pubky,
+      const mockUser: NexusUserDetails = {
+        id: 'test-user-id' as Pubky,
         name: 'Test',
         bio: '',
         image: null,
@@ -237,8 +236,8 @@ describe('useUserProfile', () => {
 
   describe('Default values', () => {
     it('includes default emoji', () => {
-      const mockUser: Core.NexusUserDetails = {
-        id: 'test-user-id' as Core.Pubky,
+      const mockUser: NexusUserDetails = {
+        id: 'test-user-id' as Pubky,
         name: 'Test',
         bio: '',
         image: null,
@@ -275,8 +274,8 @@ describe('useUserProfile', () => {
     });
 
     it('isLoading is false when user details are available', () => {
-      const mockUser: Core.NexusUserDetails = {
-        id: 'test-user-id' as Core.Pubky,
+      const mockUser: NexusUserDetails = {
+        id: 'test-user-id' as Pubky,
         name: 'Test',
         bio: '',
         image: null,
@@ -295,8 +294,8 @@ describe('useUserProfile', () => {
 
   describe('Controller integration', () => {
     it('does not call UserController.fetchDetails when data is cached (cache hit optimization)', () => {
-      const mockUser: Core.NexusUserDetails = {
-        id: 'test-user-id' as Core.Pubky,
+      const mockUser: NexusUserDetails = {
+        id: 'test-user-id' as Pubky,
         name: 'Test',
         bio: '',
         image: null,

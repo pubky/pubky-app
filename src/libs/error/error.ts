@@ -1,5 +1,5 @@
-import { ErrorCategory, ErrorService } from './error.types';
 import type { ErrorCode, ErrorCodeByCategory } from './error.codes';
+import { ErrorCategory, ErrorService } from './error.types';
 
 // =============================================================================
 // AppError System

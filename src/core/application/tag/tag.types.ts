@@ -1,15 +1,15 @@
-import * as Core from '@/core';
+import type { TTagEventParams } from '@/controllers/tag/tag.types';
 
-export interface TCreateTagInput extends Core.TTagEventParams {
+export interface TCreateTagInput extends TTagEventParams {
   tagUrl: string;
   tagJson: Record<string, unknown>;
 }
 
 export interface TCreateTagListInput {
-  tagList: Core.TCreateTagInput[];
+  tagList: TCreateTagInput[];
 }
 
-export type TDeleteTagInput = Omit<Core.TCreateTagInput, 'tagJson'>;
+export type TDeleteTagInput = Omit<TCreateTagInput, 'tagJson'>;
 
 export enum TagKind {
   USER = 'user',

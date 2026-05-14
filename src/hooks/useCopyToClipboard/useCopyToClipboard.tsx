@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
 import { copyToClipboard } from '@/libs/utils/utils';
+import { toast } from '@/molecules/Toaster/use-toast';
 
 interface UseCopyToClipboardOptions {
   onSuccess?: (text: string) => void;
@@ -24,7 +24,7 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
       try {
         await copyToClipboard({ text });
 
-        Molecules.toast({
+        toast({
           title: resolvedSuccessTitle,
           description: text,
           dismissButton: true,
@@ -33,7 +33,7 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
         onSuccess?.(text);
         return true;
       } catch (error) {
-        Molecules.toast({
+        toast({
           title: resolvedErrorTitle,
           description: resolvedErrorDescription,
         });

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { type VariantProps } from 'class-variance-authority';
-import { breadcrumbVariants, breadcrumbItemVariants, breadcrumbSeparatorVariants } from './Breadcrumb';
+import { breadcrumbItemVariants, breadcrumbSeparatorVariants, breadcrumbVariants } from './Breadcrumb';
 
 export interface BreadcrumbProps
   extends React.ComponentPropsWithoutRef<'nav'>, VariantProps<typeof breadcrumbVariants> {

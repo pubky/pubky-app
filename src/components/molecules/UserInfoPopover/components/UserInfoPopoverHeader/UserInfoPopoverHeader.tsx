@@ -1,8 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
+import { Container } from '@/atoms/Container/Container';
+import { Link } from '@/atoms/Link/Link';
+import { Typography } from '@/atoms/Typography/Typography';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+
 interface UserInfoPopoverHeaderProps {
   userId: string;
   userName: string;
@@ -23,26 +26,26 @@ export function UserInfoPopoverHeader({ userId, userName, formattedPublicKey, av
   };
 
   return (
-    <Atoms.Container className="flex min-w-0 items-center gap-2" overrideDefaults>
-      <Atoms.Link href={profileUrl} onClick={handleProfileNavigation} className="shrink-0" overrideDefaults>
-        <Organisms.AvatarWithFallback avatarUrl={avatarUrl} name={userName} fallbackSeed={userId} size="md" />
-      </Atoms.Link>
-      <Atoms.Container className="min-w-0 flex-1 items-start overflow-hidden">
-        <Atoms.Link href={profileUrl} onClick={handleProfileNavigation} overrideDefaults>
-          <Atoms.Typography
+    <Container className="flex min-w-0 items-center gap-2" overrideDefaults>
+      <Link href={profileUrl} onClick={handleProfileNavigation} className="shrink-0" overrideDefaults>
+        <AvatarWithFallback avatarUrl={avatarUrl} name={userName} fallbackSeed={userId} size="md" />
+      </Link>
+      <Container className="min-w-0 flex-1 items-start overflow-hidden">
+        <Link href={profileUrl} onClick={handleProfileNavigation} overrideDefaults>
+          <Typography
             className="max-w-full cursor-pointer truncate text-sm leading-5 font-bold text-foreground"
             overrideDefaults
           >
             {userName}
-          </Atoms.Typography>
-        </Atoms.Link>
-        <Atoms.Typography
+          </Typography>
+        </Link>
+        <Typography
           className="text-xs leading-4 font-medium tracking-[1.2px] text-muted-foreground uppercase"
           overrideDefaults
         >
           {formattedPublicKey}
-        </Atoms.Typography>
-      </Atoms.Container>
-    </Atoms.Container>
+        </Typography>
+      </Container>
+    </Container>
   );
 }

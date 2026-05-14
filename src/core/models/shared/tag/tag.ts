@@ -1,12 +1,13 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 
-export class TagModel implements Core.NexusTag {
+export class TagModel implements NexusTag {
   label: string;
-  taggers: Core.Pubky[];
+  taggers: Pubky[];
   taggers_count: number;
   relationship: boolean;
 
-  constructor(tag: Core.NexusTag) {
+  constructor(tag: NexusTag) {
     this.label = tag.label;
     this.taggers = tag.taggers;
     this.taggers_count = tag.taggers_count;
@@ -17,14 +18,14 @@ export class TagModel implements Core.NexusTag {
     this.relationship = relationship;
   }
 
-  addTagger(taggerId: Core.Pubky): void {
+  addTagger(taggerId: Pubky): void {
     if (this.taggers.includes(taggerId)) return; // idempotent
     this.taggers.push(taggerId);
     // Increment count instead of using array length (array may be truncated from Nexus)
     this.taggers_count += 1;
   }
 
-  removeTagger(taggerId: Core.Pubky): void {
+  removeTagger(taggerId: Pubky): void {
     const wasInArray = this.taggers.includes(taggerId);
     this.taggers = this.taggers.filter((id) => id !== taggerId);
     // Decrement count instead of using array length (array may be truncated from Nexus)

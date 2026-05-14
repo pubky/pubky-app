@@ -1,4 +1,4 @@
-import { NotificationType } from '@/core/models/notification/notification.types';
+import { NotificationType } from '@/models/notification/notification.types';
 
 /**
  * Configuration for notification types that should use user profile as primary link

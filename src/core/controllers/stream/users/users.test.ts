@@ -1,45 +1,49 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Core from '@/core';
-import * as Config from '@/config';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { UserStreamApplication } from '@/application/stream/users/users';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
+import type { Pubky } from '@/models/models.types';
+import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { StreamUserController } from './users';
 
 describe('StreamUserController', () => {
-  const targetUserId = 'user-target' as Core.Pubky;
-  const viewerId = 'user-viewer' as Core.Pubky;
+  const targetUserId = 'user-target' as Pubky;
+  const viewerId = 'user-viewer' as Pubky;
 
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock useAuthStore.getState() to return currentUserPubky directly
     // (implementation accesses state.currentUserPubky instead of selectCurrentUserPubky())
-    vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue({
-      ...Core.useAuthStore.getState(),
+    vi.spyOn(useAuthStore, 'getState').mockReturnValue({
+      ...useAuthStore.getState(),
       currentUserPubky: viewerId,
     });
   });
 
   describe('getOrFetchStreamSlice', () => {
     it('should return users when no cache misses', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
-      const nextPageIds: Core.Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
+      const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
+      const nextPageIds: Pubky[] = ['follower-1', 'follower-2', 'follower-3'];
 
-      const getOrFetchStreamSliceSpy = vi.spyOn(Core.UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+      const getOrFetchStreamSliceSpy = vi.spyOn(UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds,
         cacheMissUserIds: [],
         skip: undefined,
       });
 
-      const fetchMissingUsersSpy = vi.spyOn(Core.UserStreamApplication, 'fetchMissingUsersFromNexus');
+      const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus');
 
       const result = await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
       expect(fetchMissingUsersSpy).not.toHaveBeenCalled();
@@ -50,30 +54,28 @@ describe('StreamUserController', () => {
     });
 
     it('should fetch missing users when cacheMissUserIds exist', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
-      const nextPageIds: Core.Pubky[] = ['follower-1', 'follower-2'];
-      const cacheMissUserIds: Core.Pubky[] = ['follower-3', 'follower-4'];
+      const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
+      const nextPageIds: Pubky[] = ['follower-1', 'follower-2'];
+      const cacheMissUserIds: Pubky[] = ['follower-3', 'follower-4'];
 
-      const getOrFetchStreamSliceSpy = vi.spyOn(Core.UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+      const getOrFetchStreamSliceSpy = vi.spyOn(UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds,
         cacheMissUserIds,
         skip: 20,
       });
 
-      const fetchMissingUsersSpy = vi
-        .spyOn(Core.UserStreamApplication, 'fetchMissingUsersFromNexus')
-        .mockResolvedValue();
+      const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue();
 
       const result = await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
       expect(fetchMissingUsersSpy).toHaveBeenCalledWith({
@@ -87,10 +89,10 @@ describe('StreamUserController', () => {
     });
 
     it('should pass streamId and skip correctly to application layer', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'following' });
+      const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'following' });
       const skip = 20;
 
-      const getOrFetchStreamSliceSpy = vi.spyOn(Core.UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+      const getOrFetchStreamSliceSpy = vi.spyOn(UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds: [],
         cacheMissUserIds: [],
         skip: undefined,
@@ -98,29 +100,29 @@ describe('StreamUserController', () => {
 
       await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
     });
 
     it('should extract viewerId from auth store correctly', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
-      const customViewerId = 'custom-viewer' as Core.Pubky;
+      const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
+      const customViewerId = 'custom-viewer' as Pubky;
 
       // Update mock to return custom viewer
-      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue({
-        ...Core.useAuthStore.getState(),
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue({
+        ...useAuthStore.getState(),
         currentUserPubky: customViewerId,
       });
 
-      const getOrFetchStreamSliceSpy = vi.spyOn(Core.UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+      const getOrFetchStreamSliceSpy = vi.spyOn(UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds: [],
         cacheMissUserIds: [],
         skip: undefined,
@@ -128,22 +130,22 @@ describe('StreamUserController', () => {
 
       await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId: customViewerId,
       });
     });
 
-    it('should use Config.NEXUS_USERS_PER_PAGE as limit', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
+    it('should use NEXUS_USERS_PER_PAGE as limit', async () => {
+      const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
 
-      const getOrFetchStreamSliceSpy = vi.spyOn(Core.UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+      const getOrFetchStreamSliceSpy = vi.spyOn(UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds: [],
         cacheMissUserIds: [],
         skip: undefined,
@@ -151,32 +153,32 @@ describe('StreamUserController', () => {
 
       await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
     });
 
     it('should not fetch missing users when cacheMissUserIds is empty array', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
+      const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
 
-      vi.spyOn(Core.UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+      vi.spyOn(UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds: ['follower-1'],
         cacheMissUserIds: [],
         skip: 20,
       });
 
-      const fetchMissingUsersSpy = vi.spyOn(Core.UserStreamApplication, 'fetchMissingUsersFromNexus');
+      const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus');
 
       await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
@@ -184,9 +186,9 @@ describe('StreamUserController', () => {
     });
 
     it('should handle undefined skip in response', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
+      const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
 
-      vi.spyOn(Core.UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+      vi.spyOn(UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds: ['follower-1', 'follower-2'],
         cacheMissUserIds: [],
         skip: undefined,
@@ -194,7 +196,7 @@ describe('StreamUserController', () => {
 
       const result = await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
@@ -202,9 +204,9 @@ describe('StreamUserController', () => {
     });
 
     it('should handle enum-based stream IDs (influencers)', async () => {
-      const streamId = Core.UserStreamTypes.TODAY_INFLUENCERS_ALL;
+      const streamId = UserStreamTypes.TODAY_INFLUENCERS_ALL;
 
-      const getOrFetchStreamSliceSpy = vi.spyOn(Core.UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+      const getOrFetchStreamSliceSpy = vi.spyOn(UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds: ['influencer-1', 'influencer-2'],
         cacheMissUserIds: [],
         skip: undefined,
@@ -212,36 +214,34 @@ describe('StreamUserController', () => {
 
       await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
     });
 
     it('should await background fetch for missing users', async () => {
-      const streamId = Core.buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
-      const nextPageIds: Core.Pubky[] = ['follower-1', 'follower-2'];
-      const cacheMissUserIds: Core.Pubky[] = ['follower-3'];
+      const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
+      const nextPageIds: Pubky[] = ['follower-1', 'follower-2'];
+      const cacheMissUserIds: Pubky[] = ['follower-3'];
 
-      vi.spyOn(Core.UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+      vi.spyOn(UserStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds,
         cacheMissUserIds,
         skip: 20,
       });
 
-      const fetchMissingUsersSpy = vi
-        .spyOn(Core.UserStreamApplication, 'fetchMissingUsersFromNexus')
-        .mockResolvedValue();
+      const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue();
 
       const result = await StreamUserController.getOrFetchStreamSlice({
         streamId,
-        limit: Config.NEXUS_USERS_PER_PAGE,
+        limit: NEXUS_USERS_PER_PAGE,
         skip: 0,
       });
 
@@ -260,9 +260,9 @@ describe('StreamUserController', () => {
 
   describe('getOrFetchUsers', () => {
     it('should delegate to UserStreamApplication.getOrFetchUsers with correct args', async () => {
-      const userIds: Core.Pubky[] = ['user-1', 'user-2', 'user-3'];
+      const userIds: Pubky[] = ['user-1', 'user-2', 'user-3'];
 
-      const getOrFetchUsersSpy = vi.spyOn(Core.UserStreamApplication, 'getOrFetchUsers').mockResolvedValue();
+      const getOrFetchUsersSpy = vi.spyOn(UserStreamApplication, 'getOrFetchUsers').mockResolvedValue();
 
       await StreamUserController.getOrFetchUsers({ userIds });
 
@@ -273,14 +273,14 @@ describe('StreamUserController', () => {
     });
 
     it('should pass undefined as viewerId when currentUserPubky is null', async () => {
-      vi.spyOn(Core.useAuthStore, 'getState').mockReturnValue({
-        ...Core.useAuthStore.getState(),
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue({
+        ...useAuthStore.getState(),
         currentUserPubky: null,
       });
 
-      const userIds: Core.Pubky[] = ['user-1'];
+      const userIds: Pubky[] = ['user-1'];
 
-      const getOrFetchUsersSpy = vi.spyOn(Core.UserStreamApplication, 'getOrFetchUsers').mockResolvedValue();
+      const getOrFetchUsersSpy = vi.spyOn(UserStreamApplication, 'getOrFetchUsers').mockResolvedValue();
 
       await StreamUserController.getOrFetchUsers({ userIds });
 
@@ -291,9 +291,9 @@ describe('StreamUserController', () => {
     });
 
     it('should propagate errors from UserStreamApplication.getOrFetchUsers', async () => {
-      const userIds: Core.Pubky[] = ['user-1'];
+      const userIds: Pubky[] = ['user-1'];
 
-      vi.spyOn(Core.UserStreamApplication, 'getOrFetchUsers').mockRejectedValue(new Error('fetch-users-fail'));
+      vi.spyOn(UserStreamApplication, 'getOrFetchUsers').mockRejectedValue(new Error('fetch-users-fail'));
 
       await expect(StreamUserController.getOrFetchUsers({ userIds })).rejects.toThrow('fetch-users-fail');
     });

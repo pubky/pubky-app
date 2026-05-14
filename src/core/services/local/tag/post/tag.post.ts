@@ -1,15 +1,24 @@
-import * as Core from '@/core';
-import { Logger } from '@/libs/logger/logger';
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { PostCountsModel } from '@/models/post/counts/postCounts';
+import { PostTagsModel, type PostTagsModelSchema } from '@/models/post/tags/postTags';
+import { PostTtlModel } from '@/models/post/ttl/postTtl';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { ViewerTagMarkerStorage } from '@/services/local/tag/post/viewerTagMarkerStorage';
+import type { TLocalTagParams } from '@/services/local/tag/tag.types';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 
 export class LocalPostTagService {
   private static readonly TAG_TABLES = [
-    Core.PostTagsModel.table,
-    Core.PostCountsModel.table,
-    Core.UserCountsModel.table,
-    Core.PostTtlModel.table,
+    PostTagsModel.table,
+    PostCountsModel.table,
+    UserCountsModel.table,
+    PostTtlModel.table,
   ] as const;
   /**
    * Adds a tag to a post and updates all related counts.
@@ -22,13 +31,20 @@ export class LocalPostTagService {
    * @param params.label - Normalized tag label (must be pre-normalized by caller)
    * @param params.taggerId - Unique identifier of the user adding the tag
    *
+   * @returns {boolean} true if local state changed; false if the tagger already had this tag (idempotent — no writes, no viewer marker)
    * @throws {AppError} When user has already tagged this post with the same label
    * @throws {DatabaseError} When database operations fail
    */
-  static async create({ taggedId: postId, label, taggerId }: Core.TLocalTagParams): Promise<boolean> {
+  static async create({ taggedId: postId, label, taggerId }: TLocalTagParams): Promise<boolean> {
+    // True only when the transaction actually changed IndexedDB state.
+    // We use this to decide whether to write the viewer-mutation marker after
+    // the transaction commits: if nothing changed (e.g., the user already had
+    // this tag), there's no local state to protect from stale Nexus responses,
+    // so we skip the marker.
+    let mutated = false;
     try {
-      return await Core.db.transaction('rw', this.TAG_TABLES, async () => {
-        const postTagsModel = await Core.PostTagsModel.getOrCreate<string, Core.PostTagsModelSchema>(postId);
+      mutated = await db.transaction('rw', this.TAG_TABLES, async () => {
+        const postTagsModel = await PostTagsModel.getOrCreate<string, PostTagsModelSchema>(postId);
         const status = postTagsModel.addTagger(label, taggerId);
         // Idempotent: user already tagged this post with this label
         if (status === null) {
@@ -37,8 +53,8 @@ export class LocalPostTagService {
         await Promise.all([
           this.savePostTagsModel(postId, postTagsModel),
           this.updatePostCounts(postId, postTagsModel),
-          Core.UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: 1 } }),
-          Core.PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() }),
+          UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: 1 } }),
+          PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() }),
         ]);
         return true;
       });
@@ -50,6 +66,14 @@ export class LocalPostTagService {
         cause: error,
       });
     }
+
+    if (mutated) {
+      // Record this viewer change so mergeTags ignores stale Nexus responses
+      // for the next ~5 minutes (until Nexus catches up).
+      ViewerTagMarkerStorage.set({ pubky: taggerId, postId, label, op: HttpMethod.PUT });
+    }
+
+    return mutated;
   }
 
   /**
@@ -68,27 +92,26 @@ export class LocalPostTagService {
    * @throws {AppError} When post has no tags or user hasn't tagged with this label
    * @throws {DatabaseError} When database operations fail
    */
-  static async delete({ taggedId: postId, label, taggerId }: Core.TLocalTagParams): Promise<boolean> {
+  static async delete({ taggedId: postId, label, taggerId }: TLocalTagParams): Promise<boolean> {
     // Check if post has tags before starting transaction
-    const tagsData = await Core.PostTagsModel.findById(postId);
+    const tagsData = await PostTagsModel.findById(postId);
     if (!tagsData) {
       return false; // Nothing to delete
     }
 
-    const postTagsModel = new Core.PostTagsModel(tagsData);
+    const postTagsModel = new PostTagsModel(tagsData);
     const status = postTagsModel.removeTagger(label, taggerId);
     if (status === null) {
       return false; // User hasn't tagged this post with this label
     }
 
     try {
-      await Core.db.transaction('rw', this.TAG_TABLES, async () => {
+      await db.transaction('rw', this.TAG_TABLES, async () => {
         await this.savePostTagsModel(postId, postTagsModel);
         await this.updatePostCounts(postId, postTagsModel);
-        await Core.UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: -1 } });
-        await Core.PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() });
+        await UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: -1 } });
+        await PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() });
       });
-      return true;
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to delete post tag', {
         service: ErrorService.Local,
@@ -97,6 +120,11 @@ export class LocalPostTagService {
         cause: error,
       });
     }
+
+    // Record this viewer change so mergeTags ignores stale Nexus responses
+    // for the next ~5 minutes (until Nexus catches up).
+    ViewerTagMarkerStorage.set({ pubky: taggerId, postId, label, op: HttpMethod.DELETE });
+    return true;
   }
 
   /**
@@ -106,10 +134,10 @@ export class LocalPostTagService {
    * @param postTagsModel - The PostTagsModel instance to save
    * @private
    */
-  private static async savePostTagsModel(postId: string, postTagsModel: Core.PostTagsModel) {
-    await Core.PostTagsModel.upsert({
+  private static async savePostTagsModel(postId: string, postTagsModel: PostTagsModel) {
+    await PostTagsModel.upsert({
       id: postId,
-      tags: postTagsModel.tags as Core.NexusTag[],
+      tags: postTagsModel.tags as NexusTag[],
     });
   }
 
@@ -123,13 +151,13 @@ export class LocalPostTagService {
    * @param postTagsModel - The PostTagsModel instance with current tag data
    * @private
    */
-  private static async updatePostCounts(postId: Core.Pubky, postTagsModel: Core.PostTagsModel) {
+  private static async updatePostCounts(postId: Pubky, postTagsModel: PostTagsModel) {
     const tags = postTagsModel.tags.reduce((sum, tag) => sum + tag.taggers_count, 0);
     const unique_tags = postTagsModel.tags.length;
 
-    const countsExist = await Core.PostCountsModel.findById(postId);
+    const countsExist = await PostCountsModel.findById(postId);
     if (countsExist) {
-      await Core.PostCountsModel.update(postId, {
+      await PostCountsModel.update(postId, {
         tags,
         unique_tags,
       });
@@ -140,20 +168,35 @@ export class LocalPostTagService {
   }
 
   /**
-   * Merges new tags from Nexus with existing local tags.
-   * Updates existing tags or adds new ones without removing any.
+   * Merges Nexus tags into local IndexedDB using a per-field policy:
    *
-   * @param postId - Unique identifier of the post
-   * @param tags - Array of NexusTags to merge
+   * - `taggers_count`: replaced with the Nexus value (Nexus is authoritative
+   *   for the total).
+   * - Viewer's `relationship` and the viewer's entry in `taggers`: an active
+   *   sessionStorage marker (set by `create` / `delete`) overrides; otherwise
+   *   the Nexus value is used.
+   * - Other users in `taggers`: union of existing + Nexus. The Nexus `taggers`
+   *   array is a truncated top-N sample, so replacing would drop locally-cached
+   *   taggers.
+   * - Labels in IndexedDB but not in `tags`: left alone, since Nexus paginates
+   *   by label and absent labels may exist on later pages.
+   *
+   * @param postId - Composite post ID
+   * @param tags - Tags from the Nexus response
+   * @param viewerId - Current viewer pubky for marker lookup. Null when the
+   *   user is unauthenticated, in which case Nexus values are used as-is.
    */
-  static async mergeTags({ postId, tags }: { postId: string; tags: Core.NexusTag[] }) {
+  static async mergeTags({ postId, tags, viewerId }: { postId: string; tags: NexusTag[]; viewerId: Pubky | null }) {
+    // Piggyback GC: drop expired markers so sessionStorage doesn't accumulate them.
+    ViewerTagMarkerStorage.sweepExpired();
+
     try {
-      await Core.db.transaction('rw', [Core.PostTagsModel.table], async () => {
-        const existing = await Core.PostTagsModel.findById(postId);
+      await db.transaction('rw', [PostTagsModel.table], async () => {
+        const existing = await PostTagsModel.findById(postId);
         const existingTags = existing?.tags ?? [];
 
         // Create a map of existing tags by label for quick lookup
-        const tagMap = new Map<string, Core.NexusTag>();
+        const tagMap = new Map<string, NexusTag>();
         for (const tag of existingTags) {
           tagMap.set(tag.label.toLowerCase(), tag);
         }
@@ -163,24 +206,46 @@ export class LocalPostTagService {
           const key = newTag.label.toLowerCase();
           const existingTag = tagMap.get(key);
 
-          if (existingTag) {
-            // Merge taggers - combine unique taggers
-            const mergedTaggers = [...new Set([...(existingTag.taggers ?? []), ...(newTag.taggers ?? [])])];
-            tagMap.set(key, {
-              ...existingTag,
-              ...newTag,
-              taggers: mergedTaggers,
-              taggers_count: Math.max(existingTag.taggers_count ?? 0, newTag.taggers_count ?? mergedTaggers.length),
-            });
-          } else {
-            tagMap.set(key, newTag);
+          // If the viewer just toggled this tag locally, the marker tells us
+          // the intended viewer-state — trust it over a possibly stale Nexus
+          // value for the next ~5 minutes.
+          const marker = viewerId ? ViewerTagMarkerStorage.get({ pubky: viewerId, postId, label: newTag.label }) : null;
+          const nexusSaysViewerIsTagger = Boolean(newTag.relationship);
+          const viewerIsTagger = marker ? marker.op === HttpMethod.PUT : nexusSaysViewerIsTagger;
+
+          // Other users: union of existing + Nexus, viewer excluded
+          // (viewer's slot is decided by `viewerIsTagger`).
+          const otherTaggers = new Set(
+            [...(existingTag?.taggers ?? []), ...(newTag.taggers ?? [])].filter((tagger) => tagger !== viewerId),
+          );
+          const mergedTaggers: Pubky[] = Array.from(otherTaggers);
+          if (viewerIsTagger && viewerId) {
+            mergedTaggers.push(viewerId);
           }
+
+          // Default: trust Nexus's count.
+          // Exception: if the marker says the viewer is a tagger but Nexus
+          // doesn't know yet, Nexus's count is one short — add 1. If the marker
+          // says the viewer is NOT a tagger but Nexus still counts them, Nexus's
+          // count is one too high — subtract 1. This keeps `taggers_count`
+          // matching the final `taggers` / `relationship` we write below.
+          let taggers_count = newTag.taggers_count;
+          if (marker && viewerIsTagger !== nexusSaysViewerIsTagger) {
+            taggers_count = viewerIsTagger ? taggers_count + 1 : Math.max(0, taggers_count - 1);
+          }
+
+          tagMap.set(key, {
+            ...newTag,
+            taggers_count,
+            taggers: mergedTaggers,
+            relationship: viewerIsTagger,
+          });
         }
 
         // Convert map back to array
         const mergedTags = Array.from(tagMap.values());
 
-        await Core.PostTagsModel.upsert({
+        await PostTagsModel.upsert({
           id: postId,
           tags: mergedTags,
         });

@@ -1,4 +1,10 @@
-import * as Core from '@/core';
+import { FeedApplication } from '@/application/feed/feed';
+import type { TFeedPersistCreateParams } from '@/application/feed/feed.types';
+import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from '@/controllers/feed/feed.types';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { FeedNormalizer } from '@/pipes/feed/feed.normalizer';
+import { FeedValidators } from '@/pipes/feed/feed.validators';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 export class FeedController {
   private constructor() {}
@@ -7,8 +13,8 @@ export class FeedController {
    * Get the list of feeds
    * @returns The list of feeds
    */
-  static async getList(): Promise<Core.FeedModelSchema[]> {
-    return Core.FeedApplication.getList();
+  static async getList(): Promise<FeedModelSchema[]> {
+    return FeedApplication.getList();
   }
 
   /**
@@ -16,17 +22,17 @@ export class FeedController {
    * @param feedId - The ID of the feed
    * @returns The feed or undefined if not found
    */
-  static async get(params: Core.TFeedIdParam): Promise<Core.FeedModelSchema | undefined> {
-    return Core.FeedApplication.get(params);
+  static async get(params: TFeedIdParam): Promise<FeedModelSchema | undefined> {
+    return FeedApplication.get(params);
   }
 
   /**
    * Fetch all feeds from the homeserver and persist them locally.
    * @returns The list of persisted feeds
    */
-  static async fetchFeeds(): Promise<Core.FeedModelSchema[]> {
-    const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
-    return Core.FeedApplication.fetchFeeds(userId);
+  static async fetchFeeds(): Promise<FeedModelSchema[]> {
+    const userId = useAuthStore.getState().selectCurrentUserPubky();
+    return FeedApplication.fetchFeeds(userId);
   }
 
   /**
@@ -35,17 +41,17 @@ export class FeedController {
    * @param params.tags - The tags for the feed
    * @returns The created feed
    */
-  static async commitCreate(params: Core.TFeedCreateParams): Promise<Core.FeedModelSchema> {
-    const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
+  static async commitCreate(params: TFeedCreateParams): Promise<FeedModelSchema> {
+    const userId = useAuthStore.getState().selectCurrentUserPubky();
 
     // Validate tags early to fail fast before normalization and persistence
-    Core.FeedValidators.validateTags(params.tags);
+    FeedValidators.validateTags(params.tags);
 
-    const normalizedFeed = Core.FeedNormalizer.to({ params, userId });
+    const normalizedFeed = FeedNormalizer.to({ params, userId });
 
-    Core.FeedValidators.validatePutParams({ feed: normalizedFeed });
+    FeedValidators.validatePutParams({ feed: normalizedFeed });
 
-    const feed = await Core.FeedApplication.persist({ userId, params: { feed: normalizedFeed } });
+    const feed = await FeedApplication.persist({ userId, params: { feed: normalizedFeed } });
 
     return feed!;
   }
@@ -57,14 +63,14 @@ export class FeedController {
    * @param params.changes - The changes to the feed
    * @returns The updated feed
    */
-  static async commitUpdate(params: Core.TFeedUpdateParams): Promise<Core.FeedModelSchema> {
-    const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
+  static async commitUpdate(params: TFeedUpdateParams): Promise<FeedModelSchema> {
+    const userId = useAuthStore.getState().selectCurrentUserPubky();
 
     if (params.changes.tags) {
-      Core.FeedValidators.validateTags(params.changes.tags);
+      FeedValidators.validateTags(params.changes.tags);
     }
 
-    const mergedParams = await Core.FeedApplication.prepareUpdateParams({
+    const mergedParams = await FeedApplication.prepareUpdateParams({
       feedId: params.feedId,
       changes: params.changes,
     });
@@ -74,18 +80,18 @@ export class FeedController {
     // PubkyAppFeedConfig. Changing any of those fields yields a different ID, which means
     // the homeserver path changes. The `name` and `created_at` fields are NOT part of the
     // hash, so renaming a feed keeps the same ID.
-    const normalizedFeed = Core.FeedNormalizer.to({ params: mergedParams, userId });
+    const normalizedFeed = FeedNormalizer.to({ params: mergedParams, userId });
 
-    const persistParams: Core.TFeedPersistCreateParams = {
+    const persistParams: TFeedPersistCreateParams = {
       feed: normalizedFeed,
       existingId: params.feedId,
     };
 
-    Core.FeedValidators.validatePutParams(persistParams);
+    FeedValidators.validatePutParams(persistParams);
 
     // When the config-derived ID differs from existingId, persist handles the
     // create-new + delete-old cycle on the homeserver automatically.
-    const feed = await Core.FeedApplication.persist({
+    const feed = await FeedApplication.persist({
       userId,
       params: persistParams,
     });
@@ -99,9 +105,9 @@ export class FeedController {
    * @param params.feedId - The ID of the feed
    * @returns void
    */
-  static async commitDelete(params: Core.TFeedIdParam): Promise<void> {
-    const userId = Core.useAuthStore.getState().selectCurrentUserPubky();
-    Core.FeedValidators.validateDeleteParams({ feedId: params.feedId });
-    await Core.FeedApplication.commitDelete({ userId, params: { feedId: params.feedId } });
+  static async commitDelete(params: TFeedIdParam): Promise<void> {
+    const userId = useAuthStore.getState().selectCurrentUserPubky();
+    FeedValidators.validateDeleteParams({ feedId: params.feedId });
+    await FeedApplication.commitDelete({ userId, params: { feedId: params.feedId } });
   }
 }

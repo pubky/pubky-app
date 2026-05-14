@@ -1,15 +1,18 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { TaggedSection } from './TaggedSection';
 import type { TaggedSectionProps } from './TaggedSection.types';
 
 // Mock TagInput and TaggedList
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/TaggedList/TaggedList', () => {
   return {
-    ...actual,
-    TagInput: () => <div data-testid="tag-input">TagInput</div>,
     TaggedList: ({ tags }: { tags: unknown[] }) => <div data-testid="tagged-list">{tags.length} tags</div>,
+  };
+});
+
+vi.mock('@/molecules/TagInput/TagInput', () => {
+  return {
+    TagInput: () => <div data-testid="tag-input">TagInput</div>,
   };
 });
 

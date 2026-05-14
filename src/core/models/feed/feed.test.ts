@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import * as Core from '@/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { db } from '@/database/franky/franky';
+import { FeedModel } from '@/models/feed/feed';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
 
 describe('FeedModel', () => {
-  const createFeedSchema = (overrides: Partial<Core.FeedModelSchema> = {}): Core.FeedModelSchema => ({
+  const createFeedSchema = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema => ({
     id: 'feed-abc123',
     name: 'Bitcoin News',
     tags: ['bitcoin', 'lightning'],
@@ -17,17 +19,17 @@ describe('FeedModel', () => {
   });
 
   beforeEach(async () => {
-    await Core.db.initialize();
-    await Core.FeedModel.table.clear();
+    await db.initialize();
+    await FeedModel.table.clear();
   });
 
   describe('CRUD operations', () => {
     it('should create a feed', async () => {
       const feed = createFeedSchema();
 
-      await Core.FeedModel.upsert(feed);
+      await FeedModel.upsert(feed);
 
-      const saved = await Core.FeedModel.table.get(feed.id);
+      const saved = await FeedModel.table.get(feed.id);
       expect(saved).toBeTruthy();
       expect(saved!.id).toBe(feed.id);
       expect(saved!.name).toBe(feed.name);
@@ -36,37 +38,37 @@ describe('FeedModel', () => {
 
     it('should update an existing feed', async () => {
       const feed = createFeedSchema();
-      await Core.FeedModel.upsert(feed);
+      await FeedModel.upsert(feed);
 
       const updated = { ...feed, tags: ['bitcoin', 'mining'] };
-      await Core.FeedModel.upsert(updated);
+      await FeedModel.upsert(updated);
 
-      const saved = await Core.FeedModel.table.get(feed.id);
+      const saved = await FeedModel.table.get(feed.id);
       expect(saved!.tags).toEqual(['bitcoin', 'mining']);
     });
 
     it('should delete a feed by ID', async () => {
       const feed = createFeedSchema();
-      await Core.FeedModel.upsert(feed);
+      await FeedModel.upsert(feed);
 
-      await Core.FeedModel.deleteById(feed.id);
+      await FeedModel.deleteById(feed.id);
 
-      const saved = await Core.FeedModel.table.get(feed.id);
+      const saved = await FeedModel.table.get(feed.id);
       expect(saved).toBeUndefined();
     });
 
     it('should find feed by ID', async () => {
       const feed = createFeedSchema();
-      await Core.FeedModel.upsert(feed);
+      await FeedModel.upsert(feed);
 
-      const found = await Core.FeedModel.findById(feed.id);
+      const found = await FeedModel.findById(feed.id);
 
       expect(found).toBeTruthy();
       expect(found!.id).toBe(feed.id);
     });
 
     it('should return null when feed not found', async () => {
-      const found = await Core.FeedModel.findById('nonexistent');
+      const found = await FeedModel.findById('nonexistent');
 
       expect(found).toBeNull();
     });
@@ -75,9 +77,9 @@ describe('FeedModel', () => {
   describe('findByIdOrThrow', () => {
     it('should return feed when found', async () => {
       const feed = createFeedSchema();
-      await Core.FeedModel.upsert(feed);
+      await FeedModel.upsert(feed);
 
-      const found = await Core.FeedModel.findByIdOrThrow(feed.id);
+      const found = await FeedModel.findByIdOrThrow(feed.id);
 
       expect(found).toBeTruthy();
       expect(found.id).toBe(feed.id);
@@ -85,7 +87,7 @@ describe('FeedModel', () => {
     });
 
     it('should throw RECORD_NOT_FOUND when feed does not exist', async () => {
-      await expect(Core.FeedModel.findByIdOrThrow('nonexistent')).rejects.toMatchObject({
+      await expect(FeedModel.findByIdOrThrow('nonexistent')).rejects.toMatchObject({
         name: 'AppError',
         code: 'RECORD_NOT_FOUND',
         category: 'database',
@@ -101,11 +103,11 @@ describe('FeedModel', () => {
       const feed3 = createFeedSchema({ id: 'feed-3', name: 'Newest', created_at: now });
 
       // Insert in random order
-      await Core.FeedModel.upsert(feed2);
-      await Core.FeedModel.upsert(feed1);
-      await Core.FeedModel.upsert(feed3);
+      await FeedModel.upsert(feed2);
+      await FeedModel.upsert(feed1);
+      await FeedModel.upsert(feed3);
 
-      const feeds = await Core.FeedModel.findAllSorted();
+      const feeds = await FeedModel.findAllSorted();
 
       expect(feeds).toHaveLength(3);
       expect(feeds[0].name).toBe('Newest');
@@ -114,11 +116,11 @@ describe('FeedModel', () => {
     });
 
     it('should throw QUERY_FAILED on database error', async () => {
-      const spy = vi.spyOn(Core.FeedModel.table, 'orderBy').mockImplementationOnce(() => {
+      const spy = vi.spyOn(FeedModel.table, 'orderBy').mockImplementationOnce(() => {
         throw new Error('db-fail');
       });
 
-      await expect(Core.FeedModel.findAllSorted()).rejects.toMatchObject({
+      await expect(FeedModel.findAllSorted()).rejects.toMatchObject({
         name: 'AppError',
         code: 'QUERY_FAILED',
         category: 'database',
@@ -140,8 +142,8 @@ describe('FeedModel', () => {
         layout: PubkyAppFeedLayout.Visual,
       });
 
-      await Core.FeedModel.upsert(feed);
-      const saved = await Core.FeedModel.table.get(feed.id);
+      await FeedModel.upsert(feed);
+      const saved = await FeedModel.table.get(feed.id);
 
       expect(saved!.name).toBe('Complete Feed');
       expect(saved!.tags).toEqual(['tag1', 'tag2', 'tag3']);
@@ -154,8 +156,8 @@ describe('FeedModel', () => {
     it('should handle null content (All content types)', async () => {
       const feed = createFeedSchema({ content: null });
 
-      await Core.FeedModel.upsert(feed);
-      const saved = await Core.FeedModel.table.get(feed.id);
+      await FeedModel.upsert(feed);
+      const saved = await FeedModel.table.get(feed.id);
 
       expect(saved!.content).toBeNull();
     });
@@ -167,8 +169,8 @@ describe('FeedModel', () => {
         updated_at: now,
       });
 
-      await Core.FeedModel.upsert(feed);
-      const saved = await Core.FeedModel.table.get(feed.id);
+      await FeedModel.upsert(feed);
+      const saved = await FeedModel.table.get(feed.id);
 
       expect(saved!.created_at).toBe(now - 1000);
       expect(saved!.updated_at).toBe(now);

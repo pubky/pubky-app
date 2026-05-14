@@ -1,9 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import { useSettingsStore } from '@/core';
-import { useSettingsActions } from '@/hooks/useSettingsActions';
+import { useSettingsActions } from '@/hooks/useSettingsActions/useSettingsActions';
+import { SettingsSwitchGroup } from '@/molecules/Settings/SettingsSwitchGroup/SettingsSwitchGroup';
+import { SettingsSwitchItem } from '@/molecules/Settings/SettingsSwitchItem/SettingsSwitchItem';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 import { PRIVACY_SETTINGS } from './PrivacySettings.constants';
 import type { PrivacyType } from './PrivacySettings.types';
 
@@ -15,11 +16,11 @@ export function PrivacySettings() {
   const privacyTypes = Object.keys(PRIVACY_SETTINGS) as PrivacyType[];
 
   return (
-    <Molecules.SettingsSwitchGroup>
+    <SettingsSwitchGroup>
       {privacyTypes.map((type) => {
         const { labelKey, action, disabled } = PRIVACY_SETTINGS[type];
         return (
-          <Molecules.SettingsSwitchItem
+          <SettingsSwitchItem
             key={type}
             id={`privacy-switch-${type}`}
             label={t(labelKey)}
@@ -29,6 +30,6 @@ export function PrivacySettings() {
           />
         );
       })}
-    </Molecules.SettingsSwitchGroup>
+    </SettingsSwitchGroup>
   );
 }

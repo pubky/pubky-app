@@ -1,4 +1,8 @@
-import * as Core from '@/core';
+import type { EnrichedPostDetails, EnrichedUserDetails } from '@/application/moderation/moderation.types';
+import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import { LocalModerationService } from '@/services/local/moderation/moderation';
 import { shouldBlur } from './moderation.utils';
 
 export class ModerationApplication {
@@ -8,7 +12,7 @@ export class ModerationApplication {
    * Sets an item as un-blurred by the user.
    */
   static async setUnBlur(id: string): Promise<void> {
-    return Core.LocalModerationService.setUnBlur(id);
+    return LocalModerationService.setUnBlur(id);
   }
 
   /**
@@ -17,7 +21,7 @@ export class ModerationApplication {
    */
   private static enrichWithModeration<T extends { id: string }>(
     items: T[],
-    recordMap: Map<string, Core.ModerationModelSchema>,
+    recordMap: Map<string, ModerationModelSchema>,
     isBlurDisabledGlobally: boolean,
   ): (T & { is_moderated: boolean; is_blurred: boolean })[] {
     return items.map((item) => {
@@ -31,14 +35,14 @@ export class ModerationApplication {
   }
 
   static async enrichPostsWithModeration(
-    posts: Core.PostDetailsModelSchema[],
+    posts: PostDetailsModelSchema[],
     isBlurDisabledGlobally: boolean,
-  ): Promise<Core.EnrichedPostDetails[]> {
+  ): Promise<EnrichedPostDetails[]> {
     if (posts.length === 0) return [];
 
-    const records = await Core.LocalModerationService.getModerationRecords(
+    const records = await LocalModerationService.getModerationRecords(
       posts.map((p) => p.id),
-      Core.ModerationType.POST,
+      ModerationType.POST,
     );
     const recordMap = new Map(records.map((r) => [r.id, r]));
 
@@ -46,14 +50,14 @@ export class ModerationApplication {
   }
 
   static async enrichUsersWithModeration(
-    users: Core.UserDetailsModelSchema[],
+    users: UserDetailsModelSchema[],
     isBlurDisabledGlobally: boolean,
-  ): Promise<Core.EnrichedUserDetails[]> {
+  ): Promise<EnrichedUserDetails[]> {
     if (users.length === 0) return [];
 
-    const records = await Core.LocalModerationService.getModerationRecords(
+    const records = await LocalModerationService.getModerationRecords(
       users.map((u) => u.id),
-      Core.ModerationType.PROFILE,
+      ModerationType.PROFILE,
     );
     const recordMap = new Map(records.map((r) => [r.id, r]));
 
@@ -65,10 +69,10 @@ export class ModerationApplication {
    */
   static async getModerationStatus(
     id: string,
-    type: Core.ModerationType,
+    type: ModerationType,
     isBlurDisabledGlobally: boolean,
   ): Promise<{ is_moderated: boolean; is_blurred: boolean }> {
-    const record = await Core.LocalModerationService.getModerationRecord(id, type);
+    const record = await LocalModerationService.getModerationRecord(id, type);
     return {
       is_moderated: !!record,
       is_blurred: record ? shouldBlur(record.is_blurred, isBlurDisabledGlobally) : false,

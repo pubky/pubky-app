@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { InstallCard, InstallHeader, InstallNavigation } from './Install';
-import * as App from '@/app';
 
 // Mock Next.js Image
 vi.mock('next/image', () => ({
@@ -19,17 +19,13 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock Core
+// Mock dependencies
 const mockReset = vi.fn();
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useOnboardingStore: () => ({
-      reset: mockReset,
-    }),
-  };
-});
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
+  useOnboardingStore: () => ({
+    reset: mockReset,
+  }),
+}));
 
 describe('InstallCard - Snapshots', () => {
   it('matches snapshot', () => {
@@ -56,7 +52,7 @@ describe('InstallNavigation', () => {
     const createButton = screen.getByRole('button', { name: /Create keys in browser/i });
     fireEvent.click(createButton);
 
-    expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.PUBKY);
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.PUBKY);
   });
 
   it('handles continue button click', () => {
@@ -65,7 +61,7 @@ describe('InstallNavigation', () => {
     const continueButton = screen.getByRole('button', { name: /Continue with Pubky Ring/i });
     fireEvent.click(continueButton);
 
-    expect(mockPush).toHaveBeenCalledWith(App.ONBOARDING_ROUTES.SCAN);
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.SCAN);
   });
 
   it('shows loading state and disables both buttons when create button is clicked', () => {

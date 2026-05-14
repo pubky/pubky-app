@@ -1,8 +1,10 @@
 'use client';
 
+import { Check, Loader2, UserMinus, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import { Loader2, Check, UserMinus, UserRoundPlus } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
+import { Typography } from '@/atoms/Typography/Typography';
+
 interface UserInfoPopoverFollowButtonProps {
   isFollowing: boolean;
   isLoading: boolean;
@@ -11,7 +13,7 @@ interface UserInfoPopoverFollowButtonProps {
 export function UserInfoPopoverFollowButton({ isFollowing, isLoading, onClick }: UserInfoPopoverFollowButtonProps) {
   const t = useTranslations('userList');
   return (
-    <Atoms.Button
+    <Button
       variant="secondary"
       size="sm"
       className="group gap-2"
@@ -24,22 +26,22 @@ export function UserInfoPopoverFollowButton({ isFollowing, isLoading, onClick }:
       ) : isFollowing ? (
         <>
           <Check className="size-4 group-hover:hidden" />
-          <Atoms.Typography className="text-xs leading-4 font-bold group-hover:hidden" overrideDefaults>
+          <Typography className="text-xs leading-4 font-bold group-hover:hidden" overrideDefaults>
             {t('following')}
-          </Atoms.Typography>
+          </Typography>
           <UserMinus className="hidden size-4 group-hover:block" />
-          <Atoms.Typography className="hidden text-xs leading-4 font-bold group-hover:block" overrideDefaults>
+          <Typography className="hidden text-xs leading-4 font-bold group-hover:block" overrideDefaults>
             {t('unfollow')}
-          </Atoms.Typography>
+          </Typography>
         </>
       ) : (
         <>
           <UserRoundPlus className="size-4" />
-          <Atoms.Typography className="text-xs leading-4 font-bold" overrideDefaults>
+          <Typography className="text-xs leading-4 font-bold" overrideDefaults>
             {t('follow')}
-          </Atoms.Typography>
+          </Typography>
         </>
       )}
-    </Atoms.Button>
+    </Button>
   );
 }

@@ -1,20 +1,20 @@
 import { Table } from 'dexie';
+import { db } from '@/database/franky/franky';
+import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
+import type { TPostCountsParams } from '@/models/post/counts/postCounts.types';
+import { TupleModelBase } from '@/models/shared/base/tuple/baseTuple';
+import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
+import type { NexusPostCounts } from '@/services/nexus/nexus.types';
 
-import * as Core from '@/core';
-import { TupleModelBase } from '@/core/models/shared/base/tuple/baseTuple';
-
-export class PostCountsModel
-  extends TupleModelBase<string, Core.PostCountsModelSchema>
-  implements Core.PostCountsModelSchema
-{
-  static table: Table<Core.PostCountsModelSchema> = Core.db.table('post_counts');
+export class PostCountsModel extends TupleModelBase<string, PostCountsModelSchema> implements PostCountsModelSchema {
+  static table: Table<PostCountsModelSchema> = db.table('post_counts');
 
   tags: number;
   unique_tags: number;
   replies: number;
   reposts: number;
 
-  constructor(postCounts: Core.PostCountsModelSchema) {
+  constructor(postCounts: PostCountsModelSchema) {
     super(postCounts);
     this.tags = postCounts.tags;
     this.unique_tags = postCounts.unique_tags;
@@ -23,15 +23,15 @@ export class PostCountsModel
   }
 
   // Adapter function to convert NexusPostCounts to PostCountsModelSchema
-  static toSchema(data: Core.NexusModelTuple<Core.NexusPostCounts>): Core.PostCountsModelSchema {
+  static toSchema(data: NexusModelTuple<NexusPostCounts>): PostCountsModelSchema {
     return { id: data[0], ...data[1] };
   }
 
-  static async updateCounts({ postCompositeId, countChanges }: Core.TPostCountsParams): Promise<void> {
-    const postCounts = await Core.PostCountsModel.findById(postCompositeId);
+  static async updateCounts({ postCompositeId, countChanges }: TPostCountsParams): Promise<void> {
+    const postCounts = await PostCountsModel.findById(postCompositeId);
     if (!postCounts) return;
 
-    const updates: Partial<Core.PostCountsModelSchema> = {};
+    const updates: Partial<PostCountsModelSchema> = {};
 
     if (countChanges.replies !== undefined) {
       updates.replies = Math.max(0, postCounts.replies + countChanges.replies);
@@ -47,7 +47,7 @@ export class PostCountsModel
     }
 
     if (Object.keys(updates).length > 0) {
-      await Core.PostCountsModel.update(postCompositeId, updates);
+      await PostCountsModel.update(postCompositeId, updates);
     }
   }
 }

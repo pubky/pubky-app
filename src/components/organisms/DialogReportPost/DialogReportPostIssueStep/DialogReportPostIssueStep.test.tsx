@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useRouter } from 'next/navigation';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useRouter } from 'next/navigation';
-import * as Atoms from '@/atoms';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
+import { REPORT_ISSUE_LABELS, REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
 import { DialogReportPostIssueStep } from './DialogReportPostIssueStep';
-import { REPORT_ISSUE_TYPES, REPORT_ISSUE_LABELS } from '@/core/pipes/report';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -13,9 +13,9 @@ vi.mock('next/navigation', () => ({
 
 const renderWithDialog = (component: React.ReactElement) => {
   return render(
-    <Atoms.Dialog open={true}>
-      <Atoms.DialogContent>{component}</Atoms.DialogContent>
-    </Atoms.Dialog>,
+    <Dialog open={true}>
+      <DialogContent>{component}</DialogContent>
+    </Dialog>,
   );
 };
 

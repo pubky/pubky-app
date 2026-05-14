@@ -1,23 +1,22 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRequireAuth } from './useRequireAuth';
 
 const mockCurrentUserPubky = vi.hoisted(() => ({ value: null as string | null }));
 const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
 
-vi.mock('@/core', () => {
-  const getState = () => ({
-    currentUserPubky: mockCurrentUserPubky.value,
-    setShowSignInDialog: mockSetShowSignInDialog,
-  });
-
-  const useAuthStore = Object.assign(
-    (selector: (state: ReturnType<typeof getState>) => unknown) => selector(getState()),
-    { getState },
-  );
-
-  return { useAuthStore };
-});
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: Object.assign(
+    (selector: (state: { currentUserPubky: string | null }) => unknown) =>
+      selector({ currentUserPubky: mockCurrentUserPubky.value }),
+    {
+      getState: () => ({
+        currentUserPubky: mockCurrentUserPubky.value,
+        setShowSignInDialog: mockSetShowSignInDialog,
+      }),
+    },
+  ),
+}));
 
 describe('useRequireAuth', () => {
   beforeEach(() => {

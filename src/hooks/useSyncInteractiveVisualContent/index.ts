@@ -1,1 +1,0 @@
-export { useSyncInteractiveVisualContent } from './useSyncInteractiveVisualContent';

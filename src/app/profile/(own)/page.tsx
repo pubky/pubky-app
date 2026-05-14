@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function ProfilePage() {
-  return <Templates.ProfilePageNotifications />;
-}
+export { ProfileNotificationsPage as default } from '@/templates/Profile/Notifications/ProfileNotificationsPage';

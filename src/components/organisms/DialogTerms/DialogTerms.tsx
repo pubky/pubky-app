@@ -1,4 +1,8 @@
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/atoms/Dialog/Dialog';
+import { Link } from '@/atoms/Link/Link';
+import { List } from '@/atoms/List/List';
+import { Typography } from '@/atoms/Typography/Typography';
 
 const EMAIL_URL = 'mailto:info@synonym.to';
 const EMAIL_REPORT_URL = 'mailto:report@synonym.to';
@@ -14,34 +18,34 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
   const baseCSSItalic = 'text-muted-foreground text-base font-normal italic';
 
   const defaultTrigger = (
-    <Atoms.Typography as="span" size="sm" className="cursor-pointer font-medium text-brand">
+    <Typography as="span" size="sm" className="cursor-pointer font-medium text-brand">
       Terms of Service
-    </Atoms.Typography>
+    </Typography>
   );
 
   return (
-    <Atoms.Dialog>
-      <Atoms.DialogTrigger asChild>{trigger || defaultTrigger}</Atoms.DialogTrigger>
-      <Atoms.DialogContent className="sm:max-w-xl" hiddenTitle="Terms of Service">
-        <Atoms.DialogHeader className="pr-6">
-          <Atoms.DialogTitle>Terms of Service</Atoms.DialogTitle>
-        </Atoms.DialogHeader>
-        <Atoms.Container className="h-[320px] overflow-y-auto pr-4">
-          <Atoms.Container className="flex-col gap-4">
+    <Dialog>
+      <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
+      <DialogContent className="sm:max-w-xl" hiddenTitle="Terms of Service">
+        <DialogHeader className="pr-6">
+          <DialogTitle>Terms of Service</DialogTitle>
+        </DialogHeader>
+        <Container className="h-[320px] overflow-y-auto pr-4">
+          <Container className="flex-col gap-4">
             {/** Section 1 */}
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>
               TERMS AND CONDITIONS
               <br />
               Effective Date: January 29, 2026
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Thank you for using the Pubky platform and the products, services and features we make available to you as
               part of the platform, including the Pubky App (collectively, the &quot;Platform&quot;). The terms and
               conditions set forth below (as updated and amended from time to time, and collectively with the Privacy
               Policy and any other materials explicitly incorporated by us, these &quot;Terms&quot;) govern your access
               to and use of the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>
                 PLEASE REVIEW THE ARBITRATION PROVISION SET FORTH BELOW CAREFULLY, AS IT WILL REQUIRE ALL PERSONS TO
                 RESOLVE DISPUTES ON AN INDIVIDUAL BASIS THROUGH FINAL AND BINDING ARBITRATION AND TO WAIVE ANY RIGHT TO
@@ -49,8 +53,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 PLATFORM, YOU EXPRESSLY ACKNOWLEDGE THAT YOU HAVE READ AND UNDERSTAND ALL OF THE TERMS OF THIS PROVISION
                 AND HAVE TAKEN TIME TO CONSIDER THE CONSEQUENCES OF THIS IMPORTANT DECISION.
               </strong>
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>
                 THESE TERMS FORM A LEGALLY BINDING AGREEMENT BETWEEN YOU AND SYNONYM (AS DEFINED BELOW). BY ACCESSING,
                 DOWNLOADING OR USING THE PLATFORM, YOU CONFIRM THAT YOU ACCEPT THESE TERMS AND AGREE TO COMPLY WITH
@@ -59,23 +63,20 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 REPRESENT THAT YOU HAVE THE AUTHORITY TO ACT ON BEHALF OF SUCH PERSON OR ENTITY, AND THAT SUCH PERSON OR
                 ENTITY ACCEPTS THESE TERMS.
               </strong>
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 2 */}
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>
               INTRODUCTION
               <br />
               In order to assist your understanding of these Terms, we have included, in italicised text, an
               introductory paragraph to each section. These introductions should not be viewed as a substitute for
               reading the full text and are qualified by the text in full. If you have any doubt over the meaning of
-              these Terms, please contact us at <Atoms.Link href={EMAIL_URL}>info@synonym.to</Atoms.Link> before you use
-              the Platform. Any decision to utilise the Platform should be based on consideration of these Terms as a
-              whole.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
-              This section introduces Synonym and these Terms.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+              these Terms, please contact us at <Link href={EMAIL_URL}>info@synonym.to</Link> before you use the
+              Platform. Any decision to utilise the Platform should be based on consideration of these Terms as a whole.
+            </Typography>
+            <Typography className={baseCSSItalic}>This section introduces Synonym and these Terms.</Typography>
+            <Typography className={baseCSS}>
               These Terms constitute the entire agreement and understanding with respect to the access or use of any or
               all of the Platform and any manner of accessing the Platform, between you (referred to as “
               <strong>you</strong>”, “<strong>your</strong>”, or “<strong>User</strong>”) and Synonym Software Ltd., a
@@ -84,21 +85,19 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               Departamento de San Salvador, Código Postal 01101, República de El Salvador (referred to as “
               <strong>Synonym</strong>”, “<strong>we</strong>”, “<strong>us</strong>”, or “<strong>our</strong>”) (each
               of you and Synonym being a “<strong>Party</strong>”, and collectively the “<strong>Parties</strong>”).
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Only Eligible Users as described below are permitted to access or use the Platform. Any Person that is not
               an Eligible User that utilises the Platform will be in breach of these Terms and may have their account
               closed immediately.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 3 */}
-            <Atoms.Typography className={baseCSS}>
-              ACCEPTANCE OF THESE TERMS AND CONDITIONS THROUGH USE
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>ACCEPTANCE OF THESE TERMS AND CONDITIONS THROUGH USE</Typography>
+            <Typography className={baseCSSItalic}>
               This section explains your acceptance of these Terms and our ability to update or revise these Terms.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               These Terms may be amended, changed, or updated by Synonym at any time and without prior notice to you.
               You should check back often on our website to confirm that your copy and understanding of these Terms is
               current and correct. Your non-termination or continued access or use of the Platform after the effective
@@ -106,24 +105,24 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               such amendments, changes, or updates. Your only recourse in the case of your unwillingness to continue to
               be bound by these Terms is to stop using the Platform altogether and to request the closure of your
               account.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Access or use of the Platform is void where such access or use is prohibited by, would constitute a
               violation of, or would be subject to penalties under applicable Laws, and shall not be the basis for the
               assertion or recognition of any interest, right, remedy, power, or privilege.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 4 */}
-            <Atoms.Typography className={baseCSS}>REQUIREMENTS TO USE THE PLATFORM</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>REQUIREMENTS TO USE THE PLATFORM</Typography>
+            <Typography className={baseCSSItalic}>
               This section explains the requirements and restrictions that Users are subject to when using the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>User Identity Requirements:</strong>
               <br />
               You acknowledge and agree that in order to use the Platform:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>You must be at least eighteen (18) years old;</li>
               <li>
                 We must not have previously disabled your account for violation of Law or any of our policies referenced
@@ -141,18 +140,18 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 If you are using the Platform on behalf of a company or organization, you represent that you have
                 authority to act on behalf of that company or organization, and that such entity accepts these Terms.
               </li>
-            </Atoms.List>
-            <Atoms.Typography className={baseCSS}>
+            </List>
+            <Typography className={baseCSS}>
               <strong>Eligible Users:</strong>
               <br />
               Users of the Platform shall be “Eligible Users” where: they comply with the “User Identity Requirements”
               listed above and they do not utilise the Platform to facilitate any Prohibited Uses as described below.
               The access or use of any of the Platform by any Person other than an Eligible User is void and shall not
               be the basis for the assertion or recognition of any interest, right, remedy, power, or privilege.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 5 */}
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>
               <strong>License to Synonym:</strong>
               <br />
               When you share, post or upload Content as described below that is covered by intellectual property rights
@@ -162,8 +161,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               settings). This license will end when your Content is deleted from our systems. You understand and agree,
               however, that we may retain, but not display, distribute, or perform, server copies of your Content that
               has been removed or deleted.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>License to Users:</strong>
               <br />
               You also grant each other user of the Platform a worldwide, non-exclusive, royalty-free license to access
@@ -171,36 +170,36 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               derivative works, display, and perform it, only as enabled by a feature of the Platform (such as video
               playback or embeds). For clarity, this license does not grant any rights or permissions for a User to make
               use of your Content independent of the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Removal of Content:</strong>
               <br />
               You may remove your Content from the Platform at any time. You also have the option to make a copy of your
               Content before removing it. You must remove your Content if you no longer have the rights required by
               these Terms.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               You can report suspected illegal Content or Content which otherwise breaches these Terms. To contact us,
               please follow the “Complaint Procedure” outlined below.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 6 */}
-            <Atoms.Typography className={baseCSS}>CRYPTOGRAPHIC KEYS AND ACCOUNT RECOVERY</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>CRYPTOGRAPHIC KEYS AND ACCOUNT RECOVERY</Typography>
+            <Typography className={baseCSS}>
               This section explains your responsibilities regarding the cryptographic keys that secure your account.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Your Pubky account is secured by cryptographic keys that only you control. During the signup process, you
               will be provided with recovery options including:
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Recovery Phrase:</strong> A 12-word phrase that can restore your account.
               <br />
               <strong>Encrypted Backup File:</strong> A password-protected .pkarr file.
               <br />
               <strong>QR Code:</strong> A scannable backup option.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>
                 IMPORTANT: We do not store your private keys or recovery phrase. If you lose all means of recovery, your
                 account cannot be recovered by Synonym or any third party. You alone are responsible for safeguarding
@@ -208,22 +207,22 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 sharing your private keys or recovery phase with any third party, and maintaining backups of your
                 recovery materials listed above.
               </strong>
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               If you believe your account credentials have been compromised, you should immediately create a new account
               and transfer your content as appropriate.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 7 */}
-            <Atoms.Typography className={baseCSS}>HUMAN VERIFICATION</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>HUMAN VERIFICATION</Typography>
+            <Typography className={baseCSS}>
               This section explains the verification process required to use the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               To prevent spam and ensure the quality of the Platform, you must complete human verification during
               account creation. We offer the following verification methods:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>
                 <strong>SMS Verification</strong>: You may verify your account by receiving a one-time code via SMS to
                 your phone number. Standard message and data rates may apply. SMS verification may not be available in
@@ -238,34 +237,32 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 <strong>Invite Code Verification</strong>: You may verify your account using an invite code provided by
                 another user or by Synonym.
               </li>
-            </Atoms.List>
+            </List>
 
             {/** Section 8 */}
-            <Atoms.Typography className={baseCSS}>REGIONAL AVAILABILITY</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>REGIONAL AVAILABILITY</Typography>
+            <Typography className={baseCSS}>
               This section explains geographic restrictions on Platform features.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Certain features and verification methods may not be available in all jurisdictions due to legal,
               regulatory, or operational requirements. We reserve the right to restrict access to specific features
               based on your location.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               The Platform is not available to users in Prohibited Jurisdictions as defined below.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 9 */}
-            <Atoms.Typography className={baseCSS}>COMMUNITY GUIDELINES</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
-              This section explains the Synonym Community Guidelines.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>COMMUNITY GUIDELINES</Typography>
+            <Typography className={baseCSSItalic}>This section explains the Synonym Community Guidelines.</Typography>
+            <Typography className={baseCSS}>
               Synonym enables creators of Content to submit Content to the Platform. To allow all users of the Platform
               to safely participate in public conversation, you agree to comply with all applicable Laws when submitting
               Content to the Platform. In addition, you agree that under no circumstances shall the following be
               submitted to the Platform:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>
                 Content which includes, in whole or in part, audio, video, text, or images that are subject to copyright
                 by another person unless such inclusion is subject to applicable Laws concerning fair use or is
@@ -283,7 +280,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               <li>Content that is offensive, including harassment and discrimination;</li>
               <li>
                 Content that:
-                <Atoms.List>
+                <List>
                   <li>Promotes, supports, or incites violence or unlawful acts;</li>
                   <li>
                     Promotes, supports, or incites individuals and/or groups which engage in violence, hateful or
@@ -293,7 +290,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                     Promotes or supports entities and/or persons designated by governments of the United States, the
                     Republic of El Salvador, or the United Nations as terrorists or terrorist organizations.
                   </li>
-                </Atoms.List>
+                </List>
               </li>
               <li>
                 Content that exploits children under the age of eighteen (18) or posts or discloses any personally
@@ -312,32 +309,32 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 Any other Content or material that we in our sole, unfettered, and arbitrary discretion, determine
                 undesirable on the Platform.
               </li>
-            </Atoms.List>
-            <Atoms.Typography className={baseCSS}>
+            </List>
+            <Typography className={baseCSS}>
               We have the sole discretion to decide whether Content or material is permitted on the Platform and any
               materials submitted to the Platform may be, but are not necessarily, examined by us before they are made
               available on the Platform. You acknowledge that we have the absolute right (but not the obligation) to
               prohibit, refuse, delete, move and edit Content for any reason, in any manner, at any time, without notice
               to you except as otherwise required by applicable Law. We can also suspend or disable your access to the
               Platform for certain conduct as described in these Terms.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               You should also know that in using the Platform, you may be exposed to materials which you consider to be
               offensive or inappropriate and you assume the risk and sole responsibility for your exposure to any such
               Content or material.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 10 */}
-            <Atoms.Typography className={baseCSS}>COMPLAINT PROCEDURE</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>COMPLAINT PROCEDURE</Typography>
+            <Typography className={baseCSSItalic}>
               This Section explains how to report a violation of the Terms.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
-              To report any violation of our Terms, please email{' '}
-              <Atoms.Link href={EMAIL_REPORT_URL}>report@synonym.to</Atoms.Link>. Please use the word “
-              <strong>Complaint</strong>” in the subject line, and include the following information in your email:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <Typography className={baseCSS}>
+              To report any violation of our Terms, please email
+              <Link href={EMAIL_REPORT_URL}> report@synonym.to</Link>. Please use the word “<strong>Complaint</strong>”
+              in the subject line, and include the following information in your email:
+            </Typography>
+            <List>
               <li>Your name and, if you are a registered user of the Platform, your user ID;</li>
               <li>The basis of your complaint (provide as much detail as possible);</li>
               <li>
@@ -350,21 +347,21 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 subject of your complaint, timestamps within the video where the alleged violative Content appears, and
                 the reason for your Complaint.
               </li>
-            </Atoms.List>
-            <Atoms.Typography className={baseCSS}>
+            </List>
+            <Typography className={baseCSS}>
               If, in our determination, your complaint is a valid one, we will take appropriate actions in our sole
               discretion. If you have been restricted due to a violation of the Community Guidelines, you must not use
               another channel to circumvent these restrictions. Violation of this prohibition is a material breach of
               these Terms, and Synonym reserves the right to terminate your account or access to all of part of the
               Platform in its sole discretion.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 11 */}
-            <Atoms.Typography className={baseCSS}>COMPLIANCE WITH APPLICABLE LAW</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>COMPLIANCE WITH APPLICABLE LAW</Typography>
+            <Typography className={baseCSSItalic}>
               This section requires that you comply with all applicable Laws in using the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               You agree to comply with all applicable Laws with respect to your use of the Platform, including but not
               limited to sanctions, anti-money laundering, export control, privacy, and anti-terrorism Laws. Without
               limiting the foregoing, you acknowledge and agree that Synonym makes no representation that materials
@@ -374,35 +371,33 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               compliance with all applicable Laws. If you use the Platform in a jurisdiction that prohibits or restricts
               such use, your use will be subject to any other provision of these Terms, and Synonym shall not have any
               liability with respect to such use.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               You further agree to comply with all state, provincial and/or federal regulations with respect to the
               Content you upload to the Platform, including those regulations related to accessibility (e.g. closed
               captioning of Content where required by law).
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 12 */}
-            <Atoms.Typography className={baseCSS}>PRIVACY POLICY</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
-              This section provides a link to our Privacy Policy.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
-              Our <Atoms.Link href={PRIVACY_URL}>Privacy Policy</Atoms.Link> explains how we treat your personal data
-              and protect your privacy information when you use the Platform. The Privacy Policy also explains the many
-              ways you can control your information.
-            </Atoms.Typography>
+            <Typography className={baseCSS}>PRIVACY POLICY</Typography>
+            <Typography className={baseCSSItalic}>This section provides a link to our Privacy Policy.</Typography>
+            <Typography className={baseCSS}>
+              Our <Link href={PRIVACY_URL}>Privacy Policy</Link> explains how we treat your personal data and protect
+              your privacy information when you use the Platform. The Privacy Policy also explains the many ways you can
+              control your information.
+            </Typography>
 
             {/** Section 13 */}
-            <Atoms.Typography className={baseCSS}>INTELLECTUAL PROPERTY</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>INTELLECTUAL PROPERTY</Typography>
+            <Typography className={baseCSSItalic}>
               This section lays out the requirements to abide by all Laws applicable to copyrighted material,
               intellectual property or contractual rights or interests while using the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               You affirm, represent, and warrant that you have the legal right, including copyright, to submit your
               Content to the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               You further represent and warrant that any Content submitted does not contain third-party copyrighted
               material, or material that is subject to other third-party proprietary, intellectual property or
               contractual rights or interests, unless you have express written permission from the rights holder of the
@@ -411,8 +406,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               upon request by Synonym. You are required to obtain such written permission before submitting such Content
               to the Platform. Such written permission must not be limited in any way and shall remain in effect for the
               duration that the Content remains on the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Any infringement or other violation of a third-party&apos;s rights with respect to the Content submitted
               by you to the Platform and which has been identified as such by Synonym or by a third-party, may
               immediately and without notice to you result in the removal of such Content. You hereby agree to defend,
@@ -420,30 +415,30 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               investigations or disputes arising from your submission of Content to Synonym and/or monetization of your
               Content, insofar as it relates to any infringement or violation of the intellectual property rights,
               proprietary rights, contractual rights, or other rights of a third-party.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               If you believe your copyright has been infringed on the Platform, please send us a{' '}
-              <Atoms.Link href={COPYRIGHT_URL}>Takedown Notice</Atoms.Link>. We respond to notices of alleged copyright
-              infringement according to the process laid out in the{' '}
-              <Atoms.Link href={COPYRIGHT_URL}>Takedown Notice</Atoms.Link>.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+              <Link href={COPYRIGHT_URL}>Takedown Notice</Link>. We respond to notices of alleged copyright infringement
+              according to the process laid out in
+              <Link href={COPYRIGHT_URL}> Takedown Notice</Link>.
+            </Typography>
+            <Typography className={baseCSS}>
               If you believe your Content has been wrongfully removed from the Platform, please send us a{' '}
-              <Atoms.Link href={COPYRIGHT_URL}>Counter Notification</Atoms.Link>. Please note that any person who
-              knowingly materially misrepresents that material or activity was removed or disabled by mistake or
-              misidentification may be subject to liability.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+              <Link href={COPYRIGHT_URL}>Counter Notification</Link>. Please note that any person who knowingly
+              materially misrepresents that material or activity was removed or disabled by mistake or misidentification
+              may be subject to liability.
+            </Typography>
+            <Typography className={baseCSS}>
               Synonym policies provide for the termination, in appropriate circumstances, of repeat infringers’ access
               to the Platform.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 14 */}
-            <Atoms.Typography className={baseCSS}>THIRD-PARTY MATERIALS</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>THIRD-PARTY MATERIALS</Typography>
+            <Typography className={baseCSSItalic}>
               This section explains the risks of websites and other services provided by parties other than Synonym.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               The Platform may provide Third-Party Materials, and thereby produce third-party advertisements and/or
               third-party search results. The Platform and/or Content may otherwise link to Third-Party Materials.
               Synonym is not responsible for the content, privacy settings, policies and/or procedures of Third-Party
@@ -455,8 +450,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               some people may find inappropriate or offensive. You will need to make your own independent judgement
               regarding your interaction with Third-Party Materials. Synonym makes no representations or warranties
               whatsoever concerning:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>
                 the information, software or other material appearing on, or accessible through, any Third-Party
                 Materials, including any advertisement for products or services;
@@ -476,46 +471,44 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 the accuracy, copyright compliance, legality, decency, or any other aspect of the content of any
                 Third-Party Material.
               </li>
-            </Atoms.List>
-            <Atoms.Typography className={baseCSS}>
+            </List>
+            <Typography className={baseCSS}>
               If you decide to access any Third-Party Materials, you do so entirely at your own risk. If you are
               accessing Third-Party Materials through the Platform, you are advised to read any terms of use and privacy
               policies of such Third-Party Materials before you use or access them.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               You understand, acknowledge, and agree that where the Platform is licensed for use by a third-party, such
               third-party may be using the Platform for certain purposes or to display certain content, that is not
               content owned, controlled, distributed, authorized or endorsed by Synonym.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               We do not guarantee that the Platform will be secure or free from bugs, viruses or other harmful
               components. You are responsible for configuring your information technology, computer programmes and
               platform to access and utilise the Platform. You should use your own antivirus and anti-malware protection
               software.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 15 */}
-            <Atoms.Typography className={baseCSS}>
-              PUBLISHING AND DISTRIBUTION OF CONTENT VIA THE PLATFORM
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>PUBLISHING AND DISTRIBUTION OF CONTENT VIA THE PLATFORM</Typography>
+            <Typography className={baseCSSItalic}>
               This section explains that while the Platform may choose to publish user content across different media
               and formats at its discretion, it is not obligated to do so and reserves the right to reject any submitted
               content.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               We may, but are not obliged to, have your Content published and displayed through various media channels
               and in various formats via the Platform, in our sole commercial discretion. We reserve the right to
               decline or reject any Content submitted to the Platform in our sole discretion.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 16 */}
-            <Atoms.Typography className={baseCSS}>PROHIBITED USES</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>PROHIBITED USES</Typography>
+            <Typography className={baseCSSItalic}>
               This section sets out what you must not use the Platform for, and the actions we might take if you breach
               these restrictions.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               You agree not to engage in any of the following prohibited activities: (i) using any automated system,
               including “robots,” “spiders,” “offline readers,” etc., to access the Platform in a manner that sends more
               request messages to the Synonym servers than a human can reasonably produce in the same period of time by
@@ -537,8 +530,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               otherwise circumvent any applicable Laws; (xii) using or accessing the Platform if you are not an Eligible
               User; or (xiii) using the Platform to evade or attempt to evade taxes under the Laws of any applicable
               jurisdiction.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Any use as described in this section is a “<strong>Prohibited Use</strong>”. If Synonym determines or
               suspects that you have engaged in any Prohibited Use, Synonym may address such Prohibited Use through an
               appropriate sanction, in its sole and absolute discretion. Such sanction may include: (i) making a report
@@ -547,15 +540,15 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               you. In addition, should your actions or inaction result in Loss being suffered by Synonym or any of its
               Associates, you shall pay an amount to Synonym or the Associate so as to render Synonym or the Associate
               whole, including the amount of taxes or penalties that might be imposed on Synonym or the Associate.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 17 */}
-            <Atoms.Typography className={baseCSS}>NO REPRESENTATION BY SYNONYM</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>NO REPRESENTATION BY SYNONYM</Typography>
+            <Typography className={baseCSSItalic}>
               This section explains that we do not make any promises about the Platform and that we are providing the
               Platform on an “as is” basis. We cannot confirm that the Platform will suit your needs.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Synonym makes no representations, warranties, covenants or guarantees to you of any kind and, to the
               extent permitted by applicable Laws, Synonym expressly disclaims all representations, warranties,
               covenants or guarantees, express, implied or statutory, with respect to the Platform. The Platform is
@@ -565,19 +558,19 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               or pre-release, you understand that such services are still in development, may have bugs or errors, may
               be feature incomplete, may materially change prior to a full commercial launch, or may never be released
               commercially.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Without limiting the generality of the above paragraph, Synonym makes no representations, warranties,
               covenants or guarantees to you in respect of any Third-Party Materials.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 18 */}
-            <Atoms.Typography className={baseCSS}>PUBKY IS A PROGRESSIVE WEB APPLICATION</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>PUBKY IS A PROGRESSIVE WEB APPLICATION</Typography>
+            <Typography className={baseCSSItalic}>
               This section explains certain requirements and restrictions because the Pubky App is a progressive web
               application.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Progressive Web Application</strong>:
               <br />
               To use the Pubky App you must have either a computer or a mobile device that is compatible with the Pubky
@@ -588,15 +581,15 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               and may automatically electronically upgrade the version of the Pubky App that you are using. You consent
               to such automatic upgrading on your computer or mobile device, and agree that the terms and conditions of
               these Terms will apply to all such upgrades.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 19 */}
-            <Atoms.Typography className={baseCSS}>TAX</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>TAX</Typography>
+            <Typography className={baseCSSItalic}>
               This section makes it clear that you are responsible for any taxes in relation to any transactions you
               carry out through the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               It is your sole responsibility to determine whether and to what extent taxes and tax reporting obligations
               may apply to you (including any goods and services tax) with respect to any transactions carried out
               through the Platform and you shall timely pay all such taxes and shall file all returns, reports, and
@@ -604,23 +597,21 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               harmless from and against any and all taxes (other than income or similar taxes on income earned by
               Synonym in providing the Platform) payable with respect to any transactions carried out through the
               Platform.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 20 */}
-            <Atoms.Typography className={baseCSS}>
-              RESPONSIBILITIES, LIMITATION OF LIABILITY AND INDEMNITY
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>RESPONSIBILITIES, LIMITATION OF LIABILITY AND INDEMNITY</Typography>
+            <Typography className={baseCSSItalic}>
               In this section, we limit our liability to you and require you to release claims against us and indemnify
               us for any losses we incur as a result of a breach by you of these Terms.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               To the maximum extent permitted by applicable Law, you irrevocably agree and acknowledge that neither
               Synonym nor any of its Associates assumes any liability or responsibility for and neither Synonym nor any
               of its Associates shall have any liability or responsibility for any Losses directly or indirectly arising
               out of or related to the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               You hereby agree to release Synonym and its Associates from liability for any and all such Losses, and you
               shall indemnify and save and hold Synonym and its Associates harmless from and against all such Losses
               incurred by them as a result of your use of the Platform in breach of these Terms, in violation of
@@ -632,19 +623,19 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               regulation, or any other basis, even if Synonym or any of its Associates have been advised of or should
               have known of the possibility of such Losses and damages, and without regard to the success or
               effectiveness of any other remedies.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               To the fullest extent permissible by Law, the maximum aggregate monetary liability of Synonym under these
               Terms shall in no event exceed the fees paid by you to Synonym (if any) in respect of the Platform in
               relation to which the liability has arisen.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 21 */}
-            <Atoms.Typography className={baseCSS}>FORCE MAJEURE</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>FORCE MAJEURE</Typography>
+            <Typography className={baseCSSItalic}>
               This section explains that we cannot be held responsible for things outside of our control.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Synonym is not responsible for Losses caused by delay or failure of Synonym or the Platform, including
               when the delay or failure is due to fires; strikes; floods; power outages or failures; pandemics and
               public health events; acts of God or the state’s enemies; disease pandemics; government acts; any and all
@@ -652,17 +643,15 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               breaches or cyberattacks; criminal acts; delays or defaults caused by common carriers; acts or omissions
               of other Persons; or, any other delays, defaults, failures or interruptions that cannot reasonably be
               foreseen or provided against by Synonym.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 22 */}
-            <Atoms.Typography className={baseCSS}>
-              MANDATORY RESOLUTION OF DISPUTES THROUGH ARBITRATION
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>MANDATORY RESOLUTION OF DISPUTES THROUGH ARBITRATION</Typography>
+            <Typography className={baseCSSItalic}>
               This Section requires that most disputes relating to the Platform be resolved through individual
               arbitration.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Covered Claims:</strong>
               <br />
               Except for excluded claims described in the paragraph below, Synonym and you each agree that any dispute,
@@ -688,8 +677,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               claims less than U.S.$15,000, Synonym will reimburse you for all initiating filing fees in the event that
               the claim is successful. The prevailing party, as determined by the arbitrator, will be entitled to its
               costs of the arbitration (including the arbitrator’s fees) and its reasonable attorney’s fees and costs.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Excluded Claims:</strong>
               <br />
               The following claims and causes of action will be excluded from arbitration as described in the paragraph
@@ -697,8 +686,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               alleged unlawful use of its intellectual property or its confidential information or private data. The
               Parties shall be at liberty to pursue claims or causes of actions excluded from arbitration through any
               court of competent jurisdiction.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Delegation:</strong>
               <br />
               The arbitrator will have the power to hear and determine challenges to its jurisdiction, including any
@@ -712,8 +701,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               defense or, with respect to a counterclaim, the reply to the counterclaim; provided, however, that if a
               claim or counterclaim is later added or amended such a challenge may be made not later than the response
               to such claim or counterclaim as provided under LCIA Rules.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Class Action Waiver:</strong>
               <br />
               You and Synonym expressly intend and agree that: (i) class action and representative action procedures are
@@ -725,8 +714,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               claims on a class or representative basis; and (v) any relief awarded to any one User cannot and may not
               affect any other User. No adjudicator may consolidate or join more than one Person’s or Party’s claims and
               may not otherwise preside over any form of a consolidated, representative, or class proceeding.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Confidentiality:</strong>
               <br />
               You and Synonym and any other arbitration parties will maintain the confidential nature of the arbitration
@@ -734,10 +723,10 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               arbitration hearing on the merits, or except as may be necessary in connection with a court application
               for a preliminary remedy, a judicial challenge to an award or its enforcement, or unless otherwise
               required by Law or judicial decision.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 23 */}
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>
               <strong>JURY TRIAL WAIVER:</strong>
               <br />
               <strong>
@@ -746,18 +735,18 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 OR RELATING TO THESE TERMS OR ANY BREACH THEREOF, ANY USE OR ATTEMPTED USE OF THE PLATFORM BY YOU,
                 AND/OR ANY OTHER MATTER INVOLVING THE USER AND SYNONYM.
               </strong>
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 24 */}
-            <Atoms.Typography className={baseCSS}>DEFINITIONS</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>DEFINITIONS</Typography>
+            <Typography className={baseCSSItalic}>
               In this section, we define certain terms used throughout these Terms. If a word is capitalised in these
               Terms, please refer to this section for its intended meaning.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               In these Terms, the following words have the following meanings, unless otherwise indicated:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>
                 “<strong>Associates</strong>” means Synonym, its subsidiaries and affiliates and their respective
                 officers, directors, agents, co-branders and other partners, contractors, and employees;
@@ -790,9 +779,9 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 separate legal personality);
               </li>
               <li>
-                “<strong>Privacy Policy</strong>” means the Pubky{' '}
-                <Atoms.Link href={PRIVACY_URL}>Privacy Policy</Atoms.Link> located at:{' '}
-                <Atoms.Link href={PRIVACY_URL}>https://pubky.app/privacy</Atoms.Link>.
+                “<strong>Privacy Policy</strong>” means the Pubky
+                <Link href={PRIVACY_URL}> Privacy Policy</Link> located at:
+                <Link href={PRIVACY_URL}> https://pubky.app/privacy</Link>.
               </li>
               <li>
                 “<strong>Prohibited Jurisdiction</strong>” means any of: Cuba, Democratic People’s Republic of Korea
@@ -812,23 +801,23 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               <li>
                 “<strong>Users</strong>” means all users and others who access the Platform.
               </li>
-            </Atoms.List>
+            </List>
 
             {/** Section 25 */}
-            <Atoms.Typography className={baseCSS}>MISCELLANEOUS</Atoms.Typography>
-            <Atoms.Typography className={baseCSSItalic}>
+            <Typography className={baseCSS}>MISCELLANEOUS</Typography>
+            <Typography className={baseCSSItalic}>
               This section contains provisions relating to which law governs these Terms, our relationship and whether
               we can transfer the rights of these Terms, among other things.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Governing law:</strong>
               <br />
               These Terms shall be governed by and construed and enforced in accordance with the Laws of the England and
               Wales and shall be interpreted in all respects as an English law contract. Any transaction, dispute,
               controversy, claim or action arising from or related to your access to the Platform or these Terms shall
               be governed by the Laws of England and Wales, exclusive of choice-of-law principles.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>No Waiver; Available Remedies:</strong>
               <br />
               Any failure by Synonym to exercise any of its rights, powers, or remedies under these Terms, or any delay
@@ -841,8 +830,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               connection with such remedies, (ii) the right to recover the amount of any Losses by set off against any
               amounts that Synonym would otherwise be obligated to pay to you, and (iii) the right to seize and recover
               against any of your assets, or your interests therein, that are held by Synonym or any of its Associates.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Assignment and Third-Party Rights:</strong>
               <br />
               These Terms, and any of the rights, duties, and obligations contained or incorporated herein, are not
@@ -862,8 +851,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               rights and privileges set out in the paragraph titled “Responsibilities, Limitation of Liability and
               Indemnity”) as if a direct party to these Terms. No consent of any Person is required for any modification
               or amendment to these Terms.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Severability:</strong>
               <br />
               If any provision of these Terms or part thereof, as amended from time to time, is determined to be
@@ -871,8 +860,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               invalidity, voidness, or unenforceability attaches only to such provision to the extent of its illegality,
               unenforceability, invalidity, or voidness, as may be, and everything else in these Terms continues in full
               force and effect.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Electronic Communications and Acceptance:</strong>
               <br />
               You agree and consent to receive electronically all communications, agreements, documents, receipts,
@@ -882,8 +871,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               part of the Platform or on which the e-mail is sent to such e-mail address. These Terms may be accepted
               electronically, and it is the intention of the Parties that such acceptance shall be deemed to be as valid
               as an original signature being applied to these Terms.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Termination and No Liability for Termination:</strong>
               <br />
               We reserve the right, in our sole discretion, to suspend and/or terminate your access to the Platform for
@@ -891,28 +880,28 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               repeatedly submitted manifestly unfounded notices or complaints; (iii) otherwise violated these Terms or
               applicable Law. This includes our right to terminate your ability to upload Content, post comments or use
               any function available via the Platform.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               In general, we will notify you at the latest from the date the action is taken and provide you with an
               opportunity to remedy the relevant breach or breaches. However, advanced notification and/or opportunity
               to remedy will not be provided if the seriousness of the breach requires immediate termination of your
               access to the Platform, or when it is impossible to remedy the breach.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Where we disable or delete your account, we will also provide information about this action and, where
               required under applicable data protection law, the reasons for it. Where the decision is based solely on
               automated processing and produces legal or similarly significant effects, you have the right to request
               human intervention, to express your point of view, and to contest the decision. We may limit or withhold
               specific information where providing it would adversely affect the rights and freedoms of others,
               compromise the security or integrity of our services, or where we are legally required to do so.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               You acknowledge and agree that we shall not be liable to you or any third-party for any termination or
               suspension of your access to the Platform.
-            </Atoms.Typography>
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+            </Typography>
+          </Container>
+        </Container>
+      </DialogContent>
+    </Dialog>
   );
 }

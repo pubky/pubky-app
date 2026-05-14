@@ -1,17 +1,18 @@
-import * as Core from '@/core';
+import type { TagKind } from '@/application/tag/tag.types';
+import type { Pubky } from '@/models/models.types';
 
 export interface TTagEventParams {
-  taggerId: Core.Pubky | string;
-  taggedId: Core.Pubky;
+  taggerId: Pubky | string;
+  taggedId: Pubky;
   label: string;
-  taggedKind: Core.TagKind;
+  taggedKind: TagKind;
 }
 
 export interface TTagFromResponse {
-  taggerId: Core.Pubky;
-  taggedId: Core.Pubky;
+  taggerId: Pubky;
+  taggedId: Pubky;
   label: string;
-  taggedKind: Core.TagKind;
+  taggedKind: TagKind;
   tagUrl: string;
   tagJson: Record<string, unknown>;
 }

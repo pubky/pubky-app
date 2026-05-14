@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { HomeFeedSidebar, HomeFeedDrawer, HomeFeedDrawerMobile } from './HomeFeedSidebar';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFeedSidebar';
 
 const mockSetContent = vi.fn();
 const mockUseHomeStore = vi.fn();
@@ -15,8 +15,8 @@ const mockFilterContent = vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?:
   </div>
 ));
 
-// Mock Core.useHomeStore
-vi.mock('@/core', () => ({
+// Mock useHomeStore
+vi.mock('@/stores/home/home.types', () => ({
   CONTENT: {
     ALL: 'all',
     SHORT: 'short',
@@ -26,6 +26,8 @@ vi.mock('@/core', () => ({
     LINKS: 'links',
     FILES: 'files',
   },
+}));
+vi.mock('@/stores/home/home.store', () => ({
   useHomeStore: () => mockUseHomeStore(),
 }));
 
@@ -37,30 +39,49 @@ const mockUseFeedLayoutResolution = vi.fn(() => ({
   isPhoneViewport: false,
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
   useFeedLayoutResolution: () => mockUseFeedLayoutResolution(),
 }));
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock Molecules
-vi.mock('@/molecules', () => ({
-  FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
-  FilterSort: () => <div data-testid="filter-sort">FilterSort</div>,
-  FilterContent: (props: { disabledTabs?: string[]; selectedTab?: string }) => mockFilterContent(props),
-  FilterLayout: ({ showVisual }: { showVisual?: boolean }) => (
-    <div data-testid="filter-layout" data-show-visual={showVisual ? 'true' : undefined}>
-      FilterLayout
-    </div>
-  ),
-}));
+vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
+  return {
+    FilterContent: (props: { disabledTabs?: string[]; selectedTab?: string }) => mockFilterContent(props),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
+  return {
+    FilterLayout: ({ showVisual }: { showVisual?: boolean }) => (
+      <div data-testid="filter-layout" data-show-visual={showVisual ? 'true' : undefined}>
+        FilterLayout
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
+  return {
+    FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
+  };
+});
+
+vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
+  return {
+    FilterSort: () => <div data-testid="filter-sort">FilterSort</div>,
+  };
+});
 
 beforeEach(() => {
   mockSetContent.mockClear();

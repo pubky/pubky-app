@@ -1,32 +1,34 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { StatusPickerContent } from './StatusPickerContent';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { STATUS_EMOJIS, STATUS_LABELS } from '@/libs/status/status.constants';
+import { StatusPickerContent } from './StatusPickerContent';
 
 // Mock EmojiPickerDialog
-vi.mock('@/components/molecules', () => ({
-  EmojiPickerDialog: ({
-    open,
-    onOpenChange,
-    onEmojiSelect,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onEmojiSelect: (emoji: { native: string }) => void;
-  }) => {
-    if (!open) return null;
-    return (
-      <div data-testid="emoji-picker-dialog">
-        <button data-testid="emoji-select-button" onClick={() => onEmojiSelect({ native: '😊' })}>
-          Select Emoji
-        </button>
-        <button data-testid="emoji-close-button" onClick={() => onOpenChange(false)}>
-          Close
-        </button>
-      </div>
-    );
-  },
-}));
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
+  return {
+    EmojiPickerDialog: ({
+      open,
+      onOpenChange,
+      onEmojiSelect,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onEmojiSelect: (emoji: { native: string }) => void;
+    }) => {
+      if (!open) return null;
+      return (
+        <div data-testid="emoji-picker-dialog">
+          <button data-testid="emoji-select-button" onClick={() => onEmojiSelect({ native: '😊' })}>
+            Select Emoji
+          </button>
+          <button data-testid="emoji-close-button" onClick={() => onOpenChange(false)}>
+            Close
+          </button>
+        </div>
+      );
+    },
+  };
+});
 
 describe('StatusPickerContent', () => {
   const mockOnStatusSelect = vi.fn();

@@ -1,27 +1,33 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { EditProfileHeader } from './EditProfileHeader';
 
 const mockCopyToClipboard = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => ({
     currentUserPubky: 'abc123def456ghi789',
   }),
+}));
+
+vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
   useCopyToClipboard: () => ({
     copyToClipboard: mockCopyToClipboard,
   }),
 }));
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Page/Page', () => {
   return {
-    ...actual,
     PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
       <h1 data-testid="page-title" data-size={size}>
         {children}
       </h1>
     ),
+  };
+});
+
+vi.mock('@/molecules/PopoverPublicKey/PopoverPublicKey', () => {
+  return {
     PopoverPublicKey: ({ className }: { className?: string }) => (
       <div data-testid="popover-public-key" className={className} />
     ),

@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { NEXUS_URL } from '@/config/nexus';
+import { UserStreamReach } from '@/services/nexus/nexus.types';
 import { tagApi } from './tag.api';
-import { TTagViewParams, TTagHotParams, TTagTaggersParams } from './tag.types';
-import * as Config from '@/config';
-import * as Core from '@/core';
+import { TTagHotParams, TTagTaggersParams, TTagViewParams } from './tag.types';
 
 const testTaggerId = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 const testTagId = 'test_tag';
@@ -16,7 +16,7 @@ describe('Tag API', () => {
       };
 
       const result = tagApi.view(params);
-      expect(result).toBe(`${Config.NEXUS_URL}/v0/tags/${testTaggerId}/${testTagId}`);
+      expect(result).toBe(`${NEXUS_URL}/v0/tags/${testTaggerId}/${testTagId}`);
     });
 
     it('should handle different parameters', () => {
@@ -26,7 +26,7 @@ describe('Tag API', () => {
       };
 
       const result = tagApi.view(params);
-      expect(result).toBe(`${Config.NEXUS_URL}/v0/tags/${testTaggerId}/differentTag`);
+      expect(result).toBe(`${NEXUS_URL}/v0/tags/${testTaggerId}/differentTag`);
     });
   });
 
@@ -34,11 +34,11 @@ describe('Tag API', () => {
     it('should generate correct URL', () => {
       const params: TTagHotParams = {
         user_id: 'test_user',
-        reach: Core.UserStreamReach.FOLLOWERS,
+        reach: UserStreamReach.FOLLOWERS,
         limit: 20,
       };
       const result = tagApi.hot(params);
-      expect(result).toBe(`${Config.NEXUS_URL}/v0/tags/hot?user_id=test_user&reach=followers&limit=20`);
+      expect(result).toBe(`${NEXUS_URL}/v0/tags/hot?user_id=test_user&reach=followers&limit=20`);
     });
   });
 
@@ -46,11 +46,11 @@ describe('Tag API', () => {
     it('should generate correct URL', () => {
       const params: TTagTaggersParams = {
         label: 'test_label',
-        reach: Core.UserStreamReach.FRIENDS,
+        reach: UserStreamReach.FRIENDS,
         limit: 30,
       };
       const result = tagApi.taggers(params);
-      expect(result).toBe(`${Config.NEXUS_URL}/v0/tags/taggers/test_label?reach=friends&limit=30`);
+      expect(result).toBe(`${NEXUS_URL}/v0/tags/taggers/test_label?reach=friends&limit=30`);
     });
   });
 

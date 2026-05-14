@@ -1,12 +1,12 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMobileAuth } from './useMobileAuth';
 
 const mockFetchUrl = vi.fn();
 const mockCopyAuthUrl = vi.fn();
 const mockUseAuthUrl = vi.fn();
 
-vi.mock('../useAuthUrl', () => ({
+vi.mock('../useAuthUrl/useAuthUrl', () => ({
   useAuthUrl: (...args: unknown[]) => mockUseAuthUrl(...args),
 }));
 

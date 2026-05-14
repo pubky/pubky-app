@@ -1,4 +1,4 @@
-import { UserController } from '@/core/controllers/user/user';
+import { UserController } from '@/controllers/user/user';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 

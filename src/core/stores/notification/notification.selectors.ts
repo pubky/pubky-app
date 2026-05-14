@@ -1,5 +1,5 @@
-import { NotificationStore } from './notification.types';
 import { ZustandGet } from '../stores.types';
+import { NotificationStore } from './notification.types';
 
 // Selectors - State access functions with validation
 export const createNotificationSelectors = (get: ZustandGet<NotificationStore>) => ({

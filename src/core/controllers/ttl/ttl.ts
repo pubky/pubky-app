@@ -1,21 +1,22 @@
-import * as Core from '@/core';
+import { TtlApplication } from '@/application/ttl/ttl';
+import type { Pubky } from '@/models/models.types';
 
 export class TtlController {
   private constructor() {}
 
   static async findStalePostsByIds(params: { postIds: string[]; ttlMs: number }): Promise<string[]> {
-    return await Core.TtlApplication.findStalePostsByIds(params);
+    return await TtlApplication.findStalePostsByIds(params);
   }
 
-  static async findStaleUsersByIds(params: { userIds: Core.Pubky[]; ttlMs: number }): Promise<Core.Pubky[]> {
-    return await Core.TtlApplication.findStaleUsersByIds(params);
+  static async findStaleUsersByIds(params: { userIds: Pubky[]; ttlMs: number }): Promise<Pubky[]> {
+    return await TtlApplication.findStaleUsersByIds(params);
   }
 
-  static async forceRefreshPostsByIds(params: { postIds: string[]; viewerId: Core.Pubky }): Promise<void> {
-    return await Core.TtlApplication.forceRefreshPostsByIds(params);
+  static async forceRefreshPostsByIds(params: { postIds: string[]; viewerId: Pubky }): Promise<void> {
+    return await TtlApplication.forceRefreshPostsByIds(params);
   }
 
-  static async forceRefreshUsersByIds(params: { userIds: Core.Pubky[]; viewerId?: Core.Pubky }): Promise<void> {
-    return await Core.TtlApplication.forceRefreshUsersByIds(params);
+  static async forceRefreshUsersByIds(params: { userIds: Pubky[]; viewerId?: Pubky }): Promise<void> {
+    return await TtlApplication.forceRefreshUsersByIds(params);
   }
 }

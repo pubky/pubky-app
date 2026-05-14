@@ -63,6 +63,6 @@ A staging recovery phrase is stored in the `STAGING_RECOVERY_PHRASE` secret (12 
 ## Caveats
 
 - `.nvmrc` specifies Node.js **v24**. The VM update script installs it via nvm automatically.
-- The pre-commit hook runs `format:check` then `lint` — both must pass before committing. Run `npm run format` to auto-fix formatting.
+- The pre-commit hook auto-fixes staged files with `lint-staged`, then runs `typecheck`. Run `npm run format` or `npm run lint:fix` for full-repo cleanup.
 - Account creation requires SMS verification or Bitcoin payment against staging infrastructure — you cannot create a real account in the cloud VM without external credentials.
 - Vitest tests use `fake-indexeddb` and `jsdom` — no browser needed for unit tests.

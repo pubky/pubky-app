@@ -1,18 +1,19 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as Core from '@/core';
 import { MuteResult } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils';
-import {
-  TEST_PUBKY,
-  INVALID_INPUTS,
-  setupUnitTestMocks,
-  setupIntegrationTestMocks,
-  restoreMocks,
-  buildPubkyUri,
-} from '../pipes.test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { MuteNormalizer } from '@/pipes/mute/mute.normalizer';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { asOpaque } from '@/test-utils/type-assertions';
+import {
+  buildPubkyUri,
+  INVALID_INPUTS,
+  restoreMocks,
+  setupIntegrationTestMocks,
+  setupUnitTestMocks,
+  TEST_PUBKY,
+} from '../pipes.test-utils';
 
 describe('MuteNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createMute: ReturnType<typeof vi.fn> }>) => ({
@@ -40,21 +41,21 @@ describe('MuteNormalizer', () => {
 
     describe('to - successful creation', () => {
       it('should create mute with mute and meta properties', () => {
-        const result = Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
+        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
 
         expect(result).toHaveProperty('mute');
         expect(result).toHaveProperty('meta');
       });
 
       it('should call PubkySpecsSingleton.get with muter and createMute with mutee', () => {
-        Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
+        MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
 
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
         expect(mockBuilder.createMute).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
       });
 
       it('should return correct structure with mute and meta URL', () => {
-        const result = Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
+        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
 
         expect(result.mute).toHaveProperty('toJson');
         expect(result.meta.url).toContain('pubky://');
@@ -64,17 +65,17 @@ describe('MuteNormalizer', () => {
 
     describe('to - different inputs', () => {
       it('should handle different muter/mutee combinations', () => {
-        Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
+        MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
         expect(mockBuilder.createMute).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
 
-        Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_2, mutee: TEST_PUBKY.USER_1 });
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
+        MuteNormalizer.to({ muter: TEST_PUBKY.USER_2, mutee: TEST_PUBKY.USER_1 });
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
       });
 
       it('should handle self-mute scenario', () => {
-        Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_1 });
+        MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_1 });
 
-        expect(Core.PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
+        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
         expect(mockBuilder.createMute).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
       });
     });
@@ -87,7 +88,7 @@ describe('MuteNormalizer', () => {
         });
 
         try {
-          Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
+          MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);
@@ -102,11 +103,11 @@ describe('MuteNormalizer', () => {
       });
 
       it('should throw AppError when PubkySpecsSingleton.get fails', () => {
-        vi.spyOn(Core.PubkySpecsSingleton, 'get').mockImplementation(() => {
+        vi.spyOn(PubkySpecsSingleton, 'get').mockImplementation(() => {
           throw 'Singleton error';
         });
 
-        expect(() => Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 })).toThrow(AppError);
+        expect(() => MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 })).toThrow(AppError);
       });
     });
 
@@ -115,7 +116,7 @@ describe('MuteNormalizer', () => {
         ['empty mutee', { muter: TEST_PUBKY.USER_1, mutee: INVALID_INPUTS.EMPTY }],
         ['empty muter', { muter: INVALID_INPUTS.EMPTY, mutee: TEST_PUBKY.USER_2 }],
       ])('should pass %s to builder (unit test)', (_, params) => {
-        Core.MuteNormalizer.to(params);
+        MuteNormalizer.to(params);
         expect(mockBuilder.createMute).toHaveBeenCalled();
       });
     });
@@ -130,7 +131,7 @@ describe('MuteNormalizer', () => {
 
     describe('successful creation with real library', () => {
       it('should create valid result with correct URL format', () => {
-        const result = Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
+        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
 
         expect(result.mute).toBeDefined();
         expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/mutes\/.+/);
@@ -138,21 +139,21 @@ describe('MuteNormalizer', () => {
       });
 
       it('should create unique URLs for different mutees', () => {
-        const result1 = Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
-        const result2 = Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_1 });
+        const result1 = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
+        const result2 = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_1 });
 
         expect(result1.meta.url).not.toBe(result2.meta.url);
       });
 
       it('should allow self-mute at specs level', () => {
-        const result = Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_1 });
+        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_1 });
 
         expect(result).toBeDefined();
         expect(result.meta.url).toContain(TEST_PUBKY.USER_1);
       });
 
       it('should produce valid JSON from mute object', () => {
-        const result = Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
+        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: TEST_PUBKY.USER_2 });
 
         expect(typeof result.mute.toJson).toBe('function');
         expect(result.mute.toJson()).toBeDefined();
@@ -160,7 +161,7 @@ describe('MuteNormalizer', () => {
 
       it('should handle mutee with "pubky" prefix by stripping it', () => {
         const prefixedMutee = `pubky${TEST_PUBKY.USER_2}`;
-        const result = Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: prefixedMutee });
+        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: prefixedMutee });
 
         expect(result.mute).toBeDefined();
         expect(result.meta.url).toContain(TEST_PUBKY.USER_2);
@@ -168,7 +169,7 @@ describe('MuteNormalizer', () => {
 
       it('should handle mutee with "pk:" prefix by stripping it', () => {
         const prefixedMutee = `pk:${TEST_PUBKY.USER_2}`;
-        const result = Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: prefixedMutee });
+        const result = MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: prefixedMutee });
 
         expect(result.mute).toBeDefined();
         expect(result.meta.url).toContain(TEST_PUBKY.USER_2);
@@ -187,7 +188,7 @@ describe('MuteNormalizer', () => {
         ['invalid format', INVALID_INPUTS.INVALID_FORMAT],
       ])('should throw AppError for %s mutee', (_, invalidMutee) => {
         try {
-          Core.MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: invalidMutee });
+          MuteNormalizer.to({ muter: TEST_PUBKY.USER_1, mutee: invalidMutee });
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(AppError);

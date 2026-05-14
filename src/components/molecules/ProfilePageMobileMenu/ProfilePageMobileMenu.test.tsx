@@ -1,19 +1,15 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ProfilePageMobileMenu, PROFILE_MENU_ITEMS } from './ProfilePageMobileMenu';
+import { describe, expect, it, vi } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { PROFILE_MENU_ITEMS, ProfilePageMobileMenu } from './ProfilePageMobileMenu';
 
-vi.mock('@/hooks', async () => {
-  const actual = await vi.importActual<typeof import('@/hooks')>('@/hooks');
-  return {
-    ...actual,
-    useRequireAuth: () => ({
-      requireAuth: (cb: () => void) => cb(),
-    }),
-  };
-});
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    requireAuth: (cb: () => void) => cb(),
+  }),
+}));
 
 describe('ProfilePageMobileMenu', () => {
   it('renders all menu items for own profile', () => {

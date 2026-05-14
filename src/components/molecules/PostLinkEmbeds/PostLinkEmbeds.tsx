@@ -2,19 +2,22 @@
 
 import { useMemo } from 'react';
 import LinkifyIt from 'linkify-it';
-
-import * as Atoms from '@/atoms';
-import * as Providers from './Providers';
-import * as Types from './PostLinkEmbeds.types';
+import { Container } from '@/atoms/Container/Container';
+import type { ParseUrlForLinkEmbedResult, PostLinkEmbedsProps } from './PostLinkEmbeds.types';
+import { Generic } from './Providers/Generic/ProviderGeneric';
+import type { EmbedProvider } from './Providers/Provider.types';
+import { Twitter } from './Providers/Twitter/ProviderTwitter';
+import { Vimeo } from './Providers/Vimeo/ProviderVimeo';
+import { Youtube } from './Providers/Youtube/ProviderYoutube';
 
 // Register all embed providers here
-const EMBED_PROVIDERS: Providers.EmbedProvider[] = [
-  Providers.Youtube,
-  Providers.Vimeo,
-  Providers.Twitter,
-  Providers.Generic,
+const EMBED_PROVIDERS: EmbedProvider[] = [
+  Youtube,
+  Vimeo,
+  Twitter,
+  Generic,
   // Add more providers here:
-  // Providers.Twitch,
+  // Twitch,
 ];
 
 // Protocol types to ignore when parsing links
@@ -24,11 +27,11 @@ const IGNORED_PROTOCOLS = ['ftp:', 'mailto:'];
  * Create a hostname-to-provider lookup map for O(1) performance
  * Lazily initialized on first use to avoid module circular dependency issues
  */
-let PROVIDER_MAP: Map<string, Providers.EmbedProvider> | null = null;
+let PROVIDER_MAP: Map<string, EmbedProvider> | null = null;
 
-const getProviderMap = (): Map<string, Providers.EmbedProvider> => {
+const getProviderMap = (): Map<string, EmbedProvider> => {
   if (!PROVIDER_MAP) {
-    PROVIDER_MAP = new Map<string, Providers.EmbedProvider>(
+    PROVIDER_MAP = new Map<string, EmbedProvider>(
       EMBED_PROVIDERS.flatMap((provider) => provider.domains.map((domain) => [domain, provider] as const)),
     );
   }
@@ -68,7 +71,7 @@ const parseContentForUrl = (content: string) => {
  * Parse content for embeddable links
  * Returns the first embeddable link and its provider
  */
-const parseContentForLinkEmbed = (content: string): Types.ParseUrlForLinkEmbedResult => {
+const parseContentForLinkEmbed = (content: string): ParseUrlForLinkEmbedResult => {
   try {
     const url = parseContentForUrl(content);
     if (!url) return { embed: null, provider: null };
@@ -81,15 +84,15 @@ const parseContentForLinkEmbed = (content: string): Types.ParseUrlForLinkEmbedRe
     const provider = providerMap.get(hostname);
 
     if (!provider) {
-      const embed = Providers.Generic.parseEmbed(url);
-      return { embed, provider: Providers.Generic };
+      const embed = Generic.parseEmbed(url);
+      return { embed, provider: Generic };
     }
 
     const embed = provider.parseEmbed(url);
 
     if (!embed) {
-      const embed = Providers.Generic.parseEmbed(url);
-      return { embed, provider: Providers.Generic };
+      const embed = Generic.parseEmbed(url);
+      return { embed, provider: Generic };
     }
 
     return { embed, provider };
@@ -98,14 +101,14 @@ const parseContentForLinkEmbed = (content: string): Types.ParseUrlForLinkEmbedRe
   }
 };
 
-export const PostLinkEmbeds = ({ content }: Types.PostLinkEmbedsProps) => {
+export const PostLinkEmbeds = ({ content }: PostLinkEmbedsProps) => {
   const { embed, provider } = useMemo(() => parseContentForLinkEmbed(content), [content]);
 
   if (!embed || !provider) return null;
 
   return (
-    <Atoms.Container className="w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <Container className="w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
       {provider.renderEmbed(embed)}
-    </Atoms.Container>
+    </Container>
   );
 };

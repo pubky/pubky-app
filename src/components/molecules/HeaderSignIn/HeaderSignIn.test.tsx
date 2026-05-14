@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { HeaderSignIn } from './HeaderSignIn';
 
 // Mock hooks
@@ -8,74 +8,77 @@ const mockUseCurrentUserProfile = vi.fn(() => ({
   currentUserPubky: 'test-pubky-123' as string | null,
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => mockUseCurrentUserProfile(),
 }));
 
-// Mock core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/stores/notification/notification.store', () => ({
   useNotificationStore: vi.fn((selector: (state: { selectUnread: () => number }) => number) => {
     const state = {
       selectUnread: () => 5,
     };
     return selector(state);
   }),
+}));
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
-  },
-  TIMEFRAME: {
-    TODAY: 'today',
-    THIS_MONTH: 'this_month',
-    ALL_TIME: 'all_time',
   },
 }));
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  SearchInput: () => <div data-testid="search-input">Search Input</div>,
-}));
+vi.mock('@/organisms/SearchInput/SearchInput', () => {
+  return {
+    SearchInput: () => <div data-testid="search-input">Search Input</div>,
+  };
+});
 
 // Mock molecules
-vi.mock('@/molecules', () => ({
-  HeaderNavigationButtons: ({
-    avatarImage,
-    avatarName,
-    avatarSeed,
-    counter,
-  }: {
-    avatarImage?: string;
-    avatarName?: string;
-    avatarSeed?: string;
-    counter?: number;
-  }) => (
-    <div
-      data-testid="header-navigation-buttons"
-      data-avatar-image={avatarImage}
-      data-avatar-name={avatarName}
-      data-avatar-seed={avatarSeed}
-      data-counter={counter?.toString()}
-    >
-      Navigation Buttons
-    </div>
-  ),
-}));
+vi.mock('@/molecules/Header/Header', () => {
+  return {
+    HeaderNavigationButtons: ({
+      avatarImage,
+      avatarName,
+      avatarSeed,
+      counter,
+    }: {
+      avatarImage?: string;
+      avatarName?: string;
+      avatarSeed?: string;
+      counter?: number;
+    }) => (
+      <div
+        data-testid="header-navigation-buttons"
+        data-avatar-image={avatarImage}
+        data-avatar-name={avatarName}
+        data-avatar-seed={avatarSeed}
+        data-counter={counter?.toString()}
+      >
+        Navigation Buttons
+      </div>
+    ),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    [key: string]: unknown;
-  }) => (
-    <div className={className} {...props}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      [key: string]: unknown;
+    }) => (
+      <div className={className} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('HeaderSignIn', () => {
   it('renders search input and navigation buttons', () => {

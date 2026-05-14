@@ -1,3 +1,14 @@
+import {
+  DEFAULT_AUTHOR,
+  DEFAULT_CREATOR,
+  DEFAULT_KEYWORDS,
+  DEFAULT_LOCALE,
+  DEFAULT_PREVIEW_IMAGE,
+  DEFAULT_SITE_NAME,
+  DEFAULT_TYPE,
+  DEFAULT_URL,
+} from '@/config/metadata';
+
 interface MetadataProps {
   title: string;
   description: string;
@@ -13,7 +24,6 @@ interface MetadataProps {
   site?: string;
   favicon?: string;
 }
-import * as Config from '@/config';
 
 export function getPWAConfig() {
   return {
@@ -21,7 +31,7 @@ export function getPWAConfig() {
     appleWebApp: {
       capable: true,
       statusBarStyle: 'black' as const,
-      title: Config.DEFAULT_SITE_NAME,
+      title: DEFAULT_SITE_NAME,
     },
   };
 }
@@ -29,20 +39,20 @@ export function getPWAConfig() {
 export function Metadata({
   title,
   description,
-  image = Config.DEFAULT_PREVIEW_IMAGE,
-  type = Config.DEFAULT_TYPE,
-  url = Config.DEFAULT_URL,
-  siteName = Config.DEFAULT_SITE_NAME,
-  locale = Config.DEFAULT_LOCALE,
-  author = Config.DEFAULT_AUTHOR,
-  keywords = Config.DEFAULT_KEYWORDS,
+  image = DEFAULT_PREVIEW_IMAGE,
+  type = DEFAULT_TYPE,
+  url = DEFAULT_URL,
+  siteName = DEFAULT_SITE_NAME,
+  locale = DEFAULT_LOCALE,
+  author = DEFAULT_AUTHOR,
+  keywords = DEFAULT_KEYWORDS,
   robots = true,
-  creator = Config.DEFAULT_CREATOR,
-  site = Config.DEFAULT_URL,
+  creator = DEFAULT_CREATOR,
+  site = DEFAULT_URL,
   favicon = '/pubky-favicon.svg',
 }: MetadataProps) {
   return {
-    metadataBase: new URL(Config.DEFAULT_URL),
+    metadataBase: new URL(DEFAULT_URL),
     title,
     description,
     keywords,

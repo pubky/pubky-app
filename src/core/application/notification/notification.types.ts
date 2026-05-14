@@ -1,15 +1,19 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
+import type { FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import type { TOlderThanQueryParams } from '@/services/local/notification/notification.types';
+import type { NexusNotification } from '@/services/nexus/nexus.types';
 
 export type TNotificationApplicationNotificationsParams = {
-  userId: Core.Pubky;
+  userId: Pubky;
   lastPolledTimestamp: number | undefined;
   lastRead: number;
+  allowedTypes: NotificationType[];
 };
 
 /**
- * Result from fetchNotifications containing unread count and the next poll cursor.
+ * Result from fetchNotifications containing the filtered unread count and next poll cursor.
  *
- * @property unread - Number of unread notifications (those newer than lastRead)
+ * @property unread - Number of unread notifications (newer than lastRead) filtered by user preferences
  * @property nextPollCursor - Next polling cursor (newest timestamp + 1 to avoid refetch), undefined if no notifications
  */
 export type TFetchNotificationsResult = {
@@ -18,9 +22,9 @@ export type TFetchNotificationsResult = {
 };
 
 export type TNotificationsPartialCacheHitParams = {
-  userId: Core.Pubky;
+  userId: Pubky;
   limit: number;
-  flatNotifications: Core.TFlatNotificationList;
+  flatNotifications: TFlatNotificationList;
 };
 
 /**
@@ -32,14 +36,15 @@ export type TNotificationsPartialCacheHitParams = {
  *                       Use the timestamp of the last notification for pagination.
  * @property limit - Maximum number of notifications to return
  */
-export type TGetOrFetchNotificationsParams = Core.TOlderThanQueryParams & {
-  userId: Core.Pubky;
+export type TGetOrFetchNotificationsParams = TOlderThanQueryParams & {
+  userId: Pubky;
+  allowedTypes?: NotificationType[];
 };
 
-export type TFlatNotificationList = Core.FlatNotification[];
+export type TFlatNotificationList = FlatNotification[];
 
 export type TFlatNotifications = {
-  flatNotifications: Core.TFlatNotificationList;
+  flatNotifications: TFlatNotificationList;
 };
 
 /**
@@ -53,17 +58,18 @@ export type TGetOrFetchNotificationsResponse = TFlatNotifications & {
 };
 
 export type TPersistAndSummarizeParams = {
-  notifications: Core.NexusNotification[];
+  notifications: NexusNotification[];
   lastRead: number;
-  flatNotifications?: Core.TFlatNotificationList;
+  allowedTypes: NotificationType[];
+  flatNotifications?: TFlatNotificationList;
 };
 
 export type TFetchMissingEntitiesParams = {
-  notifications: Core.NexusNotification[];
-  viewerId: Core.Pubky;
+  notifications: NexusNotification[];
+  viewerId: Pubky;
 };
 
 export type TParseNotificationsResult = {
   relatedPostIds: string[];
-  relatedUserIds: Core.Pubky[];
+  relatedUserIds: Pubky[];
 };

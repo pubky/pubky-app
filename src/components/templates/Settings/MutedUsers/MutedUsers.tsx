@@ -1,21 +1,17 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import { useIsMobile } from '@/hooks';
 import { MegaphoneOff } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { SettingsSectionCard } from '@/molecules/Settings/SettingsSectionCard/SettingsSectionCard';
+import { MutedUsersList } from '@/organisms/Settings/MutedUsersList/MutedUsersList';
+
 export function MutedUsers() {
   const t = useTranslations('settings.mutedUsers');
   const isMobile = useIsMobile();
   return (
-    <Molecules.SettingsSectionCard
-      icon={MegaphoneOff}
-      wrapChildren={!isMobile}
-      title={t('title')}
-      description={t('description')}
-    >
-      <Organisms.MutedUsersList />
-    </Molecules.SettingsSectionCard>
+    <SettingsSectionCard icon={MegaphoneOff} wrapChildren={!isMobile} title={t('title')} description={t('description')}>
+      <MutedUsersList />
+    </SettingsSectionCard>
   );
 }

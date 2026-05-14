@@ -156,8 +156,8 @@ const envSchema = z.object({
   HOMESERVER_ADMIN_URL: z.string().url().default('http://localhost:6288/generate_signup_token'),
   HOMESERVER_ADMIN_PASSWORD: z.string().default('admin'),
 
-  /** HTTP relay for pubky protocol */
-  NEXT_PUBLIC_DEFAULT_HTTP_RELAY: z.string().url().default('https://httprelay.staging.pubky.app'),
+  /** HTTP relay for pubky protocol (auth uses `/inbox` with Pubky SDK 0.7+) */
+  NEXT_PUBLIC_DEFAULT_HTTP_RELAY: z.url().default('https://httprelay.staging.pubky.app/inbox'),
   NEXT_PUBLIC_MODERATION_ID: z.string().default('euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro'),
   NEXT_PUBLIC_MODERATED_TAGS: z
     .string()
@@ -230,6 +230,50 @@ const envSchema = z.object({
 
   // App version (injected from package.json via next.config.ts)
   NEXT_PUBLIC_APP_VERSION: z.string(),
+
+  // =============================================================================
+  // SENTRY (Observability)
+  // =============================================================================
+  // DSN is shared across browser/server/edge runtimes. Empty string disables Sentry entirely.
+  NEXT_PUBLIC_SENTRY_DSN: z
+    .string()
+    .optional()
+    .transform((val) => {
+      const trimmed = val?.trim();
+      return trimmed && trimmed !== '' ? trimmed : undefined;
+    })
+    .pipe(z.url().optional()),
+
+  // Environment tag attached to every event (e.g. "production", "staging", "preview").
+  // Defaults to NODE_ENV when unset.
+  NEXT_PUBLIC_SENTRY_ENVIRONMENT: z
+    .string()
+    .optional()
+    .transform((val) => (val && val.trim() !== '' ? val : undefined)),
+
+  NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: z
+    .string()
+    .default('0.1')
+    .transform((val) => parseFloat(val))
+    .pipe(z.number().min(0).max(1)),
+
+  NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE: z
+    .string()
+    .default('0.0')
+    .transform((val) => parseFloat(val))
+    .pipe(z.number().min(0).max(1)),
+
+  NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE: z
+    .string()
+    .default('1.0')
+    .transform((val) => parseFloat(val))
+    .pipe(z.number().min(0).max(1)),
+
+  // Build-only secrets used by withSentryConfig for source map upload.
+  // Not exposed to runtime; safe to leave undefined in dev/CI without source maps.
+  SENTRY_AUTH_TOKEN: z.string().optional(),
+  SENTRY_ORG: z.string().optional(),
+  SENTRY_PROJECT: z.string().optional(),
 });
 
 /**
@@ -368,6 +412,14 @@ function parseEnv(): z.infer<typeof envSchema> {
     NEXT_PUBLIC_PLAY_STORE_URL: process.env.NEXT_PUBLIC_PLAY_STORE_URL,
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
     NEXT_PUBLIC_SITE_NAME: process.env.NEXT_PUBLIC_SITE_NAME,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT,
+    NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
+    NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE: process.env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
+    NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE: process.env.NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE,
+    SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
+    SENTRY_ORG: process.env.SENTRY_ORG,
+    SENTRY_PROJECT: process.env.SENTRY_PROJECT,
   });
 
   if (!result.success) {

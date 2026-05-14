@@ -1,7 +1,8 @@
 'use client';
-
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { TaggedList } from '../TaggedList/TaggedList';
+import { TagInput } from '../TagInput/TagInput';
 import type { TaggedSectionProps } from './TaggedSection.types';
 
 export function TaggedSection({
@@ -14,12 +15,12 @@ export function TaggedSection({
   loadMore,
 }: TaggedSectionProps) {
   return (
-    <Atoms.Container className="gap-2 rounded-md bg-card p-6">
-      <Atoms.Typography as="p" className="text-base font-medium text-secondary-foreground">
+    <Container className="gap-2 rounded-md bg-card p-6">
+      <Typography as="p" className="text-base font-medium text-secondary-foreground">
         {userName ? `${userName} was tagged as:` : 'Tagged as:'}
-      </Atoms.Typography>
+      </Typography>
 
-      <Molecules.TagInput
+      <TagInput
         onTagAdd={handleTagAdd}
         existingTags={tags}
         enableApiSuggestions
@@ -27,13 +28,13 @@ export function TaggedSection({
         addOnSuggestionClick
       />
 
-      <Molecules.TaggedList
+      <TaggedList
         tags={tags}
         hasMore={hasMore}
         isLoadingMore={isLoadingMore}
         onLoadMore={loadMore}
         onTagToggle={handleTagToggle}
       />
-    </Atoms.Container>
+    </Container>
   );
 }

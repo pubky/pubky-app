@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function DynamicProfileRepliesPage() {
-  return <Templates.ProfilePageReplies />;
-}
+export { ProfileRepliesPage as default } from '@/templates/Profile/Replies/ProfileRepliesPage';

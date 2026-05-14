@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import type { TagProps } from './Tag.types';
 import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
+import { Typography } from '../Typography/Typography';
+import type { TagProps } from './Tag.types';
 
 export const Tag = ({
   name,
@@ -12,6 +12,8 @@ export const Tag = ({
   onClick,
   className,
   'data-testid': dataTestId,
+  'data-cy': dataCy,
+  countDataCy,
   ...props
 }: TagProps) => {
   const [isHovered, setIsHovered] = React.useState(false);
@@ -52,21 +54,22 @@ export const Tag = ({
       onMouseLeave={handleMouseLeave}
       title={name}
       data-testid={dataTestId || 'tag'}
+      data-cy={dataCy || 'tag'}
       {...props}
     >
-      <Atoms.Typography size="sm" className="truncate" data-testid="tag-name">
+      <Typography size="sm" className="truncate font-bold" data-testid="tag-name" data-cy={`${dataCy || 'tag'}-name`}>
         {name}
-      </Atoms.Typography>
+      </Typography>
 
       {count !== undefined && (
-        <Atoms.Typography
+        <Typography
           size="sm"
           className="ml-1.5 shrink-0 font-medium text-foreground/50"
-          data-cy="post-tag-count"
           data-testid="tag-count"
+          data-cy={countDataCy || `${dataCy || 'tag'}-count`}
         >
           {count}
-        </Atoms.Typography>
+        </Typography>
       )}
     </div>
   );

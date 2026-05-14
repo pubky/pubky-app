@@ -1,3 +1,3 @@
-import * as Core from '@/core';
+import type { TTagEventParams } from '@/controllers/tag/tag.types';
 
-export type TLocalTagParams = Omit<Core.TTagEventParams, 'taggedKind'>;
+export type TLocalTagParams = Omit<TTagEventParams, 'taggedKind'>;

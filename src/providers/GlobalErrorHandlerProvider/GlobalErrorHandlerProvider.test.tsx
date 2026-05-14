@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render } from '@testing-library/react';
-import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
-import * as Molecules from '@/molecules';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
 
 vi.mock('@/libs/logger/logger', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/libs/logger/logger')>();
@@ -15,10 +16,16 @@ vi.mock('@/libs/logger/logger', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/libs/error/error.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/error/error.utils')>();
   return {
     ...actual,
+    getErrorMessage: vi.fn(() => 'Something went wrong'),
+  };
+});
+
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
+  return {
     showErrorToast: vi.fn(),
   };
 });
@@ -54,8 +61,9 @@ describe('GlobalErrorHandlerProvider', () => {
       window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
     });
 
+    expect(getErrorMessage).toHaveBeenCalled();
     expect(Logger.error).toHaveBeenCalled();
-    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'boom' });
+    expect(showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
   });
 
   it('handles unhandledrejection events', () => {
@@ -70,9 +78,9 @@ describe('GlobalErrorHandlerProvider', () => {
       Object.defineProperty(event, 'reason', { value: new Error('promise failed') });
       window.dispatchEvent(event);
     });
-
+    expect(getErrorMessage).toHaveBeenCalled();
     expect(Logger.error).toHaveBeenCalled();
-    expect(Molecules.showErrorToast).toHaveBeenCalledWith({ description: 'promise failed' });
+    expect(showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
   });
 
   it('throttles duplicate error toasts within the cooldown window', () => {
@@ -91,13 +99,13 @@ describe('GlobalErrorHandlerProvider', () => {
     });
 
     expect(Logger.error).toHaveBeenCalledTimes(2);
-    expect(Molecules.showErrorToast).toHaveBeenCalledTimes(1);
+    expect(showErrorToast).toHaveBeenCalledTimes(1);
 
     act(() => {
       vi.advanceTimersByTime(3001);
       window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
     });
 
-    expect(Molecules.showErrorToast).toHaveBeenCalledTimes(2);
+    expect(showErrorToast).toHaveBeenCalledTimes(2);
   });
 });

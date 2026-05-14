@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { mockKeyboardEvent } from '@/test-utils';
+import { act, renderHook } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { mockKeyboardEvent } from '@/test-utils/react-events';
 import { useEnterSubmit } from './useEnterSubmit';
 
 describe('useEnterSubmit', () => {

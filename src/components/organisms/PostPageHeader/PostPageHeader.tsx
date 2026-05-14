@@ -1,11 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Hooks from '@/hooks';
+import { Container } from '@/atoms/Container/Container';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { Typography } from '@/atoms/Typography/Typography';
+import { usePostAncestors } from '@/hooks/usePostAncestors/usePostAncestors';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
+import { PostPageBreadcrumb } from '../PostPageBreadcrumb/PostPageBreadcrumb';
 import { PostPageHeaderSkeleton } from './PostPageHeader.skeleton';
 import type { PostPageHeaderProps } from './PostPageHeader.types';
-import { PostPageBreadcrumb } from '@/organisms/PostPageBreadcrumb';
 
 /**
  * PostPageHeader Organism
@@ -27,14 +31,14 @@ import { PostPageBreadcrumb } from '@/organisms/PostPageBreadcrumb';
  * ```
  */
 export function PostPageHeader({ postId }: PostPageHeaderProps) {
-  const { ancestors, isLoading: ancestorsLoading } = Hooks.usePostAncestors(postId);
-  const { navigateToPost } = Hooks.usePostNavigation();
+  const { ancestors, isLoading: ancestorsLoading } = usePostAncestors(postId);
+  const { navigateToPost } = usePostNavigation();
 
   // Get user IDs from ancestors to fetch their names
   const userIds = React.useMemo(() => ancestors.map((a) => a.userId), [ancestors]);
 
   // Fetch user details for all ancestors
-  const { users: userDetailsArray, isLoading: usersLoading } = Hooks.useUserDetailsFromIds({
+  const { users: userDetailsArray, isLoading: usersLoading } = useUserDetailsFromIds({
     userIds,
     prefetch: true,
   });
@@ -64,26 +68,26 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
   const titlePrefix = hasParents ? 'Reply by' : 'Post by';
 
   return (
-    <Atoms.PageHeader data-testid="post-page-header" className="pt-0 pb-3">
-      <Atoms.Container
+    <PageHeader data-testid="post-page-header" className="pt-0 pb-3">
+      <Container
         className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4"
         overrideDefaults
       >
         {/* Title */}
-        <Atoms.Typography
+        <Typography
           as="h1"
           overrideDefaults
           className="text-2xl leading-8 font-light text-muted-foreground"
           data-testid="post-page-title"
         >
           {titlePrefix} {authorName}
-        </Atoms.Typography>
+        </Typography>
 
         {/* Breadcrumb (only for replies) */}
         {hasParents && (
           <PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={navigateToPost} />
         )}
-      </Atoms.Container>
-    </Atoms.PageHeader>
+      </Container>
+    </PageHeader>
   );
 }

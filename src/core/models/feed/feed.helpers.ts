@@ -1,5 +1,9 @@
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import * as Core from '@/core';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { StreamSorting } from '@/services/nexus/nexus.types';
+import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
+import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 
 export function reachToString(reach: PubkyAppFeedReach): string {
   const map: Record<PubkyAppFeedReach, string> = {
@@ -40,42 +44,42 @@ export function postKindToString(kind: PubkyAppPostKind): string {
   return map[kind];
 }
 
-export function reachToStreamSource(reach: PubkyAppFeedReach): Core.StreamSource {
-  const map: Record<PubkyAppFeedReach, Core.StreamSource> = {
-    [PubkyAppFeedReach.All]: Core.StreamSource.ALL,
-    [PubkyAppFeedReach.Following]: Core.StreamSource.FOLLOWING,
-    [PubkyAppFeedReach.Friends]: Core.StreamSource.FRIENDS,
-    [PubkyAppFeedReach.Followers]: Core.StreamSource.FOLLOWERS,
+export function reachToStreamSource(reach: PubkyAppFeedReach): StreamSource {
+  const map: Record<PubkyAppFeedReach, StreamSource> = {
+    [PubkyAppFeedReach.All]: StreamSource.ALL,
+    [PubkyAppFeedReach.Following]: StreamSource.FOLLOWING,
+    [PubkyAppFeedReach.Friends]: StreamSource.FRIENDS,
+    [PubkyAppFeedReach.Followers]: StreamSource.FOLLOWERS,
   };
   return map[reach];
 }
 
-export function sortToStreamSorting(sort: PubkyAppFeedSort): Core.StreamSorting {
-  const map: Record<PubkyAppFeedSort, Core.StreamSorting> = {
-    [PubkyAppFeedSort.Recent]: Core.StreamSorting.TIMELINE,
-    [PubkyAppFeedSort.Popularity]: Core.StreamSorting.ENGAGEMENT,
+export function sortToStreamSorting(sort: PubkyAppFeedSort): StreamSorting {
+  const map: Record<PubkyAppFeedSort, StreamSorting> = {
+    [PubkyAppFeedSort.Recent]: StreamSorting.TIMELINE,
+    [PubkyAppFeedSort.Popularity]: StreamSorting.ENGAGEMENT,
   };
   return map[sort];
 }
 
-export function contentToStreamKind(content: PubkyAppPostKind | null): Core.StreamKind | undefined {
+export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKind | undefined {
   if (content === null) return undefined;
-  const map: Record<PubkyAppPostKind, Core.StreamKind> = {
-    [PubkyAppPostKind.Short]: Core.StreamKind.SHORT,
-    [PubkyAppPostKind.Long]: Core.StreamKind.LONG,
-    [PubkyAppPostKind.Image]: Core.StreamKind.IMAGE,
-    [PubkyAppPostKind.Video]: Core.StreamKind.VIDEO,
-    [PubkyAppPostKind.Link]: Core.StreamKind.LINK,
-    [PubkyAppPostKind.File]: Core.StreamKind.FILE,
+  const map: Record<PubkyAppPostKind, StreamKind> = {
+    [PubkyAppPostKind.Short]: StreamKind.SHORT,
+    [PubkyAppPostKind.Long]: StreamKind.LONG,
+    [PubkyAppPostKind.Image]: StreamKind.IMAGE,
+    [PubkyAppPostKind.Video]: StreamKind.VIDEO,
+    [PubkyAppPostKind.Link]: StreamKind.LINK,
+    [PubkyAppPostKind.File]: StreamKind.FILE,
   };
   return map[content];
 }
 
-export function buildFeedStreamId(feed: Core.FeedModelSchema): Core.PostStreamId {
+export function buildFeedStreamId(feed: FeedModelSchema): PostStreamId {
   const sorting = sortToStreamSorting(feed.sort);
   const source = reachToStreamSource(feed.reach);
   const kind = contentToStreamKind(feed.content) ?? 'all';
-  const tags = feed.tags.join(Core.POST_STREAM_TAG_DELIMITER);
+  const tags = feed.tags.join(POST_STREAM_TAG_DELIMITER);
 
-  return `${sorting}:${source}:${kind}:${tags}` as Core.PostStreamId;
+  return `${sorting}:${source}:${kind}:${tags}` as PostStreamId;
 }

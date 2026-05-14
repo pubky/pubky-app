@@ -1,9 +1,9 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { defaultPrivacyPreferences } from '@/stores/settings/settings.types';
 import { ProfilePageLinks } from './ProfilePageLinks';
-import * as Core from '@/core';
-import { defaultPrivacyPreferences } from '@/core/stores/settings/settings.types';
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -14,33 +14,31 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  DialogCheckLink: ({
-    open,
-    onOpenChangeAction,
-    linkUrl,
-  }: {
-    open: boolean;
-    onOpenChangeAction: (open: boolean) => void;
-    linkUrl: string;
-  }) => (
-    <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
-      <button data-testid="dialog-close" onClick={() => onOpenChangeAction(false)}>
-        Close
-      </button>
-    </div>
-  ),
-}));
+vi.mock('@/organisms/DialogCheckLink/DialogCheckLink', () => {
+  return {
+    DialogCheckLink: ({
+      open,
+      onOpenChangeAction,
+      linkUrl,
+    }: {
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+      linkUrl: string;
+    }) => (
+      <div data-testid="dialog-check-link" data-open={open} data-link-url={linkUrl}>
+        <button data-testid="dialog-close" onClick={() => onOpenChangeAction(false)}>
+          Close
+        </button>
+      </div>
+    ),
+  };
+});
 
 // Mock settings store
 const mockUseSettingsStore = vi.fn();
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useSettingsStore: () => mockUseSettingsStore(),
-  };
-});
+vi.mock('@/stores/settings/settings.store', () => ({
+  useSettingsStore: () => mockUseSettingsStore(),
+}));
 
 // Mock window.open
 const mockWindowOpen = vi.fn();
@@ -49,7 +47,7 @@ Object.defineProperty(window, 'open', {
   writable: true,
 });
 
-const defaultLinks: Core.NexusUserDetails['links'] = [
+const defaultLinks: NexusUserDetails['links'] = [
   { title: 'bitcoin.org', url: 'https://bitcoin.org' },
   { title: 'twitter.com/test', url: 'https://twitter.com/test' },
   { title: 'github.com/test', url: 'https://github.com/test' },
@@ -81,7 +79,7 @@ describe('ProfilePageLinks', () => {
   });
 
   it('renders with custom links', () => {
-    const customLinks: Core.NexusUserDetails['links'] = [{ title: 'Example', url: 'https://example.com' }];
+    const customLinks: NexusUserDetails['links'] = [{ title: 'Example', url: 'https://example.com' }];
     render(<ProfilePageLinks links={customLinks} />);
     expect(screen.getByText('Example')).toBeInTheDocument();
     expect(screen.getByText('Example').closest('a')).toHaveAttribute('href', 'https://example.com');
@@ -163,7 +161,7 @@ describe('ProfilePageLinks - Link Click Behavior', () => {
         showConfirm: true, // checkLink enabled
       },
     });
-    const linksWithEmail: Core.NexusUserDetails['links'] = [{ title: 'Email', url: 'mailto:test@example.com' }];
+    const linksWithEmail: NexusUserDetails['links'] = [{ title: 'Email', url: 'mailto:test@example.com' }];
     render(<ProfilePageLinks links={linksWithEmail} />);
 
     const linkElement = screen.getByText('Email').closest('a');
@@ -181,7 +179,7 @@ describe('ProfilePageLinks - Link Click Behavior', () => {
         showConfirm: true, // checkLink enabled
       },
     });
-    const linksWithPhone: Core.NexusUserDetails['links'] = [{ title: 'Phone', url: 'tel:+1234567890' }];
+    const linksWithPhone: NexusUserDetails['links'] = [{ title: 'Phone', url: 'tel:+1234567890' }];
     render(<ProfilePageLinks links={linksWithPhone} />);
 
     const linkElement = screen.getByText('Phone').closest('a');
@@ -205,7 +203,7 @@ describe('ProfilePageLinks - Link Click Behavior', () => {
         showConfirm: true, // checkLink enabled
       },
     });
-    const sameDomainLinks: Core.NexusUserDetails['links'] = [{ title: 'Same Domain', url: 'https://example.com/page' }];
+    const sameDomainLinks: NexusUserDetails['links'] = [{ title: 'Same Domain', url: 'https://example.com/page' }];
     render(<ProfilePageLinks links={sameDomainLinks} />);
 
     const linkElement = screen.getByText('Same Domain').closest('a');
@@ -229,7 +227,7 @@ describe('ProfilePageLinks - Link Click Behavior', () => {
         showConfirm: true, // checkLink enabled
       },
     });
-    const sameDomainLinks: Core.NexusUserDetails['links'] = [{ title: 'Same Domain', url: 'https://example.com/page' }];
+    const sameDomainLinks: NexusUserDetails['links'] = [{ title: 'Same Domain', url: 'https://example.com/page' }];
     render(<ProfilePageLinks links={sameDomainLinks} />);
 
     const linkElement = screen.getByText('Same Domain').closest('a');
@@ -253,7 +251,7 @@ describe('ProfilePageLinks - Link Click Behavior', () => {
         showConfirm: true, // checkLink enabled
       },
     });
-    const differentDomainLinks: Core.NexusUserDetails['links'] = [
+    const differentDomainLinks: NexusUserDetails['links'] = [
       { title: 'Different Domain', url: 'https://other-domain.com/page' },
     ];
     render(<ProfilePageLinks links={differentDomainLinks} />);
@@ -285,7 +283,7 @@ describe('ProfilePageLinks - Snapshots', () => {
   });
 
   it('matches snapshot with custom links', () => {
-    const customLinks: Core.NexusUserDetails['links'] = [{ title: 'Example', url: 'https://example.com' }];
+    const customLinks: NexusUserDetails['links'] = [{ title: 'Example', url: 'https://example.com' }];
     const { container } = render(<ProfilePageLinks links={customLinks} />);
     expect(container.firstChild).toMatchSnapshot();
   });
@@ -301,13 +299,13 @@ describe('ProfilePageLinks - Snapshots', () => {
   });
 
   it('matches snapshot with mailto link', () => {
-    const linksWithEmail: Core.NexusUserDetails['links'] = [{ title: 'Contact', url: 'mailto:hello@example.com' }];
+    const linksWithEmail: NexusUserDetails['links'] = [{ title: 'Contact', url: 'mailto:hello@example.com' }];
     const { container } = render(<ProfilePageLinks links={linksWithEmail} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with tel link', () => {
-    const linksWithPhone: Core.NexusUserDetails['links'] = [{ title: 'Call Us', url: 'tel:+1234567890' }];
+    const linksWithPhone: NexusUserDetails['links'] = [{ title: 'Call Us', url: 'tel:+1234567890' }];
     const { container } = render(<ProfilePageLinks links={linksWithPhone} />);
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Session, Keypair, PublicKey } from '@synonymdev/pubky';
-import { asOpaque } from '@/test-utils';
+import type { Keypair, PublicKey, Session } from '@synonymdev/pubky';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 // =============================================================================
 // HOISTED MOCKS - Must be hoisted to run before module imports
@@ -32,6 +32,7 @@ const mockState = vi.hoisted(() => ({
   getHomeserverOf: vi.fn(),
   startAuthFlow: vi.fn(),
   authFlowKindSignin: vi.fn(),
+  eventStreamForUser: vi.fn(),
   // Auth store session
   currentSession: null as Session | null,
 }));
@@ -57,20 +58,16 @@ vi.mock('@/libs/logger/logger', () => ({
 }));
 
 // Mock useAuthStore to provide session
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: {
-      getState: () => ({
-        selectSession: () => {
-          // Access mockState.currentSession at call time, not at mock creation time
-          return mockState.currentSession;
-        },
-      }),
-    },
-  };
-});
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: {
+    getState: () => ({
+      selectSession: () => {
+        // Access mockState.currentSession at call time, not at mock creation time
+        return mockState.currentSession;
+      },
+    }),
+  },
+}));
 
 // =============================================================================
 // MOCK @synonymdev/pubky MODULE
@@ -80,6 +77,7 @@ vi.mock('@synonymdev/pubky', () => {
   const createMockPubkyInstance = () => ({
     getHomeserverOf: (...args: unknown[]) => mockState.getHomeserverOf(...args),
     startAuthFlow: (...args: unknown[]) => mockState.startAuthFlow(...args),
+    eventStreamForUser: (...args: unknown[]) => mockState.eventStreamForUser(...args),
     client: {
       fetch: (...args: unknown[]) => mockState.clientFetch(...args),
     },
@@ -158,7 +156,7 @@ const createMockKeypair = (): Keypair =>
 // =============================================================================
 
 describe('HomeserverService', () => {
-  let HomeserverService: typeof import('@/core/services/homeserver/homeserver').HomeserverService;
+  let HomeserverService: typeof import('@/services/homeserver/homeserver').HomeserverService;
 
   beforeEach(async () => {
     // Reset all mocks
@@ -186,11 +184,15 @@ describe('HomeserverService', () => {
       free: vi.fn(),
     });
     mockState.authFlowKindSignin.mockReturnValue('signin-kind');
+    mockState.eventStreamForUser.mockReturnValue({
+      path: vi.fn().mockReturnThis(),
+      live: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockResolvedValue(new ReadableStream()),
+    });
 
     // Reset module cache and re-import
     vi.resetModules();
-    const homeserverModule = await import('@/core/services/homeserver/homeserver');
-    HomeserverService = homeserverModule.HomeserverService;
+    ({ HomeserverService } = await import('@/services/homeserver/homeserver'));
   });
 
   // ===========================================================================
@@ -212,6 +214,7 @@ describe('HomeserverService', () => {
         'delete',
         'get',
         'generateSignupToken',
+        'subscribeUserEventStreamForPath',
       ] as const;
 
       expectedMethods.forEach((method) => {
@@ -465,7 +468,7 @@ describe('HomeserverService', () => {
         expect(mockState.startAuthFlow).toHaveBeenCalledWith(
           '/pub/pubky.app/:rw', // Default capabilities
           'signin-kind', // AuthFlowKind.signin()
-          expect.any(String), // HTTP relay
+          expect.stringContaining('/inbox'), // HTTP relay (Pubky 0.7+ inbox endpoint)
         );
       });
 
@@ -474,7 +477,11 @@ describe('HomeserverService', () => {
 
         await HomeserverService.generateAuthUrl(customCaps);
 
-        expect(mockState.startAuthFlow).toHaveBeenCalledWith(customCaps, 'signin-kind', expect.any(String));
+        expect(mockState.startAuthFlow).toHaveBeenCalledWith(
+          customCaps,
+          'signin-kind',
+          expect.stringContaining('/inbox'),
+        );
       });
 
       it('should throw error when flow fails', async () => {
@@ -951,6 +958,40 @@ describe('HomeserverService', () => {
         const result = await HomeserverService.generateSignupToken();
 
         expect(result).toBe(expectedToken);
+      });
+    });
+
+    describe('subscribeUserEventStreamForPath', () => {
+      it('normalizes SDK events and disposes raw WASM objects internally', async () => {
+        const free = vi.fn();
+        const path = vi.fn().mockReturnThis();
+        const live = vi.fn().mockReturnThis();
+        const subscribe = vi.fn().mockResolvedValue(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue({ cursor: 'cursor-1', eventType: 'PUT', free });
+              controller.close();
+            },
+          }),
+        );
+
+        mockState.eventStreamForUser.mockReturnValue({ path, live, subscribe });
+
+        const stream = await HomeserverService.subscribeUserEventStreamForPath({
+          userZ32: 'user-pubky',
+          cursor: 'cursor-0',
+          pathPrefix: '/pub/pubky.app/mutes/',
+        });
+        const reader = stream.getReader();
+
+        const result = await reader.read();
+
+        expect(path).toHaveBeenCalledWith('/pub/pubky.app/mutes/');
+        expect(live).toHaveBeenCalled();
+        expect(subscribe).toHaveBeenCalled();
+        expect(result.value).toEqual({ cursor: 'cursor-1', eventType: 'PUT' });
+        expect(result.value).not.toHaveProperty('free');
+        expect(free).toHaveBeenCalledTimes(1);
       });
     });
 

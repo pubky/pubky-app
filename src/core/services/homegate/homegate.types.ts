@@ -1,3 +1,5 @@
+import { SmsCodeErrorType } from './homegate.constants';
+
 /**
  * Result of checking SMS verification availability.
  * Returns available true when service is accessible.
@@ -127,8 +129,6 @@ export type TAwaitLnVerificationResult =
   | { success: false; timeout: true }
   | { success: false; notFound: true }
   | { success: false; rateLimited: true; retryAfter?: number };
-
-import { SmsCodeErrorType } from './homegate.constants';
 
 /**
  * Error types for SMS code sending failures.

@@ -1,4 +1,4 @@
-import { NexusHotTag } from '@/core/services/nexus/nexus.types';
+import type { NexusHotTag } from '@/services/nexus/nexus.types';
 
 /**
  * Hot Tags Model Schema

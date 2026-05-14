@@ -1,11 +1,11 @@
 'use client';
-
-import * as Molecules from '@/molecules';
+import { HelpContent } from '@/molecules/Settings/HelpContent/HelpContent';
+import { SettingsSectionCard } from '@/molecules/Settings/SettingsSectionCard/SettingsSectionCard';
 
 export function Help() {
   return (
-    <Molecules.SettingsSectionCard wrapChildren={false}>
-      <Molecules.HelpContent />
-    </Molecules.SettingsSectionCard>
+    <SettingsSectionCard wrapChildren={false}>
+      <HelpContent />
+    </SettingsSectionCard>
   );
 }

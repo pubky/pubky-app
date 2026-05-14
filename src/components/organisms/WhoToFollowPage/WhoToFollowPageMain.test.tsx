@@ -1,17 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ElementType, ReactNode } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { useUserStream } from '@/hooks/useUserStream/useUserStream';
+import type { Pubky } from '@/models/models.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { WhoToFollowPageMain } from './WhoToFollowPageMain';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
-import { asOpaque } from '@/test-utils';
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
-    const state = { currentUserPubky: 'current-user-123' as Core.Pubky };
+    const state = { currentUserPubky: 'current-user-123' as Pubky };
     return selector ? selector(state) : state;
   }),
+}));
+vi.mock('@/models/stream/user/userStream.types', () => ({
   UserStreamTypes: {
     RECOMMENDED: 'recommended',
   },
@@ -40,48 +44,78 @@ const mockUseFollowUser = vi.fn(() => ({
   error: null,
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useUserStream/useUserStream', () => ({
   useUserStream: vi.fn(),
+}));
+
+vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
   useInfiniteScroll: vi.fn(),
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: vi.fn(),
 }));
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'container'} className={className}>
-      {children}
-    </div>
-  ),
-  Heading: ({ children }: { children: ReactNode }) => <h5 data-testid="heading">{children}</h5>,
-  Spinner: () => <div data-testid="spinner">Loading...</div>,
-  Typography: ({ children, as: Tag = 'p' }: { children: ReactNode; as?: ElementType }) => {
-    const Component = Tag;
-    return <Component>{children}</Component>;
-  },
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'container'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children }: { children: ReactNode }) => <h5 data-testid="heading">{children}</h5>,
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: () => <div data-testid="spinner">Loading...</div>,
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, as: Tag = 'p' }: { children: ReactNode; as?: ElementType }) => {
+      const Component = Tag;
+      return <Component>{children}</Component>;
+    },
+  };
+});
 
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  UserListItem: ({ user, followButtonVariant = 'icon' }: { user: { id: string }; followButtonVariant?: string }) => (
-    <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
-      User item
-    </div>
-  ),
-  FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton item</div>,
-}));
+vi.mock('@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton', () => {
+  return {
+    FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton item</div>,
+  };
+});
+
+vi.mock('@/organisms/UserListItem/UserListItem', () => {
+  return {
+    UserListItem: ({ user, followButtonVariant = 'icon' }: { user: { id: string }; followButtonVariant?: string }) => (
+      <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
+        User item
+      </div>
+    ),
+  };
+});
 
 const mockUsers = [
   {
-    id: 'user-1' as Core.Pubky,
+    id: 'user-1' as Pubky,
     name: 'John Doe',
     bio: 'Test bio',
     image: null,
@@ -91,7 +125,7 @@ const mockUsers = [
     isFollowing: false,
   },
   {
-    id: 'user-2' as Core.Pubky,
+    id: 'user-2' as Pubky,
     name: 'Jane Smith',
     bio: 'Another bio',
     image: null,
@@ -126,13 +160,11 @@ const mockUsersResult = {
 
 describe('WhoToFollowPageMain', () => {
   beforeEach(() => {
-    vi.mocked(Hooks.useUserStream).mockImplementation(mockUseUserStream);
-    vi.mocked(Hooks.useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useInfiniteScroll>>(mockUseInfiniteScroll()),
+    vi.mocked(useUserStream).mockImplementation(mockUseUserStream);
+    vi.mocked(useInfiniteScroll).mockReturnValue(
+      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
     );
-    vi.mocked(Hooks.useFollowUser).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useFollowUser>>(mockUseFollowUser()),
-    );
+    vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
   });
 
   it('renders empty state when no users', () => {
@@ -142,13 +174,13 @@ describe('WhoToFollowPageMain', () => {
   });
 
   it('renders loading state when isLoading is true', () => {
-    vi.mocked(Hooks.useUserStream).mockReturnValue(mockLoadingResult);
+    vi.mocked(useUserStream).mockReturnValue(mockLoadingResult);
     render(<WhoToFollowPageMain />);
     expect(screen.getAllByTestId('user-list-item-skeleton-full')).toHaveLength(30);
   });
 
   it('renders users when there are items', () => {
-    vi.mocked(Hooks.useUserStream).mockReturnValue(mockUsersResult);
+    vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
 
     render(<WhoToFollowPageMain />);
     const userItems = screen.getAllByTestId('user-list-item');
@@ -158,7 +190,7 @@ describe('WhoToFollowPageMain', () => {
   });
 
   it('uses default icon followButtonVariant for UserListItem', () => {
-    vi.mocked(Hooks.useUserStream).mockReturnValue(mockUsersResult);
+    vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
 
     render(<WhoToFollowPageMain />);
     const userItems = screen.getAllByTestId('user-list-item');
@@ -169,10 +201,10 @@ describe('WhoToFollowPageMain', () => {
   });
 
   it('calls useUserStream with correct params', () => {
-    vi.mocked(Hooks.useUserStream).mockReturnValue(mockUsersResult);
+    vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
     render(<WhoToFollowPageMain />);
 
-    expect(Hooks.useUserStream).toHaveBeenCalledWith({
+    expect(useUserStream).toHaveBeenCalledWith({
       streamId: 'recommended',
       limit: 30,
       paginated: true,
@@ -184,13 +216,11 @@ describe('WhoToFollowPageMain', () => {
 
 describe('WhoToFollowPageMain - Snapshots', () => {
   beforeEach(() => {
-    vi.mocked(Hooks.useUserStream).mockImplementation(mockUseUserStream);
-    vi.mocked(Hooks.useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useInfiniteScroll>>(mockUseInfiniteScroll()),
+    vi.mocked(useUserStream).mockImplementation(mockUseUserStream);
+    vi.mocked(useInfiniteScroll).mockReturnValue(
+      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
     );
-    vi.mocked(Hooks.useFollowUser).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useFollowUser>>(mockUseFollowUser()),
-    );
+    vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
   });
 
   it('matches snapshot with no users', () => {
@@ -199,13 +229,13 @@ describe('WhoToFollowPageMain - Snapshots', () => {
   });
 
   it('matches snapshot when loading', () => {
-    vi.mocked(Hooks.useUserStream).mockReturnValue(mockLoadingResult);
+    vi.mocked(useUserStream).mockReturnValue(mockLoadingResult);
     const { container } = render(<WhoToFollowPageMain />);
     expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with users', () => {
-    vi.mocked(Hooks.useUserStream).mockReturnValue(mockUsersResult);
+    vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
 
     const { container } = render(<WhoToFollowPageMain />);
     expect(container).toMatchSnapshot();

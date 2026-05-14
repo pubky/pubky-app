@@ -1,4 +1,12 @@
-import * as Core from '@/core';
+import { FileApplication } from '@/application/file/file';
+import type {
+  TFetchFilesParams,
+  TGetFileUrlParams,
+  TGetMetadataParams,
+  TUploadFileParams,
+} from '@/controllers/file/file.types';
+import type { Pubky } from '@/models/models.types';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
 
 /**
  * File Controller
@@ -18,11 +26,11 @@ export class FileController {
    * @param params.pubky - User's public key
    * @returns Promise resolving to the file URL
    */
-  static async commitCreate({ file, pubky }: Core.TUploadFileParams): Promise<string> {
+  static async commitCreate({ file, pubky }: TUploadFileParams): Promise<string> {
     // 1. Normalize File Attachment
-    const fileAttachment = await Core.FileNormalizer.toFileAttachment({ file, pubky });
+    const fileAttachment = await FileNormalizer.toFileAttachment({ file, pubky });
     // 2. Upload to homeserver
-    await Core.FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
+    await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
     return fileAttachment.fileResult.meta.url;
   }
 
@@ -33,8 +41,8 @@ export class FileController {
    * @param version - Optional version string/number for cache busting
    * @returns CDN URL string for the avatar
    */
-  static getAvatarUrl(pubky: Core.Pubky, version?: string | number): string {
-    return Core.FileApplication.getAvatarUrl(pubky, version);
+  static getAvatarUrl(pubky: Pubky, version?: string | number): string {
+    return FileApplication.getAvatarUrl(pubky, version);
   }
 
   /**
@@ -46,8 +54,8 @@ export class FileController {
    * @param params.variant - File variant (small, feed, main)
    * @returns CDN URL string
    */
-  static getFileUrl({ fileId, variant }: Core.TGetFileUrlParams): string {
-    return Core.FileApplication.getFileUrl({ fileId, variant });
+  static getFileUrl({ fileId, variant }: TGetFileUrlParams): string {
+    return FileApplication.getFileUrl({ fileId, variant });
   }
 
   /**
@@ -57,8 +65,8 @@ export class FileController {
    * @param params.fileUris - Array of file URIs (pubky) to fetch
    * @returns Promise resolving to file metadata
    */
-  static async getMetadata({ fileAttachments }: Core.TGetMetadataParams) {
-    return await Core.FileApplication.getMetadata({ fileAttachments });
+  static async getMetadata({ fileAttachments }: TGetMetadataParams) {
+    return await FileApplication.getMetadata({ fileAttachments });
   }
 
   /**
@@ -67,7 +75,7 @@ export class FileController {
    * @param params - Parameters for fetching files
    * @param params.fileUris - Array of file URIs to fetch and persist
    */
-  static async fetchFiles({ fileUris }: Core.TFetchFilesParams) {
-    return await Core.FileApplication.fetchFiles(fileUris);
+  static async fetchFiles({ fileUris }: TFetchFilesParams) {
+    return await FileApplication.fetchFiles(fileUris);
   }
 }

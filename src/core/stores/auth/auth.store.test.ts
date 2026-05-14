@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { THomeserverSessionResult } from '@/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from './auth.store';
 
 // Mock the logger

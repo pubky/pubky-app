@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function FeedPage() {
-  return <Templates.Custom />;
-}
+export { Custom as default } from '@/templates/Feed/Custom/Custom';

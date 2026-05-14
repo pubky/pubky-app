@@ -1,4 +1,12 @@
-import * as Core from '@/core';
+import { buildNexusUrl, buildUrlWithQuery, encodePathSegment } from '@/services/nexus/nexus.utils';
+import {
+  POST_PATH_PARAMS,
+  type TPostBase,
+  type TPostBasePathParams,
+  type TPostTaggersParams,
+  type TPostTagsParams,
+  type TPostViewParams,
+} from '@/services/nexus/post/post.types';
 
 /**
  * Post API Endpoints
@@ -9,51 +17,51 @@ import * as Core from '@/core';
 const PREFIX = 'v0/post';
 
 export const postApi = {
-  view: (params: Core.TPostViewParams) => {
-    const author = Core.encodePathSegment(params.author_id);
-    const post = Core.encodePathSegment(params.post_id);
-    return Core.buildUrlWithQuery({
+  view: (params: TPostViewParams) => {
+    const author = encodePathSegment(params.author_id);
+    const post = encodePathSegment(params.post_id);
+    return buildUrlWithQuery({
       baseRoute: `${PREFIX}/${author}/${post}`,
       params,
-      excludeKeys: Core.POST_PATH_PARAMS,
+      excludeKeys: POST_PATH_PARAMS,
     });
   },
-  bookmarks: (params: Core.TPostBase) => {
-    const author = Core.encodePathSegment(params.author_id);
-    const post = Core.encodePathSegment(params.post_id);
-    return Core.buildUrlWithQuery({
+  bookmarks: (params: TPostBase) => {
+    const author = encodePathSegment(params.author_id);
+    const post = encodePathSegment(params.post_id);
+    return buildUrlWithQuery({
       baseRoute: `${PREFIX}/${author}/${post}/bookmarks`,
       params,
-      excludeKeys: Core.POST_PATH_PARAMS,
+      excludeKeys: POST_PATH_PARAMS,
     });
   },
-  counts: (params: Core.TPostBasePathParams) => {
-    const author = Core.encodePathSegment(params.author_id);
-    const post = Core.encodePathSegment(params.post_id);
-    return Core.buildNexusUrl(`${PREFIX}/${author}/${post}/counts`);
+  counts: (params: TPostBasePathParams) => {
+    const author = encodePathSegment(params.author_id);
+    const post = encodePathSegment(params.post_id);
+    return buildNexusUrl(`${PREFIX}/${author}/${post}/counts`);
   },
-  details: (params: Core.TPostBasePathParams) => {
-    const author = Core.encodePathSegment(params.author_id);
-    const post = Core.encodePathSegment(params.post_id);
-    return Core.buildNexusUrl(`${PREFIX}/${author}/${post}/details`);
+  details: (params: TPostBasePathParams) => {
+    const author = encodePathSegment(params.author_id);
+    const post = encodePathSegment(params.post_id);
+    return buildNexusUrl(`${PREFIX}/${author}/${post}/details`);
   },
-  taggers: (params: Core.TPostTaggersParams) => {
-    const author = Core.encodePathSegment(params.author_id);
-    const post = Core.encodePathSegment(params.post_id);
-    const label = Core.encodePathSegment(params.label);
-    return Core.buildUrlWithQuery({
+  taggers: (params: TPostTaggersParams) => {
+    const author = encodePathSegment(params.author_id);
+    const post = encodePathSegment(params.post_id);
+    const label = encodePathSegment(params.label);
+    return buildUrlWithQuery({
       baseRoute: `${PREFIX}/${author}/${post}/taggers/${label}`,
       params,
-      excludeKeys: Core.POST_PATH_PARAMS,
+      excludeKeys: POST_PATH_PARAMS,
     });
   },
-  tags: (params: Core.TPostTagsParams) => {
-    const author = Core.encodePathSegment(params.author_id);
-    const post = Core.encodePathSegment(params.post_id);
-    return Core.buildUrlWithQuery({
+  tags: (params: TPostTagsParams) => {
+    const author = encodePathSegment(params.author_id);
+    const post = encodePathSegment(params.post_id);
+    return buildUrlWithQuery({
       baseRoute: `${PREFIX}/${author}/${post}/tags`,
       params,
-      excludeKeys: Core.POST_PATH_PARAMS,
+      excludeKeys: POST_PATH_PARAMS,
     });
   },
 };

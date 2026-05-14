@@ -1,6 +1,6 @@
-import * as Core from '@/core';
+import type { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
 
 export type TLocalStreamTagsParams = {
-  streamId: Core.TagStreamTypes;
+  streamId: TagStreamTypes;
   stream: string[];
 };
