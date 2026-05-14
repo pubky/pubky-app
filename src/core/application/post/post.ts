@@ -91,7 +91,7 @@ export class PostApplication {
 
     // Persist new tags to local DB (merge with existing)
     if (nexusTags.length > 0) {
-      await LocalPostTagService.mergeTags({ postId: compositeId, tags: nexusTags });
+      await LocalPostTagService.mergeTags({ postId: compositeId, tags: nexusTags, viewerId: viewerId ?? null });
     }
 
     return nexusTags;

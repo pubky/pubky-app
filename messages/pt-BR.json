@@ -383,7 +383,7 @@
       "neverShareMobile": "Nunca compartilhe este arquivo e senha com ninguem.",
       "password": "SENHA",
       "passwordPlaceholder": "Digite uma senha forte",
-      "passwordHint": "Recomendamos usar 8 caracteres ou mais com maiusculas, minusculas, números e simbolos.",
+      "passwordHint": "Recomendamos usar uma <passphraseLink>frase-senha</passphraseLink> longa com <minLen>mais de 16 caracteres</minLen> para melhor segurança.",
       "repeatPassword": "REPETIR SENHA",
       "repeatPasswordPlaceholder": "Repita sua senha",
       "passwordsDoNotMatch": "As senhas não coincidem",
@@ -1011,10 +1011,11 @@
     "couldNotFind": "Nao foi possivel encontrar o recurso solicitado"
   },
   "password": {
+    "veryWeak": "Senha muito fraca",
     "weak": "Senha fraca",
-    "fair": "Senha razoavel",
-    "good": "Boa senha",
-    "strong": "Senha forte!"
+    "moderate": "Senha moderada",
+    "strong": "Senha forte",
+    "veryStrong": "Senha muito forte"
   },
   "quickReply": {
     "prompts": [

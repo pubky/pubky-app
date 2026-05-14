@@ -377,7 +377,7 @@
       "neverShareMobile": "Never share this file and password with anyone.",
       "password": "PASSWORD",
       "passwordPlaceholder": "Enter a strong password",
-      "passwordHint": "We recommend to use 8 characters or more with uppercase, lowercase, numbers, and symbols.",
+      "passwordHint": "We recommend using a long <passphraseLink>passphrase</passphraseLink> <minLen>over 16 characters</minLen> for better security.",
       "repeatPassword": "REPEAT PASSWORD",
       "repeatPasswordPlaceholder": "Repeat your password",
       "passwordsDoNotMatch": "Passwords do not match",
@@ -1005,10 +1005,11 @@
     "couldNotFind": "Could not find requested resource"
   },
   "password": {
-    "weak": "Weak password",
-    "fair": "Fair password",
-    "good": "Good password",
-    "strong": "Strong password!"
+    "veryWeak": "Very weak",
+    "weak": "Weak",
+    "moderate": "Moderate",
+    "strong": "Strong",
+    "veryStrong": "Very strong"
   },
   "quickReply": {
     "prompts": [

@@ -383,7 +383,7 @@
       "neverShareMobile": "永远不要与任何人分享此文件和密码。",
       "password": "密码",
       "passwordPlaceholder": "输入强密码",
-      "passwordHint": "建议使用8个或更多字符，包含大小写字母、数字和符号。",
+      "passwordHint": "建议使用较长的<passphraseLink>密码短语</passphraseLink>，长度<minLen>超过16个字符</minLen>，以获得更好的安全性。",
       "repeatPassword": "重复密码",
       "repeatPasswordPlaceholder": "重复您的密码",
       "passwordsDoNotMatch": "密码不匹配",
@@ -1011,10 +1011,11 @@
     "couldNotFind": "无法找到请求的资源"
   },
   "password": {
-    "weak": "密码较弱",
-    "fair": "密码一般",
-    "good": "密码良好",
-    "strong": "密码很强！"
+    "veryWeak": "非常弱",
+    "weak": "弱",
+    "moderate": "中等",
+    "strong": "强",
+    "veryStrong": "非常强"
   },
   "quickReply": {
     "prompts": ["您对此有什么看法？", "您怎么看？", "您同意吗？", "有其他见解吗？", "您会怎么回应？"]

@@ -383,7 +383,7 @@
       "neverShareMobile": "لا تشارك هذا الملف وكلمة المرور مع اي شخص ابدا.",
       "password": "كلمة المرور",
       "passwordPlaceholder": "ادخل كلمة مرور قوية",
-      "passwordHint": "نوصي باستخدام 8 احرف او اكثر مع احرف كبيرة وصغيرة وارقام ورموز.",
+      "passwordHint": "نوصي باستخدام <passphraseLink>عبارة مرور</passphraseLink> طويلة بأكثر من <minLen>16 حرفا</minLen> لأمان أفضل.",
       "repeatPassword": "اعد كلمة المرور",
       "repeatPasswordPlaceholder": "اعد كتابة كلمة المرور",
       "passwordsDoNotMatch": "كلمات المرور غير متطابقة",
@@ -1011,10 +1011,11 @@
     "couldNotFind": "تعذر العثور على المورد المطلوب"
   },
   "password": {
-    "weak": "كلمة مرور ضعيفة",
-    "fair": "كلمة مرور متوسطة",
-    "good": "كلمة مرور جيدة",
-    "strong": "كلمة مرور قوية!"
+    "veryWeak": "ضعيفة جدا",
+    "weak": "ضعيفة",
+    "moderate": "متوسطة",
+    "strong": "قوية",
+    "veryStrong": "قوية جدا"
   },
   "quickReply": {
     "prompts": ["ما رايك في هذا؟", "ما هو رايك؟", "هل توافق؟", "اي افكار اضافية؟", "كيف سترد؟"]

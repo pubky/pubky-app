@@ -383,7 +383,7 @@
       "neverShareMobile": "Nunca compartas este archivo y contraseña con nadie.",
       "password": "CONTRASENA",
       "passwordPlaceholder": "Ingresa una contraseña fuerte",
-      "passwordHint": "Recomendamos usar 8 caracteres o más con mayusculas, minusculas, números y simbolos.",
+      "passwordHint": "Recomendamos usar una <passphraseLink>frase de contraseña</passphraseLink> larga de <minLen>más de 16 caracteres</minLen> para mayor seguridad.",
       "repeatPassword": "REPETIR CONTRASENA",
       "repeatPasswordPlaceholder": "Repite tu contraseña",
       "passwordsDoNotMatch": "Las contraseñas no coinciden",
@@ -1011,10 +1011,11 @@
     "couldNotFind": "No se pudo encontrar el recurso solicitado"
   },
   "password": {
-    "weak": "Contraseña debil",
-    "fair": "Contraseña aceptable",
-    "good": "Buena contraseña",
-    "strong": "Contraseña fuerte!"
+    "veryWeak": "Contrasena muy debil",
+    "weak": "Contrasena debil",
+    "moderate": "Contrasena moderada",
+    "strong": "Contrasena fuerte",
+    "veryStrong": "Contrasena muy fuerte"
   },
   "quickReply": {
     "prompts": [

@@ -383,7 +383,7 @@
       "neverShareMobile": "Non condividere mai questo file e questa password con nessuno.",
       "password": "PASSWORD",
       "passwordPlaceholder": "Inserisci una password forte",
-      "passwordHint": "Raccomandiamo di usare 8 o più caratteri con maiuscole, minuscole, numeri e simboli.",
+      "passwordHint": "Raccomandiamo di usare una <passphraseLink>passphrase</passphraseLink> lunga di <minLen>oltre 16 caratteri</minLen> per una maggiore sicurezza.",
       "repeatPassword": "RIPETI PASSWORD",
       "repeatPasswordPlaceholder": "Ripeti la tua password",
       "passwordsDoNotMatch": "Le password non corrispondono",
@@ -1011,10 +1011,11 @@
     "couldNotFind": "Impossibile trovare la risorsa richiesta"
   },
   "password": {
+    "veryWeak": "Password molto debole",
     "weak": "Password debole",
-    "fair": "Password discreta",
-    "good": "Buona password",
-    "strong": "Password forte!"
+    "moderate": "Password moderata",
+    "strong": "Password forte",
+    "veryStrong": "Password molto forte"
   },
   "quickReply": {
     "prompts": [

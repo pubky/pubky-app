@@ -3,6 +3,7 @@ import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
+import { TagApplication } from '@/application/tag/tag';
 import type {
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
@@ -257,6 +258,12 @@ export class AuthController {
    * Used by both logout() and restorePersistedSession() on failure.
    */
   private static async cleanupLocalState() {
+    // Capture pubky before resetting auth store; used to scope marker cleanup.
+    const pubky = useAuthStore.getState().currentUserPubky;
+    if (pubky) {
+      TagApplication.clearViewerMarkers(pubky);
+    }
+
     // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
     clearMuteSyncCursorSessionStorage();
 

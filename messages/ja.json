@@ -383,7 +383,7 @@
       "neverShareMobile": "このファイルとパスワードを誰とも共有しないでください。",
       "password": "パスワード",
       "passwordPlaceholder": "強力なパスワードを入力",
-      "passwordHint": "大文字、小文字、数字、記号を含む8文字以上を推奨します。",
+      "passwordHint": "より高い安全性のため、<minLen>16文字を超える</minLen>長い<passphraseLink>パスフレーズ</passphraseLink>の使用を推奨します。",
       "repeatPassword": "パスワードを再入力",
       "repeatPasswordPlaceholder": "パスワードを再入力",
       "passwordsDoNotMatch": "パスワードが一致しません",
@@ -1011,10 +1011,11 @@
     "couldNotFind": "リクエストされたリソースが見つかりませんでした"
   },
   "password": {
-    "weak": "弱いパスワード",
-    "fair": "普通のパスワード",
-    "good": "良いパスワード",
-    "strong": "強いパスワード！"
+    "veryWeak": "非常に弱い",
+    "weak": "弱い",
+    "moderate": "普通",
+    "strong": "強い",
+    "veryStrong": "非常に強い"
   },
   "quickReply": {
     "prompts": [
