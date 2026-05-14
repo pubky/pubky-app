@@ -115,7 +115,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
     // Store the latest set before early returns so Strict Mode reruns do not retrigger the same transition.
     previousMutedUserIdSetRef.current = currentMutedUserIdSet;
 
-    if (variant === TIMELINE_FEED_VARIANT.PROFILE) return;
+    if (variant === TIMELINE_FEED_VARIANT.PROFILE || variant === TIMELINE_FEED_VARIANT.BOOKMARKS) return;
 
     const hasUnmutedUser = previousMutedUserIdSet
       ? [...previousMutedUserIdSet].some((userId) => !currentMutedUserIdSet.has(userId))
