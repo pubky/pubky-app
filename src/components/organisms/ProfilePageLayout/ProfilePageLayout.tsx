@@ -14,7 +14,7 @@ import { ProfilePageHeader } from '../ProfilePageHeader/ProfilePageHeader';
 import { ProfilePageSidebar } from '../ProfilePageSidebar/ProfilePageSidebar';
 import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 
-const PROFILE_MOBILE_MENU_SELECTOR = '[data-testid="profile-page-mobile-menu"]';
+const PROFILE_MOBILE_MENU_SELECTOR = '[data-profile-mobile-menu="true"]';
 const DEFAULT_MOBILE_HEADER_HEIGHT = 80;
 
 function getMobilePostsFeedScrollOffset(): number {
@@ -82,7 +82,9 @@ export function ProfilePageLayout({
   const lastAutoScrolledPostsKeyRef = useRef<string | null>(null);
   const showMobilePostsProfileHeader = !isOwnProfile && activePage === PROFILE_PAGE_TYPES.POSTS;
   const shouldAutoScrollToPostsFeed = showMobilePostsProfileHeader && isMobile && !isLoading;
-  const postsFeedScrollKey = userId;
+  const profileHeaderWrapperClassName = showMobilePostsProfileHeader
+    ? 'mb-6 flex min-w-0 flex-col overflow-hidden bg-transparent pb-0 shadow-none lg:mb-0 lg:block lg:bg-background lg:pb-12 lg:shadow-sm'
+    : 'hidden overflow-hidden bg-background pb-12 shadow-sm lg:block';
 
   // Stabilize callbacks to prevent unnecessary re-renders in child components
   const handleAvatarClick = useCallback(() => {
@@ -106,7 +108,7 @@ export function ProfilePageLayout({
       return;
     }
 
-    if (lastAutoScrolledPostsKeyRef.current === postsFeedScrollKey) {
+    if (lastAutoScrolledPostsKeyRef.current === userId) {
       return;
     }
 
@@ -143,7 +145,7 @@ export function ProfilePageLayout({
       const remainingScrollDelta = postsFeed.getBoundingClientRect().top - getMobilePostsFeedScrollOffset();
       if (Math.abs(remainingScrollDelta) <= 1) {
         isAligned = true;
-        lastAutoScrolledPostsKeyRef.current = postsFeedScrollKey;
+        lastAutoScrolledPostsKeyRef.current = userId;
         stopObserving();
       }
     };
@@ -172,7 +174,7 @@ export function ProfilePageLayout({
       animationFrameIds.forEach((animationFrameId) => window.cancelAnimationFrame(animationFrameId));
       stopObserving();
     };
-  }, [activePage, isOwnProfile, postsFeedScrollKey, shouldAutoScrollToPostsFeed]);
+  }, [activePage, isOwnProfile, shouldAutoScrollToPostsFeed, userId]);
 
   return (
     <>
@@ -181,7 +183,11 @@ export function ProfilePageLayout({
       <ProfilePageMobileMenu activePage={activePage} onPageChangeAction={navigateToPage} isOwnProfile={isOwnProfile} />
 
       <ProfilePageLayoutWrapper>
-        <Container overrideDefaults={true} className="hidden overflow-hidden bg-background pb-12 shadow-sm lg:block">
+        <Container
+          ref={showMobilePostsProfileHeader ? mobilePostsProfileHeaderRef : undefined}
+          overrideDefaults={true}
+          className={profileHeaderWrapperClassName}
+        >
           {!isLoading && (
             <ProfilePageHeader
               profile={profile}
@@ -202,22 +208,6 @@ export function ProfilePageLayout({
           />
 
           <Container data-cy="profile-tab-content" overrideDefaults={true} className="min-w-0 flex-1">
-            {showMobilePostsProfileHeader && !isLoading && (
-              <Container
-                ref={mobilePostsProfileHeaderRef}
-                overrideDefaults={true}
-                className="mb-6 flex min-w-0 flex-col overflow-hidden lg:hidden"
-              >
-                <ProfilePageHeader
-                  profile={profile}
-                  actions={headerActions}
-                  isOwnProfile={isOwnProfile}
-                  userId={userId}
-                  stats={stats}
-                />
-              </Container>
-            )}
-
             {showMobilePostsProfileHeader ? (
               <Container
                 ref={postsFeedRef}

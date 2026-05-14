@@ -99,7 +99,7 @@ vi.mock('@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu', () => {
   return {
     ProfilePageMobileMenu: ({ activePage }: { activePage: string; onPageChangeAction: (page: string) => void }) => (
       <div data-testid="profile-mobile-menu" data-active={activePage}>
-        <div data-testid="profile-page-mobile-menu" />
+        <div data-testid="profile-page-mobile-menu" data-profile-mobile-menu="true" />
         Profile Mobile Menu
       </div>
     ),
@@ -271,7 +271,7 @@ describe('ProfilePageLayout', () => {
     expect(screen.getByTestId('custom-child')).toBeInTheDocument();
   });
 
-  it('renders a mobile profile header above the posts section for other-user posts', () => {
+  it('renders a single profile header above the posts section for other-user posts', () => {
     const { container } = render(
       <ProfilePageLayout
         {...defaultProps}
@@ -283,10 +283,11 @@ describe('ProfilePageLayout', () => {
       </ProfilePageLayout>,
     );
 
-    expect(screen.getAllByTestId('profile-page-header')).toHaveLength(2);
-    expect(container.querySelector('[data-cy="profile-posts-feed"]')).toContainElement(
-      screen.getByTestId('posts-content'),
-    );
+    const profileHeader = screen.getByTestId('profile-page-header');
+    const postsFeed = container.querySelector('[data-cy="profile-posts-feed"]');
+    expect(screen.getAllByTestId('profile-page-header')).toHaveLength(1);
+    expect(profileHeader.compareDocumentPosition(postsFeed!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(postsFeed).toContainElement(screen.getByTestId('posts-content'));
     expect(screen.getByTestId('posts-content')).toBeInTheDocument();
   });
 
@@ -303,7 +304,7 @@ describe('ProfilePageLayout', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function getBoundingClientRect(
       this: HTMLElement,
     ) {
-      if (this.getAttribute('data-testid') === 'profile-page-mobile-menu') {
+      if (this.getAttribute('data-profile-mobile-menu') === 'true') {
         return new DOMRect(0, 80, 0, 64);
       }
 
@@ -397,7 +398,7 @@ describe('ProfilePageLayout', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function getBoundingClientRect(
       this: HTMLElement,
     ) {
-      if (this.getAttribute('data-testid') === 'profile-page-mobile-menu') {
+      if (this.getAttribute('data-profile-mobile-menu') === 'true') {
         return new DOMRect(0, 80, 0, 64);
       }
 

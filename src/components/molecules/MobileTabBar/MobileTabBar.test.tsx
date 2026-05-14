@@ -144,6 +144,12 @@ describe('MobileTabBar', () => {
     expect(root).toHaveAttribute('data-testid', 'my-tab-bar');
   });
 
+  it('passes through profile mobile menu runtime marker', () => {
+    const { container } = render(<MobileTabBar items={makeItems()} data-profile-mobile-menu="true" />);
+    const root = container.firstChild as HTMLElement;
+    expect(root).toHaveAttribute('data-profile-mobile-menu', 'true');
+  });
+
   it('applies flex items-center gap-2 to button only when showLabels is true', () => {
     const { container: iconOnly } = render(<MobileTabBar items={makeItems()} />);
     iconOnly.querySelectorAll('button').forEach((btn) => {

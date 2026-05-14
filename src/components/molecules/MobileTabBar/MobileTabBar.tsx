@@ -22,11 +22,13 @@ export function MobileTabBar({
   position = 'sticky',
   className,
   'data-testid': dataTestId,
+  'data-profile-mobile-menu': dataProfileMobileMenu,
 }: MobileTabBarProps) {
   return (
     <Container
       overrideDefaults
       data-testid={dataTestId}
+      data-profile-mobile-menu={dataProfileMobileMenu}
       className={cn(
         'mobile-menu-gradient-fade z-(--z-mobile-menu) bg-background lg:hidden',
         position === 'sticky' && 'sticky top-(--header-height-mobile)',

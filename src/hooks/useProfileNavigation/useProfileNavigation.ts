@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { FilterBarPageType, PROFILE_PAGE_TYPES, ProfilePageType } from '@/app/profile/types';
-import { PROFILE_ROUTES } from '@/app/routes';
+import { getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 
 /**
@@ -14,7 +14,7 @@ const PROFILE_ROUTES_CONFIG: Record<
   ProfilePageType,
   {
     /** Primary route for this page type */
-    route: string;
+    route: PROFILE_ROUTES;
     /** Sub-path for dynamic routes (e.g., '/posts', '/followers') */
     subPath: string;
     /** Alternative routes that also map to this page type */
@@ -82,28 +82,9 @@ const derivePagePathMap = (): Record<string, ProfilePageType> => {
 };
 
 /**
- * Derives the route mapping from the configuration
- * Maps page types to their primary routes
- */
-const deriveRouteMap = (): Record<ProfilePageType, string> => {
-  const map: Record<ProfilePageType, string> = {} as Record<ProfilePageType, string>;
-
-  for (const [pageType, config] of Object.entries(PROFILE_ROUTES_CONFIG)) {
-    map[pageType as ProfilePageType] = config.route;
-  }
-
-  return map;
-};
-
-/**
  * Page-to-path mapping for profile navigation (derived from config)
  */
 const PAGE_PATH_MAP = derivePagePathMap();
-
-/**
- * Route mapping for profile pages (derived from config)
- */
-const ROUTE_MAP = deriveRouteMap();
 
 /**
  * Extracts the page type from a dynamic route pathname
@@ -185,7 +166,6 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
   const router = useRouter();
 
   const { pubky, isOwnProfile } = useProfileContext();
-  const canonicalOtherUserPostsRoute = pubky ? `/profile/${pubky}` : '';
 
   /**
    * Determine the active page from the current pathname
@@ -233,8 +213,7 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
 
       // For own profile, use static routes
       if (isOwnProfile) {
-        const route = ROUTE_MAP[page];
-        router.push(route);
+        router.push(config.route);
         return;
       }
 
@@ -242,26 +221,9 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
         return;
       }
 
-      const navigateToOtherUserPosts = () => {
-        router.push(canonicalOtherUserPostsRoute);
-      };
-
-      // For other users, generate dynamic route
-      // Skip notifications for other users
-      if (config.ownProfileOnly) {
-        navigateToOtherUserPosts();
-        return;
-      }
-
-      if (page === PROFILE_PAGE_TYPES.POSTS) {
-        navigateToOtherUserPosts();
-        return;
-      }
-
-      const dynamicRoute = `/profile/${pubky}${config.subPath}`;
-      router.push(dynamicRoute);
+      router.push(getProfileRoute(config.route, pubky));
     },
-    [canonicalOtherUserPostsRoute, isOwnProfile, pubky, router],
+    [isOwnProfile, pubky, router],
   );
 
   return {

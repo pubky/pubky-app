@@ -28,11 +28,11 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
     </div>
   </div>
   <div
-    class="contents min-w-0 flex-1 lg:flex! lg:flex-col lg:gap-3"
+    class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3"
     data-testid="container"
   >
     <div
-      class="col-start-2 row-start-1 flex min-w-0 flex-col items-start self-center lg:col-auto lg:row-auto lg:self-auto lg:text-left gap-1"
+      class="col-start-2 row-start-1 flex min-w-0 flex-col items-start gap-1 self-center lg:col-auto lg:row-auto lg:self-auto lg:text-left"
       data-testid="container"
     >
       <h1
@@ -163,7 +163,7 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         Edit profile
       </button>
       <button
-        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-1 uppercase min-w-0 basis-[calc(50%_-_0.25rem)] justify-center lg:order-0 lg:basis-auto"
+        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 uppercase order-1 min-w-0 basis-[calc(50%_-_0.25rem)] justify-center lg:order-0 lg:basis-auto"
         data-cy="profile-copy-pubkey-btn"
         data-size="sm"
         data-slot="button"

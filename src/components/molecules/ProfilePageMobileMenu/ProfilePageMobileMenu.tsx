@@ -91,5 +91,12 @@ export function ProfilePageMobileMenu({
     onSelect: () => requireAuth(() => onPageChangeAction(item.pageType)),
   }));
 
-  return <MobileTabBar items={items} position="sticky" data-testid="profile-page-mobile-menu" />;
+  return (
+    <MobileTabBar
+      items={items}
+      position="sticky"
+      data-testid="profile-page-mobile-menu"
+      data-profile-mobile-menu="true"
+    />
+  );
 }

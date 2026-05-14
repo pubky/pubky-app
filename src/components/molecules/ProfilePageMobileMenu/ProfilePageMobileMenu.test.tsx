@@ -94,6 +94,14 @@ describe('ProfilePageMobileMenu', () => {
     expect(rootElement).toHaveAttribute('data-testid', 'profile-page-mobile-menu');
   });
 
+  it('exposes a runtime marker for profile scroll alignment', () => {
+    const { container } = render(
+      <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />,
+    );
+    const rootElement = container.firstChild as HTMLElement;
+    expect(rootElement).toHaveAttribute('data-profile-mobile-menu', 'true');
+  });
+
   it('renders with sticky positioning', () => {
     const { container } = render(
       <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />,

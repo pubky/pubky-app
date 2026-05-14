@@ -12,7 +12,7 @@ import {
   UserRoundPlus,
   UsersRound,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { AvatarEmojiBadge } from '@/atoms/AvatarEmojiBadge/AvatarEmojiBadge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -36,12 +36,13 @@ import type { ProfilePageHeaderProps } from './ProfilePageHeader.types';
  * Subscribes the profile user to TTL tracking when visible in the viewport.
  * This ensures profile data gets refreshed when stale.
  */
-const formatFollowersLabel = (count: number) =>
-  `${new Intl.NumberFormat('en', { notation: 'compact' }).format(count)} FOLLOWERS`;
+const MOBILE_ACTION_BUTTON_CLASS_NAME = 'min-w-0 basis-[calc(50%_-_0.25rem)] justify-center lg:order-0 lg:basis-auto';
 
 export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userId, stats }: ProfilePageHeaderProps) {
   const t = useTranslations('profile.actions');
   const tStatus = useTranslations('status');
+  const tUserList = useTranslations('userList');
+  const format = useFormatter();
   const { avatarUrl, emoji = '🌴', name, bio, publicKey, status } = profile;
   const {
     onEdit,
@@ -67,9 +68,9 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     key: publicKey,
   });
   const displayEmoji = extractEmojiFromStatus(status || '', emoji);
-  const parsedStatus = parseStatus(status || '', displayEmoji);
-  const statusText = parsedStatus.key ? tStatus(parsedStatus.key as Parameters<typeof tStatus>[0]) : parsedStatus.text;
-  const mobileActionButtonClassName = 'min-w-0 basis-[calc(50%_-_0.25rem)] justify-center lg:order-0 lg:basis-auto';
+  const followersLabel = stats
+    ? `${format.number(stats.followers, { notation: 'compact' })} ${tUserList('followers')}`
+    : null;
   const getLoadingFollowText = () => {
     if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
       return t('unfollowing');
@@ -79,6 +80,38 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     }
     return t('loading');
   };
+  const copyPublicKeyButton = (
+    <Button
+      data-cy="profile-copy-pubkey-btn"
+      className={cn('uppercase', isOwnProfile && 'order-1', MOBILE_ACTION_BUTTON_CLASS_NAME)}
+      variant="secondary"
+      size="sm"
+      onClick={onCopyPublicKey}
+    >
+      <KeyRound className="size-4" />
+      {formattedPublicKey}
+    </Button>
+  );
+  const renderStatusDisplay = () => {
+    if (!status || isOwnProfile) {
+      return null;
+    }
+
+    const parsedStatus = parseStatus(status, displayEmoji);
+    const statusText = parsedStatus.key ? tStatus(parsedStatus.key) : parsedStatus.text;
+
+    return (
+      <Container overrideDefaults={true} className="flex h-8 items-center gap-1">
+        <Typography as="span" overrideDefaults className="text-base leading-6">
+          {displayEmoji}
+        </Typography>
+        <Typography as="span" overrideDefaults className="text-base leading-6 font-bold text-white">
+          {statusText}
+        </Typography>
+      </Container>
+    );
+  };
+
   return (
     <Container
       ref={ttlRef}
@@ -102,12 +135,12 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
         <AvatarEmojiBadge emoji={displayEmoji} />
       </Container>
 
-      <Container overrideDefaults={true} className="contents min-w-0 flex-1 lg:flex! lg:flex-col lg:gap-3">
+      {/* Mobile uses display: contents so children participate in the parent grid; desktop restores a normal flex column. */}
+      <Container overrideDefaults={true} className="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3">
         <Container
           overrideDefaults={true}
           className={cn(
-            'col-start-2 row-start-1 flex min-w-0 flex-col items-start self-center lg:col-auto lg:row-auto lg:self-auto lg:text-left',
-            bio && 'gap-1',
+            'col-start-2 row-start-1 flex min-w-0 flex-col items-start gap-1 self-center lg:col-auto lg:row-auto lg:self-auto lg:text-left',
           )}
         >
           <Typography
@@ -137,7 +170,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   overrideDefaults
                   className="truncate text-xs leading-4 font-medium tracking-widest text-muted-foreground uppercase"
                 >
-                  {formatFollowersLabel(stats.followers)}
+                  {followersLabel}
                 </Typography>
               </Container>
             )}
@@ -159,7 +192,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
             <>
               <Button
                 data-cy="profile-edit-btn"
-                className={cn('order-3', mobileActionButtonClassName)}
+                className={cn('order-3', MOBILE_ACTION_BUTTON_CLASS_NAME)}
                 variant="secondary"
                 size="sm"
                 onClick={onEdit}
@@ -167,18 +200,9 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 <Pencil className="size-4" />
                 {t('editProfile')}
               </Button>
+              {copyPublicKeyButton}
               <Button
-                data-cy="profile-copy-pubkey-btn"
-                className={cn('order-1 uppercase', mobileActionButtonClassName)}
-                variant="secondary"
-                size="sm"
-                onClick={onCopyPublicKey}
-              >
-                <KeyRound className="size-4" />
-                {formattedPublicKey}
-              </Button>
-              <Button
-                className={cn('order-2', mobileActionButtonClassName)}
+                className={cn('order-2', MOBILE_ACTION_BUTTON_CLASS_NAME)}
                 variant="secondary"
                 size="sm"
                 onClick={onCopyLink}
@@ -187,7 +211,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 {t('profileLink')}
               </Button>
               <Button
-                className={cn('order-4', mobileActionButtonClassName)}
+                className={cn('order-4', MOBILE_ACTION_BUTTON_CLASS_NAME)}
                 variant="secondary"
                 size="sm"
                 onClick={onSignOut}
@@ -221,7 +245,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   data-cy="profile-follow-toggle-btn"
                   variant="secondary"
                   size="sm"
-                  className={cn('group justify-center lg:w-[110px]', mobileActionButtonClassName)}
+                  className={cn('group justify-center lg:w-[110px]', MOBILE_ACTION_BUTTON_CLASS_NAME)}
                   onClick={onFollowToggle}
                   disabled={isFollowLoading}
                 >
@@ -249,17 +273,8 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   )}
                 </Button>
               )}
-              <Button
-                data-cy="profile-copy-pubkey-btn"
-                className={cn('uppercase', mobileActionButtonClassName)}
-                variant="secondary"
-                size="sm"
-                onClick={onCopyPublicKey}
-              >
-                <KeyRound className="size-4" />
-                {formattedPublicKey}
-              </Button>
-              <Button className={mobileActionButtonClassName} variant="secondary" size="sm" onClick={onCopyLink}>
+              {copyPublicKeyButton}
+              <Button className={MOBILE_ACTION_BUTTON_CLASS_NAME} variant="secondary" size="sm" onClick={onCopyLink}>
                 <Link className="size-4" />
                 {t('link')}
               </Button>
@@ -273,16 +288,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 }
               />
               {/* Status display inline with buttons */}
-              {status && (
-                <Container overrideDefaults={true} className="flex h-8 items-center gap-1">
-                  <Typography as="span" overrideDefaults className="text-base leading-6">
-                    {displayEmoji}
-                  </Typography>
-                  <Typography as="span" overrideDefaults className="text-base leading-6 font-bold text-white">
-                    {statusText}
-                  </Typography>
-                </Container>
-              )}
+              {renderStatusDisplay()}
             </>
           )}
         </Container>
