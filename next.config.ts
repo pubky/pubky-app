@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
   reactCompiler: true,
+  async redirects() {
+    return [
+      {
+        source: '/profile/:pubky/posts',
+        destination: '/profile/:pubky',
+        permanent: true,
+      },
+    ];
+  },
   // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
   ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),
   webpack: (config, { isServer }) => {

@@ -72,7 +72,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     addUser(userId);
     clearInputValue();
     setFocus(false);
-    router.push(`/profile/${userId}/posts`);
+    router.push(`/profile/${userId}`);
   };
 
   const handleTagClick = (tag: string) => {

@@ -108,7 +108,8 @@ const ROUTE_MAP = deriveRouteMap();
 
 /**
  * Extracts the page type from a dynamic route pathname
- * Handles paths like /profile/{pubky}/posts, /profile/{pubky}/followers, etc.
+ * Handles paths like /profile/{pubky}/followers, /profile/{pubky}/replies, etc.
+ * (Legacy /profile/{pubky}/posts still maps to POSTS until redirect runs.)
  *
  * Own-profile dynamic routes preserve the Notifications default.
  * Other users default to PROFILE on mobile and POSTS on desktop.
@@ -194,7 +195,7 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
 
   /**
    * Determine the active page from the current pathname
-   * Handles both static routes (/profile/posts) and dynamic routes (/profile/{pubky}/posts)
+   * Handles static routes (/profile/posts) and dynamic routes (/profile/{pubky}/…)
    */
   const activePage = useMemo(() => {
     if (PAGE_PATH_MAP[pathname]) {
@@ -246,13 +247,11 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
       // For other users, generate dynamic route
       // Skip notifications for other users
       if (config.ownProfileOnly) {
-        // Redirect to posts instead
-        const postsRoute = `/profile/${pubky}/posts`;
-        router.push(postsRoute);
+        router.push(`/profile/${pubky}`);
         return;
       }
 
-      const dynamicRoute = `/profile/${pubky}${config.subPath}`;
+      const dynamicRoute = config.subPath === '/posts' ? `/profile/${pubky}` : `/profile/${pubky}${config.subPath}`;
       router.push(dynamicRoute);
     },
     [router, isOwnProfile, pubky],
