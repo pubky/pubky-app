@@ -64,7 +64,7 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
   const { toggleFollow, isUserLoading } = useFollowUser();
   const { isMuted } = useMutedUsers();
 
-  const visibleUsers = useMemo(() => users.filter((user) => !isMuted(user.id)), [users, isMuted]);
+  const visibleUsers = users.filter((user) => !isMuted(user.id));
 
   const handleUserClick = (pubky: Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
