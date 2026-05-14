@@ -2,12 +2,14 @@ import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostTagsModel, type PostTagsModelSchema } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { ViewerTagMarkerStorage } from '@/services/local/tag/post/viewerTagMarkerStorage';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 
@@ -29,12 +31,19 @@ export class LocalPostTagService {
    * @param params.label - Normalized tag label (must be pre-normalized by caller)
    * @param params.taggerId - Unique identifier of the user adding the tag
    *
+   * @returns {boolean} true if local state changed; false if the tagger already had this tag (idempotent — no writes, no viewer marker)
    * @throws {AppError} When user has already tagged this post with the same label
    * @throws {DatabaseError} When database operations fail
    */
   static async create({ taggedId: postId, label, taggerId }: TLocalTagParams): Promise<boolean> {
+    // True only when the transaction actually changed IndexedDB state.
+    // We use this to decide whether to write the viewer-mutation marker after
+    // the transaction commits: if nothing changed (e.g., the user already had
+    // this tag), there's no local state to protect from stale Nexus responses,
+    // so we skip the marker.
+    let mutated = false;
     try {
-      return await db.transaction('rw', this.TAG_TABLES, async () => {
+      mutated = await db.transaction('rw', this.TAG_TABLES, async () => {
         const postTagsModel = await PostTagsModel.getOrCreate<string, PostTagsModelSchema>(postId);
         const status = postTagsModel.addTagger(label, taggerId);
         // Idempotent: user already tagged this post with this label
@@ -57,6 +66,14 @@ export class LocalPostTagService {
         cause: error,
       });
     }
+
+    if (mutated) {
+      // Record this viewer change so mergeTags ignores stale Nexus responses
+      // for the next ~5 minutes (until Nexus catches up).
+      ViewerTagMarkerStorage.set({ pubky: taggerId, postId, label, op: HttpMethod.PUT });
+    }
+
+    return mutated;
   }
 
   /**
@@ -95,7 +112,6 @@ export class LocalPostTagService {
         await UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: -1 } });
         await PostTtlModel.upsert({ id: postId, lastUpdatedAt: Date.now() });
       });
-      return true;
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to delete post tag', {
         service: ErrorService.Local,
@@ -104,6 +120,11 @@ export class LocalPostTagService {
         cause: error,
       });
     }
+
+    // Record this viewer change so mergeTags ignores stale Nexus responses
+    // for the next ~5 minutes (until Nexus catches up).
+    ViewerTagMarkerStorage.set({ pubky: taggerId, postId, label, op: HttpMethod.DELETE });
+    return true;
   }
 
   /**
@@ -147,13 +168,28 @@ export class LocalPostTagService {
   }
 
   /**
-   * Merges new tags from Nexus with existing local tags.
-   * Updates existing tags or adds new ones without removing any.
+   * Merges Nexus tags into local IndexedDB using a per-field policy:
    *
-   * @param postId - Unique identifier of the post
-   * @param tags - Array of NexusTags to merge
+   * - `taggers_count`: replaced with the Nexus value (Nexus is authoritative
+   *   for the total).
+   * - Viewer's `relationship` and the viewer's entry in `taggers`: an active
+   *   sessionStorage marker (set by `create` / `delete`) overrides; otherwise
+   *   the Nexus value is used.
+   * - Other users in `taggers`: union of existing + Nexus. The Nexus `taggers`
+   *   array is a truncated top-N sample, so replacing would drop locally-cached
+   *   taggers.
+   * - Labels in IndexedDB but not in `tags`: left alone, since Nexus paginates
+   *   by label and absent labels may exist on later pages.
+   *
+   * @param postId - Composite post ID
+   * @param tags - Tags from the Nexus response
+   * @param viewerId - Current viewer pubky for marker lookup. Null when the
+   *   user is unauthenticated, in which case Nexus values are used as-is.
    */
-  static async mergeTags({ postId, tags }: { postId: string; tags: NexusTag[] }) {
+  static async mergeTags({ postId, tags, viewerId }: { postId: string; tags: NexusTag[]; viewerId: Pubky | null }) {
+    // Piggyback GC: drop expired markers so sessionStorage doesn't accumulate them.
+    ViewerTagMarkerStorage.sweepExpired();
+
     try {
       await db.transaction('rw', [PostTagsModel.table], async () => {
         const existing = await PostTagsModel.findById(postId);
@@ -170,18 +206,40 @@ export class LocalPostTagService {
           const key = newTag.label.toLowerCase();
           const existingTag = tagMap.get(key);
 
-          if (existingTag) {
-            // Merge taggers - combine unique taggers
-            const mergedTaggers = [...new Set([...(existingTag.taggers ?? []), ...(newTag.taggers ?? [])])];
-            tagMap.set(key, {
-              ...existingTag,
-              ...newTag,
-              taggers: mergedTaggers,
-              taggers_count: Math.max(existingTag.taggers_count ?? 0, newTag.taggers_count ?? mergedTaggers.length),
-            });
-          } else {
-            tagMap.set(key, newTag);
+          // If the viewer just toggled this tag locally, the marker tells us
+          // the intended viewer-state — trust it over a possibly stale Nexus
+          // value for the next ~5 minutes.
+          const marker = viewerId ? ViewerTagMarkerStorage.get({ pubky: viewerId, postId, label: newTag.label }) : null;
+          const nexusSaysViewerIsTagger = Boolean(newTag.relationship);
+          const viewerIsTagger = marker ? marker.op === HttpMethod.PUT : nexusSaysViewerIsTagger;
+
+          // Other users: union of existing + Nexus, viewer excluded
+          // (viewer's slot is decided by `viewerIsTagger`).
+          const otherTaggers = new Set(
+            [...(existingTag?.taggers ?? []), ...(newTag.taggers ?? [])].filter((tagger) => tagger !== viewerId),
+          );
+          const mergedTaggers: Pubky[] = Array.from(otherTaggers);
+          if (viewerIsTagger && viewerId) {
+            mergedTaggers.push(viewerId);
           }
+
+          // Default: trust Nexus's count.
+          // Exception: if the marker says the viewer is a tagger but Nexus
+          // doesn't know yet, Nexus's count is one short — add 1. If the marker
+          // says the viewer is NOT a tagger but Nexus still counts them, Nexus's
+          // count is one too high — subtract 1. This keeps `taggers_count`
+          // matching the final `taggers` / `relationship` we write below.
+          let taggers_count = newTag.taggers_count;
+          if (marker && viewerIsTagger !== nexusSaysViewerIsTagger) {
+            taggers_count = viewerIsTagger ? taggers_count + 1 : Math.max(0, taggers_count - 1);
+          }
+
+          tagMap.set(key, {
+            ...newTag,
+            taggers_count,
+            taggers: mergedTaggers,
+            relationship: viewerIsTagger,
+          });
         }
 
         // Convert map back to array

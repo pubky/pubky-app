@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculatePasswordStrength, getStrengthColor, getStrengthText } from './password';
+import { calculatePasswordStrength } from './password';
 
 describe('Password Utilities', () => {
   describe('calculatePasswordStrength', () => {
@@ -90,6 +90,72 @@ describe('Password Utilities', () => {
       expect(result.checks.length).toBe(true);
     });
 
+    it('should rate long passphrases as strong (passphrase-first security)', () => {
+      const result = calculatePasswordStrength('logic finite eager ratio');
+      expect(result.strength).toBe(5);
+      expect(result.percentage).toBe(100);
+      expect(result.checks.length).toBe(true);
+    });
+
+    it('should rate 20–23 char passphrases as good', () => {
+      const result = calculatePasswordStrength('four good words pass');
+      expect(result.strength).toBe(4);
+      expect(result.percentage).toBe(80);
+    });
+
+    it('should rate 16–19 char passphrases as fair', () => {
+      const result = calculatePasswordStrength('four word pass x');
+      expect(result.strength).toBe(3);
+    });
+
+    it('should not treat long letter-only string without spaces as passphrase', () => {
+      // Without spaces, it's a single token regardless of length: not a phrase.
+      const result = calculatePasswordStrength('mergersdecadelabeledmanager');
+      expect(result.strength).toBe(2); // length + lowercase only
+    });
+
+    it('should not treat 3-word strings as passphrase', () => {
+      // A real phrase needs at least 4 words; this falls back to standard scoring.
+      const result = calculatePasswordStrength('mergers decade labeled');
+      expect(result.strength).toBe(2);
+      expect(result.checks.length).toBe(true);
+      expect(result.checks.lowercase).toBe(true);
+    });
+
+    it('should not count consecutive spaces as multiple word separators', () => {
+      // 20 chars, only 2 words despite 4 spaces in a row — not a phrase.
+      const result = calculatePasswordStrength('helloooo    worldddd');
+      expect(result.strength).toBe(2);
+    });
+
+    it('should not treat short multi-word string as passphrase', () => {
+      const result = calculatePasswordStrength('word word');
+      expect(result.strength).toBe(2);
+      expect(result.checks.length).toBe(true);
+      expect(result.checks.lowercase).toBe(true);
+    });
+
+    it('should not downgrade complex 16+ char passwords that contain a space', () => {
+      // Regression: previously the hasSpace branch in isPassphraseLike misclassified
+      // this as a passphrase and downgraded it from strength 5 to strength 3.
+      const result = calculatePasswordStrength('MyStr0ng!P@ss ab');
+      expect(result.strength).toBe(5);
+      expect(result.percentage).toBe(100);
+      expect(result.checks).toEqual({
+        length: true,
+        lowercase: true,
+        uppercase: true,
+        numbers: true,
+        symbols: true,
+      });
+    });
+
+    it('should not treat a 16+ char password containing digits and a space as passphrase', () => {
+      const result = calculatePasswordStrength('correct horse 1234');
+      expect(result.checks.numbers).toBe(true);
+      expect(result.strength).toBe(3);
+    });
+
     it('should handle passwords with only numbers', () => {
       const result = calculatePasswordStrength('12345678');
       expect(result.strength).toBe(2);
@@ -115,100 +181,6 @@ describe('Password Utilities', () => {
       const result = calculatePasswordStrength('Password1€');
       expect(result.strength).toBe(4);
       expect(result.checks.symbols).toBe(false); // Unicode symbol not in regex
-    });
-  });
-
-  describe('getStrengthText', () => {
-    it('should return empty string for strength 0', () => {
-      expect(getStrengthText(0)).toBe('');
-    });
-
-    it('should return "Weak password" for strength 1', () => {
-      expect(getStrengthText(1)).toBe('Weak password');
-    });
-
-    it('should return "Weak password" for strength 2', () => {
-      expect(getStrengthText(2)).toBe('Weak password');
-    });
-
-    it('should return "Fair password" for strength 3', () => {
-      expect(getStrengthText(3)).toBe('Fair password');
-    });
-
-    it('should return "Good password" for strength 4', () => {
-      expect(getStrengthText(4)).toBe('Good password');
-    });
-
-    it('should return "Strong password!" for strength 5', () => {
-      expect(getStrengthText(5)).toBe('Strong password!');
-    });
-
-    it('should return "Strong password!" for strength greater than 5', () => {
-      expect(getStrengthText(6)).toBe('Strong password!');
-      expect(getStrengthText(10)).toBe('Strong password!');
-    });
-  });
-
-  describe('getStrengthColor', () => {
-    it('should return "text-red-400" for strength 0', () => {
-      expect(getStrengthColor(0)).toBe('text-red-400');
-    });
-
-    it('should return "text-red-400" for strength 1', () => {
-      expect(getStrengthColor(1)).toBe('text-red-400');
-    });
-
-    it('should return "text-red-400" for strength 2', () => {
-      expect(getStrengthColor(2)).toBe('text-red-400');
-    });
-
-    it('should return "text-yellow-400" for strength 3', () => {
-      expect(getStrengthColor(3)).toBe('text-yellow-400');
-    });
-
-    it('should return "text-blue-400" for strength 4', () => {
-      expect(getStrengthColor(4)).toBe('text-blue-400');
-    });
-
-    it('should return "text-green-400" for strength 5', () => {
-      expect(getStrengthColor(5)).toBe('text-green-400');
-    });
-
-    it('should return "text-green-400" for strength greater than 5', () => {
-      expect(getStrengthColor(6)).toBe('text-green-400');
-      expect(getStrengthColor(10)).toBe('text-green-400');
-    });
-  });
-
-  describe('Integration tests', () => {
-    it('should work together correctly for a weak password', () => {
-      const strength = calculatePasswordStrength('short');
-      expect(getStrengthText(strength.strength)).toBe('Weak password');
-      expect(getStrengthColor(strength.strength)).toBe('text-red-400');
-    });
-
-    it('should work together correctly for a weak password with length', () => {
-      const strength = calculatePasswordStrength('password');
-      expect(getStrengthText(strength.strength)).toBe('Weak password');
-      expect(getStrengthColor(strength.strength)).toBe('text-red-400');
-    });
-
-    it('should work together correctly for a fair password', () => {
-      const strength = calculatePasswordStrength('Password');
-      expect(getStrengthText(strength.strength)).toBe('Fair password');
-      expect(getStrengthColor(strength.strength)).toBe('text-yellow-400');
-    });
-
-    it('should work together correctly for a good password', () => {
-      const strength = calculatePasswordStrength('Password1A');
-      expect(getStrengthText(strength.strength)).toBe('Good password');
-      expect(getStrengthColor(strength.strength)).toBe('text-blue-400');
-    });
-
-    it('should work together correctly for a strong password', () => {
-      const strength = calculatePasswordStrength('Password1!');
-      expect(getStrengthText(strength.strength)).toBe('Strong password!');
-      expect(getStrengthColor(strength.strength)).toBe('text-green-400');
     });
   });
 });

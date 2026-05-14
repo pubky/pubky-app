@@ -189,6 +189,21 @@ vi.mock('@/atoms/Typography/Typography', () => {
         {children}
       </p>
     ),
+    Link: ({
+      href,
+      target,
+      rel,
+      children,
+    }: {
+      href: string;
+      target?: string;
+      rel?: string;
+      children: React.ReactNode;
+    }) => (
+      <a data-testid="link" href={href} target={target} rel={rel}>
+        {children}
+      </a>
+    ),
   };
 });
 
@@ -275,6 +290,31 @@ describe('DialogBackupEncrypted', () => {
     fireEvent.keyDown(passwordInput, { key: 'Enter', isComposing: true });
 
     expect(mockCreateRecoveryFile).not.toHaveBeenCalled();
+  });
+
+  it('allows download with empty password when both fields match', () => {
+    render(<DialogBackupEncrypted />);
+
+    const downloadButton = screen.getByRole('button', { name: /download file/i });
+
+    expect(downloadButton).not.toBeDisabled();
+    fireEvent.click(downloadButton);
+
+    expect(mockCreateRecoveryFile).toHaveBeenCalledWith('');
+  });
+
+  it('renders "over 16 characters" in red when length is 1–15', () => {
+    render(<DialogBackupEncrypted />);
+
+    const passwordInput = screen.getByPlaceholderText('Enter a strong password');
+
+    const minLenText = () => screen.getByText(/over 16 characters/i);
+
+    fireEvent.change(passwordInput, { target: { value: 'short' } });
+    expect(minLenText()).toHaveClass('text-destructive');
+
+    fireEvent.change(passwordInput, { target: { value: 'sixteenchars!!!!' } });
+    expect(minLenText()).not.toHaveClass('text-destructive');
   });
 });
 

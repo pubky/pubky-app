@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
+import { ViewerTagMarkerStorage } from '@/services/local/tag/post/viewerTagMarkerStorage';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
 import { TagApplication } from './tag';
 import type { TCreateTagInput, TDeleteTagInput } from './tag.types';
@@ -14,6 +18,14 @@ vi.mock('@/services/homeserver/homeserver', () => ({
     request: vi.fn(),
   },
 }));
+
+// Build a real AppError for the relevant client status so the layered
+// `error instanceof AppError && error.code === ...` checks pass.
+const httpError = (code: ClientErrorCode, operation: string) =>
+  Err.client(code, code, {
+    service: ErrorService.Homeserver,
+    operation,
+  });
 
 describe('Tag Application', () => {
   // Test data factory
@@ -250,6 +262,34 @@ describe('Tag Application', () => {
 
       expect(deleteSpy).toHaveBeenCalledOnce();
       expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it('should treat 404 (Not Found) as already-deleted and skip rollback', async () => {
+      const mockData = createMockDeleteData();
+      const { createSpy, deleteSpy, requestSpy } = setupMocks();
+
+      deleteSpy.mockResolvedValue(true);
+      // Tag URL is content-addressed; 404 means the exact tag is already gone on HS.
+      requestSpy.mockRejectedValue(httpError(ClientErrorCode.NOT_FOUND, 'commitDelete'));
+
+      // Should resolve, not throw — local delete is already correct.
+      await TagApplication.commitDelete(mockData);
+
+      expect(deleteSpy).toHaveBeenCalledOnce();
+      expect(requestSpy).toHaveBeenCalledOnce();
+      // Without this, rollback re-creates the tag and the user is stuck with a
+      // ghost tag they can't remove (HS keeps returning 404 on every retry).
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('clearViewerMarkers', () => {
+    it('delegates to ViewerTagMarkerStorage.clearForUser', () => {
+      const spy = vi.spyOn(ViewerTagMarkerStorage, 'clearForUser').mockImplementation(() => {});
+
+      TagApplication.clearViewerMarkers('user-pubky' as Pubky);
+
+      expect(spy).toHaveBeenCalledWith('user-pubky');
     });
   });
 });
