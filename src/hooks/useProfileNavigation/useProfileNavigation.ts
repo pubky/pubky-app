@@ -251,7 +251,8 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
         return;
       }
 
-      const dynamicRoute = config.subPath === '/posts' ? `/profile/${pubky}` : `/profile/${pubky}${config.subPath}`;
+      const dynamicRoute =
+        page === PROFILE_PAGE_TYPES.POSTS ? `/profile/${pubky}` : `/profile/${pubky}${config.subPath}`;
       router.push(dynamicRoute);
     },
     [router, isOwnProfile, pubky],
