@@ -35,6 +35,7 @@ export function PostMain({
   isReply = false,
   isLastReply = false,
   pinActionsToBottom = false,
+  isNavigable = true,
 }: PostMainProps) {
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
@@ -68,9 +69,9 @@ export function PostMain({
       <Container
         ref={ttlRef}
         overrideDefaults
-        onClick={(e) => handlePostClick(postId, e)}
-        onAuxClick={(e) => handlePostAuxClick(postId, e)}
-        className={cn('relative flex min-w-0 cursor-pointer', isReply && 'pl-3')}
+        onClick={isNavigable ? (e) => handlePostClick(postId, e) : undefined}
+        onAuxClick={isNavigable ? (e) => handlePostAuxClick(postId, e) : undefined}
+        className={cn('relative flex min-w-0', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
           <Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">

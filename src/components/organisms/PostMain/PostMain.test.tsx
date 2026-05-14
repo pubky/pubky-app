@@ -332,6 +332,19 @@ describe('PostMain', () => {
     }
   });
 
+  it('does not navigate or show pointer cursor when isNavigable is false', () => {
+    render(<PostMain postId="post-abc" isNavigable={false} />);
+
+    const clickableArea = screen.getByTestId('card').parentElement;
+    if (clickableArea) {
+      fireEvent.click(clickableArea);
+      fireEvent(clickableArea, new MouseEvent('auxclick', { bubbles: true, button: 1 }));
+      expect(mockHandlePostClick).not.toHaveBeenCalled();
+      expect(mockHandlePostAuxClick).not.toHaveBeenCalled();
+      expect(clickableArea).toHaveAttribute('data-class-name', expect.not.stringContaining('cursor-pointer'));
+    }
+  });
+
   it('does not render thread connector when isReply is false', () => {
     render(<PostMain postId="post-123" isReply={false} />);
 
