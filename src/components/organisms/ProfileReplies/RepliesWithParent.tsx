@@ -164,7 +164,7 @@ function ReplyWithParent({ replyPostId }: ReplyWithParentProps) {
 
   return (
     <Container overrideDefaults className="flex flex-col">
-      {/* Parent post — independently focusable so Tab/Enter navigates to parent.
+      {/* Parent post — separate Tab stop so Tab/Enter navigates directly to the parent.
           j/k while focused here is handled by the ancestor-card fallback in
           usePostListKeyboard, so it correctly moves to the next outer card. */}
       {shouldShowParent && (

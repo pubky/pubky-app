@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import type React from 'react';
 import type { UsePostListKeyboardResult } from './usePostListKeyboard.types';
 
@@ -21,10 +21,16 @@ interface UsePostListKeyboardOptions {
   cardSelector?: string;
 }
 
+const INTERACTIVE_DESCENDANT_SELECTOR = 'a,button,input,textarea,select,[role="button"],[role="link"]';
+
 /**
  * usePostListKeyboard
  *
- * Keyboard navigation for a list of post cards.
+ * Keyboard navigation accelerator for a list of post cards.
+ *
+ * Every card stays independently tab-focusable (`tabIndex={0}` on the consumer
+ * side) so a keyboard user who doesn't know about j/k can still Tab through
+ * every post. The hook adds movement shortcuts on top of that baseline:
  *
  * - ArrowDown/ArrowUp and j/k move focus between cards.
  * - Home/End jump to the first/last item.
@@ -33,12 +39,13 @@ interface UsePostListKeyboardOptions {
  *
  * Pass `options.cardSelector` to include additional navigable elements that are
  * siblings of the main list (e.g. a "Show more" button) without registering refs
- * for them. See `UsePostListKeyboardOptions` for details.
+ * for them.
  *
  * Pair with `usePostNavigation.handlePostKeyDown` on each card to handle
  * Enter/Space activation and Cmd/Ctrl/Shift+Enter new-tab opens.
  */
 export function usePostListKeyboard(options?: UsePostListKeyboardOptions): UsePostListKeyboardResult {
+  const cardSelector = options?.cardSelector;
   const cardRefs = useRef<(HTMLElement | null)[]>([]);
 
   /**
@@ -48,64 +55,73 @@ export function usePostListKeyboard(options?: UsePostListKeyboardOptions): UsePo
    * If `cardSelector` is set, appends any matching elements from the container
    * that are NOT inside a registered ref card.
    */
-  const buildCardList = (container: HTMLElement): HTMLElement[] => {
-    const registered = cardRefs.current.filter((el): el is HTMLElement => el !== null);
-    if (!options?.cardSelector) return registered;
+  const buildCardList = useCallback(
+    (container: HTMLElement): HTMLElement[] => {
+      const registered = cardRefs.current.filter((el): el is HTMLElement => el !== null);
+      if (!cardSelector) return registered;
 
-    const allMatching = Array.from(container.querySelectorAll<HTMLElement>(options.cardSelector));
-    const extras = allMatching.filter((el) => !registered.some((c) => c === el || c.contains(el)));
-    return [...registered, ...extras];
-  };
+      const allMatching = Array.from(container.querySelectorAll<HTMLElement>(cardSelector));
+      const extras = allMatching.filter((el) => !registered.some((c) => c === el || c.contains(el)));
+      return [...registered, ...extras];
+    },
+    [cardSelector],
+  );
 
-  const focusAt = (cards: HTMLElement[], target: number) => {
+  const focusAt = useCallback((cards: HTMLElement[], target: number) => {
     if (cards.length === 0) return;
     const clamped = Math.max(0, Math.min(target, cards.length - 1));
     const card = cards[clamped];
     card.focus();
     card.scrollIntoView?.({ block: 'nearest' });
-  };
+  }, []);
 
-  const setCardRef = (index: number) => (el: HTMLElement | null) => {
-    cardRefs.current[index] = el;
-  };
+  const setCardRef = useCallback(
+    (index: number) => (el: HTMLElement | null) => {
+      cardRefs.current[index] = el;
+    },
+    [],
+  );
 
-  const onListKeyDown = (event: React.KeyboardEvent) => {
-    const target = event.target as HTMLElement;
-    const cards = buildCardList(event.currentTarget as HTMLElement);
-    let cardIndex = cards.indexOf(target);
+  const onListKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      const cards = buildCardList(event.currentTarget as HTMLElement);
+      let cardIndex = cards.indexOf(target);
 
-    // Fallback: if focus is on a non-interactive focusable descendant of a
-    // registered card (e.g. the parent-post article wrapper inside a
-    // reply-with-parent card), navigate from the containing card.
-    // Interactive controls (buttons, inputs, links) are excluded so that j/k
-    // is still ignored when a real action element inside a card is focused.
-    if (cardIndex === -1 && !target.closest('a,button,input,textarea,select,[role="button"],[role="link"]')) {
-      cardIndex = cards.findIndex((card) => card.contains(target));
-    }
+      // Fallback: if focus is on a non-interactive focusable descendant of a
+      // registered card (e.g. the parent-post article wrapper inside a
+      // reply-with-parent card), navigate from the containing card.
+      // Interactive controls (buttons, inputs, links) are excluded so that j/k
+      // is still ignored when a real action element inside a card is focused.
+      if (cardIndex === -1 && !target.closest(INTERACTIVE_DESCENDANT_SELECTOR)) {
+        cardIndex = cards.findIndex((card) => card.contains(target));
+      }
 
-    if (cardIndex === -1) return;
+      if (cardIndex === -1) return;
 
-    switch (event.key) {
-      case 'ArrowDown':
-      case 'j':
-        event.preventDefault();
-        focusAt(cards, cardIndex + 1);
-        break;
-      case 'ArrowUp':
-      case 'k':
-        event.preventDefault();
-        focusAt(cards, cardIndex - 1);
-        break;
-      case 'Home':
-        event.preventDefault();
-        focusAt(cards, 0);
-        break;
-      case 'End':
-        event.preventDefault();
-        focusAt(cards, cards.length - 1);
-        break;
-    }
-  };
+      switch (event.key) {
+        case 'ArrowDown':
+        case 'j':
+          event.preventDefault();
+          focusAt(cards, cardIndex + 1);
+          break;
+        case 'ArrowUp':
+        case 'k':
+          event.preventDefault();
+          focusAt(cards, cardIndex - 1);
+          break;
+        case 'Home':
+          event.preventDefault();
+          focusAt(cards, 0);
+          break;
+        case 'End':
+          event.preventDefault();
+          focusAt(cards, cards.length - 1);
+          break;
+      }
+    },
+    [buildCardList, focusAt],
+  );
 
   return { setCardRef, onListKeyDown };
 }

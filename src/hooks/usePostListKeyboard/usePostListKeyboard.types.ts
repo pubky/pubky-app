@@ -4,6 +4,10 @@ export interface UsePostListKeyboardResult {
   /**
    * Ref setter for each card wrapper. Pass to the wrapping element of each post:
    *   `<Container ref={setCardRef(i)} tabIndex={0} ... />`
+   *
+   * Every card is independently tabbable — there is intentionally no roving
+   * tabindex. j/k/Arrow keys are an accelerator, not the only way in: a
+   * keyboard user without those shortcuts can still reach every post via Tab.
    */
   setCardRef: (index: number) => (el: HTMLElement | null) => void;
   /**

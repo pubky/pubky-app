@@ -20,6 +20,10 @@ interface ReplyWithNestedProps {
   depth?: number;
   /** Maximum nesting depth allowed */
   maxDepth?: number;
+  /** 0-based position among nested siblings (only meaningful at depth > 0). Used for aria-posinset. */
+  nestedIndex?: number;
+  /** Total nested-sibling count, including not-yet-loaded replies when known. Used for aria-setsize. */
+  nestedSetSize?: number;
 }
 
 /**
@@ -37,6 +41,8 @@ export function ReplyWithNested({
   isLastReply = false,
   depth = 0,
   maxDepth = DEFAULT_MAX_DEPTH,
+  nestedIndex,
+  nestedSetSize,
 }: ReplyWithNestedProps) {
   const { handlePostKeyDown } = usePostNavigation();
   const { nestedReplyIds, hasMoreReplies, hasNestedReplies, replyCount, isExpandingAll, expandAll } = useNestedReplies(
@@ -71,6 +77,8 @@ export function ReplyWithNested({
           overrideDefaults
           data-post-list-card={depth > 0 ? 'true' : undefined}
           role={depth > 0 ? 'article' : undefined}
+          aria-posinset={depth > 0 && nestedIndex !== undefined ? nestedIndex + 1 : undefined}
+          aria-setsize={depth > 0 ? nestedSetSize : undefined}
           tabIndex={depth > 0 ? 0 : undefined}
           onKeyDown={depth > 0 ? (e) => handlePostKeyDown(replyId, e) : undefined}
           className={depth > 0 ? 'rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring' : undefined}
@@ -109,6 +117,8 @@ export function ReplyWithNested({
                       isLastReply={isLastNested}
                       depth={depth + 1}
                       maxDepth={maxDepth}
+                      nestedIndex={index}
+                      nestedSetSize={effectiveReplyCount}
                     />
                   );
                 })}
