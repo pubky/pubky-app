@@ -206,11 +206,9 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   </>
                 )}
               </Button>
-              {status && (
-                <Container overrideDefaults className="order-first flex h-8 w-full items-center lg:order-0 lg:w-auto">
-                  <StatusPickerWrapper emoji={displayEmoji} status={status || ''} onStatusChange={onStatusChange} />
-                </Container>
-              )}
+              <Container overrideDefaults className="order-first flex h-8 w-full items-center lg:order-0 lg:w-auto">
+                <StatusPickerWrapper emoji={displayEmoji} status={status || ''} onStatusChange={onStatusChange} />
+              </Container>
             </>
           )}
 

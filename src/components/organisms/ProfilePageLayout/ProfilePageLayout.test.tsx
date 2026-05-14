@@ -335,8 +335,108 @@ describe('ProfilePageLayout', () => {
     );
 
     const postsFeed = container.querySelector('[data-cy="profile-posts-feed"]');
-    expect(postsFeed).toHaveClass('min-w-0');
+    expect(postsFeed).toHaveClass('min-h-[calc(100dvh_-_var(--header-height-mobile))]', 'min-w-0');
     await waitFor(() => expect(scrollBy).toHaveBeenCalledWith({ top: 276, behavior: 'auto' }));
+  });
+
+  it('re-aligns when observed layout changes after the initial scroll is clamped', async () => {
+    mockIsMobile.mockReturnValue(true);
+    const animationFrameCallbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      animationFrameCallbacks.push(callback);
+      return animationFrameCallbacks.length;
+    });
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const flushNextAnimationFrame = () => {
+      const callback = animationFrameCallbacks.shift();
+      if (!callback) {
+        throw new Error('Expected an animation frame callback to be scheduled');
+      }
+      callback(0);
+    };
+    let scrollByCallCount = 0;
+    let postsFeedTop = 420;
+    const scrollBy = vi.fn((options: ScrollToOptions) => {
+      scrollByCallCount += 1;
+      const scrollTop = options.top ?? 0;
+      postsFeedTop -= scrollByCallCount === 1 ? scrollTop / 2 : scrollTop;
+    });
+    vi.stubGlobal('scrollBy', scrollBy);
+
+    const observedElements = new Set<Element>();
+    const observe = vi.fn();
+    const unobserve = vi.fn();
+    const disconnect = vi.fn();
+    const resizeObserverCallbackRef: { current: ResizeObserverCallback | null } = { current: null };
+    const mockResizeObserver: ResizeObserver = {
+      observe(target: Element, options?: ResizeObserverOptions) {
+        observedElements.add(target);
+        observe(target, options);
+      },
+      unobserve(target: Element) {
+        unobserve(target);
+      },
+      disconnect() {
+        disconnect();
+      },
+    };
+    class MockResizeObserver implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeObserverCallbackRef.current = callback;
+      }
+
+      observe = mockResizeObserver.observe;
+
+      unobserve = mockResizeObserver.unobserve;
+
+      disconnect = mockResizeObserver.disconnect;
+    }
+    vi.stubGlobal('ResizeObserver', MockResizeObserver);
+
+    let observedHeaderHeight = 160;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function getBoundingClientRect(
+      this: HTMLElement,
+    ) {
+      if (this.getAttribute('data-testid') === 'profile-page-mobile-menu') {
+        return new DOMRect(0, 80, 0, 64);
+      }
+
+      if (this.getAttribute('data-cy') === 'profile-posts-feed') {
+        return new DOMRect(0, postsFeedTop, 0, 300);
+      }
+
+      if (observedElements.has(this)) {
+        return new DOMRect(0, 144, 0, observedHeaderHeight);
+      }
+
+      return new DOMRect();
+    });
+
+    render(
+      <ProfilePageLayout
+        {...defaultProps}
+        activePage={PROFILE_PAGE_TYPES.POSTS}
+        filterBarActivePage={PROFILE_PAGE_TYPES.POSTS}
+        isOwnProfile={false}
+      >
+        <div data-testid="posts-content">Posts Content</div>
+      </ProfilePageLayout>,
+    );
+
+    expect(observe).toHaveBeenCalledTimes(2);
+    flushNextAnimationFrame();
+    await waitFor(() => expect(scrollBy).toHaveBeenCalledWith({ top: 276, behavior: 'auto' }));
+
+    observedHeaderHeight = 220;
+    const registeredResizeObserverCallback = resizeObserverCallbackRef.current;
+    if (!registeredResizeObserverCallback) {
+      throw new Error('Expected ResizeObserver callback to be registered');
+    }
+    registeredResizeObserverCallback([], mockResizeObserver);
+
+    flushNextAnimationFrame();
+    await waitFor(() => expect(scrollBy).toHaveBeenLastCalledWith({ top: 138, behavior: 'auto' }));
+    expect(disconnect).toHaveBeenCalledTimes(1);
   });
 
   it('does not auto-scroll other-user posts on desktop', () => {

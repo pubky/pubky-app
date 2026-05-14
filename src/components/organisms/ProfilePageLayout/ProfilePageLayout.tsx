@@ -16,8 +16,6 @@ import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 
 const PROFILE_MOBILE_MENU_SELECTOR = '[data-testid="profile-page-mobile-menu"]';
 const DEFAULT_MOBILE_HEADER_HEIGHT = 80;
-const POSTS_FEED_SHORT_SETTLE_DELAY_MS = 150;
-const POSTS_FEED_LONG_SETTLE_DELAY_MS = 500;
 
 function getMobilePostsFeedScrollOffset(): number {
   if (typeof document === 'undefined') {
@@ -79,6 +77,7 @@ export function ProfilePageLayout({
 }: ProfilePageLayoutProps) {
   const [isAvatarZoomOpen, setIsAvatarZoomOpen] = useState(false);
   const isMobile = useIsMobile();
+  const mobilePostsProfileHeaderRef = useRef<HTMLDivElement>(null);
   const postsFeedRef = useRef<HTMLDivElement>(null);
   const lastAutoScrolledPostsKeyRef = useRef<string | null>(null);
   const showMobilePostsProfileHeader = !isOwnProfile && activePage === PROFILE_PAGE_TYPES.POSTS;
@@ -112,7 +111,24 @@ export function ProfilePageLayout({
     }
 
     // Other-user mobile profiles render profile info above posts, but the canonical posts route should land at the feed after layout settles.
+    let isAligned = false;
+    let resizeObserver: ResizeObserver | null = null;
+    let pendingAnimationFrameId: number | null = null;
+    const observedElements = [mobilePostsProfileHeaderRef.current, postsFeedRef.current].filter(
+      (element): element is HTMLDivElement => Boolean(element),
+    );
+
+    const stopObserving = () => {
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+    };
+
     const alignPostsFeed = () => {
+      pendingAnimationFrameId = null;
+      if (isAligned) {
+        return;
+      }
+
       const postsFeed = postsFeedRef.current;
       if (!postsFeed) {
         return;
@@ -124,23 +140,37 @@ export function ProfilePageLayout({
         window.scrollBy({ top: scrollDelta, behavior: 'auto' });
       }
 
-      lastAutoScrolledPostsKeyRef.current = postsFeedScrollKey;
+      const remainingScrollDelta = postsFeed.getBoundingClientRect().top - getMobilePostsFeedScrollOffset();
+      if (Math.abs(remainingScrollDelta) <= 1) {
+        isAligned = true;
+        lastAutoScrolledPostsKeyRef.current = postsFeedScrollKey;
+        stopObserving();
+      }
     };
 
     const animationFrameIds: number[] = [];
-    const timeoutIds: number[] = [];
     const scheduleAlignment = () => {
+      if (isAligned || pendingAnimationFrameId !== null) {
+        return;
+      }
+
       const animationFrameId = window.requestAnimationFrame(alignPostsFeed);
+      pendingAnimationFrameId = animationFrameId;
       animationFrameIds.push(animationFrameId);
     };
 
+    if (observedElements.length > 0 && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        scheduleAlignment();
+      });
+      observedElements.forEach((element) => resizeObserver?.observe(element));
+    }
+
     scheduleAlignment();
-    timeoutIds.push(window.setTimeout(scheduleAlignment, POSTS_FEED_SHORT_SETTLE_DELAY_MS));
-    timeoutIds.push(window.setTimeout(scheduleAlignment, POSTS_FEED_LONG_SETTLE_DELAY_MS));
 
     return () => {
       animationFrameIds.forEach((animationFrameId) => window.cancelAnimationFrame(animationFrameId));
-      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      stopObserving();
     };
   }, [activePage, isOwnProfile, postsFeedScrollKey, shouldAutoScrollToPostsFeed]);
 
@@ -173,7 +203,11 @@ export function ProfilePageLayout({
 
           <Container data-cy="profile-tab-content" overrideDefaults={true} className="min-w-0 flex-1">
             {showMobilePostsProfileHeader && !isLoading && (
-              <Container overrideDefaults={true} className="mb-6 flex min-w-0 flex-col overflow-hidden lg:hidden">
+              <Container
+                ref={mobilePostsProfileHeaderRef}
+                overrideDefaults={true}
+                className="mb-6 flex min-w-0 flex-col overflow-hidden lg:hidden"
+              >
                 <ProfilePageHeader
                   profile={profile}
                   actions={headerActions}
@@ -189,7 +223,7 @@ export function ProfilePageLayout({
                 ref={postsFeedRef}
                 data-cy="profile-posts-feed"
                 overrideDefaults={true}
-                className="min-w-0 lg:contents"
+                className="min-h-[calc(100dvh_-_var(--header-height-mobile))] min-w-0 lg:contents"
               >
                 {children}
               </Container>

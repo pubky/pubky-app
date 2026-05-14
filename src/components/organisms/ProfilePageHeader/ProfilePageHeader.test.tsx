@@ -162,6 +162,14 @@ describe('ProfilePageHeader', () => {
     expect(screen.getByText('83 FOLLOWERS')).toBeInTheDocument();
   });
 
+  it('renders the status picker when own profile has no status', () => {
+    const props = { ...mockProps, profile: { ...mockProps.profile, status: '' } };
+
+    render(<ProfilePageHeader {...props} />);
+
+    expect(screen.getByText('No Status')).toBeInTheDocument();
+  });
+
   it('calls onEdit when Edit button is clicked', () => {
     const onEdit = vi.fn();
     const props = { ...mockProps, actions: { ...mockProps.actions, onEdit } };
