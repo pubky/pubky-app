@@ -150,6 +150,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
           {!isVisualActive ? children : null}
           <NewPostsSection
             streamId={streamId}
+            variant={variant}
             postIds={postIds}
             mutedUserIdSet={mutedUserIdSet}
             loading={loading}
