@@ -1,0 +1,52 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Search - Snapshots > matches snapshot with no tags 1`] = `
+<div>
+  <div
+    class="lg:hidden"
+    data-testid="container"
+  >
+    <div
+      data-testid="search-input"
+    >
+      SearchInput
+    </div>
+  </div>
+  <div
+    data-testid="search-empty-state"
+  >
+    SearchEmptyState
+  </div>
+</div>
+`;
+
+exports[`Search - Snapshots > matches snapshot with tags present 1`] = `
+<div>
+  <div
+    class="lg:hidden"
+    data-testid="container"
+  >
+    <div
+      data-testid="search-input"
+    >
+      SearchInput
+    </div>
+  </div>
+  <div
+    data-testid="search-header"
+  >
+    SearchHeader
+  </div>
+  <div
+    data-cy="post-search-results"
+    data-testid="container"
+  >
+    <div
+      data-testid="timeline-feed"
+      data-variant="search"
+    >
+      TimelineFeed
+    </div>
+  </div>
+</div>
+`;
