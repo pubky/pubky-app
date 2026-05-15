@@ -43,7 +43,7 @@ export function VisualTimelinePostsSkeleton({ variant = 'initial' }: VisualTimel
   const rowCount = variant === 'load-more' ? VISUAL_LOAD_MORE_SKELETON_ROW_COUNT : VISUAL_INITIAL_SKELETON_ROW_COUNT;
 
   return (
-    <Container data-cy="visual-feed-container" data-testid="visual-feed-skeleton" className="py-4">
+    <Container data-cy="visual-feed-skeleton-container" data-testid="visual-feed-skeleton" className="py-4">
       <Container
         overrideDefaults
         className="mx-auto flex w-full flex-col gap-6"

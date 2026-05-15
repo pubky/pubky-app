@@ -127,12 +127,6 @@ vi.mock('@/molecules/Timeline/TimelineError', () => {
   };
 });
 
-vi.mock('@/molecules/Timeline/TimelineLoadingMore', () => {
-  return {
-    TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more</div>,
-  };
-});
-
 vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper')>();
