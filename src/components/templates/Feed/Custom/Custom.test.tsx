@@ -9,48 +9,6 @@ vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
   };
 });
 
-vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
-  return {
-    ContentLayout: ({
-      children,
-      leftSidebarContent,
-      rightSidebarContent,
-      leftDrawerContent,
-      rightDrawerContent,
-      leftDrawerContentMobile,
-      rightDrawerContentMobile,
-    }: {
-      children: React.ReactNode;
-      leftSidebarContent: React.ReactNode;
-      rightSidebarContent: React.ReactNode;
-      leftDrawerContent: React.ReactNode;
-      rightDrawerContent: React.ReactNode;
-      leftDrawerContentMobile: React.ReactNode;
-      rightDrawerContentMobile: React.ReactNode;
-    }) => (
-      <div data-testid="content-layout">
-        <div data-testid="left-sidebar">{leftSidebarContent}</div>
-        <div data-testid="right-sidebar">{rightSidebarContent}</div>
-        <div data-testid="left-drawer">{leftDrawerContent}</div>
-        <div data-testid="right-drawer">{rightDrawerContent}</div>
-        <div data-testid="left-drawer-mobile">{leftDrawerContentMobile}</div>
-        <div data-testid="right-drawer-mobile">{rightDrawerContentMobile}</div>
-        {children}
-      </div>
-    ),
-  };
-});
-
-vi.mock('@/organisms/CustomFeedFilters/CustomFeedFilters', () => {
-  return {
-    CustomFeedFilters: ({ variant }: { variant: string }) => (
-      <div data-testid="custom-feed-filters" data-variant={variant}>
-        CustomFeedFilters
-      </div>
-    ),
-  };
-});
-
 vi.mock('@/organisms/FeedNavigation/FeedNavigation', () => {
   return {
     FeedNavigation: ({ className }: { className?: string }) => (
@@ -58,13 +16,6 @@ vi.mock('@/organisms/FeedNavigation/FeedNavigation', () => {
         FeedNavigation
       </div>
     ),
-  };
-});
-
-vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', () => {
-  return {
-    HomeFeedRightSidebar: () => <div data-testid="home-feed-right-sidebar">HomeFeedRightSidebar</div>,
-    HomeFeedRightDrawer: () => <div data-testid="home-feed-right-drawer">HomeFeedRightDrawer</div>,
   };
 });
 
@@ -107,60 +58,6 @@ vi.mock('@/config/feed', async (importOriginal) => {
 });
 
 describe('Custom', () => {
-  it('renders without errors', () => {
-    render(<Custom />);
-    expect(screen.getByTestId('content-layout')).toBeInTheDocument();
-  });
-
-  it('renders ContentLayout without showRightMobileButton', () => {
-    render(<Custom />);
-    expect(screen.getByTestId('content-layout')).not.toHaveAttribute('data-show-right-mobile-button');
-  });
-
-  it('renders CustomFeedFilters with sidebar variant in left sidebar', () => {
-    render(<Custom />);
-    const leftSidebar = screen.getByTestId('left-sidebar');
-    const filters = leftSidebar.querySelector('[data-testid="custom-feed-filters"]');
-    expect(filters).toBeInTheDocument();
-    expect(filters).toHaveAttribute('data-variant', 'sidebar');
-  });
-
-  it('renders HomeFeedRightSidebar in right sidebar', () => {
-    render(<Custom />);
-    expect(screen.getByTestId('home-feed-right-sidebar')).toBeInTheDocument();
-    expect(screen.getByTestId('right-sidebar')).toContainElement(screen.getByTestId('home-feed-right-sidebar'));
-  });
-
-  it('renders CustomFeedFilters with drawer variant in left drawer', () => {
-    render(<Custom />);
-    const leftDrawer = screen.getByTestId('left-drawer');
-    const filters = leftDrawer.querySelector('[data-testid="custom-feed-filters"]');
-    expect(filters).toBeInTheDocument();
-    expect(filters).toHaveAttribute('data-variant', 'drawer');
-  });
-
-  it('renders HomeFeedRightDrawer in right drawer', () => {
-    render(<Custom />);
-    expect(screen.getByTestId('home-feed-right-drawer')).toBeInTheDocument();
-    expect(screen.getByTestId('right-drawer')).toContainElement(screen.getByTestId('home-feed-right-drawer'));
-  });
-
-  it('renders CustomFeedFilters with drawer variant in left drawer mobile', () => {
-    render(<Custom />);
-    const leftDrawerMobile = screen.getByTestId('left-drawer-mobile');
-    const filters = leftDrawerMobile.querySelector('[data-testid="custom-feed-filters"]');
-    expect(filters).toBeInTheDocument();
-    expect(filters).toHaveAttribute('data-variant', 'drawer');
-  });
-
-  it('renders FeedNavigation with lg:hidden className in right drawer mobile', () => {
-    render(<Custom />);
-    const rightDrawerMobile = screen.getByTestId('right-drawer-mobile');
-    const feedNav = rightDrawerMobile.querySelector('[data-testid="feed-navigation"]');
-    expect(feedNav).toBeInTheDocument();
-    expect(feedNav).toHaveAttribute('data-classname', 'lg:hidden');
-  });
-
   it('renders AlertBackup', () => {
     render(<Custom />);
     expect(screen.getByTestId('alert-backup')).toBeInTheDocument();
@@ -168,9 +65,8 @@ describe('Custom', () => {
 
   it('renders FeedNavigation with hidden lg:flex className in main content', () => {
     render(<Custom />);
-    const contentLayout = screen.getByTestId('content-layout');
-    const feedNavs = contentLayout.querySelectorAll('[data-testid="feed-navigation"]');
-    const mainFeedNav = Array.from(feedNavs).find((el) => el.getAttribute('data-classname') === 'hidden lg:flex');
+    const feedNavs = screen.getAllByTestId('feed-navigation');
+    const mainFeedNav = feedNavs.find((el) => el.getAttribute('data-classname') === 'hidden lg:flex');
     expect(mainFeedNav).toBeInTheDocument();
   });
 
@@ -192,6 +88,11 @@ describe('Custom', () => {
     render(<Custom />);
     const postInput = screen.getByTestId('post-input');
     expect(postInput).toHaveAttribute('data-variant', 'post');
+  });
+
+  it('does not render a ContentLayout shell (hoisted into (feeds)/layout.tsx)', () => {
+    render(<Custom />);
+    expect(screen.queryByTestId('content-layout')).not.toBeInTheDocument();
   });
 });
 
