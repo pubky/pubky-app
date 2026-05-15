@@ -24,7 +24,7 @@ import { type FeedsShellConfig, tryResolveFeedsShellConfig } from './_shell/conf
  * (`/post/<user>/<post>`), not the underlying feed URL. That pathname does
  * **not** resolve to a feeds shell config. To keep the previous route's chrome
  * mounted (and avoid throwing during the modal), we cache the last successful
- * config in a ref and reuse it when the resolver returns `null`.
+ * config in a state and reuse it when the resolver returns `null`.
  *
  * ## Known dev-only warning
  *
