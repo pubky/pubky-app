@@ -9,6 +9,7 @@ import type {
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { userApi } from '@/services/nexus/user/user.api';
 import type { TUserPaginationParams, TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
+
 /**
  * Nexus User Service
  *

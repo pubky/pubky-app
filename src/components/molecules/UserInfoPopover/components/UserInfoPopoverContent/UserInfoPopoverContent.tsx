@@ -1,20 +1,19 @@
 'use client';
 
+import { Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { PostText } from '../../../PostText/PostText';
-
-import type { AvatarGroupItem } from '@/molecules/AvatarGroup/AvatarGroup.types';
 import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
+import { useUserInfoPopoverActions } from '@/hooks/useUserInfoPopoverActions/useUserInfoPopoverActions';
+import { useUserInfoPopoverData } from '@/hooks/useUserInfoPopoverData/useUserInfoPopoverData';
+import type { AvatarGroupItem } from '@/molecules/AvatarGroup/AvatarGroup.types';
+import { PostText } from '../../../PostText/PostText';
+import { UserInfoPopoverFollowButton } from '../UserInfoPopoverFollowButton/UserInfoPopoverFollowButton';
 import { UserInfoPopoverHeader } from '../UserInfoPopoverHeader/UserInfoPopoverHeader';
 import { UserInfoPopoverStats } from '../UserInfoPopoverStats/UserInfoPopoverStats';
-import { UserInfoPopoverFollowButton } from '../UserInfoPopoverFollowButton/UserInfoPopoverFollowButton';
 import { UserInfoPopoverSkeleton } from './UserInfoPopoverContent.skeleton';
-import { useUserInfoPopoverData } from '@/hooks/useUserInfoPopoverData/useUserInfoPopoverData';
-import { useUserInfoPopoverActions } from '@/hooks/useUserInfoPopoverActions/useUserInfoPopoverActions';
-import { Pencil } from 'lucide-react';
 
 const MAX_AVATARS = 3;
 interface UserInfoPopoverContentProps {

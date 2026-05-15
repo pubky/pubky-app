@@ -1,22 +1,22 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TagResult, postUriBuilder } from 'pubky-app-specs';
-import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
-import {
-  TEST_PUBKY,
-  TEST_POST_IDS,
-  setupUnitTestMocks,
-  setupIntegrationTestMocks,
-  restoreMocks,
-  buildPubkyUri,
-} from '../pipes.test-utils';
+import { postUriBuilder, TagResult } from 'pubky-app-specs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TagKind } from '@/application/tag/tag.types';
+import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { TagKind } from '@/application/tag/tag.types';
-import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
+import {
+  buildPubkyUri,
+  restoreMocks,
+  setupIntegrationTestMocks,
+  setupUnitTestMocks,
+  TEST_POST_IDS,
+  TEST_PUBKY,
+} from '../pipes.test-utils';
 
 const spyOnParseCompositeId = async () => vi.spyOn(await import('@/models/models.utils'), 'parseCompositeId');
 

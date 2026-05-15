@@ -1,6 +1,7 @@
+import type { Pubky } from '@/models/models.types';
 import { COMPOSITE_ID_DELIMITER } from './models.defaults';
 import type { CompositeIdParams, CompositeIdResult } from './models.types';
-import type { Pubky } from '@/models/models.types';
+
 /**
  * Parses a pubky:// URI to extract the author and ID,
  * then builds a composite ID in the format "author:id"

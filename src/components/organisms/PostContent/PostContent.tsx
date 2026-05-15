@@ -3,7 +3,6 @@
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { PostContentBase } from '../PostContentBase/PostContentBase';
-
 import type { PostContentOrganismProps } from './PostContent.types';
 
 /**

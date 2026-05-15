@@ -1,9 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { SettingsMobileMenu } from './SettingsMobileMenu';
-
+import { describe, expect, it, vi } from 'vitest';
 import { SETTINGS_ROUTES } from '@/app/routes';
+import { SettingsMobileMenu } from './SettingsMobileMenu';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({

@@ -1,17 +1,17 @@
 'use client';
 
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
+import { Key } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { PageTitle } from '@/molecules/Page/Page';
-import { PopoverPublicKey } from '@/molecules/PopoverPublicKey/PopoverPublicKey';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
-
-import { Key } from 'lucide-react';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
+import { PageTitle } from '@/molecules/Page/Page';
+import { PopoverPublicKey } from '@/molecules/PopoverPublicKey/PopoverPublicKey';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 export const CreateProfileHeader = () => {
   const t = useTranslations('onboarding.createProfile');
   const authStore = useAuthStore();

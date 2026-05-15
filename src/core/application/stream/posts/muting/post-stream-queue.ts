@@ -1,8 +1,9 @@
-import { TQueueEntry } from '../post.types';
-import { CollectParams, CollectResult } from './post-stream-queue.types';
 import { Logger } from '@/libs/logger/logger';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { LocalPostService } from '@/services/local/post/post';
+import { TQueueEntry } from '../post.types';
+import { CollectParams, CollectResult } from './post-stream-queue.types';
+
 // Safety valve to prevent infinite loops when filters remove many posts.
 // At 20 iterations with limit=30, we scan up to 600 posts before giving up.
 // This handles extreme cases like a muted user having 500+ consecutive posts.

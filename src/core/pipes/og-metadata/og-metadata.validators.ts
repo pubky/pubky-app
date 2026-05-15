@@ -1,7 +1,7 @@
-import { HttpStatusCode } from '@/libs/http/http.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 /**
  * OG metadata input validators.

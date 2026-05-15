@@ -1,6 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { asInvalid } from '@/test-utils/type-assertions';
-import { UserApplication } from './user';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
@@ -18,6 +16,9 @@ import type {
 } from '@/services/nexus/nexus.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { NexusUserService } from '@/services/nexus/user/user';
+import { asInvalid } from '@/test-utils/type-assertions';
+import { UserApplication } from './user';
+
 describe('UserApplication.commitFollow', () => {
   const follower = 'pubky_follower' as Pubky;
   const followee = 'pubky_followee' as Pubky;

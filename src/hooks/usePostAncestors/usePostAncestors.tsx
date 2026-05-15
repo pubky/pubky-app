@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { Ancestor, UsePostAncestorsResult } from './usePostAncestors.types';
-import { Logger } from '@/libs/logger/logger';
 import { PostController } from '@/controllers/post/post';
+import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import type { Ancestor, UsePostAncestorsResult } from './usePostAncestors.types';
+
 /** Maximum depth to traverse to prevent infinite loops */
 const MAX_ANCESTOR_DEPTH = 10;
 

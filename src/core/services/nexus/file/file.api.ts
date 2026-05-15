@@ -1,6 +1,7 @@
 import type { Pubky } from '@/models/models.types';
 import type { TFileBody, TFileParams } from '@/services/nexus/file/file.types';
 import { buildCdnUrl, buildNexusUrl, encodePathSegment } from '@/services/nexus/nexus.utils';
+
 /**
  * Files API Endpoints
  *

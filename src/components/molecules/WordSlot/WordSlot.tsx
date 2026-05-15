@@ -1,9 +1,8 @@
 import { Badge } from '@/atoms/Badge/Badge';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
-
-import type { WordSlotProps } from './WordSlot.types';
 import { cn } from '@/libs/utils/utils';
+import type { WordSlotProps } from './WordSlot.types';
 
 export const WordSlot = (props: WordSlotProps) => {
   const { index, word, mode } = props;

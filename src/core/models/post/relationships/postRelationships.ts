@@ -1,14 +1,14 @@
 import { Table } from 'dexie';
-
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { TupleModelBase } from '@/models/shared/base/tuple/baseTuple';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import type { NexusPostRelationships } from '@/services/nexus/nexus.types';
+
 export class PostRelationshipsModel
   extends TupleModelBase<string, PostRelationshipsModelSchema>
   implements PostRelationshipsModelSchema

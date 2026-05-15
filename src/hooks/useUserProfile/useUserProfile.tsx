@@ -1,11 +1,12 @@
 'use client';
 
 import { DEFAULT_URL } from '@/config/metadata';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import { withPubkyPrefix } from '@/libs/utils/utils';
 import { FileController } from '@/controllers/file/file';
 import { UserController } from '@/controllers/user/user';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import { withPubkyPrefix } from '@/libs/utils/utils';
 import type { NexusUserDetails, NexusUserLink } from '@/services/nexus/nexus.types';
+
 export interface UserProfile {
   name: string;
   bio: string;

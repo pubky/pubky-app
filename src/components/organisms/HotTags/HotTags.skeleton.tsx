@@ -1,6 +1,5 @@
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-
 import { MAX_TAGS } from './HotTags.constants';
 
 export function HotTagsSkeleton() {

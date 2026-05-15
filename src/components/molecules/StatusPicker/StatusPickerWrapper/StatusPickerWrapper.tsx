@@ -1,19 +1,18 @@
 'use client';
 
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { parseStatus } from '@/libs/status/status';
+import { cn } from '@/libs/utils/utils';
 import { StatusPickerContent } from '../StatusPickerContent/StatusPickerContent';
 import { DEFAULT_POPOVER_SIDE_OFFSET } from './StatusPickerWrapper.constants';
 import { StatusPickerWrapperProps } from './StatusPickerWrapper.types';
-
-import { ChevronDown } from 'lucide-react';
-import { parseStatus } from '@/libs/status/status';
-import { cn } from '@/libs/utils/utils';
 
 export function StatusPickerWrapper({
   emoji,

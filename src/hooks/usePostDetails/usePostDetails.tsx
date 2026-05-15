@@ -1,9 +1,10 @@
 'use client';
 
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import type { UsePostDetailsResult } from './usePostDetails.types';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostController } from '@/controllers/post/post';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import type { UsePostDetailsResult } from './usePostDetails.types';
+
 /**
  * Hook to get post details from local database with live updates.
  * If the post is not in cache, it will trigger a fetch from Nexus.

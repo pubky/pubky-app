@@ -1,23 +1,22 @@
 'use client';
 
-import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
-import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
-import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import * as React from 'react';
+import { Megaphone } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
-import { toast } from '@/molecules/Toaster/use-toast';
-
-import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
-import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
-import { Megaphone } from 'lucide-react';
+import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { isAppError } from '@/libs/error/error.utils';
 import { extractInitials, truncateMiddle } from '@/libs/utils/utils';
+import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
+import { toast } from '@/molecules/Toaster/use-toast';
+import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
+import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
 
 export function MutedUsersList() {
   const t = useTranslations('mutedUsers');

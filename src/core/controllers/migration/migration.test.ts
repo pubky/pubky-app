@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MigrationController } from './migration';
-import { mockSettingsStore } from '@/test-utils/stores';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MigrationApplication } from '@/application/migration/migration';
 import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { SettingsState } from '@/stores/settings/settings.types';
+import { mockSettingsStore } from '@/test-utils/stores';
+import { MigrationController } from './migration';
+
 vi.mock('pubky-app-specs', () => ({
   baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
 }));

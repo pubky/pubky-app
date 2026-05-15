@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Check, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -13,10 +14,9 @@ import {
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { DialogBackup } from '../DialogBackup/DialogBackup';
 
-import { TriangleAlert, ShieldCheck, Check } from 'lucide-react';
-import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 interface DialogConfirmBackupProps {
   onConfirm?: () => void;
 }

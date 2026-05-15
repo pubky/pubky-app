@@ -1,13 +1,12 @@
 'use client';
 
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
-import { useNotifications } from '@/hooks/useNotifications/useNotifications';
 import { useEffect } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
-import { NotificationsList } from '../NotificationsList/NotificationsList';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { useNotifications } from '@/hooks/useNotifications/useNotifications';
 import { NotificationsEmpty } from '@/molecules/NotificationsEmpty/NotificationsEmpty';
-
+import { NotificationsList } from '../NotificationsList/NotificationsList';
 import { NotificationsContainerSkeleton, NotificationsLoadMoreSkeleton } from './NotificationsContainer.skeleton';
 
 /**

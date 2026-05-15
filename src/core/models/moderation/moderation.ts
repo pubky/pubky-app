@@ -1,8 +1,9 @@
 import { Table } from 'dexie';
-import { ModerationType } from './moderation.schema';
 import { db } from '@/database/franky/franky';
 import type { ModerationModelSchema } from '@/models/moderation/moderation.schema';
 import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
+import { ModerationType } from './moderation.schema';
+
 export class ModerationModel extends RecordModelBase<string, ModerationModelSchema> implements ModerationModelSchema {
   static table: Table<ModerationModelSchema> = db.table('moderation');
 

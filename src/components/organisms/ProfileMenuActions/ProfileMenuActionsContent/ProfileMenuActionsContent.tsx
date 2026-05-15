@@ -1,12 +1,11 @@
 'use client';
 
-import { useProfileMenuActions } from '@/hooks/useProfileMenuActions/useProfileMenuActions';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { DropdownMenuItem } from '@/atoms/DropdownMenu/DropdownMenu';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import { MENU_VARIANT } from '@/config/ui';
+import { useProfileMenuActions } from '@/hooks/useProfileMenuActions/useProfileMenuActions';
 import { ProfileMenuActionsContentSkeleton } from './ProfileMenuActionsContent.skeleton';
 import type { ProfileMenuActionsContentProps } from './ProfileMenuActionsContent.types';
 

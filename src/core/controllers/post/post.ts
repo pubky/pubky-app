@@ -1,6 +1,3 @@
-import { ClientErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostApplication } from '@/application/post/post';
@@ -16,6 +13,9 @@ import type {
   TNormalizeTagsParams,
 } from '@/controllers/post/post.types';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
@@ -29,6 +29,7 @@ import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import type { TCompositeId } from '@/services/nexus/post/post.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 export class PostController {
   private constructor() {} // Prevent instantiation
 
@@ -114,8 +115,8 @@ export class PostController {
    * @param params.limit - Maximum number of tags to return
    * @returns Array of tags from Nexus
    */
-  static async fetchTags({ compositeId, skip, limit }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
-    return await PostApplication.fetchTags({ compositeId, skip, limit });
+  static async fetchTags({ compositeId, skip, limit, viewerId }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
+    return await PostApplication.fetchTags({ compositeId, skip, limit, viewerId });
   }
 
   /**

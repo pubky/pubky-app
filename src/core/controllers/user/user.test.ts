@@ -1,9 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FollowResult } from 'pubky-app-specs';
-import { UserController } from './user';
-import { asOpaque } from '@/test-utils/type-assertions';
-import { HttpMethod } from '@/libs/http/http.types';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserApplication } from '@/application/user/user';
+import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
@@ -12,6 +10,8 @@ import type { NexusTag, NexusTaggers, NexusUserCounts, NexusUserDetails } from '
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
 import { getStreamId } from '@/stores/home/home.utils';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { UserController } from './user';
 
 vi.mock('@/stores/home/home.store', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/stores/home/home.store')>();

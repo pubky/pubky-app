@@ -1,12 +1,12 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useToast } from '@/molecules/Toaster/use-toast';
-
-import type { UseInviteCodeSignUpResult } from './useInviteCodeSignUp.types';
-import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
 import { AuthController } from '@/controllers/auth/auth';
+import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
+import { useToast } from '@/molecules/Toaster/use-toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import type { UseInviteCodeSignUpResult } from './useInviteCodeSignUp.types';
+
 const SIGN_UP_MAX_ATTEMPTS = 4;
 const SIGN_UP_RETRY_BASE_DELAY_MS = 500;
 const SIGN_UP_RETRY_MAX_DELAY_MS = 5000;

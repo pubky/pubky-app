@@ -1,8 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 import { ProfilePageHeader } from './ProfilePageHeader';
 import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
-import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 
 // Mock Molecules components
 vi.mock('@/molecules/PostText/PostText', () => {

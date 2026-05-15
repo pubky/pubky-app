@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useToast } from '@/molecules/Toaster/use-toast';
-
 import { AUTH_ROUTES } from '@/app/routes';
-import type { UseSignOutResult } from './useSignOut.types';
-import { Logger } from '@/libs/logger/logger';
 import { AuthController } from '@/controllers/auth/auth';
+import { Logger } from '@/libs/logger/logger';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import type { UseSignOutResult } from './useSignOut.types';
+
 export function useSignOut(): UseSignOutResult {
   const router = useRouter();
   const { toast } = useToast();

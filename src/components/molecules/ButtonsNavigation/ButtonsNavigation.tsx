@@ -1,9 +1,9 @@
+import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-
-import type { ButtonsNavigationProps } from './ButtonsNavigation.types';
-import { ArrowLeft, Loader2, ArrowRight } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
+import type { ButtonsNavigationProps } from './ButtonsNavigation.types';
+
 export function ButtonsNavigation({
   id,
   className,

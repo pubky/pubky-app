@@ -1,14 +1,15 @@
-import { Logger } from '@/libs/logger/logger';
-import { DatabaseErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import type { TMuteParams } from '@/controllers/mute/mute.types';
 import { db } from '@/database/franky/franky';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamModel } from '@/models/stream/user/userStream';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+
 type MuteAction = 'mute' | 'unmute';
 
 export class LocalMuteService {

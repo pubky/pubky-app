@@ -1,18 +1,18 @@
 'use client';
 
-import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { Container } from '@/atoms/Container/Container';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
 import { PostText } from '@/molecules/PostText/PostText';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { PostArticle } from '../PostArticle/PostArticle';
 import { PostAttachments } from '../PostAttachments/PostAttachments';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
-
 import { PostContentBaseSkeleton } from './PostContentBase.skeleton';
 import type { PostContentBaseProps } from './PostContentBase.types';
-import { cn, isPostDeleted } from '@/libs/utils/utils';
-import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+
 /**
  * PostContentBase - Base component that renders post content without repost handling.
  * This component is used internally by PostContent and PostPreviewCard.

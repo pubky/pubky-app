@@ -1,12 +1,13 @@
 import { Keypair } from '@synonymdev/pubky';
 import * as bip39 from 'bip39';
-import type { TMnemonicWords, TCreateRecoveryFileParams, TDecryptRecoveryFileParams } from './identity.types';
 import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import type { THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
 import type { TOnboardingSecrets } from '@/stores/onboarding/onboarding.types';
+import type { TCreateRecoveryFileParams, TDecryptRecoveryFileParams, TMnemonicWords } from './identity.types';
+
 export class Identity {
   // Mention pattern: pk: or pubky followed by exactly 52 lowercase alphanumeric characters
   static readonly PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE = '(?:pk:|pubky)[a-z0-9]{52}';

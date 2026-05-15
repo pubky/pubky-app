@@ -1,10 +1,11 @@
 'use client';
 
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import type { UseCurrentUserProfileResult } from './useCurrentUserProfile.types';
 import { UserController } from '@/controllers/user/user';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import type { UseCurrentUserProfileResult } from './useCurrentUserProfile.types';
+
 /**
  * Hook to get the current logged-in user's profile details.
  * Combines authentication state with live database queries.

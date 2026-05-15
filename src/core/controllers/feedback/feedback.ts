@@ -1,6 +1,7 @@
-import type { TFeedbackSubmitParams } from './feedback.types';
 import { FeedbackApplication } from '@/application/feedback/feedback';
 import { FeedbackValidators } from '@/pipes/feedback/feedback.validators';
+import type { TFeedbackSubmitParams } from './feedback.types';
+
 /**
  * Controller for feedback submission.
  * Entry point for the feedback feature, called from the API route.

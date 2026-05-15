@@ -1,5 +1,6 @@
 import type { PollingServiceConfig, PollingServiceState } from '@/coordinators/base/coordinators.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+
 /**
  * Stream Polling Coordinator Types
  *

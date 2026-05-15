@@ -1,26 +1,26 @@
 'use client';
 
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
-import { useTranslations } from 'next-intl';
 import { Check, Loader2, StickyNote, Tag, UserMinus, UserRound, UserRoundPlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
+import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '../ClickableTagsList/ClickableTagsList';
-
-import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
-import { cn, formatPublicKey } from '@/libs/utils/utils';
 import type {
-  UserListItemProps,
   FollowButtonProps,
   StatsSubtitleProps,
+  UserListItemProps,
   UserStatsProps,
   VariantProps,
 } from './UserListItem.types';
-import { TagKind } from '@/application/tag/tag.types';
+
 // =============================================================================
 // Internal Components
 // =============================================================================

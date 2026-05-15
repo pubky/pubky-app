@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { tagApi } from './tag.api';
-import { TTagViewParams, TTagHotParams, TTagTaggersParams } from './tag.types';
+import { describe, expect, it } from 'vitest';
 import { NEXUS_URL } from '@/config/nexus';
 import { UserStreamReach } from '@/services/nexus/nexus.types';
+import { tagApi } from './tag.api';
+import { TTagHotParams, TTagTaggersParams, TTagViewParams } from './tag.types';
+
 const testTaggerId = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 const testTagId = 'test_tag';
 

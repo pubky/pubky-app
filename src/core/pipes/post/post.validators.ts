@@ -1,7 +1,8 @@
+import { PostController } from '@/controllers/post/post';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { PostController } from '@/controllers/post/post';
+
 export type TValidatePostIdParams = {
   postId: string;
   message: string;

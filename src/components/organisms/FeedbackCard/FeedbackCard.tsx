@@ -1,15 +1,14 @@
 'use client';
 
-import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { DialogFeedback } from '../DialogFeedback/DialogFeedback';
-
 import { FeedbackCardSkeleton } from './FeedbackCard.skeleton';
 
 export function FeedbackCard() {

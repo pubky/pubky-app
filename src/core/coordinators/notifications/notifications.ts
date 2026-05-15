@@ -1,5 +1,4 @@
 import { AUTH_ROUTES } from '@/app/routes';
-import { Logger } from '@/libs/logger/logger';
 import { NotificationController } from '@/controllers/notification/notification';
 import { Coordinator } from '@/coordinators/base/coordinator';
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
@@ -7,7 +6,9 @@ import type {
   NotificationCoordinatorConfig,
   NotificationCoordinatorState,
 } from '@/coordinators/notifications/notifications.types';
+import { Logger } from '@/libs/logger/logger';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 /**
  * NotificationCoordinator
  *

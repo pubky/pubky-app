@@ -1,5 +1,6 @@
-import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { TagKind } from '@/application/tag/tag.types';
+import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
+
 export interface TaggedListProps {
   /** Array of tags to display */
   tags: TagWithAvatars[];

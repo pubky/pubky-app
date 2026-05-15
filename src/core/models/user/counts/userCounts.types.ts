@@ -1,4 +1,5 @@
 import type { Pubky } from '@/models/models.types';
+
 export interface TUserCountsParams {
   userId: Pubky;
   countChanges: TUserCountsCountChanges;

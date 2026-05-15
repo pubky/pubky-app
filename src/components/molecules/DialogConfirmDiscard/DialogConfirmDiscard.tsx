@@ -1,10 +1,10 @@
 'use client';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import type { DialogConfirmDiscardProps } from './DialogConfirmDiscard.types';
-import { Trash2 } from 'lucide-react';
+
 export function DialogConfirmDiscard({ open, onOpenChange, onConfirm }: DialogConfirmDiscardProps) {
   const handleDiscard = () => {
     onConfirm();

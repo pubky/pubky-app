@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
-import type { TFeedbackSubmitParams } from './feedback.types';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedbackApplication } from '@/application/feedback/feedback';
+import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import type { Pubky } from '@/models/models.types';
+import { asInvalid } from '@/test-utils/type-assertions';
+import type { TFeedbackSubmitParams } from './feedback.types';
+
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
   userName: 'Test User',

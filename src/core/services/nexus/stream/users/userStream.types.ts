@@ -1,6 +1,7 @@
 import type { Pubky } from '@/models/models.types';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import type { TPaginationParams, TUserId, UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+
 export enum USER_STREAM_PREFIX {
   USERS = 'v0/stream/users',
   USER_IDS = 'v0/stream/users/ids',
@@ -12,7 +13,6 @@ export enum UserStreamSource {
   FOLLOWERS = 'followers',
   FOLLOWING = 'following',
   FRIENDS = 'friends',
-  MUTED = 'muted',
   INFLUENCERS = 'influencers',
   RECOMMENDED = 'recommended',
   POST_REPLIES = 'post_replies',

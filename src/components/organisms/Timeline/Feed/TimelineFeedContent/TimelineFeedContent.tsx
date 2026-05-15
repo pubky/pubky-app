@@ -1,25 +1,24 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
+import { Container } from '@/atoms/Container/Container';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-import { useEffect, useRef } from 'react';
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { Container } from '@/atoms/Container/Container';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { PullToRefreshIndicator } from '@/molecules/PullToRefreshIndicator/PullToRefreshIndicator';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
-import { TimelinePosts } from '../../Posts/Posts';
-
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
-import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
-import type { TimelineFeedProps, TimelineFeedContextValue } from '../TimelineFeed/TimelineFeed.types';
-import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import { TimelinePosts } from '../../Posts/Posts';
 import { NewPostsSection } from '../NewPostsSection/NewPostsSection';
-
+import type { TimelineFeedContextValue, TimelineFeedProps } from '../TimelineFeed/TimelineFeed.types';
+import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { VisualTimelinePosts } from '../TimelineFeed/VisualTimelinePosts';
-import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
+
 interface TimelineFeedContentProps {
   streamId: PostStreamId;
   variant: TimelineFeedProps['variant'];
@@ -79,6 +78,7 @@ export function TimelineFeedWithStream({
  */
 function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, children }: TimelineFeedContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const previousMutedUserIdSetRef = useRef<Set<string> | null>(null);
 
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
   const {
@@ -110,15 +110,32 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
   });
 
   useEffect(() => {
-    if (variant === TIMELINE_FEED_VARIANT.PROFILE) return;
-    if (mutedUserIdSet.size === 0) return;
+    const previousMutedUserIdSet = previousMutedUserIdSetRef.current;
+    const currentMutedUserIdSet = new Set(mutedUserIdSet);
+    // Store the latest set before early returns so Strict Mode reruns do not retrigger the same transition.
+    previousMutedUserIdSetRef.current = currentMutedUserIdSet;
 
-    const postIdsToRemove = rawPostIds.filter((id) => MuteFilter.isPostMuted(id, mutedUserIdSet));
+    if (variant === TIMELINE_FEED_VARIANT.PROFILE) return;
+
+    const hasUnmutedUser = previousMutedUserIdSet
+      ? [...previousMutedUserIdSet].some((userId) => !currentMutedUserIdSet.has(userId))
+      : false;
+
+    if (hasUnmutedUser) {
+      // Unmute can make posts that were removed from pagination state visible again; rebuild from the stream.
+      void refresh();
+      return;
+    }
+
+    if (currentMutedUserIdSet.size === 0) return;
+
+    // Muting only needs to remove currently visible posts, so keep this path cheaper than a full refresh.
+    const postIdsToRemove = rawPostIds.filter((id) => MuteFilter.isPostMuted(id, currentMutedUserIdSet));
 
     if (postIdsToRemove.length > 0) {
       removePosts(postIdsToRemove);
     }
-  }, [mutedUserIdSet, rawPostIds, removePosts, variant]);
+  }, [mutedUserIdSet, rawPostIds, refresh, removePosts, variant]);
 
   const contextValue: TimelineFeedContextValue = {
     prependPosts,

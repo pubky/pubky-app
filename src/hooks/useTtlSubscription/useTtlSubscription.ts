@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
-import type { UseTtlSubscriptionOptions, UseTtlSubscriptionResult } from './useTtlSubscription.types';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
+import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import type { Pubky } from '@/models/models.types';
+import type { UseTtlSubscriptionOptions, UseTtlSubscriptionResult } from './useTtlSubscription.types';
+
 /**
  * Unified hook for TTL-based data freshness tracking.
  *

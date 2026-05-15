@@ -1,8 +1,7 @@
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-
-import { TAGS_OVERVIEW_SKELETON_WIDTHS } from './HotTagsOverview.constants';
 import { cn } from '@/libs/utils/utils';
+import { TAGS_OVERVIEW_SKELETON_WIDTHS } from './HotTagsOverview.constants';
 
 export function HotTagsOverviewSkeleton() {
   return (

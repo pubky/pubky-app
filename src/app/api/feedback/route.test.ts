@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { POST, GET, OPTIONS } from './route';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { FeedbackController } from '@/controllers/feedback/feedback';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { FeedbackController } from '@/controllers/feedback/feedback';
 import type { Pubky } from '@/models/models.types';
+import { GET, OPTIONS, POST } from './route';
+
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
   userName: 'Test User',

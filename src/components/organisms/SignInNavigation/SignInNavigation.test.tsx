@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SignInNavigation } from './SignInNavigation';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HOME_ROUTES } from '@/app/routes';
+import { SignInNavigation } from './SignInNavigation';
 
 // Mock Next.js router
 const mockPush = vi.fn();

@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PostMainLayoutProvider, usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
 import { ReplyWithNested } from './ReplyWithNested';
-import { PostMainLayoutProvider, usePostMainLayout } from '@/organisms/PostMain/PostMainLayout';
 
 const mocks = vi.hoisted(() => ({
   mockUseNestedReplies: vi.fn(),

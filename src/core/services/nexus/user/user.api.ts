@@ -1,13 +1,14 @@
 import type { TUserId } from '@/services/nexus/nexus.types';
 import { buildNexusUrl, buildUrlWithQuery, encodePathSegment } from '@/services/nexus/nexus.utils';
 import {
-  USER_PATH_PARAMS,
   type TUserPaginationParams,
   type TUserRelationshipParams,
   type TUserTaggersParams,
   type TUserTagsParams,
   type TUserViewParams,
+  USER_PATH_PARAMS,
 } from '@/services/nexus/user/user.types';
+
 /**
  * User API Endpoints
  *
@@ -49,14 +50,6 @@ export const userApi = {
     const userId = encodePathSegment(params.user_id);
     return buildUrlWithQuery({
       baseRoute: `${PREFIX}/${userId}/friends`,
-      params,
-      excludeKeys: USER_PATH_PARAMS,
-    });
-  },
-  muted: (params: TUserViewParams) => {
-    const userId = encodePathSegment(params.user_id);
-    return buildUrlWithQuery({
-      baseRoute: `${PREFIX}/${userId}/muted`,
       params,
       excludeKeys: USER_PATH_PARAMS,
     });

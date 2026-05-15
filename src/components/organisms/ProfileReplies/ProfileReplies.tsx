@@ -1,9 +1,10 @@
 'use client';
 
-import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
-import { RepliesWithParent } from './RepliesWithParent';
 import type { AuthorRepliesStreamCompositeId } from '@/models/stream/post/postStream.types';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import { RepliesWithParent } from './RepliesWithParent';
+
 /**
  * ProfileReplies
  *

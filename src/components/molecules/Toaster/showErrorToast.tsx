@@ -1,7 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { toast } from './use-toast';
 
 const ERROR_TOAST_CLASSNAME = 'destructive border-destructive bg-destructive text-destructive-foreground shadow-lg';

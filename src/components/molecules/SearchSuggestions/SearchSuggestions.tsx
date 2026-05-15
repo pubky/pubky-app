@@ -2,13 +2,13 @@
 
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
+import { SEARCH_EXPANDED_STYLE } from '@/config/search';
+import { MAX_RECENT_SEARCHES } from '@/stores/search/search.constants';
 import { SearchRecentSection } from '../SearchRecentSection/SearchRecentSection';
 import { SearchTagSection } from '../SearchTagSection/SearchTagSection';
 import { SearchUsersSection } from '../SearchUsersSection/SearchUsersSection';
-
-import { SEARCH_EXPANDED_STYLE } from '@/config/search';
 import type { SearchSuggestionsProps } from './SearchSuggestions.types';
-import { MAX_RECENT_SEARCHES } from '@/stores/search/search.constants';
+
 export function SearchSuggestions({
   id,
   'aria-label': ariaLabel,

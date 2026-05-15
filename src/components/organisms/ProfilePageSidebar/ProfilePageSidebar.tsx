@@ -1,19 +1,19 @@
 'use client';
 
+import { useMemo } from 'react';
+import { usePathname } from 'next/navigation';
+import { Container } from '@/atoms/Container/Container';
+import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useStickyWhenFits } from '@/hooks/useStickyWhenFits/useStickyWhenFits';
 import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
-import { useMemo } from 'react';
-import { usePathname } from 'next/navigation';
-import { Container } from '@/atoms/Container/Container';
+import { cn } from '@/libs/utils/utils';
 import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks';
 import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
-import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
-import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
+import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
 import { MAX_SIDEBAR_TAGS } from './ProfilePageSidebar.constants';
-import { cn } from '@/libs/utils/utils';
 
 export function ProfilePageSidebar() {
   const pathname = usePathname();

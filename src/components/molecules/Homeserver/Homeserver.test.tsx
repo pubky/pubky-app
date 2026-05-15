@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import { HomeserverHeader, HomeserverFooter, HomeserverNavigation } from './Homeserver';
+import { describe, expect, it, vi } from 'vitest';
+import { HomeserverFooter, HomeserverHeader, HomeserverNavigation } from './Homeserver';
 
 // Mock Next.js router
 const mockPush = vi.fn();

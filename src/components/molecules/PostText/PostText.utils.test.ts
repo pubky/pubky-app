@@ -1,16 +1,16 @@
-import { describe, it, expect } from 'vitest';
-import type { Root, Paragraph, Text, Code, Link, Emphasis } from 'mdast';
+import type { Code, Emphasis, Link, Paragraph, Root, Text } from 'mdast';
+import { describe, expect, it } from 'vitest';
 import { asInvalid } from '@/test-utils/type-assertions';
+import { TRUNCATION_LIMIT } from './PostText.constants';
 import {
-  remarkPlaintextCodeblock,
+  extractTextFromChildren,
   remarkDisallowMarkdownLinks,
+  remarkExtractFirstParagraph,
   remarkHashtags,
   remarkMentions,
-  extractTextFromChildren,
+  remarkPlaintextCodeblock,
   truncateAtWordBoundary,
-  remarkExtractFirstParagraph,
 } from './PostText.utils';
-import { TRUNCATION_LIMIT } from './PostText.constants';
 
 // Helper to create a simple paragraph node with text
 const createParagraph = (text: string): Paragraph => ({

@@ -1,10 +1,11 @@
 'use client';
 
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import type { UseIsFollowingResult } from './useIsFollowing.types';
 import { UserController } from '@/controllers/user/user';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { NexusUserRelationship } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import type { UseIsFollowingResult } from './useIsFollowing.types';
+
 /**
  * useIsFollowing
  *

@@ -1,12 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { usePostTags } from './usePostTags';
-import { TAGS_PER_PAGE } from './usePostTags.constants';
-import { mockAuthStore } from '@/test-utils/stores';
 import * as DexieHooks from 'dexie-react-hooks';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagController } from '@/controllers/tag/tag';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
+import { mockAuthStore } from '@/test-utils/stores';
+import { usePostTags } from './usePostTags';
+import { TAGS_PER_PAGE } from './usePostTags.constants';
+
 // Hoisted mock for fetchTags - must be defined before vi.mock
 const { mockFetchTags, mockToast, mockAuthStoreSelector } = vi.hoisted(() => ({
   mockFetchTags: vi.fn().mockResolvedValue([]),
@@ -134,6 +135,7 @@ describe('usePostTags', () => {
           compositeId: 'author:post123',
           skip: 0,
           limit: TAGS_PER_PAGE,
+          viewerId: 'mock-user-id',
         });
       });
     });
@@ -344,6 +346,7 @@ describe('usePostTags', () => {
         compositeId: 'author:post123',
         skip: 25,
         limit: TAGS_PER_PAGE,
+        viewerId: 'viewer-123',
       });
     });
 
@@ -393,6 +396,7 @@ describe('usePostTags', () => {
         compositeId: 'author:post123',
         skip: 25,
         limit: TAGS_PER_PAGE,
+        viewerId: 'viewer-123',
       });
 
       // Second loadMore - skip should now be 25 + TAGS_PER_PAGE
@@ -401,6 +405,7 @@ describe('usePostTags', () => {
         compositeId: 'author:post123',
         skip: 25 + TAGS_PER_PAGE,
         limit: TAGS_PER_PAGE,
+        viewerId: 'viewer-123',
       });
     });
 
@@ -481,6 +486,7 @@ describe('usePostTags', () => {
         compositeId: 'author:post1',
         skip: 25,
         limit: TAGS_PER_PAGE,
+        viewerId: 'viewer-123',
       });
 
       // Change postId - this should reset the skip
@@ -504,6 +510,7 @@ describe('usePostTags', () => {
         compositeId: 'author:post2',
         skip: 15,
         limit: TAGS_PER_PAGE,
+        viewerId: 'viewer-123',
       });
     });
   });

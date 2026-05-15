@@ -1,10 +1,11 @@
 import { APP_ROUTES, POST_ROUTES, PROFILE_ROUTES } from '@/app/routes';
-import { USER_CENTRIC_NOTIFICATION_TYPES } from './NotificationItem.constants';
 import { Logger } from '@/libs/logger/logger';
 import { truncateString } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import { USER_CENTRIC_NOTIFICATION_TYPES } from './NotificationItem.constants';
+
 // ============================================================================
 // NOTIFICATION TEXT UTILITIES
 // ============================================================================

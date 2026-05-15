@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { useUserStream } from './useUserStream';
 import { DEFAULT_USER_STREAM_LIMIT, DEFAULT_USER_STREAM_PAGE_SIZE } from './useUserStream.constants';
-import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+
 const { mockUseLiveQuery, mockGetOrFetchStreamSlice } = vi.hoisted(() => ({
   mockUseLiveQuery: vi.fn(),
   mockGetOrFetchStreamSlice: vi.fn(),

@@ -1,11 +1,12 @@
 import {
   Facebook,
-  Github,
   GitFork,
+  Github,
   Gitlab,
   Instagram,
   Link,
   Linkedin,
+  type LucideProps,
   Mail,
   MessageCircle,
   MessageSquare,
@@ -15,7 +16,6 @@ import {
   Twitch,
   Video,
   Youtube,
-  type LucideProps,
 } from 'lucide-react';
 import { Telegram, XTwitter } from '@/icons';
 

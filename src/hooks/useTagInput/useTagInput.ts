@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { useEmojiInsert } from '../useEmojiInsert/useEmojiInsert';
-import { filterSuggestions } from './useTagInput.utils';
+import { useRef, useState } from 'react';
 import { TAG_MAX_LENGTH } from '@/config/posts';
-import type { UseTagInputOptions, UseTagInputReturn } from './useTagInput.types';
 import { Logger } from '@/libs/logger/logger';
 import { getCharacterCount, sanitizeTagInput } from '@/libs/utils/utils';
+import { useEmojiInsert } from '../useEmojiInsert/useEmojiInsert';
+import type { UseTagInputOptions, UseTagInputReturn } from './useTagInput.types';
+import { filterSuggestions } from './useTagInput.utils';
 
 /**
  * Hook for managing tag input state and local suggestions.

@@ -3,15 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@synonymdev/pubky';
 import { useTranslations } from 'next-intl';
-import { toast } from '@/molecules/Toaster/use-toast';
-
-import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
-import { Logger } from '@/libs/logger/logger';
-import { copyToClipboard } from '@/libs/utils/utils';
+import { AuthController } from '@/controllers/auth/auth';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { isAppError, isAuthError, isTimeoutError } from '@/libs/error/error.utils';
-import { AuthController } from '@/controllers/auth/auth';
+import { Logger } from '@/libs/logger/logger';
+import { copyToClipboard } from '@/libs/utils/utils';
+import { toast } from '@/molecules/Toaster/use-toast';
 import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
+import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
+
 /** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
 const isAuthFlowExpiredError = (error: unknown): boolean => {
   if (!isAppError(error)) return false;

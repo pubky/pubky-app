@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { OgMetadataApplication } from '@/application/og-metadata/og-metadata';
+import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
+import type { TOgMetadataParams } from '@/application/og-metadata/og-metadata.types';
 import { NetworkErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
-import { OgMetadataApplication } from '@/application/og-metadata/og-metadata';
-import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
-import type { TOgMetadataParams } from '@/application/og-metadata/og-metadata.types';
 import { OgMetadataValidators } from '@/pipes/og-metadata/og-metadata.validators';
+
 const testData = {
   validUrl: 'https://example.com',
   parsedUrl: new URL('https://example.com'),

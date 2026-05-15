@@ -1,27 +1,5 @@
 'use client';
 
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
-import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
-import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
-import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
-import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
-import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
-import { useTranslations } from 'next-intl';
-import { toast } from '@/molecules/Toaster/use-toast';
-
-import { POST_ROUTES } from '@/app/routes';
-import { POST_MENU_ACTION_IDS, POST_MENU_ACTION_VARIANTS } from './usePostMenuActions.constants';
-import { isAppError } from '@/libs/error/error.utils';
-import { stripPubkyPrefix, truncateString, withPubkyPrefix } from '@/libs/utils/utils';
-
-import type {
-  UsePostMenuActionsResult,
-  UsePostMenuActionsOptions,
-  PostMenuActionItem,
-} from './usePostMenuActions.types';
-
 /**
  * usePostMenuActions
  *
@@ -34,19 +12,39 @@ import type {
  * @returns Menu items array, loading state, and report post data
  */
 import {
-  UserRoundMinus,
-  UserRoundPlus,
+  Edit,
+  FileText,
+  Flag,
   Key,
   Link,
-  FileText,
   Megaphone,
   MegaphoneOff,
-  Flag,
-  Edit,
   Trash,
+  UserRoundMinus,
+  UserRoundPlus,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { POST_ROUTES } from '@/app/routes';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { isAppError } from '@/libs/error/error.utils';
+import { stripPubkyPrefix, truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
+import { toast } from '@/molecules/Toaster/use-toast';
+import { POST_MENU_ACTION_IDS, POST_MENU_ACTION_VARIANTS } from './usePostMenuActions.constants';
+import type {
+  PostMenuActionItem,
+  UsePostMenuActionsOptions,
+  UsePostMenuActionsResult,
+} from './usePostMenuActions.types';
+
 export function usePostMenuActions(postId: string, options: UsePostMenuActionsOptions): UsePostMenuActionsResult {
   const t = useTranslations('post.actions');
   const tToast = useTranslations('toast');

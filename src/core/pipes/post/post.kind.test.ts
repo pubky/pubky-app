@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
 import { PubkyAppPostKind } from 'pubky-app-specs';
+import { describe, expect, it } from 'vitest';
 import { inferPostKindForCreate, resolveTagTargetCompositeIdForPostCreate } from '@/pipes/post/post.kind';
+
 describe('inferPostKindForCreate', () => {
   it('returns video when at least one video attachment exists', () => {
     const kind = inferPostKindForCreate({

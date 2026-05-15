@@ -1,17 +1,17 @@
 'use client';
 
-import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
-import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
-import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
-import { PostText } from '@/molecules/PostText/PostText';
-import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
-
+import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
+import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { cn } from '@/libs/utils/utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
+import { PostText } from '@/molecules/PostText/PostText';
 import { FileVariant } from '@/services/nexus/file/file.types';
+import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
+import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
+
 interface PostArticleProps {
   content: string;
   attachments: PostDetailsModel['attachments'];

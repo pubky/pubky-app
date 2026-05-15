@@ -1,13 +1,13 @@
+import { CircleHelp, Mail } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
 import { Typography } from '@/atoms/Typography/Typography';
+import { EMAIL_URL, TELEGRAM_URL, TWITTER_URL } from '@/config/externalLinks';
+import { Telegram, XTwitter } from '@/icons';
 
-import { EMAIL_URL, TWITTER_URL, TELEGRAM_URL } from '@/config/externalLinks';
-import { CircleHelp, Mail } from 'lucide-react';
-import { XTwitter, Telegram } from '@/icons';
 interface PopoverInviteHomeserverProps {
   className?: React.HTMLAttributes<HTMLDivElement>['className'];
 }

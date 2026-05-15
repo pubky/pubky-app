@@ -2,10 +2,10 @@
 
 import { useMemo } from 'react';
 import { Container } from '@/atoms/Container/Container';
-import { NotificationItem } from '../NotificationItem/NotificationItem';
-
-import type { NotificationsListProps } from './NotificationsList.types';
 import { getBusinessKey } from '@/models/notification/notification.helpers';
+import { NotificationItem } from '../NotificationItem/NotificationItem';
+import type { NotificationsListProps } from './NotificationsList.types';
+
 export function NotificationsList({ notifications, unreadNotifications }: NotificationsListProps) {
   // Create a Set of unread notification business keys for O(1) lookup
   // Early return optimization for empty unread list

@@ -1,5 +1,6 @@
 import type { TagKind } from '@/application/tag/tag.types';
 import type { Pubky } from '@/models/models.types';
+
 export interface TTagEventParams {
   taggerId: Pubky | string;
   taggedId: Pubky;

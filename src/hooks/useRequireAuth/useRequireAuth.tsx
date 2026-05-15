@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { UseRequireAuthResult } from './useRequireAuth.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import type { UseRequireAuthResult } from './useRequireAuth.types';
+
 /**
  * Hook for handling authentication requirements in components.
  *

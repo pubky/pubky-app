@@ -1,13 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import { useTranslations } from 'next-intl';
-import { Button } from '@/atoms/Button/Button';
-import { Card } from '@/atoms/Card/Card';
-import { Container } from '@/atoms/Container/Container';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
-import { Typography } from '@/atoms/Typography/Typography';
-
 /**
  * DialogSignIn
  *
@@ -20,8 +12,16 @@ import { Typography } from '@/atoms/Typography/Typography';
  *
  * Inspired by pubky-app's Join modal but uses Franky's design patterns.
  */
-import { UserPlus, KeyRound } from 'lucide-react';
+import Link from 'next/link';
+import { KeyRound, UserPlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/atoms/Button/Button';
+import { Card } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { Typography } from '@/atoms/Typography/Typography';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 export function DialogSignIn() {
   const t = useTranslations('dialogs.signIn');
   const showSignInDialog = useAuthStore((state) => state.showSignInDialog);

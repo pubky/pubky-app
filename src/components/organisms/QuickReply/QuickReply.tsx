@@ -1,30 +1,29 @@
 'use client';
 
+import * as React from 'react';
+import { useTranslations } from 'next-intl';
+import { Container } from '@/atoms/Container/Container';
+import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
+import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { Textarea } from '@/atoms/Textarea/Textarea';
+import { Typography } from '@/atoms/Typography/Typography';
+import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
-import * as React from 'react';
-import { useTranslations } from 'next-intl';
-import { Container } from '@/atoms/Container/Container';
-import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
-import { Textarea } from '@/atoms/Textarea/Textarea';
-import { Typography } from '@/atoms/Typography/Typography';
+import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
-import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
-
-import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
-import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
-import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
-
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
-import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from '@/organisms/PostMain/PostMainLayout';
+import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
+import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
+import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyProps } from './QuickReply.types';
-import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 
 export function QuickReply({
   parentPostId,
@@ -151,7 +150,7 @@ export function QuickReply({
                 aria-label="Reply"
                 placeholder={displayPlaceholder}
                 variant="inline"
-                className={isWideLayout ? WIDE_POST_LAYOUT_CLASSES.bodyText : undefined}
+                className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
                 value={content}
                 onChange={handleChange}
                 onFocus={handleExpand}

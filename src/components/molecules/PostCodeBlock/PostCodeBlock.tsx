@@ -1,15 +1,15 @@
 'use client';
 
 import { ClassAttributes, HTMLAttributes, useEffect, useState } from 'react';
+import { Check, Clipboard } from 'lucide-react';
 import type { ExtraProps } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import { Check, Clipboard } from 'lucide-react';
 import { cn, copyToClipboard } from '@/libs/utils/utils';
+
 type PostCodeBlockProps = ClassAttributes<HTMLElement> & HTMLAttributes<HTMLElement> & ExtraProps;
 export const PostCodeBlock = (props: PostCodeBlockProps) => {
   const [copied, setCopied] = useState(false);

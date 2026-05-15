@@ -1,13 +1,14 @@
 import validationLimits from 'pubky-app-specs/validationLimits.json';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import {
   isFeedDeleteParams,
   type TFeedPersistCreateParams,
   type TFeedPersistDeleteParams,
   type TFeedPersistParams,
 } from '@/application/feed/feed.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+
 const MIN_TAGS = 1;
 const MAX_TAGS = validationLimits.feedTagsMaxCount;
 

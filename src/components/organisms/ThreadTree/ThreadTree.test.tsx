@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { ThreadTree } from './ThreadTree';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
+import { ThreadTree } from './ThreadTree';
 
 vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
   usePostNavigation: vi.fn(),

@@ -1,5 +1,5 @@
-import { Install } from '@/templates/Onboarding/Install/Install';
 import { Metadata } from '@/molecules/Metadata/Metadata';
+import { Install } from '@/templates/Onboarding/Install/Install';
 
 export const metadata = Metadata({
   title: 'Install - Onboarding',

@@ -1,21 +1,29 @@
 'use client';
 
-import { resolveFeedLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
-import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
+import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { resolveFeedLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { cn } from '@/libs/utils/utils';
 import { ButtonFilters } from '@/molecules/ButtonFilters/ButtonFilters';
 import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
 import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
 import { SideDrawer } from '@/molecules/SideDrawer/SideDrawer';
-
-import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
-import type { ContentLayoutProps, StickySidebarProps } from './ContentLayout.types';
-import { cn } from '@/libs/utils/utils';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
 import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
+import type { ContentLayoutProps, StickySidebarProps } from './ContentLayout.types';
+
+// NOTE: For the feed cluster (`/home`, `/feed/[id]`, `/bookmarks`, `/search`),
+// `ContentLayout` is rendered once by `app/(feeds)/layout.tsx` so that the shell
+// (sidebars, mobile header, drawers, layout-resolution state) persists across
+// intra-cluster navigation. The per-route shell props for those routes live in
+// `app/(feeds)/_shell/configs.tsx`. Other routes (e.g. `/hot`, `/who-to-follow`,
+// `/settings`, `/profile`, `/post/[userId]/[postId]`, `/share`) continue to
+// render `ContentLayout` per-page from their templates.
+
 /**
  * Reusable sticky sidebar component for left and right sidebars
  * Sidebars stay pinned below the main header and scroll independently

@@ -1,10 +1,11 @@
+import { AppError } from '@/libs/error/error';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { AppError } from '@/libs/error/error';
 import type { Pubky } from '@/models/models.types';
-import { SettingsNormalizer, type SettingsJson } from '@/pipes/settings/settings.normalizer';
+import { type SettingsJson, SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { SettingsState } from '@/stores/settings/settings.types';
+
 /**
  * Settings application service.
  *

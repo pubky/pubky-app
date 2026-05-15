@@ -1,16 +1,15 @@
-import { clsx, type ClassValue } from 'clsx';
+import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { SnapshotSerializer } from 'vitest';
+import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
+import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
+import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 import type {
-  ExtractInitialsProps,
   CopyToClipboardProps,
+  ExtractInitialsProps,
   FormatPublicKeyProps,
   GetDisplayTagsOptions,
 } from './utils.types';
-import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
-
-import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
-import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

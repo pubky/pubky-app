@@ -1,5 +1,6 @@
 import { TtlApplication } from '@/application/ttl/ttl';
 import type { Pubky } from '@/models/models.types';
+
 export class TtlController {
   private constructor() {}
 

@@ -1,9 +1,10 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { within } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CustomFeedDialog } from './CustomFeedDialog';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { CustomFeedDialog } from './CustomFeedDialog';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({

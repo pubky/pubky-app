@@ -1,16 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { HotApplication } from './hot';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { UserStreamApplication } from '@/application/stream/users/users';
 import { NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
-import { UserStreamApplication } from '@/application/stream/users/users';
 import type { HotTagsModel } from '@/models/hot/hot';
 import { LocalHotService } from '@/services/local/hot/hot';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { NexusHotService } from '@/services/nexus/hot/hot';
-import { UserStreamReach, UserStreamTimeframe, type NexusHotTag } from '@/services/nexus/nexus.types';
+import { type NexusHotTag, UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
+import { HotApplication } from './hot';
+
 describe('HotApplication', () => {
   beforeEach(() => {
     vi.clearAllMocks();

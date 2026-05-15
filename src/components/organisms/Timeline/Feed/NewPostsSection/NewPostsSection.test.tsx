@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
-import { NewPostsSection } from './NewPostsSection';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { NewPostsSection } from './NewPostsSection';
+
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));

@@ -1,21 +1,21 @@
 'use client';
 
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { ArrowRight, Key } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
-import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
-
-import { Key, ArrowRight } from 'lucide-react';
-import { Logger } from '@/libs/logger/logger';
-import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 import { FileController } from '@/controllers/file/file';
 import { UserController } from '@/controllers/user/user';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
+import { Logger } from '@/libs/logger/logger';
+import { formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
+
 /**
  * DialogWelcome
  *

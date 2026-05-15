@@ -1,18 +1,17 @@
 'use client';
 
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useRouter } from 'next/navigation';
+import { Search } from 'lucide-react';
+import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Tag } from '@/atoms/Tag/Tag';
-import { WhoTaggedExpandedList } from '../WhoTaggedExpandedList/WhoTaggedExpandedList';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-
-import { useRouter } from 'next/navigation';
-import { APP_ROUTES } from '@/app/routes';
-import type { TaggedItemProps } from './TaggedItem.types';
-import { MAX_VISIBLE_AVATARS } from './TaggedItem.constants';
-import { Search } from 'lucide-react';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { WhoTaggedExpandedList } from '../WhoTaggedExpandedList/WhoTaggedExpandedList';
+import { MAX_VISIBLE_AVATARS } from './TaggedItem.constants';
+import type { TaggedItemProps } from './TaggedItem.types';
 
 export function TaggedItem({
   tag,

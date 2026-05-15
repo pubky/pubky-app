@@ -1,13 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { UserResult } from 'pubky-app-specs';
-import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
-import {
-  TEST_PUBKY,
-  setupUnitTestMocks,
-  setupIntegrationTestMocks,
-  restoreMocks,
-  buildPubkyUri,
-} from '../pipes.test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -15,6 +7,15 @@ import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { UserValidatorData } from '@/pipes/pipes.types';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
 import type { NexusUserLink } from '@/services/nexus/nexus.types';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
+import {
+  buildPubkyUri,
+  restoreMocks,
+  setupIntegrationTestMocks,
+  setupUnitTestMocks,
+  TEST_PUBKY,
+} from '../pipes.test-utils';
+
 describe('UserNormalizer', () => {
   // Test data factories
   const createUserData = (overrides?: Partial<UserValidatorData>): UserValidatorData => ({

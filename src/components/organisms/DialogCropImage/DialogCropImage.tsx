@@ -1,13 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Cropper, { type Area } from 'react-easy-crop';
 // NOTE: CSS import is localized here since this is currently the only component using the cropper.
 // If multiple components start using react-easy-crop, consider moving this CSS import to:
 // - app/globals.css (for global availability)
 // - A shared client layout/provider (for centralized client-side loading)
 // This prevents duplicate style inclusion and ensures consistent styling across the app.
 import 'react-easy-crop/react-easy-crop.css';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Cropper, { type Area } from 'react-easy-crop';
 import { Button } from '@/atoms/Button/Button';
 import {
   Dialog,
@@ -17,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/atoms/Dialog/Dialog';
-
 import { cropImageToBlob } from '@/libs/image/cropImage';
 import { Logger } from '@/libs/logger/logger';
 

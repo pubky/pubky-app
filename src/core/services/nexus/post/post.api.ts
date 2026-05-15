@@ -7,6 +7,7 @@ import {
   type TPostTagsParams,
   type TPostViewParams,
 } from '@/services/nexus/post/post.types';
+
 /**
  * Post API Endpoints
  *

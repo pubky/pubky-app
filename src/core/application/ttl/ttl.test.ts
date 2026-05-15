@@ -1,7 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-
-import { asOpaque } from '@/test-utils/type-assertions';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { TtlApplication } from '@/application/ttl/ttl';
@@ -10,9 +7,11 @@ import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { NexusPost, NexusUser } from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import { postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();

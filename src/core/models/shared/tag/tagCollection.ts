@@ -8,6 +8,7 @@ import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type'
 import { TagModel } from '@/models/shared/tag/tag';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+
 export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<Id>> extends ModelBase<Id, Schema> {
   // TODO: Consider adding multiEntry index on tag labels and if so, update Schema to use it
   tags: TagModel[];

@@ -1,5 +1,5 @@
-import type React from 'react';
 import { AnchorHTMLAttributes, ClassAttributes } from 'react';
+import type React from 'react';
 import { ExtraProps } from 'react-markdown';
 
 export interface PostTextProps {

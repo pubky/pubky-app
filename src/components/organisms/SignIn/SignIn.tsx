@@ -1,10 +1,10 @@
 'use client';
 
-import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
-import Image from 'next/image';
-import { QRCodeSVG } from 'qrcode.react';
 import { useEffect } from 'react';
+import Image from 'next/image';
+import { CheckCircle, Circle, Key, Loader2, QrCode } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
@@ -12,18 +12,18 @@ import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 import { ContentCard } from '@/molecules/Content/Content';
 import { DialogAuthExpired } from '@/molecules/DialogAuthExpired/DialogAuthExpired';
 import { Logo } from '@/molecules/Logo/Logo';
 import { PageTitle } from '@/molecules/Page/Page';
 import { toast } from '@/molecules/Toaster/use-toast';
-
-import { CheckCircle, Loader2, Circle, QrCode, Key } from 'lucide-react';
-import { Logger } from '@/libs/logger/logger';
-import { cn } from '@/libs/utils/utils';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 import type { SignInState } from '@/stores/signIn/signIn.types';
+
 // Step configuration for the progress display (labels are translation keys)
 const SIGN_IN_STEPS = [
   {

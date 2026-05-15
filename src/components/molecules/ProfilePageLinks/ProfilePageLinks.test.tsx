@@ -1,9 +1,10 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { ProfilePageLinks } from './ProfilePageLinks';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { defaultPrivacyPreferences } from '@/stores/settings/settings.types';
+import { ProfilePageLinks } from './ProfilePageLinks';
+
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({

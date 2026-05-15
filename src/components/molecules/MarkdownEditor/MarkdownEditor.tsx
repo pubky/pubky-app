@@ -1,7 +1,7 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { forwardRef } from 'react';
+import dynamic from 'next/dynamic';
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';

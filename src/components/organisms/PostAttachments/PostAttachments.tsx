@@ -1,15 +1,15 @@
 'use client';
+import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
+import { FileController } from '@/controllers/file/file';
 import { PostAttachmentsAudios } from '@/molecules/PostAttachmentsAudios/PostAttachmentsAudios';
 import { PostAttachmentsGenericFiles } from '@/molecules/PostAttachmentsGenericFiles/PostAttachmentsGenericFiles';
 import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
 import { useToast } from '@/molecules/Toaster/use-toast';
-
-import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import type { AttachmentConstructed, PostAttachmentsProps } from './PostAttachments.types';
-import { FileController } from '@/controllers/file/file';
 import { FileVariant } from '@/services/nexus/file/file.types';
+import type { AttachmentConstructed, PostAttachmentsProps } from './PostAttachments.types';
+
 export const PostAttachments = ({ attachments, localAttachments }: PostAttachmentsProps) => {
   const [imagesAndVideos, setImagesAndVideos] = useState<AttachmentConstructed[]>([]);
   const [audios, setAudios] = useState<AttachmentConstructed[]>([]);

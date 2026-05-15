@@ -4,10 +4,9 @@ import { useEffect } from 'react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import type { ErrorFallbackProps } from './ErrorBoundaryProvider.types';
-import { Logger } from '@/libs/logger/logger';
 import { getErrorMessage } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import type { ErrorFallbackProps } from './ErrorBoundaryProvider.types';
 
 /**
  * ErrorFallback

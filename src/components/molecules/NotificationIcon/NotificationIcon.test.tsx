@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import { NotificationIcon } from './NotificationIcon';
+import { describe, expect, it, vi } from 'vitest';
 import { NotificationType } from '@/models/notification/notification.types';
+import { NotificationIcon } from './NotificationIcon';
+
 // Mock atoms
 vi.mock('@/atoms/Container/Container', () => {
   return {

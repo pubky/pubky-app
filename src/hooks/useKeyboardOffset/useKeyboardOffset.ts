@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useKeyboardVisible } from '../useKeyboardVisible/useKeyboardVisible';
 import { UseKeyboardOffsetOptions } from './useKeyboardOffset.types';
 

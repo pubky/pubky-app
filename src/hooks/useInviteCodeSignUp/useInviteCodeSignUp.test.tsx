@@ -1,10 +1,11 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useInviteCodeSignUp } from './useInviteCodeSignUp';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthController } from '@/controllers/auth/auth';
 import { NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { AuthController } from '@/controllers/auth/auth';
+import { useInviteCodeSignUp } from './useInviteCodeSignUp';
+
 const {
   mockSignUp,
   mockClearSecrets,

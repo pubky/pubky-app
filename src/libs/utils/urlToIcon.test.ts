@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import {
   Facebook,
   Github,
@@ -13,6 +12,7 @@ import {
   Twitch,
   Youtube,
 } from 'lucide-react';
+import { describe, expect, it } from 'vitest';
 import { Telegram, XTwitter } from '@/icons';
 import { getIconFromUrl, getLabelFromUrl } from './urlToIcon';
 

@@ -1,14 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { PageTitle } from '@/molecules/Page/Page';
-
-import { ONBOARDING_ROUTES } from '@/app/routes';
 
 export const BackupNavigation = () => {
   const router = useRouter();

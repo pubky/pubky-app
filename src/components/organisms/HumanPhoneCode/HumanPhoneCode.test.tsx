@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
-
-import { HumanPhoneCode } from './HumanPhoneCode';
+import { describe, expect, it, vi } from 'vitest';
 import { HomegateController } from '@/controllers/homegate/homegate';
+import { HumanPhoneCode } from './HumanPhoneCode';
+
 describe('HumanPhoneCode', () => {
   it('on back button click, onBack function is called', () => {
     vi.useFakeTimers();

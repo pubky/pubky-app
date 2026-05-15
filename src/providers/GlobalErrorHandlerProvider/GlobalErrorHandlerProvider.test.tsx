@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render } from '@testing-library/react';
-import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
-
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
 
 vi.mock('@/libs/logger/logger', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/libs/logger/logger')>();
@@ -13,6 +13,14 @@ vi.mock('@/libs/logger/logger', async (importOriginal) => {
       ...actual.Logger,
       error: vi.fn(),
     },
+  };
+});
+
+vi.mock('@/libs/error/error.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/error/error.utils')>();
+  return {
+    ...actual,
+    getErrorMessage: vi.fn(() => 'Something went wrong'),
   };
 });
 
@@ -53,8 +61,9 @@ describe('GlobalErrorHandlerProvider', () => {
       window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
     });
 
+    expect(getErrorMessage).toHaveBeenCalled();
     expect(Logger.error).toHaveBeenCalled();
-    expect(showErrorToast).toHaveBeenCalledWith({ description: 'boom' });
+    expect(showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
   });
 
   it('handles unhandledrejection events', () => {
@@ -69,9 +78,9 @@ describe('GlobalErrorHandlerProvider', () => {
       Object.defineProperty(event, 'reason', { value: new Error('promise failed') });
       window.dispatchEvent(event);
     });
-
+    expect(getErrorMessage).toHaveBeenCalled();
     expect(Logger.error).toHaveBeenCalled();
-    expect(showErrorToast).toHaveBeenCalledWith({ description: 'promise failed' });
+    expect(showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
   });
 
   it('throttles duplicate error toasts within the cooldown window', () => {

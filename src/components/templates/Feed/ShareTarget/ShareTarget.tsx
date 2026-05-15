@@ -1,18 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { composeShareContent, getSharedFiles } from '@/libs/share/shareTarget';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { PostInput } from '@/organisms/PostInput/PostInput';
-
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { APP_ROUTES } from '@/app/routes';
 import { ShareTargetSkeleton } from './ShareTarget.skeleton';
-import { composeShareContent, getSharedFiles } from '@/libs/share/shareTarget';
 
 export function ShareTarget() {
   const searchParams = useSearchParams();

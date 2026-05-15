@@ -1,10 +1,10 @@
-import { HttpMethod } from '@/libs/http/http.types';
-import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
+import type { FilesListParams } from '@/application/file/file.types';
+import type { TGetFileUrlParams, TGetMetadataParams, TUploadFileParams } from '@/controllers/file/file.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { FilesListParams } from '@/application/file/file.types';
-import type { TGetFileUrlParams, TGetMetadataParams, TUploadFileParams } from '@/controllers/file/file.types';
+import { HttpMethod } from '@/libs/http/http.types';
+import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { FileNormalizer } from '@/pipes/file/file.normalizer';
@@ -14,6 +14,7 @@ import { LocalFileService } from '@/services/local/file/file';
 import { NexusFileService } from '@/services/nexus/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
 import type { NexusFileDetails, NexusFileUrls } from '@/services/nexus/nexus.types';
+
 /**
  * File Application
  *

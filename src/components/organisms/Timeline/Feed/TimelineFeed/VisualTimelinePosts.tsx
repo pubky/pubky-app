@@ -1,17 +1,21 @@
 'use client';
 
-import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
-import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
-import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
-import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import * as React from 'react';
+import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Video } from '@/atoms/Video/Video';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
+import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
+import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
+import { cn } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
 import { PostText } from '@/molecules/PostText/PostText';
@@ -21,29 +25,23 @@ import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { ClickableTagsList } from '../../../ClickableTagsList/ClickableTagsList';
-import { DialogReply } from '../../../DialogReply/DialogReply';
-import { DialogRepost } from '../../../DialogRepost/DialogRepost';
 import { PostActionsBar } from '../../../PostActionsBar/PostActionsBar';
 import { PostContentBlurred } from '../../../PostContentBlurred/PostContentBlurred';
-
-import { useVisualFeedTiles } from './useVisualFeedTiles';
-import { cn } from '@/libs/utils/utils';
-
 import {
   VISUAL_GRID_MAX_WIDTH_PX,
   VISUAL_TILE_ASPECT_RATIOS,
   VISUAL_TILE_COLUMN_SPANS,
 } from './TimelineFeedVisual.helpers';
+import { useVisualFeedTiles } from './useVisualFeedTiles';
 import type {
-  VisualTimelinePostsProps,
   VisualTileImageProps,
+  VisualTileVideoProps,
+  VisualTimelinePostsProps,
   VisualTimelineRowProps,
   VisualTimelineTileOverlayProps,
   VisualTimelineTileProps,
-  VisualTileVideoProps,
 } from './VisualTimelinePosts.types';
-import { TagKind } from '@/application/tag/tag.types';
-import { parseCompositeId } from '@/models/models.utils';
+
 function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();
 }
@@ -221,8 +219,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
 
 function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps) {
   const isTouchDevice = useIsTouchDevice();
-  const [replyDialogOpen, setReplyDialogOpen] = React.useState(false);
-  const [repostDialogOpen, setRepostDialogOpen] = React.useState(false);
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(tile.postId);
 
   const handleNavigate = React.useCallback(() => {
     onNavigate(tile.postId);
@@ -265,14 +262,13 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
           <VisualTimelineTileOverlay
             tile={tile}
             size={size}
-            onReplyClick={() => setReplyDialogOpen(true)}
-            onRepostClick={() => setRepostDialogOpen(true)}
+            onReplyClick={openReplyDialog}
+            onRepostClick={openRepostDialog}
           />
         ) : null}
       </Container>
 
-      <DialogReply postId={tile.postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
-      <DialogRepost postId={tile.postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
+      {dialogs}
     </>
   );
 }

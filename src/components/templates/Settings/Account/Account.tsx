@@ -1,16 +1,15 @@
 'use client';
 
-import { useSignOut } from '@/hooks/useSignOut/useSignOut';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { LockKeyhole, LogOut, Pencil, Trash2, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { SETTINGS_ROUTES } from '@/app/routes';
+import { useSignOut } from '@/hooks/useSignOut/useSignOut';
 import { SettingsDivider } from '@/molecules/Settings/SettingsDivider/SettingsDivider';
 import { SettingsSection } from '@/molecules/Settings/SettingsSection/SettingsSection';
 import { SettingsSectionCard } from '@/molecules/Settings/SettingsSectionCard/SettingsSectionCard';
 import { DialogDeleteAccount } from '@/organisms/Settings/DialogDeleteAccount/DialogDeleteAccount';
-
-import { SETTINGS_ROUTES } from '@/app/routes';
-import { UserRound, LogOut, Pencil, LockKeyhole, Trash2 } from 'lucide-react';
 
 export function Account() {
   const router = useRouter();

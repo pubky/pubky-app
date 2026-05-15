@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { User, type UserData } from './User';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { ButtonVariant } from '@/atoms/Button/Button';
+import { User, type UserData } from './User';
 
 // Mock AvatarWithFallback to isolate User component tests
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {

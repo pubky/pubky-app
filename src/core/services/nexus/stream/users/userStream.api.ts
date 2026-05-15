@@ -1,7 +1,5 @@
 import { buildNexusUrl } from '@/services/nexus/nexus.utils';
 import {
-  USER_STREAM_PREFIX,
-  UserStreamSource,
   type TUserStreamBase,
   type TUserStreamInfluencersParams,
   type TUserStreamPostRepliesParams,
@@ -10,7 +8,10 @@ import {
   type TUserStreamUsersByIdsParams,
   type TUserStreamWithDepthParams,
   type TUserStreamWithUserIdParams,
+  USER_STREAM_PREFIX,
+  UserStreamSource,
 } from '@/services/nexus/stream/users/userStream.types';
+
 /**
  * Users Stream API Endpoints
  * All API endpoints related to user stream operations
@@ -56,9 +57,6 @@ export const userStreamApi = {
 
   friends: (params: TUserStreamWithUserIdParams) =>
     buildUserStreamUrl(params, UserStreamSource.FRIENDS, USER_STREAM_PREFIX.USER_IDS),
-
-  muted: (params: TUserStreamWithUserIdParams) =>
-    buildUserStreamUrl(params, UserStreamSource.MUTED, USER_STREAM_PREFIX.USER_IDS),
 
   recommended: (params: TUserStreamWithUserIdParams) =>
     buildUserStreamUrl(params, UserStreamSource.RECOMMENDED, USER_STREAM_PREFIX.USER_IDS),

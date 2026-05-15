@@ -1,16 +1,15 @@
 'use client';
 
-import { usePostAncestors } from '@/hooks/usePostAncestors/usePostAncestors';
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
-import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import * as React from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { Typography } from '@/atoms/Typography/Typography';
-
+import { usePostAncestors } from '@/hooks/usePostAncestors/usePostAncestors';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
+import { PostPageBreadcrumb } from '../PostPageBreadcrumb/PostPageBreadcrumb';
 import { PostPageHeaderSkeleton } from './PostPageHeader.skeleton';
 import type { PostPageHeaderProps } from './PostPageHeader.types';
-import { PostPageBreadcrumb } from '../PostPageBreadcrumb/PostPageBreadcrumb';
 
 /**
  * PostPageHeader Organism

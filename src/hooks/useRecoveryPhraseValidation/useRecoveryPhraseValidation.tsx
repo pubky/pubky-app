@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 export interface UseRecoveryPhraseValidationProps {
   recoveryWords: string[];

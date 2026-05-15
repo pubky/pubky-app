@@ -3,6 +3,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { ModerationModel } from '@/models/moderation/moderation';
 import type { ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
+
 export class LocalModerationService {
   private constructor() {}
 

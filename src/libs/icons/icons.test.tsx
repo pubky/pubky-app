@@ -1,19 +1,19 @@
-import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import {
-  XTwitter,
-  Github2,
-  Telegram,
-  UsersRound2,
-  LineHorizontal,
-  RoundedCorner,
-  Synonym,
-  Blocktank,
   Bitkit,
+  Blocktank,
   BTCIcon,
-  Tether,
+  Github2,
+  LineHorizontal,
   MarkdownMark,
   PubkyIcon,
+  RoundedCorner,
+  Synonym,
+  Telegram,
+  Tether,
+  UsersRound2,
+  XTwitter,
 } from './icons';
 
 describe('Custom Icons', () => {

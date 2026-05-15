@@ -1,21 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-
-import { useTranslations } from 'next-intl';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+import { HomegateController } from '@/controllers/homegate/homegate';
+import { parsePhoneNumber } from '@/libs/phone/phone';
+import { cn } from '@/libs/utils/utils';
 import { HumanPhoneInputField } from '@/molecules/HumanPhoneInputField/HumanPhoneInputField';
 import { PageTitle } from '@/molecules/Page/Page';
 import { toast } from '@/molecules/Toaster/use-toast';
-
-import { parsePhoneNumber } from '@/libs/phone/phone';
-import { cn } from '@/libs/utils/utils';
-import { HomegateController } from '@/controllers/homegate/homegate';
 import { SmsCodeErrorType } from '@/services/homegate/homegate.constants';
+
 type HumanPhoneInputProps = {
   onBack: () => void;
   onCodeSent: (phoneNumber: string) => void;

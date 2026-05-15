@@ -1,35 +1,34 @@
 'use client';
 
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
+import { useTranslations } from 'next-intl';
+import { useDebounceCallback } from 'usehooks-ts';
+import {
+  ARTICLE_ATTACHMENT_MAX_FILES,
+  ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
+  ARTICLE_SUPPORTED_FILE_TYPES,
+  ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
+  ATTACHMENT_MAX_IMAGE_SIZE,
+  ATTACHMENT_MAX_OTHER_SIZE,
+  POST_ATTACHMENT_MAX_FILES,
+  POST_MAX_CHARACTER_LENGTH,
+  POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
+  POST_SUPPORTED_FILE_TYPES,
+} from '@/config/posts';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
+import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
+import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
 import { usePost } from '@/hooks/usePost/usePost';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
-import { type MDXEditorProps, type MDXEditorMethods } from '@mdxeditor/editor';
-import { useDebounceCallback } from 'usehooks-ts';
-import { useTranslations } from 'next-intl';
 import { useToast } from '@/molecules/Toaster/use-toast';
-import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
-
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
-import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
 
-import {
-  POST_MAX_CHARACTER_LENGTH,
-  ATTACHMENT_MAX_IMAGE_SIZE,
-  ATTACHMENT_MAX_OTHER_SIZE,
-  ARTICLE_ATTACHMENT_MAX_FILES,
-  POST_ATTACHMENT_MAX_FILES,
-  ARTICLE_SUPPORTED_FILE_TYPES,
-  POST_SUPPORTED_FILE_TYPES,
-  POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
-  ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
-  ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
-} from '@/config/posts';
-import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 /**
  * Hook that encapsulates all PostInput logic.
  *

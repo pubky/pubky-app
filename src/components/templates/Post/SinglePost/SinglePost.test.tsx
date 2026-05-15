@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { SinglePost } from './SinglePost';
 
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({

@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { NotificationsContainer } from './NotificationsContainer';
+import { describe, expect, it, vi } from 'vitest';
 import { useNotifications } from '@/hooks/useNotifications/useNotifications';
 import { NotificationType } from '@/models/notification/notification.types';
+import { NotificationsContainer } from './NotificationsContainer';
+
 // Mock useNotifications hook
 vi.mock('@/hooks/useNotifications/useNotifications', () => ({
   useNotifications: vi.fn(() => ({

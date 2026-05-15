@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { resetDatabase } from '@/database/franky/franky.helpers';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import type { NexusPostRelationships } from '@/services/nexus/nexus.types';
+
 describe('PostRelationshipsModel', () => {
   beforeEach(async () => {
     await resetDatabase();

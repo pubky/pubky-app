@@ -1,5 +1,6 @@
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
+
 export type TReadPostStreamChunkParams = {
   streamId: PostStreamId;
   streamHead?: number;

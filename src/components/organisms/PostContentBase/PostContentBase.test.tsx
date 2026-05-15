@@ -1,17 +1,17 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PostContentBase } from './PostContentBase';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
 import { PostText } from '@/molecules/PostText/PostText';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { PostArticle } from '../PostArticle/PostArticle';
 import { PostAttachments } from '../PostAttachments/PostAttachments';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
+import { PostContentBase } from './PostContentBase';
 
-import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
-import { asOpaque } from '@/test-utils/type-assertions';
-import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 // Mock next/navigation for usePathname used by PostText
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/'),

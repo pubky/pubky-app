@@ -1,12 +1,13 @@
-import { TagResult, postUriBuilder, userUriBuilder } from 'pubky-app-specs';
+import { postUriBuilder, TagResult, userUriBuilder } from 'pubky-app-specs';
+import { TagKind } from '@/application/tag/tag.types';
+import type { TTagEventParams, TTagFromResponse } from '@/controllers/tag/tag.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { TagKind } from '@/application/tag/tag.types';
-import type { TTagEventParams, TTagFromResponse } from '@/controllers/tag/tag.types';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+
 export class TagNormalizer {
   private constructor() {}
 

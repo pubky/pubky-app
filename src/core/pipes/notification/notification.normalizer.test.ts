@@ -1,14 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LastReadResult } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  TEST_PUBKY,
-  INVALID_INPUTS,
-  setupUnitTestMocks,
-  setupIntegrationTestMocks,
-  restoreMocks,
-  buildPubkyUri,
-} from '../pipes.test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -17,6 +8,16 @@ import { NotificationNormalizer } from '@/pipes/notification/notification.normal
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
 import { defaultNotificationPreferences, type NotificationPreferences } from '@/stores/settings/settings.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+import {
+  buildPubkyUri,
+  INVALID_INPUTS,
+  restoreMocks,
+  setupIntegrationTestMocks,
+  setupUnitTestMocks,
+  TEST_PUBKY,
+} from '../pipes.test-utils';
+
 describe('NotificationNormalizer', () => {
   /**
    * Tests for `to` method - Creates LastRead result (same as LastReadNormalizer)

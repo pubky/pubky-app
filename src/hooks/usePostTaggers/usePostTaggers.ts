@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { TAGGERS_PAGE_SIZE } from './usePostTaggers.constants';
-import type { TaggersStateMap, UsePostTaggersResult } from './usePostTaggers.types';
-import { Logger } from '@/libs/logger/logger';
 import { PostController } from '@/controllers/post/post';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
+import { TAGGERS_PAGE_SIZE } from './usePostTaggers.constants';
+import type { TaggersStateMap, UsePostTaggersResult } from './usePostTaggers.types';
+
 /**
  * Hook to fetch and cache full tagger lists for post tags on demand.
  *

@@ -2,7 +2,6 @@
 import { Container } from '@/atoms/Container/Container';
 import { Switch } from '@/atoms/Switch/Switch';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import type { SettingsSwitchItemProps } from './SettingsSwitchItem.types';
 
 export function SettingsSwitchItem({ id, label, description, checked, disabled, onChange }: SettingsSwitchItemProps) {

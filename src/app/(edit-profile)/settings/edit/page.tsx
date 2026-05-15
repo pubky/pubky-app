@@ -1,5 +1,5 @@
-import { EditProfile } from '@/templates/Settings/EditProfile/EditProfile';
 import { Metadata } from '@/molecules/Metadata/Metadata';
+import { EditProfile } from '@/templates/Settings/EditProfile/EditProfile';
 
 export const metadata = Metadata({
   title: 'Edit Profile - Settings',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { AvatarZoomModal } from '@/molecules/AvatarZoomModal/AvatarZoomModal';
 import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
@@ -10,7 +10,6 @@ import { ProfilePageLayoutWrapper } from '@/molecules/ProfilePageLayoutWrapper/P
 import { ProfilePageMobileMenu } from '@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu';
 import { ProfilePageHeader } from '../ProfilePageHeader/ProfilePageHeader';
 import { ProfilePageSidebar } from '../ProfilePageSidebar/ProfilePageSidebar';
-
 import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 
 /**

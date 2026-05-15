@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { createDefaultPostStream } from './postStream.helper';
-import { PostStreamModel } from './tables/postStream';
-import { PostStreamTypes, PostStreamId } from './postStream.types';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/database/franky/franky';
+import { createDefaultPostStream } from './postStream.helper';
+import { PostStreamId, PostStreamTypes } from './postStream.types';
+import { PostStreamModel } from './tables/postStream';
+
 describe('PostStreamModel', () => {
   beforeEach(async () => {
     await db.initialize();

@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { Serwist, NetworkFirst, ExpirationPlugin, type PrecacheEntry, type SerwistGlobalConfig } from 'serwist';
+import { ExpirationPlugin, NetworkFirst, type PrecacheEntry, Serwist, type SerwistGlobalConfig } from 'serwist';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {

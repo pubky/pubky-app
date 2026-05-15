@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NexusSearchService } from './search';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { queryNexus } from '@/services/nexus/nexus.utils';
+import { NexusSearchService } from './search';
 
 vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();

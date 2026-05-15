@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { useFeedback } from './useFeedback';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FEEDBACK_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useFeedback } from './useFeedback';
 
 // Mock fetch
 global.fetch = vi.fn();

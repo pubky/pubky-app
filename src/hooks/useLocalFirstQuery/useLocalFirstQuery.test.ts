@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { useLocalFirstQuery } from './useLocalFirstQuery';
 import type { UseLocalFirstQueryParams } from './useLocalFirstQuery.types';

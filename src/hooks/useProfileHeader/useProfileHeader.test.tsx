@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useProfileHeader, type UserProfile, type ProfileStats, type ProfileActions } from './useProfileHeader';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { type ProfileActions, type ProfileStats, useProfileHeader, type UserProfile } from './useProfileHeader';
 
 // Mock the composed hooks
 let mockProfile: UserProfile | null = null;

@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { useTagged } from './useTagged';
-import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import { useTagged } from './useTagged';
+
 // Hoist mock functions before vi.mock
 const mockMocks = vi.hoisted(() => {
   const mockGetTags = vi.fn();
