@@ -143,15 +143,17 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
       loading,
       error,
       hasItems,
+      loadingComponent,
       emptyComponent,
     }: {
       children: React.ReactNode;
       loading: boolean;
       error: string | null;
       hasItems: boolean;
+      loadingComponent?: React.ReactNode;
       emptyComponent?: React.ReactNode;
     }) => {
-      if (loading) return <div data-testid="timeline-loading">Loading</div>;
+      if (loading) return <>{loadingComponent ?? <div data-testid="timeline-loading">Loading</div>}</>;
       if (error && !hasItems) return <div data-testid="timeline-error-state">{error}</div>;
       if (!hasItems) return <>{emptyComponent ?? <div data-testid="timeline-empty">Empty</div>}</>;
       return <>{children}</>;
@@ -344,6 +346,42 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+  });
+
+  it('renders visual grid skeletons during initial loading', () => {
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={true}
+        loadingMore={false}
+        error={null}
+        hasMore={true}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+    expect(screen.getAllByTestId('visual-feed-skeleton-row')).toHaveLength(3);
+    expect(screen.getAllByTestId('visual-feed-skeleton-tile').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('timeline-loading-more')).not.toBeInTheDocument();
+  });
+
+  it('keeps visual grid skeletons while loading more posts', () => {
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={true}
+        error={null}
+        hasMore={true}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+    expect(screen.getAllByTestId('visual-feed-skeleton-row')).toHaveLength(2);
+    expect(screen.queryByTestId('timeline-loading-more')).not.toBeInTheDocument();
   });
 
   it('falls back to the main image when the preview image fails', () => {

@@ -22,7 +22,6 @@ import { PostText } from '@/molecules/PostText/PostText';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
-import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { ClickableTagsList } from '../../../ClickableTagsList/ClickableTagsList';
 import { PostActionsBar } from '../../../PostActionsBar/PostActionsBar';
@@ -33,6 +32,7 @@ import {
   VISUAL_TILE_COLUMN_SPANS,
 } from './TimelineFeedVisual.helpers';
 import { useVisualFeedTiles } from './useVisualFeedTiles';
+import { VisualTimelinePostsSkeleton } from './VisualTimelinePosts.skeleton';
 import type {
   VisualTileImageProps,
   VisualTileVideoProps,
@@ -326,7 +326,12 @@ export function VisualTimelinePosts({
     !hasPendingFiles;
 
   return (
-    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0 && !showFilteredEmptyState}>
+    <TimelineStateWrapper
+      loading={loading}
+      error={error}
+      hasItems={postIds.length > 0 && !showFilteredEmptyState}
+      loadingComponent={<VisualTimelinePostsSkeleton />}
+    >
       {!showFilteredEmptyState ? (
         <Container data-cy="visual-feed-container">
           <Container
@@ -342,7 +347,7 @@ export function VisualTimelinePosts({
               </Container>
             ))}
 
-            {loadingMore && <TimelineLoadingMore />}
+            {loadingMore && <VisualTimelinePostsSkeleton variant="load-more" />}
 
             {error && postIds.length > 0 && <TimelineError message={error} />}
 
