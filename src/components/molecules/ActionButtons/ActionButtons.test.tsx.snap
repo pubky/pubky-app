@@ -2,7 +2,7 @@
 
 exports[`ActionButtons - Snapshots > matches snapshot with both callbacks 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 sm:flex-row sm:items-center"
+  class="mx-auto w-full flex flex-row gap-3 sm:items-center"
   data-testid="container"
 >
   <button
@@ -78,7 +78,7 @@ exports[`ActionButtons - Snapshots > matches snapshot with both callbacks 1`] = 
 
 exports[`ActionButtons - Snapshots > matches snapshot with create account callback only 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 sm:flex-row sm:items-center"
+  class="mx-auto w-full flex flex-row gap-3 sm:items-center"
   data-testid="container"
 >
   <button
@@ -154,7 +154,7 @@ exports[`ActionButtons - Snapshots > matches snapshot with create account callba
 
 exports[`ActionButtons - Snapshots > matches snapshot with custom className 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 sm:flex-row sm:items-center custom-action-buttons"
+  class="mx-auto w-full flex flex-row gap-3 sm:items-center custom-action-buttons"
   data-testid="container"
 >
   <button
@@ -230,7 +230,7 @@ exports[`ActionButtons - Snapshots > matches snapshot with custom className 1`] 
 
 exports[`ActionButtons - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 sm:flex-row sm:items-center"
+  class="mx-auto w-full flex flex-row gap-3 sm:items-center"
   data-testid="container"
 >
   <button
@@ -306,7 +306,7 @@ exports[`ActionButtons - Snapshots > matches snapshot with default props 1`] = `
 
 exports[`ActionButtons - Snapshots > matches snapshot with sign in callback only 1`] = `
 <div
-  class="mx-auto w-full flex-col flex gap-3 sm:flex-row sm:items-center"
+  class="mx-auto w-full flex flex-row gap-3 sm:items-center"
   data-testid="container"
 >
   <button
