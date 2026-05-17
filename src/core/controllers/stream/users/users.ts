@@ -61,10 +61,17 @@ export class StreamUserController {
   }
 
   /**
-   * Fetch a slice of a user stream directly from Nexus.
-   * This bypasses cache reads but still hydrates missing user details.
+   * Refresh a slice of a user stream from Nexus and update the local cache.
+   *
+   * Always hits the network; the application layer still reads the cached stream so
+   * non-initial pages are merged/deduped with existing entries. Missing user details
+   * are hydrated as a follow-up, mirroring `getOrFetchStreamSlice`.
+   *
+   * Named `refresh*` rather than `fetch*` because the implementation consults local
+   * cache as a merge source — `fetch*` is reserved for network-only paths per
+   * `AGENTS.md`.
    */
-  static async fetchStreamSlice({
+  static async refreshStreamSlice({
     streamId,
     limit = NEXUS_USERS_PER_PAGE,
     skip,
@@ -76,7 +83,7 @@ export class StreamUserController {
       cacheMissUserIds,
       skip: nextSkip,
       isExhausted,
-    } = await UserStreamApplication.fetchStreamSlice({
+    } = await UserStreamApplication.refreshStreamSlice({
       streamId,
       skip,
       limit,

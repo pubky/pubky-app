@@ -311,13 +311,13 @@ describe('StreamUserController', () => {
     });
   });
 
-  describe('fetchStreamSlice', () => {
+  describe('refreshStreamSlice', () => {
     it('should fetch directly from application and hydrate missing users', async () => {
       const streamId = UserStreamTypes.RECOMMENDED;
       const nextPageIds: Pubky[] = ['user-1', 'user-2'];
       const cacheMissUserIds: Pubky[] = ['user-2'];
 
-      const fetchStreamSliceSpy = vi.spyOn(UserStreamApplication, 'fetchStreamSlice').mockResolvedValue({
+      const refreshStreamSliceSpy = vi.spyOn(UserStreamApplication, 'refreshStreamSlice').mockResolvedValue({
         nextPageIds,
         cacheMissUserIds,
         skip: 2,
@@ -325,13 +325,13 @@ describe('StreamUserController', () => {
       });
       const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue();
 
-      const result = await StreamUserController.fetchStreamSlice({
+      const result = await StreamUserController.refreshStreamSlice({
         streamId,
         limit: 10,
         skip: 0,
       });
 
-      expect(fetchStreamSliceSpy).toHaveBeenCalledWith({
+      expect(refreshStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         skip: 0,
         limit: 10,
@@ -351,7 +351,7 @@ describe('StreamUserController', () => {
     it('should return exhausted state without hydrating when Nexus returns no misses', async () => {
       const streamId = UserStreamTypes.RECOMMENDED;
 
-      vi.spyOn(UserStreamApplication, 'fetchStreamSlice').mockResolvedValue({
+      vi.spyOn(UserStreamApplication, 'refreshStreamSlice').mockResolvedValue({
         nextPageIds: [],
         cacheMissUserIds: [],
         skip: undefined,
@@ -359,7 +359,7 @@ describe('StreamUserController', () => {
       });
       const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus');
 
-      const result = await StreamUserController.fetchStreamSlice({
+      const result = await StreamUserController.refreshStreamSlice({
         streamId,
         limit: 10,
         skip: 30,

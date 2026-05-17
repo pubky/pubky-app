@@ -58,11 +58,16 @@ export class UserStreamApplication {
   }
 
   /**
-   * Fetch a user stream slice directly from Nexus and persist it locally.
-   * Use this when the caller intentionally needs fresh candidates instead of
-   * the cache-first `getOrFetchStreamSlice` behavior.
+   * Refresh a user stream slice from Nexus and persist it locally.
+   *
+   * Unlike `getOrFetchStreamSlice`, this always hits the network. It still reads the cached
+   * stream first so that non-initial pages can be merged/deduped against existing entries
+   * (and so that `skip === 0` can replace the cache atomically).
+   *
+   * Use this when the caller intentionally needs fresh candidates instead of the
+   * cache-first `getOrFetchStreamSlice` behavior.
    */
-  static async fetchStreamSlice({
+  static async refreshStreamSlice({
     streamId,
     skip,
     limit,

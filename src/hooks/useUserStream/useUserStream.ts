@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { FileController } from '@/controllers/file/file';
 import { StreamUserController } from '@/controllers/stream/users/users';
@@ -151,55 +151,41 @@ export function useUserStream({
   // Computed Users Array
   // ============================================================================
 
-  const { users, eligibleCount } = useMemo(() => {
-    const eligible: UserStreamUser[] = [];
-    const preservedFollowedUsers = new Set(preserveFollowedUserIds);
+  const eligible: UserStreamUser[] = [];
+  const preservedFollowedUsers = new Set(preserveFollowedUserIds);
 
-    for (const id of userIds) {
-      const details = userDetailsMap.get(id);
-      if (!details) continue;
+  for (const id of userIds) {
+    const details = userDetailsMap.get(id);
+    if (!details) continue;
 
-      const counts = userCountsMap.get(id);
-      const relationship = userRelationshipsMap.get(id);
-      if (excludeFollowing && relationship?.following && !preservedFollowedUsers.has(id)) continue;
+    const counts = userCountsMap.get(id);
+    const relationship = userRelationshipsMap.get(id);
+    if (excludeFollowing && relationship?.following && !preservedFollowedUsers.has(id)) continue;
 
-      const userTags = userTagsMap.get(id);
+    const userTags = userTagsMap.get(id);
 
-      eligible.push({
-        id: details.id,
-        name: details.name,
-        bio: details.bio,
-        image: details.image,
-        avatarUrl: details.image ? FileController.getAvatarUrl(id) : null,
-        status: details.status,
-        counts: counts
-          ? {
-              posts: counts.posts,
-              tags: counts.tags,
-              followers: counts.followers,
-              following: counts.following,
-            }
-          : undefined,
-        isFollowing: relationship?.following ?? false,
-        tags: userTags?.map((tag) => tag.label),
-      });
-    }
+    eligible.push({
+      id: details.id,
+      name: details.name,
+      bio: details.bio,
+      image: details.image,
+      avatarUrl: details.image ? FileController.getAvatarUrl(id) : null,
+      status: details.status,
+      counts: counts
+        ? {
+            posts: counts.posts,
+            tags: counts.tags,
+            followers: counts.followers,
+            following: counts.following,
+          }
+        : undefined,
+      isFollowing: relationship?.following ?? false,
+      tags: userTags?.map((tag) => tag.label),
+    });
+  }
 
-    const eligibleCount = eligible.length;
-    const users = excludeFollowing && !paginated ? eligible.slice(0, effectiveLimit) : eligible;
-
-    return { users, eligibleCount };
-  }, [
-    userIds,
-    userDetailsMap,
-    userCountsMap,
-    userRelationshipsMap,
-    userTagsMap,
-    excludeFollowing,
-    preserveFollowedUserIds,
-    effectiveLimit,
-    paginated,
-  ]);
+  const eligibleCount = eligible.length;
+  const users = excludeFollowing && !paginated ? eligible.slice(0, effectiveLimit) : eligible;
 
   // ============================================================================
   // Fetch Logic
@@ -220,7 +206,7 @@ export function useUserStream({
 
       try {
         const readStreamSlice = options.forceNetwork
-          ? StreamUserController.fetchStreamSlice
+          ? StreamUserController.refreshStreamSlice
           : StreamUserController.getOrFetchStreamSlice;
 
         const {
@@ -291,6 +277,14 @@ export function useUserStream({
     if (!excludeFollowing || isLoading || isLoadingMore || isExhausted || refillAttemptedRef.current) return;
     if (userIds.length === 0) return;
 
+    // Wait for the live queries that feed `eligibleCount` to hydrate. `useLiveQuery` returns the
+    // default empty Map synchronously and only fills it on the next tick, so without these guards
+    // we briefly observe `eligibleCount === 0` for any non-empty `userIds` and would trigger an
+    // unnecessary force-network refill on normal mounts.
+    const detailsHydrated = userIds.some((id) => userDetailsMap.has(id));
+    const relationshipsHydrated = !includeRelationships || userIds.some((id) => userRelationshipsMap.has(id));
+    if (!detailsHydrated || !relationshipsHydrated) return;
+
     const shouldRefill = eligibleCount < effectiveRefillThreshold || (!paginated && eligibleCount < effectiveLimit);
 
     if (!shouldRefill) return;
@@ -303,11 +297,14 @@ export function useUserStream({
     effectiveRefillThreshold,
     excludeFollowing,
     fetchStreamSlice,
+    includeRelationships,
     isExhausted,
     isLoading,
     isLoadingMore,
     paginated,
-    userIds.length,
+    userDetailsMap,
+    userIds,
+    userRelationshipsMap,
   ]);
 
   return {

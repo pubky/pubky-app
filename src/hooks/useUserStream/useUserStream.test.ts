@@ -8,10 +8,10 @@ import {
   DEFAULT_USER_STREAM_PAGE_SIZE,
 } from './useUserStream.constants';
 
-const { mockUseLiveQuery, mockGetOrFetchStreamSlice, mockFetchStreamSlice } = vi.hoisted(() => ({
+const { mockUseLiveQuery, mockGetOrFetchStreamSlice, mockRefreshStreamSlice } = vi.hoisted(() => ({
   mockUseLiveQuery: vi.fn(),
   mockGetOrFetchStreamSlice: vi.fn(),
-  mockFetchStreamSlice: vi.fn(),
+  mockRefreshStreamSlice: vi.fn(),
 }));
 
 // Mock dexie-react-hooks
@@ -23,7 +23,7 @@ vi.mock('dexie-react-hooks', () => ({
 vi.mock('@/controllers/stream/users/users', () => ({
   StreamUserController: {
     getOrFetchStreamSlice: (...args: unknown[]) => mockGetOrFetchStreamSlice(...args),
-    fetchStreamSlice: (...args: unknown[]) => mockFetchStreamSlice(...args),
+    refreshStreamSlice: (...args: unknown[]) => mockRefreshStreamSlice(...args),
   },
 }));
 vi.mock('@/controllers/user/user', () => ({
@@ -72,7 +72,7 @@ describe('useUserStream', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetchStreamSlice.mockResolvedValue({ nextPageIds: [], skip: undefined, isExhausted: true });
+    mockRefreshStreamSlice.mockResolvedValue({ nextPageIds: [], skip: undefined, isExhausted: true });
     // Default mock for useLiveQuery - returns the details map
     mockUseLiveQuery.mockReturnValue(mockUserDetails);
   });
@@ -431,6 +431,83 @@ describe('useUserStream', () => {
       expect(result.current.users[0]?.isFollowing).toBe(true);
     });
 
+    it('does not refill while live queries are still hydrating, even if eligibleCount appears low', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: ids,
+        skip: ids.length,
+        isExhausted: false,
+      });
+      mockRefreshStreamSlice.mockResolvedValue({
+        nextPageIds: [],
+        skip: ids.length,
+        isExhausted: true,
+      });
+      // Both live queries return their default empty Map — simulates the synchronous
+      // pre-resolve render that useLiveQuery exposes on every mount.
+      mockLiveQueryMaps({
+        details: new Map(),
+        relationships: new Map(),
+      });
+
+      renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+          refillThreshold: 6,
+        }),
+      );
+
+      // Wait for the initial fetch to settle, then ensure the refill effect did NOT fire
+      // despite eligibleCount === 0, because the hydration guard is still false.
+      await waitFor(() => {
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
+    });
+
+    it('does not refill until userRelationshipsMap is hydrated when excludeFollowing is on', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: ids,
+        skip: ids.length,
+        isExhausted: false,
+      });
+      mockRefreshStreamSlice.mockResolvedValue({
+        nextPageIds: [],
+        skip: ids.length,
+        isExhausted: true,
+      });
+      // Details are hydrated but relationships are not — exposes the second race
+      // where eligibleCount can briefly look high (no users filtered) without the
+      // relationships data needed to make that decision.
+      mockLiveQueryMaps({
+        details: createDetailsMap(ids),
+        relationships: new Map(),
+      });
+
+      renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+          refillThreshold: 6,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
+    });
+
     it('makes one bounded refill request when eligible recommendations fall below threshold', async () => {
       const ids = ['user-1', 'user-2', 'user-3'];
       mockGetOrFetchStreamSlice.mockResolvedValue({
@@ -438,7 +515,7 @@ describe('useUserStream', () => {
         skip: ids.length,
         isExhausted: false,
       });
-      mockFetchStreamSlice.mockResolvedValue({
+      mockRefreshStreamSlice.mockResolvedValue({
         nextPageIds: ['user-4', 'user-5'],
         skip: 5,
         isExhausted: true,
@@ -459,10 +536,10 @@ describe('useUserStream', () => {
       );
 
       await waitFor(() => {
-        expect(mockFetchStreamSlice).toHaveBeenCalledTimes(1);
+        expect(mockRefreshStreamSlice).toHaveBeenCalledTimes(1);
       });
 
-      expect(mockFetchStreamSlice).toHaveBeenCalledWith({
+      expect(mockRefreshStreamSlice).toHaveBeenCalledWith({
         streamId: UserStreamTypes.RECOMMENDED,
         limit: DEFAULT_USER_STREAM_BUFFER_SIZE,
         skip: ids.length,

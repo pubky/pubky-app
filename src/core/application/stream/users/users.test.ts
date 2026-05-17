@@ -332,14 +332,14 @@ describe('UserStreamApplication', () => {
     });
   });
 
-  describe('fetchStreamSlice', () => {
+  describe('refreshStreamSlice', () => {
     it('should bypass cache and replace the cached stream on first page refresh', async () => {
       const streamId = UserStreamTypes.RECOMMENDED;
       await LocalStreamUsersService.upsert({ streamId, stream: ['old-user'] as Pubky[] });
 
       vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(['new-user-1', 'new-user-2'] as Pubky[]);
 
-      const result = await UserStreamApplication.fetchStreamSlice({
+      const result = await UserStreamApplication.refreshStreamSlice({
         streamId,
         skip: 0,
         limit: 2,
@@ -358,7 +358,7 @@ describe('UserStreamApplication', () => {
 
       vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue([]);
 
-      const result = await UserStreamApplication.fetchStreamSlice({
+      const result = await UserStreamApplication.refreshStreamSlice({
         streamId,
         skip: 0,
         limit: 10,
@@ -377,7 +377,7 @@ describe('UserStreamApplication', () => {
 
       vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(['user-2', 'user-3'] as Pubky[]);
 
-      await UserStreamApplication.fetchStreamSlice({
+      await UserStreamApplication.refreshStreamSlice({
         streamId,
         skip: 2,
         limit: 2,
@@ -392,7 +392,7 @@ describe('UserStreamApplication', () => {
       const streamId = UserStreamTypes.RECOMMENDED;
       vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(['user-1'] as Pubky[]);
 
-      const result = await UserStreamApplication.fetchStreamSlice({
+      const result = await UserStreamApplication.refreshStreamSlice({
         streamId,
         skip: 0,
         limit: 10,
