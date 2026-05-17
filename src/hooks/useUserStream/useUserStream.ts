@@ -187,6 +187,16 @@ export function useUserStream({
   const eligibleCount = eligible.length;
   const users = excludeFollowing && !paginated ? eligible.slice(0, effectiveLimit) : eligible;
 
+  // Track whether the live queries that feed eligibility have hydrated for the current `userIds`.
+  // `useLiveQuery` returns its default empty Map synchronously and only fills it on the next tick,
+  // so we use these flags to avoid two visible UX issues:
+  //   1. an unnecessary force-network refill while `eligibleCount` is transiently 0 (refill effect),
+  //   2. a "first three users blink to a different three" when `excludeFollowing` is on and the
+  //      relationships map hydrates a tick after the details map (consumer-facing `isLoading`).
+  const detailsHydrated = userIds.length === 0 || userIds.some((id) => userDetailsMap.has(id));
+  const relationshipsHydrated =
+    !includeRelationships || userIds.length === 0 || userIds.some((id) => userRelationshipsMap.has(id));
+
   // ============================================================================
   // Fetch Logic
   // ============================================================================
@@ -277,12 +287,8 @@ export function useUserStream({
     if (!excludeFollowing || isLoading || isLoadingMore || isExhausted || refillAttemptedRef.current) return;
     if (userIds.length === 0) return;
 
-    // Wait for the live queries that feed `eligibleCount` to hydrate. `useLiveQuery` returns the
-    // default empty Map synchronously and only fills it on the next tick, so without these guards
-    // we briefly observe `eligibleCount === 0` for any non-empty `userIds` and would trigger an
-    // unnecessary force-network refill on normal mounts.
-    const detailsHydrated = userIds.some((id) => userDetailsMap.has(id));
-    const relationshipsHydrated = !includeRelationships || userIds.some((id) => userRelationshipsMap.has(id));
+    // Wait for the live queries that feed `eligibleCount` to hydrate before deciding to refill
+    // (see the comment on `detailsHydrated` / `relationshipsHydrated` above).
     if (!detailsHydrated || !relationshipsHydrated) return;
 
     const shouldRefill = eligibleCount < effectiveRefillThreshold || (!paginated && eligibleCount < effectiveLimit);
@@ -292,25 +298,29 @@ export function useUserStream({
     refillAttemptedRef.current = true;
     void fetchStreamSlice(false, { forceNetwork: true });
   }, [
+    detailsHydrated,
     eligibleCount,
     effectiveLimit,
     effectiveRefillThreshold,
     excludeFollowing,
     fetchStreamSlice,
-    includeRelationships,
     isExhausted,
     isLoading,
     isLoadingMore,
     paginated,
-    userDetailsMap,
-    userIds,
-    userRelationshipsMap,
+    relationshipsHydrated,
+    userIds.length,
   ]);
+
+  // When `excludeFollowing` is on, the visible users depend on the relationships live query.
+  // Keep skeletons up until BOTH details and relationships are hydrated, otherwise the consumer
+  // briefly sees an unfiltered slice of the buffer that gets reshuffled once relationships arrive.
+  const isHydrating = excludeFollowing && userIds.length > 0 && !(detailsHydrated && relationshipsHydrated);
 
   return {
     users,
     userIds,
-    isLoading,
+    isLoading: isLoading || isHydrating,
     isLoadingMore,
     hasMore,
     error,

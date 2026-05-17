@@ -470,6 +470,42 @@ describe('useUserStream', () => {
       expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
     });
 
+    it('keeps isLoading true while relationships are still hydrating with excludeFollowing on', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: ids,
+        skip: ids.length,
+        isExhausted: false,
+      });
+      mockRefreshStreamSlice.mockResolvedValue({
+        nextPageIds: [],
+        skip: ids.length,
+        isExhausted: true,
+      });
+      // Details arrived but relationships hasn't — without the hydration gate the consumer
+      // would see an unfiltered slice of the buffer for one render and then watch it shuffle
+      // to the filtered slice once relationships catch up.
+      mockLiveQueryMaps({
+        details: createDetailsMap(ids),
+        relationships: new Map(),
+      });
+
+      const { result } = renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+      });
+
+      expect(result.current.isLoading).toBe(true);
+    });
+
     it('does not refill until userRelationshipsMap is hydrated when excludeFollowing is on', async () => {
       const ids = ['user-1', 'user-2', 'user-3'];
       mockGetOrFetchStreamSlice.mockResolvedValue({
