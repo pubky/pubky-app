@@ -63,6 +63,7 @@ export function QuickReply({
     handleDragLeave,
     handleDragOver,
     handleDrop,
+    handlePaste,
     setTags,
     // Mention autocomplete
     mentionUsers,
@@ -155,6 +156,7 @@ export function QuickReply({
                 onChange={handleChange}
                 onFocus={handleExpand}
                 onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
                 rows={1}
                 disabled={isSubmitting}
                 data-testid="quick-reply-textarea"
