@@ -1,15 +1,18 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WhoToFollowSidebar } from './WhoToFollowSidebar';
 
 const hooksMocks = vi.hoisted(() => ({
   useUserStream: vi.fn(),
+  toggleFollow: vi.fn(),
+  pathname: '/',
 }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),
   }),
+  usePathname: () => hooksMocks.pathname,
 }));
 
 vi.mock('@/hooks/useUserStream/useUserStream', () => ({
@@ -18,15 +21,36 @@ vi.mock('@/hooks/useUserStream/useUserStream', () => ({
 
 vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: () => ({
-    toggleFollow: vi.fn(),
+    toggleFollow: hooksMocks.toggleFollow,
     isUserLoading: () => false,
   }),
+}));
+
+vi.mock('@/organisms/UserListItem/UserListItem', () => ({
+  UserListItem: ({
+    user,
+    onFollowClick,
+  }: {
+    user: { id: string; name: string; isFollowing?: boolean };
+    onFollowClick?: (userId: string, isFollowing: boolean) => void;
+  }) => (
+    <button
+      data-testid="user-list-item"
+      data-user-id={user.id}
+      type="button"
+      onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false)}
+    >
+      {user.name}
+    </button>
+  ),
 }));
 
 describe('WhoToFollowSidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hooksMocks.useUserStream.mockReset();
+    hooksMocks.toggleFollow.mockResolvedValue(undefined);
+    hooksMocks.pathname = '/';
   });
 
   it('shows loading skeletons while stream is loading', () => {
@@ -67,6 +91,57 @@ describe('WhoToFollowSidebar', () => {
     expect(screen.getByText('User One')).toBeInTheDocument();
     expect(screen.getByText('User Two')).toBeInTheDocument();
     expect(screen.getByText('User Three')).toBeInTheDocument();
+  });
+
+  it('passes clicked users as preserved before follow resolves', async () => {
+    hooksMocks.toggleFollow.mockReturnValue(new Promise(() => {}));
+    hooksMocks.useUserStream.mockReturnValue({
+      users: [{ id: 'user-1', name: 'User One', image: null, avatarUrl: null, isFollowing: false }],
+      userIds: ['user-1'],
+      isLoading: false,
+      isLoadingMore: false,
+      hasMore: false,
+      error: null,
+      loadMore: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    render(<WhoToFollowSidebar />);
+    fireEvent.click(screen.getByText('User One'));
+
+    expect(hooksMocks.toggleFollow).toHaveBeenCalledWith('user-1', false);
+    await waitFor(() => {
+      expect(hooksMocks.useUserStream).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          preserveFollowedUserIds: ['user-1'],
+        }),
+      );
+    });
+  });
+
+  it('rolls back preserved users when follow fails', async () => {
+    hooksMocks.toggleFollow.mockRejectedValue(new Error('follow failed'));
+    hooksMocks.useUserStream.mockReturnValue({
+      users: [{ id: 'user-1', name: 'User One', image: null, avatarUrl: null, isFollowing: false }],
+      userIds: ['user-1'],
+      isLoading: false,
+      isLoadingMore: false,
+      hasMore: false,
+      error: null,
+      loadMore: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    render(<WhoToFollowSidebar />);
+    fireEvent.click(screen.getByText('User One'));
+
+    await waitFor(() => {
+      expect(hooksMocks.useUserStream).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          preserveFollowedUserIds: [],
+        }),
+      );
+    });
   });
 });
 

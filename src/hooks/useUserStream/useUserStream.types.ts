@@ -36,6 +36,14 @@ export interface UseUserStreamParams {
   includeTags?: boolean;
   /** Enable infinite scroll pagination. Default: false */
   paginated?: boolean;
+  /** Hide users whose local relationship says the viewer already follows them. Default: false */
+  excludeFollowing?: boolean;
+  /** Followed users to keep visible even when excludeFollowing is enabled. */
+  preserveFollowedUserIds?: Pubky[];
+  /** Minimum candidate IDs to request/cache per stream fetch. Defaults to the visible limit. */
+  bufferSize?: number;
+  /** Refill once when the local candidate buffer drops below this size. */
+  refillThreshold?: number;
 }
 
 export interface UseUserStreamResult {
@@ -56,3 +64,7 @@ export interface UseUserStreamResult {
   /** Re-fetch the users */
   refetch: () => Promise<void>;
 }
+
+export type FetchUserStreamSliceOptions = {
+  forceNetwork?: boolean;
+};

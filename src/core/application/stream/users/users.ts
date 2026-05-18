@@ -41,19 +41,48 @@ export class UserStreamApplication {
     skip,
     limit,
     viewerId,
+    allowPartialCache,
   }: TFetchUserStreamChunkParams): Promise<TUserStreamChunkResponse> {
     // Try cache first
     const cachedStream = await LocalStreamUsersService.findById(streamId);
     if (cachedStream) {
-      const nextPageIds = this.getStreamFromCache({ skip, limit, cachedStream });
+      const nextPageIds = this.getStreamFromCache({ skip, limit, cachedStream, allowPartial: allowPartialCache });
       if (nextPageIds) {
         // Cache hit - return undefined skip to signal cache source
-        return { nextPageIds, cacheMissUserIds: [], skip: undefined };
+        return { nextPageIds, cacheMissUserIds: [], skip: undefined, isExhausted: false };
       }
     }
 
     // Cache miss - fetch from Nexus
     return await this.fetchStreamFromNexus({ streamId, skip, limit, viewerId, cachedStream });
+  }
+
+  /**
+   * Refresh a user stream slice from Nexus and persist it locally.
+   *
+   * Unlike `getOrFetchStreamSlice`, this always hits the network. It still reads the cached
+   * stream first so that non-initial pages can be merged/deduped against existing entries
+   * (and so that `skip === 0` can replace the cache atomically).
+   *
+   * Use this when the caller intentionally needs fresh candidates instead of the
+   * cache-first `getOrFetchStreamSlice` behavior.
+   */
+  static async refreshStreamSlice({
+    streamId,
+    skip,
+    limit,
+    viewerId,
+  }: TFetchUserStreamChunkParams): Promise<TUserStreamChunkResponse> {
+    const cachedStream = await LocalStreamUsersService.findById(streamId);
+
+    return await this.fetchStreamFromNexus({
+      streamId,
+      skip,
+      limit,
+      viewerId,
+      cachedStream,
+      replaceCache: skip === 0,
+    });
   }
 
   /**
@@ -91,6 +120,7 @@ export class UserStreamApplication {
     limit = NEXUS_USERS_PER_PAGE,
     viewerId,
     cachedStream,
+    replaceCache = false,
   }: TFetchStreamFromNexusParams): Promise<TUserStreamChunkResponse> {
     // Fetch user IDs from Nexus
     const userIds = await NexusUserStreamService.fetch({
@@ -98,14 +128,19 @@ export class UserStreamApplication {
       params: { skip, limit, viewer_id: viewerId },
     });
 
+    const isExhausted = userIds.length < limit;
+
     // Handle empty response
     if (userIds.length === 0) {
-      return { nextPageIds: [], cacheMissUserIds: [], skip: undefined };
+      if (replaceCache) {
+        await LocalStreamUsersService.upsert({ streamId, stream: [] });
+      }
+      return { nextPageIds: [], cacheMissUserIds: [], skip: undefined, isExhausted };
     }
 
     // Upsert stream (append to existing or create new)
     let stream = userIds;
-    if (cachedStream) {
+    if (cachedStream && !replaceCache) {
       // Filter out duplicates before appending
       const newUserIds = userIds.filter((id) => !cachedStream.stream.includes(id));
       stream = [...cachedStream.stream, ...newUserIds];
@@ -118,7 +153,7 @@ export class UserStreamApplication {
     // Calculate next skip value for pagination
     const nextSkip = skip + userIds.length;
 
-    return { nextPageIds: userIds, cacheMissUserIds, skip: nextSkip };
+    return { nextPageIds: userIds, cacheMissUserIds, skip: nextSkip, isExhausted };
   }
 
   /**
@@ -127,11 +162,20 @@ export class UserStreamApplication {
    *
    * @private
    */
-  private static getStreamFromCache({ skip = 0, limit, cachedStream }: TCacheUserStreamParams): Pubky[] | null {
+  private static getStreamFromCache({
+    skip = 0,
+    limit,
+    cachedStream,
+    allowPartial = false,
+  }: TCacheUserStreamParams): Pubky[] | null {
     // Check if cache has enough data for the requested range
     const endIndex = skip + limit;
     if (cachedStream.stream.length >= endIndex) {
       return cachedStream.stream.slice(skip, endIndex);
+    }
+
+    if (allowPartial && cachedStream.stream.length > skip) {
+      return cachedStream.stream.slice(skip);
     }
 
     // Not enough data in cache

@@ -46,9 +46,9 @@ vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => {
   };
 });
 
-vi.mock('@/organisms/WhoToFollowPage/WhoToFollowPageMain', () => {
+vi.mock('@/organisms/WhoToFollow/WhoToFollow', () => {
   return {
-    WhoToFollowPageMain: () => <div data-testid="who-to-follow-page-main">WhoToFollowPageMain</div>,
+    WhoToFollow: () => <div data-testid="who-to-follow">WhoToFollow</div>,
   };
 });
 
@@ -79,9 +79,9 @@ describe('WhoToFollowPage', () => {
     expect(screen.getByTestId('content-layout')).toBeInTheDocument();
   });
 
-  it('renders WhoToFollowPageMain', () => {
+  it('renders WhoToFollow', () => {
     render(<WhoToFollowPage />);
-    expect(screen.getByTestId('who-to-follow-page-main')).toBeInTheDocument();
+    expect(screen.getByTestId('who-to-follow')).toBeInTheDocument();
   });
 
   it('renders FilterSortWhoToFollow in left sidebar and drawer', () => {
