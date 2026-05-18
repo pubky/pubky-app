@@ -14,6 +14,7 @@ export type TReadUserStreamChunkParams = {
   streamId: UserStreamId;
   limit: number;
   skip: number;
+  allowPartialCache?: boolean;
 };
 
 /**
@@ -31,6 +32,7 @@ export type TFetchUserStreamChunkParams = TReadUserStreamChunkParams & {
 export type TReadUserStreamChunkResponse = {
   nextPageIds: Pubky[];
   skip: number | undefined;
+  isExhausted: boolean;
 };
 
 /**
@@ -40,6 +42,7 @@ export type TUserStreamChunkResponse = {
   nextPageIds: Pubky[];
   cacheMissUserIds: Pubky[];
   skip: number | undefined;
+  isExhausted: boolean;
 };
 
 /**
@@ -52,6 +55,7 @@ export type TMissingUsersParams = {
 
 export type TFetchStreamFromNexusParams = TFetchUserStreamChunkParams & {
   cachedStream?: { stream: Pubky[] } | null;
+  replaceCache?: boolean;
 };
 
 /**

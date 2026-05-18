@@ -4,6 +4,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserConnectionsModel } from '@/models/user/connections/userConnections';
 import { UserConnectionsFields } from '@/models/user/connections/userConnections.schema';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
@@ -223,6 +224,10 @@ export class LocalFollowService {
       streamOp.call(LocalStreamUsersService, `${follower}:${UserStreamReach.FOLLOWING}`, [followee]),
       streamOp.call(LocalStreamUsersService, `${followee}:${UserStreamReach.FOLLOWERS}`, [follower]),
     );
+
+    if (isFollowing) {
+      ops.push(LocalStreamUsersService.removeFromStream(UserStreamTypes.RECOMMENDED, [followee]));
+    }
 
     // Update friends streams if friendship status changed
     if (friendshipChanged) {
