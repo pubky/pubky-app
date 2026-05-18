@@ -19,7 +19,6 @@ const MIME_TYPES_WITH_CANVAS_SANITIZATION = new Set(['image/jpeg', 'image/png', 
 const MIME_TYPES_WITH_LOSSY_REENCODING = new Set(['image/jpeg', 'image/webp']);
 const LOSSY_IMAGE_ENCODE_QUALITY = 1;
 const FILE_HEADER_BYTES_LENGTH = 512;
-const TEXT_DECODER = new TextDecoder();
 
 function getFileExtension(file: File): string | null {
   const parts = file.name.split('.');
@@ -76,15 +75,6 @@ function isWebpSignature(bytes: Uint8Array): boolean {
   );
 }
 
-function isSvgSignature(bytes: Uint8Array): boolean {
-  const text = TEXT_DECODER.decode(bytes);
-  const normalized = text
-    .replace(/^\uFEFF/, '')
-    .trimStart()
-    .toLowerCase();
-  return normalized.startsWith('<svg') || (normalized.startsWith('<?xml') && normalized.includes('<svg'));
-}
-
 async function getImageMimeTypeFromMagicBytes(file: File): Promise<string | null> {
   const header = new Uint8Array(await file.slice(0, FILE_HEADER_BYTES_LENGTH).arrayBuffer());
   if (isJpegSignature(header)) {
@@ -98,9 +88,6 @@ async function getImageMimeTypeFromMagicBytes(file: File): Promise<string | null
   }
   if (isGifSignature(header)) {
     return 'image/gif';
-  }
-  if (isSvgSignature(header)) {
-    return 'image/svg+xml';
   }
   return null;
 }
@@ -197,13 +184,18 @@ async function sanitizeRasterImage(file: File, mimeType: string): Promise<Blob> 
  * Removes sensitive metadata from supported image formats before upload.
  * - JPEG/PNG/WebP: re-encodes via canvas to strip metadata (fail-closed on errors)
  * - JPEG/WebP: encoded at quality 1.0 to avoid browser default quality reduction
- * - GIF/SVG and other image types: keep bytes to avoid visual regressions
+ * - GIF and other raster types: keep bytes to avoid visual regressions
+ * - SVG: rejected — cannot be safely sanitized without a full XML sanitizer
  * - All image types: replace original filename with an obfuscated one
  */
 export async function stripImageMetadata(file: File): Promise<File> {
   const imageMimeType = await detectImageMimeType(file);
   if (!imageMimeType) {
     return file;
+  }
+
+  if (imageMimeType === 'image/svg+xml') {
+    throw new Error('SVG uploads are not supported');
   }
 
   const obfuscatedName = generateObfuscatedImageFileName(file, imageMimeType);

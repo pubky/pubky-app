@@ -128,20 +128,43 @@ describe('stripImageMetadata', () => {
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['image/gif', 'animated.gif', 'gif'],
-    ['image/svg+xml', 'icon.svg', 'svg'],
-  ])('keeps %s bytes unchanged while obfuscating filename', async (mimeType, fileName, extension) => {
-    const inputFile = new File(['original-content'], fileName, { type: mimeType });
+  it('keeps image/gif bytes unchanged while obfuscating filename', async () => {
+    const inputFile = new File(['original-content'], 'animated.gif', { type: 'image/gif' });
 
     const result = await stripImageMetadata(inputFile);
 
     expect(result).toBeInstanceOf(File);
     expect(result).not.toBe(inputFile);
-    expect(result.type).toBe(mimeType);
-    expect(result.name).not.toBe(fileName);
-    expect(result.name).toMatch(new RegExp(`^[a-z0-9]+\\.${extension}$`));
+    expect(result.type).toBe('image/gif');
+    expect(result.name).not.toBe('animated.gif');
+    expect(result.name).toMatch(/^[a-z0-9]+\.gif$/);
     expect(await result.text()).toBe(await inputFile.text());
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('throws for SVG files declared via file.type', async () => {
+    const inputFile = new File(['<svg><script>alert(1)</script></svg>'], 'icon.svg', { type: 'image/svg+xml' });
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('SVG uploads are not supported');
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('throws for SVG files declared via file extension', async () => {
+    const inputFile = new File(['<svg><script>alert(1)</script></svg>'], 'icon.svg', { type: '' });
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('SVG uploads are not supported');
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('does not auto-detect SVG from magic bytes', async () => {
+    const svgBytes = new TextEncoder().encode(
+      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+    );
+    const inputFile = new File([svgBytes], 'upload', { type: '' });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result).toBe(inputFile);
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
