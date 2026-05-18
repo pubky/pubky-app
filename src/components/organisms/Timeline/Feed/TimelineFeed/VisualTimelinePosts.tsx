@@ -306,24 +306,23 @@ export function VisualTimelinePosts({
 }: VisualTimelinePostsProps) {
   const { navigateToPost } = usePostNavigation();
   const { rows, hasPendingTiles, hasPendingFiles } = useVisualFeedTiles({ postIds, hasMore });
+  const initialBackfillInFlightRef = React.useRef(false);
   const hasRows = rows.length > 0;
-  const shouldBackfillInitialRows =
-    !loading &&
-    !loadingMore &&
-    !error &&
-    postIds.length > 0 &&
-    !hasRows &&
-    hasMore &&
-    !hasPendingTiles &&
-    !hasPendingFiles;
+  const shouldBackfillInitialRows = !loading && !loadingMore && !error && postIds.length > 0 && !hasRows && hasMore;
   const isResolvingInitialRows =
     !error && postIds.length > 0 && !hasRows && (hasMore || loadingMore || hasPendingTiles || hasPendingFiles);
   const isInitialLoading = loading || isResolvingInitialRows;
 
   useEffect(() => {
     if (!shouldBackfillInitialRows) return;
+    if (initialBackfillInFlightRef.current) return;
 
-    void loadMore();
+    initialBackfillInFlightRef.current = true;
+    void Promise.resolve()
+      .then(() => loadMore())
+      .finally(() => {
+        initialBackfillInFlightRef.current = false;
+      });
   }, [loadMore, shouldBackfillInitialRows]);
 
   const { sentinelRef } = useInfiniteScroll({
@@ -365,8 +364,6 @@ export function VisualTimelinePosts({
                 ))}
               </Container>
             ))}
-
-            {loadingMore && <VisualTimelinePostsSkeleton variant="load-more" />}
 
             {error && postIds.length > 0 && <TimelineError message={error} />}
 

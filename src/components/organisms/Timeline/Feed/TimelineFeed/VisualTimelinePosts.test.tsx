@@ -379,6 +379,34 @@ describe('VisualTimelinePosts', () => {
     });
   });
 
+  it('backfills initial rows while tile probes are pending', async () => {
+    const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: true,
+      hasPendingFiles: false,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={true}
+        loadMore={mockLoadMore}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockLoadMore).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('renders visual grid skeletons during initial loading', () => {
     render(
       <VisualTimelinePosts
@@ -397,7 +425,7 @@ describe('VisualTimelinePosts', () => {
     expect(screen.queryByTestId('timeline-loading-more')).not.toBeInTheDocument();
   });
 
-  it('keeps visual grid skeletons while loading more posts', () => {
+  it('does not add full-row skeletons while loading more posts', () => {
     render(
       <VisualTimelinePosts
         postIds={['author:post1']}
@@ -410,8 +438,7 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
-    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
-    expect(screen.getAllByTestId('visual-feed-skeleton-row')).toHaveLength(2);
+    expect(screen.queryByTestId('visual-feed-skeleton')).not.toBeInTheDocument();
     expect(screen.queryByTestId('timeline-loading-more')).not.toBeInTheDocument();
   });
 
