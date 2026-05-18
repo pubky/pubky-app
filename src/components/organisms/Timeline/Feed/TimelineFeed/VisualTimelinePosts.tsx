@@ -46,7 +46,7 @@ function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();
 }
 
-function VisualTileVideo({ tile }: VisualTileVideoProps) {
+function VisualTileVideo({ tile, onMediaLoad }: VisualTileVideoProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const { ref, isVisible } = useViewportObserver({
     rootMargin: '300px 0px 300px 0px',
@@ -89,6 +89,8 @@ function VisualTileVideo({ tile }: VisualTileVideoProps) {
         playsInline
         pauseVideo={!isVisible}
         preload="metadata"
+        onLoadedData={onMediaLoad}
+        onCanPlay={onMediaLoad}
         onTimeUpdate={handleTimeUpdate}
         className="h-full w-full rounded-none object-cover"
       />
@@ -96,7 +98,7 @@ function VisualTileVideo({ tile }: VisualTileVideoProps) {
   );
 }
 
-function VisualTileImage({ tile }: VisualTileImageProps) {
+function VisualTileImage({ tile, onMediaLoad }: VisualTileImageProps) {
   const [currentSrc, setCurrentSrc] = React.useState(tile.previewSrc);
   const hasFallenBackToMainRef = React.useRef(tile.previewSrc === tile.mainSrc);
 
@@ -114,7 +116,16 @@ function VisualTileImage({ tile }: VisualTileImageProps) {
     setCurrentSrc(tile.mainSrc);
   }, [tile.mainSrc, tile.previewSrc]);
 
-  return <Image src={currentSrc} alt={tile.attachmentName} fill className="object-cover" onError={handleError} />;
+  return (
+    <Image
+      src={currentSrc}
+      alt={tile.attachmentName}
+      fill
+      className="object-cover"
+      onError={handleError}
+      onLoad={onMediaLoad}
+    />
+  );
 }
 
 function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: VisualTimelineTileOverlayProps) {
@@ -220,6 +231,11 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
 function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps) {
   const isTouchDevice = useIsTouchDevice();
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(tile.postId);
+  const [mediaLoaded, setMediaLoaded] = React.useState(tile.isBlurred);
+
+  useEffect(() => {
+    setMediaLoaded(tile.isBlurred);
+  }, [tile.id, tile.isBlurred, tile.mainSrc, tile.previewSrc]);
 
   const handleNavigate = React.useCallback(() => {
     onNavigate(tile.postId);
@@ -247,15 +263,18 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
         aria-label={`Open post ${tile.postId}`}
         onClick={handleNavigate}
         onKeyDown={handleKeyDown}
-        className="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 bg-black focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+        className={cn(
+          'group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none',
+          mediaLoaded ? 'bg-black' : 'animate-pulse bg-white/8',
+        )}
         style={{ aspectRatio: VISUAL_TILE_ASPECT_RATIOS[size] }}
       >
         {tile.isBlurred ? (
           <PostContentBlurred postId={tile.postId} className="h-full rounded-none" />
         ) : tile.mediaKind === 'video' ? (
-          <VisualTileVideo tile={tile} />
+          <VisualTileVideo tile={tile} onMediaLoad={() => setMediaLoaded(true)} />
         ) : (
-          <VisualTileImage tile={tile} />
+          <VisualTileImage tile={tile} onMediaLoad={() => setMediaLoaded(true)} />
         )}
 
         {!isTouchDevice && !tile.isBlurred ? (

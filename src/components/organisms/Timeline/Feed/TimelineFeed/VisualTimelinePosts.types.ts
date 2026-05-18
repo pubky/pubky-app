@@ -11,10 +11,12 @@ export interface VisualTimelinePostsProps {
 
 export interface VisualTileVideoProps {
   tile: VisualTile;
+  onMediaLoad: () => void;
 }
 
 export interface VisualTileImageProps {
   tile: VisualTile;
+  onMediaLoad: () => void;
 }
 
 export interface VisualTimelineTileOverlayProps {

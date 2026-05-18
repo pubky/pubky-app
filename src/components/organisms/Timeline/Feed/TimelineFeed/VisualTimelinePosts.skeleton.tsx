@@ -32,7 +32,7 @@ function VisualTimelineSkeletonTile({ size }: { size: VisualTileSize }) {
     >
       <Skeleton
         data-testid="visual-feed-skeleton-tile"
-        className="h-full w-full animate-none rounded-md border border-white/10 bg-white/8"
+        className="h-full w-full rounded-md border border-white/10 bg-white/8"
         style={{ aspectRatio: VISUAL_TILE_ASPECT_RATIOS[size] }}
       />
     </Container>

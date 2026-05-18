@@ -17,7 +17,7 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for a populated visu
       >
         <div
           aria-label="Open post author:post1"
-          class="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 bg-black focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+          class="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none animate-pulse bg-white/8"
           data-cy="visual-feed-tile"
           role="button"
           style="aspect-ratio: 588 / 384;"
@@ -126,7 +126,7 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for touch devices wi
       >
         <div
           aria-label="Open post author:post1"
-          class="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 bg-black focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+          class="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none animate-pulse bg-white/8"
           data-cy="visual-feed-tile"
           role="button"
           style="aspect-ratio: 588 / 384;"
