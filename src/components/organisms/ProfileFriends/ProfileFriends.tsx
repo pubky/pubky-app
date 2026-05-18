@@ -51,7 +51,7 @@ export function ProfileFriends() {
 
   if (isLoading) {
     return (
-      <Container className="mt-6 gap-4 lg:mt-0">
+      <Container className="gap-4">
         <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
           Friends
         </Heading>
@@ -69,14 +69,14 @@ export function ProfileFriends() {
 
   if (connections.length === 0) {
     return (
-      <Container className="mt-6 lg:mt-0">
+      <Container>
         <FriendsEmpty />
       </Container>
     );
   }
 
   return (
-    <Container className="mt-6 gap-4 lg:mt-0">
+    <Container className="gap-4">
       <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
         Friends {count > 0 && `(${count})`}
       </Heading>

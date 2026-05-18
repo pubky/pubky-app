@@ -59,6 +59,7 @@ export function ProfilePageLayout({
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const postsFeedRef = useRef<HTMLDivElement>(null);
   const lastAutoScrolledPostsKeyRef = useRef<string | null>(null);
+  const lastTopResetKeyRef = useRef<string | null>(null);
   const showMobilePostsProfileHeader = !isOwnProfile && activePage === PROFILE_PAGE_TYPES.POSTS;
   const shouldAutoScrollToPostsFeed = showMobilePostsProfileHeader && isMobile && !isLoading;
   const profileHeaderWrapperClassName = showMobilePostsProfileHeader
@@ -106,6 +107,21 @@ export function ProfilePageLayout({
     lastAutoScrolledPostsKeyRef.current = userId;
   }, [shouldAutoScrollToPostsFeed, userId]);
 
+  useLayoutEffect(() => {
+    if (!isMobile || isLoading || activePage === PROFILE_PAGE_TYPES.POSTS) {
+      lastTopResetKeyRef.current = null;
+      return;
+    }
+
+    const topResetKey = `${userId}:${activePage}`;
+    if (lastTopResetKeyRef.current === topResetKey) {
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    lastTopResetKeyRef.current = topResetKey;
+  }, [activePage, isLoading, isMobile, userId]);
+
   return (
     <>
       <MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} />
@@ -144,7 +160,7 @@ export function ProfilePageLayout({
                 ref={postsFeedRef}
                 data-cy="profile-posts-feed"
                 overrideDefaults={true}
-                className="min-h-[calc(100dvh_-_var(--header-height-mobile))] min-w-0 lg:contents"
+                className="min-h-[calc(100dvh-var(--header-height-mobile))] min-w-0 lg:contents"
               >
                 {children}
               </Container>

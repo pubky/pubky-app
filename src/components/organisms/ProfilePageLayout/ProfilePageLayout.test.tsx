@@ -332,7 +332,7 @@ describe('ProfilePageLayout', () => {
     );
 
     const postsFeed = container.querySelector<HTMLElement>('[data-cy="profile-posts-feed"]');
-    expect(postsFeed).toHaveClass('min-h-[calc(100dvh_-_var(--header-height-mobile))]', 'min-w-0');
+    expect(postsFeed).toHaveClass('min-h-[calc(100dvh-var(--header-height-mobile))]', 'min-w-0');
     expect(postsFeed?.style.scrollMarginTop).toBe('144px');
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' });
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
@@ -402,6 +402,41 @@ describe('ProfilePageLayout', () => {
     );
 
     expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it('resets mobile scroll to top when leaving other-user posts for another profile tab', () => {
+    mockIsMobile.mockReturnValue(true);
+    const scrollIntoView = vi.fn();
+    const scrollTo = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    vi.stubGlobal('scrollTo', scrollTo);
+
+    const props = {
+      ...defaultProps,
+      activePage: PROFILE_PAGE_TYPES.POSTS,
+      filterBarActivePage: PROFILE_PAGE_TYPES.POSTS,
+      isOwnProfile: false,
+    };
+    const { rerender } = render(
+      <ProfilePageLayout {...props}>
+        <div data-testid="posts-content">Posts Content</div>
+      </ProfilePageLayout>,
+    );
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    rerender(
+      <ProfilePageLayout
+        {...props}
+        activePage={PROFILE_PAGE_TYPES.FOLLOWERS}
+        filterBarActivePage={PROFILE_PAGE_TYPES.FOLLOWERS}
+      >
+        <div data-testid="followers-content">Followers Content</div>
+      </ProfilePageLayout>,
+    );
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+    expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 
   it('does not add the mobile posts header for own-profile posts', () => {
