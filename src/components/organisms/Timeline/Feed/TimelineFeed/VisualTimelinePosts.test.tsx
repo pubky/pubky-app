@@ -317,6 +317,7 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
   });
 
   it('does not render the filtered empty state while file metadata is being fetched', () => {
@@ -340,6 +341,42 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+  });
+
+  it('keeps the initial skeleton and backfills while the first visual rows are unavailable', async () => {
+    const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={true}
+        loadMore={mockLoadMore}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+    expect(mockUseInfiniteScroll).toHaveBeenCalledWith({
+      onLoadMore: expect.any(Function),
+      hasMore: false,
+      isLoading: true,
+      threshold: 3000,
+      debounceMs: 20,
+    });
+
+    await waitFor(() => {
+      expect(mockLoadMore).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('renders visual grid skeletons during initial loading', () => {
