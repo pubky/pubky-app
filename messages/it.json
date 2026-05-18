@@ -466,8 +466,9 @@
     },
     "actions": {
       "title": "Azioni profilo",
-      "edit": "Modifica",
+      "editProfile": "Modifica profilo",
       "link": "Link",
+      "profileLink": "Link profilo",
       "loggingOut": "Disconnessione...",
       "signOut": "Esci",
       "unfollowing": "Smetto di seguire...",

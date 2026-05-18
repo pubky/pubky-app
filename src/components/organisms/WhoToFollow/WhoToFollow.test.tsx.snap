@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`WhoToFollowPageMain - Snapshots > matches snapshot when loading 1`] = `
+exports[`WhoToFollow - Snapshots > matches snapshot when loading 1`] = `
 <div>
   <div
     class="mt-6 gap-4 lg:mt-0"
@@ -165,7 +165,7 @@ exports[`WhoToFollowPageMain - Snapshots > matches snapshot when loading 1`] = `
 </div>
 `;
 
-exports[`WhoToFollowPageMain - Snapshots > matches snapshot with no users 1`] = `
+exports[`WhoToFollow - Snapshots > matches snapshot with no users 1`] = `
 <div>
   <div
     class="relative mt-6 items-center gap-6 px-0 py-6 lg:mt-0"
@@ -221,7 +221,7 @@ exports[`WhoToFollowPageMain - Snapshots > matches snapshot with no users 1`] = 
 </div>
 `;
 
-exports[`WhoToFollowPageMain - Snapshots > matches snapshot with users 1`] = `
+exports[`WhoToFollow - Snapshots > matches snapshot with users 1`] = `
 <div>
   <div
     class="mt-6 gap-4 lg:mt-0"
@@ -231,20 +231,22 @@ exports[`WhoToFollowPageMain - Snapshots > matches snapshot with users 1`] = `
       class="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6"
       data-testid="container"
     >
-      <div
+      <button
         data-follow-button-variant="icon"
         data-testid="user-list-item"
         data-user-id="user-1"
+        type="button"
       >
         User item
-      </div>
-      <div
+      </button>
+      <button
         data-follow-button-variant="icon"
         data-testid="user-list-item"
         data-user-id="user-2"
+        type="button"
       >
         User item
-      </div>
+      </button>
     </div>
     <div
       class="h-1"

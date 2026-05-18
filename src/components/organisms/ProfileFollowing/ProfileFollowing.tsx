@@ -49,7 +49,7 @@ export function ProfileFollowing() {
 
   if (isLoading) {
     return (
-      <Container className="mt-6 gap-4 lg:mt-0">
+      <Container className="gap-4">
         <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
           Following
         </Heading>
@@ -67,14 +67,14 @@ export function ProfileFollowing() {
 
   if (connections.length === 0) {
     return (
-      <Container className="mt-6 lg:mt-0">
+      <Container>
         <FollowingEmpty />
       </Container>
     );
   }
 
   return (
-    <Container className="mt-6 gap-4 lg:mt-0">
+    <Container className="gap-4">
       <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
         Following {count > 0 && `(${count})`}
       </Heading>

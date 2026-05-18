@@ -11,7 +11,7 @@ import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
  * DynamicProfileLayout - Next.js layout for viewing other users' profiles
  *
  * This layout wraps children with ProfileProvider using the pubky from URL params.
- * Used for routes like /profile/{pubky}/followers, /profile/{pubky}/posts, etc.
+ * Used for routes like /profile/{pubky}, /profile/{pubky}/followers, etc.
  *
  * @see {@link ProfilePageContainer} for business logic
  * @see {@link ProfilePageLayout} for presentation
