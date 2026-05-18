@@ -130,11 +130,11 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
       </div>
     </div>
     <div
-      class="col-span-full flex w-full flex-wrap items-center gap-2 lg:col-auto lg:gap-3"
+      class="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:flex lg:flex-wrap lg:gap-3"
       data-testid="container"
     >
       <button
-        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-3 min-w-0 basis-[calc(50%_-_0.25rem)] justify-center lg:order-0 lg:basis-auto"
+        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-3 min-w-0 justify-center lg:order-0"
         data-cy="profile-edit-btn"
         data-size="sm"
         data-slot="button"
@@ -163,7 +163,7 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         Edit profile
       </button>
       <button
-        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 uppercase order-1 min-w-0 basis-[calc(50%_-_0.25rem)] justify-center lg:order-0 lg:basis-auto"
+        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 uppercase order-1 min-w-0 justify-center lg:order-0"
         data-cy="profile-copy-pubkey-btn"
         data-size="sm"
         data-slot="button"
@@ -195,7 +195,7 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         1QX7...7890
       </button>
       <button
-        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-2 min-w-0 basis-[calc(50%_-_0.25rem)] justify-center lg:order-0 lg:basis-auto"
+        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-2 min-w-0 justify-center lg:order-0"
         data-size="sm"
         data-slot="button"
         data-variant="secondary"
@@ -223,7 +223,7 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         Profile link
       </button>
       <button
-        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-4 min-w-0 basis-[calc(50%_-_0.25rem)] justify-center lg:order-0 lg:basis-auto"
+        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-4 min-w-0 justify-center lg:order-0"
         data-size="sm"
         data-slot="button"
         data-variant="secondary"
@@ -255,7 +255,7 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         Sign out
       </button>
       <div
-        class="order-first flex h-8 w-full items-center lg:order-0 lg:w-auto"
+        class="order-first col-span-2 flex h-8 items-center lg:order-0 lg:col-auto"
         data-testid="container"
       >
         <button

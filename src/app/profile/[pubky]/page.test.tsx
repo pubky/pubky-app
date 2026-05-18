@@ -1,7 +1,7 @@
 import { renderToString } from 'react-dom/server';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import DynamicProfilePage from './page';
+import DynamicProfilePage, { generateMetadata } from './page';
 
 vi.mock('@/templates/Profile/Posts/ProfilePostsPage', () => {
   return {
@@ -29,5 +29,31 @@ describe('DynamicProfilePage', () => {
 
     expect(html).toContain('profile-page-posts');
     expect(html).not.toContain('profile-page-profile');
+  });
+});
+
+describe('generateMetadata', () => {
+  it('emits a canonical alternate pointing at /profile/[pubky]', async () => {
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ pubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy' }),
+    });
+
+    expect(metadata.alternates?.canonical).toBe('/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
+  });
+
+  it('strips the pubky prefix so the canonical matches the canonical route', async () => {
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ pubky: 'pubkyo1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy' }),
+    });
+
+    expect(metadata.alternates?.canonical).toBe('/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
+  });
+
+  it('strips the legacy pk: prefix from URL-encoded pubky params', async () => {
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ pubky: 'pk%3Ao1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy' }),
+    });
+
+    expect(metadata.alternates?.canonical).toBe('/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
   });
 });

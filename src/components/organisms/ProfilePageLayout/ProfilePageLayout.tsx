@@ -14,27 +14,6 @@ import { ProfilePageHeader } from '../ProfilePageHeader/ProfilePageHeader';
 import { ProfilePageSidebar } from '../ProfilePageSidebar/ProfilePageSidebar';
 import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 
-const PROFILE_MOBILE_MENU_SELECTOR = '[data-profile-mobile-menu="true"]';
-const DEFAULT_MOBILE_HEADER_HEIGHT = 80;
-
-function getMobilePostsFeedScrollOffset(): number {
-  if (typeof document === 'undefined') {
-    return DEFAULT_MOBILE_HEADER_HEIGHT;
-  }
-
-  const mobileMenu = document.querySelector<HTMLElement>(PROFILE_MOBILE_MENU_SELECTOR);
-  const mobileMenuBottom = mobileMenu?.getBoundingClientRect().bottom ?? 0;
-
-  if (mobileMenuBottom > 0) {
-    return mobileMenuBottom;
-  }
-
-  const configuredHeaderHeight = window
-    .getComputedStyle(document.documentElement)
-    .getPropertyValue('--header-height-mobile');
-  return Number.parseFloat(configuredHeaderHeight) || DEFAULT_MOBILE_HEADER_HEIGHT;
-}
-
 /**
  * ProfilePageLayout - Presentation component for profile page structure
  *
@@ -77,7 +56,7 @@ export function ProfilePageLayout({
 }: ProfilePageLayoutProps) {
   const [isAvatarZoomOpen, setIsAvatarZoomOpen] = useState(false);
   const isMobile = useIsMobile();
-  const mobilePostsProfileHeaderRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const postsFeedRef = useRef<HTMLDivElement>(null);
   const lastAutoScrolledPostsKeyRef = useRef<string | null>(null);
   const showMobilePostsProfileHeader = !isOwnProfile && activePage === PROFILE_PAGE_TYPES.POSTS;
@@ -100,11 +79,12 @@ export function ProfilePageLayout({
     onAvatarClick: handleAvatarClick,
   };
 
+  // Other-user mobile profiles render profile info above posts, but the canonical posts route should land at the feed.
+  // The browser handles the scroll math via `scrollIntoView` + `scroll-margin-top`; we only need to seed `scroll-margin-top`
+  // with the sticky mobile menu's current bottom so the feed lands flush under it.
   useLayoutEffect(() => {
     if (!shouldAutoScrollToPostsFeed) {
-      if (activePage !== PROFILE_PAGE_TYPES.POSTS || isOwnProfile) {
-        lastAutoScrolledPostsKeyRef.current = null;
-      }
+      lastAutoScrolledPostsKeyRef.current = null;
       return;
     }
 
@@ -112,82 +92,33 @@ export function ProfilePageLayout({
       return;
     }
 
-    // Other-user mobile profiles render profile info above posts, but the canonical posts route should land at the feed after layout settles.
-    let isAligned = false;
-    let resizeObserver: ResizeObserver | null = null;
-    let pendingAnimationFrameId: number | null = null;
-    const observedElements = [mobilePostsProfileHeaderRef.current, postsFeedRef.current].filter(
-      (element): element is HTMLDivElement => Boolean(element),
-    );
-
-    const stopObserving = () => {
-      resizeObserver?.disconnect();
-      resizeObserver = null;
-    };
-
-    const alignPostsFeed = () => {
-      pendingAnimationFrameId = null;
-      if (isAligned) {
-        return;
-      }
-
-      const postsFeed = postsFeedRef.current;
-      if (!postsFeed) {
-        return;
-      }
-
-      const scrollDelta = postsFeed.getBoundingClientRect().top - getMobilePostsFeedScrollOffset();
-
-      if (Math.abs(scrollDelta) > 1) {
-        window.scrollBy({ top: scrollDelta, behavior: 'auto' });
-      }
-
-      const remainingScrollDelta = postsFeed.getBoundingClientRect().top - getMobilePostsFeedScrollOffset();
-      if (Math.abs(remainingScrollDelta) <= 1) {
-        isAligned = true;
-        lastAutoScrolledPostsKeyRef.current = userId;
-        stopObserving();
-      }
-    };
-
-    const animationFrameIds: number[] = [];
-    const scheduleAlignment = () => {
-      if (isAligned || pendingAnimationFrameId !== null) {
-        return;
-      }
-
-      const animationFrameId = window.requestAnimationFrame(alignPostsFeed);
-      pendingAnimationFrameId = animationFrameId;
-      animationFrameIds.push(animationFrameId);
-    };
-
-    if (observedElements.length > 0 && typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => {
-        scheduleAlignment();
-      });
-      observedElements.forEach((element) => resizeObserver?.observe(element));
+    const postsFeed = postsFeedRef.current;
+    if (!postsFeed) {
+      return;
     }
 
-    scheduleAlignment();
+    const stickyOffset = mobileMenuRef.current?.getBoundingClientRect().bottom ?? 0;
+    if (stickyOffset > 0) {
+      postsFeed.style.scrollMarginTop = `${stickyOffset}px`;
+    }
 
-    return () => {
-      animationFrameIds.forEach((animationFrameId) => window.cancelAnimationFrame(animationFrameId));
-      stopObserving();
-    };
-  }, [activePage, isOwnProfile, shouldAutoScrollToPostsFeed, userId]);
+    postsFeed.scrollIntoView({ block: 'start', behavior: 'auto' });
+    lastAutoScrolledPostsKeyRef.current = userId;
+  }, [shouldAutoScrollToPostsFeed, userId]);
 
   return (
     <>
       <MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} />
 
-      <ProfilePageMobileMenu activePage={activePage} onPageChangeAction={navigateToPage} isOwnProfile={isOwnProfile} />
+      <ProfilePageMobileMenu
+        ref={mobileMenuRef}
+        activePage={activePage}
+        onPageChangeAction={navigateToPage}
+        isOwnProfile={isOwnProfile}
+      />
 
       <ProfilePageLayoutWrapper>
-        <Container
-          ref={showMobilePostsProfileHeader ? mobilePostsProfileHeaderRef : undefined}
-          overrideDefaults={true}
-          className={profileHeaderWrapperClassName}
-        >
+        <Container overrideDefaults={true} className={profileHeaderWrapperClassName}>
           {!isLoading && (
             <ProfilePageHeader
               profile={profile}
