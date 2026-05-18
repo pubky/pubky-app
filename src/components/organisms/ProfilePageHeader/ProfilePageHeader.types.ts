@@ -1,4 +1,5 @@
 import { FollowAction } from '@/hooks/useFollowUser/useFollowUser.types';
+import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
 
 /**
  * Profile data for the header
@@ -47,6 +48,8 @@ export interface ProfilePageHeaderProps {
   isOwnProfile?: boolean;
   /** Raw user ID (without pubky prefix) for TTL tracking */
   userId: string;
+  /** Statistics for the profile, used by the mobile header summary */
+  stats?: ProfileStats;
 }
 
 /**

@@ -466,8 +466,9 @@
     },
     "actions": {
       "title": "Acciones de perfil",
-      "edit": "Editar",
+      "editProfile": "Editar perfil",
       "link": "Enlace",
+      "profileLink": "Enlace del perfil",
       "loggingOut": "Cerrando sesión...",
       "signOut": "Cerrar sesión",
       "unfollowing": "Dejando de seguir...",

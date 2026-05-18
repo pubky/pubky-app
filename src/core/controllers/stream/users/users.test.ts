@@ -30,6 +30,7 @@ describe('StreamUserController', () => {
         nextPageIds,
         cacheMissUserIds: [],
         skip: undefined,
+        isExhausted: false,
       });
 
       const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus');
@@ -50,6 +51,7 @@ describe('StreamUserController', () => {
       expect(result).toEqual({
         nextPageIds,
         skip: undefined,
+        isExhausted: false,
       });
     });
 
@@ -62,6 +64,7 @@ describe('StreamUserController', () => {
         nextPageIds,
         cacheMissUserIds,
         skip: 20,
+        isExhausted: false,
       });
 
       const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue();
@@ -85,6 +88,7 @@ describe('StreamUserController', () => {
       expect(result).toEqual({
         nextPageIds,
         skip: 20,
+        isExhausted: false,
       });
     });
 
@@ -96,6 +100,7 @@ describe('StreamUserController', () => {
         nextPageIds: [],
         cacheMissUserIds: [],
         skip: undefined,
+        isExhausted: false,
       });
 
       await StreamUserController.getOrFetchStreamSlice({
@@ -126,6 +131,7 @@ describe('StreamUserController', () => {
         nextPageIds: [],
         cacheMissUserIds: [],
         skip: undefined,
+        isExhausted: false,
       });
 
       await StreamUserController.getOrFetchStreamSlice({
@@ -149,6 +155,7 @@ describe('StreamUserController', () => {
         nextPageIds: [],
         cacheMissUserIds: [],
         skip: undefined,
+        isExhausted: false,
       });
 
       await StreamUserController.getOrFetchStreamSlice({
@@ -172,6 +179,7 @@ describe('StreamUserController', () => {
         nextPageIds: ['follower-1'],
         cacheMissUserIds: [],
         skip: 20,
+        isExhausted: false,
       });
 
       const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus');
@@ -192,6 +200,7 @@ describe('StreamUserController', () => {
         nextPageIds: ['follower-1', 'follower-2'],
         cacheMissUserIds: [],
         skip: undefined,
+        isExhausted: false,
       });
 
       const result = await StreamUserController.getOrFetchStreamSlice({
@@ -210,6 +219,7 @@ describe('StreamUserController', () => {
         nextPageIds: ['influencer-1', 'influencer-2'],
         cacheMissUserIds: [],
         skip: undefined,
+        isExhausted: false,
       });
 
       await StreamUserController.getOrFetchStreamSlice({
@@ -235,6 +245,7 @@ describe('StreamUserController', () => {
         nextPageIds,
         cacheMissUserIds,
         skip: 20,
+        isExhausted: false,
       });
 
       const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue();
@@ -248,6 +259,7 @@ describe('StreamUserController', () => {
       expect(result).toEqual({
         nextPageIds,
         skip: 20,
+        isExhausted: false,
       });
 
       // fetchMissingUsersFromNexus should be called and awaited
@@ -296,6 +308,69 @@ describe('StreamUserController', () => {
       vi.spyOn(UserStreamApplication, 'getOrFetchUsers').mockRejectedValue(new Error('fetch-users-fail'));
 
       await expect(StreamUserController.getOrFetchUsers({ userIds })).rejects.toThrow('fetch-users-fail');
+    });
+  });
+
+  describe('refreshStreamSlice', () => {
+    it('should fetch directly from application and hydrate missing users', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      const nextPageIds: Pubky[] = ['user-1', 'user-2'];
+      const cacheMissUserIds: Pubky[] = ['user-2'];
+
+      const refreshStreamSliceSpy = vi.spyOn(UserStreamApplication, 'refreshStreamSlice').mockResolvedValue({
+        nextPageIds,
+        cacheMissUserIds,
+        skip: 2,
+        isExhausted: false,
+      });
+      const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue();
+
+      const result = await StreamUserController.refreshStreamSlice({
+        streamId,
+        limit: 10,
+        skip: 0,
+      });
+
+      expect(refreshStreamSliceSpy).toHaveBeenCalledWith({
+        streamId,
+        skip: 0,
+        limit: 10,
+        viewerId,
+      });
+      expect(fetchMissingUsersSpy).toHaveBeenCalledWith({
+        cacheMissUserIds,
+        viewerId,
+      });
+      expect(result).toEqual({
+        nextPageIds,
+        skip: 2,
+        isExhausted: false,
+      });
+    });
+
+    it('should return exhausted state without hydrating when Nexus returns no misses', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+
+      vi.spyOn(UserStreamApplication, 'refreshStreamSlice').mockResolvedValue({
+        nextPageIds: [],
+        cacheMissUserIds: [],
+        skip: undefined,
+        isExhausted: true,
+      });
+      const fetchMissingUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus');
+
+      const result = await StreamUserController.refreshStreamSlice({
+        streamId,
+        limit: 10,
+        skip: 30,
+      });
+
+      expect(fetchMissingUsersSpy).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        nextPageIds: [],
+        skip: undefined,
+        isExhausted: true,
+      });
     });
   });
 });
