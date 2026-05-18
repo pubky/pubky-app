@@ -36,7 +36,11 @@ import type { ProfilePageHeaderProps } from './ProfilePageHeader.types';
  * Subscribes the profile user to TTL tracking when visible in the viewport.
  * This ensures profile data gets refreshed when stale.
  */
-const MOBILE_ACTION_BUTTON_CLASS_NAME = 'min-w-0 basis-[calc(50%_-_0.25rem)] justify-center lg:order-0 lg:basis-auto';
+// Mobile lays the action buttons out in a 2-column grid (see the parent Container below),
+// so each button only needs to opt into truncation + center-aligned content. The grid handles
+// 50/50 widths natively; `lg:order-0` resets any mobile reordering on desktop where buttons
+// sit in their natural JSX order in a flex row.
+const ACTION_BUTTON_GRID_CELL = 'min-w-0 justify-center lg:order-0';
 
 export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userId, stats }: ProfilePageHeaderProps) {
   const t = useTranslations('profile.actions');
@@ -83,7 +87,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
   const copyPublicKeyButton = (
     <Button
       data-cy="profile-copy-pubkey-btn"
-      className={cn('uppercase', isOwnProfile && 'order-1', MOBILE_ACTION_BUTTON_CLASS_NAME)}
+      className={cn('uppercase', isOwnProfile && 'order-1', ACTION_BUTTON_GRID_CELL)}
       variant="secondary"
       size="sm"
       onClick={onCopyPublicKey}
@@ -185,14 +189,14 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
 
         <Container
           overrideDefaults={true}
-          className="col-span-full flex w-full flex-wrap items-center gap-2 lg:col-auto lg:gap-3"
+          className="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:flex lg:flex-wrap lg:gap-3"
         >
           {/* Own profile actions */}
           {isOwnProfile && (
             <>
               <Button
                 data-cy="profile-edit-btn"
-                className={cn('order-3', MOBILE_ACTION_BUTTON_CLASS_NAME)}
+                className={cn('order-3', ACTION_BUTTON_GRID_CELL)}
                 variant="secondary"
                 size="sm"
                 onClick={onEdit}
@@ -202,7 +206,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               </Button>
               {copyPublicKeyButton}
               <Button
-                className={cn('order-2', MOBILE_ACTION_BUTTON_CLASS_NAME)}
+                className={cn('order-2', ACTION_BUTTON_GRID_CELL)}
                 variant="secondary"
                 size="sm"
                 onClick={onCopyLink}
@@ -211,7 +215,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 {t('profileLink')}
               </Button>
               <Button
-                className={cn('order-4', MOBILE_ACTION_BUTTON_CLASS_NAME)}
+                className={cn('order-4', ACTION_BUTTON_GRID_CELL)}
                 variant="secondary"
                 size="sm"
                 onClick={onSignOut}
@@ -230,7 +234,10 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   </>
                 )}
               </Button>
-              <Container overrideDefaults className="order-first flex h-8 w-full items-center lg:order-0 lg:w-auto">
+              <Container
+                overrideDefaults
+                className="order-first col-span-2 flex h-8 items-center lg:order-0 lg:col-auto"
+              >
                 <StatusPickerWrapper emoji={displayEmoji} status={status || ''} onStatusChange={onStatusChange} />
               </Container>
             </>
@@ -245,7 +252,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   data-cy="profile-follow-toggle-btn"
                   variant="secondary"
                   size="sm"
-                  className={cn('group justify-center lg:w-[110px]', MOBILE_ACTION_BUTTON_CLASS_NAME)}
+                  className={cn('group justify-center lg:w-[110px]', ACTION_BUTTON_GRID_CELL)}
                   onClick={onFollowToggle}
                   disabled={isFollowLoading}
                 >
@@ -274,7 +281,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 </Button>
               )}
               {copyPublicKeyButton}
-              <Button className={MOBILE_ACTION_BUTTON_CLASS_NAME} variant="secondary" size="sm" onClick={onCopyLink}>
+              <Button className={ACTION_BUTTON_GRID_CELL} variant="secondary" size="sm" onClick={onCopyLink}>
                 <Link className="size-4" />
                 {t('link')}
               </Button>

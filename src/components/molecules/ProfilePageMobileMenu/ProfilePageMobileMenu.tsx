@@ -1,7 +1,7 @@
 'use client';
 
+import { type ComponentType, forwardRef } from 'react';
 import { Bell, CircleUserRound, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
-import type { ComponentType } from 'react';
 import { PROFILE_PAGE_TYPES, type ProfilePageType } from '@/app/profile/types';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { UsersRound2 } from '@/icons';
@@ -73,30 +73,24 @@ export interface ProfilePageMobileMenuProps {
  * - Filters items via `isOwnProfile` (e.g. hides Notifications on other users).
  * - Wraps click handlers with `requireAuth` for unauthenticated users.
  * - Uses raw English labels (no i18n sweep yet).
+ *
+ * Forwards a ref to the underlying `MobileTabBar` root so a parent layout can
+ * measure the sticky menu (e.g. to align scroll targets below it).
  */
-export function ProfilePageMobileMenu({
-  activePage,
-  onPageChangeAction,
-  isOwnProfile = true,
-}: ProfilePageMobileMenuProps) {
-  const { requireAuth } = useRequireAuth();
+export const ProfilePageMobileMenu = forwardRef<HTMLDivElement, ProfilePageMobileMenuProps>(
+  function ProfilePageMobileMenu({ activePage, onPageChangeAction, isOwnProfile = true }, ref) {
+    const { requireAuth } = useRequireAuth();
 
-  const visibleItems = PROFILE_MENU_ITEMS.filter((item) => !item.ownProfileOnly || isOwnProfile);
+    const visibleItems = PROFILE_MENU_ITEMS.filter((item) => !item.ownProfileOnly || isOwnProfile);
 
-  const items: MobileTabBarItem[] = visibleItems.map((item) => ({
-    key: item.pageType,
-    icon: item.icon,
-    label: item.label,
-    isActive: item.pageType === activePage,
-    onSelect: () => requireAuth(() => onPageChangeAction(item.pageType)),
-  }));
+    const items: MobileTabBarItem[] = visibleItems.map((item) => ({
+      key: item.pageType,
+      icon: item.icon,
+      label: item.label,
+      isActive: item.pageType === activePage,
+      onSelect: () => requireAuth(() => onPageChangeAction(item.pageType)),
+    }));
 
-  return (
-    <MobileTabBar
-      items={items}
-      position="sticky"
-      data-testid="profile-page-mobile-menu"
-      data-profile-mobile-menu="true"
-    />
-  );
-}
+    return <MobileTabBar ref={ref} items={items} position="sticky" data-testid="profile-page-mobile-menu" />;
+  },
+);

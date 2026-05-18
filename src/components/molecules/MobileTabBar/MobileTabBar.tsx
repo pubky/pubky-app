@@ -1,4 +1,5 @@
 'use client';
+import { forwardRef } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -14,21 +15,19 @@ import type { MobileTabBarProps } from './MobileTabBar.types';
  * - Positioning via `position` ('sticky' default, or 'fixed').
  *
  * Consumers own identity semantics (active detection, click handlers, i18n,
- * filtering) and pass already-resolved `MobileTabBarItem`s.
+ * filtering) and pass already-resolved `MobileTabBarItem`s. Consumers may
+ * attach a ref to read the root element (e.g. to measure its position when
+ * the bar is sticky).
  */
-export function MobileTabBar({
-  items,
-  showLabels = false,
-  position = 'sticky',
-  className,
-  'data-testid': dataTestId,
-  'data-profile-mobile-menu': dataProfileMobileMenu,
-}: MobileTabBarProps) {
+export const MobileTabBar = forwardRef<HTMLDivElement, MobileTabBarProps>(function MobileTabBar(
+  { items, showLabels = false, position = 'sticky', className, 'data-testid': dataTestId },
+  ref,
+) {
   return (
     <Container
+      ref={ref}
       overrideDefaults
       data-testid={dataTestId}
-      data-profile-mobile-menu={dataProfileMobileMenu}
       className={cn(
         'mobile-menu-gradient-fade z-(--z-mobile-menu) bg-background lg:hidden',
         position === 'sticky' && 'sticky top-(--header-height-mobile)',
@@ -73,4 +72,4 @@ export function MobileTabBar({
       </Container>
     </Container>
   );
-}
+});

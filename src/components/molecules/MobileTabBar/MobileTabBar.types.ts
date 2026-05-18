@@ -27,6 +27,4 @@ export interface MobileTabBarProps {
   className?: string;
   /** Optional data-testid for the root element. */
   'data-testid'?: string;
-  /** Optional runtime marker for the profile mobile menu scroll offset measurement. */
-  'data-profile-mobile-menu'?: string;
 }

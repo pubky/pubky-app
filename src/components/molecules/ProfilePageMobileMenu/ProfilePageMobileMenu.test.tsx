@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -94,12 +94,13 @@ describe('ProfilePageMobileMenu', () => {
     expect(rootElement).toHaveAttribute('data-testid', 'profile-page-mobile-menu');
   });
 
-  it('exposes a runtime marker for profile scroll alignment', () => {
-    const { container } = render(
-      <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />,
+  it('forwards a ref to the underlying mobile tab bar root', () => {
+    const ref = createRef<HTMLDivElement>();
+    render(
+      <ProfilePageMobileMenu ref={ref} activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />,
     );
-    const rootElement = container.firstChild as HTMLElement;
-    expect(rootElement).toHaveAttribute('data-profile-mobile-menu', 'true');
+    expect(ref.current).not.toBeNull();
+    expect(ref.current).toHaveAttribute('data-testid', 'profile-page-mobile-menu');
   });
 
   it('renders with sticky positioning', () => {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import { ProfilePageLayout } from './ProfilePageLayout';
@@ -95,14 +95,20 @@ vi.mock('@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper', () => {
   };
 });
 
-vi.mock('@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu', () => {
+vi.mock('@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+
   return {
-    ProfilePageMobileMenu: ({ activePage }: { activePage: string; onPageChangeAction: (page: string) => void }) => (
-      <div data-testid="profile-mobile-menu" data-active={activePage}>
-        <div data-testid="profile-page-mobile-menu" data-profile-mobile-menu="true" />
-        Profile Mobile Menu
-      </div>
-    ),
+    ProfilePageMobileMenu: React.forwardRef<HTMLDivElement, { activePage: string }>(function MockProfilePageMobileMenu(
+      { activePage },
+      ref,
+    ) {
+      return (
+        <div ref={ref} data-testid="profile-page-mobile-menu" data-active={activePage}>
+          Profile Mobile Menu
+        </div>
+      );
+    }),
   };
 });
 
@@ -206,7 +212,7 @@ describe('ProfilePageLayout', () => {
     render(<ProfilePageLayout {...defaultProps} />);
 
     expect(screen.getByTestId('mobile-header')).toBeInTheDocument();
-    expect(screen.getByTestId('profile-mobile-menu')).toBeInTheDocument();
+    expect(screen.getByTestId('profile-page-mobile-menu')).toBeInTheDocument();
     expect(screen.getByTestId('profile-page-layout-wrapper')).toBeInTheDocument();
     expect(screen.getByTestId('profile-filter-bar')).toBeInTheDocument();
     expect(screen.getByTestId('profile-sidebar')).toBeInTheDocument();
@@ -222,7 +228,7 @@ describe('ProfilePageLayout', () => {
 
   it('passes correct activePage to ProfilePageMobileMenu', () => {
     render(<ProfilePageLayout {...defaultProps} activePage={PROFILE_PAGE_TYPES.POSTS} />);
-    const menu = screen.getByTestId('profile-mobile-menu');
+    const menu = screen.getByTestId('profile-page-mobile-menu');
     expect(menu).toHaveAttribute('data-active', PROFILE_PAGE_TYPES.POSTS);
   });
 
@@ -291,27 +297,17 @@ describe('ProfilePageLayout', () => {
     expect(screen.getByTestId('posts-content')).toBeInTheDocument();
   });
 
-  it('scrolls mobile other-user posts to the posts feed after the profile header loads', async () => {
+  it('scrolls mobile other-user posts into view after the profile header loads', () => {
     mockIsMobile.mockReturnValue(true);
-    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
-      callback(0);
-      return 1;
-    });
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
-    const scrollBy = vi.fn();
-    vi.stubGlobal('scrollBy', scrollBy);
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
 
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function getBoundingClientRect(
       this: HTMLElement,
     ) {
-      if (this.getAttribute('data-profile-mobile-menu') === 'true') {
+      if (this.getAttribute('data-testid') === 'profile-page-mobile-menu') {
         return new DOMRect(0, 80, 0, 64);
       }
-
-      if (this.getAttribute('data-cy') === 'profile-posts-feed') {
-        return new DOMRect(0, 420, 0, 300);
-      }
-
       return new DOMRect();
     });
 
@@ -327,7 +323,7 @@ describe('ProfilePageLayout', () => {
       </ProfilePageLayout>,
     );
 
-    expect(scrollBy).not.toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
 
     rerender(
       <ProfilePageLayout {...props} isLoading={false}>
@@ -335,85 +331,46 @@ describe('ProfilePageLayout', () => {
       </ProfilePageLayout>,
     );
 
-    const postsFeed = container.querySelector('[data-cy="profile-posts-feed"]');
+    const postsFeed = container.querySelector<HTMLElement>('[data-cy="profile-posts-feed"]');
     expect(postsFeed).toHaveClass('min-h-[calc(100dvh_-_var(--header-height-mobile))]', 'min-w-0');
-    await waitFor(() => expect(scrollBy).toHaveBeenCalledWith({ top: 276, behavior: 'auto' }));
+    expect(postsFeed?.style.scrollMarginTop).toBe('144px');
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' });
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
   });
 
-  it('re-aligns when observed layout changes after the initial scroll is clamped', async () => {
+  it('only scrolls once per user even if the layout re-renders', () => {
     mockIsMobile.mockReturnValue(true);
-    const animationFrameCallbacks: FrameRequestCallback[] = [];
-    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
-      animationFrameCallbacks.push(callback);
-      return animationFrameCallbacks.length;
-    });
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
-    const flushNextAnimationFrame = () => {
-      const callback = animationFrameCallbacks.shift();
-      if (!callback) {
-        throw new Error('Expected an animation frame callback to be scheduled');
-      }
-      callback(0);
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    const props = {
+      ...defaultProps,
+      activePage: PROFILE_PAGE_TYPES.POSTS,
+      filterBarActivePage: PROFILE_PAGE_TYPES.POSTS,
+      isOwnProfile: false,
     };
-    let scrollByCallCount = 0;
-    let postsFeedTop = 420;
-    const scrollBy = vi.fn((options: ScrollToOptions) => {
-      scrollByCallCount += 1;
-      const scrollTop = options.top ?? 0;
-      postsFeedTop -= scrollByCallCount === 1 ? scrollTop / 2 : scrollTop;
-    });
-    vi.stubGlobal('scrollBy', scrollBy);
+    const { rerender } = render(
+      <ProfilePageLayout {...props}>
+        <div data-testid="posts-content">Posts Content</div>
+      </ProfilePageLayout>,
+    );
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
 
-    const observedElements = new Set<Element>();
-    const observe = vi.fn();
-    const unobserve = vi.fn();
-    const disconnect = vi.fn();
-    const resizeObserverCallbackRef: { current: ResizeObserverCallback | null } = { current: null };
-    const mockResizeObserver: ResizeObserver = {
-      observe(target: Element, options?: ResizeObserverOptions) {
-        observedElements.add(target);
-        observe(target, options);
-      },
-      unobserve(target: Element) {
-        unobserve(target);
-      },
-      disconnect() {
-        disconnect();
-      },
-    };
-    class MockResizeObserver implements ResizeObserver {
-      constructor(callback: ResizeObserverCallback) {
-        resizeObserverCallbackRef.current = callback;
-      }
+    rerender(
+      <ProfilePageLayout {...props}>
+        <div data-testid="posts-content">Posts Content updated</div>
+      </ProfilePageLayout>,
+    );
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+  });
 
-      observe = mockResizeObserver.observe;
+  it('does not set scroll-margin-top when the sticky mobile menu has not laid out yet', () => {
+    mockIsMobile.mockReturnValue(true);
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    // Default DOMRect → bottom = 0, simulates the menu element existing but not yet measured.
 
-      unobserve = mockResizeObserver.unobserve;
-
-      disconnect = mockResizeObserver.disconnect;
-    }
-    vi.stubGlobal('ResizeObserver', MockResizeObserver);
-
-    let observedHeaderHeight = 160;
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function getBoundingClientRect(
-      this: HTMLElement,
-    ) {
-      if (this.getAttribute('data-profile-mobile-menu') === 'true') {
-        return new DOMRect(0, 80, 0, 64);
-      }
-
-      if (this.getAttribute('data-cy') === 'profile-posts-feed') {
-        return new DOMRect(0, postsFeedTop, 0, 300);
-      }
-
-      if (observedElements.has(this)) {
-        return new DOMRect(0, 144, 0, observedHeaderHeight);
-      }
-
-      return new DOMRect();
-    });
-
-    render(
+    const { container } = render(
       <ProfilePageLayout
         {...defaultProps}
         activePage={PROFILE_PAGE_TYPES.POSTS}
@@ -424,25 +381,14 @@ describe('ProfilePageLayout', () => {
       </ProfilePageLayout>,
     );
 
-    expect(observe).toHaveBeenCalledTimes(2);
-    flushNextAnimationFrame();
-    await waitFor(() => expect(scrollBy).toHaveBeenCalledWith({ top: 276, behavior: 'auto' }));
-
-    observedHeaderHeight = 220;
-    const registeredResizeObserverCallback = resizeObserverCallbackRef.current;
-    if (!registeredResizeObserverCallback) {
-      throw new Error('Expected ResizeObserver callback to be registered');
-    }
-    registeredResizeObserverCallback([], mockResizeObserver);
-
-    flushNextAnimationFrame();
-    await waitFor(() => expect(scrollBy).toHaveBeenLastCalledWith({ top: 138, behavior: 'auto' }));
-    expect(disconnect).toHaveBeenCalledTimes(1);
+    const postsFeed = container.querySelector<HTMLElement>('[data-cy="profile-posts-feed"]');
+    expect(postsFeed?.style.scrollMarginTop).toBe('');
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' });
   });
 
   it('does not auto-scroll other-user posts on desktop', () => {
-    const scrollBy = vi.fn();
-    vi.stubGlobal('scrollBy', scrollBy);
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
 
     render(
       <ProfilePageLayout
@@ -455,7 +401,7 @@ describe('ProfilePageLayout', () => {
       </ProfilePageLayout>,
     );
 
-    expect(scrollBy).not.toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
   it('does not add the mobile posts header for own-profile posts', () => {

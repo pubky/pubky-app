@@ -466,7 +466,6 @@
     },
     "actions": {
       "title": "个人资料操作",
-      "edit": "编辑",
       "editProfile": "编辑个人资料",
       "link": "链接",
       "profileLink": "个人资料链接",
