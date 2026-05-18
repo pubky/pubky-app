@@ -89,14 +89,11 @@ const configs: Record<FeedsRouteKey, FeedsShellConfig> = {
  *
  * Used by `(feeds)/layout.tsx` to hoist the shell so it stays mounted across
  * intra-cluster transitions (e.g. `/home → /feed/[id] → /bookmarks → /search`).
- * The layout treats the `null` return as follows:
- *   - while the intercepted `(.)post` slot is active (pathname is
- *     `/post/<user>/<post>`), it reuses the most recently cached feeds config
- *     so the previous route's chrome stays mounted under the modal;
- *   - otherwise (unknown pathname, modal not active), the layout throws —
- *     this is the safety net for an unconfigured route mounted under
- *     `(feeds)/`, e.g. someone adds `(feeds)/notifications/page.tsx` without
- *     updating `configs` above.
+ * The layout handles the `null` return without throwing — see the header
+ * comment in `(feeds)/layout.tsx` for the full fallback chain (cached config
+ * during the intercepted post modal; empty chrome otherwise). When adding a
+ * new route under `(feeds)/`, add a matching entry to `configs` above so the
+ * route renders with its intended sidebars/drawers.
  */
 export function tryResolveFeedsShellConfig(pathname: string): FeedsShellConfig | null {
   const key = matchFeedsRouteKey(pathname);
