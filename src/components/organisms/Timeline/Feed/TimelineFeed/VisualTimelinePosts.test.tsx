@@ -80,11 +80,9 @@ vi.mock('@/atoms/Typography/Typography', () => {
 
 vi.mock('@/atoms/Video/Video', () => {
   return {
-    Video: React.forwardRef<HTMLVideoElement, React.VideoHTMLAttributes<HTMLVideoElement> & { pauseVideo?: boolean }>(
-      function Video({ pauseVideo: _pauseVideo, ...props }, ref) {
-        return <video ref={ref} {...props} />;
-      },
-    ),
+    Video: React.forwardRef<HTMLVideoElement, React.VideoHTMLAttributes<HTMLVideoElement>>(function Video(props, ref) {
+      return <video ref={ref} {...props} />;
+    }),
   };
 });
 
@@ -424,7 +422,6 @@ describe('VisualTimelinePosts', () => {
     expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
     expect(screen.getAllByTestId('visual-feed-skeleton-row')).toHaveLength(3);
     expect(screen.getAllByTestId('visual-feed-skeleton-tile').length).toBeGreaterThan(0);
-    expect(screen.queryByTestId('timeline-loading-more')).not.toBeInTheDocument();
   });
 
   it('does not add full-row skeletons while loading more posts', () => {
@@ -441,7 +438,6 @@ describe('VisualTimelinePosts', () => {
 
     expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
     expect(screen.queryByTestId('visual-feed-skeleton')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('timeline-loading-more')).not.toBeInTheDocument();
   });
 
   it('falls back to the main image when the preview image fails', () => {
@@ -499,7 +495,7 @@ describe('VisualTimelinePosts', () => {
     expect(image).toHaveAttribute('src', '/main-image.jpg');
   });
 
-  it('uses an animated skeleton tile background until the image loads', async () => {
+  it('uses the black tile background while media loads', () => {
     render(
       <VisualTimelinePosts
         postIds={['author:post1']}
@@ -512,78 +508,9 @@ describe('VisualTimelinePosts', () => {
     );
 
     const tile = screen.getByLabelText('Open post author:post1');
-    const image = screen.getByAltText('image.jpg');
 
-    expect(tile).toHaveClass('animate-pulse', 'bg-white/8');
-
-    fireEvent.load(image);
-
-    await waitFor(() => {
-      expect(tile).toHaveClass('bg-black');
-    });
+    expect(tile).toHaveClass('bg-black');
     expect(tile).not.toHaveClass('animate-pulse');
-  });
-
-  it('uses an animated skeleton tile background until the video loads', async () => {
-    const playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
-    mockUseVisualFeedTiles.mockReturnValue({
-      rows: [
-        {
-          key: 'row-video',
-          cells: [
-            {
-              key: 'cell-video',
-              size: 'medium',
-              tile: {
-                id: 'tile-video',
-                postId: 'author:post1',
-                attachmentId: 'file-video',
-                attachmentName: 'video.mp4',
-                contentType: 'video/mp4',
-                mediaKind: 'video',
-                previewSrc: '/video.mp4',
-                mainSrc: '/video.mp4',
-                preferredSize: 'medium',
-                rowSize: 'medium',
-                probeState: 'ready',
-                isBlurred: false,
-                content: 'Video post',
-                indexedAt: Date.now(),
-              },
-            },
-          ],
-        },
-      ],
-      tail: [],
-      tiles: [],
-      hasPendingTiles: false,
-      hasPendingFiles: false,
-    });
-
-    render(
-      <VisualTimelinePosts
-        postIds={['author:post1']}
-        loading={false}
-        loadingMore={false}
-        error={null}
-        hasMore={false}
-        loadMore={vi.fn()}
-      />,
-    );
-
-    const tile = screen.getByLabelText('Open post author:post1');
-    const video = tile.querySelector('video');
-
-    expect(tile).toHaveClass('animate-pulse', 'bg-white/8');
-    expect(video).not.toBeNull();
-
-    fireEvent.loadedData(video as HTMLVideoElement);
-
-    await waitFor(() => {
-      expect(tile).toHaveClass('bg-black');
-    });
-    expect(tile).not.toHaveClass('animate-pulse');
-    playSpy.mockRestore();
   });
 
   it('renders the timestamp in a separate top-right timestamp block', () => {

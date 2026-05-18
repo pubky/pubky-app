@@ -10,16 +10,11 @@ import {
 import type { VisualTileSize } from './TimelineFeedVisual.types';
 
 const VISUAL_INITIAL_SKELETON_ROW_COUNT = 3;
-const VISUAL_LOAD_MORE_SKELETON_ROW_COUNT = 2;
 const VISUAL_SKELETON_ROW_PATTERNS = [
   ['square', 'wide'],
   ['medium', 'medium'],
   ['square', 'square', 'square'],
 ] satisfies VisualTileSize[][];
-
-interface VisualTimelinePostsSkeletonProps {
-  variant?: 'initial' | 'load-more';
-}
 
 function VisualTimelineSkeletonTile({ size }: { size: VisualTileSize }) {
   return (
@@ -39,9 +34,7 @@ function VisualTimelineSkeletonTile({ size }: { size: VisualTileSize }) {
   );
 }
 
-export function VisualTimelinePostsSkeleton({ variant = 'initial' }: VisualTimelinePostsSkeletonProps) {
-  const rowCount = variant === 'load-more' ? VISUAL_LOAD_MORE_SKELETON_ROW_COUNT : VISUAL_INITIAL_SKELETON_ROW_COUNT;
-
+export function VisualTimelinePostsSkeleton() {
   return (
     <Container data-cy="visual-feed-skeleton-container" data-testid="visual-feed-skeleton" className="py-4">
       <Container
@@ -49,12 +42,12 @@ export function VisualTimelinePostsSkeleton({ variant = 'initial' }: VisualTimel
         className="mx-auto flex w-full flex-col gap-6"
         style={{ maxWidth: `${VISUAL_GRID_MAX_WIDTH_PX}px` }}
       >
-        {Array.from({ length: rowCount }).map((_, rowIndex) => {
+        {Array.from({ length: VISUAL_INITIAL_SKELETON_ROW_COUNT }).map((_, rowIndex) => {
           const pattern = VISUAL_SKELETON_ROW_PATTERNS[rowIndex % VISUAL_SKELETON_ROW_PATTERNS.length];
 
           return (
             <Container
-              key={`visual-feed-skeleton-row-${variant}-${rowIndex}`}
+              key={`visual-feed-skeleton-row-${rowIndex}`}
               overrideDefaults
               className="grid grid-cols-12 gap-6"
               data-testid="visual-feed-skeleton-row"
