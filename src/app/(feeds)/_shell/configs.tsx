@@ -23,8 +23,9 @@ export type FeedsRouteKey = 'home' | 'customFeed' | 'bookmarks' | 'search';
  * legitimately be mounted under a non-feeds pathname — e.g. while the
  * intercepted `(.)post` slot is active, `usePathname()` reports
  * `/post/<user>/<post>` even though the layout is still alive. The layout
- * decides how to handle the `null` case (cache fallback when the modal is
- * active, throw otherwise).
+ * handles the `null` case without throwing: it falls back to the cached
+ * previous feeds config while the modal is active, and otherwise renders
+ * empty chrome (see `(feeds)/layout.tsx` for the full fallback chain).
  */
 export function matchFeedsRouteKey(pathname: string): FeedsRouteKey | null {
   if (pathname === APP_ROUTES.HOME) return 'home';
