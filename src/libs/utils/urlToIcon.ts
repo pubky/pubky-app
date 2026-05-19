@@ -1,23 +1,5 @@
-import {
-  Facebook,
-  GitFork,
-  Github,
-  Gitlab,
-  Instagram,
-  Link,
-  Linkedin,
-  type LucideProps,
-  Mail,
-  MessageCircle,
-  MessageSquare,
-  Music,
-  Phone,
-  Slack,
-  Twitch,
-  Video,
-  Youtube,
-} from 'lucide-react';
-import { Telegram, XTwitter } from '@/icons';
+import { GitFork, Link, type LucideProps, Mail, MessageCircle, MessageSquare, Music, Phone, Video } from 'lucide-react';
+import { Facebook, Github, Gitlab, Instagram, Linkedin, Slack, Telegram, Twitch, XTwitter, Youtube } from '@/icons';
 
 /**
  * Maps a URL to the appropriate icon component based on the domain.

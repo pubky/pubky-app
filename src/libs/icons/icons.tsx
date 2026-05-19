@@ -1,5 +1,7 @@
 import { LucideProps } from 'lucide-react';
 
+export { CircleUserRound, Facebook, Github, Gitlab, Instagram, Linkedin, Slack, Twitch, Youtube } from './brandIcons';
+
 export const XTwitter = ({ className, size = 24, ...props }: LucideProps) => (
   <svg
     width={size}
