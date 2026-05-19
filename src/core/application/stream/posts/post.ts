@@ -208,7 +208,8 @@ export class PostStreamApplication {
   }
 
   /**
-   * Fetches a page of posts for a stream, filtering out muted users.
+   * Fetches a page of posts for a stream.
+   * Filters out muted authors for most streams; skips filtering for author timelines and bookmarks.
    */
   static async getOrFetchStreamSlice({
     streamId,
@@ -226,7 +227,10 @@ export class PostStreamApplication {
       return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
     }
 
-    const shouldFilterMuted = !streamId.startsWith(`${StreamSource.AUTHOR}:`);
+    // Author streams and bookmarks intentionally include posts from muted users:
+    // bookmarks are explicit saves (#1804); profile is someone's full timeline.
+    const shouldFilterMuted =
+      !streamId.startsWith(`${StreamSource.AUTHOR}:`) && !streamId.includes(`:${StreamSource.BOOKMARKS}:`);
     const mutedUserIds = shouldFilterMuted
       ? new Set((await LocalStreamUsersService.findById(UserStreamTypes.MUTED))?.stream ?? [])
       : new Set<Pubky>();

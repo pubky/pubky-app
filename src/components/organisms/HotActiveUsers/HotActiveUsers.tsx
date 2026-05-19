@@ -8,6 +8,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { cn } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -61,6 +62,9 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
   });
 
   const { toggleFollow, isUserLoading } = useFollowUser();
+  const { isMuted } = useMutedUsers();
+
+  const visibleUsers = users.filter((user) => !isMuted(user.id));
 
   const handleUserClick = (pubky: Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
@@ -83,11 +87,11 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
             <FullUserListItemSkeleton key={`hot-active-users-skeleton-${index}`} />
           ))}
         </Container>
-      ) : users.length === 0 ? (
+      ) : visibleUsers.length === 0 ? (
         <Typography className="font-light text-muted-foreground">{t('noUsersToShow')}</Typography>
       ) : (
         <Container className="gap-3.5 rounded-md py-2 lg:gap-3">
-          {users.map((user) => (
+          {visibleUsers.map((user) => (
             <UserListItem
               key={user.id}
               user={user}

@@ -1,8 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
+import type { Pubky } from '@/models/models.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { NewPostsSection } from './NewPostsSection';
 
@@ -62,8 +64,9 @@ vi.mock('@/controllers/stream/posts/posts', () => ({
 
 const defaultProps = {
   streamId: 'timeline:all:all' as PostStreamId,
+  variant: TIMELINE_FEED_VARIANT.HOME,
   postIds: ['post1', 'post2'],
-  mutedUserIdSet: new Set<string>(),
+  mutedUserIdSet: new Set<Pubky>(),
   loading: false,
   prependPosts: vi.fn(),
 };
@@ -72,6 +75,7 @@ describe('NewPostsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
+    vi.mocked(MuteFilter.filterPostsSafe).mockImplementation((ids: string[]) => ids);
     window.scrollTo = vi.fn();
   });
 
@@ -104,6 +108,23 @@ describe('NewPostsSection', () => {
     vi.mocked(MuteFilter.filterPostsSafe).mockReturnValue(['new1']);
     render(<NewPostsSection {...defaultProps} />);
     expect(screen.getByTestId('new-posts-button')).toHaveAttribute('data-count', '1');
+  });
+
+  it('does not mute-filter new post count on bookmarks feed', () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['muted-user:post-9'], unreadCount: 1 });
+    const filterSpy = vi.mocked(MuteFilter.filterPostsSafe);
+
+    render(
+      <NewPostsSection
+        {...defaultProps}
+        variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+        streamId={'timeline:bookmarks:all' as PostStreamId}
+        mutedUserIdSet={new Set<Pubky>(['muted-user' as Pubky])}
+      />,
+    );
+
+    expect(screen.getByTestId('new-posts-button')).toHaveAttribute('data-count', '1');
+    expect(filterSpy).not.toHaveBeenCalled();
   });
 
   it('calls stream controllers and prependPosts on click', async () => {
