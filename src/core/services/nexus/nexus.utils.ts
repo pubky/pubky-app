@@ -13,6 +13,9 @@ import type {
   TQueryNexusWithExpectedStatusParams,
 } from './nexus.utils.types';
 
+const FETCH_NEXUS_OPERATION = 'fetchNexus';
+const FETCH_NEXUS_WITH_EXPECTED_STATUS_OPERATION = 'fetchNexusWithExpectedStatus';
+
 export function buildNexusUrl(endpoint: string): string {
   return `${NEXUS_URL}/${endpoint}`;
 }
@@ -79,11 +82,16 @@ export function createFetchOptions({ method = HttpMethod.GET, body }: TCreateFet
  * @throws {NexusError} When response is not ok or JSON parsing fails
  */
 export async function fetchNexus<T>({ url, method = HttpMethod.GET, body = null }: TFetchNexusParams): Promise<T> {
-  const response = await safeFetch(url, createFetchOptions({ method, body }), ErrorService.Nexus, 'fetchNexus');
+  const response = await safeFetch(
+    url,
+    createFetchOptions({ method, body }),
+    ErrorService.Nexus,
+    FETCH_NEXUS_OPERATION,
+  );
   if (!response.ok) {
-    throw httpResponseToError(response, ErrorService.Nexus, 'fetchNexus', url);
+    throw httpResponseToError(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
   }
-  return parseResponseOrThrow<T>(response, ErrorService.Nexus, 'fetchNexus', url);
+  return parseResponseOrThrow<T>(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
 }
 
 /**
@@ -99,14 +107,19 @@ export async function fetchNexusWithExpectedStatus<T>({
   body = null,
   expectedStatusFallbacks,
 }: TFetchNexusWithExpectedStatusParams<T>): Promise<T> {
-  const response = await safeFetch(url, createFetchOptions({ method, body }), ErrorService.Nexus, 'fetchNexus');
+  const response = await safeFetch(
+    url,
+    createFetchOptions({ method, body }),
+    ErrorService.Nexus,
+    FETCH_NEXUS_WITH_EXPECTED_STATUS_OPERATION,
+  );
   if (!response.ok) {
     if (Object.prototype.hasOwnProperty.call(expectedStatusFallbacks, response.status)) {
       return expectedStatusFallbacks[response.status] as T;
     }
-    throw httpResponseToError(response, ErrorService.Nexus, 'fetchNexus', url);
+    throw httpResponseToError(response, ErrorService.Nexus, FETCH_NEXUS_WITH_EXPECTED_STATUS_OPERATION, url);
   }
-  return parseResponseOrThrow<T>(response, ErrorService.Nexus, 'fetchNexus', url);
+  return parseResponseOrThrow<T>(response, ErrorService.Nexus, FETCH_NEXUS_WITH_EXPECTED_STATUS_OPERATION, url);
 }
 
 /**

@@ -303,6 +303,7 @@ describe('NexusPostService', () => {
       ).rejects.toMatchObject({
         category: ErrorCategory.Client,
         code: ClientErrorCode.BAD_REQUEST,
+        operation: 'fetchNexusWithExpectedStatus',
       });
 
       expect(httpResponseToError).toHaveBeenCalledOnce();
