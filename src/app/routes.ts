@@ -129,7 +129,6 @@ export const HOME_ROUTES = {
  * Dynamic public routes:
  * - /post/[userId]/[postId] - viewing a single post
  * - /profile/[pubky] - viewing another user's profile
- * - /profile/[pubky]/posts - legacy posts route that redirects to /profile/[pubky]
  */
 export function isDynamicPublicRoute(pathname: string): boolean {
   const segments = pathname.split('/').filter(Boolean);
@@ -138,10 +137,6 @@ export function isDynamicPublicRoute(pathname: string): boolean {
     case segments[0] === 'invite' && segments.length === 2:
     case segments[0] === 'post' && segments.length === 3:
     case segments[0] === 'profile' && segments.length === 2 && isPubkyIdentifier(segments[1]):
-    case segments[0] === 'profile' &&
-      segments.length === 3 &&
-      isPubkyIdentifier(segments[1]) &&
-      segments[2] === 'posts':
       return true;
     default:
       return false;
@@ -178,6 +173,7 @@ export function getProfileRoute(route: PROFILE_ROUTES, pubky?: string): string {
   const subPath = route.replace('/profile', '');
 
   // For other users, the base profile route is the canonical posts view.
+  // Notifications only apply to the logged-in user, so they fall back to base profile.
   if (route === PROFILE_ROUTES.PROFILE || route === PROFILE_ROUTES.NOTIFICATIONS || route === PROFILE_ROUTES.POSTS) {
     return `/profile/${pubky}`;
   }
