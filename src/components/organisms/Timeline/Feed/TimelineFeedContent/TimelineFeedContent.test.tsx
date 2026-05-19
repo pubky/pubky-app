@@ -399,6 +399,39 @@ describe('TimelineFeedContent', () => {
       expect(mockRefresh).not.toHaveBeenCalled();
       expect(mockRemovePosts).not.toHaveBeenCalled();
     });
+
+    it('does not remove or refresh posts for bookmarks feeds', () => {
+      let mutedUserIds = ['muted-user'];
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['muted-user:post-1', 'other-user:post-2'],
+      });
+      mockUseMutedUsers.mockImplementation(() => ({
+        ...defaultMutedUsersResult,
+        mutedUserIds,
+        mutedUserIdSet: new Set(mutedUserIds),
+      }));
+
+      const { rerender } = render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+          tagsLayout="inline"
+        />,
+      );
+
+      mutedUserIds = [];
+      rerender(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+      expect(mockRemovePosts).not.toHaveBeenCalled();
+    });
   });
 });
 

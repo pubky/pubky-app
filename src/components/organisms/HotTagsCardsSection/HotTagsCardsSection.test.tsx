@@ -1,6 +1,25 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UseMutedUsersResult } from '@/hooks/useMutedUsers/useMutedUsers.types';
+import type { Pubky } from '@/models/models.types';
 import { HotTagsCardsSection } from './HotTagsCardsSection';
+
+const mockUseBulkUserAvatars = vi.hoisted(() =>
+  vi.fn(() => ({
+    getUsersWithAvatars: vi.fn(() => []),
+  })),
+);
+
+const mockUseMutedUsers = vi.hoisted(() =>
+  vi.fn(
+    (): UseMutedUsersResult => ({
+      mutedUserIds: [],
+      mutedUserIdSet: new Set(),
+      isMuted: (_userId: Pubky) => false,
+      isLoading: false,
+    }),
+  ),
+);
 
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -26,10 +45,12 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
 }));
 
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: mockUseMutedUsers,
+}));
+
 vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
-  useBulkUserAvatars: vi.fn(() => ({
-    getUsersWithAvatars: vi.fn(() => []),
-  })),
+  useBulkUserAvatars: mockUseBulkUserAvatars,
 }));
 
 vi.mock('@/config/tags', () => ({
@@ -82,6 +103,17 @@ describe('HotTagsCardsSection', () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockUseHotTags.mockClear();
+    mockUseBulkUserAvatars.mockImplementation(() => ({
+      getUsersWithAvatars: vi.fn(() => []),
+    }));
+    mockUseMutedUsers.mockImplementation(
+      (): UseMutedUsersResult => ({
+        mutedUserIds: [],
+        mutedUserIdSet: new Set(),
+        isMuted: (_userId: Pubky) => false,
+        isLoading: false,
+      }),
+    );
   });
 
   it('renders heading and empty state when tags are empty', () => {
@@ -143,5 +175,34 @@ describe('HotTagsCardsSection', () => {
     expect(screen.getByTestId('hot-tags-card-skeleton-0')).toBeInTheDocument();
     expect(screen.getByTestId('hot-tags-card-skeleton-1')).toBeInTheDocument();
     expect(screen.getByTestId('hot-tags-card-skeleton-2')).toBeInTheDocument();
+  });
+
+  it('excludes muted taggers from avatar bulk fetch and HotTagCard taggers', () => {
+    mockUseMutedUsers.mockImplementation(
+      (): UseMutedUsersResult => ({
+        mutedUserIds: ['muted-author'],
+        mutedUserIdSet: new Set(['muted-author']),
+        isMuted: (id: Pubky) => id === 'muted-author',
+        isLoading: false,
+      }),
+    );
+
+    const getUsersWithAvatars = vi.fn(() => []);
+    mockUseBulkUserAvatars.mockImplementation(() => ({ getUsersWithAvatars }));
+
+    mockUseHotTags.mockReturnValue({
+      rawTags: [
+        { label: 'bitcoin', tagged_count: 16, taggers_id: ['muted-author', 'visible-author'] },
+        { label: 'keys', tagged_count: 176, taggers_id: [] },
+        { label: 'pubky', tagged_count: 149, taggers_id: [] },
+      ],
+      isLoading: false,
+      error: null,
+    });
+
+    render(<HotTagsCardsSection />);
+
+    expect(mockUseBulkUserAvatars).toHaveBeenCalledWith(['visible-author']);
+    expect(getUsersWithAvatars).toHaveBeenCalledWith(['visible-author']);
   });
 });

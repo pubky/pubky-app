@@ -82,7 +82,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
       data-cy="post-text"
       overrideDefaults
       className={cn(
-        'text-base leading-6 font-medium wrap-anywhere hyphens-auto whitespace-pre-line text-secondary-foreground',
+        'text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground',
         className,
       )}
     >
