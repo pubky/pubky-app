@@ -14,6 +14,7 @@ exports[`SinglePostContent - Snapshots > matches snapshot when not authenticated
     data-testid="container"
   >
     <div
+      data-is-navigable="false"
       data-pin-actions-to-bottom="true"
       data-post-id="author:post123"
       data-tags-layout="inline"
@@ -135,6 +136,7 @@ exports[`SinglePostContent - Snapshots > matches snapshot with short post and no
     data-testid="container"
   >
     <div
+      data-is-navigable="false"
       data-pin-actions-to-bottom="true"
       data-post-id="author:post123"
       data-tags-layout="inline"

@@ -45,9 +45,9 @@ describe('isDynamicPublicRoute', () => {
       expect(isDynamicPublicRoute(`/profile/${longPubky}`)).toBe(true);
     });
 
-    it('returns true for profile with pubky and legacy posts sub-route', () => {
+    it('returns false for profile with pubky and legacy posts sub-route (redirected at edge)', () => {
       const longPubky = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
-      expect(isDynamicPublicRoute(`/profile/${longPubky}/posts`)).toBe(true);
+      expect(isDynamicPublicRoute(`/profile/${longPubky}/posts`)).toBe(false);
     });
 
     it('returns false for profile with pubky and other sub-routes', () => {
@@ -125,20 +125,25 @@ describe('isDynamicPublicRoute', () => {
 });
 
 describe('getProfileRoute', () => {
-  it('returns unchanged own-profile routes when no pubky is provided', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+
+  it('returns unchanged own-profile routes when pubky is omitted', () => {
     expect(getProfileRoute(PROFILE_ROUTES.POSTS)).toBe(PROFILE_ROUTES.POSTS);
   });
 
-  it('uses /profile/[pubky] as the canonical posts route for other users', () => {
-    const pubky = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
-
+  it('uses base profile URL for another user posts tab', () => {
     expect(getProfileRoute(PROFILE_ROUTES.POSTS, pubky)).toBe(`/profile/${pubky}`);
   });
 
-  it('routes own-only profile defaults to the other-user canonical profile route', () => {
-    const pubky = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
-
+  it('uses base profile URL for another user default profile route', () => {
     expect(getProfileRoute(PROFILE_ROUTES.PROFILE, pubky)).toBe(`/profile/${pubky}`);
+  });
+
+  it('uses base profile URL for notifications route with pubky (other user)', () => {
     expect(getProfileRoute(PROFILE_ROUTES.NOTIFICATIONS, pubky)).toBe(`/profile/${pubky}`);
+  });
+
+  it('preserves sub-paths other than posts', () => {
+    expect(getProfileRoute(PROFILE_ROUTES.FOLLOWERS, pubky)).toBe(`/profile/${pubky}/followers`);
   });
 });

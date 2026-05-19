@@ -26,6 +26,12 @@ describe('ShowMoreReplies', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it('marks button as keyboard-navigable thread item', () => {
+    render(<ShowMoreReplies count={3} onClick={vi.fn()} />);
+
+    expect(screen.getByRole('button')).toHaveAttribute('data-post-list-card', 'true');
+  });
+
   it('renders left connector structure', () => {
     const { container } = render(<ShowMoreReplies count={2} onClick={vi.fn()} />);
 

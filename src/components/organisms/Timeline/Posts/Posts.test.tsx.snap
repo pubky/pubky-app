@@ -41,10 +41,16 @@ exports[`TimelinePosts - Snapshots > should match snapshot with posts 1`] = `
       class="space-y-4"
       data-cy="timeline-posts"
       data-testid="container"
+      role="feed"
     >
       <div
+        aria-posinset="1"
+        aria-setsize="3"
+        class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         data-cy="post-card"
         data-testid="container"
+        role="article"
+        tabindex="0"
       >
         <div
           data-testid="post-author1:post1"
@@ -54,8 +60,13 @@ exports[`TimelinePosts - Snapshots > should match snapshot with posts 1`] = `
         />
       </div>
       <div
+        aria-posinset="2"
+        aria-setsize="3"
+        class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         data-cy="post-card"
         data-testid="container"
+        role="article"
+        tabindex="0"
       >
         <div
           data-testid="post-author2:post2"
@@ -65,8 +76,13 @@ exports[`TimelinePosts - Snapshots > should match snapshot with posts 1`] = `
         />
       </div>
       <div
+        aria-posinset="3"
+        aria-setsize="3"
+        class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         data-cy="post-card"
         data-testid="container"
+        role="article"
+        tabindex="0"
       >
         <div
           data-testid="post-author3:post3"
