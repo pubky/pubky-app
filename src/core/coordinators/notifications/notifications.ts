@@ -115,6 +115,10 @@ export class NotificationCoordinator extends Coordinator<NotificationCoordinator
    * Fire one immediate poll on idle→active transitions (cold start, tab
    * resume) so the first fetch isn't delayed by intervalMs (#1497).
    * Trade-off: duplicates bootstrap's fetch once per sign-in.
+   *
+   * NOTE: this also fires when configure() changes intervalMs while polling.
+   * No production code does that today (only tests), so it has no effect in
+   * the real app. Add a guard here if a runtime caller appears.
    */
   protected evaluateAndStartPolling(): void {
     const wasPolling = this.getState().intervalId !== null;
