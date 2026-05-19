@@ -35,7 +35,16 @@ export class FileApplication {
         cause: error,
       });
     }
-    const blobData = new Uint8Array(await sanitizedFile.arrayBuffer());
+    let blobData: Uint8Array;
+    try {
+      blobData = new Uint8Array(await sanitizedFile.arrayBuffer());
+    } catch (error) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to read file content', {
+        service: ErrorService.Local,
+        operation: 'toFileAttachment',
+        cause: error,
+      });
+    }
     return FileNormalizer.toFileAttachment({ file: sanitizedFile, blobData, pubky });
   }
 

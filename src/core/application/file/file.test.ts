@@ -170,6 +170,30 @@ describe('FileApplication', () => {
       }
       expect(FileNormalizer.toFileAttachment).not.toHaveBeenCalled();
     });
+
+    it('wraps file read failures as AppError', async () => {
+      const rawFile = new File(['raw'], 'photo.jpg', { type: 'image/jpeg' });
+      const sanitizedFile = new File(['sanitized'], 'obfuscated.jpg', { type: 'image/jpeg' });
+      const readError = new Error('arrayBuffer failed');
+      vi.spyOn(sanitizedFile, 'arrayBuffer').mockRejectedValueOnce(readError);
+      vi.mocked(stripImageMetadata).mockResolvedValueOnce(sanitizedFile);
+
+      try {
+        await FileApplication.toFileAttachment({ file: rawFile, pubky: TEST_PUBKY });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toMatchObject({
+          name: 'AppError',
+          category: ErrorCategory.Validation,
+          code: ValidationErrorCode.INVALID_INPUT,
+          service: ErrorService.Local,
+          operation: 'toFileAttachment',
+          message: 'Failed to read file content',
+          cause: readError,
+        });
+      }
+      expect(FileNormalizer.toFileAttachment).not.toHaveBeenCalled();
+    });
   });
 
   describe('commitCreate', () => {
