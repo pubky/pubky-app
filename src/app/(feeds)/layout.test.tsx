@@ -182,10 +182,13 @@ describe('FeedsLayout', () => {
     expect(screen.getAllByTestId('container')[0]).toHaveClass('hidden');
   });
 
-  it('throws on an unknown pathname when the (.)post slot is NOT active, even with a cached config', () => {
-    // This is the config-drift guard: someone adds `(feeds)/notifications/` without
-    // a matching entry in `_shell/configs.tsx`. The layout must not silently render
-    // stale chrome from a previously-visited feed route — it must throw.
+  it('renders empty chrome (no throw) on an unknown pathname when the (.)post slot is NOT active, even with a cached config', () => {
+    // Config-drift case: someone adds `(feeds)/notifications/` without a
+    // matching entry in `_shell/configs.tsx`. The layout intentionally does
+    // NOT throw — crashing the whole feeds cluster for end users is far
+    // worse than missing sidebars for a dev who forgot to wire up the
+    // config. The cache fallback is also intentionally gated on the modal
+    // being active, so we should NOT see stale `feed-left` from /home here.
     const FEED_CONFIG = {
       feedVariant: 'home' as const,
       leftSidebarContent: <div data-testid="feed-left">feed-left</div>,
@@ -209,16 +212,46 @@ describe('FeedsLayout', () => {
     vi.mocked(useSelectedLayoutSegments).mockReturnValue([]);
     vi.mocked(tryResolveFeedsShellConfig).mockReturnValue(null);
 
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
     expect(() =>
       rerender(
         <FeedsLayout post={<div data-testid="post">post</div>}>
           <div data-testid="feed-content">Feed</div>
         </FeedsLayout>,
       ),
-    ).toThrow(/\[FeedsLayout\] No feeds shell config for pathname "\/notifications"/);
+    ).not.toThrow();
 
-    errorSpy.mockRestore();
+    // ContentLayout still mounts but with no shell props — stale cached
+    // chrome must NOT leak into a non-modal route.
+    expect(screen.getByTestId('content-layout')).toBeInTheDocument();
+    expect(screen.queryByTestId('feed-left')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('feed-right')).not.toBeInTheDocument();
+    expect(screen.getByTestId('content-layout')).toHaveAttribute('data-feed-variant', '');
+    // Container is NOT hidden because the post slot is not active.
+    expect(screen.getAllByTestId('container')[0]).not.toHaveClass('hidden');
+  });
+
+  it('renders empty chrome (no throw) when mounted directly into the (.)post modal with no cached config', () => {
+    // Real-user flow: home → click post (intercepted modal) → click settings
+    // (unmounts FeedsLayout, dropping the cache) → browser back to /post/...
+    // FeedsLayout remounts fresh with the modal already active and no
+    // cached config. Must not throw — the modal covers the empty chrome.
+    vi.mocked(usePathname).mockReturnValue('/post/alice/123');
+    vi.mocked(useSelectedLayoutSegments).mockReturnValue(['(.)post']);
+    vi.mocked(tryResolveFeedsShellConfig).mockReturnValue(null);
+
+    expect(() =>
+      render(
+        <FeedsLayout post={<div data-testid="post">post</div>}>
+          <div data-testid="feed-content">Feed</div>
+        </FeedsLayout>,
+      ),
+    ).not.toThrow();
+
+    expect(screen.getByTestId('content-layout')).toBeInTheDocument();
+    expect(screen.getByTestId('content-layout')).toHaveAttribute('data-feed-variant', '');
+    // Feed content is hidden while the modal is active.
+    expect(screen.getAllByTestId('container')[0]).toHaveClass('hidden');
+    // Post slot still renders.
+    expect(screen.getByTestId('post')).toBeInTheDocument();
   });
 });

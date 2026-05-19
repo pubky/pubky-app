@@ -4,15 +4,27 @@ exports[`ThreadTree - Snapshots > matches snapshot with replies and show-more 1`
 <div
   class=""
   data-testid="container"
+  role="feed"
 >
   <div
-    data-is-last-reply="false"
-    data-reply-id="author:reply-1"
-    data-testid="reply-with-nested"
-  />
+    aria-posinset="1"
+    aria-setsize="2"
+    class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    data-post-list-card="true"
+    data-testid="container"
+    role="article"
+    tabindex="0"
+  >
+    <div
+      data-is-last-reply="false"
+      data-reply-id="author:reply-1"
+      data-testid="reply-with-nested"
+    />
+  </div>
   <button
     data-count="1"
     data-is-last="true"
+    data-post-list-card="true"
     data-testid="show-more-replies"
     type="button"
   >

@@ -61,6 +61,7 @@ export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepl
             variant="ghost"
             size="sm"
             type="button"
+            data-post-list-card="true"
             onClick={onClick}
             className="gap-2 rounded-full px-3.5 py-2 text-xs font-bold text-foreground"
           >
