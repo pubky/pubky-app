@@ -367,7 +367,7 @@ describe('useProfileNavigation', () => {
       expect(result.current.filterBarActivePage).toBe(PROFILE_PAGE_TYPES.POSTS);
     });
 
-    it('should return POSTS for explicit /posts route regardless of viewport', () => {
+    it('should return POSTS for legacy /posts pathname regardless of viewport', () => {
       mockPathname.mockReturnValue('/profile/user123/posts');
 
       mockIsMobile.mockReturnValue(true);
@@ -403,7 +403,7 @@ describe('useProfileNavigation', () => {
       expect(mockPush).toHaveBeenCalledWith('/profile/user123/profile');
     });
 
-    it('should navigate to the canonical posts route for other users', () => {
+    it('should navigate to base profile URL for other users posts tab', () => {
       mockPathname.mockReturnValue('/profile/user123');
 
       const { result } = renderHook(() => useProfileNavigation());
