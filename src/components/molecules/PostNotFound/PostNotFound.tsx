@@ -1,48 +1,57 @@
 'use client';
 
-import { ArrowLeft, Tag, UserX } from 'lucide-react';
+import { ArrowLeft, FileQuestion, Tag, UserRound } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { ProfilePageEmptyState } from '../ProfilePageEmptyState/ProfilePageEmptyState';
 
-interface UserNotFoundProps {
+interface PostNotFoundProps {
   title: string;
   subtitle: string;
   imageAlt: string;
   backToFeedLabel: string;
+  viewProfileLabel: string;
   exploreTagsLabel: string;
   onBackToFeed: () => void;
+  /** When omitted (e.g. malformed post URL), the View profile action is hidden */
+  onViewProfile?: () => void;
   onExploreTags: () => void;
 }
 
 /**
- * UserNotFound - Empty state component for when a user profile is not found
- *
- * Displayed when navigating to a profile URL with a pubky that doesn't exist.
- * Copy and navigation are provided by the parent (e.g. for `next-intl` + `useRouter`).
+ * Empty state when a post URL does not resolve to a post (cache miss after fetch).
+ * Copy and navigation are supplied by the parent (e.g. `next-intl` + `useRouter`).
  */
-export function UserNotFound({
+export function PostNotFound({
   title,
   subtitle,
   imageAlt,
   backToFeedLabel,
+  viewProfileLabel,
   exploreTagsLabel,
   onBackToFeed,
+  onViewProfile,
   onExploreTags,
-}: UserNotFoundProps) {
+}: PostNotFoundProps) {
   return (
     <ProfilePageEmptyState
       imageSrc="/images/connections-empty-state.webp"
       imageAlt={imageAlt}
-      icon={UserX}
+      icon={FileQuestion}
       title={title}
       subtitle={subtitle}
     >
-      <Container overrideDefaults className="flex flex-col items-center justify-center gap-6 sm:flex-row">
+      <Container overrideDefaults className="flex flex-col flex-wrap items-center justify-center gap-3 sm:flex-row">
         <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onBackToFeed}>
           <ArrowLeft className="size-4 shrink-0" />
           {backToFeedLabel}
         </Button>
+        {onViewProfile ? (
+          <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onViewProfile}>
+            <UserRound className="size-4 shrink-0" />
+            {viewProfileLabel}
+          </Button>
+        ) : null}
         <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onExploreTags}>
           <Tag className="size-4 shrink-0" />
           {exploreTagsLabel}

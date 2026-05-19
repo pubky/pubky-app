@@ -438,10 +438,25 @@
     "youReposted": "You reposted",
     "newPostsSingular": "See {count} new post",
     "newPostsPlural": "See {count} new posts",
-    "replies": "Replies"
+    "replies": "Replies",
+    "notFound": {
+      "title": "Post not found",
+      "subtitle": "This post isn't available. It may have been removed or the link is no longer valid.",
+      "imageAlt": "Post not found",
+      "backToFeed": "Back to Feed",
+      "viewProfile": "View profile",
+      "exploreTags": "Explore Tags"
+    }
   },
   "profile": {
     "title": "Profile",
+    "notFound": {
+      "title": "User not found",
+      "subtitle": "The user you're looking for doesn't exist or may have been removed.",
+      "imageAlt": "User not found",
+      "backToFeed": "Back to Feed",
+      "exploreTags": "Explore Tags"
+    },
     "tabs": {
       "notifications": "Notifications",
       "posts": "Posts",

@@ -444,10 +444,25 @@
     "youReposted": "你转发了",
     "newPostsSingular": "查看 {count} 条新帖子",
     "newPostsPlural": "查看 {count} 条新帖子",
-    "replies": "回复"
+    "replies": "回复",
+    "notFound": {
+      "title": "未找到帖子",
+      "subtitle": "此帖子不可用。可能已被删除，或链接已失效。",
+      "imageAlt": "未找到帖子",
+      "backToFeed": "返回信息流",
+      "viewProfile": "查看个人资料",
+      "exploreTags": "浏览标签"
+    }
   },
   "profile": {
     "title": "个人资料",
+    "notFound": {
+      "title": "未找到用户",
+      "subtitle": "您查找的用户不存在或可能已被移除。",
+      "imageAlt": "未找到用户",
+      "backToFeed": "返回信息流",
+      "exploreTags": "浏览标签"
+    },
     "tabs": {
       "notifications": "通知",
       "posts": "帖子",

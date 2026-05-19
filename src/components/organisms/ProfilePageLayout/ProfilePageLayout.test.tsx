@@ -245,6 +245,11 @@ describe('ProfilePageLayout', () => {
     expect(statsData).toEqual(mockStats);
   });
 
+  it('renders ProfilePageHeader when isLoading is true but isHeaderLoading is false', () => {
+    render(<ProfilePageLayout {...defaultProps} isLoading={true} isHeaderLoading={false} />);
+    expect(screen.getByTestId('profile-page-header')).toBeInTheDocument();
+  });
+
   it('does not render ProfilePageHeader when loading', () => {
     render(<ProfilePageLayout {...defaultProps} isLoading={true} />);
     expect(screen.queryByTestId('profile-page-header')).not.toBeInTheDocument();

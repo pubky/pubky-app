@@ -444,10 +444,25 @@
     "youReposted": "Você repostou",
     "newPostsSingular": "Ver {count} novo post",
     "newPostsPlural": "Ver {count} novos posts",
-    "replies": "Respostas"
+    "replies": "Respostas",
+    "notFound": {
+      "title": "Post não encontrado",
+      "subtitle": "Este post não está disponível. Ele pode ter sido removido ou o link pode não ser mais válido.",
+      "imageAlt": "Post não encontrado",
+      "backToFeed": "Voltar ao feed",
+      "viewProfile": "Ver perfil",
+      "exploreTags": "Explorar tags"
+    }
   },
   "profile": {
     "title": "Perfil",
+    "notFound": {
+      "title": "Usuário não encontrado",
+      "subtitle": "O usuário que você procura não existe ou pode ter sido removido.",
+      "imageAlt": "Usuário não encontrado",
+      "backToFeed": "Voltar ao feed",
+      "exploreTags": "Explorar tags"
+    },
     "tabs": {
       "notifications": "Notificações",
       "posts": "Posts",

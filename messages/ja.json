@@ -444,10 +444,25 @@
     "youReposted": "リポストしました",
     "newPostsSingular": "{count}件の新しい投稿を見る",
     "newPostsPlural": "{count}件の新しい投稿を見る",
-    "replies": "返信"
+    "replies": "返信",
+    "notFound": {
+      "title": "投稿が見つかりません",
+      "subtitle": "この投稿は表示できません。削除されたか、リンクが無効になっている可能性があります。",
+      "imageAlt": "投稿が見つかりません",
+      "backToFeed": "フィードに戻る",
+      "viewProfile": "プロフィールを見る",
+      "exploreTags": "タグを見る"
+    }
   },
   "profile": {
     "title": "プロフィール",
+    "notFound": {
+      "title": "ユーザーが見つかりません",
+      "subtitle": "お探しのユーザーは存在しないか、削除された可能性があります。",
+      "imageAlt": "ユーザーが見つかりません",
+      "backToFeed": "フィードに戻る",
+      "exploreTags": "タグを見る"
+    },
     "tabs": {
       "notifications": "通知",
       "posts": "投稿",

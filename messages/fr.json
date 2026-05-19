@@ -444,10 +444,25 @@
     "youReposted": "Vous avez republié",
     "newPostsSingular": "Voir {count} nouvelle publication",
     "newPostsPlural": "Voir {count} nouvelles publications",
-    "replies": "Réponses"
+    "replies": "Réponses",
+    "notFound": {
+      "title": "Publication introuvable",
+      "subtitle": "Cette publication n'est pas disponible. Elle a peut-être été supprimée ou le lien n'est plus valide.",
+      "imageAlt": "Publication introuvable",
+      "backToFeed": "Retour au fil",
+      "viewProfile": "Voir le profil",
+      "exploreTags": "Explorer les tags"
+    }
   },
   "profile": {
     "title": "Profil",
+    "notFound": {
+      "title": "Utilisateur introuvable",
+      "subtitle": "L'utilisateur que vous recherchez n'existe pas ou a peut-être été supprimé.",
+      "imageAlt": "Utilisateur introuvable",
+      "backToFeed": "Retour au fil",
+      "exploreTags": "Explorer les tags"
+    },
     "tabs": {
       "notifications": "Notifications",
       "posts": "Publications",

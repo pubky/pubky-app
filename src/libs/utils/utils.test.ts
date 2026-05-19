@@ -1,4 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  POST_ID_STAGING_FIXTURE,
+  PUBKY_52_STAGING_FIXTURE,
+  PUBKY_INVALID_BAD_CHAR,
+  PUBKY_INVALID_TOO_LONG,
+} from '@/test-utils/pubky';
 import { asInvalid } from '@/test-utils/type-assertions';
 import {
   canSubmitPost,
@@ -14,11 +20,13 @@ import {
   generateRandomColor,
   generateRandomUsername,
   getCharacterCount,
+  getValidAuthorPubkyFromPostCompositeId,
   hexToRgba,
   hoursAgo,
   isPostDeleted,
   isPubkyIdentifier,
   isSameDomain,
+  isValidPostCompositeId,
   isValidTagLabel,
   minutesAgo,
   radixIdSerializer,
@@ -259,47 +267,35 @@ describe('Utils', () => {
     });
   });
 
-  describe('isPubkyIdentifier', () => {
-    it('should return true for valid 52-char lowercase alphanumeric string', () => {
-      const validPubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
-      expect(isPubkyIdentifier(validPubky)).toBe(true);
+  describe('isValidPostCompositeId', () => {
+    it('returns true for staging-shaped author and post id', () => {
+      const composite = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
+      expect(isValidPostCompositeId(composite)).toBe(true);
     });
 
-    it('should return true for another valid pubky', () => {
-      const validPubky = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
-      expect(isPubkyIdentifier(validPubky)).toBe(true);
+    it('returns false when author is not a valid pubky', () => {
+      expect(isValidPostCompositeId(`${PUBKY_INVALID_TOO_LONG}:${POST_ID_STAGING_FIXTURE}`)).toBe(false);
+      expect(isValidPostCompositeId(`${PUBKY_INVALID_BAD_CHAR}:${POST_ID_STAGING_FIXTURE}`)).toBe(false);
     });
 
-    it('should return false for string shorter than 52 characters', () => {
-      expect(isPubkyIdentifier('short')).toBe(false);
-      expect(isPubkyIdentifier('12345678901234567890')).toBe(false); // 20 chars
-      expect(isPubkyIdentifier('123456789012345678901234567890123456789012345678901')).toBe(false); // 51 chars
+    it('returns false when post id is empty', () => {
+      expect(isValidPostCompositeId(`${PUBKY_52_STAGING_FIXTURE}:`)).toBe(false);
     });
 
-    it('should return false for string longer than 52 characters', () => {
-      expect(isPubkyIdentifier('12345678901234567890123456789012345678901234567890123')).toBe(false); // 53 chars
+    it('returns false for unparseable composite', () => {
+      expect(isValidPostCompositeId('nocolon')).toBe(false);
+    });
+  });
+
+  describe('getValidAuthorPubkyFromPostCompositeId', () => {
+    it('returns author pubky for a valid composite', () => {
+      const composite = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
+      expect(getValidAuthorPubkyFromPostCompositeId(composite)).toBe(PUBKY_52_STAGING_FIXTURE);
     });
 
-    it('should return false for string with uppercase characters', () => {
-      expect(isPubkyIdentifier('GUJX6QD8KSYDH1MAKDPHD3BXU351D9B8WAQKA8HFG6Q7HNQKXEXO')).toBe(false);
-      expect(isPubkyIdentifier('gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexO')).toBe(false); // One uppercase
-    });
-
-    it('should return false for string with special characters', () => {
-      expect(isPubkyIdentifier('gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxex!')).toBe(false);
-      expect(isPubkyIdentifier('gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxex-')).toBe(false);
-      expect(isPubkyIdentifier('gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxex_')).toBe(false);
-    });
-
-    it('should return false for empty string', () => {
-      expect(isPubkyIdentifier('')).toBe(false);
-    });
-
-    it('should return false for common route names', () => {
-      expect(isPubkyIdentifier('posts')).toBe(false);
-      expect(isPubkyIdentifier('followers')).toBe(false);
-      expect(isPubkyIdentifier('following')).toBe(false);
-      expect(isPubkyIdentifier('notifications')).toBe(false);
+    it('returns null when composite is invalid', () => {
+      expect(getValidAuthorPubkyFromPostCompositeId(`${PUBKY_INVALID_TOO_LONG}:${POST_ID_STAGING_FIXTURE}`)).toBeNull();
+      expect(getValidAuthorPubkyFromPostCompositeId('nocolon')).toBeNull();
     });
   });
 

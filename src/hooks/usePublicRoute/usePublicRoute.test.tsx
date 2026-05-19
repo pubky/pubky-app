@@ -32,13 +32,13 @@ describe('usePublicRoute', () => {
       expect(result.current.isPublicRoute).toBe(true);
     });
 
-    it('returns isPublicRoute: false for other user legacy posts URL (redirected; not public in guard)', () => {
+    it('returns isPublicRoute: true for the legacy other user posts route', () => {
       const pubky = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
       mockPathname.mockReturnValue(`/profile/${pubky}/posts`);
 
       const { result } = renderHook(() => usePublicRoute());
 
-      expect(result.current.isPublicRoute).toBe(false);
+      expect(result.current.isPublicRoute).toBe(true);
     });
   });
 

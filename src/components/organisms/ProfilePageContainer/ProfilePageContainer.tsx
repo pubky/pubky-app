@@ -5,10 +5,8 @@ import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation/useProfileNavigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { MobileFooter } from '@/molecules/MobileFooter/MobileFooter';
-import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
-import { ProfilePageLayoutWrapper } from '@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper';
-import { UserNotFound } from '@/molecules/UserNotFound/UserNotFound';
+import { isPubkyIdentifier } from '@/libs/utils/utils';
+import { ProfileUserNotFoundDiscoveryView } from '@/organisms/ProfileUserNotFoundDiscoveryView/ProfileUserNotFoundDiscoveryView';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { ProfilePageLayout } from '../ProfilePageLayout/ProfilePageLayout';
@@ -51,14 +49,16 @@ export interface ProfilePageContainerProps {
  */
 export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
   // Business logic: Get profile context (pubky and isOwnProfile)
-  const { pubky, isOwnProfile } = useProfileContext();
+  const { pubky, isOwnProfile, isLoading: isProfileContextLoading } = useProfileContext();
 
   // Check if logout is in progress (global state to prevent flash of weird states)
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
 
   // Business logic: Fetch profile data and stats
   // Note: useProfileHeader guarantees a non-null profile with default values during loading
-  const { profile, stats, actions, isLoading, userNotFound } = useProfileHeader(pubky ?? '');
+  const { profile, stats, actions, isLoading, isProfileLoading, userNotFound } = useProfileHeader(pubky ?? '', {
+    enabled: pubky !== null && isPubkyIdentifier(pubky),
+  });
 
   // Business logic: Handle navigation state
   const { activePage, filterBarActivePage, navigateToPage } = useProfileNavigation();
@@ -83,18 +83,12 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
     isFollowing,
   };
 
-  // If user was not found (loading complete but no profile), show UserNotFound
-  // Skip showing UserNotFound during logout to prevent flash of error state
-  if (userNotFound && !isOwnProfile && !isLoggingOut) {
-    return (
-      <>
-        <MobileHeader showLeftButton={false} showRightButton={false} />
-        <ProfilePageLayoutWrapper>
-          <UserNotFound />
-        </ProfilePageLayoutWrapper>
-        <MobileFooter />
-      </>
-    );
+  const showUserNotFoundDiscovery =
+    (pubky !== null && pubky !== '' && !isPubkyIdentifier(pubky)) ||
+    (userNotFound && !isOwnProfile && !isLoggingOut && !isProfileContextLoading);
+
+  if (showUserNotFoundDiscovery) {
+    return <ProfileUserNotFoundDiscoveryView />;
   }
 
   // Delegate presentation to layout organism
@@ -107,6 +101,7 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
       filterBarActivePage={filterBarActivePage}
       navigateToPage={navigateToPage}
       isLoading={isLoading}
+      isHeaderLoading={isProfileLoading}
       isOwnProfile={isOwnProfile}
       userId={pubky ?? ''}
     >
