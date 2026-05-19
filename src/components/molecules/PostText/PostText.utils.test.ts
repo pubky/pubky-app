@@ -537,7 +537,7 @@ describe('remarkHashtags', () => {
       expect(links).toHaveLength(0);
     });
 
-    it('stops at trailing underscore', () => {
+    it('includes trailing underscore before whitespace', () => {
       const paragraph = createParagraph('#hello_ world');
       const tree = createRoot([paragraph]);
 
@@ -545,10 +545,10 @@ describe('remarkHashtags', () => {
 
       const links = getLinks(paragraph);
       expect(links).toHaveLength(1);
-      expect((links[0].children[0] as Text).value).toBe('#hello');
+      expect((links[0].children[0] as Text).value).toBe('#hello_');
     });
 
-    it('stops at double underscore', () => {
+    it('allows double underscore in hashtag body', () => {
       const paragraph = createParagraph('#hello__world');
       const tree = createRoot([paragraph]);
 
@@ -556,7 +556,7 @@ describe('remarkHashtags', () => {
 
       const links = getLinks(paragraph);
       expect(links).toHaveLength(1);
-      expect((links[0].children[0] as Text).value).toBe('#hello');
+      expect((links[0].children[0] as Text).value).toBe('#hello__world');
     });
 
     it('does not match hashtags starting with hyphen', () => {
@@ -569,7 +569,7 @@ describe('remarkHashtags', () => {
       expect(links).toHaveLength(0);
     });
 
-    it('stops at trailing hyphen', () => {
+    it('includes trailing hyphen before whitespace', () => {
       const paragraph = createParagraph('#hello- world');
       const tree = createRoot([paragraph]);
 
@@ -577,10 +577,10 @@ describe('remarkHashtags', () => {
 
       const links = getLinks(paragraph);
       expect(links).toHaveLength(1);
-      expect((links[0].children[0] as Text).value).toBe('#hello');
+      expect((links[0].children[0] as Text).value).toBe('#hello-');
     });
 
-    it('stops at double hyphen', () => {
+    it('allows double hyphen in hashtag body', () => {
       const paragraph = createParagraph('#hello--world');
       const tree = createRoot([paragraph]);
 
@@ -588,10 +588,10 @@ describe('remarkHashtags', () => {
 
       const links = getLinks(paragraph);
       expect(links).toHaveLength(1);
-      expect((links[0].children[0] as Text).value).toBe('#hello');
+      expect((links[0].children[0] as Text).value).toBe('#hello--world');
     });
 
-    it('stops at mixed consecutive separators (hyphen-underscore)', () => {
+    it('allows mixed consecutive separators (hyphen-underscore)', () => {
       const paragraph = createParagraph('#hello-_world');
       const tree = createRoot([paragraph]);
 
@@ -599,10 +599,10 @@ describe('remarkHashtags', () => {
 
       const links = getLinks(paragraph);
       expect(links).toHaveLength(1);
-      expect((links[0].children[0] as Text).value).toBe('#hello');
+      expect((links[0].children[0] as Text).value).toBe('#hello-_world');
     });
 
-    it('stops at mixed consecutive separators (underscore-hyphen)', () => {
+    it('allows mixed consecutive separators (underscore-hyphen)', () => {
       const paragraph = createParagraph('#hello_-world');
       const tree = createRoot([paragraph]);
 
@@ -610,7 +610,7 @@ describe('remarkHashtags', () => {
 
       const links = getLinks(paragraph);
       expect(links).toHaveLength(1);
-      expect((links[0].children[0] as Text).value).toBe('#hello');
+      expect((links[0].children[0] as Text).value).toBe('#hello_-world');
     });
 
     it('allows numbers after the first letter', () => {
@@ -624,7 +624,7 @@ describe('remarkHashtags', () => {
       expect(links[0].url).toBe('/search?tags=test123abc');
     });
 
-    it('stops at punctuation', () => {
+    it('stops at banned punctuation (comma)', () => {
       const paragraph = createParagraph('#hello, world');
       const tree = createRoot([paragraph]);
 
@@ -635,8 +635,8 @@ describe('remarkHashtags', () => {
       expect((links[0].children[0] as Text).value).toBe('#hello');
     });
 
-    it('stops at special characters', () => {
-      const paragraph = createParagraph('#hello!world');
+    it('stops at banned colon', () => {
+      const paragraph = createParagraph('#hello:world');
       const tree = createRoot([paragraph]);
 
       remarkHashtags()(tree);
@@ -644,6 +644,35 @@ describe('remarkHashtags', () => {
       const links = getLinks(paragraph);
       expect(links).toHaveLength(1);
       expect((links[0].children[0] as Text).value).toBe('#hello');
+    });
+
+    it('includes spec-allowed special characters in hashtag body', () => {
+      const paragraph = createParagraph('#hello!world');
+      const tree = createRoot([paragraph]);
+
+      remarkHashtags()(tree);
+
+      const links = getLinks(paragraph);
+      expect(links).toHaveLength(1);
+      expect((links[0].children[0] as Text).value).toBe('#hello!world');
+    });
+
+    it.each([
+      ['#foo@bar', 'foo@bar'],
+      ['#what?', 'what?'],
+      ['#semi;colon', 'semi;colon'],
+      ['#star*tag', 'star*tag'],
+      ['#quoted"tag', 'quoted"tag'],
+    ])('converts hashtag with spec-allowed symbol: %s', (hashtag, tagName) => {
+      const paragraph = createParagraph(`${hashtag} trailing`);
+      const tree = createRoot([paragraph]);
+
+      remarkHashtags()(tree);
+
+      const links = getLinks(paragraph);
+      expect(links).toHaveLength(1);
+      expect((links[0].children[0] as Text).value).toBe(hashtag);
+      expect(links[0].url).toBe(`/search?tags=${encodeURIComponent(tagName)}`);
     });
   });
 

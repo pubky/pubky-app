@@ -3,6 +3,7 @@ import type { Link, Paragraph, Parent, PhrasingContent, Root, RootContent, Text 
 import { visit } from 'unist-util-visit';
 import { Identity } from '@/libs/identity/identity';
 import { isValidTagLabel } from '@/libs/utils/utils';
+import { HASHTAG_IN_TEXT_REGEX } from '@/libs/utils/utils.constants';
 import { TRUNCATION_LIMIT } from './PostText.constants';
 
 // We assign full code blocks without a language specified as plaintext (ex. ```...```)
@@ -154,10 +155,10 @@ const createPatternPlugin = (config: PatternPluginConfig) => {
 };
 
 // Parse hashtags in paragraph text nodes and convert them to links with data-type="hashtag"
-// Hashtag pattern: # followed by a letter or number, then letters/numbers, with underscores or hyphens allowed only between alphanumerics
+// Pattern follows pubky-app-specs tagInvalidChars; isValidTagLabel gates link conversion (length, etc.)
 // Must be at start of text or preceded by whitespace (standalone)
 export const remarkHashtags = createPatternPlugin({
-  regex: /(^|\s)(#[a-zA-Z0-9]+(?:[-_][a-zA-Z0-9]+)*)/g,
+  regex: HASHTAG_IN_TEXT_REGEX,
   getUrl: (hashtag: string) => {
     // Extract tag name without the # symbol for the URL
     const tagName = hashtag.slice(1);

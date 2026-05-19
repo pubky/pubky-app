@@ -587,6 +587,17 @@ describe('PostText', () => {
       expect(hashtag).toHaveTextContent('#hello-world_test');
     });
 
+    it('renders hashtags with spec-allowed symbols (@ ? ; * ")', () => {
+      render(<PostText content="Tags #foo@bar #what? #semi;colon #star*tag" />);
+
+      const hashtags = screen.getAllByTestId('post-hashtag');
+      expect(hashtags).toHaveLength(4);
+      expect(hashtags[0]).toHaveTextContent('#foo@bar');
+      expect(hashtags[1]).toHaveTextContent('#what?');
+      expect(hashtags[2]).toHaveTextContent('#semi;colon');
+      expect(hashtags[3]).toHaveTextContent('#star*tag');
+    });
+
     it('renders hashtags with numbers', () => {
       render(<PostText content="Check #web3 tag" />);
 
