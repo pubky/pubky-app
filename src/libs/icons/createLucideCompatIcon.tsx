@@ -2,6 +2,12 @@ import type { LucideProps } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/libs/utils/utils';
 
+const toDisplayName = (kebabIconName: string) =>
+  kebabIconName
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+
 /** Renders Lucide v0-compatible SVG markup (paths + lucide CSS classes) for icons changed or removed in v1. */
 export const createLucideCompatIcon = (iconName: string, children: ReactNode) => {
   const LucideCompatIcon = ({ className, size = 24, ...props }: LucideProps) => (
@@ -22,6 +28,6 @@ export const createLucideCompatIcon = (iconName: string, children: ReactNode) =>
       {children}
     </svg>
   );
-  LucideCompatIcon.displayName = iconName;
+  LucideCompatIcon.displayName = toDisplayName(iconName);
   return LucideCompatIcon;
 };
