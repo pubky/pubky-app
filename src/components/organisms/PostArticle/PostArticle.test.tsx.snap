@@ -11,7 +11,7 @@ exports[`PostArticle > Snapshots > matches snapshot with cover image 1`] = `
       data-testid="container"
     >
       <span
-        class="wrap-anywhere hyphens-auto"
+        class="wrap-anywhere"
         data-size="lg"
         data-testid="typography"
       >
@@ -60,7 +60,7 @@ exports[`PostArticle > Snapshots > matches snapshot with custom className 1`] = 
       data-testid="container"
     >
       <span
-        class="wrap-anywhere hyphens-auto"
+        class="wrap-anywhere"
         data-size="lg"
         data-testid="typography"
       >
@@ -109,7 +109,7 @@ exports[`PostArticle > Snapshots > matches snapshot with local cover image 1`] =
       data-testid="container"
     >
       <span
-        class="wrap-anywhere hyphens-auto"
+        class="wrap-anywhere"
         data-size="lg"
         data-testid="typography"
       >
@@ -158,7 +158,7 @@ exports[`PostArticle > Snapshots > matches snapshot with local video attachment 
       data-testid="container"
     >
       <span
-        class="wrap-anywhere hyphens-auto"
+        class="wrap-anywhere"
         data-size="lg"
         data-testid="typography"
       >
@@ -207,7 +207,7 @@ exports[`PostArticle > Snapshots > matches snapshot with long title and body 1`]
       data-testid="container"
     >
       <span
-        class="wrap-anywhere hyphens-auto"
+        class="wrap-anywhere"
         data-size="lg"
         data-testid="typography"
       >
@@ -256,7 +256,7 @@ exports[`PostArticle > Snapshots > matches snapshot without cover image 1`] = `
       data-testid="container"
     >
       <span
-        class="wrap-anywhere hyphens-auto"
+        class="wrap-anywhere"
         data-size="lg"
         data-testid="typography"
       >

@@ -2,6 +2,8 @@ import { ReactNode } from 'react';
 import type { Link, Paragraph, Parent, PhrasingContent, Root, RootContent, Text } from 'mdast';
 import { visit } from 'unist-util-visit';
 import { Identity } from '@/libs/identity/identity';
+import { isValidTagLabel } from '@/libs/utils/utils';
+import { HASHTAG_IN_TEXT_REGEX } from '@/libs/utils/utils.constants';
 import { TRUNCATION_LIMIT } from './PostText.constants';
 
 // We assign full code blocks without a language specified as plaintext (ex. ```...```)
@@ -63,11 +65,13 @@ interface PatternPluginConfig {
   getUrl: (match: string) => string;
   // The data-type attribute value for the link
   dataType: string;
+  // When false, the matched span stays plain text (mentions omit this; hashtags use it)
+  shouldConvert?: (matchedText: string) => boolean;
 }
 
 // Factory function that creates a remark plugin for pattern matching and link conversion
 const createPatternPlugin = (config: PatternPluginConfig) => {
-  const { regex, getUrl, dataType } = config;
+  const { regex, getUrl, dataType, shouldConvert } = config;
 
   return () => (tree: Root) => {
     visit(tree, 'paragraph', (node: Paragraph) => {
@@ -88,7 +92,19 @@ const createPatternPlugin = (config: PatternPluginConfig) => {
         for (const match of text.matchAll(regex)) {
           hasChanges = true;
           const [fullMatch, leadingWhitespace, matchedText] = match;
-          const matchStart = match.index;
+          const matchStart = match.index ?? 0;
+
+          if (shouldConvert && !shouldConvert(matchedText)) {
+            const plainSpan = text.slice(lastIndex, matchStart + fullMatch.length);
+            if (plainSpan) {
+              segments.push({
+                type: 'text',
+                value: plainSpan,
+              } as Text);
+            }
+            lastIndex = matchStart + fullMatch.length;
+            continue;
+          }
 
           // Add text before the match (including any leading whitespace from the match)
           const textBefore = text.slice(lastIndex, matchStart) + leadingWhitespace;
@@ -139,16 +155,17 @@ const createPatternPlugin = (config: PatternPluginConfig) => {
 };
 
 // Parse hashtags in paragraph text nodes and convert them to links with data-type="hashtag"
-// Hashtag pattern: # followed by a letter or number, then letters/numbers, with underscores or hyphens allowed only between alphanumerics
+// Pattern follows pubky-app-specs tagInvalidChars; isValidTagLabel gates link conversion (length, etc.)
 // Must be at start of text or preceded by whitespace (standalone)
 export const remarkHashtags = createPatternPlugin({
-  regex: /(^|\s)(#[a-zA-Z0-9]+(?:[-_][a-zA-Z0-9]+)*)/g,
+  regex: HASHTAG_IN_TEXT_REGEX,
   getUrl: (hashtag: string) => {
     // Extract tag name without the # symbol for the URL
     const tagName = hashtag.slice(1);
     return `/search?tags=${encodeURIComponent(tagName)}`;
   },
   dataType: 'hashtag',
+  shouldConvert: (hashtag) => isValidTagLabel(hashtag.slice(1).trim().toLowerCase()),
 });
 
 // Parse mentions in paragraph text nodes and convert them to links with data-type="mention"
