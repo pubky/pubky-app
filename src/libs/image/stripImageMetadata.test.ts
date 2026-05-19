@@ -128,44 +128,97 @@ describe('stripImageMetadata', () => {
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
-  it('keeps image/gif bytes unchanged while obfuscating filename', async () => {
-    const inputFile = new File(['original-content'], 'animated.gif', { type: 'image/gif' });
+  it.each([
+    ['image/gif', 'animated.gif', 'gif'],
+    ['image/svg+xml', 'icon.svg', 'svg'],
+  ])('keeps safe %s upload while obfuscating filename', async (mimeType, fileName, extension) => {
+    const content =
+      mimeType === 'image/svg+xml'
+        ? '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="4"/></svg>'
+        : 'original-content';
+    const inputFile = new File([content], fileName, { type: mimeType });
 
     const result = await stripImageMetadata(inputFile);
 
     expect(result).toBeInstanceOf(File);
     expect(result).not.toBe(inputFile);
-    expect(result.type).toBe('image/gif');
-    expect(result.name).not.toBe('animated.gif');
-    expect(result.name).toMatch(/^[a-z0-9]+\.gif$/);
-    expect(await result.text()).toBe(await inputFile.text());
+    expect(result.type).toBe(mimeType);
+    expect(result.name).not.toBe(fileName);
+    expect(result.name).toMatch(new RegExp(`^[a-z0-9]+\\.${extension}$`));
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
-  it('throws for SVG files declared via file.type', async () => {
-    const inputFile = new File(['<svg><script>alert(1)</script></svg>'], 'icon.svg', { type: 'image/svg+xml' });
+  it('sanitizes SVG files declared via file.type', async () => {
+    const inputFile = new File(
+      [
+        '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(1)</script><circle cx="8" cy="8" r="4"/></svg>',
+      ],
+      'icon.svg',
+      { type: 'image/svg+xml' },
+    );
 
-    await expect(stripImageMetadata(inputFile)).rejects.toThrow('SVG uploads are not supported');
+    const result = await stripImageMetadata(inputFile);
+    const text = await result.text();
+
+    expect(result.type).toBe('image/svg+xml');
+    expect(result.name).toMatch(/^[a-z0-9]+\.svg$/);
+    expect(text).toContain('<circle');
+    expect(text).not.toContain('<script');
+    expect(text).not.toContain('onload');
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
-  it('throws for SVG files declared via file extension', async () => {
-    const inputFile = new File(['<svg><script>alert(1)</script></svg>'], 'icon.svg', { type: '' });
+  it('sanitizes SVG files declared via file extension', async () => {
+    const inputFile = new File(
+      ['<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>'],
+      'icon.svg',
+      {
+        type: '',
+      },
+    );
 
-    await expect(stripImageMetadata(inputFile)).rejects.toThrow('SVG uploads are not supported');
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result.type).toBe('image/svg+xml');
+    expect(result.name).toMatch(/^[a-z0-9]+\.svg$/);
+    expect(await result.text()).toContain('<rect');
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
-  it('does not auto-detect SVG from magic bytes', async () => {
+  it('sanitizes SVG files detected from magic bytes', async () => {
     const svgBytes = new TextEncoder().encode(
-      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><iframe src="https://example.com"></iframe></foreignObject><circle cx="8" cy="8" r="4"/></svg>',
     );
     const inputFile = new File([svgBytes], 'upload', { type: '' });
 
     const result = await stripImageMetadata(inputFile);
+    const text = await result.text();
 
-    expect(result).toBe(inputFile);
+    expect(result).not.toBe(inputFile);
+    expect(result.type).toBe('image/svg+xml');
+    expect(result.name).toMatch(/^[a-z0-9]+\.svg$/);
+    expect(text).toContain('<circle');
+    expect(text).not.toContain('foreignObject');
+    expect(text).not.toContain('iframe');
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('removes risky SVG references and keeps local references', async () => {
+    const inputFile = new File(
+      [
+        '<svg xmlns="http://www.w3.org/2000/svg"><defs><path id="p" d="M0 0"/></defs><use href="#p"/><image href="https://example.com/a.png"/><a href="javascript:alert(1)"><text>bad</text></a><rect fill="url(http://example.com/pattern)"/></svg>',
+      ],
+      'icon.svg',
+      { type: 'image/svg+xml' },
+    );
+
+    const result = await stripImageMetadata(inputFile);
+    const text = await result.text();
+
+    expect(text).toContain('href="#p"');
+    expect(text).not.toContain('https://example.com');
+    expect(text).not.toContain('javascript:');
+    expect(text).not.toContain('url(http://example.com/pattern)');
   });
 
   it('throws when sanitization fails for supported formats', async () => {

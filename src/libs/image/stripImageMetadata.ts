@@ -17,8 +17,26 @@ const IMAGE_EXTENSION_TO_MIME_TYPE: Record<string, string> = {
 
 const MIME_TYPES_WITH_CANVAS_SANITIZATION = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MIME_TYPES_WITH_LOSSY_REENCODING = new Set(['image/jpeg', 'image/webp']);
+const SVG_MIME_TYPE = 'image/svg+xml';
 const LOSSY_IMAGE_ENCODE_QUALITY = 1;
 const FILE_HEADER_BYTES_LENGTH = 512;
+const TEXT_DECODER = new TextDecoder();
+const SVG_ACTIVE_ELEMENT_NAMES = new Set([
+  'animate',
+  'animatemotion',
+  'animatetransform',
+  'audio',
+  'canvas',
+  'discard',
+  'embed',
+  'foreignobject',
+  'iframe',
+  'script',
+  'set',
+  'style',
+  'video',
+]);
+const SVG_RISKY_URL_ATTRIBUTES = new Set(['href', 'src']);
 
 function getFileExtension(file: File): string | null {
   const parts = file.name.split('.');
@@ -75,6 +93,15 @@ function isWebpSignature(bytes: Uint8Array): boolean {
   );
 }
 
+function isSvgSignature(bytes: Uint8Array): boolean {
+  const text = TEXT_DECODER.decode(bytes);
+  const normalized = text
+    .replace(/^\uFEFF/, '')
+    .trimStart()
+    .toLowerCase();
+  return normalized.startsWith('<svg') || (normalized.startsWith('<?xml') && normalized.includes('<svg'));
+}
+
 async function getImageMimeTypeFromMagicBytes(file: File): Promise<string | null> {
   const header = new Uint8Array(await file.slice(0, FILE_HEADER_BYTES_LENGTH).arrayBuffer());
   if (isJpegSignature(header)) {
@@ -88,6 +115,9 @@ async function getImageMimeTypeFromMagicBytes(file: File): Promise<string | null
   }
   if (isGifSignature(header)) {
     return 'image/gif';
+  }
+  if (isSvgSignature(header)) {
+    return SVG_MIME_TYPE;
   }
   return null;
 }
@@ -180,12 +210,105 @@ async function sanitizeRasterImage(file: File, mimeType: string): Promise<Blob> 
   }
 }
 
+function isSvgParserError(document: Document): boolean {
+  return document.getElementsByTagName('parsererror').length > 0;
+}
+
+function normalizeSvgName(name: string): string {
+  return name.toLowerCase();
+}
+
+function isSafeSvgReference(value: string): boolean {
+  const trimmedValue = value.trim();
+  const normalizedValue = trimmedValue.replace(/[\u0000-\u001F\u007F\s]+/g, '').toLowerCase();
+
+  if (!normalizedValue) {
+    return true;
+  }
+
+  if (normalizedValue.startsWith('#')) {
+    return true;
+  }
+
+  if (
+    normalizedValue.startsWith('data:image/png') ||
+    normalizedValue.startsWith('data:image/jpeg') ||
+    normalizedValue.startsWith('data:image/gif') ||
+    normalizedValue.startsWith('data:image/webp')
+  ) {
+    return true;
+  }
+
+  if (normalizedValue.includes('javascript:') || normalizedValue.includes('data:text/html')) {
+    return false;
+  }
+
+  return !/^(https?:|blob:|file:|ftp:|\/\/)/.test(normalizedValue);
+}
+
+function isSafeSvgAttribute(attribute: Attr): boolean {
+  const name = normalizeSvgName(attribute.localName || attribute.name);
+  const value = attribute.value;
+
+  if (name.startsWith('on')) {
+    return false;
+  }
+
+  if (name === 'style') {
+    return false;
+  }
+
+  if (SVG_RISKY_URL_ATTRIBUTES.has(name)) {
+    return isSafeSvgReference(value);
+  }
+
+  if (value.toLowerCase().includes('url(')) {
+    return !/(url\(\s*['"]?(?:https?:|blob:|file:|ftp:|\/\/|javascript:|data:text\/html|data:image\/svg\+xml))/i.test(
+      value,
+    );
+  }
+
+  return true;
+}
+
+function sanitizeSvgElement(element: Element): void {
+  const elementName = normalizeSvgName(element.localName || element.tagName);
+  if (SVG_ACTIVE_ELEMENT_NAMES.has(elementName)) {
+    element.remove();
+    return;
+  }
+
+  for (const attribute of Array.from(element.attributes)) {
+    if (!isSafeSvgAttribute(attribute)) {
+      element.removeAttributeNode(attribute);
+    }
+  }
+
+  for (const child of Array.from(element.children)) {
+    sanitizeSvgElement(child);
+  }
+}
+
+async function sanitizeSvgImage(file: File): Promise<Blob> {
+  const text = await file.text();
+  const document = new DOMParser().parseFromString(text, SVG_MIME_TYPE);
+  const root = document.documentElement;
+
+  if (isSvgParserError(document) || normalizeSvgName(root.localName || root.tagName) !== 'svg') {
+    throw new Error('Failed to parse SVG for metadata stripping');
+  }
+
+  sanitizeSvgElement(root);
+
+  return new Blob([new XMLSerializer().serializeToString(root)], { type: SVG_MIME_TYPE });
+}
+
 /**
  * Removes sensitive metadata from supported image formats before upload.
  * - JPEG/PNG/WebP: re-encodes via canvas to strip metadata (fail-closed on errors)
  * - JPEG/WebP: encoded at quality 1.0 to avoid browser default quality reduction
  * - GIF and other raster types: keep bytes to avoid visual regressions
- * - SVG: rejected — cannot be safely sanitized without a full XML sanitizer
+ * - SVG: best-effort XML rewrite that removes active content and risky references
  * - All image types: replace original filename with an obfuscated one
  */
 export async function stripImageMetadata(file: File): Promise<File> {
@@ -194,11 +317,16 @@ export async function stripImageMetadata(file: File): Promise<File> {
     return file;
   }
 
-  if (imageMimeType === 'image/svg+xml') {
-    throw new Error('SVG uploads are not supported');
-  }
-
   const obfuscatedName = generateObfuscatedImageFileName(file, imageMimeType);
+
+  if (imageMimeType === SVG_MIME_TYPE) {
+    const sanitizedBlob = await sanitizeSvgImage(file);
+
+    return new File([sanitizedBlob], obfuscatedName, {
+      type: sanitizedBlob.type || imageMimeType,
+      lastModified: file.lastModified,
+    });
+  }
 
   if (!MIME_TYPES_WITH_CANVAS_SANITIZATION.has(imageMimeType)) {
     return new File([file], obfuscatedName, {
