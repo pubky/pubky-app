@@ -37,6 +37,16 @@ export type TFetchNexusParams = {
   body?: string | null;
 };
 
+export type TExpectedStatusFallbacks<T> = Partial<Record<number, T>>;
+
+/**
+ * Parameters for raw fetch requests that intentionally treat selected HTTP
+ * statuses as domain values instead of AppErrors.
+ */
+export type TFetchNexusWithExpectedStatusParams<T> = TFetchNexusParams & {
+  expectedStatusFallbacks: TExpectedStatusFallbacks<T>;
+};
+
 /**
  * Parameters for querying Nexus API with retry logic.
  * @see queryNexus in nexus.utils.ts
@@ -48,4 +58,12 @@ export type TQueryNexusParams = {
   method?: HttpMethod;
   /** Request body as JSON string */
   body?: string | null;
+};
+
+/**
+ * Parameters for querying Nexus with explicit status-code fallbacks.
+ * @see queryNexusWithExpectedStatus in nexus.utils.ts
+ */
+export type TQueryNexusWithExpectedStatusParams<T> = TQueryNexusParams & {
+  expectedStatusFallbacks: TExpectedStatusFallbacks<T>;
 };

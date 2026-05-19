@@ -8,7 +8,9 @@ import type {
   TBuildUrlWithQueryParams,
   TCreateFetchOptionsParams,
   TFetchNexusParams,
+  TFetchNexusWithExpectedStatusParams,
   TQueryNexusParams,
+  TQueryNexusWithExpectedStatusParams,
 } from './nexus.utils.types';
 
 export function buildNexusUrl(endpoint: string): string {
@@ -85,6 +87,29 @@ export async function fetchNexus<T>({ url, method = HttpMethod.GET, body = null 
 }
 
 /**
+ * Raw Nexus fetch with explicit HTTP status fallbacks.
+ *
+ * Use this only when a service method models a specific status as an expected
+ * domain value. Expected statuses are returned before httpResponseToError runs,
+ * so they also bypass the standard AppError/Sentry path by design.
+ */
+export async function fetchNexusWithExpectedStatus<T>({
+  url,
+  method = HttpMethod.GET,
+  body = null,
+  expectedStatusFallbacks,
+}: TFetchNexusWithExpectedStatusParams<T>): Promise<T> {
+  const response = await safeFetch(url, createFetchOptions({ method, body }), ErrorService.Nexus, 'fetchNexus');
+  if (!response.ok) {
+    if (Object.prototype.hasOwnProperty.call(expectedStatusFallbacks, response.status)) {
+      return expectedStatusFallbacks[response.status] as T;
+    }
+    throw httpResponseToError(response, ErrorService.Nexus, 'fetchNexus', url);
+  }
+  return parseResponseOrThrow<T>(response, ErrorService.Nexus, 'fetchNexus', url);
+}
+
+/**
  * Queries Nexus API with automatic retry logic via TanStack Query.
  * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
  *
@@ -98,5 +123,25 @@ export async function queryNexus<T>({ url, method = HttpMethod.GET, body = null 
   return nexusQueryClient.fetchQuery({
     queryKey: ['nexus', url, method, body],
     queryFn: () => fetchNexus<T>({ url, method, body }),
+  });
+}
+
+/**
+ * Queries Nexus while mapping explicit HTTP statuses to fallback domain values.
+ *
+ * Expected statuses do not use the normal Nexus retry behavior. This is an
+ * intentional opt-in for endpoints where the first response already carries the
+ * desired domain meaning.
+ */
+export async function queryNexusWithExpectedStatus<T>({
+  url,
+  method = HttpMethod.GET,
+  body = null,
+  expectedStatusFallbacks,
+}: TQueryNexusWithExpectedStatusParams<T>): Promise<T> {
+  const expectedStatusCodes = Object.keys(expectedStatusFallbacks).sort();
+  return nexusQueryClient.fetchQuery({
+    queryKey: ['nexus', url, method, body, 'expected-status', expectedStatusCodes],
+    queryFn: () => fetchNexusWithExpectedStatus<T>({ url, method, body, expectedStatusFallbacks }),
   });
 }
