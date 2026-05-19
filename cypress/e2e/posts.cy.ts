@@ -427,9 +427,13 @@ describe('posts', () => {
 
     // untag tag 1 after page reload to cover bug https://github.com/pubky/pubky-app/issues/1721
     cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag1');
-    cy.get('[data-cy="post-tags-panel"]').within(() => {
-      cy.contains('p', tag1).parent().click();
-      cy.wait('@deleteTag1').its('response.statusCode').should('eq', 204);
+    cy.get('[data-cy="single-post-card"]').within(() => {
+      cy.get('[data-cy="post-tags-panel"]')
+        .filter(':visible')
+        .within(() => {
+          cy.contains('p', tag1).parent().click();
+          cy.wait('@deleteTag1').its('response.statusCode').should('eq', 204);
+        });
     });
     cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag removed');
   });
