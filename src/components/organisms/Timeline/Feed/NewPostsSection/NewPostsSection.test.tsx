@@ -113,22 +113,18 @@ describe('NewPostsSection', () => {
   it('does not mute-filter new post count on bookmarks feed', () => {
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['muted-user:post-9'], unreadCount: 1 });
     const filterSpy = vi.mocked(MuteFilter.filterPostsSafe);
-    filterSpy.mockImplementation((ids, mutedSet) => {
-      expect(mutedSet?.size).toBe(0);
-      return ids;
-    });
 
     render(
       <NewPostsSection
         {...defaultProps}
         variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
         streamId={'timeline:bookmarks:all' as PostStreamId}
-        mutedUserIdSet={new Set<Pubky>(['muted-user'])}
+        mutedUserIdSet={new Set<Pubky>(['muted-user' as Pubky])}
       />,
     );
 
     expect(screen.getByTestId('new-posts-button')).toHaveAttribute('data-count', '1');
-    expect(filterSpy).toHaveBeenCalled();
+    expect(filterSpy).not.toHaveBeenCalled();
   });
 
   it('calls stream controllers and prependPosts on click', async () => {

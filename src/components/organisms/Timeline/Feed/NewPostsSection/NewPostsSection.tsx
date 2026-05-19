@@ -21,9 +21,6 @@ interface NewPostsSectionProps {
   prependPosts: (postIds: string | string[]) => Promise<void>;
 }
 
-/** Shared empty set so bookmarks skip mute filtering without per-render allocation (#1804). */
-const SKIP_MUTE_FILTER_FOR_NEW_POSTS = new Set<Pubky>();
-
 /**
  * NewPostsSection
  *
@@ -48,9 +45,10 @@ export function NewPostsSection({
 
   const displayedPostIds = new Set(postIds);
   const notDisplayed = unreadPostIds.filter((id) => !displayedPostIds.has(id));
-  const muteIdsForNewPosts =
-    variant === TIMELINE_FEED_VARIANT.BOOKMARKS ? SKIP_MUTE_FILTER_FOR_NEW_POSTS : mutedUserIdSet;
-  const actualNewPostIds = MuteFilter.filterPostsSafe(notDisplayed, muteIdsForNewPosts);
+  const actualNewPostIds =
+    variant === TIMELINE_FEED_VARIANT.BOOKMARKS
+      ? notDisplayed
+      : MuteFilter.filterPostsSafe(notDisplayed, mutedUserIdSet);
   const actualNewCount = actualNewPostIds.length;
 
   const handleNewPostsClick = async () => {
