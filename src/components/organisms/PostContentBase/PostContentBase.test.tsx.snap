@@ -102,6 +102,7 @@ exports[`PostContentBase - Snapshots > matches snapshot with very long content 1
     <button
       aria-label="Show full post content"
       class="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
+      data-allow-post-navigation="true"
       data-testid="button"
     >
       Show more

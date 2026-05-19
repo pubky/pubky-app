@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { usePathname, useSelectedLayoutSegments } from 'next/navigation';
 import { Container } from '@/atoms/Container/Container';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
@@ -23,21 +23,26 @@ import { type FeedsShellConfig, tryResolveFeedsShellConfig } from './_shell/conf
  * While the `(.)post` slot is active, `usePathname()` reports the post URL
  * (`/post/<user>/<post>`), not the underlying feed URL. That pathname does
  * **not** resolve to a feeds shell config. To keep the previous route's chrome
- * mounted (and avoid throwing during the modal), we cache the last successful
- * config in a state and reuse it when the resolver returns `null`.
+ * mounted during the modal, we cache the last successful config in a state
+ * and reuse it when the resolver returns `null`.
  *
- * ## Known dev-only warning
+ * If the layout mounts directly into the intercepted state — e.g. user is on
+ * `/home`, opens a post modal (`/post/...`), navigates to `/settings`
+ * (unmounting `FeedsLayout` and dropping the cache), then hits browser-back
+ * — the cache is empty and `shellConfig` is `null`. In that case we render
+ * `<ContentLayout>` with no shell props (all are optional); the modal covers
+ * the empty chrome until it's dismissed, at which point a soft-nav resolves
+ * and repopulates the config. Any momentary flash of empty chrome on close
+ * is an acceptable tradeoff vs. extra complexity.
  *
- * In dev mode you may see:
- *   `Each child in a list should have a unique "key" prop. Check the render
- *   method of \`ClientSegmentRoot\`.`
+ * ## No throw for missing configs
  *
- * The trace originates inside `react-server-dom-turbopack` while reconciling
- * the RSC stream chunks for this layout's parallel slots — i.e. it fires
- * *before* `FeedsLayout` runs. It is a Next.js framework warning (same family
- * as vercel/next.js#70452 and the parallel-route + route-group cluster) and
- * has no functional impact: routing, hydration, scroll preservation and
- * production builds are unaffected. We cannot silence it from userland.
+ * If a new route is added under `(feeds)/` without a matching entry in
+ * `_shell/configs.tsx`, the layout simply renders empty chrome rather than
+ * throwing — an uncaught error in a layout would crash the whole feeds
+ * cluster for end users, which is a much worse outcome than missing
+ * sidebars for a dev who forgot to wire up a config. Keep `configs` in
+ * sync with the routes under `(feeds)/` by convention.
  */
 export default function FeedsLayout({ children, post }: { children: React.ReactNode; post: React.ReactNode }) {
   const pathname = usePathname();
@@ -62,28 +67,14 @@ export default function FeedsLayout({ children, post }: { children: React.ReactN
   if (resolved && resolved !== lastFeedsConfig) {
     setLastFeedsConfig(resolved);
   }
-  // Fallback is intentionally gated on `isPostActive` so a non-modal unknown
-  // pathname (e.g. a new `(feeds)/notifications/page.tsx` added without a
-  // matching entry in `configs`) hits the throw below instead of silently
-  // rendering stale chrome from the previous feed route.
+  // Fallback chain:
+  //   1. Fresh resolve from pathname (normal feeds navigation).
+  //   2. Cached previous config while the intercepted `(.)post` modal is
+  //      active (intra-cluster: feed → post modal keeps chrome behind it).
+  //   3. `null` — layout mounted directly into the modal with no cache (see
+  //      header comment). `<ContentLayout>` accepts all shell slots as
+  //      optional, so spreading `undefined`s is safe.
   const shellConfig = resolved ?? (isPostActive ? lastFeedsConfig : null);
-
-  if (!shellConfig) {
-    // Config-drift safety net: reachable only when a new route is added under
-    // `(feeds)/` without a matching entry in `configs` in `_shell/configs.tsx`.
-    //
-    // The other apparent paths to here are unreachable by design:
-    //   - A direct deep-link to `/post/...` does NOT mount this layout —
-    //     `/post/` is outside the `(feeds)` route group, so the standalone
-    //     `app/post/[userId]/[postId]/page.tsx` handles it.
-    //   - Soft-nav to `/post/...` from a feed route activates the intercepted
-    //     `(.)post` slot, by which point `lastFeedsConfig` is always populated
-    //     (the user had to be on a feed route to reach the modal).
-    throw new Error(
-      `[FeedsLayout] No feeds shell config for pathname "${pathname}". ` +
-        `Add an entry to (feeds)/_shell/configs.tsx if this is a new feeds route.`,
-    );
-  }
 
   return (
     <>
@@ -92,8 +83,10 @@ export default function FeedsLayout({ children, post }: { children: React.ReactN
         <ContentLayout {...shellConfig}>{children}</ContentLayout>
       </Container>
 
-      {/* Parallel route @post — renders intercepted post page when active. */}
-      {post}
+      <Fragment key="post">
+        {/* Parallel route @post — renders intercepted post page when active. */}
+        {post}
+      </Fragment>
     </>
   );
 }

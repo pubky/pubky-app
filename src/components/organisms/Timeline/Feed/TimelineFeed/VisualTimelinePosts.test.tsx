@@ -127,12 +127,6 @@ vi.mock('@/molecules/Timeline/TimelineError', () => {
   };
 });
 
-vi.mock('@/molecules/Timeline/TimelineLoadingMore', () => {
-  return {
-    TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more</div>,
-  };
-});
-
 vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper')>();
@@ -143,15 +137,17 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
       loading,
       error,
       hasItems,
+      loadingComponent,
       emptyComponent,
     }: {
       children: React.ReactNode;
       loading: boolean;
       error: string | null;
       hasItems: boolean;
+      loadingComponent?: React.ReactNode;
       emptyComponent?: React.ReactNode;
     }) => {
-      if (loading) return <div data-testid="timeline-loading">Loading</div>;
+      if (loading) return <>{loadingComponent ?? <div data-testid="timeline-loading">Loading</div>}</>;
       if (error && !hasItems) return <div data-testid="timeline-error-state">{error}</div>;
       if (!hasItems) return <>{emptyComponent ?? <div data-testid="timeline-empty">Empty</div>}</>;
       return <>{children}</>;
@@ -321,6 +317,7 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
   });
 
   it('does not render the filtered empty state while file metadata is being fetched', () => {
@@ -344,6 +341,103 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+  });
+
+  it('keeps the initial skeleton and backfills while the first visual rows are unavailable', async () => {
+    const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={true}
+        loadMore={mockLoadMore}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+    expect(mockUseInfiniteScroll).toHaveBeenCalledWith({
+      onLoadMore: expect.any(Function),
+      hasMore: false,
+      isLoading: true,
+      threshold: 3000,
+      debounceMs: 20,
+    });
+
+    await waitFor(() => {
+      expect(mockLoadMore).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('backfills initial rows while tile probes are pending', async () => {
+    const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: true,
+      hasPendingFiles: false,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={true}
+        loadMore={mockLoadMore}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockLoadMore).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('renders visual grid skeletons during initial loading', () => {
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={true}
+        loadingMore={false}
+        error={null}
+        hasMore={true}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+    expect(screen.getAllByTestId('visual-feed-skeleton-row')).toHaveLength(3);
+    expect(screen.getAllByTestId('visual-feed-skeleton-tile').length).toBeGreaterThan(0);
+  });
+
+  it('does not add full-row skeletons while loading more posts', () => {
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={true}
+        error={null}
+        hasMore={true}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+    expect(screen.queryByTestId('visual-feed-skeleton')).not.toBeInTheDocument();
   });
 
   it('falls back to the main image when the preview image fails', () => {
@@ -399,6 +493,24 @@ describe('VisualTimelinePosts', () => {
     fireEvent.error(image);
 
     expect(image).toHaveAttribute('src', '/main-image.jpg');
+  });
+
+  it('uses the black tile background while media loads', () => {
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    const tile = screen.getByLabelText('Open post author:post1');
+
+    expect(tile).toHaveClass('bg-black');
+    expect(tile).not.toHaveClass('animate-pulse');
   });
 
   it('renders the timestamp in a separate top-right timestamp block', () => {

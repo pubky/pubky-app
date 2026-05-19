@@ -3,7 +3,7 @@
 exports[`ProfileFriends - Snapshots > matches snapshot when loading 1`] = `
 <div>
   <div
-    class="mt-6 gap-4 lg:mt-0"
+    class="gap-4"
     data-testid="container"
   >
     <h5
@@ -73,7 +73,7 @@ exports[`ProfileFriends - Snapshots > matches snapshot when loading 1`] = `
 exports[`ProfileFriends - Snapshots > matches snapshot with connections 1`] = `
 <div>
   <div
-    class="mt-6 gap-4 lg:mt-0"
+    class="gap-4"
     data-testid="container"
   >
     <h5
@@ -111,7 +111,6 @@ exports[`ProfileFriends - Snapshots > matches snapshot with connections 1`] = `
 exports[`ProfileFriends - Snapshots > matches snapshot with no connections 1`] = `
 <div>
   <div
-    class="mt-6 lg:mt-0"
     data-testid="container"
   >
     <div

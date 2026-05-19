@@ -460,8 +460,9 @@
     },
     "actions": {
       "title": "Profile Actions",
-      "edit": "Edit",
+      "editProfile": "Edit profile",
       "link": "Link",
+      "profileLink": "Profile link",
       "loggingOut": "Logging out...",
       "signOut": "Sign out",
       "unfollowing": "Unfollowing...",

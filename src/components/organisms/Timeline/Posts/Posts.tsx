@@ -2,6 +2,7 @@
 
 import { Container } from '@/atoms/Container/Container';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
@@ -29,8 +30,6 @@ interface TimelinePostsProps {
  * PostMain / nested reply inherits the active tags layout via context.
  */
 export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, loadMore }: TimelinePostsProps) {
-  const { navigateToPost } = usePostNavigation();
-
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
@@ -39,13 +38,32 @@ export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, l
     debounceMs: 20,
   });
 
+  const { handlePostKeyDown } = usePostNavigation();
+  const { setCardRef, onListKeyDown } = usePostListKeyboard();
+
   return (
     <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
       <Container data-cy="timeline-container">
-        <Container data-cy="timeline-posts" overrideDefaults className="space-y-4">
-          {postIds.map((postId) => (
-            <Container key={`main_${postId}`} data-cy="post-card">
-              <PostMain postId={postId} onClick={() => navigateToPost(postId)} isReply={false} />
+        <Container
+          data-cy="timeline-posts"
+          overrideDefaults
+          role="feed"
+          className="space-y-4"
+          onKeyDown={onListKeyDown}
+        >
+          {postIds.map((postId, index) => (
+            <Container
+              key={`main_${postId}`}
+              data-cy="post-card"
+              ref={setCardRef(index)}
+              role="article"
+              aria-posinset={index + 1}
+              aria-setsize={postIds.length}
+              tabIndex={0}
+              onKeyDown={(e) => handlePostKeyDown(postId, e)}
+              className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <PostMain postId={postId} isReply={false} />
               <TimelinePostReplies postId={postId} />
             </Container>
           ))}

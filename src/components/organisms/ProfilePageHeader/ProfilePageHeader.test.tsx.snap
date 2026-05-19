@@ -2,11 +2,11 @@
 
 exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
 <div
-  class="flex min-w-0 flex-col items-center gap-6 rounded-lg bg-card p-6 lg:flex-row lg:items-start lg:rounded-none lg:bg-transparent lg:p-0"
+  class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 rounded-none bg-transparent p-0 lg:flex lg:items-start lg:gap-6"
   data-testid="profile-page-header"
 >
   <div
-    class="relative cursor-pointer lg:px-4"
+    class="relative col-start-1 row-start-1 shrink-0 cursor-pointer lg:px-4"
     data-testid="container"
   >
     <div
@@ -28,38 +28,113 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
     </div>
   </div>
   <div
-    class="flex min-w-0 flex-1 flex-col gap-3"
+    class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3"
     data-testid="container"
   >
     <div
-      class="flex min-w-0 flex-col text-center lg:text-left gap-1"
+      class="col-start-2 row-start-1 flex min-w-0 flex-col items-start gap-1 self-center lg:col-auto lg:row-auto lg:self-auto lg:text-left"
       data-testid="container"
     >
       <h1
-        class="text-2xl font-bold max-width-profile-page-header w-full truncate leading-normal text-white sm:max-w-xl lg:max-w-full lg:text-6xl lg:leading-normal"
+        class="font-bold max-width-profile-page-header w-full truncate text-2xl leading-8 text-white sm:max-w-xl lg:max-w-full lg:text-6xl lg:leading-none"
         data-cy="profile-username-header"
         data-testid="typography"
       >
         Satoshi Nakamoto
       </h1>
       <div
-        class=""
-        data-cy="profile-bio-header"
+        class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 lg:hidden"
         data-testid="container"
       >
         <div
-          data-testid="post-text"
+          class="flex min-w-0 items-center gap-1"
+          data-testid="container"
         >
-          Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-key-round size-4 shrink-0 text-muted-foreground"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
+            />
+            <circle
+              cx="16.5"
+              cy="7.5"
+              fill="currentColor"
+              r=".5"
+            />
+          </svg>
+          <span
+            class="truncate text-xs leading-4 font-medium tracking-widest text-muted-foreground uppercase"
+            data-testid="typography"
+          >
+            1QX7...7890
+          </span>
+        </div>
+        <div
+          class="flex min-w-0 items-center gap-1"
+          data-testid="container"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-users-round size-4 shrink-0 text-muted-foreground"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 21a8 8 0 0 0-16 0"
+            />
+            <circle
+              cx="10"
+              cy="8"
+              r="5"
+            />
+            <path
+              d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"
+            />
+          </svg>
+          <span
+            class="truncate text-xs leading-4 font-medium tracking-widest text-muted-foreground uppercase"
+            data-testid="typography"
+          >
+            83 FOLLOWERS
+          </span>
         </div>
       </div>
     </div>
     <div
-      class="flex flex-wrap items-center justify-center gap-3 lg:justify-start"
+      class="col-span-full min-w-0 lg:col-auto"
+      data-cy="profile-bio-header"
+      data-testid="container"
+    >
+      <div
+        data-testid="post-text"
+      >
+        Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.
+      </div>
+    </div>
+    <div
+      class="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:flex lg:flex-wrap lg:gap-3"
       data-testid="container"
     >
       <button
-        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-3 min-w-0 justify-center lg:order-0"
         data-cy="profile-edit-btn"
         data-size="sm"
         data-slot="button"
@@ -85,10 +160,10 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
             d="m15 5 4 4"
           />
         </svg>
-        Edit
+        Edit profile
       </button>
       <button
-        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 uppercase"
+        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 uppercase order-1 min-w-0 justify-center lg:order-0"
         data-cy="profile-copy-pubkey-btn"
         data-size="sm"
         data-slot="button"
@@ -120,7 +195,7 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         1QX7...7890
       </button>
       <button
-        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-2 min-w-0 justify-center lg:order-0"
         data-size="sm"
         data-slot="button"
         data-variant="secondary"
@@ -145,10 +220,10 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
             d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
           />
         </svg>
-        Link
+        Profile link
       </button>
       <button
-        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        class="inline-flex items-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-4 min-w-0 justify-center lg:order-0"
         data-size="sm"
         data-slot="button"
         data-variant="secondary"
@@ -179,41 +254,46 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         </svg>
         Sign out
       </button>
-      <button
-        aria-controls="radix-normalized"
-        aria-expanded="false"
-        aria-haspopup="dialog"
-        class="flex h-8 cursor-pointer items-center gap-1 p-0 focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none"
-        data-as-child="true"
-        data-slot="popover-trigger"
-        data-state="closed"
-        data-testid="popover-trigger"
-        data-variant="ghost"
-        type="button"
+      <div
+        class="order-first col-span-2 flex h-8 items-center lg:order-0 lg:col-auto"
+        data-testid="container"
       >
-        <span
-          class="text-base leading-6 font-bold text-white"
+        <button
+          aria-controls="radix-normalized"
+          aria-expanded="false"
+          aria-haspopup="dialog"
+          class="flex h-8 cursor-pointer items-center gap-1 p-0 focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none"
+          data-as-child="true"
+          data-slot="popover-trigger"
+          data-state="closed"
+          data-testid="popover-trigger"
+          data-variant="ghost"
+          type="button"
         >
-          Vacationing
-        </span>
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-chevron-down size-6 transition-transform duration-300"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m6 9 6 6 6-6"
-          />
-        </svg>
-      </button>
+          <span
+            class="text-base leading-6 font-bold text-white"
+          >
+            Vacationing
+          </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chevron-down size-6 transition-transform duration-300"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 </div>

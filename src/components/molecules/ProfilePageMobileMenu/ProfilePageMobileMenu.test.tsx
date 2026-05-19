@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -44,6 +44,39 @@ describe('ProfilePageMobileMenu', () => {
     expect(buttons).toHaveLength(PROFILE_MENU_ITEMS.length);
   });
 
+  it('orders own-profile items with Posts before Replies', () => {
+    const { container } = render(
+      <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />,
+    );
+
+    const labels = Array.from(container.querySelectorAll('button')).map((button) => button.getAttribute('aria-label'));
+
+    expect(labels).toEqual([
+      'Profile',
+      'Notifications',
+      'Posts',
+      'Replies',
+      'Followers',
+      'Following',
+      'Friends',
+      'Tagged',
+    ]);
+  });
+
+  it('orders other-user items according to the Figma profile tabs', () => {
+    const { container } = render(
+      <ProfilePageMobileMenu
+        activePage={PROFILE_PAGE_TYPES.POSTS}
+        onPageChangeAction={() => {}}
+        isOwnProfile={false}
+      />,
+    );
+
+    const labels = Array.from(container.querySelectorAll('button')).map((button) => button.getAttribute('aria-label'));
+
+    expect(labels).toEqual(['Profile', 'Posts', 'Replies', 'Followers', 'Following', 'Friends', 'Tagged']);
+  });
+
   it('marks the active item with aria-current="page"', () => {
     const { container } = render(
       <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.FOLLOWING} onPageChangeAction={() => {}} />,
@@ -59,6 +92,15 @@ describe('ProfilePageMobileMenu', () => {
     );
     const rootElement = container.firstChild as HTMLElement;
     expect(rootElement).toHaveAttribute('data-testid', 'profile-page-mobile-menu');
+  });
+
+  it('forwards a ref to the underlying mobile tab bar root', () => {
+    const ref = createRef<HTMLDivElement>();
+    render(
+      <ProfilePageMobileMenu ref={ref} activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />,
+    );
+    expect(ref.current).not.toBeNull();
+    expect(ref.current).toHaveAttribute('data-testid', 'profile-page-mobile-menu');
   });
 
   it('renders with sticky positioning', () => {
