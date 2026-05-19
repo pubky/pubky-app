@@ -42,7 +42,7 @@ export function PostHeader({
   const timeAgo = indexedAt ? formatRelativeTime(indexedAt) : null;
 
   return (
-    <Container className="flex min-w-0 items-start justify-between gap-3" overrideDefaults>
+    <Container className="flex w-full min-w-0 items-start justify-between gap-3" overrideDefaults>
       <PostHeaderUserInfo
         userId={userId}
         userName={userDetails.name || ''}
@@ -52,6 +52,7 @@ export function PostHeader({
         size={size}
         timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
         indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
+        className="w-0 flex-1"
       />
       {timeAgo && timeAgoPlacement === 'top-right' && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />}
     </Container>

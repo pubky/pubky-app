@@ -70,17 +70,17 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
   return (
     <PageHeader data-testid="post-page-header" className="pt-0 pb-3">
       <Container
-        className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4"
+        className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4"
         overrideDefaults
       >
         {/* Title */}
         <Typography
           as="h1"
           overrideDefaults
-          className="text-2xl leading-8 font-light text-muted-foreground"
+          className="w-full min-w-0 text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
           data-testid="post-page-title"
         >
-          {titlePrefix} {authorName}
+          {titlePrefix} <span className="inline-block max-w-full min-w-0 truncate">{authorName}</span>
         </Typography>
 
         {/* Breadcrumb (only for replies) */}

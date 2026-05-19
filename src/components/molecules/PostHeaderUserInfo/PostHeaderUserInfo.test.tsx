@@ -467,6 +467,19 @@ describe('PostHeaderUserInfo - Navigation', () => {
 
     expect(screen.getByText('Test User')).not.toHaveClass('hover:underline');
   });
+
+  it('constrains the username link so long names can truncate', () => {
+    const longName = 'This is an extremely long profile name that should truncate instead of expanding the post header';
+
+    render(<PostHeaderUserInfo userId="testuser123" userName={longName} showPopover={false} className="w-0 flex-1" />);
+
+    const profileLinks = screen.getAllByTestId('profile-link');
+    const usernameLink = profileLinks[1];
+
+    expect(usernameLink.closest('.w-0.flex-1')).toBeInTheDocument();
+    expect(usernameLink).toHaveClass('block', 'w-full', 'min-w-0', 'max-w-full');
+    expect(screen.getByText(longName)).toHaveClass('w-full', 'truncate', 'max-w-full');
+  });
 });
 
 describe('PostHeaderUserInfo - Snapshots', () => {

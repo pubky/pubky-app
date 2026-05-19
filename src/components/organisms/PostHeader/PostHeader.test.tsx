@@ -87,14 +87,16 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
         characterLimit,
         size,
         timeAgo,
+        className,
       }: {
         userId: string;
         userName: string;
         characterLimit?: { count: number; max: number };
         size?: 'normal' | 'large';
         timeAgo?: string | null;
+        className?: string;
       }) => (
-        <div data-testid="post-header-user-info" data-size={size}>
+        <div data-testid="post-header-user-info" data-size={size} data-class-name={className}>
           <div data-testid="avatar" />
           <div>{userName}</div>
           <div>@{userId.substring(0, 8)}</div>
@@ -207,6 +209,35 @@ describe('PostHeader', () => {
     render(<PostHeader postId="userpubkykey:post456" size="large" />);
 
     expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-size', 'large');
+  });
+
+  it('constrains PostHeaderUserInfo width for long author names', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: {
+        id: 'userpubkykey:post456',
+        indexed_at: Date.now(),
+        kind: 'short' as const,
+        uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
+        content: '',
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+      } as EnrichedPostDetails,
+      isLoading: false,
+    });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: {
+        id: 'userpubkykey',
+        name: 'This is an extremely long profile name that should truncate',
+        image: 'test-image-id',
+      } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
+
+    render(<PostHeader postId="userpubkykey:post456" />);
+
+    expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-class-name', 'w-0 flex-1');
   });
 
   it('renders time in top-right by default', () => {

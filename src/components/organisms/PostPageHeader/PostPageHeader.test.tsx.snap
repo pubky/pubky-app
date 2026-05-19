@@ -7,16 +7,20 @@ exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = 
     data-testid="post-page-header"
   >
     <div
-      class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4"
+      class="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4"
       data-testid="container"
     >
       <h1
-        class="text-2xl leading-8 font-light text-muted-foreground"
+        class="w-full min-w-0 text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
         data-testid="post-page-title"
       >
         Reply by
          
-        Anna
+        <span
+          class="inline-block min-w-0 max-w-full truncate"
+        >
+          Anna
+        </span>
       </h1>
       <nav
         aria-label="breadcrumb"
@@ -131,16 +135,20 @@ exports[`PostPageHeader > matches snapshot for root post 1`] = `
     data-testid="post-page-header"
   >
     <div
-      class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4"
+      class="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4"
       data-testid="container"
     >
       <h1
-        class="text-2xl leading-8 font-light text-muted-foreground"
+        class="w-full min-w-0 text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
         data-testid="post-page-title"
       >
         Post by
          
-        John
+        <span
+          class="inline-block min-w-0 max-w-full truncate"
+        >
+          John
+        </span>
       </h1>
     </div>
   </div>

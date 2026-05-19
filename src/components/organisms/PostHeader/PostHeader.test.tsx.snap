@@ -2,10 +2,11 @@
 
 exports[`PostHeader - Snapshots > matches snapshot in loaded state 1`] = `
 <div
-  class="flex min-w-0 items-start justify-between gap-3"
+  class="flex w-full min-w-0 items-start justify-between gap-3"
   data-testid="container"
 >
   <div
+    data-class-name="w-0 flex-1"
     data-size="normal"
     data-testid="post-header-user-info"
   >
@@ -35,7 +36,7 @@ exports[`PostHeader - Snapshots > matches snapshot in loaded state 1`] = `
 
 exports[`PostHeader - Snapshots > matches snapshot in loading state 1`] = `
 <div
-  class="flex min-w-0 items-start justify-between gap-3"
+  class="flex w-full min-w-0 items-start justify-between gap-3"
   data-testid="container"
 >
   <div
