@@ -627,6 +627,13 @@ describe('PostText', () => {
       expect(screen.queryByTestId('post-hashtag')).not.toBeInTheDocument();
       expect(container.textContent).toContain(`#${label}`);
     });
+
+    it('does not render inline hash without whitespace boundary as PostHashtags link', () => {
+      const { container } = render(<PostText content="Hello#Notatag" />);
+
+      expect(screen.queryByTestId('post-hashtag')).not.toBeInTheDocument();
+      expect(container.textContent).toBe('Hello#Notatag');
+    });
   });
 
   describe('Mentions', () => {
