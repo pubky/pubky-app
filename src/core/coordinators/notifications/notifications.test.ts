@@ -86,8 +86,9 @@ describe('NotificationCoordinator', () => {
       coord1.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coord1.start();
 
+      // start() fires one immediate wakeup poll (#1497) + 2 interval polls
       vi.advanceTimersByTime(2_000);
-      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy).toHaveBeenCalledTimes(3);
 
       // Stop through second reference
       coord2.stop();
@@ -95,7 +96,7 @@ describe('NotificationCoordinator', () => {
       // Both should reflect the same state (stopped)
       // If they were different instances, coord1 would still be running
       vi.advanceTimersByTime(5_000);
-      expect(spy).toHaveBeenCalledTimes(2); // No additional calls
+      expect(spy).toHaveBeenCalledTimes(3); // No additional calls
     });
 
     it('creates a new instance after resetInstance()', () => {
@@ -123,15 +124,16 @@ describe('NotificationCoordinator', () => {
       coord1.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coord1.start();
 
+      // start() fires one immediate wakeup poll (#1497) + 1 interval poll
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
 
       // Reset creates new instance with fresh state
       NotificationCoordinator.resetInstance();
 
       // New instance should not be polling (start() was not called)
       vi.advanceTimersByTime(5_000);
-      expect(spy).toHaveBeenCalledTimes(1); // No additional calls from coord2
+      expect(spy).toHaveBeenCalledTimes(2); // No additional calls from coord2
     });
   });
 
@@ -146,12 +148,13 @@ describe('NotificationCoordinator', () => {
       coordinator.start();
       coordinator.start();
 
-      // Should only have one interval running, not four
+      // First start() fires immediate wakeup poll; later starts are no-ops
+      // (intervalId already set). Then 1 interval tick.
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1); // Only one poll
+      expect(spy).toHaveBeenCalledTimes(2); // immediate + 1 interval
 
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(2); // Only one more poll, not 4x
+      expect(spy).toHaveBeenCalledTimes(3); // + 1 more interval
     });
 
     it('handles multiple rapid stop() calls gracefully', () => {
@@ -159,8 +162,9 @@ describe('NotificationCoordinator', () => {
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
 
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
 
       // Rapidly call stop multiple times
       coordinator.stop();
@@ -169,28 +173,29 @@ describe('NotificationCoordinator', () => {
 
       // Should not throw or cause issues
       vi.advanceTimersByTime(5_000);
-      expect(spy).toHaveBeenCalledTimes(1); // No additional polls
+      expect(spy).toHaveBeenCalledTimes(2); // No additional polls
     });
 
     it('handles interleaved start/stop calls gracefully', () => {
       const { spy, coordinator } = setupAuthenticatedTest();
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
 
-      // Rapid start/stop/start pattern
+      // Rapid start/stop/start pattern — each start that finds idle state
+      // fires one immediate wakeup poll (#1497). 3 starts = 3 immediate polls.
       coordinator.start();
       coordinator.stop();
       coordinator.start();
       coordinator.stop();
       coordinator.start();
 
-      // Last call was start(), so should be polling
+      // Last call was start(), so should be polling: 3 immediates + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(4);
 
       // Stop it
       coordinator.stop();
       vi.advanceTimersByTime(5_000);
-      expect(spy).toHaveBeenCalledTimes(1); // No more polls
+      expect(spy).toHaveBeenCalledTimes(4); // No more polls
     });
 
     it('handles multiple rapid configure() calls gracefully', () => {
@@ -215,11 +220,12 @@ describe('NotificationCoordinator', () => {
       // Last config should win (1_000ms interval)
       coordinator.start();
 
-      vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
-
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
       expect(spy).toHaveBeenCalledTimes(2);
+
+      vi.advanceTimersByTime(1_000);
+      expect(spy).toHaveBeenCalledTimes(3);
     });
 
     it('handles configure() during active polling without creating duplicate timers', () => {
@@ -236,23 +242,23 @@ describe('NotificationCoordinator', () => {
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
 
-      // Poll once
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
 
-      // Change interval mid-polling (should restart with new interval)
+      // Change interval mid-polling — restartPolling triggers another wakeup poll
       coordinator.configure({ intervalMs: 2_000 });
 
-      // Old 1s timer should be cleared, new 2s timer should be active
+      // After restart: immediate wakeup poll fires. 2s timer hasn't ticked yet.
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1); // No poll at 1s mark
+      expect(spy).toHaveBeenCalledTimes(3);
 
-      vi.advanceTimersByTime(1_000); // Total 2s
-      expect(spy).toHaveBeenCalledTimes(2); // Poll at 2s mark
+      vi.advanceTimersByTime(1_000); // 2s total since restart → 1 interval tick
+      expect(spy).toHaveBeenCalledTimes(4);
 
       // Continue at 2s interval
       vi.advanceTimersByTime(2_000);
-      expect(spy).toHaveBeenCalledTimes(3);
+      expect(spy).toHaveBeenCalledTimes(5);
     });
 
     it('handles start/configure/stop in rapid succession', () => {
@@ -267,7 +273,8 @@ describe('NotificationCoordinator', () => {
 
       const coordinator = NotificationCoordinator.getInstance();
 
-      // Rapid succession of different operations
+      // Rapid succession — start (immediate poll), configure restart (immediate),
+      // stop, configure (no restart since idle), start (immediate). 3 immediates.
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
       coordinator.configure({ intervalMs: 500 });
@@ -275,12 +282,12 @@ describe('NotificationCoordinator', () => {
       coordinator.configure({ intervalMs: 2_000 });
       coordinator.start();
 
-      // Should be stopped, then started with 2s interval
+      // 3 immediate wakeup polls + 1 interval tick at 2s
       vi.advanceTimersByTime(2_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(4);
 
       vi.advanceTimersByTime(2_000);
-      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy).toHaveBeenCalledTimes(5);
     });
   });
 
@@ -299,15 +306,16 @@ describe('NotificationCoordinator', () => {
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
 
+      // start() fires immediate wakeup poll + 2 intervals
       vi.advanceTimersByTime(2_000);
-      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy).toHaveBeenCalledTimes(3);
 
       // Destroy the coordinator
       coordinator.destroy();
 
       // Should not poll anymore
       vi.advanceTimersByTime(10_000);
-      expect(spy).toHaveBeenCalledTimes(2); // No additional calls
+      expect(spy).toHaveBeenCalledTimes(3); // No additional calls
     });
 
     it('removes visibility change listener on destroy()', () => {
@@ -345,8 +353,9 @@ describe('NotificationCoordinator', () => {
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
 
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
 
       // Destroy the coordinator
       coordinator.destroy();
@@ -359,7 +368,7 @@ describe('NotificationCoordinator', () => {
       });
 
       vi.advanceTimersByTime(10_000);
-      expect(spy).toHaveBeenCalledTimes(1); // No additional calls
+      expect(spy).toHaveBeenCalledTimes(2); // No additional calls
     });
 
     it('does not respond to visibility changes after destroy()', () => {
@@ -380,8 +389,9 @@ describe('NotificationCoordinator', () => {
       } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
 
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
 
       // Destroy the coordinator
       coordinator.destroy();
@@ -400,7 +410,7 @@ describe('NotificationCoordinator', () => {
       document.dispatchEvent(new Event('visibilitychange'));
 
       vi.advanceTimersByTime(10_000);
-      expect(spy).toHaveBeenCalledTimes(1); // No additional calls
+      expect(spy).toHaveBeenCalledTimes(2); // No additional calls
     });
 
     it('can be safely destroyed multiple times', () => {
@@ -430,15 +440,16 @@ describe('NotificationCoordinator', () => {
       coord1.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coord1.start();
 
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
 
       // Reset (should call destroy internally)
       NotificationCoordinator.resetInstance();
 
       // Old instance should not poll anymore
       vi.advanceTimersByTime(10_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
 
       // New instance should be clean
       const coord2 = NotificationCoordinator.getInstance();
@@ -535,8 +546,9 @@ describe('NotificationCoordinator', () => {
       coordinator.setRoute(APP_ROUTES.HOME);
       coordinator.start();
 
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
       expect(spy).toHaveBeenCalledWith({ userId: 'user123' });
 
       // Clear userId mid-session - polling should stop
@@ -547,7 +559,7 @@ describe('NotificationCoordinator', () => {
       });
 
       vi.advanceTimersByTime(5_000);
-      expect(spy).toHaveBeenCalledTimes(1); // No additional calls
+      expect(spy).toHaveBeenCalledTimes(2); // No additional calls
     });
 
     it('resumes polling when userId is set after being null', async () => {
@@ -579,8 +591,9 @@ describe('NotificationCoordinator', () => {
       });
       coordinator.setRoute(PROFILE_ROUTES.PROFILE); // Trigger route change to re-evaluate
 
+      // Route-change wakeup fires immediate poll (#1497) + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
       expect(spy).toHaveBeenCalledWith({ userId: 'user456' });
     });
 
@@ -620,7 +633,8 @@ describe('NotificationCoordinator', () => {
       vi.advanceTimersByTime(1_000);
       expect(spy).toHaveBeenCalledWith({ userId: 'user3' });
 
-      expect(spy).toHaveBeenCalledTimes(3);
+      // start() fires immediate wakeup poll (#1497) + 3 intervals at 1s each
+      expect(spy).toHaveBeenCalledTimes(4);
     });
   });
 
@@ -631,9 +645,9 @@ describe('NotificationCoordinator', () => {
       coordinator.setRoute('/admin');
       coordinator.start();
 
-      // Should poll on /admin (not disabled by default)
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
 
       // Add /admin to disabled routes
       coordinator.configure({ disabledRoutes: [/^\/admin/] });
@@ -644,14 +658,13 @@ describe('NotificationCoordinator', () => {
 
       // Should not poll on now-disabled route
       vi.advanceTimersByTime(5_000);
-      expect(spy).toHaveBeenCalledTimes(1); // No additional calls
+      expect(spy).toHaveBeenCalledTimes(2); // No additional calls
 
-      // Change to different route
+      // Change to different route — route-change wakeup fires immediate poll
       coordinator.setRoute(APP_ROUTES.HOME);
 
-      // Should resume polling (home not disabled)
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy).toHaveBeenCalledTimes(4); // immediate on resume + 1 interval
     });
 
     it('allows disabling default routes via configure()', async () => {
@@ -664,9 +677,9 @@ describe('NotificationCoordinator', () => {
       coordinator.setRoute(AUTH_ROUTES.SIGN_IN);
       coordinator.start();
 
-      // Should poll on /sign-in now (disabled routes cleared)
+      // start() fires immediate wakeup poll + 1 interval (disabled routes cleared)
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
     });
 
     it('respects respectPageVisibility toggle at runtime', async () => {
@@ -702,9 +715,9 @@ describe('NotificationCoordinator', () => {
       coordinator.setRoute('/home');
       await flushPromises();
 
-      // Should start polling (now ignoring visibility)
+      // Route-change wakeup fires immediate poll (#1497) + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
     });
 
     it('toggles respectPageVisibility from false to true', async () => {
@@ -728,9 +741,9 @@ describe('NotificationCoordinator', () => {
       coordinator.start();
       await flushPromises();
 
-      // Should poll despite being hidden (respectPageVisibility: false)
+      // start() fires immediate wakeup poll (respectPageVisibility: false) + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
 
       // Toggle to respect page visibility
       coordinator.stop();
@@ -743,7 +756,7 @@ describe('NotificationCoordinator', () => {
       coordinator.setRoute('/home');
       await flushPromises();
       vi.advanceTimersByTime(5_000);
-      expect(spy).toHaveBeenCalledTimes(1); // No additional calls
+      expect(spy).toHaveBeenCalledTimes(2); // No additional calls
 
       // Make visible again
       Object.defineProperty(document, 'visibilityState', {
@@ -752,13 +765,12 @@ describe('NotificationCoordinator', () => {
       });
       // Update coordinator's internal state to match
       asOpaque<{ state: { isPageVisible: boolean } }>(coordinator).state.isPageVisible = true;
-      // Trigger re-evaluation by changing route
+      // Trigger re-evaluation by changing route — route-change wakeup fires immediate poll
       coordinator.setRoute('/feed');
       await flushPromises();
 
-      // Should resume polling
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy).toHaveBeenCalledTimes(4); // immediate on resume + 1 interval
     });
   });
 
@@ -825,6 +837,27 @@ describe('NotificationCoordinator', () => {
     });
   });
 
+  describe('Cold-start Session Restore', () => {
+    it('polls immediately on start() so cold restore does not wait intervalMs (#1497)', async () => {
+      // In production, restorePersistedSession completes before CoordinatorsManager
+      // mounts, so the session is already set when start() runs. The override in
+      // NotificationCoordinator.evaluateAndStartPolling fires one immediate poll
+      // on this idle→active transition.
+      const { spy, coordinator } = setupAuthenticatedTest();
+      coordinator.configure({ pollOnStart: false, intervalMs: 10_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute(APP_ROUTES.HOME);
+      coordinator.start();
+      await flushPromises();
+
+      // Immediate poll fires on start() — not 10s later
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      // Regular interval continues
+      vi.advanceTimersByTime(10_000);
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('Route Edge Cases', () => {
     it('handles empty route string', async () => {
       const { spy, coordinator } = setupAuthenticatedTest();
@@ -832,9 +865,9 @@ describe('NotificationCoordinator', () => {
       coordinator.setRoute('');
       coordinator.start();
 
-      // Should poll normally with empty route (not disabled)
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
     });
 
     it('handles route with query parameters', async () => {
@@ -843,9 +876,9 @@ describe('NotificationCoordinator', () => {
       coordinator.setRoute(PROFILE_ROUTES.PROFILE + '?tab=posts&sort=recent');
       coordinator.start();
 
-      // Should poll normally
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
     });
 
     it('handles route with special regex characters', async () => {
@@ -873,9 +906,9 @@ describe('NotificationCoordinator', () => {
       coordinator.setRoute('/app/dashboard/analytics/reports/quarterly/2024/q1');
       coordinator.start();
 
-      // Should poll normally
+      // start() fires immediate wakeup poll + 1 interval
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -952,12 +985,11 @@ describe('NotificationCoordinator', () => {
       vi.advanceTimersByTime(2_000);
       expect(spy).not.toHaveBeenCalled();
 
-      // Move to enabled route
+      // Move to enabled route — wakeup fires immediate poll (#1497)
       coordinator.setRoute(APP_ROUTES.HOME);
 
-      // Should resume polling
       vi.advanceTimersByTime(1_000);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(2); // immediate on resume + 1 interval
     });
 
     it('stops polling when moving from enabled to disabled route', async () => {
@@ -975,16 +1007,16 @@ describe('NotificationCoordinator', () => {
       coordinator.setRoute(APP_ROUTES.HOME);
       coordinator.start();
 
-      // Should poll on enabled route
+      // start() fires immediate wakeup poll + 2 intervals
       vi.advanceTimersByTime(2_000);
-      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy).toHaveBeenCalledTimes(3);
 
       // Move to disabled route
       coordinator.setRoute(ONBOARDING_ROUTES.PROFILE);
 
       // Should stop polling
       vi.advanceTimersByTime(5_000);
-      expect(spy).toHaveBeenCalledTimes(2); // No additional calls
+      expect(spy).toHaveBeenCalledTimes(3); // No additional calls
     });
   });
 
@@ -1003,13 +1035,14 @@ describe('NotificationCoordinator', () => {
     coordinator.setRoute(APP_ROUTES.HOME);
     coordinator.start();
 
-    expect(spy).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(999);
-    expect(spy).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
+    // start() fires one immediate wakeup poll (#1497) synchronously
     expect(spy).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(999);
+    expect(spy).toHaveBeenCalledTimes(1); // No interval tick yet
+    vi.advanceTimersByTime(1);
+    expect(spy).toHaveBeenCalledTimes(2); // + 1 interval tick at 1s
     vi.advanceTimersByTime(2_000);
-    expect(spy).toHaveBeenCalledTimes(3);
+    expect(spy).toHaveBeenCalledTimes(4); // + 2 more interval ticks
   });
 
   it('restarts polling when interval changes via configure()', () => {
@@ -1027,13 +1060,15 @@ describe('NotificationCoordinator', () => {
     coordinator.setRoute(APP_ROUTES.HOME);
     coordinator.start();
 
-    vi.advanceTimersByTime(2_000); // two ticks at 1s
-    expect(spy).toHaveBeenCalledTimes(2);
+    // start() fires immediate wakeup poll + 2 interval ticks at 1s
+    vi.advanceTimersByTime(2_000);
+    expect(spy).toHaveBeenCalledTimes(3);
 
-    // Change to 500ms and ensure more frequent ticks
+    // Reconfigure to 500ms — restart fires another immediate wakeup poll +
+    // 4 interval ticks at 0.5s
     coordinator.configure({ intervalMs: 500 });
-    vi.advanceTimersByTime(2_000); // four ticks at 0.5s
-    expect(spy).toHaveBeenCalledTimes(6);
+    vi.advanceTimersByTime(2_000);
+    expect(spy).toHaveBeenCalledTimes(8);
   });
 
   it('respects page visibility: pauses when hidden, resumes when visible', async () => {
@@ -1133,26 +1168,29 @@ describe('NotificationCoordinator', () => {
     coordinator.setRoute(APP_ROUTES.HOME);
     coordinator.start();
 
+    // start() fires immediate wakeup poll + 2 intervals
     vi.advanceTimersByTime(2_000);
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenCalledTimes(3);
 
-    // De-authenticate -> should stop (clear session)
+    // De-auth: poll() catches the null-pubky error silently; interval keeps
+    // running but no fetchNotifications is dispatched. The base coordinator's
+    // selector-based subscription doesn't detect the auth transition.
     useAuthStore.getState().init({
       session: null,
       currentUserPubky: null,
       hasProfile: false,
     });
     vi.advanceTimersByTime(2_000);
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenCalledTimes(3);
 
-    // Re-authenticate -> must also have a pubky set before polling can succeed
+    // Re-authenticate: interval is still active, so the next tick dispatches.
     useAuthStore.getState().init({
       session: mockSession(),
       currentUserPubky: 'user123',
       hasProfile: true,
     });
     vi.advanceTimersByTime(1_000);
-    expect(spy).toHaveBeenCalledTimes(3);
+    expect(spy).toHaveBeenCalledTimes(4);
   });
 
   it('pauses on disabled route then resumes on allowed route', async () => {
@@ -1170,16 +1208,18 @@ describe('NotificationCoordinator', () => {
     coordinator.setRoute(APP_ROUTES.HOME);
     coordinator.start();
 
+    // start() fires immediate wakeup poll + 2 intervals
     vi.advanceTimersByTime(2_000);
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenCalledTimes(3);
 
     coordinator.setRoute(AUTH_ROUTES.LOGOUT); // disabled by default
     vi.advanceTimersByTime(2_000);
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenCalledTimes(3);
 
+    // Move back to allowed route — wakeup fires immediate poll (#1497)
     coordinator.setRoute(APP_ROUTES.HOME);
     vi.advanceTimersByTime(1_000);
-    expect(spy).toHaveBeenCalledTimes(3);
+    expect(spy).toHaveBeenCalledTimes(5); // immediate on resume + 1 interval
   });
 
   it('forwards the correct userId to NotificationController.fetchNotifications', async () => {

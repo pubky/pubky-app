@@ -110,4 +110,18 @@ export class NotificationCoordinator extends Coordinator<NotificationCoordinator
     const state = this.getState();
     return !this.notificationConfig.disabledRoutes.some((pattern) => pattern.test(state.currentRoute));
   }
+
+  /**
+   * Fire one immediate poll on idle→active transitions (cold start, tab
+   * resume) so the first fetch isn't delayed by intervalMs (#1497).
+   * Trade-off: duplicates bootstrap's fetch once per sign-in.
+   */
+  protected evaluateAndStartPolling(): void {
+    const wasPolling = this.getState().intervalId !== null;
+    super.evaluateAndStartPolling();
+
+    if (!wasPolling && this.getState().intervalId !== null && !this.getConfig().pollOnStart) {
+      void this.poll();
+    }
+  }
 }
