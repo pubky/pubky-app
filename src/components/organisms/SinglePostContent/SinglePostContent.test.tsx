@@ -188,13 +188,22 @@ vi.mock('@/organisms/PostMain/PostMain', async () => {
   const { usePostMainLayout } = await import('@/organisms/PostMain/PostMainLayoutContext');
 
   return {
-    PostMain: ({ postId, pinActionsToBottom }: { postId: string; pinActionsToBottom?: boolean }) => {
+    PostMain: ({
+      postId,
+      pinActionsToBottom,
+      isNavigable,
+    }: {
+      postId: string;
+      pinActionsToBottom?: boolean;
+      isNavigable?: boolean;
+    }) => {
       const inheritedTagsLayout = usePostMainLayout();
       return (
         <div
           data-testid="post-main"
           data-post-id={postId}
           data-pin-actions-to-bottom={String(pinActionsToBottom)}
+          data-is-navigable={String(isNavigable)}
           data-tags-layout={inheritedTagsLayout}
         >
           PostMain
@@ -256,6 +265,7 @@ describe('SinglePostContent', () => {
       expect(container.querySelector('[data-cy="single-post-card"]')).toBeInTheDocument();
       expect(screen.getByTestId('post-main')).toHaveAttribute('data-post-id', mockPostId);
       expect(screen.getByTestId('post-main')).toHaveAttribute('data-pin-actions-to-bottom', 'true');
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-is-navigable', 'false');
       expect(screen.getByTestId('post-main')).toHaveAttribute('data-tags-layout', 'inline');
       expect(screen.queryByTestId('post-article-detail')).not.toBeInTheDocument();
     });

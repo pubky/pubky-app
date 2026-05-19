@@ -9,6 +9,7 @@ import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
@@ -24,21 +25,26 @@ import type { PostMainProps } from './PostMain.types';
 import { usePostMainLayout } from './PostMainLayoutContext';
 import { WIDE_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 
+// Stops click and middle-click from bubbling to the outer post-card navigation
+// (so action buttons and tag panels don't trigger a navigate / new-tab open).
+const stopCardPropagation = (event: React.MouseEvent) => event.stopPropagation();
+
 export function PostMain({
   postId,
-  onClick,
   className,
   isReply = false,
   isLastReply = false,
   pinActionsToBottom = false,
+  isNavigable = true,
 }: PostMainProps) {
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
   const isWideLayout = effectiveTagsLayout === 'side';
-  const isInteractive = Boolean(onClick);
   const { postDetails } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
+
+  const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
   const { showRepostHeader, shouldShowPostHeader } = usePostHeaderVisibility(postId);
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
@@ -63,8 +69,9 @@ export function PostMain({
       <Container
         ref={ttlRef}
         overrideDefaults
-        onClick={onClick}
-        className={cn('relative flex min-w-0', isInteractive && 'cursor-pointer', isReply && 'pl-3')}
+        onClick={isNavigable ? (e) => handlePostClick(postId, e) : undefined}
+        onAuxClick={isNavigable ? (e) => handlePostAuxClick(postId, e) : undefined}
+        className={cn('relative flex min-w-0', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
           <Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">
@@ -88,7 +95,8 @@ export function PostMain({
                       {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
                       <Container
                         overrideDefaults
-                        onClick={(event) => event.stopPropagation()}
+                        onClick={stopCardPropagation}
+                        onAuxClick={stopCardPropagation}
                         className="flex flex-col gap-4"
                       >
                         <PostTagsPanel
@@ -110,7 +118,8 @@ export function PostMain({
                     </Container>
                     <Container
                       overrideDefaults
-                      onClick={(event) => event.stopPropagation()}
+                      onClick={stopCardPropagation}
+                      onAuxClick={stopCardPropagation}
                       className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
                     >
                       <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />

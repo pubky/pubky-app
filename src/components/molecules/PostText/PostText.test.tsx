@@ -17,13 +17,15 @@ vi.mock('@/atoms/Button/Button', () => {
       className,
       'aria-label': ariaLabel,
       overrideDefaults,
+      ...rest
     }: {
       children: React.ReactNode;
       className?: string;
       'aria-label'?: string;
       overrideDefaults?: boolean;
+      [key: string]: unknown;
     }) => (
-      <button data-override-defaults={overrideDefaults} className={className} aria-label={ariaLabel}>
+      <button data-override-defaults={overrideDefaults} className={className} aria-label={ariaLabel} {...rest}>
         {children}
       </button>
     ),
@@ -769,6 +771,7 @@ describe('PostText', () => {
       render(<PostText content={longContent} />);
 
       const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
+      expect(showMoreButton).toHaveAttribute('data-allow-post-navigation');
       expect(showMoreButton).toHaveClass('cursor-pointer');
       expect(showMoreButton).toHaveClass('text-brand');
       expect(showMoreButton).toHaveClass('mt-4');

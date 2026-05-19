@@ -290,10 +290,26 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
   }, [missingFileUris, missingFileUrisKey]);
 
   const tiles = (snapshot?.tiles ?? []).map(resolveTileProbeState);
-  const pendingOverflowFallbackIds = React.useMemo(
-    () => getVisualPendingOverflowFallbackIds(tiles, hasMore ? undefined : 0),
-    [tiles, hasMore],
-  );
+  const pendingOverflowFallbackIds = React.useMemo(() => {
+    const fallbackIds = getVisualPendingOverflowFallbackIds(tiles, hasMore ? undefined : 0);
+
+    if (!hasMore || fallbackIds.length > 0 || tiles.length < 2) {
+      return fallbackIds;
+    }
+
+    const firstPendingTileIndex = tiles.findIndex((tile) => tile.preferredSize === undefined);
+    if (firstPendingTileIndex === -1 || firstPendingTileIndex > 1) {
+      return fallbackIds;
+    }
+
+    return [
+      ...fallbackIds,
+      ...tiles
+        .slice(firstPendingTileIndex, 2)
+        .filter((tile) => tile.preferredSize === undefined)
+        .map((tile) => tile.id),
+    ];
+  }, [tiles, hasMore]);
   const pendingOverflowFallbackIdSet = React.useMemo(
     () => new Set(pendingOverflowFallbackIds),
     [pendingOverflowFallbackIds],

@@ -3,7 +3,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import type { Pubky } from '@/models/models.types';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
@@ -17,12 +16,12 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
 }));
 
-vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
-  usePostNavigation: vi.fn(),
-}));
-
 vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
   useInfiniteScroll: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), prefetch: vi.fn() }),
 }));
 
 // Mock components
@@ -100,12 +99,10 @@ vi.mock('@/organisms/PostMain/PostMain', () => {
 
 const mockUseLiveQuery = vi.mocked(useLiveQuery);
 const mockUseStreamPagination = vi.mocked(useStreamPagination);
-const mockUsePostNavigation = vi.mocked(usePostNavigation);
 const mockUseInfiniteScroll = vi.mocked(useInfiniteScroll);
 
 describe('RepliesWithParent', () => {
   const mockStreamId = 'author_replies:test-user-id' as PostStreamId;
-  const mockNavigateToPost = vi.fn();
   const mockViewerId = 'test-viewer-id' as Pubky;
 
   beforeEach(() => {
@@ -127,11 +124,6 @@ describe('RepliesWithParent', () => {
       refresh: vi.fn(),
       prependPosts: vi.fn(),
       removePosts: vi.fn(),
-    });
-
-    // Mock usePostNavigation
-    mockUsePostNavigation.mockReturnValue({
-      navigateToPost: mockNavigateToPost,
     });
 
     // Mock useInfiniteScroll
@@ -317,6 +309,38 @@ describe('RepliesWithParent', () => {
       });
     });
 
+    it('should make all reply cards individually tabbable', async () => {
+      const mockReplyIds = ['author1:reply1', 'author2:reply2'];
+
+      mockUseStreamPagination.mockReturnValue({
+        postIds: mockReplyIds,
+        loading: false,
+        loadingMore: false,
+        error: null,
+        hasMore: true,
+        loadMore: vi.fn(),
+        refresh: vi.fn(),
+        prependPosts: vi.fn(),
+        removePosts: vi.fn(),
+      });
+
+      mockUseLiveQuery
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce(null);
+
+      render(<RepliesWithParent streamId={mockStreamId} />);
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('article')).toHaveLength(mockReplyIds.length);
+      });
+
+      const cards = screen.getAllByRole('article');
+      expect(cards[0]).toHaveAttribute('tabindex', '0');
+      expect(cards[1]).toHaveAttribute('tabindex', '0');
+    });
+
     it('should render reply with isReply=true', async () => {
       const mockReplyIds = ['author1:reply1'];
 
@@ -376,40 +400,6 @@ describe('RepliesWithParent', () => {
         const parentPost = screen.getByTestId(`post-${mockParentId}`);
         expect(parentPost).toHaveAttribute('data-is-reply', 'false');
       });
-    });
-  });
-
-  describe('Navigation', () => {
-    it('should navigate to post when clicked', async () => {
-      const mockReplyIds = ['author1:reply1'];
-
-      mockUseStreamPagination.mockReturnValue({
-        postIds: mockReplyIds,
-        loading: false,
-        loadingMore: false,
-        error: null,
-        hasMore: true,
-        loadMore: vi.fn(),
-        refresh: vi.fn(),
-        prependPosts: vi.fn(),
-        removePosts: vi.fn(),
-      });
-
-      // Mock useLiveQuery to handle multiple calls:
-      // 1st call: parentPostId (null - no parent)
-      // 2nd call: parentPost (null)
-      mockUseLiveQuery
-        .mockReturnValueOnce(null) // 1st: parentPostId
-        .mockReturnValueOnce(null); // 2nd: parentPost
-
-      render(<RepliesWithParent streamId={mockStreamId} />);
-
-      await waitFor(() => {
-        const post = screen.getByTestId(`post-${mockReplyIds[0]}`);
-        post.click();
-      });
-
-      expect(mockNavigateToPost).toHaveBeenCalledWith(mockReplyIds[0]);
     });
   });
 

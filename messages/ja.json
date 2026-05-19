@@ -466,8 +466,9 @@
     },
     "actions": {
       "title": "プロフィールアクション",
-      "edit": "編集",
+      "editProfile": "プロフィールを編集",
       "link": "リンク",
+      "profileLink": "プロフィールリンク",
       "loggingOut": "ログアウト中...",
       "signOut": "ログアウト",
       "unfollowing": "フォロー解除中...",

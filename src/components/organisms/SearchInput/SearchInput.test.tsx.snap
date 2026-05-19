@@ -49,12 +49,8 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - focused with
   </div>
   <div
     aria-label="Search suggestions"
-    autocompletetags=""
-    autocompleteusers=""
     data-testid="search-suggestions"
     id="search-suggestions"
-    recenttags=""
-    recentusers=""
   >
     <button
       data-testid="hot-tag-pubky"

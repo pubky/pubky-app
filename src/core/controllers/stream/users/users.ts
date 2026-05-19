@@ -29,6 +29,7 @@ export class StreamUserController {
     streamId,
     limit = NEXUS_USERS_PER_PAGE,
     skip,
+    allowPartialCache,
   }: TReadUserStreamChunkParams): Promise<TReadUserStreamChunkResponse> {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile followers/following)
@@ -38,11 +39,13 @@ export class StreamUserController {
       nextPageIds,
       cacheMissUserIds,
       skip: nextSkip,
+      isExhausted,
     } = await UserStreamApplication.getOrFetchStreamSlice({
       streamId,
       skip,
       limit,
       viewerId: viewerId ?? undefined,
+      ...(allowPartialCache !== undefined && { allowPartialCache }),
     });
 
     // Background fetch for missing users (non-blocking)
@@ -54,7 +57,47 @@ export class StreamUserController {
       });
     }
 
-    return { nextPageIds, skip: nextSkip };
+    return { nextPageIds, skip: nextSkip, isExhausted };
+  }
+
+  /**
+   * Refresh a slice of a user stream from Nexus and update the local cache.
+   *
+   * Always hits the network; the application layer still reads the cached stream so
+   * non-initial pages are merged/deduped with existing entries. Missing user details
+   * are hydrated as a follow-up, mirroring `getOrFetchStreamSlice`.
+   *
+   * Named `refresh*` rather than `fetch*` because the implementation consults local
+   * cache as a merge source — `fetch*` is reserved for network-only paths per
+   * `AGENTS.md`.
+   */
+  static async refreshStreamSlice({
+    streamId,
+    limit = NEXUS_USERS_PER_PAGE,
+    skip,
+  }: TReadUserStreamChunkParams): Promise<TReadUserStreamChunkResponse> {
+    const viewerId = useAuthStore.getState().currentUserPubky;
+
+    const {
+      nextPageIds,
+      cacheMissUserIds,
+      skip: nextSkip,
+      isExhausted,
+    } = await UserStreamApplication.refreshStreamSlice({
+      streamId,
+      skip,
+      limit,
+      viewerId: viewerId ?? undefined,
+    });
+
+    if (cacheMissUserIds.length > 0) {
+      await UserStreamApplication.fetchMissingUsersFromNexus({
+        cacheMissUserIds,
+        viewerId: viewerId ?? undefined,
+      });
+    }
+
+    return { nextPageIds, skip: nextSkip, isExhausted };
   }
 
   /**

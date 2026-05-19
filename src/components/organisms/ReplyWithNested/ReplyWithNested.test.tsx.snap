@@ -8,14 +8,15 @@ exports[`ReplyWithNested - Snapshots > matches snapshot for expanded nested repl
   <div
     class="relative"
   >
-    <button
-      data-is-last-reply="false"
-      data-post-id="author:reply-1"
-      data-testid="post-main"
-      type="button"
-    >
-      author:reply-1
-    </button>
+    <div>
+      <div
+        data-is-last-reply="false"
+        data-post-id="author:reply-1"
+        data-testid="post-main"
+      >
+        author:reply-1
+      </div>
+    </div>
     <div
       class="absolute bottom-[24px] left-0 z-10 -translate-x-1/2"
     >
@@ -48,14 +49,22 @@ exports[`ReplyWithNested - Snapshots > matches snapshot for expanded nested repl
               data-testid="post-thread-spacer"
             />
             <div>
-              <button
-                data-is-last-reply="true"
-                data-post-id="author:nested-1"
-                data-testid="post-main"
-                type="button"
+              <div
+                aria-posinset="1"
+                aria-setsize="1"
+                class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                data-post-list-card="true"
+                role="article"
+                tabindex="0"
               >
-                author:nested-1
-              </button>
+                <div
+                  data-is-last-reply="true"
+                  data-post-id="author:nested-1"
+                  data-testid="post-main"
+                >
+                  author:nested-1
+                </div>
+              </div>
             </div>
           </div>
         </div>

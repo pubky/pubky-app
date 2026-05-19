@@ -3,34 +3,37 @@
 import { Users } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
-import type { Pubky } from '@/models/models.types';
+import { WHO_TO_FOLLOW_PAGE_SIZE } from '@/hooks/useUserStream/useUserStream.constants';
+import { useWhoToFollowFollowPreservation } from '@/hooks/useWhoToFollowFollowPreservation/useWhoToFollowFollowPreservation';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { FullUserListItemSkeleton } from '@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton';
+import { UserListItem } from '@/organisms/UserListItem/UserListItem';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
-import { UserListItem } from '../UserListItem/UserListItem';
-import { USERS_PER_PAGE } from './WhoToFollowPageMain.constants';
 
 const LOAD_MORE_SKELETON_COUNT = 2;
 
 /**
- * WhoToFollowPageMain
+ * WhoToFollow
  *
  * Main content component for the Who To Follow page.
  * Displays recommended users with infinite scroll pagination.
  */
-export function WhoToFollowPageMain() {
+export function WhoToFollow() {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const { preservedFollowedUserIds, handleFollowClick, isUserLoading } = useWhoToFollowFollowPreservation();
   const { users, isLoading, isLoadingMore, hasMore, loadMore } = useUserStream({
     streamId: UserStreamTypes.RECOMMENDED,
-    limit: USERS_PER_PAGE,
+    limit: WHO_TO_FOLLOW_PAGE_SIZE,
+    bufferSize: WHO_TO_FOLLOW_PAGE_SIZE,
+    refillThreshold: WHO_TO_FOLLOW_PAGE_SIZE,
     paginated: true,
     includeRelationships: true,
     includeCounts: true,
+    excludeFollowing: true,
+    preserveFollowedUserIds: preservedFollowedUserIds,
   });
-  const { toggleFollow, isUserLoading } = useFollowUser();
 
   // Handle infinite scroll
   const { sentinelRef } = useInfiniteScroll({
@@ -38,17 +41,12 @@ export function WhoToFollowPageMain() {
     hasMore,
     isLoading: isLoadingMore,
   });
-
-  // Handle follow/unfollow action
-  const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean) => {
-    await toggleFollow(userId, isCurrentlyFollowing);
-  };
   if (isLoading) {
     return (
       <Container className="mt-6 gap-4 lg:mt-0">
         <Container className="gap-3.5 rounded-md bg-transparent p-0 lg:gap-3 lg:bg-card lg:p-6">
           {Array.from({
-            length: USERS_PER_PAGE,
+            length: WHO_TO_FOLLOW_PAGE_SIZE,
           }).map((_, index) => (
             <FullUserListItemSkeleton key={`who-to-follow-page-skeleton-${index}`} />
           ))}
@@ -89,7 +87,7 @@ export function WhoToFollowPageMain() {
             isLoading={isUserLoading(user.id)}
             isStatusLoading={isLoading}
             isCurrentUser={currentUserPubky === user.id}
-            onFollowClick={handleFollow}
+            onFollowClick={handleFollowClick}
           />
         ))}
       </Container>

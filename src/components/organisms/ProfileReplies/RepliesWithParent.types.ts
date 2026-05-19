@@ -9,5 +9,4 @@ export interface RepliesWithParentProps {
 
 export interface ReplyWithParentProps {
   replyPostId: string;
-  onPostClick: (postId: string) => void;
 }
