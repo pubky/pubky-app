@@ -143,3 +143,16 @@ describe('PostNotFoundDiscoveryView', () => {
     expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
 });
+
+describe('PostNotFoundDiscoveryView - Snapshots', () => {
+  it('matches snapshot when composite author is valid', () => {
+    const { container } = render(<PostNotFoundDiscoveryView postId={VALID_COMPOSITE} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot when composite author is invalid', () => {
+    const invalid = `${PUBKY_INVALID_TOO_LONG}:${POST_ID_STAGING_FIXTURE}`;
+    const { container } = render(<PostNotFoundDiscoveryView postId={invalid} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

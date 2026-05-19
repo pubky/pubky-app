@@ -178,3 +178,10 @@ describe('ProfileUserNotFoundDiscoveryView', () => {
     expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
 });
+
+describe('ProfileUserNotFoundDiscoveryView - Snapshots', () => {
+  it('matches snapshot', () => {
+    const { container } = render(<ProfileUserNotFoundDiscoveryView />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
