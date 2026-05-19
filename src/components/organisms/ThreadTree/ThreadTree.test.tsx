@@ -1,15 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
 import { ThreadTree } from './ThreadTree';
 
-vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
-  usePostNavigation: vi.fn(),
-}));
-
 vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => ({
   useThreadReplies: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), prefetch: vi.fn() }),
 }));
 
 vi.mock('@/organisms/QuickReply/QuickReply', () => {
@@ -34,6 +33,7 @@ vi.mock('@/molecules/ShowMoreReplies/ShowMoreReplies', () => {
       <button
         type="button"
         data-testid="show-more-replies"
+        data-post-list-card="true"
         data-count={String(count)}
         data-is-last={String(isLast)}
         onClick={onClick}
@@ -50,9 +50,6 @@ describe('ThreadTree', () => {
   });
 
   it('renders quick reply only when no replies and quick reply is enabled', () => {
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: [],
       totalCount: 0,
@@ -69,9 +66,6 @@ describe('ThreadTree', () => {
   });
 
   it('renders null when no replies and quick reply is disabled', () => {
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: [],
       totalCount: 0,
@@ -87,10 +81,6 @@ describe('ThreadTree', () => {
   });
 
   it('renders replies and show-more with expected props', () => {
-    const navigateToPost = vi.fn();
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost,
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1', 'author:reply-2'],
       totalCount: 5,
@@ -110,11 +100,28 @@ describe('ThreadTree', () => {
     expect(screen.getByTestId('show-more-replies')).toHaveAttribute('data-is-last', 'true');
   });
 
+  it('keeps reply cards tabbable and uses total reply count for aria-setsize', () => {
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1', 'author:reply-2'],
+      totalCount: 5,
+      hasMore: true,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    const cards = screen.getAllByRole('article');
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveAttribute('tabindex', '0');
+    expect(cards[1]).toHaveAttribute('tabindex', '0');
+    expect(cards[0]).toHaveAttribute('aria-setsize', '5');
+    expect(cards[1]).toHaveAttribute('aria-setsize', '5');
+  });
+
   it('calls expandAll when show-more is clicked', () => {
     const expandAll = vi.fn(async () => {});
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,
@@ -130,10 +137,56 @@ describe('ThreadTree', () => {
     expect(expandAll).toHaveBeenCalledTimes(1);
   });
 
-  it('hides show-more button while expand-all is in progress', () => {
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost: vi.fn(),
+  it('moves focus between reply cards with j/k keys', () => {
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1', 'author:reply-2'],
+      totalCount: 2,
+      hasMore: false,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
     });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    const cards = screen.getAllByRole('article');
+    cards[0].focus();
+    expect(document.activeElement).toBe(cards[0]);
+
+    fireEvent.keyDown(cards[0], { key: 'j' });
+    expect(document.activeElement).toBe(cards[1]);
+
+    fireEvent.keyDown(cards[1], { key: 'k' });
+    expect(document.activeElement).toBe(cards[0]);
+  });
+
+  it('moves focus to "show more replies" with j and allows expanding', () => {
+    const expandAll = vi.fn(async () => {});
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1'],
+      totalCount: 6,
+      hasMore: true,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll,
+    });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    const card = screen.getByRole('article');
+    const showMoreButton = screen.getByTestId('show-more-replies');
+
+    card.focus();
+    expect(document.activeElement).toBe(card);
+
+    fireEvent.keyDown(card, { key: 'j' });
+    expect(document.activeElement).toBe(showMoreButton);
+
+    fireEvent.click(showMoreButton);
+    expect(expandAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides show-more button while expand-all is in progress', () => {
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,
@@ -151,9 +204,6 @@ describe('ThreadTree', () => {
 
 describe('ThreadTree - Snapshots', () => {
   it('matches snapshot with replies and show-more', () => {
-    vi.mocked(usePostNavigation).mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,

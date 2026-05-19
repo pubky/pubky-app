@@ -11,8 +11,14 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
   reactCompiler: true,
+  // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
+  ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),
   async redirects() {
     return [
+      // /profile/[pubky] is the canonical other-user posts view (see app/profile/[pubky]/page.tsx).
+      // The legacy /profile/[pubky]/posts route is kept as a 308 permanent redirect so existing
+      // bookmarks, shares, and search indexes consolidate onto the canonical URL without invoking
+      // any React/SSR work for the legacy path.
       {
         source: '/profile/:pubky/posts',
         destination: '/profile/:pubky',
@@ -20,8 +26,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
-  ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push('@synonymdev/pubky');

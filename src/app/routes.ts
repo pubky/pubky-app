@@ -172,14 +172,9 @@ export function getProfileRoute(route: PROFILE_ROUTES, pubky?: string): string {
   // Extract the sub-path after /profile
   const subPath = route.replace('/profile', '');
 
-  // Notifications only apply to the logged-in user; for someone else's profile use base URL.
-  if (route === PROFILE_ROUTES.NOTIFICATIONS || route === PROFILE_ROUTES.PROFILE) {
-    if (subPath === '' || subPath === '/notifications') {
-      return `/profile/${pubky}`;
-    }
-  }
-
-  if (route === PROFILE_ROUTES.POSTS) {
+  // For other users, the base profile route is the canonical posts view.
+  // Notifications only apply to the logged-in user, so they fall back to base profile.
+  if (route === PROFILE_ROUTES.PROFILE || route === PROFILE_ROUTES.NOTIFICATIONS || route === PROFILE_ROUTES.POSTS) {
     return `/profile/${pubky}`;
   }
 

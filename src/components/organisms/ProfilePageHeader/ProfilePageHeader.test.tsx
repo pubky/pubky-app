@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
+import enMessages from '../../../../messages/en.json';
 import { ProfilePageHeader } from './ProfilePageHeader';
 import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
 
@@ -101,6 +102,15 @@ const mockProps: ProfilePageHeaderProps = {
   },
   isOwnProfile: true,
   userId: '1QX7GKW3abcdef1234567890',
+  stats: {
+    notifications: 0,
+    posts: 0,
+    replies: 0,
+    followers: 83,
+    following: 0,
+    friends: 0,
+    uniqueTags: 0,
+  },
 };
 
 const mockOtherUserProps: ProfilePageHeaderProps = {
@@ -139,17 +149,26 @@ describe('ProfilePageHeader', () => {
     render(<ProfilePageHeader {...mockProps} />);
 
     // formatPublicKey with length 8: first 4 + ... + last 4 (no pubky prefix)
-    expect(screen.getByText(/1QX7\.\.\.7890/)).toBeInTheDocument();
+    expect(screen.getAllByText(/1QX7\.\.\.7890/)).toHaveLength(2);
   });
 
   it('renders all action buttons', () => {
     render(<ProfilePageHeader {...mockProps} />);
 
-    expect(screen.getByText('Edit')).toBeInTheDocument();
-    expect(screen.getByText(/1QX7\.\.\.7890/)).toBeInTheDocument();
-    expect(screen.getByText('Link')).toBeInTheDocument();
+    expect(screen.getByText('Edit profile')).toBeInTheDocument();
+    expect(screen.getAllByText(/1QX7\.\.\.7890/)).toHaveLength(2);
+    expect(screen.getByText('Profile link')).toBeInTheDocument();
     expect(screen.getByText('Sign out')).toBeInTheDocument();
     expect(screen.getByText('Vacationing')).toBeInTheDocument();
+    expect(screen.getByText(`83 ${enMessages.userList.followers}`)).toBeInTheDocument();
+  });
+
+  it('renders the status picker when own profile has no status', () => {
+    const props = { ...mockProps, profile: { ...mockProps.profile, status: '' } };
+
+    render(<ProfilePageHeader {...props} />);
+
+    expect(screen.getByText('No Status')).toBeInTheDocument();
   });
 
   it('calls onEdit when Edit button is clicked', () => {
@@ -157,7 +176,7 @@ describe('ProfilePageHeader', () => {
     const props = { ...mockProps, actions: { ...mockProps.actions, onEdit } };
     render(<ProfilePageHeader {...props} />);
 
-    const editButton = screen.getByText('Edit').closest('button');
+    const editButton = screen.getByText('Edit profile').closest('button');
     fireEvent.click(editButton!);
 
     expect(onEdit).toHaveBeenCalledTimes(1);
@@ -168,8 +187,7 @@ describe('ProfilePageHeader', () => {
     const props = { ...mockProps, actions: { ...mockProps.actions, onCopyPublicKey } };
     render(<ProfilePageHeader {...props} />);
 
-    // Find button containing the formatted public key (length 8: first 4 + ... + last 4)
-    const publicKeyButton = screen.getByText(/1QX7\.\.\.7890/).closest('button');
+    const publicKeyButton = document.querySelector('[data-cy="profile-copy-pubkey-btn"]');
     fireEvent.click(publicKeyButton!);
 
     expect(onCopyPublicKey).toHaveBeenCalledTimes(1);
@@ -191,7 +209,7 @@ describe('ProfilePageHeader', () => {
     const props = { ...mockProps, actions: { ...mockProps.actions, onCopyLink } };
     render(<ProfilePageHeader {...props} />);
 
-    const linkButton = screen.getByText('Link').closest('button');
+    const linkButton = screen.getByText('Profile link').closest('button');
     fireEvent.click(linkButton!);
 
     expect(onCopyLink).toHaveBeenCalledTimes(1);
@@ -328,7 +346,7 @@ describe('ProfilePageHeader - Other User Profile', () => {
 
     // formatPublicKey with length 8: first 4 + ... + last 4 (no pubky prefix)
     // For 'other123456789012345', it should be 'othe...2345'
-    expect(screen.getByText(/othe\.\.\.2345/)).toBeInTheDocument();
+    expect(screen.getAllByText(/othe\.\.\.2345/)).toHaveLength(2);
     expect(screen.getByText('Link')).toBeInTheDocument();
   });
 

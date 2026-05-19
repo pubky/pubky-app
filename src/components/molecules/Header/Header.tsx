@@ -28,7 +28,7 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
       overrideDefaults
       as="header"
       className={cn(
-        'pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent p-6',
+        'pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent p-0 sm:py-6',
         className,
       )}
     >

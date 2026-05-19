@@ -127,8 +127,8 @@ describe('isDynamicPublicRoute', () => {
 describe('getProfileRoute', () => {
   const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
-  it('returns static route when pubky is omitted', () => {
-    expect(getProfileRoute(PROFILE_ROUTES.POSTS)).toBe('/profile/posts');
+  it('returns unchanged own-profile routes when pubky is omitted', () => {
+    expect(getProfileRoute(PROFILE_ROUTES.POSTS)).toBe(PROFILE_ROUTES.POSTS);
   });
 
   it('uses base profile URL for another user posts tab', () => {

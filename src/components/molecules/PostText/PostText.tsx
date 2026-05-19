@@ -209,6 +209,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
         <Button
           overrideDefaults
           aria-label="Show full post content"
+          data-allow-post-navigation
           className="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
         >
           Show more
