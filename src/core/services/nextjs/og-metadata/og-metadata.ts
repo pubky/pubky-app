@@ -9,8 +9,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { isIpSafe } from '@/libs/network/network';
-import { isHttpProtocol, readResponseBody } from '../nextjs.utils';
+import { checkDnsSafety, isHttpProtocol, readResponseBody } from '../nextjs.utils';
 import { buildFallbackMetadata, detectMediaType, extractMetadata, validateRedirectUrl } from './og-metadata.utils';
 
 const MAX_REDIRECTS = 5;
@@ -240,30 +239,20 @@ function getHostname(url: string): string | undefined {
 }
 
 async function validateDnsForOgMetadata(hostname: string): Promise<OgDnsResult> {
-  const { isIP } = await import(/* webpackIgnore: true */ 'net');
-  const dns = await import(/* webpackIgnore: true */ 'dns/promises');
+  const result = await checkDnsSafety(hostname);
+  if (result.ok) {
+    return { ok: true };
+  }
 
-  let resolvedIp: string;
-
-  try {
-    resolvedIp = isIP(hostname) ? hostname : (await dns.resolve4(hostname))[0];
-  } catch {
+  if (result.reason === 'dns_failed') {
     return { ok: false, reason: 'dns_failed' };
   }
 
-  if (!resolvedIp) {
-    return { ok: false, reason: 'dns_failed' };
-  }
-
-  if (!isIpSafe(resolvedIp)) {
-    throw Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
-      service: ErrorService.NextJsServer,
-      operation: 'validateDnsForOgMetadata',
-      context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },
-    });
-  }
-
-  return { ok: true };
+  throw Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
+    service: ErrorService.NextJsServer,
+    operation: 'validateDnsForOgMetadata',
+    context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },
+  });
 }
 
 async function normalizeImageUrlForOgMetadata(image: string, baseUrl: string): Promise<string | null> {

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TOgMetadataFetchOutcome, TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { TITLE_TRUNCATE_LENGTH, URL_TRUNCATE_LENGTH } from '@/config/urls';
 import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -60,6 +61,8 @@ const createErrorResponse = (status: number) => {
   Object.defineProperty(response, 'ok', { value: false });
   return response;
 };
+
+const createDnsError = (code = 'ENOTFOUND') => Object.assign(new Error(code), { code });
 
 const expectMetadataOutcome = (outcome: TOgMetadataFetchOutcome): TOgMetadataResult => {
   expect(outcome.kind).not.toBe('transient-fallback');
@@ -177,6 +180,49 @@ describe('NextJsOgMetadataService', () => {
     });
   });
 
+  it('should return durable fallback metadata for 404 responses', async () => {
+    mockFetch.mockResolvedValue(createErrorResponse(404));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/missing'))).resolves.toMatchObject({
+      kind: 'durable-fallback',
+      fallbackReason: 'http_error',
+      cachePolicy: 'normal',
+      metadata: {
+        url: 'https://example.com/missing',
+        title: null,
+        image: null,
+        type: 'website',
+      },
+    });
+  });
+
+  it('should return durable fallback metadata for 410 responses', async () => {
+    mockFetch.mockResolvedValue(createErrorResponse(410));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/gone'))).resolves.toMatchObject({
+      kind: 'durable-fallback',
+      fallbackReason: 'http_error',
+      cachePolicy: 'normal',
+      metadata: {
+        url: 'https://example.com/gone',
+        title: null,
+        image: null,
+        type: 'website',
+      },
+    });
+  });
+
+  it('should return transient rate-limit fallback for 429 responses', async () => {
+    mockFetch.mockResolvedValue(createErrorResponse(429));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/rate-limited'))).resolves.toMatchObject({
+      kind: 'transient-fallback',
+      fallbackReason: 'rate_limit',
+      statusCode: HttpStatusCode.TOO_MANY_REQUESTS,
+      cachePolicy: 'no-store',
+    });
+  });
+
   it('should return transient fallback for remote 500 responses', async () => {
     mockFetch.mockResolvedValue(createErrorResponse(500));
 
@@ -184,6 +230,17 @@ describe('NextJsOgMetadataService', () => {
       kind: 'transient-fallback',
       fallbackReason: 'http_error',
       statusCode: HttpStatusCode.SERVICE_UNAVAILABLE,
+      cachePolicy: 'no-store',
+    });
+  });
+
+  it('should return transient timeout fallback for remote 504 responses', async () => {
+    mockFetch.mockResolvedValue(createErrorResponse(504));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/gateway-timeout'))).resolves.toMatchObject({
+      kind: 'transient-fallback',
+      fallbackReason: 'timeout',
+      statusCode: HttpStatusCode.REQUEST_TIMEOUT,
       cachePolicy: 'no-store',
     });
   });
@@ -256,14 +313,16 @@ describe('NextJsOgMetadataService', () => {
   });
 
   it('should drop og:image when image DNS fails without failing page metadata', async () => {
+    const errNetworkSpy = vi.spyOn(Err, 'network');
     mockFetch.mockResolvedValue(createOkResponse('text/html'));
     mockReadResponseBody.mockResolvedValue(simpleHtml('Test', 'https://cdn.example.test/img.png'));
-    mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockRejectedValueOnce(new Error('ENOTFOUND'));
+    mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockRejectedValueOnce(createDnsError());
 
     const result = expectMetadataOutcome(await NextJsOgMetadataService.fetch(new URL('https://example.com/')));
 
     expect(result.title).toBe('Test');
     expect(result.image).toBeNull();
+    expect(errNetworkSpy).not.toHaveBeenCalled();
   });
 
   it('should keep private og:image IPs reportable', async () => {
@@ -340,6 +399,17 @@ describe('NextJsOgMetadataService', () => {
     clearTimeoutSpy.mockRestore();
   });
 
+  it('should return transient network fallback for raw fetch failures', async () => {
+    mockFetch.mockRejectedValueOnce(new TypeError('ECONNRESET'));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toMatchObject({
+      kind: 'transient-fallback',
+      fallbackReason: 'network',
+      statusCode: HttpStatusCode.SERVICE_UNAVAILABLE,
+      cachePolicy: 'no-store',
+    });
+  });
+
   it('should block redirects to non-HTTP protocols', async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(null, { status: 302, headers: { location: 'ftp://example.test/data' } }),
@@ -381,13 +451,25 @@ describe('NextJsOgMetadataService', () => {
   // -------------------------------------------------------------------------
 
   it('should return transient fallback for DNS failures without throwing', async () => {
-    mockResolve4.mockRejectedValue(new Error('DNS failed'));
+    mockResolve4.mockRejectedValue(createDnsError());
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toMatchObject({
       kind: 'transient-fallback',
       fallbackReason: 'dns_failed',
       statusCode: HttpStatusCode.SERVICE_UNAVAILABLE,
       cachePolicy: 'no-store',
+    });
+  });
+
+  it('should keep unexpected DNS safety errors reportable', async () => {
+    const rawError = new Error('resolver bug');
+    mockResolve4.mockRejectedValue(rawError);
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
+      category: ErrorCategory.Server,
+      code: ServerErrorCode.UNKNOWN_ERROR,
+      cause: rawError,
+      context: { url: 'https://example.com/', statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
     });
   });
 

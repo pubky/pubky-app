@@ -1,11 +1,9 @@
 import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 
-export type TOgMetadataValidationResult =
+type TOgMetadataValidationResult =
   | { ok: true; url: URL }
-  | { ok: false; message: string; statusCode: 400; code: ValidationErrorCode };
+  | { ok: false; message: string; statusCode: HttpStatusCode.BAD_REQUEST; code: ValidationErrorCode };
 
 /**
  * OG metadata input validators.
@@ -46,34 +44,6 @@ export class OgMetadataValidators {
     if (!onionResult.ok) return onionResult;
 
     return { ok: true, url: parsed };
-  }
-
-  /**
-   * Validates the full URL input and returns a parsed URL object.
-   *
-   * Runs all validation steps in order:
-   * 1. Non-empty string check
-   * 2. Parseable URL
-   * 3. HTTP/HTTPS protocol only
-   * 4. Valid hostname structure (TLD, domain)
-   * 5. No .onion addresses
-   *
-   * @param url - Raw URL string from the request
-   * @returns Validated and parsed URL object
-   * @throws AppError if any validation step fails
-   */
-  static async validate(url: string | null): Promise<URL> {
-    const result = await this.validateSafe(url);
-    if (!result.ok) {
-      throw Err.validation(result.code, result.message, {
-        service: ErrorService.NextJsServer,
-        operation: 'validate',
-        context: { field: 'url', statusCode: result.statusCode },
-      });
-    }
-
-    // Format validation only; DNS/IP SSRF checks are enforced in OgMetadataApplication.
-    return result.url;
   }
 
   /**

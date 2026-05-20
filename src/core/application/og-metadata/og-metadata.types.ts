@@ -1,3 +1,5 @@
+import { HttpStatusCode } from '@/libs/http/http.types';
+
 /**
  * Input parameters for OG metadata fetching.
  * `url` comes from searchParams.get(), so it can be string or null.
@@ -30,7 +32,10 @@ export type TOgMetadataFetchOutcome =
     }
   | {
       kind: 'transient-fallback';
-      statusCode: 408 | 429 | 503;
+      statusCode:
+        | HttpStatusCode.REQUEST_TIMEOUT
+        | HttpStatusCode.TOO_MANY_REQUESTS
+        | HttpStatusCode.SERVICE_UNAVAILABLE;
       fallbackReason: Exclude<TOgMetadataFallbackReason, 'non_html'>;
       cachePolicy: 'no-store';
     };
