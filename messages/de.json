@@ -8,7 +8,7 @@
     "title": "<highlight>Entsperre</highlight> das Web.",
     "subtitle": "Deine Schlüssel, deine Inhalte, deine Regeln.",
     "signIn": "Anmelden",
-    "createAccount": "Konto erstellen",
+    "joinNow": "Jetzt beitreten",
     "aTetherCompany": "ein <tether>tether.</tether> Unternehmen",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Alle Rechte vorbehalten."
   },
@@ -157,7 +157,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "Konto erstellen",
+      "joinNow": "Jetzt beitreten",
       "identityKeys": "Identitätsschlüssel",
       "usePubkyRing": "Pubky Ring verwenden",
       "yourPubky": "Ihr Pubky",
