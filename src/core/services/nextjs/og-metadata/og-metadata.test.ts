@@ -10,15 +10,13 @@ import { asOpaque } from '@/test-utils/type-assertions';
 // Mocks
 // ---------------------------------------------------------------------------
 
-const { mockValidateDns, mockReadResponseBody, mockNormalizeImageUrl, mockResolve4, mockIsIP, mockIsIpSafe } =
-  vi.hoisted(() => ({
-    mockValidateDns: vi.fn(),
-    mockReadResponseBody: vi.fn(),
-    mockNormalizeImageUrl: vi.fn(),
-    mockResolve4: vi.fn<(hostname: string) => Promise<string[]>>(),
-    mockIsIP: vi.fn<(input: string) => number>(),
-    mockIsIpSafe: vi.fn<(ip: string) => boolean>(),
-  }));
+const { mockValidateDns, mockReadResponseBody, mockResolve4, mockIsIP, mockIsIpSafe } = vi.hoisted(() => ({
+  mockValidateDns: vi.fn(),
+  mockReadResponseBody: vi.fn(),
+  mockResolve4: vi.fn<(hostname: string) => Promise<string[]>>(),
+  mockIsIP: vi.fn<(input: string) => number>(),
+  mockIsIpSafe: vi.fn<(ip: string) => boolean>(),
+}));
 
 vi.mock('dns/promises', () => ({
   default: { resolve4: mockResolve4 },
@@ -40,7 +38,6 @@ vi.mock('../nextjs.utils', async (importOriginal) => {
     ...actual,
     validateDns: mockValidateDns,
     readResponseBody: mockReadResponseBody,
-    normalizeImageUrl: mockNormalizeImageUrl,
   };
 });
 
@@ -86,8 +83,6 @@ describe('NextJsOgMetadataService', () => {
     mockResolve4.mockResolvedValue(['1.1.1.1']);
     mockIsIP.mockReturnValue(0);
     mockIsIpSafe.mockReturnValue(true);
-    mockNormalizeImageUrl.mockResolvedValue(null);
-
     const mod = await import('./og-metadata');
     NextJsOgMetadataService = mod.NextJsOgMetadataService;
   });
@@ -242,25 +237,45 @@ describe('NextJsOgMetadataService', () => {
   // Image normalization
   // -------------------------------------------------------------------------
 
-  it('should call normalizeImageUrl when og:image is found', async () => {
+  it('should normalize og:image when image URL is safe', async () => {
     mockFetch.mockResolvedValue(createOkResponse('text/html'));
     mockReadResponseBody.mockResolvedValue(simpleHtml('Test', '/img.png'));
-    mockNormalizeImageUrl.mockResolvedValue('https://example.com/img.png');
 
     const result = expectMetadataOutcome(await NextJsOgMetadataService.fetch(new URL('https://example.com/')));
 
-    expect(mockNormalizeImageUrl).toHaveBeenCalledWith('/img.png', 'https://example.com/');
     expect(result.image).toBe('https://example.com/img.png');
   });
 
-  it('should not call normalizeImageUrl when og:image is missing', async () => {
+  it('should return null image when og:image is missing', async () => {
     mockFetch.mockResolvedValue(createOkResponse('text/html'));
     mockReadResponseBody.mockResolvedValue(simpleHtml('Test'));
 
     const result = expectMetadataOutcome(await NextJsOgMetadataService.fetch(new URL('https://example.com/')));
 
-    expect(mockNormalizeImageUrl).not.toHaveBeenCalled();
     expect(result.image).toBeNull();
+  });
+
+  it('should drop og:image when image DNS fails without failing page metadata', async () => {
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValue(simpleHtml('Test', 'https://cdn.example.test/img.png'));
+    mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockRejectedValueOnce(new Error('ENOTFOUND'));
+
+    const result = expectMetadataOutcome(await NextJsOgMetadataService.fetch(new URL('https://example.com/')));
+
+    expect(result.title).toBe('Test');
+    expect(result.image).toBeNull();
+  });
+
+  it('should keep private og:image IPs reportable', async () => {
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValue(simpleHtml('Test', 'http://169.254.169.254/img.png'));
+    mockIsIP.mockReturnValueOnce(0).mockReturnValueOnce(4);
+    mockIsIpSafe.mockReturnValueOnce(true).mockReturnValueOnce(false);
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
+      category: ErrorCategory.Auth,
+      code: AuthErrorCode.FORBIDDEN,
+    });
   });
 
   // -------------------------------------------------------------------------

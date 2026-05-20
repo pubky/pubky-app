@@ -30,6 +30,7 @@ For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('ac
 creation so they do not create Sentry issues:
 
 - Durable outcomes such as forbidden/not-found/gone pages or non-HTML content return fallback metadata.
+- Expected `og:image` normalization failures such as dead image hosts drop the image without creating Sentry issues.
 - Transient outcomes such as DNS failure, network failure, timeout, rate limiting, or remote 5xx return direct
   no-store route responses without throwing or passing through `handleApiError`.
 - Security/anomaly cases such as private IPs, non-HTTP redirects, redirect loops, oversized bodies, and parser/runtime

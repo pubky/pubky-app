@@ -10,7 +10,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { isIpSafe } from '@/libs/network/network';
-import { readResponseBody } from '../nextjs.utils';
+import { isHttpProtocol, readResponseBody } from '../nextjs.utils';
 import { buildFallbackMetadata, detectMediaType, extractMetadata, validateRedirectUrl } from './og-metadata.utils';
 
 const MAX_REDIRECTS = 5;
@@ -80,7 +80,7 @@ export class NextJsOgMetadataService {
       const html = await readResponseBody(response);
 
       // 7. Extract and normalize metadata
-      return success(await extractMetadata(url, html));
+      return success(await extractMetadata(url, html, normalizeImageUrlForOgMetadata));
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -264,6 +264,27 @@ async function validateDnsForOgMetadata(hostname: string): Promise<OgDnsResult> 
   }
 
   return { ok: true };
+}
+
+async function normalizeImageUrlForOgMetadata(image: string, baseUrl: string): Promise<string | null> {
+  let imageUrl: URL;
+  try {
+    imageUrl = new URL(image, baseUrl);
+  } catch {
+    return null;
+  }
+
+  if (!isHttpProtocol(imageUrl)) {
+    return null;
+  }
+
+  const dnsResult = await validateDnsForOgMetadata(imageUrl.hostname.toLowerCase());
+  if (!dnsResult.ok) {
+    logFallback(imageUrl.toString(), dnsResult.reason, { source: 'og_image' });
+    return null;
+  }
+
+  return imageUrl.toString();
 }
 
 async function fetchForOgMetadata(url: string, options: RequestInit): Promise<OgFetchResult> {
