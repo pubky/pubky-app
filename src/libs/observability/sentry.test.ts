@@ -1,9 +1,8 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
-import { describe, expect, it } from 'vitest';
-import { Env } from '@/libs/env/env';
+import { describe, expect, it, vi } from 'vitest';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { getSentryInitBase, shouldEnableSentry } from './sentry';
+import { getSentryInitBase } from './sentry';
 
 const TEST_PUBKY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
 
@@ -38,9 +37,25 @@ function runBeforeSendSpan(span: SpanJSON): SpanJSON {
 }
 
 describe('shouldEnableSentry', () => {
-  it('is disabled when NEXT_PUBLIC_TESTNET is true (Vitest and CI E2E testnet builds)', () => {
-    expect(Env.NEXT_PUBLIC_TESTNET).toBe(true);
-    expect(shouldEnableSentry()).toBe(false);
+  it('is disabled when NEXT_PUBLIC_TESTNET is true outside unit-test guards', async () => {
+    vi.resetModules();
+    vi.doMock('@/libs/env/env', () => ({
+      Env: {
+        NODE_ENV: 'production',
+        VITEST: undefined,
+        NEXT_PUBLIC_TESTNET: true,
+        NEXT_PUBLIC_SENTRY_DSN: 'https://public@example.com/1',
+      },
+    }));
+
+    try {
+      const { shouldEnableSentry: shouldEnableSentryWithMockedEnv } = await import('./sentry');
+
+      expect(shouldEnableSentryWithMockedEnv()).toBe(false);
+    } finally {
+      vi.doUnmock('@/libs/env/env');
+      vi.resetModules();
+    }
   });
 });
 
