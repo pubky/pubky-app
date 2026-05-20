@@ -1,49 +1,58 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { APP_ROUTES } from '@/app/routes';
 import { UserNotFound } from './UserNotFound';
 
-const defaultProps = {
-  title: 'User not found',
-  subtitle: "The user you're looking for doesn't exist or may have been removed.",
-  imageAlt: 'User not found',
-  backToFeedLabel: 'Back to Feed',
-  exploreTagsLabel: 'Explore Tags',
-  onBackToFeed: vi.fn(),
-  onExploreTags: vi.fn(),
-};
+const mockPush = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}));
+
+vi.mock('next-intl', () => ({
+  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
+}));
 
 describe('UserNotFound', () => {
-  it('renders the user not found message and actions', () => {
-    render(<UserNotFound {...defaultProps} />);
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    expect(screen.getByText('User not found')).toBeInTheDocument();
-    expect(screen.getByText("The user you're looking for doesn't exist or may have been removed.")).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Back to Feed' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Explore Tags' })).toBeInTheDocument();
+  it('renders the user not found message and actions', () => {
+    render(<UserNotFound />);
+
+    expect(screen.getByText('profile.notFound.title')).toBeInTheDocument();
+    expect(screen.getByText('profile.notFound.subtitle')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'profile.notFound.backToFeed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'profile.notFound.exploreTags' })).toBeInTheDocument();
   });
 
   it('renders the background image with correct alt text', () => {
-    render(<UserNotFound {...defaultProps} />);
+    render(<UserNotFound />);
 
-    const image = screen.getByAltText('User not found');
+    const image = screen.getByAltText('profile.notFound.imageAlt');
     expect(image).toBeInTheDocument();
   });
 
-  it('invokes navigation callbacks when buttons are clicked', async () => {
+  it('navigates home and hot when buttons are clicked', async () => {
     const user = userEvent.setup();
-    render(<UserNotFound {...defaultProps} />);
+    render(<UserNotFound />);
 
-    await user.click(screen.getByRole('button', { name: 'Back to Feed' }));
-    expect(defaultProps.onBackToFeed).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'profile.notFound.backToFeed' }));
+    expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOME);
 
-    await user.click(screen.getByRole('button', { name: 'Explore Tags' }));
-    expect(defaultProps.onExploreTags).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'profile.notFound.exploreTags' }));
+    expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
 
   describe('Snapshots', () => {
     it('matches snapshot', () => {
-      const { container } = render(<UserNotFound {...defaultProps} />);
+      const { container } = render(<UserNotFound />);
       expect(container.firstChild).toMatchSnapshot();
     });
   });

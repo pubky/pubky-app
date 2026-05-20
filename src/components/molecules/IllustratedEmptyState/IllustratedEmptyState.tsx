@@ -5,7 +5,7 @@ import { LucideIcon } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 
-interface ProfilePageEmptyStateProps {
+interface IllustratedEmptyStateProps {
   imageSrc: string;
   imageAlt: string;
   icon: LucideIcon;
@@ -14,14 +14,14 @@ interface ProfilePageEmptyStateProps {
   children?: React.ReactNode;
 }
 
-export function ProfilePageEmptyState({
+export function IllustratedEmptyState({
   imageSrc,
   imageAlt,
   icon: Icon,
   title,
   subtitle,
   children,
-}: ProfilePageEmptyStateProps) {
+}: IllustratedEmptyStateProps) {
   return (
     <Container className="relative flex flex-col items-center justify-center gap-6 p-6">
       {/* Background image */}

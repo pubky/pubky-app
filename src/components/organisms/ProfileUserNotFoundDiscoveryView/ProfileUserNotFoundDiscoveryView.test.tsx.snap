@@ -41,24 +41,8 @@ exports[`ProfileUserNotFoundDiscoveryView - Snapshots > matches snapshot 1`] = `
     data-testid="container"
   >
     <div
-      data-image-alt="profile.notFound.imageAlt"
-      data-subtitle="profile.notFound.subtitle"
       data-testid="user-not-found-mock"
-      data-title="profile.notFound.title"
-    >
-      <button
-        data-testid="mock-back-to-feed"
-        type="button"
-      >
-        profile.notFound.backToFeed
-      </button>
-      <button
-        data-testid="mock-explore-tags"
-        type="button"
-      >
-        profile.notFound.exploreTags
-      </button>
-    </div>
+    />
     <div
       data-testid="hot-active-users"
     />

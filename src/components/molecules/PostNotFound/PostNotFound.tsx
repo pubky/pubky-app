@@ -1,62 +1,54 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, FileQuestion, Tag, UserRound } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { APP_ROUTES, getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-import { ProfilePageEmptyState } from '../ProfilePageEmptyState/ProfilePageEmptyState';
+import { getValidAuthorPubkyFromPostCompositeId } from '@/libs/utils/utils';
+import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmptyState';
 
 interface PostNotFoundProps {
-  title: string;
-  subtitle: string;
-  imageAlt: string;
-  backToFeedLabel: string;
-  viewProfileLabel: string;
-  exploreTagsLabel: string;
-  onBackToFeed: () => void;
-  /** When omitted (e.g. malformed post URL), the View profile action is hidden */
-  onViewProfile?: () => void;
-  onExploreTags: () => void;
+  postId: string;
 }
 
 /**
  * Empty state when a post URL does not resolve to a post (cache miss after fetch).
- * Copy and navigation are supplied by the parent (e.g. `next-intl` + `useRouter`).
  */
-export function PostNotFound({
-  title,
-  subtitle,
-  imageAlt,
-  backToFeedLabel,
-  viewProfileLabel,
-  exploreTagsLabel,
-  onBackToFeed,
-  onViewProfile,
-  onExploreTags,
-}: PostNotFoundProps) {
+export function PostNotFound({ postId }: PostNotFoundProps) {
+  const t = useTranslations('post.notFound');
+  const router = useRouter();
+  const viewProfilePubky = getValidAuthorPubkyFromPostCompositeId(postId);
+
   return (
-    <ProfilePageEmptyState
+    <IllustratedEmptyState
       imageSrc="/images/connections-empty-state.webp"
-      imageAlt={imageAlt}
+      imageAlt={t('imageAlt')}
       icon={FileQuestion}
-      title={title}
-      subtitle={subtitle}
+      title={t('title')}
+      subtitle={t('subtitle')}
     >
       <Container overrideDefaults className="flex flex-col flex-wrap items-center justify-center gap-3 sm:flex-row">
-        <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onBackToFeed}>
+        <Button type="button" variant={ButtonVariant.SECONDARY} onClick={() => router.push(APP_ROUTES.HOME)}>
           <ArrowLeft className="size-4 shrink-0" />
-          {backToFeedLabel}
+          {t('backToFeed')}
         </Button>
-        {onViewProfile ? (
-          <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onViewProfile}>
+        {viewProfilePubky ? (
+          <Button
+            type="button"
+            variant={ButtonVariant.SECONDARY}
+            onClick={() => router.push(getProfileRoute(PROFILE_ROUTES.PROFILE, viewProfilePubky))}
+          >
             <UserRound className="size-4 shrink-0" />
-            {viewProfileLabel}
+            {t('viewProfile')}
           </Button>
         ) : null}
-        <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onExploreTags}>
+        <Button type="button" variant={ButtonVariant.SECONDARY} onClick={() => router.push(APP_ROUTES.HOT)}>
           <Tag className="size-4 shrink-0" />
-          {exploreTagsLabel}
+          {t('exploreTags')}
         </Button>
       </Container>
-    </ProfilePageEmptyState>
+    </IllustratedEmptyState>
   );
 }

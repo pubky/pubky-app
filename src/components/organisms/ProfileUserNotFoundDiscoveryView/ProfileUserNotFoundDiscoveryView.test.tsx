@@ -1,24 +1,9 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { APP_ROUTES } from '@/app/routes';
 import { ProfileUserNotFoundDiscoveryView } from './ProfileUserNotFoundDiscoveryView';
 
-const mockPush = vi.fn();
 const mockUseLayoutReset = vi.fn();
-
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-  }),
-}));
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => `profile.notFound.${key}`,
-}));
 
 vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
   useLayoutReset: () => mockUseLayoutReset(),
@@ -74,32 +59,7 @@ vi.mock('@/organisms/HotActiveUsers/HotActiveUsers', () => ({
 }));
 
 vi.mock('@/molecules/UserNotFound/UserNotFound', () => ({
-  UserNotFound: ({
-    title,
-    subtitle,
-    imageAlt,
-    backToFeedLabel,
-    exploreTagsLabel,
-    onBackToFeed,
-    onExploreTags,
-  }: {
-    title: string;
-    subtitle: string;
-    imageAlt: string;
-    backToFeedLabel: string;
-    exploreTagsLabel: string;
-    onBackToFeed: () => void;
-    onExploreTags: () => void;
-  }) => (
-    <div data-testid="user-not-found-mock" data-title={title} data-subtitle={subtitle} data-image-alt={imageAlt}>
-      <button type="button" data-testid="mock-back-to-feed" onClick={onBackToFeed}>
-        {backToFeedLabel}
-      </button>
-      <button type="button" data-testid="mock-explore-tags" onClick={onExploreTags}>
-        {exploreTagsLabel}
-      </button>
-    </div>
-  ),
+  UserNotFound: () => <div data-testid="user-not-found-mock" />,
 }));
 
 vi.mock('@/atoms/Container/Container', () => ({
@@ -148,15 +108,10 @@ describe('ProfileUserNotFoundDiscoveryView', () => {
     );
   });
 
-  it('passes translated strings to UserNotFound', () => {
+  it('renders UserNotFound', () => {
     render(<ProfileUserNotFoundDiscoveryView />);
 
-    const block = screen.getByTestId('user-not-found-mock');
-    expect(block).toHaveAttribute('data-title', 'profile.notFound.title');
-    expect(block).toHaveAttribute('data-subtitle', 'profile.notFound.subtitle');
-    expect(block).toHaveAttribute('data-image-alt', 'profile.notFound.imageAlt');
-    expect(screen.getByTestId('mock-back-to-feed')).toHaveTextContent('profile.notFound.backToFeed');
-    expect(screen.getByTestId('mock-explore-tags')).toHaveTextContent('profile.notFound.exploreTags');
+    expect(screen.getByTestId('user-not-found-mock')).toBeInTheDocument();
   });
 
   it('renders HotActiveUsers below the empty state', () => {
@@ -165,17 +120,6 @@ describe('ProfileUserNotFoundDiscoveryView', () => {
     const container = screen.getByTestId('container');
     expect(container).toContainElement(screen.getByTestId('user-not-found-mock'));
     expect(container).toContainElement(screen.getByTestId('hot-active-users'));
-  });
-
-  it('navigates home and hot when action buttons are used', async () => {
-    const user = userEvent.setup();
-    render(<ProfileUserNotFoundDiscoveryView />);
-
-    await user.click(screen.getByTestId('mock-back-to-feed'));
-    expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOME);
-
-    await user.click(screen.getByTestId('mock-explore-tags'));
-    expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
 });
 

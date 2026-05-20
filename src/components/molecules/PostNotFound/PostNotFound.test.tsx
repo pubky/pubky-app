@@ -1,61 +1,71 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { APP_ROUTES, getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
+import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE, PUBKY_INVALID_TOO_LONG } from '@/test-utils/pubky';
 import { PostNotFound } from './PostNotFound';
 
-const defaultProps = {
-  title: 'Post not found',
-  subtitle: "This post isn't available.",
-  imageAlt: 'Post not found',
-  backToFeedLabel: 'Back to Feed',
-  viewProfileLabel: 'View profile',
-  exploreTagsLabel: 'Explore Tags',
-  onBackToFeed: vi.fn(),
-  onViewProfile: vi.fn(),
-  onExploreTags: vi.fn(),
-};
+const mockPush = vi.fn();
+const VALID_COMPOSITE = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
+const INVALID_AUTHOR_COMPOSITE = `${PUBKY_INVALID_TOO_LONG}:${POST_ID_STAGING_FIXTURE}`;
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}));
+
+vi.mock('next-intl', () => ({
+  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
+}));
 
 describe('PostNotFound', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders the message and three actions', () => {
-    render(<PostNotFound {...defaultProps} />);
+    render(<PostNotFound postId={VALID_COMPOSITE} />);
 
-    expect(screen.getByText('Post not found')).toBeInTheDocument();
-    expect(screen.getByText("This post isn't available.")).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Back to Feed' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'View profile' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Explore Tags' })).toBeInTheDocument();
+    expect(screen.getByText('post.notFound.title')).toBeInTheDocument();
+    expect(screen.getByText('post.notFound.subtitle')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'post.notFound.backToFeed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'post.notFound.viewProfile' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'post.notFound.exploreTags' })).toBeInTheDocument();
   });
 
-  it('hides View profile when onViewProfile is omitted', () => {
-    render(<PostNotFound {...defaultProps} onViewProfile={undefined} />);
+  it('hides View profile when postId does not contain a valid author pubky', () => {
+    render(<PostNotFound postId={INVALID_AUTHOR_COMPOSITE} />);
 
-    expect(screen.queryByRole('button', { name: 'View profile' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Back to Feed' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Explore Tags' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'post.notFound.viewProfile' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'post.notFound.backToFeed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'post.notFound.exploreTags' })).toBeInTheDocument();
   });
 
-  it('invokes navigation callbacks when buttons are clicked', async () => {
+  it('navigates home, profile, and hot when buttons are clicked', async () => {
     const user = userEvent.setup();
-    render(<PostNotFound {...defaultProps} />);
+    render(<PostNotFound postId={VALID_COMPOSITE} />);
 
-    await user.click(screen.getByRole('button', { name: 'Back to Feed' }));
-    expect(defaultProps.onBackToFeed).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'post.notFound.backToFeed' }));
+    expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOME);
 
-    await user.click(screen.getByRole('button', { name: 'View profile' }));
-    expect(defaultProps.onViewProfile).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'post.notFound.viewProfile' }));
+    expect(mockPush).toHaveBeenCalledWith(getProfileRoute(PROFILE_ROUTES.PROFILE, PUBKY_52_STAGING_FIXTURE));
 
-    await user.click(screen.getByRole('button', { name: 'Explore Tags' }));
-    expect(defaultProps.onExploreTags).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'post.notFound.exploreTags' }));
+    expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
 
   describe('Snapshots', () => {
     it('matches snapshot with View profile', () => {
-      const { container } = render(<PostNotFound {...defaultProps} />);
+      const { container } = render(<PostNotFound postId={VALID_COMPOSITE} />);
       expect(container.firstChild).toMatchSnapshot();
     });
 
     it('matches snapshot without View profile', () => {
-      const { container } = render(<PostNotFound {...defaultProps} onViewProfile={undefined} />);
+      const { container } = render(<PostNotFound postId={INVALID_AUTHOR_COMPOSITE} />);
       expect(container.firstChild).toMatchSnapshot();
     });
   });

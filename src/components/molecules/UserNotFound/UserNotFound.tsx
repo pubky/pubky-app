@@ -1,53 +1,40 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Tag, UserX } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-import { ProfilePageEmptyState } from '../ProfilePageEmptyState/ProfilePageEmptyState';
-
-interface UserNotFoundProps {
-  title: string;
-  subtitle: string;
-  imageAlt: string;
-  backToFeedLabel: string;
-  exploreTagsLabel: string;
-  onBackToFeed: () => void;
-  onExploreTags: () => void;
-}
+import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmptyState';
 
 /**
  * UserNotFound - Empty state component for when a user profile is not found
  *
  * Displayed when navigating to a profile URL with a pubky that doesn't exist.
- * Copy and navigation are provided by the parent (e.g. for `next-intl` + `useRouter`).
  */
-export function UserNotFound({
-  title,
-  subtitle,
-  imageAlt,
-  backToFeedLabel,
-  exploreTagsLabel,
-  onBackToFeed,
-  onExploreTags,
-}: UserNotFoundProps) {
+export function UserNotFound() {
+  const t = useTranslations('profile.notFound');
+  const router = useRouter();
+
   return (
-    <ProfilePageEmptyState
+    <IllustratedEmptyState
       imageSrc="/images/connections-empty-state.webp"
-      imageAlt={imageAlt}
+      imageAlt={t('imageAlt')}
       icon={UserX}
-      title={title}
-      subtitle={subtitle}
+      title={t('title')}
+      subtitle={t('subtitle')}
     >
       <Container overrideDefaults className="flex flex-col items-center justify-center gap-6 sm:flex-row">
-        <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onBackToFeed}>
+        <Button type="button" variant={ButtonVariant.SECONDARY} onClick={() => router.push(APP_ROUTES.HOME)}>
           <ArrowLeft className="size-4 shrink-0" />
-          {backToFeedLabel}
+          {t('backToFeed')}
         </Button>
-        <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onExploreTags}>
+        <Button type="button" variant={ButtonVariant.SECONDARY} onClick={() => router.push(APP_ROUTES.HOT)}>
           <Tag className="size-4 shrink-0" />
-          {exploreTagsLabel}
+          {t('exploreTags')}
         </Button>
       </Container>
-    </ProfilePageEmptyState>
+    </IllustratedEmptyState>
   );
 }

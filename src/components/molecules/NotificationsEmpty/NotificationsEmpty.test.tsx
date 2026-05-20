@@ -2,10 +2,10 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { NotificationsEmpty } from './NotificationsEmpty';
 
-// Mock ProfilePageEmptyState
-vi.mock('@/molecules/ProfilePageEmptyState/ProfilePageEmptyState', () => {
+// Mock IllustratedEmptyState
+vi.mock('@/molecules/IllustratedEmptyState/IllustratedEmptyState', () => {
   return {
-    ProfilePageEmptyState: ({
+    IllustratedEmptyState: ({
       imageSrc,
       imageAlt,
       icon: Icon,
