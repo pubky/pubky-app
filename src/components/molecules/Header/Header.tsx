@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
-import { Bookmark, Flame, Home, Settings } from 'lucide-react';
+import { Flame, Home, Library, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
@@ -83,6 +83,7 @@ type NavigationItemConfig = {
   }>;
   labelKey: string;
   dataCy?: string;
+  activePrefix?: string;
 };
 type HeaderNavigationButtonsProps = {
   counter?: number;
@@ -104,16 +105,18 @@ const NAVIGATION_ITEMS: NavigationItemConfig[] = [
     dataCy: 'header-hot-btn',
   },
   {
-    href: APP_ROUTES.BOOKMARKS,
-    icon: Bookmark,
-    labelKey: 'bookmarks',
-    dataCy: 'header-bookmarks-btn',
+    href: APP_ROUTES.COLLECTIONS,
+    icon: Library,
+    labelKey: 'collections',
+    dataCy: 'header-collections-btn',
+    activePrefix: APP_ROUTES.COLLECTIONS,
   },
   {
     href: SETTINGS_ROUTES.ACCOUNT,
     icon: Settings,
     labelKey: 'settings',
     dataCy: 'header-settings-btn',
+    activePrefix: APP_ROUTES.SETTINGS,
   },
 ];
 type NavigationButtonProps = {
@@ -155,7 +158,9 @@ export function HeaderNavigationButtons({
           href={item.href}
           icon={item.icon}
           label={t(item.labelKey)}
-          isActive={pathname === item.href}
+          isActive={
+            pathname === item.href || Boolean(item.activePrefix && pathname.startsWith(`${item.activePrefix}/`))
+          }
           dataCy={item.dataCy}
         />
       ))}

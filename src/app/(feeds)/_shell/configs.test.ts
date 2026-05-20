@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { APP_ROUTES } from '@/app/routes';
+import { APP_ROUTES, COLLECTION_ROUTES } from '@/app/routes';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { matchFeedsRouteKey, tryResolveFeedsShellConfig } from './configs';
 
 describe('matchFeedsRouteKey', () => {
   it('returns the correct key for each feeds route', () => {
     expect(matchFeedsRouteKey(APP_ROUTES.HOME)).toBe('home');
-    expect(matchFeedsRouteKey(APP_ROUTES.BOOKMARKS)).toBe('bookmarks');
     expect(matchFeedsRouteKey(APP_ROUTES.SEARCH)).toBe('search');
     expect(matchFeedsRouteKey('/feed/abc123')).toBe('customFeed');
   });
@@ -42,14 +41,6 @@ describe('tryResolveFeedsShellConfig', () => {
     expect(config?.rightDrawerContentMobile).toBeDefined();
   });
 
-  it('returns the bookmarks config with showRightMobileButton=false and no mobile right drawer', () => {
-    const config = tryResolveFeedsShellConfig(APP_ROUTES.BOOKMARKS);
-    expect(config).not.toBeNull();
-    expect(config?.feedVariant).toBe(TIMELINE_FEED_VARIANT.BOOKMARKS);
-    expect(config?.showRightMobileButton).toBe(false);
-    expect(config?.rightDrawerContentMobile).toBeUndefined();
-  });
-
   it('returns the search config with showRightMobileButton=false and no mobile right drawer', () => {
     const config = tryResolveFeedsShellConfig(APP_ROUTES.SEARCH);
     expect(config).not.toBeNull();
@@ -67,6 +58,8 @@ describe('tryResolveFeedsShellConfig', () => {
 
   it('returns null for any other non-feeds pathname', () => {
     expect(tryResolveFeedsShellConfig('/hot')).toBeNull();
+    expect(tryResolveFeedsShellConfig(APP_ROUTES.COLLECTIONS)).toBeNull();
+    expect(tryResolveFeedsShellConfig(COLLECTION_ROUTES.BOOKMARKS)).toBeNull();
     expect(tryResolveFeedsShellConfig('/who-to-follow')).toBeNull();
     expect(tryResolveFeedsShellConfig('/settings/account')).toBeNull();
   });

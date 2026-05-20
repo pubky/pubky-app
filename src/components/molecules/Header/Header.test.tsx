@@ -1,4 +1,4 @@
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { describe, expect, it, vi } from 'vitest';
@@ -151,6 +151,7 @@ describe('Header Components', () => {
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
+    vi.mocked(usePathname).mockReturnValue('/home');
     vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
     vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
     vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
@@ -342,7 +343,7 @@ describe('Header Components', () => {
       // lucide uses 'house' for the home icon
       expect(document.querySelector('.lucide-house')).toBeInTheDocument();
       expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
-      expect(document.querySelector('.lucide-bookmark')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-library')).toBeInTheDocument();
       expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
     });
 
@@ -398,15 +399,24 @@ describe('Header Components', () => {
 
       const homeLink = document.querySelector('.lucide-house')?.closest('a');
       const hotLink = document.querySelector('.lucide-flame')?.closest('a');
-      const bookmarkLink = document.querySelector('.lucide-bookmark')?.closest('a');
+      const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
       const settingsLink = document.querySelector('.lucide-settings')?.closest('a');
       const profileLink = screen.getByText('TU').closest('a');
 
       expect(homeLink).toHaveAttribute('href', '/home');
       expect(hotLink).toHaveAttribute('href', '/hot');
-      expect(bookmarkLink).toHaveAttribute('href', '/bookmarks');
+      expect(collectionsLink).toHaveAttribute('href', '/collections');
       expect(settingsLink).toHaveAttribute('href', '/settings/account');
       expect(profileLink).toHaveAttribute('href', '/profile');
+    });
+
+    it('highlights Collections on nested collection routes', () => {
+      vi.mocked(usePathname).mockReturnValue('/collections/bookmarks');
+      render(<HeaderNavigationButtons avatarName="TU" />);
+
+      const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
+      expect(collectionsButton).toHaveClass('bg-secondary');
+      expect(collectionsButton).not.toHaveClass('bg-white/5');
     });
 
     it('applies correct button classes', () => {
@@ -498,6 +508,7 @@ describe('Header Components - Snapshots', () => {
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
+    vi.mocked(usePathname).mockReturnValue('/home');
     vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
     vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
     vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });

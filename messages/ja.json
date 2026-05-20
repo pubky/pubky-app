@@ -74,11 +74,12 @@
   "header": {
     "home": "ホーム",
     "hot": "人気",
-    "bookmarks": "ブックマーク",
     "settings": "設定",
     "newHere": "初めてですか？",
     "signIn": "ログイン",
-    "feed": "フィード"
+    "feed": "フィード",
+    "search": "検索",
+    "collections": "コレクション"
   },
   "settings": {
     "title": "設定",
@@ -257,11 +258,8 @@
       "subtitle": "Pubky Ringを開き、pubkyを作成してQRをスキャンしてください。",
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
-
       "expired": "期限切れ",
-
       "openingRing": "Pubky Ringを開いています...",
-
       "authorize": "Pubky Ringで認証",
       "authorizeSub": "<pubkyRing>Pubky Ring</pubkyRing>または<pubkyCore>Pubky Core</pubkyCore>搭載の他のキーチェーンを使用してください。",
       "linkFailed": "Pubky Ring署名アプリへの接続に失敗しました",
@@ -281,11 +279,8 @@
       "progressSubtitle": "Pubky の体験を読み込んでいます。しばらくお待ちください。",
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
-
       "expired": "期限切れ",
-
       "openingRing": "Pubky Ringを開いています...",
-
       "authorize": "Pubky Ringで認証",
       "linkCopied": "リンクをコピーしました",
       "linkCopiedDescription": "認証リンクをクリップボードにコピーしました。",
@@ -1220,5 +1215,13 @@
     "toolbarAriaLabel": "マークダウン編集ツールバー",
     "warningApproaching": "最大文字数制限に近づいています。",
     "warningReached": "最大文字数制限に達しました。"
+  },
+  "collections": {
+    "title": "マイコレクション",
+    "bookmarks": {
+      "title": "ブックマーク",
+      "description": "あとで見たいものをすべて保存できます。"
+    },
+    "private": "非公開"
   }
 }

@@ -74,11 +74,12 @@
   "header": {
     "home": "Home",
     "hot": "Tendenze",
-    "bookmarks": "Segnalibri",
     "settings": "Impostazioni",
     "newHere": "Nuovo qui?",
     "signIn": "Accedi",
-    "feed": "Feed"
+    "feed": "Feed",
+    "search": "Cerca",
+    "collections": "Collezioni"
   },
   "settings": {
     "title": "Impostazioni",
@@ -257,11 +258,8 @@
       "subtitle": "Apri Pubky Ring, crea un pubky e scansiona il QR.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
-
       "expired": "Scaduto",
-
       "openingRing": "Apertura di Pubky Ring...",
-
       "authorize": "Autorizza con Pubky Ring",
       "authorizeSub": "Usa <pubkyRing>Pubky Ring</pubkyRing> o qualsiasi altro portachiavi alimentato da <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "Impossibile collegarsi all'applicazione Pubky Ring",
@@ -281,11 +279,8 @@
       "progressSubtitle": "Attendi mentre la tua esperienza Pubky viene caricata.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
-
       "expired": "Scaduto",
-
       "openingRing": "Apertura di Pubky Ring...",
-
       "authorize": "Autorizza con Pubky Ring",
       "linkCopied": "Link copiato",
       "linkCopiedDescription": "Link di autenticazione copiato negli appunti.",
@@ -1220,5 +1215,13 @@
     "toolbarAriaLabel": "Barra degli strumenti per la modifica Markdown",
     "warningApproaching": "Ti stai avvicinando al limite massimo di caratteri.",
     "warningReached": "Hai raggiunto il limite massimo di caratteri."
+  },
+  "collections": {
+    "title": "Le mie collezioni",
+    "bookmarks": {
+      "title": "Segnalibri",
+      "description": "Tutto ciò che vuoi salvare per dopo."
+    },
+    "private": "PRIVATO"
   }
 }

@@ -74,11 +74,12 @@
   "header": {
     "home": "الرئيسية",
     "hot": "الرائج",
-    "bookmarks": "المفضلة",
     "settings": "الاعدادات",
     "newHere": "جديد هنا؟",
     "signIn": "تسجيل الدخول",
-    "feed": "فيد"
+    "feed": "فيد",
+    "search": "بحث",
+    "collections": "المجموعات"
   },
   "settings": {
     "title": "الاعدادات",
@@ -257,11 +258,8 @@
       "subtitle": "افتح Pubky Ring، انشئ pubky وامسح رمز QR.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
-
       "expired": "منتهي الصلاحية",
-
       "openingRing": "جارٍ فتح Pubky Ring...",
-
       "authorize": "تفويض باستخدام Pubky Ring",
       "authorizeSub": "استخدم <pubkyRing>Pubky Ring</pubkyRing> او اي سلسلة مفاتيح اخرى مدعومة من <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
@@ -281,11 +279,8 @@
       "progressSubtitle": "يرجى الانتظار بينما يتم تحميل تجربتك على Pubky.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
-
       "expired": "منتهي الصلاحية",
-
       "openingRing": "جارٍ فتح Pubky Ring...",
-
       "authorize": "تفويض باستخدام Pubky Ring",
       "linkCopied": "تم نسخ الرابط",
       "linkCopiedDescription": "تم نسخ رابط المصادقة الى الحافظة.",
@@ -1214,5 +1209,13 @@
     "toolbarAriaLabel": "شريط أدوات تحرير ماركداون",
     "warningApproaching": "أنت تقترب من الحد الأقصى لعدد الأحرف.",
     "warningReached": "لقد وصلت إلى الحد الأقصى لعدد الأحرف."
+  },
+  "collections": {
+    "title": "مجموعاتي",
+    "bookmarks": {
+      "title": "الإشارات المرجعية",
+      "description": "كل ما تريد حفظه لوقت لاحق."
+    },
+    "private": "خاص"
   }
 }

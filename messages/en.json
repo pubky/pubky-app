@@ -74,11 +74,12 @@
   "header": {
     "home": "Home",
     "hot": "Hot",
-    "bookmarks": "Bookmarks",
     "settings": "Settings",
     "newHere": "New here?",
     "signIn": "Sign in",
-    "feed": "Feed"
+    "feed": "Feed",
+    "search": "Search",
+    "collections": "Collections"
   },
   "settings": {
     "title": "Settings",
@@ -1214,5 +1215,13 @@
     "toolbarAriaLabel": "Markdown editing toolbar",
     "warningApproaching": "You're approaching the maximum character limit.",
     "warningReached": "You've reached the maximum character limit."
+  },
+  "collections": {
+    "title": "My Collections",
+    "bookmarks": {
+      "title": "Bookmarks",
+      "description": "Everything you want to save for later."
+    },
+    "private": "PRIVATE"
   }
 }

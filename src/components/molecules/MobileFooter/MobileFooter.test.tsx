@@ -69,7 +69,7 @@ vi.mock('@/app/routes', async () => {
       HOME: '/home',
       SEARCH: '/search',
       HOT: '/hot',
-      BOOKMARKS: '/bookmarks',
+      COLLECTIONS: '/collections',
       SETTINGS: '/settings',
       PROFILE: '/profile',
     },
@@ -142,7 +142,7 @@ describe('MobileFooter', () => {
     expect(document.querySelector('.lucide-house')).toBeInTheDocument();
     expect(document.querySelector('.lucide-search')).toBeInTheDocument();
     expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
-    expect(document.querySelector('.lucide-bookmark')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-library')).toBeInTheDocument();
     expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
     expect(screen.getByTestId('avatar-with-fallback')).toBeInTheDocument();
   });
@@ -160,7 +160,7 @@ describe('MobileFooter', () => {
       { href: '/home', iconClass: '.lucide-house', label: 'Home' },
       { href: '/search', iconClass: '.lucide-search', label: 'Search' },
       { href: '/hot', iconClass: '.lucide-flame', label: 'Hot' },
-      { href: '/bookmarks', iconClass: '.lucide-bookmark', label: 'Bookmarks' },
+      { href: '/collections', iconClass: '.lucide-library', label: 'Collections' },
       { href: '/settings/account', iconClass: '.lucide-settings', label: 'Settings' },
     ];
 
@@ -185,7 +185,7 @@ describe('MobileFooter', () => {
 
     expect(document.querySelector('.lucide-search')).toBeInTheDocument();
     expect(document.querySelector('.lucide-house')).toBeInTheDocument();
-    expect(document.querySelector('.lucide-bookmark')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-library')).toBeInTheDocument();
     expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
   });
 
@@ -230,7 +230,7 @@ describe('MobileFooter', () => {
   it('applies correct icon classes', () => {
     render(<MobileFooter />);
 
-    const iconClasses = ['.lucide-house', '.lucide-search', '.lucide-flame', '.lucide-bookmark', '.lucide-settings'];
+    const iconClasses = ['.lucide-house', '.lucide-search', '.lucide-flame', '.lucide-library', '.lucide-settings'];
     iconClasses.forEach((selector) => {
       const iconElement = document.querySelector(selector) as HTMLElement | null;
       expect(iconElement).toHaveClass('h-6', 'w-6');
@@ -262,6 +262,24 @@ describe('MobileFooter', () => {
     const settingsLink = document.querySelector('.lucide-settings')?.closest('a');
     expect(settingsLink).toHaveClass('bg-secondary');
     expect(settingsLink).not.toHaveClass('border');
+  });
+
+  it('highlights Collections on the Collections landing page', () => {
+    vi.mocked(usePathname).mockReturnValue('/collections');
+    render(<MobileFooter />);
+
+    const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
+    expect(collectionsLink).toHaveClass('bg-secondary');
+    expect(collectionsLink).not.toHaveClass('border');
+  });
+
+  it('highlights Collections when on a nested collection route', () => {
+    vi.mocked(usePathname).mockReturnValue('/collections/bookmarks');
+    render(<MobileFooter />);
+
+    const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
+    expect(collectionsLink).toHaveClass('bg-secondary');
+    expect(collectionsLink).not.toHaveClass('border');
   });
 
   it('highlights Settings when on any sibling settings page', () => {

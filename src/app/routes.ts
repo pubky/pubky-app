@@ -21,11 +21,15 @@ export enum APP_ROUTES {
   FEED = '/feed',
   SEARCH = '/search',
   HOT = '/hot',
-  BOOKMARKS = '/bookmarks',
+  COLLECTIONS = '/collections',
   SETTINGS = '/settings',
   PROFILE = '/profile',
   WHO_TO_FOLLOW = '/who-to-follow',
   SHARE = '/share',
+}
+
+export enum COLLECTION_ROUTES {
+  BOOKMARKS = '/collections/bookmarks',
 }
 
 export enum PROFILE_ROUTES {
@@ -79,7 +83,7 @@ export const ALLOWED_ROUTES = [
   APP_ROUTES.FEED,
   APP_ROUTES.SEARCH,
   APP_ROUTES.HOT,
-  APP_ROUTES.BOOKMARKS,
+  APP_ROUTES.COLLECTIONS,
   APP_ROUTES.SETTINGS,
   APP_ROUTES.PROFILE,
   APP_ROUTES.WHO_TO_FOLLOW,

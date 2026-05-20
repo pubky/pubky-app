@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bookmark, Flame, Home, Search, Settings } from 'lucide-react';
+import { Flame, Home, Library, Search, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
@@ -31,6 +31,7 @@ const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
  */
 export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
+  const tHeader = useTranslations('header');
   const tCommon = useTranslations('common');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const { isPublicRoute } = usePublicRoute();
@@ -56,28 +57,29 @@ export function MobileFooter({ className }: MobileFooterProps) {
     {
       href: APP_ROUTES.HOME,
       icon: Home,
-      label: 'Home',
+      label: tHeader('home'),
     },
     {
       href: APP_ROUTES.SEARCH,
       icon: Search,
-      label: 'Search',
+      label: tHeader('search'),
     },
     {
       href: APP_ROUTES.HOT,
       icon: Flame,
-      label: 'Hot',
+      label: tHeader('hot'),
     },
     {
-      href: APP_ROUTES.BOOKMARKS,
-      icon: Bookmark,
-      label: 'Bookmarks',
+      href: APP_ROUTES.COLLECTIONS,
+      activePrefix: APP_ROUTES.COLLECTIONS,
+      icon: Library,
+      label: tHeader('collections'),
     },
     {
       href: SETTINGS_ROUTES.ACCOUNT,
       activePrefix: APP_ROUTES.SETTINGS,
       icon: Settings,
-      label: 'Settings',
+      label: tHeader('settings'),
     },
   ];
   return (

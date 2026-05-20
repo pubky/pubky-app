@@ -74,11 +74,12 @@
   "header": {
     "home": "首页",
     "hot": "热门",
-    "bookmarks": "书签",
     "settings": "设置",
     "newHere": "新来?",
     "signIn": "登录",
-    "feed": "动态"
+    "feed": "动态",
+    "search": "搜索",
+    "collections": "收藏集"
   },
   "settings": {
     "title": "设置",
@@ -257,11 +258,8 @@
       "subtitle": "打开 Pubky Ring，创建一个 pubky，然后扫描二维码。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
-
       "expired": "已过期",
-
       "openingRing": "正在打开 Pubky Ring...",
-
       "authorize": "使用 Pubky Ring 授权",
       "authorizeSub": "使用 <pubkyRing>Pubky Ring</pubkyRing> 或任何其他由 <pubkyCore>Pubky Core</pubkyCore> 驱动的密钥链。",
       "linkFailed": "无法连接到 Pubky Ring 签名应用",
@@ -281,11 +279,8 @@
       "progressSubtitle": "请稍候，正在加载你的 Pubky 体验。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
-
       "expired": "已过期",
-
       "openingRing": "正在打开 Pubky Ring...",
-
       "authorize": "使用 Pubky Ring 授权",
       "linkCopied": "链接已复制",
       "linkCopiedDescription": "认证链接已复制到剪贴板。",
@@ -1214,5 +1209,13 @@
     "toolbarAriaLabel": "Markdown 编辑工具栏",
     "warningApproaching": "您即将达到最大字符数限制。",
     "warningReached": "您已达到最大字符数限制。"
+  },
+  "collections": {
+    "title": "我的收藏集",
+    "bookmarks": {
+      "title": "书签",
+      "description": "保存你想稍后查看的所有内容。"
+    },
+    "private": "私密"
   }
 }
