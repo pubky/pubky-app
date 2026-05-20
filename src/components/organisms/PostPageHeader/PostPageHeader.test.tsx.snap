@@ -17,7 +17,7 @@ exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = 
         Reply by
          
         <span
-          class="inline-block min-w-0 max-w-full truncate"
+          class="inline-block max-w-full min-w-0 truncate"
         >
           Anna
         </span>
@@ -145,7 +145,7 @@ exports[`PostPageHeader > matches snapshot for root post 1`] = `
         Post by
          
         <span
-          class="inline-block min-w-0 max-w-full truncate"
+          class="inline-block max-w-full min-w-0 truncate"
         >
           John
         </span>
