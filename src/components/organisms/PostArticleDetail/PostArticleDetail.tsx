@@ -58,7 +58,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     <>
       <Container className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Container className="lg:col-span-2">
-          <Typography as="h1" size="2xl" className="mb-6 wrap-anywhere hyphens-auto">
+          <Typography as="h1" size="2xl" className="mb-6 wrap-anywhere">
             {title}
           </Typography>
 

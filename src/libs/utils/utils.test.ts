@@ -27,7 +27,7 @@ import {
   stripPubkyPrefix,
   truncateString,
 } from './utils';
-import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
+import { HASHTAG_IN_TEXT_REGEX, RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 
 describe('Utils', () => {
   describe('radixIdSerializer', () => {
@@ -1274,6 +1274,23 @@ describe('Utils', () => {
     it('should handle Unicode characters', () => {
       expect(sanitizeTagInput('日本語')).toBe('日本語');
       expect(sanitizeTagInput('日本語: test')).toBe('日本語test');
+    });
+  });
+
+  describe('HASHTAG_IN_TEXT_REGEX', () => {
+    it('matches hashtags with spec-allowed symbols', () => {
+      const matches = [...'see #foo@bar here'.matchAll(HASHTAG_IN_TEXT_REGEX)].map((m) => m[2]);
+      expect(matches).toEqual(['#foo@bar']);
+    });
+
+    it('stops at spec-banned comma', () => {
+      const matches = [...'#hello, world'.matchAll(HASHTAG_IN_TEXT_REGEX)].map((m) => m[2]);
+      expect(matches).toEqual(['#hello']);
+    });
+
+    it('does not match when hash is not preceded by whitespace', () => {
+      const matches = [...'no#hashtag'.matchAll(HASHTAG_IN_TEXT_REGEX)].map((m) => m[2]);
+      expect(matches).toEqual([]);
     });
   });
 

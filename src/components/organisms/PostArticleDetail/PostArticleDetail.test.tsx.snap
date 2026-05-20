@@ -10,7 +10,7 @@ exports[`PostArticleDetail > matches snapshot when blurred 1`] = `
     data-testid="container"
   >
     <h1
-      class="mb-6 wrap-anywhere hyphens-auto"
+      class="mb-6 wrap-anywhere"
       data-testid="typography"
     >
       Test Article Title
@@ -70,7 +70,7 @@ exports[`PostArticleDetail > matches snapshot with cover image 1`] = `
     data-testid="container"
   >
     <h1
-      class="mb-6 wrap-anywhere hyphens-auto"
+      class="mb-6 wrap-anywhere"
       data-testid="typography"
     >
       Article With Cover
@@ -137,7 +137,7 @@ exports[`PostArticleDetail > matches snapshot with default props 1`] = `
     data-testid="container"
   >
     <h1
-      class="mb-6 wrap-anywhere hyphens-auto"
+      class="mb-6 wrap-anywhere"
       data-testid="typography"
     >
       Test Article Title

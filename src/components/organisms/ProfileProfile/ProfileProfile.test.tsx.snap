@@ -3,7 +3,7 @@
 exports[`ProfileProfile > matches snapshot 1`] = `
 <div>
   <div
-    class="mt-6 flex min-w-0 flex-col gap-6 overflow-hidden lg:mt-0 lg:hidden"
+    class="flex min-w-0 flex-col gap-6 overflow-hidden lg:hidden"
     data-testid="container"
   >
     <div

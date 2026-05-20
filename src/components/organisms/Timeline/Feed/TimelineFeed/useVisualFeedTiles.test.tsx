@@ -149,7 +149,7 @@ describe('useVisualFeedTiles', () => {
     });
   });
 
-  it('does not assign fallback when stream has more pages', () => {
+  it('assigns enough fallback to render the first row when stream has more pages', () => {
     mockUseLiveQuery.mockReturnValue({
       tiles: [
         createPendingTile({ id: 'tile-a', postId: 'author:post-1', attachmentName: 'a.png', previewSrc: '/a.png' }),
@@ -163,8 +163,11 @@ describe('useVisualFeedTiles', () => {
       useVisualFeedTiles({ postIds: ['author:post-1', 'author:post-2', 'author:post-3'], hasMore: true }),
     );
 
-    expect(result.current.rows.length).toBe(0);
+    expect(result.current.rows.length).toBeGreaterThan(0);
     expect(result.current.hasPendingTiles).toBe(true);
+    expect(result.current.tiles[0].preferredSize).toBe('medium');
+    expect(result.current.tiles[1].preferredSize).toBe('medium');
+    expect(result.current.tiles[2].preferredSize).toBeUndefined();
   });
 
   it('exposes hasPendingFiles when file metadata is missing', () => {

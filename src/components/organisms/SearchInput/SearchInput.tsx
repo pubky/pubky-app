@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { APP_ROUTES } from '@/app/routes';
+import { APP_ROUTES, getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
@@ -72,7 +72,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     addUser(userId);
     clearInputValue();
     setFocus(false);
-    router.push(`/profile/${userId}/posts`);
+    router.push(getProfileRoute(PROFILE_ROUTES.POSTS, userId));
   };
 
   const handleTagClick = (tag: string) => {

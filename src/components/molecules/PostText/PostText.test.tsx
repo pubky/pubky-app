@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TAG_MAX_LENGTH } from '@/config/posts';
 import { PostText } from './PostText';
 import { TRUNCATION_LIMIT } from './PostText.constants';
 
@@ -17,13 +18,15 @@ vi.mock('@/atoms/Button/Button', () => {
       className,
       'aria-label': ariaLabel,
       overrideDefaults,
+      ...rest
     }: {
       children: React.ReactNode;
       className?: string;
       'aria-label'?: string;
       overrideDefaults?: boolean;
+      [key: string]: unknown;
     }) => (
-      <button data-override-defaults={overrideDefaults} className={className} aria-label={ariaLabel}>
+      <button data-override-defaults={overrideDefaults} className={className} aria-label={ariaLabel} {...rest}>
         {children}
       </button>
     ),
@@ -584,6 +587,17 @@ describe('PostText', () => {
       expect(hashtag).toHaveTextContent('#hello-world_test');
     });
 
+    it('renders hashtags with spec-allowed symbols (@ ? ; * ")', () => {
+      render(<PostText content="Tags #foo@bar #what? #semi;colon #star*tag" />);
+
+      const hashtags = screen.getAllByTestId('post-hashtag');
+      expect(hashtags).toHaveLength(4);
+      expect(hashtags[0]).toHaveTextContent('#foo@bar');
+      expect(hashtags[1]).toHaveTextContent('#what?');
+      expect(hashtags[2]).toHaveTextContent('#semi;colon');
+      expect(hashtags[3]).toHaveTextContent('#star*tag');
+    });
+
     it('renders hashtags with numbers', () => {
       render(<PostText content="Check #web3 tag" />);
 
@@ -603,6 +617,22 @@ describe('PostText', () => {
 
       expect(screen.getByText('bold').tagName).toBe('STRONG');
       expect(screen.getByTestId('post-hashtag')).toHaveTextContent('#hashtag');
+    });
+
+    it('does not render overlong hashtag as PostHashtags link', () => {
+      const label = 'a'.repeat(TAG_MAX_LENGTH + 1);
+      const content = `Intro #${label} outro`;
+      const { container } = render(<PostText content={content} />);
+
+      expect(screen.queryByTestId('post-hashtag')).not.toBeInTheDocument();
+      expect(container.textContent).toContain(`#${label}`);
+    });
+
+    it('does not render inline hash without whitespace boundary as PostHashtags link', () => {
+      const { container } = render(<PostText content="Hello#Notatag" />);
+
+      expect(screen.queryByTestId('post-hashtag')).not.toBeInTheDocument();
+      expect(container.textContent).toBe('Hello#Notatag');
     });
   });
 
@@ -769,6 +799,7 @@ describe('PostText', () => {
       render(<PostText content={longContent} />);
 
       const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
+      expect(showMoreButton).toHaveAttribute('data-allow-post-navigation');
       expect(showMoreButton).toHaveClass('cursor-pointer');
       expect(showMoreButton).toHaveClass('text-brand');
       expect(showMoreButton).toHaveClass('mt-4');
@@ -1016,7 +1047,7 @@ Third line`}
   });
 
   it('matches snapshot for hashtag with mixed hyphens and underscores', () => {
-    const { container } = render(<PostText content="Check out #hello-world_test-example tag" />);
+    const { container } = render(<PostText content="Check out #hello-world_test tag" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 

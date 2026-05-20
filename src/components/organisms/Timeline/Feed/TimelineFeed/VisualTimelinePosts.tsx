@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import React, { useEffect } from 'react';
 import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
@@ -22,7 +22,6 @@ import { PostText } from '@/molecules/PostText/PostText';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
-import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { ClickableTagsList } from '../../../ClickableTagsList/ClickableTagsList';
 import { PostActionsBar } from '../../../PostActionsBar/PostActionsBar';
@@ -33,6 +32,7 @@ import {
   VISUAL_TILE_COLUMN_SPANS,
 } from './TimelineFeedVisual.helpers';
 import { useVisualFeedTiles } from './useVisualFeedTiles';
+import { VisualTimelinePostsSkeleton } from './VisualTimelinePosts.skeleton';
 import type {
   VisualTileImageProps,
   VisualTileVideoProps,
@@ -52,7 +52,7 @@ function VisualTileVideo({ tile }: VisualTileVideoProps) {
     rootMargin: '300px 0px 300px 0px',
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
 
@@ -100,7 +100,7 @@ function VisualTileImage({ tile }: VisualTileImageProps) {
   const [currentSrc, setCurrentSrc] = React.useState(tile.previewSrc);
   const hasFallenBackToMainRef = React.useRef(tile.previewSrc === tile.mainSrc);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentSrc(tile.previewSrc);
     hasFallenBackToMainRef.current = tile.previewSrc === tile.mainSrc;
   }, [tile.mainSrc, tile.previewSrc]);
@@ -306,11 +306,29 @@ export function VisualTimelinePosts({
 }: VisualTimelinePostsProps) {
   const { navigateToPost } = usePostNavigation();
   const { rows, hasPendingTiles, hasPendingFiles } = useVisualFeedTiles({ postIds, hasMore });
+  const initialBackfillInFlightRef = React.useRef(false);
+  const hasRows = rows.length > 0;
+  const shouldBackfillInitialRows = !loading && !loadingMore && !error && postIds.length > 0 && !hasRows && hasMore;
+  const isResolvingInitialRows =
+    !error && postIds.length > 0 && !hasRows && (hasMore || loadingMore || hasPendingTiles || hasPendingFiles);
+  const isInitialLoading = loading || isResolvingInitialRows;
+
+  useEffect(() => {
+    if (!shouldBackfillInitialRows) return;
+    if (initialBackfillInFlightRef.current) return;
+
+    initialBackfillInFlightRef.current = true;
+    void Promise.resolve()
+      .then(() => loadMore())
+      .finally(() => {
+        initialBackfillInFlightRef.current = false;
+      });
+  }, [loadMore, shouldBackfillInitialRows]);
 
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
-    hasMore,
-    isLoading: loadingMore,
+    hasMore: hasMore && hasRows,
+    isLoading: loadingMore || isInitialLoading,
     threshold: 3000,
     debounceMs: 20,
   });
@@ -319,14 +337,19 @@ export function VisualTimelinePosts({
     !loading &&
     !error &&
     postIds.length > 0 &&
-    rows.length === 0 &&
+    !hasRows &&
     !hasMore &&
     !loadingMore &&
     !hasPendingTiles &&
     !hasPendingFiles;
 
   return (
-    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0 && !showFilteredEmptyState}>
+    <TimelineStateWrapper
+      loading={isInitialLoading}
+      error={error}
+      hasItems={hasRows && !showFilteredEmptyState}
+      loadingComponent={<VisualTimelinePostsSkeleton />}
+    >
       {!showFilteredEmptyState ? (
         <Container data-cy="visual-feed-container">
           <Container
@@ -341,8 +364,6 @@ export function VisualTimelinePosts({
                 ))}
               </Container>
             ))}
-
-            {loadingMore && <TimelineLoadingMore />}
 
             {error && postIds.length > 0 && <TimelineError message={error} />}
 

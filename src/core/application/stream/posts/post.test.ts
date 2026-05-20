@@ -1813,6 +1813,28 @@ describe('PostStreamApplication', () => {
       expect(result.nextPageIds).toEqual(['author-1:post-1', 'author-3:post-3']);
     });
 
+    it('does not filter bookmark stream posts from muted authors', async () => {
+      await setupMutedUsers(['author-2'] as Pubky[]);
+
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
+        post_keys: ['author-1:post-1', 'author-2:post-2', 'author-3:post-3'],
+        last_post_score: BASE_TIMESTAMP + 2,
+      };
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      const bookmarksStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: bookmarksStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+
+      expect(result.nextPageIds).toEqual(['author-1:post-1', 'author-2:post-2', 'author-3:post-3']);
+    });
+
     it('should fetch more posts until limit is reached after mute filtering', async () => {
       // Mute author-2 (7 out of 10 posts are from author-2)
       await setupMutedUsers(['author-2'] as Pubky[]);
