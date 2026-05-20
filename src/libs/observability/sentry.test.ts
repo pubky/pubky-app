@@ -1,8 +1,9 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
 import { describe, expect, it } from 'vitest';
+import { Env } from '@/libs/env/env';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { getSentryInitBase } from './sentry';
+import { getSentryInitBase, shouldEnableSentry } from './sentry';
 
 const TEST_PUBKY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
 
@@ -35,6 +36,13 @@ function runBeforeSendSpan(span: SpanJSON): SpanJSON {
 
   return beforeSendSpan!(span);
 }
+
+describe('shouldEnableSentry', () => {
+  it('is disabled when NEXT_PUBLIC_TESTNET is true (Vitest and CI E2E testnet builds)', () => {
+    expect(Env.NEXT_PUBLIC_TESTNET).toBe(true);
+    expect(shouldEnableSentry()).toBe(false);
+  });
+});
 
 describe('Sentry PII scrubbing', () => {
   it('redacts identifiers from messages, exception values, and breadcrumb messages', () => {
