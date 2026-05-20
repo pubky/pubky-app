@@ -2,7 +2,7 @@
 
 exports[`Collections - Snapshots > matches snapshot 1`] = `
 <div
-  class="pb-24 xl:!px-0 lg:pb-12"
+  class="pb-24 lg:pb-12 xl:!px-0"
   data-show-left-mobile-button="false"
   data-show-right-mobile-button="false"
   data-testid="content-layout"
