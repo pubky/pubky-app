@@ -100,8 +100,11 @@ describe('OgMetadataApplication (integration)', () => {
       const result = await OgMetadataApplication.fetch(new URL('http://example.com'));
 
       expect(result).toMatchObject({
-        title: 'Example Title',
-        type: 'website',
+        kind: 'success',
+        metadata: {
+          title: 'Example Title',
+          type: 'website',
+        },
       });
     });
   });
@@ -124,7 +127,12 @@ describe('OgMetadataApplication (integration)', () => {
       expect(redirectResponse._cancel).toHaveBeenCalled();
       expect(mockResolve4).toHaveBeenCalledWith('example.com');
       expect(mockResolve4).toHaveBeenCalledWith('example.org');
-      expect(result.title).toBe('Redirected Page');
+      expect(result).toMatchObject({
+        kind: 'success',
+        metadata: {
+          title: 'Redirected Page',
+        },
+      });
     });
 
     it('should block redirects to private IPs (SSRF via open redirect)', async () => {

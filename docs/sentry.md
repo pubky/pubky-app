@@ -24,6 +24,20 @@ The two route-segment error boundaries (`app/error.tsx`, `app/global-error.tsx`)
 
 For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('actionName', { headers: await headers() }, async () => { ... })` so server-action errors are captured and traces stitch with the client.
 
+### OG metadata enrichment
+
+`/api/og-metadata` is best-effort link-preview enrichment. Expected external outcomes are handled before `Err.*`
+creation so they do not create Sentry issues:
+
+- Durable outcomes such as forbidden/not-found/gone pages or non-HTML content return fallback metadata.
+- Transient outcomes such as DNS failure, network failure, timeout, rate limiting, or remote 5xx return direct
+  no-store route responses without throwing or passing through `handleApiError`.
+- Security/anomaly cases such as private IPs, non-HTTP redirects, redirect loops, oversized bodies, and parser/runtime
+  surprises remain reportable through `Err.*`.
+
+Fallback paths use `Logger.warn`, which is currently platform/server logging. Sentry Logs are disabled in this app, so
+these warnings are not Sentry aggregate events unless logging infrastructure is enabled separately.
+
 ### Known quirk: render-time errors emit 2 events in React 19
 
 When an `AppError` is thrown synchronously during React render (as opposed to event handlers, effects, or application-layer code), React 19 attempts to re-render the failing component once before handing off to the error boundary. Each render invocation runs the `throw Err.*(...)` expression afresh, constructing a new `AppError` and routing through `captureAppError` — producing **2 Sentry events** within ~30 ms.

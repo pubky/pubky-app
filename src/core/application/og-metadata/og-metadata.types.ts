@@ -17,3 +17,20 @@ export interface TOgMetadataResult {
   title?: string | null;
   image?: string | null;
 }
+
+export type TOgMetadataFallbackReason = 'http_error' | 'non_html' | 'dns_failed' | 'network' | 'timeout' | 'rate_limit';
+
+export type TOgMetadataFetchOutcome =
+  | { kind: 'success'; metadata: TOgMetadataResult; cachePolicy: 'normal' }
+  | {
+      kind: 'durable-fallback';
+      metadata: TOgMetadataResult;
+      fallbackReason: Extract<TOgMetadataFallbackReason, 'http_error' | 'non_html'>;
+      cachePolicy: 'normal';
+    }
+  | {
+      kind: 'transient-fallback';
+      statusCode: 408 | 429 | 503;
+      fallbackReason: Exclude<TOgMetadataFallbackReason, 'non_html'>;
+      cachePolicy: 'no-store';
+    };

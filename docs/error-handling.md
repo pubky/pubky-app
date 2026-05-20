@@ -79,6 +79,14 @@ class HomegateService {
 
 Differentiate transient errors (`SERVICE_UNAVAILABLE`, `NETWORK_ERROR`) from fatal ones for smarter retries.
 
+When a specific remote outcome is an expected domain state, handle it before calling `httpResponseToError` or
+`Err.*`. Keep these cases explicit and narrow: expected outcomes are not Sentry-suppressed errors; they avoid
+`Err.*` because they are not application failures.
+
+For best-effort enrichment endpoints such as `/api/og-metadata`, durable expected outcomes may return fallback
+metadata, while transient external failures should return explicit no-store route responses without throwing or
+passing through `handleApiError`.
+
 ### Application Layer (`src/core/application/`)
 
 ```typescript

@@ -24,14 +24,32 @@ const CACHE_HEADERS = {
   },
 };
 
+const NO_STORE_HEADERS = {
+  headers: {
+    'Cache-Control': 'no-store',
+  },
+};
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const url = searchParams.get('url');
 
-    const metadata = await OgMetadataController.fetch({ url });
+    const result = await OgMetadataController.fetch({ url });
 
-    return NextResponse.json(metadata, CACHE_HEADERS);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.message }, { status: result.statusCode, ...NO_STORE_HEADERS });
+    }
+
+    const { outcome } = result;
+    if (outcome.kind === 'transient-fallback') {
+      return NextResponse.json(
+        { error: 'Failed to fetch metadata' },
+        { status: outcome.statusCode, ...NO_STORE_HEADERS },
+      );
+    }
+
+    return NextResponse.json(outcome.metadata, CACHE_HEADERS);
   } catch (error) {
     return handleApiError(error, 'api.og-metadata.GET', {
       unknownErrorMessage: 'Internal server error',
