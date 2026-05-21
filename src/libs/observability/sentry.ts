@@ -157,7 +157,7 @@ function deepScrubTelemetryStrings<T>(value: T, seen: WeakSet<object>): T {
 
 /**
  * Whether Sentry should be initialized in the current runtime.
- * False during tests, false when no DSN is configured.
+ * False during tests, testnet/E2E builds, and when no DSN is configured.
  *
  * The `!Env` guard protects against a module-init circular dependency:
  * env.ts → @/libs/error → error.factories.ts → observability/sentry.ts → env.ts.
@@ -169,6 +169,7 @@ export function shouldEnableSentry(): boolean {
   if (!Env) return false;
   if (Env.NODE_ENV === 'test') return false;
   if (Env.VITEST) return false;
+  if (Env.NEXT_PUBLIC_TESTNET) return false;
   if (!Env.NEXT_PUBLIC_SENTRY_DSN) return false;
   return true;
 }

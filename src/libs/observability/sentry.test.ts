@@ -1,6 +1,6 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { getSentryInitBase } from './sentry';
 
@@ -35,6 +35,29 @@ function runBeforeSendSpan(span: SpanJSON): SpanJSON {
 
   return beforeSendSpan!(span);
 }
+
+describe('shouldEnableSentry', () => {
+  it('is disabled when NEXT_PUBLIC_TESTNET is true outside unit-test guards', async () => {
+    vi.resetModules();
+    vi.doMock('@/libs/env/env', () => ({
+      Env: {
+        NODE_ENV: 'production',
+        VITEST: undefined,
+        NEXT_PUBLIC_TESTNET: true,
+        NEXT_PUBLIC_SENTRY_DSN: 'https://public@example.com/1',
+      },
+    }));
+
+    try {
+      const { shouldEnableSentry: shouldEnableSentryWithMockedEnv } = await import('./sentry');
+
+      expect(shouldEnableSentryWithMockedEnv()).toBe(false);
+    } finally {
+      vi.doUnmock('@/libs/env/env');
+      vi.resetModules();
+    }
+  });
+});
 
 describe('Sentry PII scrubbing', () => {
   it('redacts identifiers from messages, exception values, and breadcrumb messages', () => {

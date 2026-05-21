@@ -37,7 +37,7 @@ See [React 19's `onRecoverableError` docs](https://react.dev/reference/react-dom
 - `src/instrumentation.ts` — server runtime dispatch + `onRequestError`
 - `src/instrumentation-client.ts` — browser init + Replay + `onRouterTransitionStart`
 - `src/sentry.server.config.ts` / `src/sentry.edge.config.ts` — runtime-specific init
-- `src/libs/observability/sentry.ts` — single source of truth (`shouldEnableSentry`, `getSentryInitBase`, `captureAppError`)
+- `src/libs/observability/sentry.ts` — single source of truth (`shouldEnableSentry`, `getSentryInitBase`, `captureAppError`). Sentry is off when `NODE_ENV=test`, `VITEST` is set, `NEXT_PUBLIC_TESTNET=true`, or no DSN is configured.
 - `src/libs/error/error.factories.ts` — `createAppError()` calls `captureAppError(error)` after `Logger.error`
 - `next.config.ts` — wrapped by `withSentryConfig(...)` for source map upload
 
@@ -45,15 +45,16 @@ See [React 19's `onRecoverableError` docs](https://react.dev/reference/react-dom
 
 Defined in `src/libs/env/env.ts`. See `.env.example` for descriptions.
 
-| Variable                                          | Runtime                 | Required?                                          |
-| ------------------------------------------------- | ----------------------- | -------------------------------------------------- |
-| `NEXT_PUBLIC_SENTRY_DSN`                          | browser + server + edge | Optional. Empty/unset disables Sentry entirely.    |
-| `NEXT_PUBLIC_SENTRY_ENVIRONMENT`                  | all                     | Optional. Defaults to `NODE_ENV`.                  |
-| `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`           | all                     | Optional. Default `0.1`.                           |
-| `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`  | browser                 | Optional. Default `0.0` (record only on error).    |
-| `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | browser                 | Optional. Default `1.0`.                           |
-| `SENTRY_AUTH_TOKEN`                               | build only              | Required for source-map upload. Skipped if absent. |
-| `SENTRY_ORG`, `SENTRY_PROJECT`                    | build only              | Required alongside auth token.                     |
+| Variable                                          | Runtime                 | Required?                                                  |
+| ------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
+| `NEXT_PUBLIC_SENTRY_DSN`                          | browser + server + edge | Optional. Empty/unset disables Sentry entirely.            |
+| `NEXT_PUBLIC_SENTRY_ENVIRONMENT`                  | all                     | Optional. Defaults to `NODE_ENV`.                          |
+| `NEXT_PUBLIC_TESTNET`                             | all                     | When `true`, Sentry is disabled (CI E2E / testnet Docker). |
+| `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`           | all                     | Optional. Default `0.1`.                                   |
+| `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`  | browser                 | Optional. Default `0.0` (record only on error).            |
+| `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | browser                 | Optional. Default `1.0`.                                   |
+| `SENTRY_AUTH_TOKEN`                               | build only              | Required for source-map upload. Skipped if absent.         |
+| `SENTRY_ORG`, `SENTRY_PROJECT`                    | build only              | Required alongside auth token.                             |
 
 ## Privacy
 
