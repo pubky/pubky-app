@@ -17,7 +17,6 @@ import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { ActionButtons } from '../ActionButtons/ActionButtons';
 
 export const HomeActions = () => {
-  const t = useTranslations('landing');
   const router = useRouter();
 
   const handleCreateAccount = () => {
@@ -28,14 +27,7 @@ export const HomeActions = () => {
     router.push(AUTH_ROUTES.SIGN_IN);
   };
 
-  return (
-    <ActionButtons
-      onSignIn={handleSignIn}
-      onCreateAccount={handleCreateAccount}
-      signInText={t('signIn')}
-      createAccountText={t('createAccount')}
-    />
-  );
+  return <ActionButtons onSignIn={handleSignIn} onCreateAccount={handleCreateAccount} />;
 };
 
 export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
@@ -75,7 +67,7 @@ export const HomeSectionTitle = () => {
   const t = useTranslations('landing');
   return (
     <Container className="flex-row items-start gap-2">
-      <Typography size="md" className="self-center font-light text-brand sm:text-2xl">
+      <Typography as="h2" size="md" className="self-center text-xl font-light text-brand sm:text-2xl">
         {t('subtitle')}
       </Typography>
     </Container>

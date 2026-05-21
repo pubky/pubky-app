@@ -8,7 +8,7 @@
     "title": "<highlight>Sblocca</highlight> il web.",
     "subtitle": "Le tue chiavi, i tuoi contenuti, le tue regole.",
     "signIn": "Accedi",
-    "createAccount": "Crea account",
+    "joinNow": "Unisciti ora",
     "aTetherCompany": "un'azienda <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tutti i diritti riservati."
   },
@@ -157,7 +157,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "Crea account",
+      "joinNow": "Unisciti ora",
       "identityKeys": "Chiavi di identità",
       "usePubkyRing": "Usa Pubky Ring",
       "yourPubky": "Il tuo pubky",
