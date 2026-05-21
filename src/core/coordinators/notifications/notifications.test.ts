@@ -83,7 +83,7 @@ describe('NotificationCoordinator', () => {
       const coord2 = NotificationCoordinator.getInstance();
 
       // Configure and start through first reference
-      coord1.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coord1.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coord1.start();
 
       // start() fires one immediate wakeup poll (#1497) + 2 interval polls
@@ -121,7 +121,7 @@ describe('NotificationCoordinator', () => {
       });
 
       const coord1 = NotificationCoordinator.getInstance();
-      coord1.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coord1.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coord1.start();
 
       // start() fires one immediate wakeup poll (#1497) + 1 interval poll
@@ -140,7 +140,7 @@ describe('NotificationCoordinator', () => {
   describe('Race Conditions', () => {
     it('handles multiple rapid start() calls gracefully', () => {
       const { spy, coordinator } = setupAuthenticatedTest();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
 
       // Rapidly call start multiple times
       coordinator.start();
@@ -159,7 +159,7 @@ describe('NotificationCoordinator', () => {
 
     it('handles multiple rapid stop() calls gracefully', () => {
       const { spy, coordinator } = setupAuthenticatedTest();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
 
       // start() fires immediate wakeup poll + 1 interval
@@ -178,7 +178,7 @@ describe('NotificationCoordinator', () => {
 
     it('handles interleaved start/stop calls gracefully', () => {
       const { spy, coordinator } = setupAuthenticatedTest();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
 
       // Rapid start/stop/start pattern — each start that finds idle state
       // fires one immediate wakeup poll (#1497). 3 starts = 3 immediate polls.
@@ -239,7 +239,7 @@ describe('NotificationCoordinator', () => {
       });
 
       const coordinator = NotificationCoordinator.getInstance();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
 
       // start() fires immediate wakeup poll + 1 interval
@@ -275,7 +275,7 @@ describe('NotificationCoordinator', () => {
 
       // Rapid succession — start (immediate poll), configure restart (immediate),
       // stop, configure (no restart since idle), start (immediate). 3 immediates.
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
       coordinator.configure({ intervalMs: 500 });
       coordinator.stop();
@@ -303,7 +303,7 @@ describe('NotificationCoordinator', () => {
       });
 
       const coordinator = NotificationCoordinator.getInstance();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
 
       // start() fires immediate wakeup poll + 2 intervals
@@ -350,7 +350,7 @@ describe('NotificationCoordinator', () => {
       });
 
       const coordinator = NotificationCoordinator.getInstance();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
 
       // start() fires immediate wakeup poll + 1 interval
@@ -383,7 +383,7 @@ describe('NotificationCoordinator', () => {
 
       const coordinator = NotificationCoordinator.getInstance();
       coordinator.configure({
-        pollOnStart: false,
+        pollOnStart: true,
         intervalMs: 1_000,
         respectPageVisibility: true,
       } as Partial<CoordinatorConfigWithBase>);
@@ -415,7 +415,7 @@ describe('NotificationCoordinator', () => {
 
     it('can be safely destroyed multiple times', () => {
       const coordinator = NotificationCoordinator.getInstance();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.start();
 
       // Multiple destroy calls should not throw
@@ -437,7 +437,7 @@ describe('NotificationCoordinator', () => {
       });
 
       const coord1 = NotificationCoordinator.getInstance();
-      coord1.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coord1.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coord1.start();
 
       // start() fires immediate wakeup poll + 1 interval
@@ -542,7 +542,7 @@ describe('NotificationCoordinator', () => {
       });
 
       const coordinator = NotificationCoordinator.getInstance();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(APP_ROUTES.HOME);
       coordinator.start();
 
@@ -575,7 +575,7 @@ describe('NotificationCoordinator', () => {
       });
 
       const coordinator = NotificationCoordinator.getInstance();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(APP_ROUTES.HOME);
       coordinator.start();
 
@@ -608,7 +608,7 @@ describe('NotificationCoordinator', () => {
       });
 
       const coordinator = NotificationCoordinator.getInstance();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(APP_ROUTES.HOME);
       coordinator.start();
 
@@ -641,7 +641,7 @@ describe('NotificationCoordinator', () => {
   describe('Dynamic Configuration', () => {
     it('respects disabledRoutes changes at runtime', async () => {
       const { spy, coordinator } = setupAuthenticatedTest();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute('/admin');
       coordinator.start();
 
@@ -670,7 +670,7 @@ describe('NotificationCoordinator', () => {
     it('allows disabling default routes via configure()', async () => {
       const { spy, coordinator } = setupAuthenticatedTest();
       coordinator.configure({
-        pollOnStart: false,
+        pollOnStart: true,
         intervalMs: 1_000,
         disabledRoutes: [], // Clear all disabled routes
       } as Partial<CoordinatorConfigWithBase>);
@@ -687,7 +687,7 @@ describe('NotificationCoordinator', () => {
 
       // Start with visibility respect enabled
       coordinator.configure({
-        pollOnStart: false,
+        pollOnStart: true,
         intervalMs: 1_000,
         respectPageVisibility: true,
       } as Partial<CoordinatorConfigWithBase>);
@@ -725,7 +725,7 @@ describe('NotificationCoordinator', () => {
 
       // Start with visibility respect disabled
       coordinator.configure({
-        pollOnStart: false,
+        pollOnStart: true,
         intervalMs: 1_000,
         respectPageVisibility: false,
       } as Partial<CoordinatorConfigWithBase>);
@@ -817,7 +817,7 @@ describe('NotificationCoordinator', () => {
 
       const coordinator = NotificationCoordinator.getInstance();
       coordinator.configure({
-        pollOnStart: false,
+        pollOnStart: true,
         intervalMs: 1_000,
         respectPageVisibility: true,
       } as Partial<CoordinatorConfigWithBase>);
@@ -840,11 +840,11 @@ describe('NotificationCoordinator', () => {
   describe('Cold-start Session Restore', () => {
     it('polls immediately on start() so cold restore does not wait intervalMs (#1497)', async () => {
       // In production, restorePersistedSession completes before CoordinatorsManager
-      // mounts, so the session is already set when start() runs. The override in
-      // NotificationCoordinator.evaluateAndStartPolling fires one immediate poll
-      // on this idle→active transition.
+      // mounts, so the session is already set when start() runs. pollOnStart
+      // (enabled in the NotificationCoordinator constructor) fires one immediate
+      // poll on this idle→active transition.
       const { spy, coordinator } = setupAuthenticatedTest();
-      coordinator.configure({ pollOnStart: false, intervalMs: 10_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 10_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(APP_ROUTES.HOME);
       coordinator.start();
       await flushPromises();
@@ -861,7 +861,7 @@ describe('NotificationCoordinator', () => {
   describe('Route Edge Cases', () => {
     it('handles empty route string', async () => {
       const { spy, coordinator } = setupAuthenticatedTest();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute('');
       coordinator.start();
 
@@ -872,7 +872,7 @@ describe('NotificationCoordinator', () => {
 
     it('handles route with query parameters', async () => {
       const { spy, coordinator } = setupAuthenticatedTest();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(PROFILE_ROUTES.PROFILE + '?tab=posts&sort=recent');
       coordinator.start();
 
@@ -883,7 +883,7 @@ describe('NotificationCoordinator', () => {
 
     it('handles route with special regex characters', async () => {
       const { spy, coordinator } = setupAuthenticatedTest();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
 
       // Routes with special chars that need escaping in regex
       const specialRoutes = ['/user/$userId', '/post/[id]', '/search/(advanced)', '/settings.html', '/api/v1+v2'];
@@ -902,7 +902,7 @@ describe('NotificationCoordinator', () => {
 
     it('handles deeply nested routes', async () => {
       const { spy, coordinator } = setupAuthenticatedTest();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute('/app/dashboard/analytics/reports/quarterly/2024/q1');
       coordinator.start();
 
@@ -977,7 +977,7 @@ describe('NotificationCoordinator', () => {
       });
 
       const coordinator = NotificationCoordinator.getInstance();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(AUTH_ROUTES.SIGN_IN);
       coordinator.start();
 
@@ -1003,7 +1003,7 @@ describe('NotificationCoordinator', () => {
       });
 
       const coordinator = NotificationCoordinator.getInstance();
-      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(APP_ROUTES.HOME);
       coordinator.start();
 
@@ -1020,7 +1020,7 @@ describe('NotificationCoordinator', () => {
     });
   });
 
-  it('polls on interval when started (no pollOnStart)', () => {
+  it('polls immediately on start, then on every interval tick', () => {
     const spy = vi.spyOn(NotificationController, 'fetchNotifications').mockResolvedValue(undefined);
 
     // Use init() to set up authenticated state with hasProfile: true
@@ -1031,7 +1031,7 @@ describe('NotificationCoordinator', () => {
     });
 
     const coordinator = NotificationCoordinator.getInstance();
-    coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+    coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
     coordinator.setRoute(APP_ROUTES.HOME);
     coordinator.start();
 
@@ -1056,7 +1056,7 @@ describe('NotificationCoordinator', () => {
     });
 
     const coordinator = NotificationCoordinator.getInstance();
-    coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+    coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
     coordinator.setRoute(APP_ROUTES.HOME);
     coordinator.start();
 
@@ -1164,7 +1164,7 @@ describe('NotificationCoordinator', () => {
     });
 
     const coordinator = NotificationCoordinator.getInstance();
-    coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+    coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
     coordinator.setRoute(APP_ROUTES.HOME);
     coordinator.start();
 
@@ -1204,7 +1204,7 @@ describe('NotificationCoordinator', () => {
     });
 
     const coordinator = NotificationCoordinator.getInstance();
-    coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+    coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
     coordinator.setRoute(APP_ROUTES.HOME);
     coordinator.start();
 

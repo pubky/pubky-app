@@ -30,7 +30,10 @@ export class NotificationCoordinator extends Coordinator<NotificationCoordinator
   };
 
   private constructor() {
-    super();
+    // Poll immediately on every idle→active transition (cold start, tab
+    // resume, route-change resume) so the first fetch isn't delayed by
+    // intervalMs (#1497). Scoped to this coordinator via initialConfig.
+    super({ initialConfig: { pollOnStart: true } });
   }
 
   // ============================================================================
@@ -109,23 +112,5 @@ export class NotificationCoordinator extends Coordinator<NotificationCoordinator
   protected isRouteAllowed(): boolean {
     const state = this.getState();
     return !this.notificationConfig.disabledRoutes.some((pattern) => pattern.test(state.currentRoute));
-  }
-
-  /**
-   * Fire one immediate poll on idle→active transitions (cold start, tab
-   * resume) so the first fetch isn't delayed by intervalMs (#1497).
-   * Trade-off: duplicates bootstrap's fetch once per sign-in.
-   *
-   * NOTE: this also fires when configure() changes intervalMs while polling.
-   * No production code does that today (only tests), so it has no effect in
-   * the real app. Add a guard here if a runtime caller appears.
-   */
-  protected evaluateAndStartPolling(): void {
-    const wasPolling = this.getState().intervalId !== null;
-    super.evaluateAndStartPolling();
-
-    if (!wasPolling && this.getState().intervalId !== null && !this.getConfig().pollOnStart) {
-      void this.poll();
-    }
   }
 }
