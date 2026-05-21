@@ -77,10 +77,11 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
         <Typography
           as="h1"
           overrideDefaults
-          className="w-full min-w-0 text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
+          className="flex w-full min-w-0 items-baseline text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
           data-testid="post-page-title"
         >
-          {titlePrefix} <span className="inline-block max-w-full min-w-0 truncate">{authorName}</span>
+          <span className="shrink-0 pr-1">{titlePrefix} </span>
+          <span className="min-w-0 flex-1 truncate">{authorName}</span>
         </Typography>
 
         {/* Breadcrumb (only for replies) */}

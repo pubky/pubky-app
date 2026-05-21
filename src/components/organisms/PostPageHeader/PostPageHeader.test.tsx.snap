@@ -11,13 +11,17 @@ exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = 
       data-testid="container"
     >
       <h1
-        class="w-full min-w-0 text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
+        class="flex w-full min-w-0 items-baseline text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
         data-testid="post-page-title"
       >
-        Reply by
-         
         <span
-          class="inline-block max-w-full min-w-0 truncate"
+          class="shrink-0 pr-1"
+        >
+          Reply by
+           
+        </span>
+        <span
+          class="min-w-0 flex-1 truncate"
         >
           Anna
         </span>
@@ -139,13 +143,17 @@ exports[`PostPageHeader > matches snapshot for root post 1`] = `
       data-testid="container"
     >
       <h1
-        class="w-full min-w-0 text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
+        class="flex w-full min-w-0 items-baseline text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
         data-testid="post-page-title"
       >
-        Post by
-         
         <span
-          class="inline-block max-w-full min-w-0 truncate"
+          class="shrink-0 pr-1"
+        >
+          Post by
+           
+        </span>
+        <span
+          class="min-w-0 flex-1 truncate"
         >
           John
         </span>

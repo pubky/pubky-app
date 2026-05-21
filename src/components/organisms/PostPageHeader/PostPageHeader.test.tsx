@@ -157,8 +157,9 @@ describe('PostPageHeader', () => {
     render(<PostPageHeader postId="user1:post1" />);
 
     const title = screen.getByTestId('post-page-title');
-    expect(title).toHaveClass('w-full', 'min-w-0', 'md:w-0', 'md:flex-1');
-    expect(within(title).getByText(longName)).toHaveClass('inline-block', 'min-w-0', 'max-w-full', 'truncate');
+    expect(title).toHaveClass('flex', 'w-full', 'min-w-0', 'md:w-0', 'md:flex-1');
+    expect(within(title).getByText('Post by')).toHaveClass('shrink-0');
+    expect(within(title).getByText(longName)).toHaveClass('min-w-0', 'flex-1', 'truncate');
   });
 
   it('matches snapshot for root post', () => {
