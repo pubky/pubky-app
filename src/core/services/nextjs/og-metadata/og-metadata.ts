@@ -46,6 +46,9 @@ export class NextJsOgMetadataService {
       // 1. Resolve DNS and validate IP (prevents SSRF via DNS rebinding)
       const dnsResult = await validateDnsForOgMetadata(hostname);
       if (!dnsResult.ok) {
+        if (dnsResult.reason === 'unsafe_ip') {
+          throwBlockedIpError(hostname, 'validateDnsForOgMetadata');
+        }
         return transientFallback(url, dnsResult.reason, HttpStatusCode.SERVICE_UNAVAILABLE);
       }
 
@@ -163,6 +166,9 @@ async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgFetchResu
 
     const redirectDnsResult = await validateDnsForOgMetadata(redirectUrl.hostname);
     if (!redirectDnsResult.ok) {
+      if (redirectDnsResult.reason === 'unsafe_ip') {
+        throwBlockedIpError(redirectUrl.hostname, 'validateDnsForOgMetadata');
+      }
       return { ok: false, reason: redirectDnsResult.reason, statusCode: HttpStatusCode.SERVICE_UNAVAILABLE };
     }
 
@@ -178,7 +184,7 @@ async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgFetchResu
 
 type OgExpectedFailureReason = Extract<TOgMetadataFallbackReason, 'dns_failed' | 'network' | 'timeout'>;
 
-type OgDnsResult = { ok: true } | { ok: false; reason: Extract<OgExpectedFailureReason, 'dns_failed'> };
+type OgDnsResult = { ok: true } | { ok: false; reason: 'dns_failed' | 'unsafe_ip' };
 
 type OgFetchResult =
   | { ok: true; response: Response }
@@ -187,6 +193,8 @@ type OgFetchResult =
       reason: OgExpectedFailureReason;
       statusCode: HttpStatusCode.REQUEST_TIMEOUT | HttpStatusCode.SERVICE_UNAVAILABLE;
     };
+
+type TOgMetadataLogReason = TOgMetadataFallbackReason | 'unsafe_ip';
 
 function success(metadata: TOgMetadataResult): TOgMetadataFetchOutcome {
   return { kind: 'success', metadata, cachePolicy: 'normal' };
@@ -221,12 +229,25 @@ function transientFallback(
   };
 }
 
-function logFallback(url: string, reason: TOgMetadataFallbackReason, context: Record<string, unknown>): void {
+function logFallback(
+  url: string,
+  reason: TOgMetadataLogReason,
+  context: Record<string, unknown>,
+  hostname = getHostname(url),
+): void {
   Logger.warn('[og-metadata:fetch]', {
     outcome: 'fallback',
     reason,
-    hostname: getHostname(url),
+    hostname,
     ...context,
+  });
+}
+
+function throwBlockedIpError(hostname: string, operation: string): never {
+  throw Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
+    service: ErrorService.NextJsServer,
+    operation,
+    context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },
   });
 }
 
@@ -248,11 +269,7 @@ async function validateDnsForOgMetadata(hostname: string): Promise<OgDnsResult> 
     return { ok: false, reason: 'dns_failed' };
   }
 
-  throw Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
-    service: ErrorService.NextJsServer,
-    operation: 'validateDnsForOgMetadata',
-    context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },
-  });
+  return { ok: false, reason: 'unsafe_ip' };
 }
 
 async function normalizeImageUrlForOgMetadata(image: string, baseUrl: string): Promise<string | null> {
@@ -269,7 +286,7 @@ async function normalizeImageUrlForOgMetadata(image: string, baseUrl: string): P
 
   const dnsResult = await validateDnsForOgMetadata(imageUrl.hostname.toLowerCase());
   if (!dnsResult.ok) {
-    logFallback(imageUrl.toString(), dnsResult.reason, { source: 'og_image' });
+    logFallback(imageUrl.toString(), dnsResult.reason, { source: 'og_image' }, imageUrl.hostname);
     return null;
   }
 
@@ -299,7 +316,5 @@ async function fetchForOgMetadata(url: string, options: RequestInit): Promise<Og
 }
 
 function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException
-    ? error.name === 'AbortError'
-    : error instanceof Error && error.name === 'AbortError';
+  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
 }

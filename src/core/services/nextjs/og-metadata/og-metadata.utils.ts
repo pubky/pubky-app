@@ -6,11 +6,11 @@ import { ErrorService } from '@/libs/error/error.types';
 import { extractFromHtml, OG_PATTERNS } from '@/libs/html/html';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { decodeHtmlEntities, truncateMiddle, truncateString } from '@/libs/utils/utils';
-import { isHttpProtocol, normalizeImageUrl } from '../nextjs.utils';
+import { isHttpProtocol } from '../nextjs.utils';
 
 const MEDIA_TYPES = ['image', 'video', 'audio'] as const;
 
-export type NormalizeImageUrl = (image: string, baseUrl: string) => Promise<string | null>;
+type NormalizeImageUrl = (image: string, baseUrl: string) => Promise<string | null>;
 
 /**
  * Detects media content types (image/video/audio) and returns early.
@@ -34,7 +34,7 @@ export function detectMediaType(url: string, response: Response): TOgMetadataRes
 export async function extractMetadata(
   url: string,
   html: string,
-  normalizeImage: NormalizeImageUrl = normalizeImageUrl,
+  normalizeImage: NormalizeImageUrl,
 ): Promise<TOgMetadataResult> {
   // Extract title (og:title → <title> fallback)
   const ogTitle = extractFromHtml(html, OG_PATTERNS.TITLE);

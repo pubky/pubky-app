@@ -5,6 +5,8 @@ type TOgMetadataValidationResult =
   | { ok: true; url: URL }
   | { ok: false; message: string; statusCode: HttpStatusCode.BAD_REQUEST; code: ValidationErrorCode };
 
+type TOgMetadataValidationFailure = Extract<TOgMetadataValidationResult, { ok: false }>;
+
 /**
  * OG metadata input validators.
  *
@@ -34,14 +36,11 @@ export class OgMetadataValidators {
       return validationFailure(ValidationErrorCode.FORMAT_ERROR, 'Malformed URL');
     }
 
-    const protocolResult = this.validateProtocolSafe(parsed);
-    if (!protocolResult.ok) return protocolResult;
-
-    const hostnameResult = await this.validateHostnameSafe(parsed);
-    if (!hostnameResult.ok) return hostnameResult;
-
-    const onionResult = this.validateNotOnionSafe(parsed);
-    if (!onionResult.ok) return onionResult;
+    const failure =
+      this.validateProtocolSafe(parsed) ??
+      (await this.validateHostnameSafe(parsed)) ??
+      this.validateNotOnionSafe(parsed);
+    if (failure) return failure;
 
     return { ok: true, url: parsed };
   }
@@ -49,18 +48,18 @@ export class OgMetadataValidators {
   /**
    * Validates that the URL uses HTTP or HTTPS protocol.
    */
-  private static validateProtocolSafe(parsed: URL): TOgMetadataValidationResult {
+  private static validateProtocolSafe(parsed: URL): TOgMetadataValidationFailure | null {
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       return validationFailure(ValidationErrorCode.INVALID_INPUT, 'Invalid protocol. Only HTTP and HTTPS are allowed.');
     }
-    return { ok: true, url: parsed };
+    return null;
   }
 
   /**
    * Validates hostname structure: non-empty, valid TLD, non-empty domain.
    * IP addresses and localhost are allowed without TLD checks.
    */
-  private static async validateHostnameSafe(parsed: URL): Promise<TOgMetadataValidationResult> {
+  private static async validateHostnameSafe(parsed: URL): Promise<TOgMetadataValidationFailure | null> {
     const hostname = parsed.hostname.toLowerCase();
 
     // Empty hostname (e.g., "http:///path")
@@ -73,7 +72,7 @@ export class OgMetadataValidators {
     // See #1435.
     const { isIP } = await import(/* webpackIgnore: true */ 'net');
     if (isIP(hostname) || hostname === 'localhost') {
-      return { ok: true, url: parsed };
+      return null;
     }
 
     // Trailing dot in hostname (e.g., "http://example.com.")
@@ -109,20 +108,20 @@ export class OgMetadataValidators {
       return validationFailure(ValidationErrorCode.FORMAT_ERROR, 'Invalid hostname. Domain name cannot be empty.');
     }
 
-    return { ok: true, url: parsed };
+    return null;
   }
 
   /**
    * Blocks Tor .onion addresses (they require Tor network and will always fail).
    */
-  private static validateNotOnionSafe(parsed: URL): TOgMetadataValidationResult {
+  private static validateNotOnionSafe(parsed: URL): TOgMetadataValidationFailure | null {
     if (parsed.hostname.toLowerCase().endsWith('.onion')) {
       return validationFailure(ValidationErrorCode.INVALID_INPUT, 'Tor .onion addresses are not supported.');
     }
-    return { ok: true, url: parsed };
+    return null;
   }
 }
 
-function validationFailure(code: ValidationErrorCode, message: string): TOgMetadataValidationResult {
+function validationFailure(code: ValidationErrorCode, message: string): TOgMetadataValidationFailure {
   return { ok: false, code, message, statusCode: HttpStatusCode.BAD_REQUEST };
 }

@@ -70,11 +70,13 @@ describe('checkDnsSafety', () => {
     mockIsIpSafe.mockReturnValue(true); // safe by default
   });
 
-  it('should return ok when hostname resolves to a safe IP', async () => {
-    mockResolve4.mockResolvedValueOnce(['1.2.3.4']);
+  it('should return ok when hostname resolves to safe IPs', async () => {
+    mockResolve4.mockResolvedValueOnce(['1.2.3.4', '8.8.8.8']);
 
     await expect(checkDnsSafety('example.com')).resolves.toEqual({ ok: true });
     expect(mockResolve4).toHaveBeenCalledWith('example.com');
+    expect(mockIsIpSafe).toHaveBeenCalledWith('1.2.3.4');
+    expect(mockIsIpSafe).toHaveBeenCalledWith('8.8.8.8');
   });
 
   it('should return dns_failed when DNS resolves to empty addresses', async () => {
@@ -106,6 +108,24 @@ describe('checkDnsSafety', () => {
     mockIsIpSafe.mockReturnValue(false);
 
     await expect(checkDnsSafety('unsafe.test')).resolves.toEqual({ ok: false, reason: 'unsafe_ip' });
+  });
+
+  it('should skip DNS resolution when hostname is already an IP', async () => {
+    mockIsIP.mockReturnValue(4);
+    mockIsIpSafe.mockReturnValue(true);
+
+    await expect(checkDnsSafety('1.2.3.4')).resolves.toEqual({ ok: true });
+    expect(mockResolve4).not.toHaveBeenCalled();
+    expect(mockIsIpSafe).toHaveBeenCalledWith('1.2.3.4');
+  });
+
+  it('should return unsafe_ip when any resolved IP is unsafe', async () => {
+    mockResolve4.mockResolvedValueOnce(['1.2.3.4', '127.0.0.1']);
+    mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.1');
+
+    await expect(checkDnsSafety('mixed.test')).resolves.toEqual({ ok: false, reason: 'unsafe_ip' });
+    expect(mockIsIpSafe).toHaveBeenCalledWith('1.2.3.4');
+    expect(mockIsIpSafe).toHaveBeenCalledWith('127.0.0.1');
   });
 });
 

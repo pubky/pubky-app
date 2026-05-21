@@ -38,15 +38,15 @@ export async function checkDnsSafety(hostname: string): Promise<TDnsSafetyResult
   const { isIP } = await import(/* webpackIgnore: true */ 'net');
   const dns = await import(/* webpackIgnore: true */ 'dns/promises');
 
-  let resolvedIp: string | undefined;
+  const resolvedIps: string[] = [];
 
-  // Resolve hostname to IP: use as-is if already an IP, otherwise DNS resolve to IPv4.
+  // Resolve hostname to IPs: use as-is if already an IP, otherwise DNS resolve to IPv4.
   if (isIP(hostname)) {
-    resolvedIp = hostname;
+    resolvedIps.push(hostname);
   } else {
     try {
       const addresses = await dns.resolve4(hostname);
-      resolvedIp = addresses[0];
+      resolvedIps.push(...addresses);
     } catch (error) {
       if (isExpectedDnsResolutionError(error)) {
         return { ok: false, reason: 'dns_failed', cause: error };
@@ -56,12 +56,12 @@ export async function checkDnsSafety(hostname: string): Promise<TDnsSafetyResult
     }
   }
 
-  if (!resolvedIp) {
+  if (resolvedIps.length === 0) {
     return { ok: false, reason: 'dns_failed' };
   }
 
-  // Reject private/reserved IP ranges to prevent SSRF (e.g. localhost, 10.x, 192.168.x).
-  if (!isIpSafe(resolvedIp)) {
+  // Reject if any resolved address is private/reserved because fetch may connect to any returned A record.
+  if (resolvedIps.some((ip) => !isIpSafe(ip))) {
     return { ok: false, reason: 'unsafe_ip' };
   }
 
@@ -78,8 +78,6 @@ export async function validateDns(hostname: string): Promise<void> {
   try {
     result = await checkDnsSafety(hostname);
   } catch (error) {
-    if (error instanceof AppError) throw error;
-
     throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'DNS safety check failed', {
       service: ErrorService.NextJsServer,
       operation: 'validateDns',
