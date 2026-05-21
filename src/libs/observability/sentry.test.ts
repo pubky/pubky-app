@@ -6,7 +6,8 @@ import { ClientErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { getSentryInitBase, shouldDropAppErrorFromSentry } from './sentry';
+import { getSentryInitBase } from './sentry';
+import { shouldDropAppErrorFromSentry } from './sentry.utils';
 
 const TEST_PUBKY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
 
