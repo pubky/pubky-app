@@ -1,25 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NEXUS_URL } from '@/config/nexus';
-import { ClientErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { httpResponseToError } from '@/libs/error/error.http';
-import { ErrorCategory } from '@/libs/error/error.types';
-import { HttpStatusCode } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
-import { nexusQueryClient } from '@/services/nexus/nexus.query-client';
 import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { NexusPostService } from '@/services/nexus/post/post';
 import { postApi } from './post.api';
 import { type TPostBase, type TPostTaggersParams, type TPostTagsParams, type TPostViewParams } from './post.types';
-
-vi.mock('@/libs/error/error.http', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs/error/error.http')>();
-  return {
-    ...actual,
-    httpResponseToError: vi.fn(actual.httpResponseToError),
-  };
-});
 
 vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();
@@ -259,70 +245,14 @@ describe('NexusPostService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    nexusQueryClient.clear();
   });
 
   describe('getPostTags', () => {
-    it('returns an empty list for expected post-tags 404 without creating an AppError', async () => {
-      const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: HttpStatusCode.NOT_FOUND }));
-      const errClientSpy = vi.spyOn(Err, 'client');
-      vi.stubGlobal('fetch', fetchSpy);
-
-      const result = await NexusPostService.getPostTags({
-        compositeId: `${pubky}:${postId}`,
-        skip: 0,
-        limit: 3,
-        viewerId: testViewerId,
-      });
-
-      expect(result).toEqual([]);
-      expect(fetchSpy).toHaveBeenCalledWith(
-        `${NEXUS_URL}/v0/post/${pubky}/${postId}/tags?skip_tags=0&limit_tags=3&viewer_id=${testViewerId}`,
-        expect.objectContaining({ method: 'GET' }),
-      );
-      expect(httpResponseToError).not.toHaveBeenCalled();
-      expect(errClientSpy).not.toHaveBeenCalled();
-    });
-
-    it('throws reportable AppError for non-expected post-tags HTTP failures', async () => {
-      const errClientSpy = vi.spyOn(Err, 'client');
-      vi.stubGlobal(
-        'fetch',
-        vi
-          .fn()
-          .mockResolvedValue(new Response(null, { status: HttpStatusCode.BAD_REQUEST, statusText: 'Bad Request' })),
-      );
-
-      await expect(
-        NexusPostService.getPostTags({
-          compositeId: `${pubky}:${postId}`,
-          skip: 0,
-          limit: 3,
-          viewerId: testViewerId,
-        }),
-      ).rejects.toMatchObject({
-        category: ErrorCategory.Client,
-        code: ClientErrorCode.BAD_REQUEST,
-        operation: 'fetchNexusWithExpectedStatus',
-      });
-
-      expect(httpResponseToError).toHaveBeenCalledOnce();
-      expect(errClientSpy).toHaveBeenCalledOnce();
-    });
-
-    it('constructs the post-tags URL and returns parsed tags for successful responses', async () => {
+    it('constructs the post-tags URL and returns queryNexus response', async () => {
       const mockTags: NexusTag[] = [
         { label: 'bitcoin', taggers: ['user1' as Pubky], taggers_count: 1, relationship: false },
       ];
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue(
-          new Response(JSON.stringify(mockTags), {
-            status: HttpStatusCode.OK,
-            headers: { 'Content-Type': 'application/json' },
-          }),
-        ),
-      );
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockTags);
 
       const result = await NexusPostService.getPostTags({
         compositeId: `${pubky}:${postId}`,
@@ -332,10 +262,23 @@ describe('NexusPostService', () => {
       });
 
       expect(result).toEqual(mockTags);
-      expect(global.fetch).toHaveBeenCalledWith(
-        `${NEXUS_URL}/v0/post/${pubky}/${postId}/tags?skip_tags=5&limit_tags=3&viewer_id=${testViewerId}`,
-        expect.objectContaining({ method: 'GET' }),
-      );
+      expect(queryNexusSpy).toHaveBeenCalledWith({
+        url: `${NEXUS_URL}/v0/post/${pubky}/${postId}/tags?skip_tags=5&limit_tags=3&viewer_id=${testViewerId}`,
+      });
+    });
+
+    it('propagates queryNexus errors so Nexus retry behavior remains intact', async () => {
+      const error = new Error('nexus-fail');
+      mockQueryNexus.mockRejectedValue(error);
+
+      await expect(
+        NexusPostService.getPostTags({
+          compositeId: `${pubky}:${postId}`,
+          skip: 0,
+          limit: 3,
+          viewerId: testViewerId,
+        }),
+      ).rejects.toThrow(error);
     });
   });
 

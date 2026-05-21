@@ -80,13 +80,13 @@ class HomegateService {
 Differentiate transient errors (`SERVICE_UNAVAILABLE`, `NETWORK_ERROR`) from fatal ones for smarter retries.
 
 When a specific HTTP status is an expected domain state, handle it before calling `httpResponseToError`.
-For example, a geoblocked availability endpoint can return `{ available: false }` for `403`, and a Nexus endpoint
-whose missing resource means “empty collection” can return `[]` for `404`. Keep these cases explicit and narrow:
+For example, a geoblocked availability endpoint can return `{ available: false }` for `403`. Keep these cases
+explicit and narrow:
 
 - Prefer normal `safeFetch` + `httpResponseToError` for unexpected remote failures.
 - Use status-specific helpers only when the status has a clear product meaning at that endpoint.
-- For Nexus, `queryNexusWithExpectedStatus` intentionally bypasses the normal Nexus retry behavior for the configured statuses. Use it only when the first response already carries the desired domain meaning.
-- Do not model this as Sentry suppression. Expected statuses avoid `Err.*`/Sentry because they are not errors.
+- For Nexus reads, preserve query retry behavior for transient indexing states unless the endpoint contract explicitly says the status is final.
+- If a retried failure is low-value operational telemetry rather than an actionable exception, filter it narrowly in the observability layer instead of changing fetch semantics.
 
 ### Application Layer (`src/core/application/`)
 

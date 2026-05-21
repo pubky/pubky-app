@@ -2,6 +2,9 @@ import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
 import { Env } from '@/libs/env/env';
 import { AppError } from '@/libs/error/error';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 /**
  * Single source of truth for Sentry configuration shared across the three Next.js runtimes
@@ -27,6 +30,7 @@ const PUBKY_HTTP_HOST_PATTERN = /\bhttps?:\/\/_pubky\.[^\s"'<>]+/gi;
 const PUBKY_COMPACT_URI_PATTERN = new RegExp(`\\bpubky[${Z32_ALPHABET}]{52}(?:\\/[^\\s"'<>]*)?`, 'gi');
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 const PHONE_PATTERN = /\+?\d[\d\s().-]{7,}\d/g;
+const NEXUS_POST_TAGS_PATH_PATTERN = /^\/v0\/post\/[^/]+\/[^/]+\/tags$/;
 
 const SENSITIVE_CONTEXT_KEYS = new Set([
   'avatar',
@@ -67,6 +71,26 @@ function scrubSensitiveString(value: string): string {
     .replace(RAW_PUBKY_PATTERN, PUBKY_REDACTED)
     .replace(EMAIL_PATTERN, EMAIL_REDACTED)
     .replace(PHONE_PATTERN, PHONE_REDACTED);
+}
+
+function getEndpointPath(endpoint: unknown): string | null {
+  if (typeof endpoint !== 'string') return null;
+
+  try {
+    return new URL(endpoint).pathname;
+  } catch {
+    return endpoint.startsWith('/') ? endpoint.split('?')[0] : null;
+  }
+}
+
+export function shouldDropAppErrorFromSentry(error: AppError): boolean {
+  if (error.service !== ErrorService.Nexus) return false;
+  if (error.operation !== 'fetchNexus') return false;
+  if (error.code !== ClientErrorCode.NOT_FOUND) return false;
+  if (error.context?.statusCode !== HttpStatusCode.NOT_FOUND) return false;
+
+  const endpointPath = getEndpointPath(error.context.endpoint);
+  return endpointPath ? NEXUS_POST_TAGS_PATH_PATTERN.test(endpointPath) : false;
 }
 
 function isSensitiveFieldValue(parent: Record<string, unknown>, key: string): boolean {
@@ -355,6 +379,7 @@ export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions 
  */
 export function captureAppError(error: AppError): void {
   if (!shouldEnableSentry()) return;
+  if (shouldDropAppErrorFromSentry(error)) return;
 
   Sentry.withScope((scope) => {
     if (error.category) scope.setTag('error.category', error.category);

@@ -1,8 +1,7 @@
 import type { TFetchMorePostTagsParams, TFetchPostTaggersParams } from '@/controllers/post/post.types';
-import { HttpStatusCode } from '@/libs/http/http.types';
 import { parseCompositeId } from '@/models/models.utils';
 import type { NexusPost, NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
-import { queryNexus, queryNexusWithExpectedStatus } from '@/services/nexus/nexus.utils';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import { postApi } from '@/services/nexus/post/post.api';
 import type { TCompositeId } from '@/services/nexus/post/post.types';
 
@@ -35,13 +34,7 @@ export class NexusPostService {
     const { pubky: author_id, id: post_id } = parseCompositeId(compositeId);
 
     const url = postApi.tags({ author_id, post_id, skip_tags: skip, limit_tags: limit, viewer_id: viewerId });
-    // A missing post tags collection is an expected empty state for this endpoint.
-    // This intentionally bypasses Nexus 404 retries for tags only; full post fetches
-    // still use queryNexus so real missing-post signals stay visible.
-    return await queryNexusWithExpectedStatus<NexusTag[]>({
-      url,
-      expectedStatusFallbacks: { [HttpStatusCode.NOT_FOUND]: [] },
-    });
+    return await queryNexus<NexusTag[]>({ url });
   }
 
   /**
