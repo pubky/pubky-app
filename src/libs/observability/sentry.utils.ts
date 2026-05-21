@@ -49,16 +49,32 @@ function getEndpointPath(endpoint: unknown): string | null {
   }
 }
 
-export function shouldDropAppErrorFromSentry(error: AppError): boolean {
-  // Keep this filter intentionally narrow: post-tags 404s are low-value
-  // telemetry, but other Nexus errors and non-Nexus 404s remain actionable.
-  if (error.service !== ErrorService.Nexus) return false;
-  if (error.operation !== 'fetchNexus') return false;
-  if (error.code !== ClientErrorCode.NOT_FOUND) return false;
-  if (error.context?.statusCode !== HttpStatusCode.NOT_FOUND) return false;
+type AppErrorDropRule = {
+  name: string;
+  reason: string;
+  matches: (error: AppError) => boolean;
+};
 
-  const endpointPath = getEndpointPath(error.context.endpoint);
-  return endpointPath ? NEXUS_POST_TAGS_PATH_PATTERN.test(endpointPath) : false;
+function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
+  const endpointPath = getEndpointPath(error.context?.endpoint);
+  return endpointPath ? pattern.test(endpointPath) : false;
+}
+
+const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
+  {
+    name: 'nexus-post-tags-404',
+    reason: 'Low-value post-tags telemetry; Nexus retry behavior is preserved and other Nexus errors stay reportable.',
+    matches: (error) =>
+      error.service === ErrorService.Nexus &&
+      error.operation === 'fetchNexus' &&
+      error.code === ClientErrorCode.NOT_FOUND &&
+      error.context?.statusCode === HttpStatusCode.NOT_FOUND &&
+      matchesEndpointPath(error, NEXUS_POST_TAGS_PATH_PATTERN),
+  },
+];
+
+export function shouldDropAppErrorFromSentry(error: AppError): boolean {
+  return APP_ERROR_DROP_RULES.some((rule) => rule.matches(error));
 }
 
 function isSensitiveFieldValue(parent: Record<string, unknown>, key: string): boolean {
