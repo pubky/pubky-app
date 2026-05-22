@@ -8,6 +8,11 @@ import { UserProfile, useUserProfile } from '@/hooks/useUserProfile/useUserProfi
 // Re-export types from composed hooks for backwards compatibility
 export type { ProfileActions, ProfileStats, UserProfile };
 
+interface UseProfileHeaderOptions {
+  /** When false, skips profile and stats local-first queries (e.g. invalid pubky in URL). */
+  enabled?: boolean;
+}
+
 /**
  * Default profile data used during loading state or when profile is unavailable.
  */
@@ -34,21 +39,22 @@ const DEFAULT_PROFILE: UserProfile = {
  * Consumers should also check `userNotFound` to determine if the user does not exist.
  *
  * @param userId - The user ID to fetch profile data for
- * @returns Combined profile data (never null), stats, actions, loading state, and userNotFound flag
+ * @param options - Optional gate for local-first queries (defaults to enabled)
+ * @returns Combined profile data (never null), stats, actions, `isLoading` (profile or stats),
+ *   `isProfileLoading` (profile only), and `userNotFound`
  */
-export function useProfileHeader(userId: string) {
+export function useProfileHeader(userId: string, options?: UseProfileHeaderOptions) {
   // Fetch user profile data
-  const { profile, isLoading: isProfileLoading } = useUserProfile(userId);
+  const { profile, isLoading: isProfileLoading } = useUserProfile(userId, options);
 
   // Fetch profile statistics
-  const { stats, isLoading: isStatsLoading } = useProfileStats(userId);
+  const { stats, isLoading: isStatsLoading } = useProfileStats(userId, options);
 
-  // Determine if loading is complete
+  // Determine if loading is complete (profile + stats — used for overall readiness)
   const isLoading = isProfileLoading || isStatsLoading;
 
-  // Determine if user was not found (loading finished but no profile data)
-  // This is true when the query has completed but returned null
-  const userNotFound = !isLoading && profile === null;
+  // User missing on Nexus: profile query settled with null — do not wait for counts
+  const userNotFound = !isProfileLoading && profile === null;
 
   // Provide default profile values when profile is null (loading state or not found)
   // This centralizes the fallback logic and ensures type consistency
@@ -65,6 +71,7 @@ export function useProfileHeader(userId: string) {
     stats,
     actions,
     isLoading,
+    isProfileLoading,
     userNotFound,
   };
 }

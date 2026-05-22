@@ -314,4 +314,14 @@ describe('useUserProfile', () => {
       expect(mockMocks.mockFetchDetails).not.toHaveBeenCalled();
     });
   });
+
+  describe('enabled option', () => {
+    it('does not call UserController when enabled is false', () => {
+      mockMocks.mockUserDetails.current = null;
+      renderHook(() => useUserProfile('test-user-id', { enabled: false }));
+
+      expect(mockMocks.mockGetDetails).not.toHaveBeenCalled();
+      expect(mockMocks.mockFetchDetails).not.toHaveBeenCalled();
+    });
+  });
 });

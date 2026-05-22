@@ -10,10 +10,8 @@ import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { cn } from '@/libs/utils/utils';
 import { HotMobileMenu } from '@/molecules/HotMobileMenu/HotMobileMenu';
 import { HotSection } from '@/molecules/HotMobileMenu/HotMobileMenu.types';
-import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
-import { HotFeedRightDrawer, HotFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
 import { HotActiveUsers } from '@/organisms/HotActiveUsers/HotActiveUsers';
-import { HotFeedDrawer, HotFeedSidebar } from '@/organisms/HotFeedFilters/HotFeedFilters';
+import { HotDiscoveryContentLayout } from '@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout';
 import { HotTagsCardsSection } from '@/organisms/HotTagsCardsSection/HotTagsCardsSection';
 import { HotTagsOverview } from '@/organisms/HotTagsOverview/HotTagsOverview';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
@@ -46,15 +44,7 @@ export function Hot() {
   const hidePosts = isMobile && activeSection !== HotSection.POSTS;
 
   return (
-    <ContentLayout
-      showRightMobileButton={false}
-      hasGradientBackground={false}
-      leftSidebarContent={<HotFeedSidebar />}
-      rightSidebarContent={<HotFeedRightSidebar />}
-      leftDrawerContent={<HotFeedDrawer />}
-      rightDrawerContent={<HotFeedRightDrawer />}
-      className="pb-24 lg:pb-12"
-    >
+    <HotDiscoveryContentLayout>
       {/* Mobile section navigation - visible only on mobile (< lg) */}
       <HotMobileMenu activeSection={activeSection} onSectionChange={setActiveSection} />
 
@@ -74,6 +64,6 @@ export function Hot() {
         </Heading>
         <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOT} />
       </Container>
-    </ContentLayout>
+    </HotDiscoveryContentLayout>
   );
 }
