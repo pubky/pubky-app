@@ -1,8 +1,13 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
 import { describe, expect, it, vi } from 'vitest';
+import { AppError } from '@/libs/error/error';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { getSentryInitBase } from './sentry';
+import { shouldDropAppErrorFromSentry } from './sentry.utils';
 
 const TEST_PUBKY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
 
@@ -36,6 +41,71 @@ function runBeforeSendSpan(span: SpanJSON): SpanJSON {
   return beforeSendSpan!(span);
 }
 
+async function withEnabledSentryCapture(
+  run: (params: { captureAppError: (error: AppError) => void; captureException: ReturnType<typeof vi.fn> }) => void,
+) {
+  vi.resetModules();
+
+  const captureException = vi.fn();
+  type MockScope = {
+    setTag: ReturnType<typeof vi.fn>;
+    setContext: ReturnType<typeof vi.fn>;
+  };
+  const scope = {
+    setTag: vi.fn(),
+    setContext: vi.fn(),
+  } satisfies MockScope;
+  const withScope = vi.fn((callback: (scope: MockScope) => void) => callback(scope));
+
+  vi.doMock('@sentry/nextjs', () => ({
+    withScope,
+    captureException,
+  }));
+  vi.doMock('@/libs/env/env', () => ({
+    Env: {
+      NODE_ENV: 'production',
+      VITEST: undefined,
+      NEXT_PUBLIC_TESTNET: false,
+      NEXT_PUBLIC_SENTRY_DSN: 'https://public@example.com/1',
+      NEXT_PUBLIC_SENTRY_ENVIRONMENT: 'production',
+      NEXT_PUBLIC_APP_VERSION: 'test',
+      NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: 0,
+    },
+  }));
+
+  try {
+    const { captureAppError } = await import('./sentry');
+    run({ captureAppError, captureException });
+  } finally {
+    vi.doUnmock('@sentry/nextjs');
+    vi.doUnmock('@/libs/env/env');
+    vi.resetModules();
+  }
+}
+
+function createCapturedAppError({
+  code,
+  statusCode,
+  endpoint,
+  service = ErrorService.Nexus,
+  operation = 'fetchNexus',
+}: {
+  code: ClientErrorCode;
+  statusCode: number;
+  endpoint: string;
+  service?: ErrorService;
+  operation?: string;
+}): AppError {
+  return new AppError({
+    category: ErrorCategory.Client,
+    code,
+    message: 'Not Found',
+    service,
+    operation,
+    context: { endpoint, statusCode },
+  });
+}
+
 describe('shouldEnableSentry', () => {
   it('is disabled when NEXT_PUBLIC_TESTNET is true outside unit-test guards', async () => {
     vi.resetModules();
@@ -56,6 +126,75 @@ describe('shouldEnableSentry', () => {
       vi.doUnmock('@/libs/env/env');
       vi.resetModules();
     }
+  });
+});
+
+describe('captureAppError filtering', () => {
+  it('drops Nexus fetchNexus post-tags 404 errors', async () => {
+    await withEnabledSentryCapture(({ captureAppError, captureException }) => {
+      const error = createCapturedAppError({
+        code: ClientErrorCode.NOT_FOUND,
+        statusCode: HttpStatusCode.NOT_FOUND,
+        endpoint: `https://nexus.pubky.app/v0/post/${TEST_PUBKY}/003544WKXXGQG/tags?skip_tags=0&limit_tags=3`,
+      });
+
+      captureAppError(error);
+
+      expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+      expect(captureException).not.toHaveBeenCalled();
+    });
+  });
+
+  it('keeps full post 404 errors reportable', async () => {
+    await withEnabledSentryCapture(({ captureAppError, captureException }) => {
+      const error = createCapturedAppError({
+        code: ClientErrorCode.NOT_FOUND,
+        statusCode: HttpStatusCode.NOT_FOUND,
+        endpoint: `https://nexus.pubky.app/v0/post/${TEST_PUBKY}/003544WKXXGQG`,
+      });
+
+      captureAppError(error);
+
+      expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+      expect(captureException).toHaveBeenCalledWith(error);
+    });
+  });
+
+  it('does not drop post-tags bad requests', async () => {
+    await withEnabledSentryCapture(({ captureAppError, captureException }) => {
+      const error = createCapturedAppError({
+        code: ClientErrorCode.BAD_REQUEST,
+        statusCode: HttpStatusCode.BAD_REQUEST,
+        endpoint: `https://nexus.pubky.app/v0/post/${TEST_PUBKY}/003544WKXXGQG/tags?skip_tags=-1`,
+      });
+
+      captureAppError(error);
+
+      expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+      expect(captureException).toHaveBeenCalledWith(error);
+    });
+  });
+
+  it('does not drop non-Nexus post-tags 404 errors', () => {
+    const error = createCapturedAppError({
+      code: ClientErrorCode.NOT_FOUND,
+      statusCode: HttpStatusCode.NOT_FOUND,
+      endpoint: `https://nexus.pubky.app/v0/post/${TEST_PUBKY}/003544WKXXGQG/tags`,
+      service: ErrorService.Homeserver,
+    });
+
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+  });
+
+  it('does not drop non-fetchNexus post-tags 404 errors', () => {
+    const error = createCapturedAppError({
+      code: ClientErrorCode.NOT_FOUND,
+      statusCode: HttpStatusCode.NOT_FOUND,
+      endpoint: `https://nexus.pubky.app/v0/post/${TEST_PUBKY}/003544WKXXGQG/tags`,
+      operation: 'fetchNexusWithExpectedStatus',
+    });
+
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
   });
 });
 

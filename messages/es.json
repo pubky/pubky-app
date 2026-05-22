@@ -444,10 +444,25 @@
     "youReposted": "Republicaste",
     "newPostsSingular": "Ver {count} nueva publicación",
     "newPostsPlural": "Ver {count} nuevas publicaciónes",
-    "replies": "Respuestas"
+    "replies": "Respuestas",
+    "notFound": {
+      "title": "Publicación no encontrada",
+      "subtitle": "Esta publicación no está disponible. Es posible que se haya eliminado o que el enlace ya no sea válido.",
+      "imageAlt": "Publicación no encontrada",
+      "backToFeed": "Volver al feed",
+      "viewProfile": "Ver perfil",
+      "exploreTags": "Explorar etiquetas"
+    }
   },
   "profile": {
     "title": "Perfil",
+    "notFound": {
+      "title": "Usuario no encontrado",
+      "subtitle": "El usuario que buscas no existe o puede haber sido eliminado.",
+      "imageAlt": "Usuario no encontrado",
+      "backToFeed": "Volver al feed",
+      "exploreTags": "Explorar etiquetas"
+    },
     "tabs": {
       "notifications": "Notificaciones",
       "posts": "Publicaciones",

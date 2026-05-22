@@ -5,12 +5,15 @@ import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
+import { PUBKY_52_STAGING_FIXTURE, PUBKY_INVALID_TOO_LONG } from '@/test-utils/pubky';
 import { mockAuthStore } from '@/test-utils/stores';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { ProfilePageContainer } from './ProfilePageContainer';
 
+const OTHER_VALID_PUBKY = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
+
 // Mock dependencies
-const mockCurrentUserPubky = 'user123';
+const mockCurrentUserPubky = PUBKY_52_STAGING_FIXTURE;
 const mockAuthStoreState = {
   currentUserPubky: mockCurrentUserPubky,
   isLoggingOut: false,
@@ -32,11 +35,11 @@ vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
 const mockProfile = {
   name: 'Test User',
   bio: 'Test bio',
-  publicKey: 'pubkyuser123',
+  publicKey: mockCurrentUserPubky,
   emoji: '🌴',
   status: 'Available',
   avatarUrl: 'https://example.com/avatar.jpg',
-  link: 'https://example.com/profile/user123',
+  link: `https://example.com/profile/${mockCurrentUserPubky}`,
 };
 
 const mockStats = {
@@ -65,6 +68,7 @@ vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
     stats: mockStats,
     actions: mockActions,
     isLoading: false,
+    isProfileLoading: false,
     userNotFound: false,
   })),
 }));
@@ -100,7 +104,6 @@ vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
   })),
 }));
 
-// Mock Molecules for UserNotFound component
 vi.mock('@/molecules/MobileFooter/MobileFooter', () => {
   return {
     MobileFooter: () => <div data-testid="mobile-footer" />,
@@ -123,11 +126,11 @@ vi.mock('@/molecules/ProfilePageLayoutWrapper/ProfilePageLayoutWrapper', () => {
   };
 });
 
-vi.mock('@/molecules/UserNotFound/UserNotFound', () => {
-  return {
-    UserNotFound: () => <div data-testid="user-not-found">User not found</div>,
-  };
-});
+vi.mock('@/organisms/ProfileUserNotFoundDiscoveryView/ProfileUserNotFoundDiscoveryView', () => ({
+  ProfileUserNotFoundDiscoveryView: () => (
+    <div data-testid="profile-user-not-found-discovery">User not found discovery</div>
+  ),
+}));
 
 // Mock Organisms - ProfilePageLayout
 vi.mock('@/organisms/ProfilePageLayout/ProfilePageLayout', () => {
@@ -140,6 +143,7 @@ vi.mock('@/organisms/ProfilePageLayout/ProfilePageLayout', () => {
       activePage,
       filterBarActivePage,
       isLoading,
+      isHeaderLoading,
     }: {
       children: React.ReactNode;
       profile: Record<string, unknown>;
@@ -149,6 +153,7 @@ vi.mock('@/organisms/ProfilePageLayout/ProfilePageLayout', () => {
       filterBarActivePage: string;
       navigateToPage: (page: string) => void;
       isLoading: boolean;
+      isHeaderLoading?: boolean;
     }) => (
       <div
         data-testid="profile-page-layout"
@@ -158,6 +163,7 @@ vi.mock('@/organisms/ProfilePageLayout/ProfilePageLayout', () => {
         data-active-page={activePage}
         data-filter-bar-page={filterBarActivePage}
         data-is-loading={isLoading}
+        data-is-header-loading={isHeaderLoading === undefined ? '' : String(isHeaderLoading)}
       >
         {children}
       </div>
@@ -296,10 +302,44 @@ describe('ProfilePageContainer - User not found', () => {
     vi.clearAllMocks();
   });
 
+  it('does not show UserNotFound while profile context is loading', () => {
+    vi.mocked(useProfileContext).mockReturnValue({
+      pubky: null,
+      isOwnProfile: false,
+      isLoading: true,
+    });
+
+    vi.mocked(useProfileHeader).mockReturnValue({
+      profile: {
+        name: '',
+        bio: '',
+        publicKey: '',
+        emoji: '🌴',
+        status: '',
+        avatarUrl: undefined,
+        link: '',
+      },
+      stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
+      isLoading: false,
+      isProfileLoading: false,
+      userNotFound: true,
+    });
+
+    render(
+      <ProfilePageContainer>
+        <div>Test Content</div>
+      </ProfilePageContainer>,
+    );
+
+    expect(screen.queryByTestId('profile-user-not-found-discovery')).not.toBeInTheDocument();
+    expect(screen.getByTestId('profile-page-layout')).toBeInTheDocument();
+  });
+
   it('shows UserNotFound when user is not found and not own profile', async () => {
     // Mock useProfileContext to return isOwnProfile: false
     vi.mocked(useProfileContext).mockReturnValue({
-      pubky: 'nonexistent-user',
+      pubky: OTHER_VALID_PUBKY,
       isOwnProfile: false,
       isLoading: false,
     });
@@ -318,6 +358,7 @@ describe('ProfilePageContainer - User not found', () => {
       stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
       actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
       isLoading: false,
+      isProfileLoading: false,
       userNotFound: true,
     });
 
@@ -327,8 +368,35 @@ describe('ProfilePageContainer - User not found', () => {
       </ProfilePageContainer>,
     );
 
-    expect(screen.getByTestId('user-not-found')).toBeInTheDocument();
+    expect(screen.getByTestId('profile-user-not-found-discovery')).toBeInTheDocument();
     expect(screen.queryByTestId('profile-page-layout')).not.toBeInTheDocument();
+  });
+
+  it('shows ProfileUserNotFoundDiscoveryView when pubky fails identifier shape', () => {
+    vi.mocked(useProfileContext).mockReturnValue({
+      pubky: PUBKY_INVALID_TOO_LONG,
+      isOwnProfile: false,
+      isLoading: false,
+    });
+
+    vi.mocked(useProfileHeader).mockReturnValue({
+      profile: mockProfile,
+      stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
+      isLoading: false,
+      isProfileLoading: false,
+      userNotFound: false,
+    });
+
+    render(
+      <ProfilePageContainer>
+        <div>Test Content</div>
+      </ProfilePageContainer>,
+    );
+
+    expect(screen.getByTestId('profile-user-not-found-discovery')).toBeInTheDocument();
+    expect(screen.queryByTestId('profile-page-layout')).not.toBeInTheDocument();
+    expect(useProfileHeader).toHaveBeenCalledWith(PUBKY_INVALID_TOO_LONG, { enabled: false });
   });
 
   it('shows ProfilePageLayout when user is found', async () => {
@@ -343,6 +411,7 @@ describe('ProfilePageContainer - User not found', () => {
       stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
       actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
       isLoading: false,
+      isProfileLoading: false,
       userNotFound: false,
     });
 
@@ -353,7 +422,7 @@ describe('ProfilePageContainer - User not found', () => {
     );
 
     expect(screen.getByTestId('profile-page-layout')).toBeInTheDocument();
-    expect(screen.queryByTestId('user-not-found')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('profile-user-not-found-discovery')).not.toBeInTheDocument();
   });
 
   it('does not show UserNotFound for own profile even if userNotFound is true', async () => {
@@ -378,6 +447,7 @@ describe('ProfilePageContainer - User not found', () => {
       stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
       actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
       isLoading: false,
+      isProfileLoading: false,
       userNotFound: true,
     });
 
@@ -389,7 +459,7 @@ describe('ProfilePageContainer - User not found', () => {
 
     // Should still show layout for own profile
     expect(screen.getByTestId('profile-page-layout')).toBeInTheDocument();
-    expect(screen.queryByTestId('user-not-found')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('profile-user-not-found-discovery')).not.toBeInTheDocument();
   });
 
   it('does not show UserNotFound during logout even if userNotFound is true', async () => {
@@ -420,6 +490,7 @@ describe('ProfilePageContainer - User not found', () => {
       stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
       actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
       isLoading: false,
+      isProfileLoading: false,
       userNotFound: true,
     });
 
@@ -430,7 +501,7 @@ describe('ProfilePageContainer - User not found', () => {
     );
 
     // Should NOT show UserNotFound during logout to prevent flash of error state
-    expect(screen.queryByTestId('user-not-found')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('profile-user-not-found-discovery')).not.toBeInTheDocument();
     // Should show the profile layout instead
     expect(screen.getByTestId('profile-page-layout')).toBeInTheDocument();
   });

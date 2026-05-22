@@ -2,7 +2,7 @@ import { baseUriBuilder } from 'pubky-app-specs';
 import type { TMuteApplicationCommitParams } from '@/application/mute/mute.types';
 import { MUTE_HOMESERVER_EVENTS_PATH_PREFIX } from '@/config/mute-sync';
 import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
-import { AppError } from '@/libs/error/error';
+import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
@@ -46,7 +46,7 @@ export class MuteApplication {
       const muteUris = await HomeserverService.list({ baseDirectory: mutesDirectory });
       stream = muteUris.map((uri) => uri.split('/').pop()).filter((id): id is string => !!id) as Pubky[];
     } catch (error) {
-      if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
+      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
         Logger.info('Mutes directory not found, defaulting to empty list', { pubky });
       } else {
         throw error;

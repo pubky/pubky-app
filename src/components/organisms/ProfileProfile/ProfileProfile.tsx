@@ -25,7 +25,7 @@ export function ProfileProfile() {
   const { pubky, isOwnProfile } = useProfileContext();
 
   // Note: useProfileHeader guarantees a non-null profile with default values during loading
-  const { profile, stats, actions, isLoading } = useProfileHeader(pubky ?? '');
+  const { profile, stats, actions, isProfileLoading } = useProfileHeader(pubky ?? '');
 
   // Handle follow/unfollow for other users' profiles (with auth check)
   const { requireAuth } = useRequireAuth();
@@ -64,7 +64,7 @@ export function ProfileProfile() {
 
   return (
     <Container overrideDefaults={true} className="flex min-w-0 flex-col gap-6 overflow-hidden lg:hidden">
-      {!isLoading && (
+      {!isProfileLoading && (
         <ProfilePageHeader
           profile={profile}
           actions={mergedActions}

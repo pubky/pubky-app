@@ -1,4 +1,4 @@
-import { AppError } from '@/libs/error/error';
+import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
@@ -60,7 +60,7 @@ export class SettingsApplication {
       return settings;
     } catch (error) {
       // Handle 404, settings don't exist yet
-      if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
+      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
         Logger.info('[Settings] Pull complete, settings file not found (404)');
         return null;
       }

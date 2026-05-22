@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { SnapshotSerializer } from 'vitest';
 import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
+import { parseCompositeId } from '@/models/models.utils';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 import type {
@@ -64,6 +65,31 @@ export function formatPublicKey({
  */
 export function isPubkyIdentifier(value: string): boolean {
   return /^[a-z0-9]{52}$/.test(value);
+}
+
+function parseValidPostCompositeId(compositeId: string): { pubky: string; id: string } | null {
+  try {
+    const { pubky, id } = parseCompositeId(compositeId);
+    if (!isPubkyIdentifier(pubky) || id.length === 0) return null;
+    return { pubky, id };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True when `compositeId` parses as `author:postId` and `author` is a valid pubky identifier.
+ * Used to reject malformed `/post/:userId/:postId` URLs without treating them as a cache miss.
+ */
+export function isValidPostCompositeId(compositeId: string): boolean {
+  return parseValidPostCompositeId(compositeId) !== null;
+}
+
+/**
+ * Author pubky from `author:postId` when {@link isValidPostCompositeId} is true; otherwise `null`.
+ */
+export function getValidAuthorPubkyFromPostCompositeId(compositeId: string): string | null {
+  return parseValidPostCompositeId(compositeId)?.pubky ?? null;
 }
 
 export async function copyToClipboard({ text }: CopyToClipboardProps) {
