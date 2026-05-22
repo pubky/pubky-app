@@ -5,7 +5,7 @@ import { MuteApplication } from '@/application/mute/mute';
 import { NotificationApplication } from '@/application/notification/notification';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { Env } from '@/libs/env/env';
-import { AppError } from '@/libs/error/error';
+import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
@@ -119,7 +119,7 @@ export class BootstrapApplication {
       return timestamp;
     } catch (error) {
       // Only handle 404 errors (resource not found), rethrow everything else
-      if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
+      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
         Logger.info('Last read file not found, creating new one...', { pubky });
         const lastRead = LastReadNormalizer.to(pubky);
         void HomeserverService.request({
