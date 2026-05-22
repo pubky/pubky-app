@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { OgMetadataController } from '@/controllers/og-metadata/og-metadata';
-import { AuthErrorCode, ClientErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -31,7 +31,7 @@ describe('API Route: /api/og-metadata', () => {
     vi.clearAllMocks();
     vi.spyOn(OgMetadataController, 'fetch').mockResolvedValue({
       ok: true,
-      outcome: { kind: 'success', metadata: mockMetadata, cachePolicy: 'normal' },
+      metadata: mockMetadata,
     });
   });
 
@@ -108,16 +108,18 @@ describe('API Route: /api/og-metadata', () => {
       expect(data.error).toBe('Blocked IP range');
     });
 
-    it('should return no-store non-2xx for transient fallback outcomes', async () => {
-      vi.spyOn(OgMetadataController, 'fetch').mockResolvedValue({
-        ok: true,
-        outcome: {
-          kind: 'transient-fallback',
-          fallbackReason: 'timeout',
-          statusCode: HttpStatusCode.REQUEST_TIMEOUT,
+    it('should return no-store non-2xx for expected transient OG metadata errors', async () => {
+      const appError = Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Timed out fetching OG metadata', {
+        service: ErrorService.NextJsServer,
+        operation: 'fetchOgMetadata',
+        context: {
+          source: 'og_metadata',
+          reason: 'timeout',
           cachePolicy: 'no-store',
+          statusCode: HttpStatusCode.REQUEST_TIMEOUT,
         },
       });
+      vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(appError);
 
       const request = createRequest('https://slow-site.com');
       const response = await GET(request);

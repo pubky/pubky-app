@@ -1,10 +1,12 @@
-import type {
-  TOgMetadataFallbackReason,
-  TOgMetadataFetchOutcome,
-  TOgMetadataResult,
-} from '@/application/og-metadata/og-metadata.types';
+import type { TOgMetadataFallbackReason, TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import {
+  AuthErrorCode,
+  NetworkErrorCode,
+  RateLimitErrorCode,
+  ServerErrorCode,
+  TimeoutErrorCode,
+} from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -14,6 +16,7 @@ import { buildFallbackMetadata, detectMediaType, extractMetadata, validateRedire
 
 const MAX_REDIRECTS = 5;
 const FETCH_TIMEOUT_MS = 10_000;
+const OG_METADATA_OPERATION = 'fetchOgMetadata';
 
 const FETCH_HEADERS = {
   'User-Agent':
@@ -38,7 +41,7 @@ export class NextJsOgMetadataService {
    * @param validatedUrl - Parsed and validated URL from the pipes layer
    * @returns Normalized OG metadata result
    */
-  static async fetch(validatedUrl: URL): Promise<TOgMetadataFetchOutcome> {
+  static async fetch(validatedUrl: URL): Promise<TOgMetadataResult> {
     const url = validatedUrl.toString();
     const hostname = validatedUrl.hostname;
 
@@ -49,15 +52,11 @@ export class NextJsOgMetadataService {
         if (dnsResult.reason === 'unsafe_ip') {
           throwBlockedIpError(hostname, 'validateDnsForOgMetadata');
         }
-        return transientFallback(url, dnsResult.reason, HttpStatusCode.SERVICE_UNAVAILABLE);
+        throwExpectedOgMetadataError(dnsResult.reason, url, HttpStatusCode.SERVICE_UNAVAILABLE);
       }
 
       // 2. Fetch with redirect following and DNS validation on each hop
-      const fetchResult = await fetchWithRedirectsForOgMetadata(url);
-      if (!fetchResult.ok) {
-        return transientFallback(url, fetchResult.reason, fetchResult.statusCode);
-      }
-      const { response } = fetchResult;
+      const response = await fetchWithRedirectsForOgMetadata(url);
 
       // 3. Handle non-OK responses
       if (!response.ok) {
@@ -69,7 +68,7 @@ export class NextJsOgMetadataService {
       if (mediaResult) {
         // If it's valid media content type, return result and stop fetch process
         response.body?.cancel().catch(() => {});
-        return success(mediaResult);
+        return mediaResult;
       }
 
       // 5. Validate HTML content type
@@ -82,7 +81,7 @@ export class NextJsOgMetadataService {
       const html = await readResponseBody(response);
 
       // 7. Extract and normalize metadata
-      return success(await extractMetadata(url, html, normalizeImageUrlForOgMetadata));
+      return await extractMetadata(url, html, normalizeImageUrlForOgMetadata);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -90,7 +89,7 @@ export class NextJsOgMetadataService {
 
       throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to fetch OG metadata', {
         service: ErrorService.NextJsServer,
-        operation: 'fetchOgMetadata',
+        operation: OG_METADATA_OPERATION,
         cause: error,
         context: { url, statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
@@ -101,10 +100,11 @@ export class NextJsOgMetadataService {
 // --- Module-private helpers (not exported; used only by NextJsOgMetadataService.fetch) ---
 
 /**
- * Handles non-OK responses without creating AppError for expected remote outcomes.
+ * Handles non-OK responses. Durable remote outcomes return cacheable fallback metadata;
+ * transient remote outcomes throw narrowly-marked AppErrors so the route can return no-store.
  * Cancels the response body to release the TCP connection back to the pool.
  */
-function handleErrorResponse(response: Response, url: string): TOgMetadataFetchOutcome {
+function handleErrorResponse(response: Response, url: string): TOgMetadataResult {
   response.body?.cancel().catch(() => {});
 
   if (
@@ -116,21 +116,27 @@ function handleErrorResponse(response: Response, url: string): TOgMetadataFetchO
   }
 
   if (response.status === HttpStatusCode.TOO_MANY_REQUESTS) {
-    return transientFallback(url, 'rate_limit', HttpStatusCode.TOO_MANY_REQUESTS, { statusCode: response.status });
+    throwExpectedOgMetadataError('rate_limit', url, HttpStatusCode.TOO_MANY_REQUESTS, {
+      responseStatusCode: response.status,
+    });
   }
 
   if (response.status === HttpStatusCode.REQUEST_TIMEOUT || response.status === HttpStatusCode.GATEWAY_TIMEOUT) {
-    return transientFallback(url, 'timeout', HttpStatusCode.REQUEST_TIMEOUT, { statusCode: response.status });
+    throwExpectedOgMetadataError('timeout', url, HttpStatusCode.REQUEST_TIMEOUT, {
+      responseStatusCode: response.status,
+    });
   }
 
-  return transientFallback(url, 'http_error', HttpStatusCode.SERVICE_UNAVAILABLE, { statusCode: response.status });
+  throwExpectedOgMetadataError('http_error', url, HttpStatusCode.SERVICE_UNAVAILABLE, {
+    responseStatusCode: response.status,
+  });
 }
 
 /**
  * Validates that the response has an HTML content type.
  * Cancels the response body and returns durable fallback metadata if not HTML.
  */
-function resolveHtmlContentType(response: Response, url: string): TOgMetadataFetchOutcome | null {
+function resolveHtmlContentType(response: Response, url: string): TOgMetadataResult | null {
   const contentType = response.headers.get('content-type');
   if (!contentType?.includes('text/html')) {
     response.body?.cancel().catch(() => {});
@@ -143,22 +149,18 @@ function resolveHtmlContentType(response: Response, url: string): TOgMetadataFet
 /**
  * Follows redirects manually, validating DNS on each hop to prevent SSRF via open redirects.
  */
-async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgFetchResult> {
+async function fetchWithRedirectsForOgMetadata(url: string): Promise<Response> {
   let currentUrl = url;
 
   for (let i = 0; i < MAX_REDIRECTS; i++) {
-    const fetchResult = await fetchForOgMetadata(currentUrl, {
+    const response = await fetchForOgMetadata(currentUrl, {
       headers: FETCH_HEADERS,
       redirect: 'manual', // Disable automatic redirects so we can validate each hop (DNS + protocol) ourselves
     });
-    if (!fetchResult.ok) {
-      return fetchResult;
-    }
-    const { response } = fetchResult;
 
     const redirectUrl = validateRedirectUrl(response, currentUrl);
     if (!redirectUrl) {
-      return { ok: true, response };
+      return response;
     }
 
     // Release the redirect response body before following the next hop so the TCP connection can be reused promptly.
@@ -169,7 +171,11 @@ async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgFetchResu
       if (redirectDnsResult.reason === 'unsafe_ip') {
         throwBlockedIpError(redirectUrl.hostname, 'validateDnsForOgMetadata');
       }
-      return { ok: false, reason: redirectDnsResult.reason, statusCode: HttpStatusCode.SERVICE_UNAVAILABLE };
+      throwExpectedOgMetadataError(
+        redirectDnsResult.reason,
+        redirectUrl.toString(),
+        HttpStatusCode.SERVICE_UNAVAILABLE,
+      );
     }
 
     currentUrl = redirectUrl.toString();
@@ -182,51 +188,66 @@ async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgFetchResu
   });
 }
 
-type OgExpectedFailureReason = Extract<TOgMetadataFallbackReason, 'dns_failed' | 'network' | 'timeout'>;
+type OgExpectedFailureReason = Exclude<TOgMetadataFallbackReason, 'non_html'>;
 
 type OgDnsResult = { ok: true } | { ok: false; reason: 'dns_failed' | 'unsafe_ip' };
 
-type OgFetchResult =
-  | { ok: true; response: Response }
-  | {
-      ok: false;
-      reason: OgExpectedFailureReason;
-      statusCode: HttpStatusCode.REQUEST_TIMEOUT | HttpStatusCode.SERVICE_UNAVAILABLE;
-    };
+type OgExpectedFailureStatus =
+  | HttpStatusCode.REQUEST_TIMEOUT
+  | HttpStatusCode.TOO_MANY_REQUESTS
+  | HttpStatusCode.SERVICE_UNAVAILABLE;
 
 type TOgMetadataLogReason = TOgMetadataFallbackReason | 'unsafe_ip';
-
-function success(metadata: TOgMetadataResult): TOgMetadataFetchOutcome {
-  return { kind: 'success', metadata, cachePolicy: 'normal' };
-}
 
 function durableFallback(
   url: string,
   fallbackReason: Extract<TOgMetadataFallbackReason, 'http_error' | 'non_html'>,
   context: Record<string, unknown> = {},
-): TOgMetadataFetchOutcome {
+): TOgMetadataResult {
   logFallback(url, fallbackReason, context);
-  return {
-    kind: 'durable-fallback',
-    metadata: buildFallbackMetadata(url),
-    fallbackReason,
-    cachePolicy: 'normal',
-  };
+  return buildFallbackMetadata(url);
 }
 
-function transientFallback(
+function throwExpectedOgMetadataError(
+  fallbackReason: OgExpectedFailureReason,
   url: string,
-  fallbackReason: Exclude<TOgMetadataFallbackReason, 'non_html'>,
-  statusCode: HttpStatusCode.REQUEST_TIMEOUT | HttpStatusCode.TOO_MANY_REQUESTS | HttpStatusCode.SERVICE_UNAVAILABLE,
+  statusCode: OgExpectedFailureStatus,
   context: Record<string, unknown> = {},
-): TOgMetadataFetchOutcome {
-  logFallback(url, fallbackReason, { ...context, responseStatusCode: statusCode });
-  return {
-    kind: 'transient-fallback',
-    statusCode,
-    fallbackReason,
-    cachePolicy: 'no-store',
+  cause?: unknown,
+): never {
+  logFallback(url, fallbackReason, { responseStatusCode: statusCode, ...context });
+
+  const params = {
+    service: ErrorService.NextJsServer,
+    operation: OG_METADATA_OPERATION,
+    cause,
+    context: {
+      source: 'og_metadata',
+      reason: fallbackReason,
+      cachePolicy: 'no-store',
+      url,
+      statusCode,
+      ...context,
+    },
   };
+
+  if (fallbackReason === 'dns_failed') {
+    throw Err.network(NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', params);
+  }
+
+  if (fallbackReason === 'network') {
+    throw Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Failed to fetch OG metadata', params);
+  }
+
+  if (fallbackReason === 'timeout') {
+    throw Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Timed out fetching OG metadata', params);
+  }
+
+  if (fallbackReason === 'rate_limit') {
+    throw Err.rateLimit(RateLimitErrorCode.RATE_LIMITED, 'OG metadata upstream rate limited', params);
+  }
+
+  throw Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'OG metadata upstream returned an error', params);
 }
 
 function logFallback(
@@ -293,23 +314,21 @@ async function normalizeImageUrlForOgMetadata(image: string, baseUrl: string): P
   return imageUrl.toString();
 }
 
-async function fetchForOgMetadata(url: string, options: RequestInit): Promise<OgFetchResult> {
+async function fetchForOgMetadata(url: string, options: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, {
+    return await fetch(url, {
       ...options,
       signal: controller.signal,
     });
-
-    return { ok: true, response };
   } catch (error) {
     if (isAbortError(error)) {
-      return { ok: false, reason: 'timeout', statusCode: HttpStatusCode.REQUEST_TIMEOUT };
+      throwExpectedOgMetadataError('timeout', url, HttpStatusCode.REQUEST_TIMEOUT, {}, error);
     }
 
-    return { ok: false, reason: 'network', statusCode: HttpStatusCode.SERVICE_UNAVAILABLE };
+    throwExpectedOgMetadataError('network', url, HttpStatusCode.SERVICE_UNAVAILABLE, {}, error);
   } finally {
     clearTimeout(timeoutId);
   }

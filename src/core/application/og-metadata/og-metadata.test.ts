@@ -100,11 +100,8 @@ describe('OgMetadataApplication (integration)', () => {
       const result = await OgMetadataApplication.fetch(new URL('http://example.com'));
 
       expect(result).toMatchObject({
-        kind: 'success',
-        metadata: {
-          title: 'Example Title',
-          type: 'website',
-        },
+        title: 'Example Title',
+        type: 'website',
       });
     });
   });
@@ -128,10 +125,7 @@ describe('OgMetadataApplication (integration)', () => {
       expect(mockResolve4).toHaveBeenCalledWith('example.com');
       expect(mockResolve4).toHaveBeenCalledWith('example.org');
       expect(result).toMatchObject({
-        kind: 'success',
-        metadata: {
-          title: 'Redirected Page',
-        },
+        title: 'Redirected Page',
       });
     });
 

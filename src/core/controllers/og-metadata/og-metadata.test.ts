@@ -15,15 +15,11 @@ const createParams = (overrides: Partial<TOgMetadataParams> = {}): TOgMetadataPa
   ...overrides,
 });
 
-const createMockOutcome = () => ({
-  kind: 'success' as const,
-  metadata: {
-    url: testData.validUrl,
-    type: 'website' as const,
-    title: 'Example Title',
-    image: 'https://example.com/image.jpg',
-  },
-  cachePolicy: 'normal' as const,
+const createMockMetadata = () => ({
+  url: testData.validUrl,
+  type: 'website' as const,
+  title: 'Example Title',
+  image: 'https://example.com/image.jpg',
 });
 
 describe('OgMetadataController', () => {
@@ -34,7 +30,7 @@ describe('OgMetadataController', () => {
 
     // Mock validators and application layer
     vi.spyOn(OgMetadataValidators, 'validateSafe').mockResolvedValue({ ok: true, url: testData.parsedUrl });
-    vi.spyOn(OgMetadataApplication, 'fetch').mockResolvedValue(createMockOutcome());
+    vi.spyOn(OgMetadataApplication, 'fetch').mockResolvedValue(createMockMetadata());
 
     const controllerModule = await import('./og-metadata');
     OgMetadataController = controllerModule.OgMetadataController;
@@ -60,12 +56,12 @@ describe('OgMetadataController', () => {
     });
 
     it('should return the application layer result', async () => {
-      const mockResult = createMockOutcome();
+      const mockResult = createMockMetadata();
       vi.spyOn(OgMetadataApplication, 'fetch').mockResolvedValue(mockResult);
 
       const result = await OgMetadataController.fetch(createParams());
 
-      expect(result).toEqual({ ok: true, outcome: mockResult });
+      expect(result).toEqual({ ok: true, metadata: mockResult });
     });
 
     it('should return validation failures without throwing AppError', async () => {

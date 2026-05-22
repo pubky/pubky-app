@@ -17,7 +17,7 @@ export class OgMetadataController {
    * for DNS resolution, fetching, parsing, and SSRF protection.
    *
    * @param params.url - Raw URL string from the request (may be null)
-   * @returns Controller result with validation failure or normalized OG metadata outcome
+   * @returns Controller result with validation failure or normalized OG metadata
    */
   static async fetch(params: TOgMetadataParams): Promise<TOgMetadataControllerResult> {
     // Validate and parse URL using pipes layer
@@ -27,6 +27,6 @@ export class OgMetadataController {
     }
 
     // Delegate to application layer
-    return { ok: true, outcome: await OgMetadataApplication.fetch(validation.url) };
+    return { ok: true, metadata: await OgMetadataApplication.fetch(validation.url) };
   }
 }

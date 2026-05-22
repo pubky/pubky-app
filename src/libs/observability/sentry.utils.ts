@@ -1,7 +1,13 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import type * as Sentry from '@sentry/nextjs';
 import { AppError } from '@/libs/error/error';
-import { ClientErrorCode } from '@/libs/error/error.codes';
+import {
+  ClientErrorCode,
+  NetworkErrorCode,
+  RateLimitErrorCode,
+  ServerErrorCode,
+  TimeoutErrorCode,
+} from '@/libs/error/error.codes';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import {
@@ -60,6 +66,28 @@ function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
   return endpointPath ? pattern.test(endpointPath) : false;
 }
 
+const OG_METADATA_EXPECTED_DROP_REASONS = new Set<unknown>([
+  'dns_failed',
+  'network',
+  'timeout',
+  'rate_limit',
+  'http_error',
+]);
+
+const OG_METADATA_EXPECTED_DROP_CODES = new Set<unknown>([
+  NetworkErrorCode.DNS_FAILED,
+  NetworkErrorCode.CONNECTION_FAILED,
+  TimeoutErrorCode.REQUEST_TIMEOUT,
+  RateLimitErrorCode.RATE_LIMITED,
+  ServerErrorCode.SERVICE_UNAVAILABLE,
+]);
+
+const OG_METADATA_NO_STORE_STATUSES = new Set<unknown>([
+  HttpStatusCode.REQUEST_TIMEOUT,
+  HttpStatusCode.TOO_MANY_REQUESTS,
+  HttpStatusCode.SERVICE_UNAVAILABLE,
+]);
+
 const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
     name: 'nexus-post-tags-404',
@@ -70,6 +98,18 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       error.code === ClientErrorCode.NOT_FOUND &&
       error.context?.statusCode === HttpStatusCode.NOT_FOUND &&
       matchesEndpointPath(error, NEXUS_POST_TAGS_PATH_PATTERN),
+  },
+  {
+    name: 'og-metadata-expected-external-failure',
+    reason: 'Low-value OG metadata enrichment telemetry; route no-store behavior is preserved.',
+    matches: (error) =>
+      error.service === ErrorService.NextJsServer &&
+      error.operation === 'fetchOgMetadata' &&
+      error.context?.source === 'og_metadata' &&
+      error.context?.cachePolicy === 'no-store' &&
+      OG_METADATA_EXPECTED_DROP_REASONS.has(error.context?.reason) &&
+      OG_METADATA_EXPECTED_DROP_CODES.has(error.code) &&
+      OG_METADATA_NO_STORE_STATUSES.has(error.context?.statusCode),
   },
 ];
 
