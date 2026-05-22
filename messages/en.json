@@ -441,7 +441,8 @@
     "replies": "Replies",
     "notFound": {
       "title": "Post not found",
-      "subtitle": "This post isn't available. It may have been removed or the link is no longer valid.",
+      "subtitle1": "This post isn't available.",
+      "subtitle2": "It may have been removed or the link is no longer valid.",
       "imageAlt": "Post not found",
       "backToFeed": "Back to Feed",
       "viewProfile": "View profile",
