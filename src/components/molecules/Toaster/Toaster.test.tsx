@@ -40,7 +40,7 @@ describe('Toaster', () => {
     expect(screen.getByText('Just a description')).toBeInTheDocument();
   });
 
-  it('should not truncate long description text', () => {
+  it('should wrap long description text instead of truncating', () => {
     const longDescription =
       'The file you are trying to upload exceeds the maximum allowed size of 100MB. Please reduce the file size and try again.';
 
@@ -58,7 +58,30 @@ describe('Toaster', () => {
     render(<Toaster />);
 
     const descriptionElement = screen.getByText(longDescription);
+    expect(descriptionElement).toHaveClass('wrap-anywhere');
     expect(descriptionElement).not.toHaveClass('truncate');
+  });
+
+  it('should wrap long URL description when dismiss button is shown', () => {
+    const longUrl = `https://pubky-ring-signer.example.com/auth?redirect=${'a'.repeat(120)}`;
+
+    mockUseToast.mockReturnValue({
+      toasts: [
+        {
+          id: 'copy-link',
+          title: 'Link copied to clipboard',
+          description: longUrl,
+          dismissButton: true,
+          open: true,
+        },
+      ],
+      dismiss: vi.fn(),
+    });
+
+    render(<Toaster />);
+
+    expect(screen.getByText(longUrl)).toHaveClass('wrap-anywhere');
+    expect(screen.getByRole('button', { name: 'OK' })).toBeInTheDocument();
   });
 
   it('should render dismiss button when dismissButton is true', () => {
