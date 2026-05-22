@@ -42,8 +42,13 @@ export interface ProfilePageLayoutProps {
   filterBarActivePage: FilterBarPageType;
   /** Navigation handler */
   navigateToPage: (page: ProfilePageType) => void;
-  /** Loading state */
+  /** Loading state for overall page readiness (profile + counts) */
   isLoading: boolean;
+  /**
+   * When set, controls desktop `ProfilePageHeader` visibility only.
+   * Defaults to `isLoading` when omitted (backward compatible).
+   */
+  isHeaderLoading?: boolean;
   /** Whether this is the logged-in user's own profile */
   isOwnProfile?: boolean;
   /** Raw user ID (without pubky prefix) for TTL tracking */
