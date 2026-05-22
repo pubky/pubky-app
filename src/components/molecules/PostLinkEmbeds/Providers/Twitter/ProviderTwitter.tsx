@@ -60,12 +60,17 @@ const TWITTER_DOMAINS = [
  */
 // `entities` is typed as a complete `TweetEntities`, but the syndication API
 // can omit fields at runtime — hence `Partial` so the defaults below survive.
+//
+// Only the four arrays that `getEntities` iterates unguarded are defaulted.
+// `media` is deliberately NOT defaulted: react-tweet guards it with
+// `if (tweet.entities.media)` and `fixRange` reads `media[0].indices`, so an
+// empty `[]` would pass the truthy check and then crash on `media[0]`. A
+// missing `media` must stay missing.
 const withEntityDefaults = (entities: Partial<TweetEntities> | undefined): TweetEntities => ({
   hashtags: [],
   urls: [],
   user_mentions: [],
   symbols: [],
-  media: [],
   ...entities,
 });
 
