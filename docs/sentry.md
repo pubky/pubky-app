@@ -32,8 +32,8 @@ For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('ac
 - Expected remote failures such as forbidden/not-found/gone pages, non-HTML content, DNS failure, network failure,
   timeout, rate limiting, or remote 5xx return fallback metadata.
 - Invalid user URLs return a normal `400` response from the controller/route without `Err.validation`.
-- Shared `og:image` DNS validation may still create an `AppError`; `shouldDropAppErrorFromSentry` filters only that
-  narrow DNS-failure case as low-value image enrichment telemetry.
+- `og:image` normalization uses non-throwing DNS safety checks, so invalid image URLs, DNS failures, and private image
+  IPs simply remove the image from otherwise valid page metadata.
 - Security/anomaly cases on the main page fetch path, such as private IPs, non-HTTP redirects, redirect loops, oversized
   bodies, and parser/runtime surprises remain reportable through `Err.*`.
 

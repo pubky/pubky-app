@@ -18,6 +18,8 @@ export class OgMetadataController {
    *
    * @param params.url - Raw URL string from the request (may be null)
    * @returns Controller result with validation failure or normalized OG metadata
+   * @throws AppError when the application layer surfaces a security/anomaly outcome
+   * (blocked private IP, non-HTTP redirect, oversized body, redirect loop, or unexpected server error).
    */
   static async fetch(params: TOgMetadataParams): Promise<TOgMetadataControllerResult> {
     // Validate and parse URL using pipes layer

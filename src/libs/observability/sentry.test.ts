@@ -2,7 +2,7 @@ import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -130,24 +130,6 @@ describe('shouldEnableSentry', () => {
 });
 
 describe('captureAppError filtering', () => {
-  it('drops OG image DNS failures from shared image normalization', async () => {
-    await withEnabledSentryCapture(({ captureAppError, captureException }) => {
-      const error = new AppError({
-        category: ErrorCategory.Network,
-        code: NetworkErrorCode.DNS_FAILED,
-        message: 'DNS resolution failed',
-        service: ErrorService.NextJsServer,
-        operation: 'validateDns',
-        context: { hostname: 'cdn.example.test', statusCode: HttpStatusCode.BAD_REQUEST },
-      });
-
-      captureAppError(error);
-
-      expect(shouldDropAppErrorFromSentry(error)).toBe(true);
-      expect(captureException).not.toHaveBeenCalled();
-    });
-  });
-
   it('keeps OG metadata fetch errors reportable unless handled before Err creation', async () => {
     await withEnabledSentryCapture(({ captureAppError, captureException }) => {
       const error = new AppError({
@@ -173,7 +155,7 @@ describe('captureAppError filtering', () => {
         code: AuthErrorCode.FORBIDDEN,
         message: 'Blocked IP range',
         service: ErrorService.NextJsServer,
-        operation: 'validateDnsForOgMetadata',
+        operation: 'checkDnsSafety',
         context: { hostname: '169.254.169.254', statusCode: HttpStatusCode.FORBIDDEN },
       });
 

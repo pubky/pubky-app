@@ -59,6 +59,18 @@ const createErrorResponse = (status: number) => {
 };
 
 const createDnsError = (code = 'ENOTFOUND') => Object.assign(new Error(code), { code });
+const EXPECTED_DNS_ERROR_CODES = [
+  'ENOTFOUND',
+  'ESERVFAIL',
+  'ETIMEDOUT',
+  'ETIMEOUT',
+  'EAI_AGAIN',
+  'ENODATA',
+  'EREFUSED',
+  'ECONNREFUSED',
+  'ECANCELLED',
+  'EDESTRUCTION',
+];
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -443,8 +455,8 @@ describe('NextJsOgMetadataService', () => {
   // Error wrapping
   // -------------------------------------------------------------------------
 
-  it('should return fallback metadata for DNS failures', async () => {
-    mockResolve4.mockRejectedValue(createDnsError());
+  it.each(EXPECTED_DNS_ERROR_CODES)('should return fallback metadata for expected DNS failure %s', async (code) => {
+    mockResolve4.mockRejectedValue(createDnsError(code));
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toMatchObject({
       url: 'https://example.com/',

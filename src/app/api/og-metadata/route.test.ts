@@ -94,7 +94,7 @@ describe('API Route: /api/og-metadata', () => {
     it('should return 403 for AppError with statusCode 403', async () => {
       const appError = Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range', {
         service: ErrorService.NextJsServer,
-        operation: 'validateDns',
+        operation: 'checkDnsSafety',
         context: { statusCode: HttpStatusCode.FORBIDDEN },
       });
       vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(appError);

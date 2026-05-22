@@ -1,7 +1,7 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import type * as Sentry from '@sentry/nextjs';
 import { AppError } from '@/libs/error/error';
-import { ClientErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
+import { ClientErrorCode } from '@/libs/error/error.codes';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import {
@@ -70,15 +70,6 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       error.code === ClientErrorCode.NOT_FOUND &&
       error.context?.statusCode === HttpStatusCode.NOT_FOUND &&
       matchesEndpointPath(error, NEXUS_POST_TAGS_PATH_PATTERN),
-  },
-  {
-    name: 'og-metadata-image-dns-failure',
-    reason: 'Low-value OG image DNS telemetry; page metadata still degrades without the image.',
-    matches: (error) =>
-      error.service === ErrorService.NextJsServer &&
-      error.operation === 'validateDns' &&
-      error.code === NetworkErrorCode.DNS_FAILED &&
-      error.context?.statusCode === HttpStatusCode.BAD_REQUEST,
   },
 ];
 

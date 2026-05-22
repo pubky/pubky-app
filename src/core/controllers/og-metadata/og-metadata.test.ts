@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OgMetadataApplication } from '@/application/og-metadata/og-metadata';
 import type { TOgMetadataParams } from '@/application/og-metadata/og-metadata.types';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { OgMetadataValidators } from '@/pipes/og-metadata/og-metadata.validators';
 
@@ -62,6 +64,16 @@ describe('OgMetadataController', () => {
       const result = await OgMetadataController.fetch(createParams());
 
       expect(result).toEqual({ ok: true, metadata: mockResult });
+    });
+
+    it('should bubble up AppError from application layer unchanged', async () => {
+      const appError = Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP', {
+        service: ErrorService.NextJsServer,
+        operation: 'checkDnsSafety',
+      });
+      vi.spyOn(OgMetadataApplication, 'fetch').mockRejectedValue(appError);
+
+      await expect(OgMetadataController.fetch(createParams())).rejects.toBe(appError);
     });
 
     it('should return validation failures without throwing AppError', async () => {

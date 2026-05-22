@@ -5,8 +5,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { isIpSafe } from '@/libs/network/network';
-import { readResponseBody } from '../nextjs.utils';
+import { checkDnsSafety, readResponseBody } from '../nextjs.utils';
 import { buildFallbackMetadata, detectMediaType, extractMetadata, validateRedirectUrl } from './og-metadata.utils';
 
 const MAX_REDIRECTS = 5;
@@ -42,10 +41,10 @@ export class NextJsOgMetadataService {
 
     try {
       // 1. Resolve DNS and validate IP (prevents SSRF via DNS rebinding)
-      const dnsResult = await validateDnsForOgMetadata(hostname);
+      const dnsResult = await checkDnsSafety(hostname);
       if (!dnsResult.ok) {
         if (dnsResult.reason === 'unsafe_ip') {
-          throwBlockedIpError(hostname, 'validateDnsForOgMetadata');
+          throwBlockedIpError(hostname, 'checkDnsSafety');
         }
         return fallback(url, dnsResult.reason, { hostname });
       }
@@ -153,10 +152,10 @@ async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgRedirectF
     // Release the redirect response body before following the next hop so the TCP connection can be reused promptly.
     response.body?.cancel().catch(() => {});
 
-    const redirectDnsResult = await validateDnsForOgMetadata(redirectUrl.hostname);
+    const redirectDnsResult = await checkDnsSafety(redirectUrl.hostname);
     if (!redirectDnsResult.ok) {
       if (redirectDnsResult.reason === 'unsafe_ip') {
-        throwBlockedIpError(redirectUrl.hostname, 'validateDnsForOgMetadata');
+        throwBlockedIpError(redirectUrl.hostname, 'checkDnsSafety');
       }
       return { ok: false, reason: redirectDnsResult.reason, url: redirectUrl.toString() };
     }
@@ -170,8 +169,6 @@ async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgRedirectF
     context: { url, statusCode: HttpStatusCode.BAD_REQUEST },
   });
 }
-
-type OgDnsResult = { ok: true } | { ok: false; reason: 'dns_failed' | 'unsafe_ip' };
 
 type OgFetchResult =
   | { ok: true; response: Response }
@@ -228,54 +225,6 @@ function getHostname(url: string): string | undefined {
   } catch {
     return undefined;
   }
-}
-
-async function validateDnsForOgMetadata(hostname: string): Promise<OgDnsResult> {
-  // Keep Node.js-only modules out of client bundles if this helper is imported from UI code.
-  // See #1435.
-  const { isIP } = await import(/* webpackIgnore: true */ 'net');
-  const dns = await import(/* webpackIgnore: true */ 'dns/promises');
-
-  let resolvedIp: string | undefined;
-
-  try {
-    if (isIP(hostname)) {
-      resolvedIp = hostname;
-    } else {
-      const addresses = await dns.resolve4(hostname);
-      resolvedIp = addresses[0];
-    }
-  } catch (error) {
-    if (isExpectedDnsResolutionError(error)) {
-      return { ok: false, reason: 'dns_failed' };
-    }
-
-    throw error;
-  }
-
-  if (!resolvedIp) {
-    return { ok: false, reason: 'dns_failed' };
-  }
-
-  if (!isIpSafe(resolvedIp)) {
-    return { ok: false, reason: 'unsafe_ip' };
-  }
-
-  return { ok: true };
-}
-
-function isExpectedDnsResolutionError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-
-  const code = 'code' in error ? error.code : undefined;
-  return (
-    code === 'ENOTFOUND' ||
-    code === 'ESERVFAIL' ||
-    code === 'ETIMEDOUT' ||
-    code === 'ETIMEOUT' ||
-    code === 'EAI_AGAIN' ||
-    code === 'ENODATA'
-  );
 }
 
 async function fetchForOgMetadata(url: string, options: RequestInit): Promise<OgFetchResult> {
