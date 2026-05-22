@@ -81,6 +81,16 @@ export const isNotFound = (error: AppError): boolean => {
 };
 
 /**
+ * Did this AppError originate from a specific HTTP status?
+ *
+ * Keep this separate from semantic helpers like isNotFound(): callers that only
+ * mean "remote HTTP 404" should not accidentally swallow local/domain misses.
+ */
+export const hasHttpStatus = (error: unknown, statusCode: number): error is AppError => {
+  return isAppError(error) && error.context?.statusCode === statusCode;
+};
+
+/**
  * Get retry delay from context (for rate limiting).
  * Returns the retry-after value in seconds if present.
  */

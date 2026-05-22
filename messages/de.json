@@ -444,10 +444,25 @@
     "youReposted": "Du hast geteilt",
     "newPostsSingular": "{count} neuen Beitrag anzeigen",
     "newPostsPlural": "{count} neue Beiträge anzeigen",
-    "replies": "Antworten"
+    "replies": "Antworten",
+    "notFound": {
+      "title": "Beitrag nicht gefunden",
+      "subtitle": "Dieser Beitrag ist nicht verfügbar. Er wurde möglicherweise entfernt oder der Link ist nicht mehr gültig.",
+      "imageAlt": "Beitrag nicht gefunden",
+      "backToFeed": "Zurück zum Feed",
+      "viewProfile": "Profil ansehen",
+      "exploreTags": "Tags entdecken"
+    }
   },
   "profile": {
     "title": "Profil",
+    "notFound": {
+      "title": "Nutzer nicht gefunden",
+      "subtitle": "Der gesuchte Nutzer existiert nicht oder wurde möglicherweise entfernt.",
+      "imageAlt": "Nutzer nicht gefunden",
+      "backToFeed": "Zurück zum Feed",
+      "exploreTags": "Tags entdecken"
+    },
     "tabs": {
       "notifications": "Benachrichtigungen",
       "posts": "Beiträge",

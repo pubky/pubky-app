@@ -51,6 +51,7 @@ export function ProfilePageLayout({
   filterBarActivePage,
   navigateToPage,
   isLoading,
+  isHeaderLoading,
   isOwnProfile = true,
   userId,
 }: ProfilePageLayoutProps) {
@@ -79,6 +80,8 @@ export function ProfilePageLayout({
     ...actions,
     onAvatarClick: handleAvatarClick,
   };
+
+  const headerLoading = isHeaderLoading ?? isLoading;
 
   // Other-user mobile profiles render profile info above posts, but the canonical posts route should land at the feed.
   // The browser handles the scroll math via `scrollIntoView` + `scroll-margin-top`; we only need to seed `scroll-margin-top`
@@ -135,7 +138,7 @@ export function ProfilePageLayout({
 
       <ProfilePageLayoutWrapper>
         <Container overrideDefaults={true} className={profileHeaderWrapperClassName}>
-          {!isLoading && (
+          {!headerLoading && (
             <ProfilePageHeader
               profile={profile}
               actions={headerActions}

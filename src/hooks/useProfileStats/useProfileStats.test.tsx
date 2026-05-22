@@ -345,11 +345,11 @@ describe('useProfileStats', () => {
       expect(UserController.fetchCounts).not.toHaveBeenCalled();
     });
 
-    it('does not call fetchCounts when userId is empty', () => {
+    it('does not call getCounts or fetchCounts when enabled is false', () => {
       setMockUserCounts(undefined);
-      renderHook(() => useProfileStats(''));
+      renderHook(() => useProfileStats('test-user-id', { enabled: false }));
 
-      // enabled=false when userId is empty, so fetchFn should not fire
+      expect(UserController.getCounts).not.toHaveBeenCalled();
       expect(UserController.fetchCounts).not.toHaveBeenCalled();
     });
   });
