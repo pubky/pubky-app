@@ -1,3 +1,4 @@
+import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostApplication } from '@/application/post/post';
 import type { TGetOrFetchPostParams } from '@/application/post/post.types';
@@ -20,7 +21,6 @@ import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.sche
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { inferPostKindForCreate, resolveTagTargetCompositeIdForPostCreate } from '@/pipes/post/post.kind';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
@@ -251,7 +251,7 @@ export class PostController {
   }: TFileAttachmentsParams): Promise<TFileAttachmentResult[]> {
     return await Promise.all(
       attachments.map(async (attachment) => {
-        return await FileNormalizer.toFileAttachment({ file: attachment, pubky });
+        return await FileApplication.toFileAttachment({ file: attachment, pubky });
       }),
     );
   }
