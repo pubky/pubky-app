@@ -5,6 +5,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Logger } from '@/libs/logger/logger';
 import type { UseLocalFirstQueryParams, UseLocalFirstQueryResult } from './useLocalFirstQuery.types';
 
+/** Whether a local-first read/fetch should run (truthy entity id + optional caller gate). */
+export function isLocalFirstQueryEnabled(entityId: string | null | undefined, optionsEnabled?: boolean): boolean {
+  return Boolean(entityId) && (optionsEnabled ?? true);
+}
+
 /**
  * Shared hook that encapsulates the local-first query pattern (ADR-0011).
  *
