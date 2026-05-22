@@ -173,7 +173,7 @@ describe('captureAppError filtering', () => {
         code: AuthErrorCode.FORBIDDEN,
         message: 'Blocked IP range',
         service: ErrorService.NextJsServer,
-        operation: 'validateDns',
+        operation: 'validateDnsForOgMetadata',
         context: { hostname: '169.254.169.254', statusCode: HttpStatusCode.FORBIDDEN },
       });
 
