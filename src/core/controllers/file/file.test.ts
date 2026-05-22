@@ -3,13 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { FileVariant } from '@/services/nexus/file/file.types';
 
-const mockFileNormalizer = {
-  toBlob: vi.fn(),
-  toFile: vi.fn(),
-  toFileAttachment: vi.fn(),
-};
-
 const mockFileApplication = {
+  toFileAttachment: vi.fn(),
   commitCreate: vi.fn(),
   fetchFiles: vi.fn(),
   getAvatarUrl: vi.fn(),
@@ -17,9 +12,6 @@ const mockFileApplication = {
   getMetadata: vi.fn(),
 };
 
-vi.mock('@/pipes/file/file.normalizer', () => ({
-  FileNormalizer: mockFileNormalizer,
-}));
 vi.mock('@/application/file/file', () => ({
   FileApplication: mockFileApplication,
 }));
@@ -75,9 +67,7 @@ describe('FileController', () => {
     vi.resetModules();
     vi.clearAllMocks();
 
-    mockFileNormalizer.toBlob.mockReset();
-    mockFileNormalizer.toFile.mockReset();
-    mockFileNormalizer.toFileAttachment.mockReset();
+    mockFileApplication.toFileAttachment.mockReset();
     mockFileApplication.commitCreate.mockReset();
     mockFileApplication.fetchFiles.mockReset();
     mockFileApplication.getAvatarUrl.mockReset();
@@ -94,27 +84,27 @@ describe('FileController', () => {
       const fileResult = createMockFileResult();
       const fileAttachment = { blobResult, fileResult };
 
-      mockFileNormalizer.toFileAttachment.mockResolvedValue(fileAttachment);
+      mockFileApplication.toFileAttachment.mockResolvedValue(fileAttachment);
       mockFileApplication.commitCreate.mockResolvedValue(undefined);
 
       const result = await FileController.commitCreate({ file, pubky: testPubky });
 
-      expect(mockFileNormalizer.toFileAttachment).toHaveBeenCalledWith({ file, pubky: testPubky });
+      expect(mockFileApplication.toFileAttachment).toHaveBeenCalledWith({ file, pubky: testPubky });
       expect(mockFileApplication.commitCreate).toHaveBeenCalledWith({ fileAttachments: [fileAttachment] });
       expect(result).toBe(fileResult.meta.url);
     });
 
-    it('propagates errors when blob normalization fails', async () => {
+    it('propagates errors when file attachment preparation fails', async () => {
       const file = createMockFile();
-      mockFileNormalizer.toFileAttachment.mockRejectedValue(new Error('normalizer failed'));
+      mockFileApplication.toFileAttachment.mockRejectedValue(new Error('normalizer failed'));
 
       await expect(FileController.commitCreate({ file, pubky: testPubky })).rejects.toThrow('normalizer failed');
       expect(mockFileApplication.commitCreate).not.toHaveBeenCalled();
     });
 
-    it('propagates errors when file normalization fails', async () => {
+    it('propagates errors when attachment preparation fails', async () => {
       const file = createMockFile();
-      mockFileNormalizer.toFileAttachment.mockRejectedValue(new Error('file failed'));
+      mockFileApplication.toFileAttachment.mockRejectedValue(new Error('file failed'));
 
       await expect(FileController.commitCreate({ file, pubky: testPubky })).rejects.toThrow('file failed');
       expect(mockFileApplication.commitCreate).not.toHaveBeenCalled();
@@ -124,7 +114,7 @@ describe('FileController', () => {
       const file = createMockFile();
       const blobResult = createMockBlobResult();
       const fileResult = createMockFileResult();
-      mockFileNormalizer.toFileAttachment.mockResolvedValue({ blobResult, fileResult });
+      mockFileApplication.toFileAttachment.mockResolvedValue({ blobResult, fileResult });
       mockFileApplication.commitCreate.mockRejectedValue(new Error('upload failed'));
 
       await expect(FileController.commitCreate({ file, pubky: testPubky })).rejects.toThrow('upload failed');
@@ -133,10 +123,10 @@ describe('FileController', () => {
     it('propagates errors when file.arrayBuffer() fails', async () => {
       const file = createMockFile();
       vi.spyOn(file, 'arrayBuffer').mockRejectedValue(new Error('arrayBuffer failed'));
-      mockFileNormalizer.toFileAttachment.mockRejectedValue(new Error('arrayBuffer failed'));
+      mockFileApplication.toFileAttachment.mockRejectedValue(new Error('arrayBuffer failed'));
 
       await expect(FileController.commitCreate({ file, pubky: testPubky })).rejects.toThrow('arrayBuffer failed');
-      expect(mockFileNormalizer.toFileAttachment).toHaveBeenCalledWith({ file, pubky: testPubky });
+      expect(mockFileApplication.toFileAttachment).toHaveBeenCalledWith({ file, pubky: testPubky });
       expect(mockFileApplication.commitCreate).not.toHaveBeenCalled();
     });
   });
