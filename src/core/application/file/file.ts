@@ -1,8 +1,14 @@
 import type { FilesListParams } from '@/application/file/file.types';
-import type { TGetFileUrlParams, TGetMetadataParams } from '@/controllers/file/file.types';
+import type { TGetFileUrlParams, TGetMetadataParams, TUploadFileParams } from '@/controllers/file/file.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';
 import { NexusFileService } from '@/services/nexus/file/file';
@@ -17,6 +23,30 @@ import type { NexusFileDetails, NexusFileUrls } from '@/services/nexus/nexus.typ
  */
 export class FileApplication {
   private constructor() {} // Prevent instantiation
+
+  static async toFileAttachment({ file, pubky }: TUploadFileParams): Promise<TFileAttachmentResult> {
+    let sanitizedFile: File;
+    try {
+      sanitizedFile = await stripImageMetadata(file);
+    } catch (error) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Image sanitization failed', {
+        service: ErrorService.Local,
+        operation: 'toFileAttachment',
+        cause: error,
+      });
+    }
+    let blobData: Uint8Array;
+    try {
+      blobData = new Uint8Array(await sanitizedFile.arrayBuffer());
+    } catch (error) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to read file content', {
+        service: ErrorService.Local,
+        operation: 'toFileAttachment',
+        cause: error,
+      });
+    }
+    return FileNormalizer.toFileAttachment({ file: sanitizedFile, blobData, pubky });
+  }
 
   /**
    * Uploads a file to the homeserver and persists it locally and persist it locally.
