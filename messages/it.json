@@ -447,7 +447,8 @@
     "replies": "Risposte",
     "notFound": {
       "title": "Post non trovato",
-      "subtitle": "Questo post non è disponibile. Potrebbe essere stato rimosso oppure il link non è più valido.",
+      "subtitle1": "Questo post non è disponibile.",
+      "subtitle2": "Potrebbe essere stato rimosso oppure il link non è più valido.",
       "imageAlt": "Post non trovato",
       "backToFeed": "Torna al feed",
       "viewProfile": "Vedi profilo",

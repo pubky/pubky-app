@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Tweet } from 'react-tweet';
+import { EmbeddedTweet, TweetNotFound, TweetSkeleton, useTweet } from 'react-tweet';
+import type { Tweet, TweetEntities } from 'react-tweet/api';
 import { Container } from '@/atoms/Container/Container';
 import type { EmbedData, EmbedProvider } from '../Provider.types';
 
@@ -43,6 +44,62 @@ const TWITTER_DOMAINS = [
 ] as const;
 
 /**
+ * TEMPORARY WORKAROUND: Normalizes a tweet's `entities` before rendering.
+ *
+ * The Twitter syndication API sometimes returns `entities` containing only
+ * `media`, omitting `hashtags` / `user_mentions` / `urls` / `symbols`.
+ * react-tweet's `getEntities` iterates those four arrays with no guard, so a
+ * missing one throws `TypeError: <x> is not iterable` and crashes the page.
+ *
+ * This fills the missing arrays with `[]` (for the tweet and any quoted tweet)
+ * before the data reaches `EmbeddedTweet`.
+ *
+ * Remove this entire workaround — `withEntityDefaults`, `normalizeTweet`,
+ * `NormalizedTweet` — and go back to react-tweet's `<Tweet id={...} />` once
+ * https://github.com/vercel/react-tweet/issues/218 is fixed and released.
+ */
+// `entities` is typed as a complete `TweetEntities`, but the syndication API
+// can omit fields at runtime — hence `Partial` so the defaults below survive.
+//
+// Only the four arrays that `getEntities` iterates unguarded are defaulted.
+// `media` is deliberately NOT defaulted: react-tweet guards it with
+// `if (tweet.entities.media)` and `fixRange` reads `media[0].indices`, so an
+// empty `[]` would pass the truthy check and then crash on `media[0]`. A
+// missing `media` must stay missing.
+const withEntityDefaults = (entities: Partial<TweetEntities> | undefined): TweetEntities => ({
+  hashtags: [],
+  urls: [],
+  user_mentions: [],
+  symbols: [],
+  ...entities,
+});
+
+const normalizeTweet = (tweet: Tweet): Tweet => ({
+  ...tweet,
+  entities: withEntityDefaults(tweet.entities),
+  ...(tweet.quoted_tweet && {
+    quoted_tweet: {
+      ...tweet.quoted_tweet,
+      entities: withEntityDefaults(tweet.quoted_tweet.entities),
+    },
+  }),
+});
+
+/**
+ * Drop-in replacement for react-tweet's `<Tweet id={...} />` that normalizes
+ * entities before rendering. Mirrors the original loading / error / content
+ * states. Part of the TEMPORARY WORKAROUND above.
+ */
+const NormalizedTweet = ({ tweetId }: { tweetId: string }) => {
+  const { data, error, isLoading } = useTweet(tweetId);
+
+  if (isLoading) return <TweetSkeleton />;
+  if (error || !data) return <TweetNotFound error={error} />;
+
+  return <EmbeddedTweet tweet={normalizeTweet(data)} />;
+};
+
+/**
  * TEMPORARY WORKAROUND: Intercepts clicks on the video area and redirects to X.
  * Twitter CDN blocks video playback from external sites (403 Forbidden).
  * Remove this once react-tweet provides an upstream fix.
@@ -82,7 +139,7 @@ const TwitterEmbed = ({ tweetId, tweetUrl }: { tweetId: string; tweetUrl: string
       data-theme="dark"
       className="mx-0 max-w-70 sm:mx-auto sm:max-w-none [&_.react-tweet-theme]:m-0! [&_.tweet-media\_root\_\_k6gQ2]:max-h-75! [&_.tweet-media\_root\_\_k6gQ2]:overflow-y-auto!"
     >
-      <Tweet id={tweetId} />
+      <NormalizedTweet tweetId={tweetId} />
     </Container>
   );
 };

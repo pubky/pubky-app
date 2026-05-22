@@ -447,7 +447,8 @@
     "replies": "Réponses",
     "notFound": {
       "title": "Publication introuvable",
-      "subtitle": "Cette publication n'est pas disponible. Elle a peut-être été supprimée ou le lien n'est plus valide.",
+      "subtitle1": "Cette publication n'est pas disponible.",
+      "subtitle2": "Elle a peut-être été supprimée ou le lien n'est plus valide.",
       "imageAlt": "Publication introuvable",
       "backToFeed": "Retour au fil",
       "viewProfile": "Voir le profil",

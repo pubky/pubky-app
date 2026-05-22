@@ -447,7 +447,8 @@
     "replies": "Respuestas",
     "notFound": {
       "title": "Publicación no encontrada",
-      "subtitle": "Esta publicación no está disponible. Es posible que se haya eliminado o que el enlace ya no sea válido.",
+      "subtitle1": "Esta publicación no está disponible.",
+      "subtitle2": "Es posible que se haya eliminado o que el enlace ya no sea válido.",
       "imageAlt": "Publicación no encontrada",
       "backToFeed": "Volver al feed",
       "viewProfile": "Ver perfil",
