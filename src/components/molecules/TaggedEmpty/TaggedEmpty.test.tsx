@@ -4,10 +4,10 @@ import { TaggedEmpty } from './TaggedEmpty';
 
 const mockHandleTagAdd = vi.fn().mockResolvedValue({ success: true });
 
-// Mock ProfilePageEmptyState and TagInput
-vi.mock('@/molecules/ProfilePageEmptyState/ProfilePageEmptyState', () => {
+// Mock IllustratedEmptyState and TagInput
+vi.mock('@/molecules/IllustratedEmptyState/IllustratedEmptyState', () => {
   return {
-    ProfilePageEmptyState: ({
+    IllustratedEmptyState: ({
       imageSrc,
       imageAlt,
       icon: Icon,

@@ -1,7 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES } from '@/app/routes';
+import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { ProfileProfile } from './ProfileProfile';
+
+const mockProfilePubky = PUBKY_52_STAGING_FIXTURE;
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -21,6 +26,14 @@ vi.mock('@/stores/notification/notification.store', () => ({
   useNotificationStore: vi.fn(() => 0),
 }));
 
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
+  useProfileContext: vi.fn(() => ({
+    pubky: mockProfilePubky,
+    isOwnProfile: true,
+    isLoading: false,
+  })),
+}));
+
 // Mock hooks
 vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
   useProfileHeader: vi.fn(() => ({
@@ -34,6 +47,13 @@ vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
       link: 'http://localhost:3000/profile/1QX7GKW3abcdef1234567890',
       links: [],
     },
+    stats: {
+      posts: 42,
+      following: 10,
+      followers: 100,
+      tagged: 7,
+      uniqueTags: 12,
+    },
     actions: {
       onEdit: vi.fn(),
       onCopyPublicKey: vi.fn(),
@@ -44,6 +64,7 @@ vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
       onStatusClick: vi.fn(),
     },
     isLoading: false,
+    isProfileLoading: false,
   })),
 }));
 
@@ -130,8 +151,55 @@ vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', () => {
 });
 
 describe('ProfileProfile', () => {
+  beforeEach(() => {
+    vi.mocked(useProfileContext).mockReturnValue({
+      pubky: mockProfilePubky,
+      isOwnProfile: true,
+      isLoading: false,
+    });
+  });
+
   it('renders without errors', () => {
     render(<ProfileProfile />);
+    expect(screen.getByTestId('profile-page-header')).toBeInTheDocument();
+  });
+
+  it('shows ProfilePageHeader when profile is ready even if stats are still loading', () => {
+    vi.mocked(useProfileHeader).mockReturnValueOnce({
+      profile: {
+        name: 'Satoshi Nakamoto',
+        bio: 'Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.',
+        publicKey: 'pubky1QX7GKW3abcdef1234567890',
+        emoji: '🌴',
+        status: 'Vacationing',
+        avatarUrl: undefined,
+        link: 'http://localhost:3000/profile/1QX7GKW3abcdef1234567890',
+        links: [],
+      },
+      stats: {
+        notifications: 0,
+        posts: 42,
+        replies: 0,
+        following: 10,
+        followers: 100,
+        friends: 0,
+        uniqueTags: 12,
+      },
+      actions: {
+        onEdit: vi.fn(),
+        onCopyPublicKey: vi.fn(),
+        onCopyLink: vi.fn(),
+        onSignOut: vi.fn(),
+        onStatusChange: vi.fn(),
+        isLoggingOut: false,
+      },
+      isLoading: true,
+      isProfileLoading: false,
+      userNotFound: false,
+    });
+
+    render(<ProfileProfile />);
+
     expect(screen.getByTestId('profile-page-header')).toBeInTheDocument();
   });
 

@@ -3,7 +3,7 @@
 import { DEFAULT_URL } from '@/config/metadata';
 import { FileController } from '@/controllers/file/file';
 import { UserController } from '@/controllers/user/user';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import { withPubkyPrefix } from '@/libs/utils/utils';
 import type { NexusUserDetails, NexusUserLink } from '@/services/nexus/nexus.types';
 
@@ -24,6 +24,11 @@ export interface UseUserProfileResult {
   isLoading: boolean;
 }
 
+export interface UseUserProfileOptions {
+  /** When false, skips local-first read/fetch (e.g. known-invalid pubky in URL). */
+  enabled?: boolean;
+}
+
 /**
  * Hook for fetching and transforming user profile data.
  * Pure data fetching - no side effects or actions.
@@ -36,14 +41,17 @@ export interface UseUserProfileResult {
  * in the consuming component (e.g., ProfilePageHeader)
  *
  * @param userId - The user ID to fetch profile for
+ * @param options - Optional gate; queries run only when `userId` is non-empty and `enabled` is not false
  * @returns Profile data and loading state
  */
-export function useUserProfile(userId: string): UseUserProfileResult {
+export function useUserProfile(userId: string, options?: UseUserProfileOptions): UseUserProfileResult {
+  const enabled = isLocalFirstQueryEnabled(userId, options?.enabled);
+
   const { data: userDetails, isLoading } = useLocalFirstQuery<NexusUserDetails>({
     queryFn: () => UserController.getDetails({ userId }),
     fetchFn: () => UserController.fetchDetails({ userId }),
-    deps: [userId],
-    enabled: !!userId,
+    deps: [userId, enabled],
+    enabled,
   });
 
   if (!userDetails) {
