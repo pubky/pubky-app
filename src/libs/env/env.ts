@@ -50,7 +50,7 @@ const envSchema = z.object({
 
   NEXT_PUBLIC_NOTIFICATION_POLL_ON_START: z
     .string()
-    .default('false')
+    .default('true')
     .transform((val) => val === 'true')
     .pipe(z.boolean()),
 

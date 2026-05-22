@@ -30,10 +30,7 @@ export class NotificationCoordinator extends Coordinator<NotificationCoordinator
   };
 
   private constructor() {
-    // Poll immediately on every idle→active transition (cold start, tab
-    // resume, route-change resume) so the first fetch isn't delayed by
-    // intervalMs (#1497). Scoped to this coordinator via initialConfig.
-    super({ initialConfig: { pollOnStart: true } });
+    super();
   }
 
   // ============================================================================
