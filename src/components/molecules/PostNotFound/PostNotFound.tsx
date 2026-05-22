@@ -23,11 +23,17 @@ export function PostNotFound({ postId }: PostNotFoundProps) {
 
   return (
     <IllustratedEmptyState
-      imageSrc="/images/connections-empty-state.webp"
+      imageSrc="/images/post-not-found-empty-state.webp"
       imageAlt={t('imageAlt')}
       icon={FileQuestion}
       title={t('title')}
-      subtitle={t('subtitle')}
+      subtitle={
+        <>
+          {t('subtitle1')}
+          <br />
+          {t('subtitle2')}
+        </>
+      }
     >
       <Container overrideDefaults className="flex flex-col flex-wrap items-center justify-center gap-3 sm:flex-row">
         <Button type="button" variant={ButtonVariant.SECONDARY} onClick={() => router.push(APP_ROUTES.HOME)}>
