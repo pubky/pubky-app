@@ -3,13 +3,21 @@
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
-import type { HotActiveUsersProps } from './HotActiveUsers.types';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Typography } from '@/atoms/Typography/Typography';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { cn } from '@/libs/utils/utils';
+import type { Pubky } from '@/models/models.types';
+import type { UserStreamId } from '@/models/stream/user/userStream.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useHotStore } from '@/stores/hot/hot.store';
+import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
+import { UserListItem } from '../UserListItem/UserListItem';
+import type { HotActiveUsersProps } from './HotActiveUsers.types';
 
 const DEFAULT_USERS_LIMIT = 10;
 
@@ -18,13 +26,13 @@ const DEFAULT_USERS_LIMIT = 10;
  * Uses influencers source with dynamic reach/timeframe from hot store.
  * Pattern: influencers:timeframe:reach
  */
-function useActiveUsersStreamId(): Core.UserStreamId {
-  const reach = Core.useHotStore((state) => state.reach);
-  const timeframe = Core.useHotStore((state) => state.timeframe);
+function useActiveUsersStreamId(): UserStreamId {
+  const reach = useHotStore((state) => state.reach);
+  const timeframe = useHotStore((state) => state.timeframe);
 
   const streamId = useMemo(() => {
     // Build influencers stream ID: influencers:timeframe:reach
-    return `influencers:${timeframe}:${reach}` as Core.UserStreamId;
+    return `influencers:${timeframe}:${reach}` as UserStreamId;
   }, [reach, timeframe]);
 
   return streamId;
@@ -42,10 +50,10 @@ function useActiveUsersStreamId(): Core.UserStreamId {
 export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotActiveUsersProps) {
   const t = useTranslations('hot');
   const router = useRouter();
-  const currentUserPubky = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const streamId = useActiveUsersStreamId();
 
-  const { users, isLoading, error } = Hooks.useUserStream({
+  const { users, isLoading, error } = useUserStream({
     streamId,
     limit,
     includeCounts: true,
@@ -53,39 +61,38 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
     includeTags: true,
   });
 
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
+  const { toggleFollow, isUserLoading } = useFollowUser();
+  const { isMuted } = useMutedUsers();
 
-  const handleUserClick = (pubky: Core.Pubky) => {
+  const visibleUsers = users.filter((user) => !isMuted(user.id));
+
+  const handleUserClick = (pubky: Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
   };
 
-  const handleFollowClick = async (userId: Core.Pubky, isCurrentlyFollowing: boolean) => {
+  const handleFollowClick = async (userId: Pubky, isCurrentlyFollowing: boolean) => {
     await toggleFollow(userId, isCurrentlyFollowing);
   };
 
   return (
-    <Atoms.Container
-      overrideDefaults
-      className={cn('flex w-full flex-col gap-2', className)}
-      data-testid="hot-active-users"
-    >
-      <Atoms.Heading level={5} size="lg" className="font-light text-muted-foreground">
+    <Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)} data-testid="hot-active-users">
+      <Heading level={5} size="lg" className="font-light text-muted-foreground">
         {t('activeUsers')}
-      </Atoms.Heading>
+      </Heading>
       {error ? (
-        <Atoms.Typography className="text-destructive">{t('failedToLoadUsers')}</Atoms.Typography>
+        <Typography className="text-destructive">{t('failedToLoadUsers')}</Typography>
       ) : isLoading ? (
-        <Atoms.Container className="gap-3.5 rounded-md py-2 lg:gap-3">
+        <Container className="gap-3.5 rounded-md py-2 lg:gap-3">
           {Array.from({ length: limit }).map((_, index) => (
-            <Organisms.FullUserListItemSkeleton key={`hot-active-users-skeleton-${index}`} />
+            <FullUserListItemSkeleton key={`hot-active-users-skeleton-${index}`} />
           ))}
-        </Atoms.Container>
-      ) : users.length === 0 ? (
-        <Atoms.Typography className="font-light text-muted-foreground">{t('noUsersToShow')}</Atoms.Typography>
+        </Container>
+      ) : visibleUsers.length === 0 ? (
+        <Typography className="font-light text-muted-foreground">{t('noUsersToShow')}</Typography>
       ) : (
-        <Atoms.Container className="gap-3.5 rounded-md py-2 lg:gap-3">
-          {users.map((user) => (
-            <Organisms.UserListItem
+        <Container className="gap-3.5 rounded-md py-2 lg:gap-3">
+          {visibleUsers.map((user) => (
+            <UserListItem
               key={user.id}
               user={user}
               variant="full"
@@ -96,8 +103,8 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
               onFollowClick={handleFollowClick}
             />
           ))}
-        </Atoms.Container>
+        </Container>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }

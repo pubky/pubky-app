@@ -28,7 +28,7 @@ exports[`PostContentBase - Snapshots > matches snapshot with multiline content (
   data-testid="container"
 >
   <div
-    class="text-base leading-6 font-medium wrap-anywhere hyphens-auto whitespace-pre-line text-secondary-foreground"
+    class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
     data-testid="container"
   >
     <p>
@@ -53,7 +53,7 @@ exports[`PostContentBase - Snapshots > matches snapshot with single-line content
   data-testid="container"
 >
   <div
-    class="text-base leading-6 font-medium wrap-anywhere hyphens-auto whitespace-pre-line text-secondary-foreground"
+    class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
     data-testid="container"
   >
     <p>
@@ -72,7 +72,7 @@ exports[`PostContentBase - Snapshots > matches snapshot with special characters 
   data-testid="container"
 >
   <div
-    class="text-base leading-6 font-medium wrap-anywhere hyphens-auto whitespace-pre-line text-secondary-foreground"
+    class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
     data-testid="container"
   >
     <p>
@@ -93,7 +93,7 @@ exports[`PostContentBase - Snapshots > matches snapshot with very long content 1
   data-testid="container"
 >
   <div
-    class="text-base leading-6 font-medium wrap-anywhere hyphens-auto whitespace-pre-line text-secondary-foreground"
+    class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
     data-testid="container"
   >
     <p>
@@ -102,6 +102,7 @@ exports[`PostContentBase - Snapshots > matches snapshot with very long content 1
     <button
       aria-label="Show full post content"
       class="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
+      data-allow-post-navigation="true"
       data-testid="button"
     >
       Show more

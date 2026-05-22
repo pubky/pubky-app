@@ -1,8 +1,15 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ModerationApplication } from '@/application/moderation/moderation';
+import type { EnrichedPostDetails, EnrichedUserDetails } from '@/application/moderation/moderation.types';
+import type { Pubky } from '@/models/models.types';
+import { ModerationType } from '@/models/moderation/moderation.schema';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import type { SettingsStore } from '@/stores/settings/settings.types';
 import { ModerationController } from './moderation';
-import * as Core from '@/core';
 
-vi.mock('@/core/application/moderation', () => ({
+vi.mock('@/application/moderation/moderation', () => ({
   ModerationApplication: {
     setUnBlur: vi.fn(),
     enrichPostsWithModeration: vi.fn(),
@@ -19,7 +26,7 @@ describe('ModerationController', () => {
   describe('unBlur', () => {
     it('should call ModerationApplication.setUnBlur', async () => {
       const id = 'author:post1';
-      const spy = vi.spyOn(Core.ModerationApplication, 'setUnBlur').mockResolvedValue(undefined);
+      const spy = vi.spyOn(ModerationApplication, 'setUnBlur').mockResolvedValue(undefined);
 
       await ModerationController.unBlur(id);
 
@@ -27,7 +34,7 @@ describe('ModerationController', () => {
     });
 
     it('should work for both posts and profiles', async () => {
-      const spy = vi.spyOn(Core.ModerationApplication, 'setUnBlur').mockResolvedValue(undefined);
+      const spy = vi.spyOn(ModerationApplication, 'setUnBlur').mockResolvedValue(undefined);
 
       await ModerationController.unBlur('author:post1');
       await ModerationController.unBlur('pk:user1');
@@ -39,7 +46,7 @@ describe('ModerationController', () => {
 
   describe('enrichPosts', () => {
     it('should pass isBlurDisabledGlobally from settings store', async () => {
-      const posts: Core.PostDetailsModelSchema[] = [
+      const posts: PostDetailsModelSchema[] = [
         {
           id: 'author:post1',
           content: 'Content 1',
@@ -50,14 +57,12 @@ describe('ModerationController', () => {
         },
       ];
 
-      const enrichedPosts: Core.EnrichedPostDetails[] = [{ ...posts[0], is_moderated: true, is_blurred: true }];
+      const enrichedPosts: EnrichedPostDetails[] = [{ ...posts[0], is_moderated: true, is_blurred: true }];
 
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue({
         privacy: { blurCensored: true },
-      } as Partial<Core.SettingsStore> as Core.SettingsStore);
-      const enrichSpy = vi
-        .spyOn(Core.ModerationApplication, 'enrichPostsWithModeration')
-        .mockResolvedValue(enrichedPosts);
+      } as Partial<SettingsStore> as SettingsStore);
+      const enrichSpy = vi.spyOn(ModerationApplication, 'enrichPostsWithModeration').mockResolvedValue(enrichedPosts);
 
       const result = await ModerationController.enrichPosts(posts);
 
@@ -66,10 +71,10 @@ describe('ModerationController', () => {
     });
 
     it('should handle empty array', async () => {
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue({
         privacy: { blurCensored: true },
-      } as Partial<Core.SettingsStore> as Core.SettingsStore);
-      const enrichSpy = vi.spyOn(Core.ModerationApplication, 'enrichPostsWithModeration').mockResolvedValue([]);
+      } as Partial<SettingsStore> as SettingsStore);
+      const enrichSpy = vi.spyOn(ModerationApplication, 'enrichPostsWithModeration').mockResolvedValue([]);
 
       const result = await ModerationController.enrichPosts([]);
 
@@ -80,9 +85,9 @@ describe('ModerationController', () => {
 
   describe('enrichUsers', () => {
     it('should pass isBlurDisabledGlobally from settings store', async () => {
-      const users: Core.UserDetailsModelSchema[] = [
+      const users: UserDetailsModelSchema[] = [
         {
-          id: 'pk:user1' as Core.Pubky,
+          id: 'pk:user1' as Pubky,
           name: 'Test User',
           bio: 'Test bio',
           image: null,
@@ -92,14 +97,12 @@ describe('ModerationController', () => {
         },
       ];
 
-      const enrichedUsers: Core.EnrichedUserDetails[] = [{ ...users[0], is_moderated: true, is_blurred: true }];
+      const enrichedUsers: EnrichedUserDetails[] = [{ ...users[0], is_moderated: true, is_blurred: true }];
 
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue({
         privacy: { blurCensored: true },
-      } as Partial<Core.SettingsStore> as Core.SettingsStore);
-      const enrichSpy = vi
-        .spyOn(Core.ModerationApplication, 'enrichUsersWithModeration')
-        .mockResolvedValue(enrichedUsers);
+      } as Partial<SettingsStore> as SettingsStore);
+      const enrichSpy = vi.spyOn(ModerationApplication, 'enrichUsersWithModeration').mockResolvedValue(enrichedUsers);
 
       const result = await ModerationController.enrichUsers(users);
 
@@ -108,9 +111,9 @@ describe('ModerationController', () => {
     });
 
     it('should handle blur disabled globally', async () => {
-      const users: Core.UserDetailsModelSchema[] = [
+      const users: UserDetailsModelSchema[] = [
         {
-          id: 'pk:user1' as Core.Pubky,
+          id: 'pk:user1' as Pubky,
           name: 'Test User',
           bio: 'Test bio',
           image: null,
@@ -120,10 +123,10 @@ describe('ModerationController', () => {
         },
       ];
 
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue({
         privacy: { blurCensored: false },
-      } as Partial<Core.SettingsStore> as Core.SettingsStore);
-      const enrichSpy = vi.spyOn(Core.ModerationApplication, 'enrichUsersWithModeration').mockResolvedValue([]);
+      } as Partial<SettingsStore> as SettingsStore);
+      const enrichSpy = vi.spyOn(ModerationApplication, 'enrichUsersWithModeration').mockResolvedValue([]);
 
       await ModerationController.enrichUsers(users);
 
@@ -131,10 +134,10 @@ describe('ModerationController', () => {
     });
 
     it('should handle empty array', async () => {
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue({
         privacy: { blurCensored: true },
-      } as Partial<Core.SettingsStore> as Core.SettingsStore);
-      const enrichSpy = vi.spyOn(Core.ModerationApplication, 'enrichUsersWithModeration').mockResolvedValue([]);
+      } as Partial<SettingsStore> as SettingsStore);
+      const enrichSpy = vi.spyOn(ModerationApplication, 'enrichUsersWithModeration').mockResolvedValue([]);
 
       const result = await ModerationController.enrichUsers([]);
 
@@ -145,43 +148,43 @@ describe('ModerationController', () => {
 
   describe('getModerationStatus', () => {
     it('should call ModerationApplication.getModerationStatus with correct params for POST', async () => {
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue({
         privacy: { blurCensored: true },
-      } as Partial<Core.SettingsStore> as Core.SettingsStore);
+      } as Partial<SettingsStore> as SettingsStore);
       const spy = vi
-        .spyOn(Core.ModerationApplication, 'getModerationStatus')
+        .spyOn(ModerationApplication, 'getModerationStatus')
         .mockResolvedValue({ is_moderated: true, is_blurred: true });
 
-      const result = await ModerationController.getModerationStatus('author:post1', Core.ModerationType.POST);
+      const result = await ModerationController.getModerationStatus('author:post1', ModerationType.POST);
 
-      expect(spy).toHaveBeenCalledWith('author:post1', Core.ModerationType.POST, false);
+      expect(spy).toHaveBeenCalledWith('author:post1', ModerationType.POST, false);
       expect(result).toEqual({ is_moderated: true, is_blurred: true });
     });
 
     it('should call ModerationApplication.getModerationStatus with correct params for PROFILE', async () => {
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue({
         privacy: { blurCensored: false },
-      } as Partial<Core.SettingsStore> as Core.SettingsStore);
+      } as Partial<SettingsStore> as SettingsStore);
       const spy = vi
-        .spyOn(Core.ModerationApplication, 'getModerationStatus')
+        .spyOn(ModerationApplication, 'getModerationStatus')
         .mockResolvedValue({ is_moderated: true, is_blurred: false });
 
-      const result = await ModerationController.getModerationStatus('pk:user1', Core.ModerationType.PROFILE);
+      const result = await ModerationController.getModerationStatus('pk:user1', ModerationType.PROFILE);
 
-      expect(spy).toHaveBeenCalledWith('pk:user1', Core.ModerationType.PROFILE, true);
+      expect(spy).toHaveBeenCalledWith('pk:user1', ModerationType.PROFILE, true);
       expect(result).toEqual({ is_moderated: true, is_blurred: false });
     });
 
     it('should return not moderated status', async () => {
-      vi.spyOn(Core.useSettingsStore, 'getState').mockReturnValue({
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue({
         privacy: { blurCensored: true },
-      } as Partial<Core.SettingsStore> as Core.SettingsStore);
-      vi.spyOn(Core.ModerationApplication, 'getModerationStatus').mockResolvedValue({
+      } as Partial<SettingsStore> as SettingsStore);
+      vi.spyOn(ModerationApplication, 'getModerationStatus').mockResolvedValue({
         is_moderated: false,
         is_blurred: false,
       });
 
-      const result = await ModerationController.getModerationStatus('pk:user1', Core.ModerationType.PROFILE);
+      const result = await ModerationController.getModerationStatus('pk:user1', ModerationType.PROFILE);
 
       expect(result).toEqual({ is_moderated: false, is_blurred: false });
     });

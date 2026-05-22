@@ -1,4 +1,4 @@
-import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds';
+import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
 
 /**
  * Props for the MentionPopover component

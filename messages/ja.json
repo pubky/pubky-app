@@ -8,7 +8,7 @@
     "title": "ウェブを<highlight>解放</highlight>する。",
     "subtitle": "あなたの鍵、あなたのコンテンツ、あなたのルール。",
     "signIn": "サインイン",
-    "createAccount": "アカウント作成",
+    "joinNow": "今すぐ参加",
     "aTetherCompany": "<tether>tether.</tether>グループ企業",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. 無断転載を禁じます。"
   },
@@ -157,7 +157,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "アカウント作成",
+      "joinNow": "今すぐ参加",
       "identityKeys": "IDキー",
       "usePubkyRing": "Pubky Ringを使用",
       "yourPubky": "あなたのpubky",
@@ -383,7 +383,7 @@
       "neverShareMobile": "このファイルとパスワードを誰とも共有しないでください。",
       "password": "パスワード",
       "passwordPlaceholder": "強力なパスワードを入力",
-      "passwordHint": "大文字、小文字、数字、記号を含む8文字以上を推奨します。",
+      "passwordHint": "より高い安全性のため、<minLen>16文字を超える</minLen>長い<passphraseLink>パスフレーズ</passphraseLink>の使用を推奨します。",
       "repeatPassword": "パスワードを再入力",
       "repeatPasswordPlaceholder": "パスワードを再入力",
       "passwordsDoNotMatch": "パスワードが一致しません",
@@ -443,10 +443,26 @@
     "viewOriginal": "元の投稿を見る",
     "youReposted": "リポストしました",
     "newPostsSingular": "{count}件の新しい投稿を見る",
-    "newPostsPlural": "{count}件の新しい投稿を見る"
+    "newPostsPlural": "{count}件の新しい投稿を見る",
+    "replies": "返信",
+    "notFound": {
+      "title": "投稿が見つかりません",
+      "subtitle": "この投稿は表示できません。削除されたか、リンクが無効になっている可能性があります。",
+      "imageAlt": "投稿が見つかりません",
+      "backToFeed": "フィードに戻る",
+      "viewProfile": "プロフィールを見る",
+      "exploreTags": "タグを見る"
+    }
   },
   "profile": {
     "title": "プロフィール",
+    "notFound": {
+      "title": "ユーザーが見つかりません",
+      "subtitle": "お探しのユーザーは存在しないか、削除された可能性があります。",
+      "imageAlt": "ユーザーが見つかりません",
+      "backToFeed": "フィードに戻る",
+      "exploreTags": "タグを見る"
+    },
     "tabs": {
       "notifications": "通知",
       "posts": "投稿",
@@ -465,8 +481,9 @@
     },
     "actions": {
       "title": "プロフィールアクション",
-      "edit": "編集",
+      "editProfile": "プロフィールを編集",
       "link": "リンク",
+      "profileLink": "プロフィールリンク",
       "loggingOut": "ログアウト中...",
       "signOut": "ログアウト",
       "unfollowing": "フォロー解除中...",
@@ -1010,10 +1027,11 @@
     "couldNotFind": "リクエストされたリソースが見つかりませんでした"
   },
   "password": {
-    "weak": "弱いパスワード",
-    "fair": "普通のパスワード",
-    "good": "良いパスワード",
-    "strong": "強いパスワード！"
+    "veryWeak": "非常に弱い",
+    "weak": "弱い",
+    "moderate": "普通",
+    "strong": "強い",
+    "veryStrong": "非常に強い"
   },
   "quickReply": {
     "prompts": [

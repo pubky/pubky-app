@@ -1,5 +1,4 @@
 import type * as React from 'react';
-
 import type { PostInputVariant } from '../PostInput/PostInput.types';
 
 export type PostInputActionSubmitMode = PostInputVariant;

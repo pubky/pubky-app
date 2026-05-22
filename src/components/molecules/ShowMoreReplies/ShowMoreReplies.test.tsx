@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { ShowMoreReplies } from './ShowMoreReplies';
 
 describe('ShowMoreReplies', () => {
@@ -24,6 +24,12 @@ describe('ShowMoreReplies', () => {
     fireEvent.click(screen.getByRole('button'));
 
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks button as keyboard-navigable thread item', () => {
+    render(<ShowMoreReplies count={3} onClick={vi.fn()} />);
+
+    expect(screen.getByRole('button')).toHaveAttribute('data-post-list-card', 'true');
   });
 
   it('renders left connector structure', () => {

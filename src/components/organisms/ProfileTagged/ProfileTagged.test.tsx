@@ -1,10 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useTagged } from '@/hooks/useTagged/useTagged';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { ProfileTagged } from './ProfileTagged';
-import * as Hooks from '@/hooks';
 
 // Mock providers
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: () => ({
     pubky: 'test-user-pubky',
     isOwnProfile: true,
@@ -13,25 +15,34 @@ vi.mock('@/providers', () => ({
 }));
 
 // Mock hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(),
+}));
+
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: vi.fn(),
+}));
+
+vi.mock('@/hooks/useTagged/useTagged', () => ({
   useTagged: vi.fn(),
 }));
 
 // Mock molecules
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/TaggedEmpty/TaggedEmpty', () => {
   return {
-    ...actual,
-    TaggedSection: () => <div data-testid="tagged-section">TaggedSection</div>,
     TaggedEmpty: () => <div data-testid="tagged-empty">TaggedEmpty</div>,
   };
 });
 
-const mockUseCurrentUserProfile = vi.mocked(Hooks.useCurrentUserProfile);
-const mockUseUserProfile = vi.mocked(Hooks.useUserProfile);
-const mockUseTagged = vi.mocked(Hooks.useTagged);
+vi.mock('@/molecules/TaggedSection/TaggedSection', () => {
+  return {
+    TaggedSection: () => <div data-testid="tagged-section">TaggedSection</div>,
+  };
+});
+
+const mockUseCurrentUserProfile = vi.mocked(useCurrentUserProfile);
+const mockUseUserProfile = vi.mocked(useUserProfile);
+const mockUseTagged = vi.mocked(useTagged);
 
 const mockTaggedOneTag = {
   tags: [
@@ -79,11 +90,11 @@ beforeEach(() => {
   mockUseCurrentUserProfile.mockReturnValue({
     userDetails: { name: 'Satoshi' },
     currentUserPubky: 'test-user-pubky',
-  } as ReturnType<typeof Hooks.useCurrentUserProfile>);
+  } as ReturnType<typeof useCurrentUserProfile>);
   mockUseUserProfile.mockReturnValue({
     profile: { name: 'Satoshi' },
     isLoading: false,
-  } as ReturnType<typeof Hooks.useUserProfile>);
+  } as ReturnType<typeof useUserProfile>);
 });
 
 describe('ProfileTagged', () => {

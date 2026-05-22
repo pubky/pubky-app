@@ -1,11 +1,11 @@
-import * as Templates from '@/templates';
-import * as Molecules from '@/molecules';
+import { Metadata } from '@/molecules/Metadata/Metadata';
+import { EditProfile } from '@/templates/Settings/EditProfile/EditProfile';
 
-export const metadata = Molecules.Metadata({
+export const metadata = Metadata({
   title: 'Edit Profile - Settings',
   description: 'Edit your profile on pubky app.',
 });
 
 export default function SettingsEditPage() {
-  return <Templates.EditProfile />;
+  return <EditProfile />;
 }

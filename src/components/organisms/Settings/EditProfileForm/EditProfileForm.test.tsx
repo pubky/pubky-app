@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { EditProfileForm } from './EditProfileForm';
 
 const mockHandlers = {
@@ -20,25 +20,31 @@ const mockHandlers = {
 
 const mockUseProfileForm = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => ({
     userDetails: { name: 'Test User', bio: 'Test bio' },
     currentUserPubky: 'test-pubky-123',
   }),
+}));
+
+vi.mock('@/hooks/useProfileForm/useProfileForm', () => ({
   useProfileForm: (...args: unknown[]) => mockUseProfileForm(...args),
 }));
 
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/DialogAddLink/DialogAddLink', () => {
   return {
-    ...actual,
     DialogAddLink: () => <div data-testid="dialog-add-link" />,
+  };
+});
+
+vi.mock('@/organisms/DialogCropImage/DialogCropImage', () => {
+  return {
     DialogCropImage: () => <div data-testid="dialog-crop-image" />,
   };
 });
 
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/user', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/user')>();
   return {
     ...actual,
     USER_MAX_LINKS: 5,

@@ -1,9 +1,15 @@
 'use client';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
+import { Container } from '@/atoms/Container/Container';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
+import { TimelineError } from '@/molecules/Timeline/TimelineError';
+import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
+import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
+import { PostMain } from '../../PostMain/PostMain';
+import { TimelinePostReplies } from '../PostReplies/PostReplies';
 
 interface TimelinePostsProps {
   postIds: string[];
@@ -24,9 +30,7 @@ interface TimelinePostsProps {
  * PostMain / nested reply inherits the active tags layout via context.
  */
 export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, loadMore }: TimelinePostsProps) {
-  const { navigateToPost } = Hooks.usePostNavigation();
-
-  const { sentinelRef } = Hooks.useInfiniteScroll({
+  const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: loadingMore,
@@ -34,26 +38,45 @@ export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, l
     debounceMs: 20,
   });
 
+  const { handlePostKeyDown } = usePostNavigation();
+  const { setCardRef, onListKeyDown } = usePostListKeyboard();
+
   return (
-    <Molecules.TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
-      <Atoms.Container data-cy="timeline-container">
-        <Atoms.Container data-cy="timeline-posts" overrideDefaults className="space-y-4">
-          {postIds.map((postId) => (
-            <Atoms.Container key={`main_${postId}`} data-cy="post-card">
-              <Organisms.PostMain postId={postId} onClick={() => navigateToPost(postId)} isReply={false} />
-              <Organisms.TimelinePostReplies postId={postId} />
-            </Atoms.Container>
+    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
+      <Container data-cy="timeline-container">
+        <Container
+          data-cy="timeline-posts"
+          overrideDefaults
+          role="feed"
+          className="space-y-4"
+          onKeyDown={onListKeyDown}
+        >
+          {postIds.map((postId, index) => (
+            <Container
+              key={`main_${postId}`}
+              data-cy="post-card"
+              ref={setCardRef(index)}
+              role="article"
+              aria-posinset={index + 1}
+              aria-setsize={postIds.length}
+              tabIndex={0}
+              onKeyDown={(e) => handlePostKeyDown(postId, e)}
+              className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <PostMain postId={postId} isReply={false} />
+              <TimelinePostReplies postId={postId} />
+            </Container>
           ))}
 
-          {loadingMore && <Molecules.TimelineLoadingMore />}
+          {loadingMore && <TimelineLoadingMore />}
 
-          {error && postIds.length > 0 && <Molecules.TimelineError message={error} />}
+          {error && postIds.length > 0 && <TimelineError message={error} />}
 
-          {!hasMore && !loadingMore && postIds.length > 0 && <Molecules.TimelineEndMessage />}
+          {!hasMore && !loadingMore && postIds.length > 0 && <TimelineEndMessage />}
 
-          <Atoms.Container overrideDefaults className="h-5" ref={sentinelRef} />
-        </Atoms.Container>
-      </Atoms.Container>
-    </Molecules.TimelineStateWrapper>
+          <Container overrideDefaults className="h-5" ref={sentinelRef} />
+        </Container>
+      </Container>
+    </TimelineStateWrapper>
   );
 }

@@ -1,24 +1,26 @@
 'use client';
 
 import { memo, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { POST_ROUTES } from '@/app/routes';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { cn } from '@/libs/utils/utils';
+import { PostMentions } from '@/organisms/PostMentions/PostMentions';
+import { PostCodeBlock } from '../PostCodeBlock/PostCodeBlock';
+import { PostHashtags } from '../PostHashtags/PostHashtags';
+import { TRUNCATION_LIMIT } from './PostText.constants';
+import { PostTextProps, RemarkAnchorProps } from './PostText.types';
 import {
-  remarkExtractFirstParagraph,
   remarkDisallowMarkdownLinks,
+  remarkExtractFirstParagraph,
   remarkHashtags,
   remarkMentions,
   remarkPlaintextCodeblock,
   truncateAtWordBoundary,
 } from './PostText.utils';
-import { PostTextProps, RemarkAnchorProps } from './PostText.types';
-import { TRUNCATION_LIMIT } from './PostText.constants';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import { usePathname } from 'next/navigation';
-import { POST_ROUTES } from '@/app/routes';
-import { cn } from '@/libs/utils/utils';
 
 /**
  * Renders formatted text content with markdown, hashtags, mentions, and links.
@@ -76,11 +78,11 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
   );
 
   return (
-    <Atoms.Container
+    <Container
       data-cy="post-text"
       overrideDefaults
       className={cn(
-        'text-base leading-6 font-medium wrap-anywhere hyphens-auto whitespace-pre-line text-secondary-foreground',
+        'text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground',
         className,
       )}
     >
@@ -92,8 +94,8 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
           a(props: RemarkAnchorProps) {
             const { children, className, 'data-type': dataType, node: _node, ref: _ref, ...rest } = props;
 
-            if (dataType === 'hashtag') return <Molecules.PostHashtags {...props} />;
-            if (dataType === 'mention') return <Organisms.PostMentions {...props} />;
+            if (dataType === 'hashtag') return <PostHashtags {...props} />;
+            if (dataType === 'mention') return <PostMentions {...props} />;
 
             return (
               <a
@@ -141,7 +143,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
             );
           },
           code(props) {
-            return <Molecules.PostCodeBlock {...props} />;
+            return <PostCodeBlock {...props} />;
           },
           h1(props) {
             const { children, className, node: _node, ref: _ref, ...rest } = props;
@@ -204,14 +206,15 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
 
       {/* No stopPropagation on this element therefore click takes user to post via parent element */}
       {contentTruncated && (
-        <Atoms.Button
+        <Button
           overrideDefaults
           aria-label="Show full post content"
+          data-allow-post-navigation
           className="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
         >
           Show more
-        </Atoms.Button>
+        </Button>
       )}
-    </Atoms.Container>
+    </Container>
   );
 });

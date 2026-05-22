@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import * as Core from '@/core';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import type { ProfileContextValue, ProfileProviderProps } from './ProfileProvider.types';
 
 /**
@@ -40,37 +40,26 @@ const ProfileContext = React.createContext<ProfileContextValue>(defaultContextVa
  */
 export function ProfileProvider({ pubky: externalPubky, children }: ProfileProviderProps) {
   // Get current authenticated user
-  const { currentUserPubky } = Core.useAuthStore();
+  const { currentUserPubky } = useAuthStore();
 
   // Determine which pubky to use
   const targetPubky = externalPubky ?? currentUserPubky;
 
-  // Determine if this is the user's own profile
-  // Fixed: When viewing another user's profile while unauthenticated,
-  // isOwnProfile should be false, not true
-  const isOwnProfile = React.useMemo(() => {
-    // If external pubky is provided (viewing another user's profile)
-    if (externalPubky) {
-      // Only true if logged in AND viewing own profile
-      return Boolean(currentUserPubky) && currentUserPubky === externalPubky;
-    }
-    // Own profile route (/profile/*) - only true if authenticated
-    return Boolean(currentUserPubky);
-  }, [currentUserPubky, externalPubky]);
+  // Dynamic `/profile/[pubky]` passes `pubky` even when the URL normalizes to "".
+  // Own profile route (`/profile/*`) omits the prop (`externalPubky === undefined`).
+  const isOwnProfile =
+    externalPubky !== undefined
+      ? Boolean(currentUserPubky) && currentUserPubky === externalPubky
+      : Boolean(currentUserPubky);
 
-  // Loading state (only loading if we don't have a pubky yet)
   const isLoading = !targetPubky;
 
-  const contextValue = React.useMemo<ProfileContextValue>(
-    () => ({
-      pubky: targetPubky,
-      isOwnProfile,
-      isLoading,
-    }),
-    [targetPubky, isOwnProfile, isLoading],
+  // React Compiler memoizes JSX props including `value` objects (stable ref while deps unchanged).
+  return (
+    <ProfileContext.Provider value={{ pubky: targetPubky, isOwnProfile, isLoading }}>
+      {children}
+    </ProfileContext.Provider>
   );
-
-  return <ProfileContext.Provider value={contextValue}>{children}</ProfileContext.Provider>;
 }
 
 /**

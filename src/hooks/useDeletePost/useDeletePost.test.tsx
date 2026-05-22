@@ -1,13 +1,13 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PostController } from '@/controllers/post/post';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useDeletePost } from './useDeletePost';
-import * as Core from '@/core';
-import * as Organisms from '@/organisms';
 
-// Mock Core
+// Mock dependencies
 const mockDelete = vi.fn();
 const mockGetPostDetails = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitDelete: vi.fn(),
     getDetails: vi.fn(),
@@ -16,11 +16,13 @@ vi.mock('@/core', () => ({
 
 // Mock molecules (useToast)
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: () => ({
-    toast: mockToast,
-  }),
-}));
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({
+      toast: mockToast,
+    }),
+  };
+});
 
 // Mock organisms (useTimelineFeedContext)
 const mockRemovePosts = vi.fn();
@@ -30,18 +32,20 @@ const mockTimelineFeed = {
   prependPosts: mockPrependPosts,
 };
 
-vi.mock('@/organisms', () => ({
-  useTimelineFeedContext: vi.fn(),
-}));
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => {
+  return {
+    useTimelineFeedContext: vi.fn(),
+  };
+});
 
 describe('useDeletePost', () => {
   const mockPostId = 'author:post-123';
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Core.PostController.commitDelete).mockImplementation(mockDelete);
-    vi.mocked(Core.PostController.getDetails).mockImplementation(mockGetPostDetails);
-    vi.mocked(Organisms.useTimelineFeedContext).mockReturnValue(mockTimelineFeed);
+    vi.mocked(PostController.commitDelete).mockImplementation(mockDelete);
+    vi.mocked(PostController.getDetails).mockImplementation(mockGetPostDetails);
+    vi.mocked(useTimelineFeedContext).mockReturnValue(mockTimelineFeed);
     // Default: post exists (for tests that expect restoration)
     mockGetPostDetails.mockResolvedValue({ id: mockPostId, content: 'Test post' });
   });
@@ -78,7 +82,7 @@ describe('useDeletePost', () => {
       await result.current.deletePost(mockPostId);
     });
 
-    expect(Core.PostController.commitDelete).toHaveBeenCalledWith({
+    expect(PostController.commitDelete).toHaveBeenCalledWith({
       compositePostId: mockPostId,
     });
   });
@@ -217,7 +221,7 @@ describe('useDeletePost', () => {
   });
 
   it('works without timeline feed context', async () => {
-    vi.mocked(Organisms.useTimelineFeedContext).mockReturnValue(null);
+    vi.mocked(useTimelineFeedContext).mockReturnValue(null);
     mockDelete.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useDeletePost());

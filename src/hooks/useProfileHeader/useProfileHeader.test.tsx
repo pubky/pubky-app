@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useProfileHeader } from './useProfileHeader';
-import type { UserProfile, ProfileStats, ProfileActions } from './useProfileHeader';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { type ProfileActions, type ProfileStats, useProfileHeader, type UserProfile } from './useProfileHeader';
 
 // Mock the composed hooks
 let mockProfile: UserProfile | null = null;
@@ -26,40 +27,23 @@ let mockActions: ProfileActions = {
 };
 
 // Mock direct imports (used by useProfileHeader)
-vi.mock('@/hooks/useUserProfile', () => ({
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: vi.fn(() => ({
     profile: mockProfile,
     isLoading: mockProfileLoading,
   })),
 }));
 
-vi.mock('@/hooks/useProfileStats', () => ({
+vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
   useProfileStats: vi.fn(() => ({
     stats: mockStats,
     isLoading: mockStatsLoading,
   })),
 }));
 
-vi.mock('@/hooks/useProfileActions', () => ({
+vi.mock('@/hooks/useProfileActions/useProfileActions', () => ({
   useProfileActions: vi.fn(() => mockActions),
 }));
-
-// Mock barrel export (for compatibility)
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useUserProfile: vi.fn(() => ({
-      profile: mockProfile,
-      isLoading: mockProfileLoading,
-    })),
-    useProfileStats: vi.fn(() => ({
-      stats: mockStats,
-      isLoading: mockStatsLoading,
-    })),
-    useProfileActions: vi.fn(() => mockActions),
-  };
-});
 
 describe('useProfileHeader', () => {
   beforeEach(() => {
@@ -317,7 +301,7 @@ describe('useProfileHeader', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    it('userNotFound is false when loading is in progress', () => {
+    it('userNotFound is false when profile loading is in progress', () => {
       mockProfileLoading = true;
       mockStatsLoading = false;
       mockProfile = null;
@@ -325,6 +309,17 @@ describe('useProfileHeader', () => {
       const { result } = renderHook(() => useProfileHeader('test-user-id'));
 
       expect(result.current.userNotFound).toBe(false);
+      expect(result.current.isLoading).toBe(true);
+    });
+
+    it('userNotFound is true when profile finished with null even if stats are still loading', () => {
+      mockProfileLoading = false;
+      mockStatsLoading = true;
+      mockProfile = null;
+
+      const { result } = renderHook(() => useProfileHeader('test-user-id'));
+
+      expect(result.current.userNotFound).toBe(true);
       expect(result.current.isLoading).toBe(true);
     });
 
@@ -380,6 +375,15 @@ describe('useProfileHeader', () => {
       const { result } = renderHook(() => useProfileHeader('test-user-id'));
 
       expect(result.current.profile).toEqual(mockProfile);
+    });
+  });
+
+  describe('enabled option', () => {
+    it('forwards enabled: false to useUserProfile and useProfileStats', () => {
+      renderHook(() => useProfileHeader('bad-id', { enabled: false }));
+
+      expect(useUserProfile).toHaveBeenCalledWith('bad-id', { enabled: false });
+      expect(useProfileStats).toHaveBeenCalledWith('bad-id', { enabled: false });
     });
   });
 

@@ -1,9 +1,10 @@
-import * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 
 export interface FilesListParams {
-  fileAttachments: Core.TFileAttachmentResult[];
+  fileAttachments: TFileAttachmentResult[];
 }
 
 export interface ReadFilesInput {
-  fileUris: Core.Pubky[];
+  fileUris: Pubky[];
 }

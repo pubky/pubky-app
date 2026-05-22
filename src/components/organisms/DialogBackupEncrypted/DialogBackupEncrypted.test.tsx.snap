@@ -91,7 +91,13 @@ exports[`DialogBackupEncrypted - Snapshots > matches snapshot for default Dialog
             data-size="sm"
             data-testid="typography"
           >
-            We recommend to use 8 characters or more with uppercase, lowercase, numbers, and symbols.
+            We recommend using a long ,[object Object], 
+            <span
+              class="text-destructive"
+            >
+              over 16 characters
+            </span>
+             for better security.
           </p>
         </div>
       </div>
@@ -132,7 +138,6 @@ exports[`DialogBackupEncrypted - Snapshots > matches snapshot for default Dialog
       <button
         class="order-2 sm:order-1"
         data-testid="button-default"
-        disabled=""
       >
         <svg
           aria-hidden="true"

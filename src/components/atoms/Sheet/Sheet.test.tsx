@@ -1,7 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './Sheet';
+import { describe, expect, it } from 'vitest';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './Sheet';
 
 describe('Sheet', () => {
   it('renders Sheet root correctly', () => {

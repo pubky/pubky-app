@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { TimelineFeedVariant } from '@/config';
+import type { TimelineFeedVariant } from '@/config/feed';
 
 export interface TimelineFeedProps {
   /**

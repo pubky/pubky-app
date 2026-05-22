@@ -8,7 +8,7 @@
     "title": "<highlight>Sblocca</highlight> il web.",
     "subtitle": "Le tue chiavi, i tuoi contenuti, le tue regole.",
     "signIn": "Accedi",
-    "createAccount": "Crea account",
+    "joinNow": "Unisciti ora",
     "aTetherCompany": "un'azienda <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tutti i diritti riservati."
   },
@@ -157,7 +157,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "Crea account",
+      "joinNow": "Unisciti ora",
       "identityKeys": "Chiavi di identità",
       "usePubkyRing": "Usa Pubky Ring",
       "yourPubky": "Il tuo pubky",
@@ -383,7 +383,7 @@
       "neverShareMobile": "Non condividere mai questo file e questa password con nessuno.",
       "password": "PASSWORD",
       "passwordPlaceholder": "Inserisci una password forte",
-      "passwordHint": "Raccomandiamo di usare 8 o più caratteri con maiuscole, minuscole, numeri e simboli.",
+      "passwordHint": "Raccomandiamo di usare una <passphraseLink>passphrase</passphraseLink> lunga di <minLen>oltre 16 caratteri</minLen> per una maggiore sicurezza.",
       "repeatPassword": "RIPETI PASSWORD",
       "repeatPasswordPlaceholder": "Ripeti la tua password",
       "passwordsDoNotMatch": "Le password non corrispondono",
@@ -443,10 +443,26 @@
     "viewOriginal": "Vedi post originale",
     "youReposted": "Hai ripubblicato",
     "newPostsSingular": "Vedi {count} nuovo post",
-    "newPostsPlural": "Vedi {count} nuovi post"
+    "newPostsPlural": "Vedi {count} nuovi post",
+    "replies": "Risposte",
+    "notFound": {
+      "title": "Post non trovato",
+      "subtitle": "Questo post non è disponibile. Potrebbe essere stato rimosso oppure il link non è più valido.",
+      "imageAlt": "Post non trovato",
+      "backToFeed": "Torna al feed",
+      "viewProfile": "Vedi profilo",
+      "exploreTags": "Esplora tag"
+    }
   },
   "profile": {
     "title": "Profilo",
+    "notFound": {
+      "title": "Utente non trovato",
+      "subtitle": "L'utente che cerchi non esiste o potrebbe essere stato rimosso.",
+      "imageAlt": "Utente non trovato",
+      "backToFeed": "Torna al feed",
+      "exploreTags": "Esplora tag"
+    },
     "tabs": {
       "notifications": "Notifiche",
       "posts": "Post",
@@ -465,8 +481,9 @@
     },
     "actions": {
       "title": "Azioni profilo",
-      "edit": "Modifica",
+      "editProfile": "Modifica profilo",
       "link": "Link",
+      "profileLink": "Link profilo",
       "loggingOut": "Disconnessione...",
       "signOut": "Esci",
       "unfollowing": "Smetto di seguire...",
@@ -1010,10 +1027,11 @@
     "couldNotFind": "Impossibile trovare la risorsa richiesta"
   },
   "password": {
+    "veryWeak": "Password molto debole",
     "weak": "Password debole",
-    "fair": "Password discreta",
-    "good": "Buona password",
-    "strong": "Password forte!"
+    "moderate": "Password moderata",
+    "strong": "Password forte",
+    "veryStrong": "Password molto forte"
   },
   "quickReply": {
     "prompts": [

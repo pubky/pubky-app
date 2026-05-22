@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { asOpaque, mockResponse } from '@/test-utils';
-import { getSharedFiles, composeShareContent } from './shareTarget';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mockResponse } from '@/test-utils/dom';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { composeShareContent, getSharedFiles } from './shareTarget';
 
 function createMockResponse(blob: Blob, headers: Headers): Response {
   return mockResponse({

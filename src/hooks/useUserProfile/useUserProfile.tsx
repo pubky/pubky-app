@@ -1,9 +1,11 @@
 'use client';
 
-import * as Core from '@/core';
-import * as Config from '@/config';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
+import { DEFAULT_URL } from '@/config/metadata';
+import { FileController } from '@/controllers/file/file';
+import { UserController } from '@/controllers/user/user';
+import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import { withPubkyPrefix } from '@/libs/utils/utils';
+import type { NexusUserDetails, NexusUserLink } from '@/services/nexus/nexus.types';
 
 export interface UserProfile {
   name: string;
@@ -14,12 +16,17 @@ export interface UserProfile {
   avatarUrl?: string;
   link: string;
   /** User's external links (social media, websites, etc.) */
-  links?: Core.NexusUserLink[] | null;
+  links?: NexusUserLink[] | null;
 }
 
 export interface UseUserProfileResult {
   profile: UserProfile | null;
   isLoading: boolean;
+}
+
+export interface UseUserProfileOptions {
+  /** When false, skips local-first read/fetch (e.g. known-invalid pubky in URL). */
+  enabled?: boolean;
 }
 
 /**
@@ -34,30 +41,31 @@ export interface UseUserProfileResult {
  * in the consuming component (e.g., ProfilePageHeader)
  *
  * @param userId - The user ID to fetch profile for
+ * @param options - Optional gate; queries run only when `userId` is non-empty and `enabled` is not false
  * @returns Profile data and loading state
  */
-export function useUserProfile(userId: string): UseUserProfileResult {
-  const { data: userDetails, isLoading } = useLocalFirstQuery<Core.NexusUserDetails>({
-    queryFn: () => Core.UserController.getDetails({ userId }),
-    fetchFn: () => Core.UserController.fetchDetails({ userId }),
-    deps: [userId],
-    enabled: !!userId,
+export function useUserProfile(userId: string, options?: UseUserProfileOptions): UseUserProfileResult {
+  const enabled = isLocalFirstQueryEnabled(userId, options?.enabled);
+
+  const { data: userDetails, isLoading } = useLocalFirstQuery<NexusUserDetails>({
+    queryFn: () => UserController.getDetails({ userId }),
+    fetchFn: () => UserController.fetchDetails({ userId }),
+    deps: [userId, enabled],
+    enabled,
   });
 
   if (!userDetails) {
     return { profile: null, isLoading };
   }
 
-  const avatarUrl = userDetails.image
-    ? Core.FileController.getAvatarUrl(userDetails.id, userDetails.indexed_at)
-    : undefined;
+  const avatarUrl = userDetails.image ? FileController.getAvatarUrl(userDetails.id, userDetails.indexed_at) : undefined;
 
   // Build public key with proper format
   const publicKey = withPubkyPrefix(userId);
 
   // Build profile link using config (SSR-safe)
   // Use DEFAULT_URL from config to avoid window.location.origin which breaks SSR
-  const link = `${Config.DEFAULT_URL}/profile/${userId}`;
+  const link = `${DEFAULT_URL}/profile/${userId}`;
 
   const profile: UserProfile = {
     name: userDetails.name ?? '',

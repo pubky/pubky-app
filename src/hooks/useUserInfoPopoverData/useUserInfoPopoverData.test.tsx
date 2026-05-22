@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUserInfoPopoverData } from './useUserInfoPopoverData';
 
 const mockUseCurrentUserProfile = vi.fn();
@@ -8,13 +8,24 @@ const mockUseProfileStats = vi.fn();
 const mockUseIsFollowing = vi.fn();
 const mockUseProfileConnections = vi.fn();
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => mockUseCurrentUserProfile(),
+}));
+
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: () => mockUseUserProfile(),
+}));
+
+vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
   useProfileStats: () => mockUseProfileStats(),
+}));
+
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => ({
   useIsFollowing: () => mockUseIsFollowing(),
+}));
+
+vi.mock('@/hooks/useProfileConnections/useProfileConnections', () => ({
   useProfileConnections: () => mockUseProfileConnections(),
-  CONNECTION_TYPE: { FOLLOWERS: 'followers', FOLLOWING: 'following' },
 }));
 
 describe('useUserInfoPopoverData', () => {

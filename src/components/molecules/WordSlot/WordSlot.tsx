@@ -1,8 +1,10 @@
-import * as Atoms from '@/atoms';
-import * as Types from './WordSlot.types';
+import { Badge } from '@/atoms/Badge/Badge';
+import { Container } from '@/atoms/Container/Container';
+import { Input } from '@/atoms/Input/Input';
 import { cn } from '@/libs/utils/utils';
+import type { WordSlotProps } from './WordSlot.types';
 
-export const WordSlot = (props: Types.WordSlotProps) => {
+export const WordSlot = (props: WordSlotProps) => {
   const { index, word, mode } = props;
 
   if (mode === 'editable') {
@@ -28,12 +30,12 @@ export const WordSlot = (props: Types.WordSlotProps) => {
     );
 
     return (
-      <Atoms.Container className="relative">
-        <Atoms.Container className={containerClasses}>
-          <Atoms.Badge variant="outline" className={badgeClasses}>
+      <Container className="relative">
+        <Container className={containerClasses}>
+          <Badge variant="outline" className={badgeClasses}>
             {index + 1}
-          </Atoms.Badge>
-          <Atoms.Input
+          </Badge>
+          <Input
             id={`word-slot-input-${index + 1}`}
             value={word}
             placeholder="word"
@@ -47,8 +49,8 @@ export const WordSlot = (props: Types.WordSlotProps) => {
             autoCapitalize="off"
             spellCheck={false}
           />
-        </Atoms.Container>
-      </Atoms.Container>
+        </Container>
+      </Container>
     );
   }
 
@@ -87,12 +89,12 @@ export const WordSlot = (props: Types.WordSlotProps) => {
   };
 
   return (
-    <Atoms.Container className="relative">
-      <Atoms.Container className={containerClasses} onClick={handleClick} title={title}>
-        <Atoms.Badge variant="outline" className={badgeClasses}>
+    <Container className="relative">
+      <Container className={containerClasses} onClick={handleClick} title={title}>
+        <Badge variant="outline" className={badgeClasses}>
           {index + 1}
-        </Atoms.Badge>
-        <Atoms.Input
+        </Badge>
+        <Input
           value={word}
           placeholder="word"
           className={inputColor}
@@ -102,7 +104,7 @@ export const WordSlot = (props: Types.WordSlotProps) => {
             if (canClear) onClear(index);
           }}
         />
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 };

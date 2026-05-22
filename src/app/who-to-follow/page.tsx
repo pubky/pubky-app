@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function WhoToFollowPage() {
-  return <Templates.WhoToFollow />;
-}
+export { WhoToFollowPage as default } from '@/templates/Feed/WhoToFollowPage/WhoToFollowPage';

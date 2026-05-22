@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import * as Config from '@/config';
+import { useCallback, useEffect, useState } from 'react';
+import { type Breakpoint, getBreakpoint } from '@/config/theme';
 
 interface UseIsMobileOptions {
   /**
    * Breakpoint threshold (default: 'lg' = 1024px)
    * Viewport width below this value is considered mobile
    */
-  breakpoint?: Config.Breakpoint;
+  breakpoint?: Breakpoint;
   /**
    * Debounce delay in milliseconds (default: 150ms)
    * Prevents excessive re-renders during window resize
@@ -39,7 +39,7 @@ interface UseIsMobileOptions {
  */
 export function useIsMobile(options: UseIsMobileOptions = {}): boolean {
   const { breakpoint = 'lg', debounceMs = 150 } = options;
-  const threshold = Config.getBreakpoint(breakpoint);
+  const threshold = getBreakpoint(breakpoint);
 
   const [isMobile, setIsMobile] = useState(() => {
     // SSR-safe: return false on server, actual value on client

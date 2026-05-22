@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { DialogAuthExpired } from './DialogAuthExpired';
 
 vi.mock('next-intl', () => ({
@@ -15,7 +15,7 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
 }));
 

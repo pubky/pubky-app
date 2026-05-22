@@ -1,6 +1,5 @@
 'use client';
-
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
 import { PostCardSkeleton } from '@/organisms/PostCardSkeleton/PostCardSkeleton';
 
 const TIMELINE_LOAD_MORE_SKELETON_COUNT = 2;
@@ -12,10 +11,10 @@ const TIMELINE_LOAD_MORE_SKELETON_COUNT = 2;
  */
 export function TimelineLoadingMore() {
   return (
-    <Atoms.Container className="gap-4 py-4">
+    <Container className="gap-4 py-4">
       {Array.from({ length: TIMELINE_LOAD_MORE_SKELETON_COUNT }).map((_, i) => (
         <PostCardSkeleton key={`timeline-load-more-skeleton-${i}`} />
       ))}
-    </Atoms.Container>
+    </Container>
   );
 }

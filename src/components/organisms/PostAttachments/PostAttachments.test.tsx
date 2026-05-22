@@ -1,45 +1,74 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FileController } from '@/controllers/file/file';
+import { FileVariant } from '@/services/nexus/file/file.types';
+import type { NexusFileDetails } from '@/services/nexus/nexus.types';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { PostAttachments } from './PostAttachments';
-import * as Core from '@/core';
-import { asInvalid } from '@/test-utils';
 
 // Mock useToast
 const mockToast = vi.fn();
-vi.mock('@/molecules', () => ({
-  useToast: () => ({ toast: mockToast }),
-  PostAttachmentsImagesAndVideos: vi.fn(({ imagesAndVideos }) => (
-    <div data-testid="post-attachments-images-and-videos" data-count={imagesAndVideos.length}>
-      ImagesAndVideos
-    </div>
-  )),
-  PostAttachmentsAudios: vi.fn(({ audios }) => (
-    <div data-testid="post-attachments-audios" data-count={audios.length}>
-      Audios
-    </div>
-  )),
-  PostAttachmentsGenericFiles: vi.fn(({ genericFiles }) => (
-    <div data-testid="post-attachments-generic-files" data-count={genericFiles.length}>
-      GenericFiles
-    </div>
-  )),
-}));
+vi.mock('@/molecules/PostAttachmentsAudios/PostAttachmentsAudios', () => {
+  return {
+    PostAttachmentsAudios: vi.fn(({ audios }) => (
+      <div data-testid="post-attachments-audios" data-count={audios.length}>
+        Audios
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/molecules/PostAttachmentsGenericFiles/PostAttachmentsGenericFiles', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/molecules/PostAttachmentsGenericFiles/PostAttachmentsGenericFiles')>();
+  return {
+    ...actual,
+    PostAttachmentsGenericFiles: vi.fn(({ genericFiles }) => (
+      <div data-testid="post-attachments-generic-files" data-count={genericFiles.length}>
+        GenericFiles
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos')>();
+  return {
+    ...actual,
+    PostAttachmentsImagesAndVideos: vi.fn(({ imagesAndVideos }) => (
+      <div data-testid="post-attachments-images-and-videos" data-count={imagesAndVideos.length}>
+        ImagesAndVideos
+      </div>
+    )),
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-// Mock core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getMetadata: vi.fn(),
     getFileUrl: vi.fn(),
   },
+}));
+vi.mock('@/services/nexus/file/file.types', () => ({
   FileVariant: {
     MAIN: 'main',
     FEED: 'feed',
@@ -47,11 +76,11 @@ vi.mock('@/core', () => ({
   },
 }));
 
-const mockGetMetadata = vi.mocked(Core.FileController.getMetadata);
-const mockGetFileUrl = vi.mocked(Core.FileController.getFileUrl);
+const mockGetMetadata = vi.mocked(FileController.getMetadata);
+const mockGetFileUrl = vi.mocked(FileController.getFileUrl);
 
 // Helper to create mock metadata
-const createMockFileBase = (id: string, name: string, content_type: string, size: number): Core.NexusFileDetails => ({
+const createMockFileBase = (id: string, name: string, content_type: string, size: number): NexusFileDetails => ({
   id,
   name,
   content_type,
@@ -270,8 +299,8 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:image1', variant: Core.FileVariant.MAIN });
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:image1', variant: Core.FileVariant.FEED });
+        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:image1', variant: FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:image1', variant: FileVariant.FEED });
       });
     });
 
@@ -282,12 +311,12 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:video1', variant: Core.FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:video1', variant: FileVariant.MAIN });
       });
 
       // Videos should not have feed variant
       const feedCalls = mockGetFileUrl.mock.calls.filter(
-        (call) => call[0].fileId === 'user1:video1' && call[0].variant === Core.FileVariant.FEED,
+        (call) => call[0].fileId === 'user1:video1' && call[0].variant === FileVariant.FEED,
       );
       expect(feedCalls).toHaveLength(0);
     });
@@ -299,7 +328,7 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:audio1', variant: Core.FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:audio1', variant: FileVariant.MAIN });
       });
     });
 
@@ -310,7 +339,7 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:doc1', variant: Core.FileVariant.MAIN });
+        expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user1:doc1', variant: FileVariant.MAIN });
       });
     });
   });

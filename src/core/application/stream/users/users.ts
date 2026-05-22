@@ -1,6 +1,17 @@
-import * as Core from '@/core';
-import * as Config from '@/config';
+import type {
+  TFetchStreamFromNexusParams,
+  TFetchUserStreamChunkParams,
+  TGetOrFetchUsersParams,
+  TMissingUsersParams,
+  TUserStreamChunkResponse,
+} from '@/application/stream/users/users.types';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import type { TCacheUserStreamParams } from '@/services/local/stream/users/users.types';
+import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
+
 /**
  * Internal type for fetchStreamFromNexus parameters
  * Extends the internal fetch params type with optional cached stream data
@@ -30,19 +41,48 @@ export class UserStreamApplication {
     skip,
     limit,
     viewerId,
-  }: Core.TFetchUserStreamChunkParams): Promise<Core.TUserStreamChunkResponse> {
+    allowPartialCache,
+  }: TFetchUserStreamChunkParams): Promise<TUserStreamChunkResponse> {
     // Try cache first
-    const cachedStream = await Core.LocalStreamUsersService.findById(streamId);
+    const cachedStream = await LocalStreamUsersService.findById(streamId);
     if (cachedStream) {
-      const nextPageIds = this.getStreamFromCache({ skip, limit, cachedStream });
+      const nextPageIds = this.getStreamFromCache({ skip, limit, cachedStream, allowPartial: allowPartialCache });
       if (nextPageIds) {
         // Cache hit - return undefined skip to signal cache source
-        return { nextPageIds, cacheMissUserIds: [], skip: undefined };
+        return { nextPageIds, cacheMissUserIds: [], skip: undefined, isExhausted: false };
       }
     }
 
     // Cache miss - fetch from Nexus
     return await this.fetchStreamFromNexus({ streamId, skip, limit, viewerId, cachedStream });
+  }
+
+  /**
+   * Refresh a user stream slice from Nexus and persist it locally.
+   *
+   * Unlike `getOrFetchStreamSlice`, this always hits the network. It still reads the cached
+   * stream first so that non-initial pages can be merged/deduped against existing entries
+   * (and so that `skip === 0` can replace the cache atomically).
+   *
+   * Use this when the caller intentionally needs fresh candidates instead of the
+   * cache-first `getOrFetchStreamSlice` behavior.
+   */
+  static async refreshStreamSlice({
+    streamId,
+    skip,
+    limit,
+    viewerId,
+  }: TFetchUserStreamChunkParams): Promise<TUserStreamChunkResponse> {
+    const cachedStream = await LocalStreamUsersService.findById(streamId);
+
+    return await this.fetchStreamFromNexus({
+      streamId,
+      skip,
+      limit,
+      viewerId,
+      cachedStream,
+      replaceCache: skip === 0,
+    });
   }
 
   /**
@@ -52,17 +92,17 @@ export class UserStreamApplication {
    * @param cacheMissUserIds - Array of user IDs that need to be fetched
    * @param viewerId - Optional viewer ID for relationship data
    */
-  static async fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId }: Core.TMissingUsersParams): Promise<void> {
+  static async fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId }: TMissingUsersParams): Promise<void> {
     if (cacheMissUserIds.length === 0) {
       return;
     }
 
     try {
-      const userBatch = await Core.NexusUserStreamService.fetchByIds({
+      const userBatch = await NexusUserStreamService.fetchByIds({
         user_ids: cacheMissUserIds,
         viewer_id: viewerId,
       });
-      await Core.LocalStreamUsersService.persistUsers(userBatch);
+      await LocalStreamUsersService.persistUsers(userBatch);
     } catch (error) {
       Logger.warn('Failed to fetch missing users from Nexus:', { error });
     }
@@ -77,29 +117,35 @@ export class UserStreamApplication {
   private static async fetchStreamFromNexus({
     streamId,
     skip = 0,
-    limit = Config.NEXUS_USERS_PER_PAGE,
+    limit = NEXUS_USERS_PER_PAGE,
     viewerId,
     cachedStream,
-  }: Core.TFetchStreamFromNexusParams): Promise<Core.TUserStreamChunkResponse> {
+    replaceCache = false,
+  }: TFetchStreamFromNexusParams): Promise<TUserStreamChunkResponse> {
     // Fetch user IDs from Nexus
-    const userIds = await Core.NexusUserStreamService.fetch({
+    const userIds = await NexusUserStreamService.fetch({
       streamId,
       params: { skip, limit, viewer_id: viewerId },
     });
 
+    const isExhausted = userIds.length < limit;
+
     // Handle empty response
     if (userIds.length === 0) {
-      return { nextPageIds: [], cacheMissUserIds: [], skip: undefined };
+      if (replaceCache) {
+        await LocalStreamUsersService.upsert({ streamId, stream: [] });
+      }
+      return { nextPageIds: [], cacheMissUserIds: [], skip: undefined, isExhausted };
     }
 
     // Upsert stream (append to existing or create new)
     let stream = userIds;
-    if (cachedStream) {
+    if (cachedStream && !replaceCache) {
       // Filter out duplicates before appending
       const newUserIds = userIds.filter((id) => !cachedStream.stream.includes(id));
       stream = [...cachedStream.stream, ...newUserIds];
     }
-    await Core.LocalStreamUsersService.upsert({ streamId, stream });
+    await LocalStreamUsersService.upsert({ streamId, stream });
 
     // Identify users missing from cache that need full details fetched
     const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds);
@@ -107,7 +153,7 @@ export class UserStreamApplication {
     // Calculate next skip value for pagination
     const nextSkip = skip + userIds.length;
 
-    return { nextPageIds: userIds, cacheMissUserIds, skip: nextSkip };
+    return { nextPageIds: userIds, cacheMissUserIds, skip: nextSkip, isExhausted };
   }
 
   /**
@@ -120,11 +166,16 @@ export class UserStreamApplication {
     skip = 0,
     limit,
     cachedStream,
-  }: Core.TCacheUserStreamParams): Core.Pubky[] | null {
+    allowPartial = false,
+  }: TCacheUserStreamParams): Pubky[] | null {
     // Check if cache has enough data for the requested range
     const endIndex = skip + limit;
     if (cachedStream.stream.length >= endIndex) {
       return cachedStream.stream.slice(skip, endIndex);
+    }
+
+    if (allowPartial && cachedStream.stream.length > skip) {
+      return cachedStream.stream.slice(skip);
     }
 
     // Not enough data in cache
@@ -138,7 +189,7 @@ export class UserStreamApplication {
    * @param userIds - Array of user IDs to ensure are cached
    * @param viewerId - Optional viewer ID for relationship data
    */
-  static async getOrFetchUsers({ userIds, viewerId }: Core.TGetOrFetchUsersParams): Promise<void> {
+  static async getOrFetchUsers({ userIds, viewerId }: TGetOrFetchUsersParams): Promise<void> {
     if (userIds.length === 0) return;
 
     const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds);
@@ -153,7 +204,7 @@ export class UserStreamApplication {
    *
    * @private
    */
-  private static async getNotPersistedUsersInCache(userIds: Core.Pubky[]): Promise<Core.Pubky[]> {
-    return await Core.LocalStreamUsersService.getNotPersistedUsersInCache(userIds);
+  private static async getNotPersistedUsersInCache(userIds: Pubky[]): Promise<Pubky[]> {
+    return await LocalStreamUsersService.getNotPersistedUsersInCache(userIds);
   }
 }

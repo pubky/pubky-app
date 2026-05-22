@@ -1,11 +1,11 @@
 'use client';
-
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { TAGS_PER_PAGE } from '@/hooks/usePostTags/usePostTags.constants';
 
 export function WhoTaggedExpandedListSkeleton() {
   return (
-    <Atoms.Container
+    <Container
       aria-label="Who tagged expanded list"
       role="list"
       overrideDefaults
@@ -13,19 +13,19 @@ export function WhoTaggedExpandedListSkeleton() {
       data-testid="who-tagged-expanded-list-skeleton"
     >
       {Array.from({ length: TAGS_PER_PAGE }).map((_, index) => (
-        <Atoms.Container
+        <Container
           key={`who-tagged-expanded-list-skeleton-row-${index}`}
           overrideDefaults
           className="flex w-full items-center gap-3"
         >
-          <Atoms.Skeleton className="size-10 shrink-0 rounded-full" />
-          <Atoms.Container overrideDefaults className="flex min-w-0 flex-1 flex-col gap-2">
-            <Atoms.Skeleton className="h-4 max-w-[150px] rounded-md" />
-            <Atoms.Skeleton className="h-4 max-w-[130px] rounded-md" />
-          </Atoms.Container>
-          <Atoms.Skeleton className="size-8 shrink-0 rounded-full" />
-        </Atoms.Container>
+          <Skeleton className="size-10 shrink-0 rounded-full" />
+          <Container overrideDefaults className="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton className="h-4 max-w-[150px] rounded-md" />
+            <Skeleton className="h-4 max-w-[130px] rounded-md" />
+          </Container>
+          <Skeleton className="size-8 shrink-0 rounded-full" />
+        </Container>
       ))}
-    </Atoms.Container>
+    </Container>
   );
 }

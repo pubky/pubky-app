@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { debounce, type DebouncedFunc } from 'lodash-es';
-import * as Core from '@/core';
-import { useListboxNavigation } from '@/hooks/useListboxNavigation';
-import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds';
-import type { UseMentionAutocompleteParams, UseMentionAutocompleteResult } from './useMentionAutocomplete.types';
-import { MENTION_DEBOUNCE_MS, MENTION_USER_LIMIT } from './useMentionAutocomplete.constants';
-import { extractMentionQuery } from './useMentionAutocomplete.utils';
+import { SearchController } from '@/controllers/search/search';
+import { useListboxNavigation } from '@/hooks/useListboxNavigation/useListboxNavigation';
+import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import { MENTION_DEBOUNCE_MS, MENTION_USER_LIMIT } from './useMentionAutocomplete.constants';
+import type { UseMentionAutocompleteParams, UseMentionAutocompleteResult } from './useMentionAutocomplete.types';
+import { extractMentionQuery } from './useMentionAutocomplete.utils';
 
 /**
  * Hook for mention autocomplete functionality in post input
@@ -21,7 +22,7 @@ export function useMentionAutocomplete({
   content,
   onSelect,
 }: UseMentionAutocompleteParams): UseMentionAutocompleteResult {
-  const [userIds, setUserIds] = useState<Core.Pubky[]>([]);
+  const [userIds, setUserIds] = useState<Pubky[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
   // Guard against out-of-order async responses
@@ -77,7 +78,7 @@ export function useMentionAutocomplete({
 
         if (atQuery) {
           searchPromises.push(
-            Core.SearchController.getUsersByName({
+            SearchController.getUsersByName({
               prefix: atQuery,
               limit: MENTION_USER_LIMIT,
             }).catch((error) => {
@@ -89,7 +90,7 @@ export function useMentionAutocomplete({
 
         if (pkQuery) {
           searchPromises.push(
-            Core.SearchController.fetchUsersById({
+            SearchController.fetchUsersById({
               prefix: pkQuery,
               limit: MENTION_USER_LIMIT,
             }).catch((error) => {
@@ -108,7 +109,7 @@ export function useMentionAutocomplete({
 
         // Combine and deduplicate
         const uniqueUserIds = Array.from(new Set(results.flat()))
-          .map((id) => id as Core.Pubky)
+          .map((id) => id as Pubky)
           .slice(0, MENTION_USER_LIMIT);
 
         setUserIds(uniqueUserIds);

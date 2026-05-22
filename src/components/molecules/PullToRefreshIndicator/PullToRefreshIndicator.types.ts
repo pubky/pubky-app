@@ -1,4 +1,4 @@
-import type { PullToRefreshState } from '@/hooks/usePullToRefresh';
+import type { PullToRefreshState } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 
 /**
  * Props for the PullToRefreshIndicator component

@@ -1,20 +1,21 @@
 'use client';
 
 import { useLayoutEffect } from 'react';
-import * as Core from '@/core';
+import { useHomeStore } from '@/stores/home/home.store';
+import { LAYOUT } from '@/stores/home/home.types';
 
 /**
  * Hook to reset unsupported wide-shell pages back to columns.
  * Visual layout is intentionally preserved and handled via render-time fallback.
  */
 export function useLayoutReset() {
-  const { layout, setLayout } = Core.useHomeStore();
+  const { layout, setLayout } = useHomeStore();
 
   useLayoutEffect(() => {
-    if (layout !== Core.LAYOUT.WIDE) {
+    if (layout !== LAYOUT.WIDE) {
       return;
     }
 
-    setLayout(Core.LAYOUT.COLUMNS);
+    setLayout(LAYOUT.COLUMNS);
   }, [layout, setLayout]);
 }

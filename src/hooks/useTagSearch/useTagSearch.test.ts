@@ -1,8 +1,8 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MAX_ACTIVE_SEARCH_TAGS } from '@/stores/search/search.constants';
 import { useTagSearch } from './useTagSearch';
 import { buildSearchUrl } from './useTagSearch.utils';
-import { MAX_ACTIVE_SEARCH_TAGS } from '@/core/stores/search/search.constants';
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -18,7 +18,7 @@ const mockRemoveActiveTag = vi.fn();
 const mockAddTag = vi.fn();
 let mockActiveTags: string[] = [];
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/search/search.store', () => ({
   useSearchStore: () => ({
     activeTags: mockActiveTags,
     setActiveTags: mockSetActiveTags,

@@ -8,7 +8,7 @@
     "title": "<highlight>Libérez</highlight> le web.",
     "subtitle": "Vos clés, votre contenu, vos règles.",
     "signIn": "Se connecter",
-    "createAccount": "Créer un compte",
+    "joinNow": "Rejoignez-nous maintenant",
     "aTetherCompany": "une entreprise <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tous droits réservés."
   },
@@ -157,7 +157,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "Créér un compte",
+      "joinNow": "Rejoignez-nous",
       "identityKeys": "Cles d'identite",
       "usePubkyRing": "Utiliser Pubky Ring",
       "yourPubky": "Votre pubky",
@@ -383,7 +383,7 @@
       "neverShareMobile": "Ne partagez jamais ce fichier et ce mot de passe avec qui que ce soit.",
       "password": "MOT DE PASSE",
       "passwordPlaceholder": "Entrez un mot de passe fort",
-      "passwordHint": "Nous recommandons d'utiliser 8 caracteres ou plus avec des majuscules, minuscules, chiffres et symboles.",
+      "passwordHint": "Nous recommandons d'utiliser une <passphraseLink>passphrase</passphraseLink> longue de <minLen>plus de 16 caractères</minLen> pour une meilleure sécurité.",
       "repeatPassword": "REPETER LE MOT DE PASSE",
       "repeatPasswordPlaceholder": "Répétez votre mot de passe",
       "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
@@ -443,10 +443,26 @@
     "viewOriginal": "Voir la publication originale",
     "youReposted": "Vous avez republié",
     "newPostsSingular": "Voir {count} nouvelle publication",
-    "newPostsPlural": "Voir {count} nouvelles publications"
+    "newPostsPlural": "Voir {count} nouvelles publications",
+    "replies": "Réponses",
+    "notFound": {
+      "title": "Publication introuvable",
+      "subtitle": "Cette publication n'est pas disponible. Elle a peut-être été supprimée ou le lien n'est plus valide.",
+      "imageAlt": "Publication introuvable",
+      "backToFeed": "Retour au fil",
+      "viewProfile": "Voir le profil",
+      "exploreTags": "Explorer les tags"
+    }
   },
   "profile": {
     "title": "Profil",
+    "notFound": {
+      "title": "Utilisateur introuvable",
+      "subtitle": "L'utilisateur que vous recherchez n'existe pas ou a peut-être été supprimé.",
+      "imageAlt": "Utilisateur introuvable",
+      "backToFeed": "Retour au fil",
+      "exploreTags": "Explorer les tags"
+    },
     "tabs": {
       "notifications": "Notifications",
       "posts": "Publications",
@@ -465,8 +481,9 @@
     },
     "actions": {
       "title": "Actions du profil",
-      "edit": "Modifiér",
+      "editProfile": "Modifiér le profil",
       "link": "Lien",
+      "profileLink": "Lien du profil",
       "loggingOut": "Déconnexion...",
       "signOut": "Se déconnectér",
       "unfollowing": "Désabonnement...",
@@ -1010,10 +1027,11 @@
     "couldNotFind": "Impossible de trouver la ressource demandee"
   },
   "password": {
+    "veryWeak": "Mot de passe tres faible",
     "weak": "Mot de passe faible",
-    "fair": "Mot de passe moyen",
-    "good": "Bon mot de passe",
-    "strong": "Mot de passe fort !"
+    "moderate": "Mot de passe modere",
+    "strong": "Mot de passe fort",
+    "veryStrong": "Mot de passe tres fort"
   },
   "quickReply": {
     "prompts": [

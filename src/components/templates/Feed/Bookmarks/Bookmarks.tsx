@@ -1,5 +1,5 @@
-import { TIMELINE_FEED_VARIANT } from '@/config';
-import * as Organisms from '@/organisms';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
 /**
  * Bookmarks Page Template
@@ -9,29 +9,12 @@ import * as Organisms from '@/organisms';
  *
  * Sort and Content filters affect the bookmarks stream.
  * Reach filter is hidden as it's not supported by the Nexus API for bookmarks.
+ *
+ * Rendered as `{children}` inside the shared `(feeds)/layout.tsx`, which hoists
+ * the `ContentLayout` shell (sidebars, drawers, right rail) across the feed
+ * cluster so it stays mounted across intra-cluster transitions. The shell
+ * config for `/bookmarks` lives in `app/(feeds)/_shell/configs.tsx`.
  */
 export function Bookmarks() {
-  return (
-    <Organisms.ContentLayout
-      feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS}
-      showRightMobileButton={false}
-      leftSidebarContent={
-        <Organisms.HomeFeedSidebar hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
-      }
-      rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
-      leftDrawerContent={
-        <Organisms.HomeFeedDrawer hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
-      }
-      rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
-      leftDrawerContentMobile={
-        <Organisms.HomeFeedDrawerMobile
-          hideReachFilter
-          allowVisualLayout
-          feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS}
-        />
-      }
-    >
-      <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
-    </Organisms.ContentLayout>
-  );
+  return <TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />;
 }

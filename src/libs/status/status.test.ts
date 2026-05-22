@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { parseStatus, extractEmojiFromStatus } from './status';
-import { STATUS_LABELS, STATUS_EMOJIS, DEFAULT_STATUS, EMOJI_REGEX } from './status.constants';
+import { describe, expect, it } from 'vitest';
+import { extractEmojiFromStatus, parseStatus } from './status';
+import { DEFAULT_STATUS, EMOJI_REGEX, STATUS_EMOJIS, STATUS_LABELS } from './status.constants';
 
 describe('status', () => {
   describe('constants', () => {

@@ -1,4 +1,5 @@
-import * as Atoms from '@/atoms';
+import { Audio } from '@/atoms/Audio/Audio';
+import { Container } from '@/atoms/Container/Container';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 
 type PostAttachmentsAudiosProps = {
@@ -7,9 +8,9 @@ type PostAttachmentsAudiosProps = {
 
 export const PostAttachmentsAudios = ({ audios }: PostAttachmentsAudiosProps) => {
   return (
-    <Atoms.Container className="gap-3">
+    <Container className="gap-3">
       {audios.map((a, i) => (
-        <Atoms.Audio
+        <Audio
           key={i}
           onClick={(e) => {
             e.stopPropagation();
@@ -18,6 +19,6 @@ export const PostAttachmentsAudios = ({ audios }: PostAttachmentsAudiosProps) =>
           className="cursor-auto"
         />
       ))}
-    </Atoms.Container>
+    </Container>
   );
 };

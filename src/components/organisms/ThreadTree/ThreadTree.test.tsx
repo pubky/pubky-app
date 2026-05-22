@@ -1,28 +1,39 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
 import { ThreadTree } from './ThreadTree';
 
-vi.mock('@/organisms', async () => {
-  const actual = await vi.importActual<typeof import('@/organisms')>('@/organisms');
+vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => ({
+  useThreadReplies: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), prefetch: vi.fn() }),
+}));
+
+vi.mock('@/organisms/QuickReply/QuickReply', () => {
   return {
-    ...actual,
     QuickReply: ({ parentPostId }: { parentPostId: string }) => (
       <div data-testid="quick-reply" data-parent-post-id={parentPostId} />
     ),
+  };
+});
+
+vi.mock('@/organisms/ReplyWithNested/ReplyWithNested', () => {
+  return {
     ReplyWithNested: ({ replyId, isLastReply }: { replyId: string; isLastReply: boolean }) => (
       <div data-testid="reply-with-nested" data-reply-id={replyId} data-is-last-reply={String(isLastReply)} />
     ),
   };
 });
 
-vi.mock('@/molecules', async () => {
-  const actual = await vi.importActual<typeof import('@/molecules')>('@/molecules');
+vi.mock('@/molecules/ShowMoreReplies/ShowMoreReplies', () => {
   return {
-    ...actual,
     ShowMoreReplies: ({ count, isLast, onClick }: { count: number; isLast: boolean; onClick: () => void }) => (
       <button
         type="button"
         data-testid="show-more-replies"
+        data-post-list-card="true"
         data-count={String(count)}
         data-is-last={String(isLast)}
         onClick={onClick}
@@ -33,18 +44,13 @@ vi.mock('@/molecules', async () => {
   };
 });
 
-import * as Hooks from '@/hooks';
-
 describe('ThreadTree', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders quick reply only when no replies and quick reply is enabled', () => {
-    vi.spyOn(Hooks, 'usePostNavigation').mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
-    vi.spyOn(Hooks, 'useThreadReplies').mockReturnValue({
+    vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: [],
       totalCount: 0,
       hasMore: false,
@@ -60,10 +66,7 @@ describe('ThreadTree', () => {
   });
 
   it('renders null when no replies and quick reply is disabled', () => {
-    vi.spyOn(Hooks, 'usePostNavigation').mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
-    vi.spyOn(Hooks, 'useThreadReplies').mockReturnValue({
+    vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: [],
       totalCount: 0,
       hasMore: false,
@@ -78,11 +81,7 @@ describe('ThreadTree', () => {
   });
 
   it('renders replies and show-more with expected props', () => {
-    const navigateToPost = vi.fn();
-    vi.spyOn(Hooks, 'usePostNavigation').mockReturnValue({
-      navigateToPost,
-    });
-    vi.spyOn(Hooks, 'useThreadReplies').mockReturnValue({
+    vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1', 'author:reply-2'],
       totalCount: 5,
       hasMore: true,
@@ -101,12 +100,29 @@ describe('ThreadTree', () => {
     expect(screen.getByTestId('show-more-replies')).toHaveAttribute('data-is-last', 'true');
   });
 
+  it('keeps reply cards tabbable and uses total reply count for aria-setsize', () => {
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1', 'author:reply-2'],
+      totalCount: 5,
+      hasMore: true,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    const cards = screen.getAllByRole('article');
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveAttribute('tabindex', '0');
+    expect(cards[1]).toHaveAttribute('tabindex', '0');
+    expect(cards[0]).toHaveAttribute('aria-setsize', '5');
+    expect(cards[1]).toHaveAttribute('aria-setsize', '5');
+  });
+
   it('calls expandAll when show-more is clicked', () => {
     const expandAll = vi.fn(async () => {});
-    vi.spyOn(Hooks, 'usePostNavigation').mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
-    vi.spyOn(Hooks, 'useThreadReplies').mockReturnValue({
+    vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,
       hasMore: true,
@@ -121,11 +137,57 @@ describe('ThreadTree', () => {
     expect(expandAll).toHaveBeenCalledTimes(1);
   });
 
-  it('hides show-more button while expand-all is in progress', () => {
-    vi.spyOn(Hooks, 'usePostNavigation').mockReturnValue({
-      navigateToPost: vi.fn(),
+  it('moves focus between reply cards with j/k keys', () => {
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1', 'author:reply-2'],
+      totalCount: 2,
+      hasMore: false,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
     });
-    vi.spyOn(Hooks, 'useThreadReplies').mockReturnValue({
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    const cards = screen.getAllByRole('article');
+    cards[0].focus();
+    expect(document.activeElement).toBe(cards[0]);
+
+    fireEvent.keyDown(cards[0], { key: 'j' });
+    expect(document.activeElement).toBe(cards[1]);
+
+    fireEvent.keyDown(cards[1], { key: 'k' });
+    expect(document.activeElement).toBe(cards[0]);
+  });
+
+  it('moves focus to "show more replies" with j and allows expanding', () => {
+    const expandAll = vi.fn(async () => {});
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1'],
+      totalCount: 6,
+      hasMore: true,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll,
+    });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    const card = screen.getByRole('article');
+    const showMoreButton = screen.getByTestId('show-more-replies');
+
+    card.focus();
+    expect(document.activeElement).toBe(card);
+
+    fireEvent.keyDown(card, { key: 'j' });
+    expect(document.activeElement).toBe(showMoreButton);
+
+    fireEvent.click(showMoreButton);
+    expect(expandAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides show-more button while expand-all is in progress', () => {
+    vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,
       hasMore: true,
@@ -142,10 +204,7 @@ describe('ThreadTree', () => {
 
 describe('ThreadTree - Snapshots', () => {
   it('matches snapshot with replies and show-more', () => {
-    vi.spyOn(Hooks, 'usePostNavigation').mockReturnValue({
-      navigateToPost: vi.fn(),
-    });
-    vi.spyOn(Hooks, 'useThreadReplies').mockReturnValue({
+    vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,
       hasMore: true,

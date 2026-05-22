@@ -1,8 +1,14 @@
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
 import React from 'react';
 import { useTranslations } from 'next-intl';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { PageHeader } from '@/atoms/PageHeader/PageHeader';
+import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
+import { Typography } from '@/atoms/Typography/Typography';
+import { HumanFooter } from '@/molecules/HumanFooter/HumanFooter';
+import { HumanSmsCard } from '@/molecules/HumanSmsCard/HumanSmsCard';
+import { PageTitle } from '@/molecules/Page/Page';
+import { HumanBitcoinCard } from '../HumanBitcoinCard/HumanBitcoinCard';
 import type { HumanSelectionProps } from './HumanSelection.types';
 
 export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanSelectionProps) => {
@@ -12,15 +18,15 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
   const isDevMode = process.env.NODE_ENV === 'development' || isCypressRunning;
   return (
     <React.Fragment>
-      <Atoms.PageHeader>
-        <Molecules.PageTitle size="large">
+      <PageHeader>
+        <PageTitle size="large">
           {t.rich('title', {
             highlight: (chunks) => <span className="text-brand">{chunks}</span>,
           })}
-        </Molecules.PageTitle>
-        <Atoms.PageSubtitle>
+        </PageTitle>
+        <PageSubtitle>
           {t('subtitle')}{' '}
-          <Atoms.Button
+          <Button
             overrideDefaults
             onClick={onInviteCodeClick}
             className="inline cursor-pointer text-brand transition-all hover:font-bold"
@@ -28,43 +34,38 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
             data-cy="invite-code-link"
           >
             {t('inviteCode')}
-          </Atoms.Button>
-        </Atoms.PageSubtitle>
-      </Atoms.PageHeader>
+          </Button>
+        </PageSubtitle>
+      </PageHeader>
 
-      <Atoms.Container data-testid="human-verification-cards" className="gap-6 lg:flex-row lg:items-stretch lg:gap-8">
-        <Molecules.HumanSmsCard onClick={() => onClick('sms')} />
-        <Organisms.HumanBitcoinCard onClick={() => onClick('payment')} />
-      </Atoms.Container>
+      <Container data-testid="human-verification-cards" className="gap-6 lg:flex-row lg:items-stretch lg:gap-8">
+        <HumanSmsCard onClick={() => onClick('sms')} />
+        <HumanBitcoinCard onClick={() => onClick('payment')} />
+      </Container>
       {isDevMode && (
-        <Atoms.Container className="relative mt-6 flex items-start rounded border px-4 py-6">
-          <Atoms.Typography
+        <Container className="relative mt-6 flex items-start rounded border px-4 py-6">
+          <Typography
             as="p"
             className="absolute top-[-14px] left-[-6px] ml-4 bg-background px-2 text-base leading-6 font-medium text-secondary-foreground/80"
           >
             {t('devMode')}
-          </Atoms.Typography>
-          <Atoms.Container className="flex flex-row gap-2">
-            <Atoms.Button
-              data-testid="human-dev-skip-btn"
-              variant="secondary"
-              onClick={() => onDevMode('skip')}
-              className=""
-            >
+          </Typography>
+          <Container className="flex flex-row gap-2">
+            <Button data-testid="human-dev-skip-btn" variant="secondary" onClick={() => onDevMode('skip')} className="">
               {t('skip')}
-            </Atoms.Button>
-            <Atoms.Button
+            </Button>
+            <Button
               data-testid="human-dev-invite-code-btn"
               variant="secondary"
               onClick={() => onDevMode('inviteCode')}
               className=""
             >
               {t('enterInviteCode')}
-            </Atoms.Button>
-          </Atoms.Container>
-        </Atoms.Container>
+            </Button>
+          </Container>
+        </Container>
       )}
-      <Molecules.HumanFooter />
+      <HumanFooter />
     </React.Fragment>
   );
 };

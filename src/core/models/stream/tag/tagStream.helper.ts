@@ -1,4 +1,4 @@
-import { NexusHotTag } from '@/core';
+import type { NexusHotTag } from '@/services/nexus/nexus.types';
 import { TagStreamModelSchema } from './tagStream.schema';
 import { TagStreamTypes } from './tagStream.types';
 

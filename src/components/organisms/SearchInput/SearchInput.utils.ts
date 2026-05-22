@@ -1,4 +1,4 @@
-import { MAX_ACTIVE_SEARCH_TAGS } from '@/core/stores/search/search.constants';
+import { MAX_ACTIVE_SEARCH_TAGS } from '@/stores/search/search.constants';
 
 /**
  * Parse tags from URL search params

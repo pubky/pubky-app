@@ -1,0 +1,11 @@
+import { ProfileProfile } from '@/organisms/ProfileProfile/ProfileProfile';
+
+/**
+ * ProfileOverviewPage Template
+ *
+ * Template for displaying the current user's profile (mobile view).
+ * Delegates all logic to the ProfileProfile organism.
+ */
+export function ProfileOverviewPage() {
+  return <ProfileProfile />;
+}

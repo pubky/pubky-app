@@ -1,29 +1,30 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
+import { Container } from '@/atoms/Container/Container';
+import { FileController } from '@/controllers/file/file';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { SearchInput } from '@/organisms/SearchInput/SearchInput';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import { HeaderNavigationButtons } from '../Header/Header';
 
 export const HeaderSignIn = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
-  const { userDetails, currentUserPubky } = Hooks.useCurrentUserProfile();
-  const unreadNotifications = Core.useNotificationStore((state) => state.selectUnread());
+  const { userDetails, currentUserPubky } = useCurrentUserProfile();
+  const unreadNotifications = useNotificationStore((state) => state.selectUnread());
 
   return (
-    <Atoms.Container className="min-w-0 flex-1 flex-row items-center justify-end gap-3" {...props}>
-      <Organisms.SearchInput />
-      <Molecules.HeaderNavigationButtons
+    <Container className="min-w-0 flex-1 flex-row items-center justify-end gap-3" {...props}>
+      <SearchInput />
+      <HeaderNavigationButtons
         avatarImage={
           currentUserPubky && userDetails?.image
-            ? Core.FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
+            ? FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
             : undefined
         }
         avatarName={userDetails?.name}
         avatarSeed={currentUserPubky || userDetails?.name || 'user'}
         counter={unreadNotifications}
       />
-    </Atoms.Container>
+    </Container>
   );
 };

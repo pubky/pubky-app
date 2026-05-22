@@ -1,9 +1,10 @@
 'use client';
-
-import { Container } from '@/atoms/Container';
-import * as Core from '@/core';
-
-import { FilterReach, FilterSort, FilterLayout, FilterContent } from '@/molecules/Filters/';
+import { Container } from '@/atoms/Container/Container';
+import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
+import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
+import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
+import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
+import { useHomeStore } from '@/stores/home/home.store';
 
 /**
  * SinglePostFilters
@@ -12,7 +13,7 @@ import { FilterReach, FilterSort, FilterLayout, FilterContent } from '@/molecule
  * Currently supports layout only.
  */
 function SinglePostFilters() {
-  const { layout, setLayout } = Core.useHomeStore();
+  const { layout, setLayout } = useHomeStore();
 
   return (
     <Container overrideDefaults className="flex flex-col gap-6">

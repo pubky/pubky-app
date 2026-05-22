@@ -1,27 +1,29 @@
 'use client';
 
 import * as React from 'react';
+import { Flame, SquareAsterisk } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import * as Molecules from '@/molecules';
-import { SquareAsterisk, Flame } from 'lucide-react';
+import { SORT, type SortType } from '@/stores/home/home.types';
+import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
+import { BaseFilterProps } from '../Filters.types';
+
 export function FilterSort({
   selectedTab,
-  defaultSelectedTab = Core.SORT.TIMELINE,
+  defaultSelectedTab = SORT.TIMELINE,
   onTabChange,
   disabled,
-}: Molecules.BaseFilterProps<Core.SortType>) {
+}: BaseFilterProps<SortType>) {
   const t = useTranslations('filters.sort');
   const items = React.useMemo(
     () => [
       {
-        key: Core.SORT.TIMELINE,
+        key: SORT.TIMELINE,
         label: t('recent'),
         icon: SquareAsterisk,
         disabled,
       },
       {
-        key: Core.SORT.ENGAGEMENT,
+        key: SORT.ENGAGEMENT,
         label: t('popularity'),
         icon: Flame,
         disabled,
@@ -30,7 +32,7 @@ export function FilterSort({
     [t, disabled],
   );
   return (
-    <Molecules.FilterRadioGroup
+    <FilterRadioGroup
       title={t('title')}
       items={items}
       selectedValue={selectedTab}

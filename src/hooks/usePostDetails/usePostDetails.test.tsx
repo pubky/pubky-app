@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostDetails } from './usePostDetails';
 
-// Mock @/core
+// Mock direct dependencies
 const mockReadPostDetails = vi.fn();
 const mockFetch = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/post/post', () => ({
   PostController: {
     getDetails: (params: { compositeId: string }) => mockReadPostDetails(params),
     fetch: (params: { compositeId: string }) => mockFetch(params),
@@ -82,6 +82,12 @@ describe('usePostDetails', () => {
     renderHook(() => usePostDetails(null));
 
     // The query function returns early with null, so getPostDetails is never called
+    expect(mockReadPostDetails).not.toHaveBeenCalled();
+  });
+
+  it('does not call getDetails when enabled is false', () => {
+    renderHook(() => usePostDetails('user-123:post-123', { enabled: false }));
+
     expect(mockReadPostDetails).not.toHaveBeenCalled();
   });
 

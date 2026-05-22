@@ -2,12 +2,12 @@
 
 exports[`TagInput - Snapshots > matches snapshot 1`] = `
 <div
-  class="relative flex h-8 w-full items-center gap-1 rounded-md border border-dashed border-input pr-1 pl-3 shadow-sm"
+  class="relative flex h-8 w-full items-center gap-1 rounded-md pr-1 pl-3 border border-dashed border-input shadow-sm transition-all duration-300"
   data-slot="popover-anchor"
   data-testid="container"
 >
   <input
-    class="flex h-9 w-full min-w-0 rounded-md border border-input transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 flex-1 bg-transparent p-0 text-sm leading-5 font-bold caret-white border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none placeholder:font-bold placeholder:text-input text-input"
+    class="flex w-full min-w-0 rounded-md border border-input transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 -mt-0.5 h-full flex-1 bg-transparent p-0 text-sm leading-8 font-bold caret-white border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none placeholder:font-bold placeholder:text-input text-input"
     data-cy="add-tag-input"
     data-testid="input"
     maxlength="20"
@@ -17,7 +17,65 @@ exports[`TagInput - Snapshots > matches snapshot 1`] = `
   />
   <button
     aria-label="Open emoji picker"
-    class="shadow-xs-dark hover:shadow-xs-dark inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1"
+    class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1 shadow-xs-dark hover:shadow-xs-dark"
+    data-slot="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-smile size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+      />
+      <path
+        d="M8 14s1.5 2 4 2 4-2 4-2"
+      />
+      <line
+        x1="9"
+        x2="9.01"
+        y1="9"
+        y2="9"
+      />
+      <line
+        x1="15"
+        x2="15.01"
+        y1="9"
+        y2="9"
+      />
+    </svg>
+  </button>
+</div>
+`;
+
+exports[`TagInput - Snapshots > matches snapshot in plain variant 1`] = `
+<div
+  class="relative flex h-8 w-full items-center gap-1 rounded-md pr-1 pl-3"
+  data-slot="popover-anchor"
+  data-testid="container"
+>
+  <input
+    class="flex w-full min-w-0 rounded-md border border-input transition-[color,box-shadow] selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 -mt-0.5 h-full flex-1 bg-transparent p-0 text-sm leading-8 font-bold caret-white border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none placeholder:font-bold placeholder:text-input text-input"
+    data-cy="add-tag-input"
+    data-testid="input"
+    maxlength="20"
+    placeholder="add tag"
+    type="text"
+    value=""
+  />
+  <button
+    aria-label="Open emoji picker"
+    class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1"
     data-slot="button"
   >
     <svg

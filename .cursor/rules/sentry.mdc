@@ -1,0 +1,13 @@
+---
+description: Sentry observability conventions — capture funnel and direct-call rule
+globs: src/**/*
+alwaysApply: false
+---
+
+# Sentry Rules
+
+@docs/sentry.md
+
+- Do not attach raw user data to Sentry events. If an `Err.*` context includes `email`, `phone`, `phoneNumber`, `name`,
+  `firstName`, `lastName`, `displayName`, `username`, `bio`, `file`, `user`, raw Pubky keys, or Pubky URLs, verify
+  `src/libs/observability/sentry.ts` redacts it before merge.

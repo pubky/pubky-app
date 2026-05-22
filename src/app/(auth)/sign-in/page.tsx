@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function SignInPage() {
-  return <Templates.SignIn />;
-}
+export { SignInPage as default } from '@/templates/Auth/SignInPage/SignInPage';

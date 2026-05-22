@@ -1,29 +1,31 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { ButtonFilters } from './ButtonFilters';
 
 // Mock the atoms
-vi.mock('@/atoms', () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-    variant,
-    size,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    className?: string;
-    variant?: string;
-    size?: string;
-    [key: string]: unknown;
-  }) => (
-    <button onClick={onClick} className={className} data-variant={variant} data-size={size} {...props}>
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      className,
+      variant,
+      size,
+      ...props
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      className?: string;
+      variant?: string;
+      size?: string;
+      [key: string]: unknown;
+    }) => (
+      <button onClick={onClick} className={className} data-variant={variant} data-size={size} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
 
 describe('ButtonFilters', () => {
   it('renders with default props', () => {

@@ -1,4 +1,5 @@
-import { NexusSearchService, type TPrefixSearchParams, type TSearchResult } from '@/core/services/nexus';
+import { NexusSearchService } from '@/services/nexus/search/search';
+import type { TPrefixSearchParams, TSearchResult } from '@/services/nexus/search/search.types';
 
 /**
  * Search Application Layer

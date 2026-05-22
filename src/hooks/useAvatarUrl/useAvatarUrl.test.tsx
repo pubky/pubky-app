@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useAvatarUrl } from './useAvatarUrl';
-import * as Core from '@/core';
 
-// Mock @/core
+// Mock file controller
 const mockGetAvatarUrl = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: (pubky: string) => mockGetAvatarUrl(pubky),
   },
@@ -22,7 +22,7 @@ describe('useAvatarUrl', () => {
       id: 'test-user',
       name: 'Test User',
       image: 'avatar.jpg',
-    } as Core.NexusUserDetails;
+    } as NexusUserDetails;
 
     const { result } = renderHook(() => useAvatarUrl(userDetails));
 
@@ -35,7 +35,7 @@ describe('useAvatarUrl', () => {
       id: 'test-user',
       name: 'Test User',
       image: null,
-    } as Core.NexusUserDetails;
+    } as NexusUserDetails;
 
     const { result } = renderHook(() => useAvatarUrl(userDetails));
 
@@ -48,7 +48,7 @@ describe('useAvatarUrl', () => {
       id: 'test-user',
       name: 'Test User',
       image: null,
-    } as Core.NexusUserDetails;
+    } as NexusUserDetails;
 
     const { result } = renderHook(() => useAvatarUrl(userDetails));
 
@@ -75,7 +75,7 @@ describe('useAvatarUrl', () => {
       id: 'test-user',
       name: 'Test User',
       image: 'avatar.jpg',
-    } as Core.NexusUserDetails;
+    } as NexusUserDetails;
 
     const { result, rerender } = renderHook(() => useAvatarUrl(userDetails));
 
@@ -97,7 +97,7 @@ describe('useAvatarUrl', () => {
       id: 'user-1',
       name: 'User 1',
       image: 'avatar1.jpg',
-    } as Core.NexusUserDetails;
+    } as NexusUserDetails;
 
     const { result, rerender } = renderHook(({ userDetails }) => useAvatarUrl(userDetails), {
       initialProps: { userDetails: userDetails1 },
@@ -109,7 +109,7 @@ describe('useAvatarUrl', () => {
       id: 'user-2',
       name: 'User 2',
       image: 'avatar2.jpg',
-    } as Core.NexusUserDetails;
+    } as NexusUserDetails;
 
     rerender({ userDetails: userDetails2 });
 
@@ -124,7 +124,7 @@ describe('useAvatarUrl', () => {
       id: 'test-user',
       name: 'Test User',
       image: null,
-    } as Core.NexusUserDetails;
+    } as NexusUserDetails;
 
     const { result, rerender } = renderHook(({ userDetails }) => useAvatarUrl(userDetails), {
       initialProps: { userDetails: userDetails1 },
@@ -136,7 +136,7 @@ describe('useAvatarUrl', () => {
       id: 'test-user',
       name: 'Test User',
       image: 'avatar.jpg',
-    } as Core.NexusUserDetails;
+    } as NexusUserDetails;
 
     rerender({ userDetails: userDetails2 });
 
@@ -157,7 +157,7 @@ describe('useAvatarUrl - Snapshots', () => {
       name: 'Snapshot User',
       image: 'avatar.jpg',
       bio: 'A user for snapshot testing',
-    } as Core.NexusUserDetails;
+    } as NexusUserDetails;
 
     const { result } = renderHook(() => useAvatarUrl(userDetails));
 
@@ -169,7 +169,7 @@ describe('useAvatarUrl - Snapshots', () => {
       id: 'snapshot-user',
       name: 'Snapshot User',
       image: null,
-    } as Core.NexusUserDetails;
+    } as NexusUserDetails;
 
     const { result } = renderHook(() => useAvatarUrl(userDetails));
 

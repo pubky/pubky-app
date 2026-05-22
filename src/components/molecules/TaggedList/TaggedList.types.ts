@@ -1,4 +1,4 @@
-import type { TagKind } from '@/core';
+import type { TagKind } from '@/application/tag/tag.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 
 export interface TaggedListProps {

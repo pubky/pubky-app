@@ -1,11 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import type { PostInputActionBarProps } from './PostInputActionBar.types';
-import { useIsMobile } from '@/hooks';
-import { Loader2, Send, Smile, Image, Newspaper } from 'lucide-react';
+import { Image, Loader2, Newspaper, Send, Smile } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { cn } from '@/libs/utils/utils';
+import type { PostInputActionBarProps } from './PostInputActionBar.types';
+
 interface ActionButtonContentProps {
   Icon: React.ComponentType<{
     className?: string;
@@ -45,10 +48,10 @@ export function PostInputActionBar({
   const postButtonText = isSubmitting ? 'Posting...' : postButtonLabel;
   const postButtonIconClassName = isSubmitting ? 'animate-spin' : undefined;
   return (
-    <Atoms.Container className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center" overrideDefaults>
-      <Atoms.Container className="flex items-center gap-2" overrideDefaults>
+    <Container className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center" overrideDefaults>
+      <Container className="flex items-center gap-2" overrideDefaults>
         {!isArticle ? (
-          <Atoms.Button
+          <Button
             data-cy={getButtonDataCy('Add emoji')}
             {...commonButtonProps}
             onClick={onEmojiClick}
@@ -56,10 +59,10 @@ export function PostInputActionBar({
             aria-label="Add emoji"
           >
             <ActionButtonContent Icon={Smile} />
-          </Atoms.Button>
+          </Button>
         ) : null}
         {!isArticle && !isEdit ? (
-          <Atoms.Button
+          <Button
             data-cy={getButtonDataCy('Add image')}
             {...commonButtonProps}
             onClick={onImageClick}
@@ -67,10 +70,10 @@ export function PostInputActionBar({
             aria-label="Add image"
           >
             <ActionButtonContent Icon={Image} />
-          </Atoms.Button>
+          </Button>
         ) : null}
         {!hideArticleButton ? (
-          <Atoms.Button
+          <Button
             data-cy={getButtonDataCy('Add article')}
             {...commonButtonProps}
             onClick={onArticleClick}
@@ -78,20 +81,20 @@ export function PostInputActionBar({
             aria-label="Add article"
           >
             <ActionButtonContent Icon={Newspaper} />
-          </Atoms.Button>
+          </Button>
         ) : null}
-      </Atoms.Container>
-      <Atoms.Container className="flex items-center justify-end gap-2" overrideDefaults>
+      </Container>
+      <Container className="flex items-center justify-end gap-2" overrideDefaults>
         {characterLimit ? (
-          <Atoms.Typography
+          <Typography
             data-cy="post-input-action-bar-character-count"
-            className="hidden shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground sm:block"
+            className="hidden shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums sm:block"
             overrideDefaults
           >
             {characterLimit.count}/{characterLimit.max}
-          </Atoms.Typography>
+          </Typography>
         ) : null}
-        <Atoms.Button
+        <Button
           data-cy={getButtonDataCy(postButtonAriaText)}
           {...commonButtonProps}
           onClick={onPostClick}
@@ -101,14 +104,14 @@ export function PostInputActionBar({
           variant={'default'}
           size={isMobile ? 'default' : 'sm'}
         >
-          <Atoms.Container className="flex items-center gap-2" overrideDefaults>
+          <Container className="flex items-center gap-2" overrideDefaults>
             <PostButtonIconComponent className={cn('size-4 text-brand', postButtonIconClassName)} strokeWidth={2} />
-            <Atoms.Typography as="span" size="sm" className={'text-brand'}>
+            <Typography as="span" size="sm" className={'text-brand'}>
               {postButtonText}
-            </Atoms.Typography>
-          </Atoms.Container>
-        </Atoms.Button>
-      </Atoms.Container>
-    </Atoms.Container>
+            </Typography>
+          </Container>
+        </Button>
+      </Container>
+    </Container>
   );
 }

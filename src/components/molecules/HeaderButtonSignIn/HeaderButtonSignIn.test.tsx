@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { HeaderButtonSignIn } from './HeaderButtonSignIn';
 
 // Mock Next.js navigation
@@ -11,28 +11,30 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Button: ({
-    children,
-    onClick,
-    id,
-    variant,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    id?: string;
-    variant?: string;
-    [key: string]: unknown;
-  }) => (
-    <button id={id} onClick={onClick} data-variant={variant} {...props}>
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      onClick,
+      id,
+      variant,
+      ...props
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      id?: string;
+      variant?: string;
+      [key: string]: unknown;
+    }) => (
+      <button id={id} onClick={onClick} data-variant={variant} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
 
 // Mock app
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   ONBOARDING_ROUTES: {
     HUMAN: '/onboarding/human',
   },

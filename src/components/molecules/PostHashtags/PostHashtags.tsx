@@ -1,9 +1,9 @@
 import { JSX } from 'react';
-import { RemarkAnchorProps } from '../PostText/PostText.types';
-import { extractTextFromChildren } from '../PostText/PostText.utils';
-import * as Atoms from '@/atoms';
+import { Link } from '@/atoms/Link/Link';
 import { Bitkit, Blocktank, BTCIcon, PubkyIcon, Synonym, Tether } from '@/icons';
 import { cn } from '@/libs/utils/utils';
+import { RemarkAnchorProps } from '../PostText/PostText.types';
+import { extractTextFromChildren } from '../PostText/PostText.utils';
 
 type TagIcons = {
   [key: string]: JSX.Element | undefined;
@@ -26,13 +26,13 @@ export const PostHashtags = (props: RemarkAnchorProps) => {
   const Icon = tagIcons[hashtagText.toLowerCase()] || null;
 
   return (
-    <Atoms.Link
+    <Link
       {...rest}
       href={href || ''}
       onClick={(e) => e.stopPropagation()}
       className={cn(className, 'inline-flex items-center gap-x-1 text-base')}
     >
       {children} {Icon}
-    </Atoms.Link>
+    </Link>
   );
 };

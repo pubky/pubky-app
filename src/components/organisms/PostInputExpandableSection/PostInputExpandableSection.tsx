@@ -1,14 +1,17 @@
 'use client';
 
+import { Edit, MessageCircle, Repeat } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import { PostInputActionBar } from '../PostInputActionBar';
-import { PostInputTags } from '../PostInputTags';
-import { getButtonLabel } from './PostInputExpandableSection.utils';
-import type { PostInputExpandableSectionProps } from './PostInputExpandableSection.types';
+import { Container } from '@/atoms/Container/Container';
+import { EmojiPickerDialog } from '@/molecules/EmojiPickerDialog/EmojiPickerDialog';
+import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
+import { PostTag } from '@/molecules/PostTag/PostTag';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
-import { Edit, Repeat, MessageCircle } from 'lucide-react';
+import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
+import { PostInputTags } from '../PostInputTags/PostInputTags';
+import type { PostInputExpandableSectionProps } from './PostInputExpandableSection.types';
+import { getButtonLabel } from './PostInputExpandableSection.utils';
+
 const IconsButton = {
   [POST_INPUT_VARIANT.EDIT]: Edit,
   [POST_INPUT_VARIANT.REPOST]: Repeat,
@@ -97,13 +100,13 @@ export function PostInputExpandableSection({
             }}
             className={`overflow-hidden ${className || ''}`}
           >
-            <Atoms.Container className="gap-6">
-              {hasContent && !isArticle && <Molecules.PostLinkEmbeds content={content} />}
+            <Container className="gap-6">
+              {hasContent && !isArticle && <PostLinkEmbeds content={content} />}
 
               {tags.length > 0 && (
-                <Atoms.Container className="flex flex-wrap items-center gap-2" overrideDefaults>
+                <Container className="flex flex-wrap items-center gap-2" overrideDefaults>
                   {tags.map((tag, index) => (
-                    <Molecules.PostTag
+                    <PostTag
                       key={`${tag}-${index}`}
                       label={tag}
                       showClose={!isUiDisabled}
@@ -112,9 +115,9 @@ export function PostInputExpandableSection({
                       }}
                     />
                   ))}
-                </Atoms.Container>
+                </Container>
               )}
-              <Atoms.Container className="justify-between gap-4 md:flex-row md:gap-0">
+              <Container className="justify-between gap-4 md:flex-row md:gap-0">
                 <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
 
                 <PostInputActionBar
@@ -132,13 +135,13 @@ export function PostInputExpandableSection({
                   postButtonIcon={IconsButton[submitMode]}
                   characterLimit={characterLimit}
                 />
-              </Atoms.Container>
-            </Atoms.Container>
+              </Container>
+            </Container>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <Molecules.EmojiPickerDialog
+      <EmojiPickerDialog
         open={showEmojiPicker && !isUiDisabled}
         onOpenChange={setShowEmojiPicker}
         onEmojiSelect={onEmojiSelect}

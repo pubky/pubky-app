@@ -1,7 +1,12 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
+import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
+import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
+import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
+import type { Pubky } from '@/models/models.types';
+import { useSearchStore } from '@/stores/search/search.store';
 import { SearchInput } from './SearchInput';
-import type { Pubky } from '@/core';
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -19,7 +24,7 @@ vi.mock('next/navigation', () => ({
 // Mock hooks
 const mockAddTagToSearch = vi.fn();
 const mockRemoveTagFromSearch = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useSearchInput/useSearchInput', () => ({
   useSearchInput: vi.fn(() => ({
     inputValue: '',
     isFocused: false,
@@ -29,6 +34,9 @@ vi.mock('@/hooks', () => ({
     handleFocus: vi.fn(),
     clearInputValue: vi.fn(),
   })),
+}));
+
+vi.mock('@/hooks/useHotTags/useHotTags', () => ({
   useHotTags: vi.fn(() => ({
     tags: [{ name: 'pubky', count: 10 }],
     rawTags: [],
@@ -36,27 +44,36 @@ vi.mock('@/hooks', () => ({
     error: null,
     refetch: vi.fn(),
   })),
+}));
+
+vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', () => ({
   useSearchAutocomplete: vi.fn(() => ({
     tags: [],
     users: [],
     isLoading: false,
   })),
+}));
+
+vi.mock('@/hooks/useTagSearch/useTagSearch', () => ({
   useTagSearch: vi.fn(() => ({
     addTagToSearch: mockAddTagToSearch,
     removeTagFromSearch: mockRemoveTagFromSearch,
     activeTags: [],
     isReadOnly: false,
   })),
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => false,
 }));
 
-// Mock core
+// Mock dependencies
 const mockAddUser = vi.fn();
 const mockAddTag = vi.fn();
 const mockSetActiveTags = vi.fn();
 const mockAddActiveTag = vi.fn();
 const mockRemoveActiveTag = vi.fn();
-vi.mock('@/core', () => ({
+vi.mock('@/stores/search/search.store', () => ({
   useSearchStore: vi.fn(() => ({
     activeTags: [],
     setActiveTags: mockSetActiveTags,
@@ -70,128 +87,157 @@ vi.mock('@/core', () => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    style,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; style?: React.CSSProperties }>) => (
-    <div className={className} style={style} {...props}>
-      {children}
-    </div>
-  ),
-  Input: ({
-    type,
-    placeholder,
-    value,
-    onChange,
-    onKeyDown,
-    onFocus,
-    readOnly,
-    className,
-    ...props
-  }: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input
-      type={type}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      onKeyDown={onKeyDown}
-      onFocus={onFocus}
-      readOnly={readOnly}
-      className={className}
-      {...props}
-    />
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      style,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; style?: React.CSSProperties }>) => (
+      <div className={className} style={style} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-// Mock molecules
-vi.mock('@/molecules', () => ({
-  SearchInputBar: ({
-    activeTags,
-    inputValue,
-    isFocused,
-    isReadOnly,
-    isExpanded,
-    suggestionsId,
-    onTagRemove,
-    onInputChange,
-    onKeyDown,
-    onFocus,
-  }: {
-    activeTags: string[];
-    inputValue: string;
-    isFocused: boolean;
-    isReadOnly: boolean;
-    isExpanded?: boolean;
-    suggestionsId?: string;
-    onTagRemove: (tag: string) => void;
-    onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-    onFocus: () => void;
-  }) => (
-    <div
-      data-testid="search-input-bar"
-      className={isFocused ? 'rounded-t-2xl' : 'rounded-full'}
-      style={isFocused ? { background: 'linear-gradient(180deg, #05050A 0%, rgba(5, 5, 10, 0.50) 100%)' } : undefined}
-    >
-      {activeTags.length > 0 && (
-        <div role="list" aria-label="Active search tags">
-          {activeTags.map((tag) => (
-            <span key={tag} data-testid={`active-tag-${tag}`}>
-              {tag}
-              <button data-testid={`remove-tag-${tag}`} onClick={() => onTagRemove(tag)}>
-                x
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+vi.mock('@/atoms/Input/Input', () => {
+  return {
+    Input: ({
+      type,
+      placeholder,
+      value,
+      onChange,
+      onKeyDown,
+      onFocus,
+      readOnly,
+      className,
+      ...props
+    }: React.InputHTMLAttributes<HTMLInputElement>) => (
       <input
-        type="text"
-        placeholder={activeTags.length > 0 ? '' : 'Search'}
-        value={inputValue}
-        onChange={onInputChange}
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
-        readOnly={isReadOnly}
-        aria-label="Search input"
-        aria-autocomplete="list"
-        aria-controls={suggestionsId || undefined}
-        aria-expanded={isExpanded}
+        readOnly={readOnly}
+        className={className}
+        {...props}
       />
-      <svg data-testid="search-icon" />
-    </div>
-  ),
-  SearchSuggestions: ({
-    hotTags,
-    onTagClick,
-    ...props
-  }: {
-    hotTags: Array<{ name: string }>;
-    inputValue: string;
-    hasInput: boolean;
-    autocompleteTags?: Array<{ name: string }>;
-    autocompleteUsers?: Array<{ id: string; name: string; avatarUrl?: string }>;
-    recentUsers?: Array<{ id: string; searchedAt: number }>;
-    recentTags?: Array<{ tag: string; searchedAt: number }>;
-    onTagClick: (tag: string | { tag: string; searchedAt: number }) => void;
-    onUserClick: (userId: string | { id: string; searchedAt: number }) => void;
-    onSearchAsTagClick?: (query: string) => void;
-    onClearRecentSearches?: () => void;
-  }) => (
-    <div data-testid="search-suggestions" {...props}>
-      {hotTags.map((tag) => (
-        <button key={tag.name} data-testid={`hot-tag-${tag.name}`} onClick={() => onTagClick(tag.name)}>
-          {tag.name}
-        </button>
-      ))}
-    </div>
-  ),
-  RecentUserSearchItem: {} as { id: Pubky; searchedAt: number },
-  RecentTagSearchItem: {} as { tag: string; searchedAt: number },
-}));
+    ),
+  };
+});
+
+// Mock molecules
+vi.mock('@/molecules/SearchInputBar/SearchInputBar', () => {
+  return {
+    SearchInputBar: ({
+      activeTags,
+      inputValue,
+      isFocused,
+      isReadOnly,
+      isExpanded,
+      suggestionsId,
+      onTagRemove,
+      onInputChange,
+      onKeyDown,
+      onFocus,
+    }: {
+      activeTags: string[];
+      inputValue: string;
+      isFocused: boolean;
+      isReadOnly: boolean;
+      isExpanded?: boolean;
+      suggestionsId?: string;
+      onTagRemove: (tag: string) => void;
+      onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+      onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+      onFocus: () => void;
+    }) => (
+      <div
+        data-testid="search-input-bar"
+        className={isFocused ? 'rounded-t-2xl' : 'rounded-full'}
+        style={isFocused ? { background: 'linear-gradient(180deg, #05050A 0%, rgba(5, 5, 10, 0.50) 100%)' } : undefined}
+      >
+        {activeTags.length > 0 && (
+          <div role="list" aria-label="Active search tags">
+            {activeTags.map((tag) => (
+              <span key={tag} data-testid={`active-tag-${tag}`}>
+                {tag}
+                <button data-testid={`remove-tag-${tag}`} onClick={() => onTagRemove(tag)}>
+                  x
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <input
+          type="text"
+          placeholder={activeTags.length > 0 ? '' : 'Search'}
+          value={inputValue}
+          onChange={onInputChange}
+          onKeyDown={onKeyDown}
+          onFocus={onFocus}
+          readOnly={isReadOnly}
+          aria-label="Search input"
+          aria-autocomplete="list"
+          aria-controls={suggestionsId || undefined}
+          aria-expanded={isExpanded}
+        />
+        <svg data-testid="search-icon" />
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/SearchRecentUserItem/SearchRecentUserItem.types', () => {
+  return {
+    RecentUserSearchItem: {} as { id: Pubky; searchedAt: number },
+    RecentTagSearchItem: {} as { tag: string; searchedAt: number },
+  };
+});
+
+vi.mock('@/molecules/SearchSuggestions/SearchSuggestions', () => {
+  return {
+    SearchSuggestions: ({
+      id,
+      'aria-label': ariaLabel,
+      hotTags,
+      autocompleteUsers = [],
+      onTagClick,
+      onUserClick,
+    }: {
+      id?: string;
+      'aria-label'?: string;
+      hotTags: Array<{ name: string }>;
+      inputValue: string;
+      hasInput: boolean;
+      autocompleteTags?: Array<{ name: string }>;
+      autocompleteUsers?: Array<{ id: string; name: string; avatarUrl?: string }>;
+      recentUsers?: Array<{ id: string; searchedAt: number }>;
+      recentTags?: Array<{ tag: string; searchedAt: number }>;
+      onTagClick: (tag: string | { tag: string; searchedAt: number }) => void;
+      onUserClick: (userId: string | { id: string; searchedAt: number }) => void;
+      onSearchAsTagClick?: (query: string) => void;
+      onClearRecentSearches?: () => void;
+    }) => (
+      <div id={id} aria-label={ariaLabel} data-testid="search-suggestions">
+        {hotTags.map((tag) => (
+          <button key={tag.name} data-testid={`hot-tag-${tag.name}`} onClick={() => onTagClick(tag.name)}>
+            {tag.name}
+          </button>
+        ))}
+        {autocompleteUsers.map((user) => (
+          <button key={user.id} data-testid={`autocomplete-user-${user.id}`} onClick={() => onUserClick(user.id)}>
+            {user.name}
+          </button>
+        ))}
+      </div>
+    ),
+  };
+});
 
 describe('SearchInput', () => {
   beforeEach(async () => {
@@ -199,7 +245,6 @@ describe('SearchInput', () => {
     // Reset URL search params
     mockSearchParams.delete('tags');
     // Reset hooks to default state before each test
-    const { useSearchInput, useHotTags, useSearchAutocomplete, useTagSearch } = await import('@/hooks');
     vi.mocked(useSearchInput).mockReturnValue({
       inputValue: '',
       isFocused: false,
@@ -229,8 +274,7 @@ describe('SearchInput', () => {
       activeTags: [],
       isReadOnly: false,
     });
-    // Reset core mock
-    const { useSearchStore } = await import('@/core');
+    // Reset dependency mocks
     vi.mocked(useSearchStore).mockReturnValue({
       activeTags: [],
       setActiveTags: mockSetActiveTags,
@@ -281,7 +325,6 @@ describe('SearchInput', () => {
 
   describe('Active Tags', () => {
     it('renders active tags when present', async () => {
-      const { useTagSearch } = await import('@/hooks');
       vi.mocked(useTagSearch).mockReturnValue({
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
@@ -296,7 +339,6 @@ describe('SearchInput', () => {
     });
 
     it('renders empty placeholder when active tags present', async () => {
-      const { useTagSearch } = await import('@/hooks');
       vi.mocked(useTagSearch).mockReturnValue({
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
@@ -311,7 +353,6 @@ describe('SearchInput', () => {
     });
 
     it('renders active tags list with aria-label', async () => {
-      const { useTagSearch } = await import('@/hooks');
       vi.mocked(useTagSearch).mockReturnValue({
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
@@ -328,7 +369,6 @@ describe('SearchInput', () => {
 
   describe('Suggestions Dropdown', () => {
     it('does not show suggestions when not focused', async () => {
-      const { useSearchInput } = await import('@/hooks');
       vi.mocked(useSearchInput).mockReturnValue({
         inputValue: '',
         isFocused: false,
@@ -347,7 +387,6 @@ describe('SearchInput', () => {
     });
 
     it('shows suggestions when focused and has hot tags', async () => {
-      const { useSearchInput, useHotTags } = await import('@/hooks');
       vi.mocked(useSearchInput).mockReturnValue({
         inputValue: '',
         isFocused: true,
@@ -373,7 +412,6 @@ describe('SearchInput', () => {
     });
 
     it('has correct aria attributes when suggestions visible', async () => {
-      const { useSearchInput, useHotTags } = await import('@/hooks');
       vi.mocked(useSearchInput).mockReturnValue({
         inputValue: '',
         isFocused: true,
@@ -401,7 +439,6 @@ describe('SearchInput', () => {
     });
 
     it('has correct aria attributes when suggestions hidden', async () => {
-      const { useSearchInput, useHotTags } = await import('@/hooks');
       vi.mocked(useSearchInput).mockReturnValue({
         inputValue: '',
         isFocused: false,
@@ -431,7 +468,6 @@ describe('SearchInput', () => {
 
   describe('Tag Click Handling', () => {
     it('calls addTagToSearch with addToRecent when tag clicked from suggestions', async () => {
-      const { useSearchInput, useHotTags } = await import('@/hooks');
       vi.mocked(useSearchInput).mockReturnValue({
         inputValue: '',
         isFocused: true,
@@ -459,9 +495,40 @@ describe('SearchInput', () => {
     });
   });
 
+  describe('User Click Handling', () => {
+    it('routes user suggestions to the canonical profile page', () => {
+      const clearInputValue = vi.fn();
+      const setFocus = vi.fn();
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: 'satoshi',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue,
+        setFocus,
+      });
+      vi.mocked(useSearchAutocomplete).mockReturnValue({
+        tags: [],
+        users: [{ id: 'user123', name: 'Satoshi' }],
+        isLoading: false,
+      });
+
+      render(<SearchInput />);
+
+      fireEvent.click(screen.getByTestId('autocomplete-user-user123'));
+
+      expect(mockAddUser).toHaveBeenCalledWith('user123');
+      expect(clearInputValue).toHaveBeenCalled();
+      expect(setFocus).toHaveBeenCalledWith(false);
+      expect(mockPush).toHaveBeenCalledWith('/profile/user123');
+    });
+  });
+
   describe('Active Tag Removal', () => {
     it('calls removeTagFromSearch when close button clicked', async () => {
-      const { useTagSearch } = await import('@/hooks');
       vi.mocked(useTagSearch).mockReturnValue({
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
@@ -479,7 +546,6 @@ describe('SearchInput', () => {
 
   describe('ReadOnly State', () => {
     it('sets input to readOnly when at max tags', async () => {
-      const { useTagSearch } = await import('@/hooks');
       vi.mocked(useTagSearch).mockReturnValue({
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
@@ -501,7 +567,6 @@ describe('SearchInput', () => {
     });
 
     it('matches snapshot - with active tags', async () => {
-      const { useTagSearch } = await import('@/hooks');
       vi.mocked(useTagSearch).mockReturnValue({
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
@@ -514,7 +579,6 @@ describe('SearchInput', () => {
     });
 
     it('matches snapshot - focused with suggestions', async () => {
-      const { useSearchInput, useHotTags } = await import('@/hooks');
       vi.mocked(useSearchInput).mockReturnValue({
         inputValue: '',
         isFocused: true,

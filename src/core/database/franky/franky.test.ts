@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { indexedDB } from 'fake-indexeddb';
-import { DB_NAME, DB_VERSION } from '@/config';
-import { AppDatabase } from '@/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DB_NAME, DB_VERSION } from '@/config/database';
+import { AppDatabase } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
 
 const waitForDatabaseDeletion = async (name: string, onBlocked?: () => void) => {

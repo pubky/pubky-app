@@ -1,11 +1,11 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ProfilePageFilterBar, getDefaultItems } from './ProfilePageFilterBar';
+import { describe, expect, it } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
-import * as Hooks from '@/hooks';
+import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
+import { getDefaultItems, ProfilePageFilterBar } from './ProfilePageFilterBar';
 
-const mockStats: Hooks.ProfileStats = {
+const mockStats: ProfileStats = {
   notifications: 2,
   posts: 4,
   replies: 7,
@@ -77,7 +77,7 @@ describe('ProfilePageFilterBar', () => {
   });
 
   it('renders with zero counts when stats are provided but individual values are zero', () => {
-    const zeroStats: Hooks.ProfileStats = {
+    const zeroStats: ProfileStats = {
       notifications: 0,
       posts: 0,
       replies: 0,
@@ -211,7 +211,7 @@ describe('ProfilePageFilterBar - Snapshots', () => {
   });
 
   it('matches snapshot with zero stats', () => {
-    const zeroStats: Hooks.ProfileStats = {
+    const zeroStats: ProfileStats = {
       notifications: 0,
       posts: 0,
       replies: 0,

@@ -1,12 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
+import type { Pubky } from '@/models/models.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { ProfileFollowing } from './ProfileFollowing';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
-import { asOpaque } from '@/test-utils';
 
 // Mock Providers
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: vi.fn(() => ({
     pubky: 'user123',
     isOwnProfile: true,
@@ -14,8 +16,8 @@ vi.mock('@/providers', () => ({
   })),
 }));
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const state = { currentUserPubky: 'current-user-123' };
     return selector ? selector(state) : state;
@@ -45,46 +47,68 @@ const mockUseFollowUser = vi.fn(() => ({
   error: null,
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useProfileConnections/useProfileConnections', () => ({
   useProfileConnections: vi.fn(),
+}));
+
+vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
   useInfiniteScroll: vi.fn(),
+}));
+
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: vi.fn(),
-  CONNECTION_TYPE: {
-    FOLLOWERS: 'followers',
-    FOLLOWING: 'following',
-    FRIENDS: 'friends',
-  },
 }));
 
 // Mock Atoms
-vi.mock('@/atoms', () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="container" className={className}>
-      {children}
-    </div>
-  ),
-  Heading: ({ children }: { children: React.ReactNode }) => <h5 data-testid="heading">{children}</h5>,
-  Spinner: () => <div data-testid="spinner">Loading...</div>,
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="container" className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
+    Heading: ({ children }: { children: React.ReactNode }) => <h5 data-testid="heading">{children}</h5>,
+  };
+});
+
+vi.mock('@/atoms/Spinner/Spinner', () => {
+  return {
+    Spinner: () => <div data-testid="spinner">Loading...</div>,
+  };
+});
 
 // Mock Molecules
-vi.mock('@/molecules', () => ({
-  FollowingEmpty: () => <div data-testid="following-empty">No following</div>,
-}));
+vi.mock('@/molecules/FollowingEmpty/FollowingEmpty', () => {
+  return {
+    FollowingEmpty: () => <div data-testid="following-empty">No following</div>,
+  };
+});
 
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  UserListItem: ({ user, followButtonVariant }: { user: { id: string }; followButtonVariant?: string }) => (
-    <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
-      User item
-    </div>
-  ),
-  FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton</div>,
-}));
+vi.mock('@/organisms/FullUserListItemSkeleton/FullUserListItemSkeleton', () => {
+  return {
+    FullUserListItemSkeleton: () => <div data-testid="user-list-item-skeleton-full">Skeleton</div>,
+  };
+});
+
+vi.mock('@/organisms/UserListItem/UserListItem', () => {
+  return {
+    UserListItem: ({ user, followButtonVariant }: { user: { id: string }; followButtonVariant?: string }) => (
+      <div data-testid="user-list-item" data-user-id={user.id} data-follow-button-variant={followButtonVariant}>
+        User item
+      </div>
+    ),
+  };
+});
 
 const mockConnections = [
   {
-    id: 'user-1' as Core.Pubky,
+    id: 'user-1' as Pubky,
     name: 'John Doe',
     bio: 'Test bio',
     image: null,
@@ -97,7 +121,7 @@ const mockConnections = [
     isFollowing: false,
   },
   {
-    id: 'user-2' as Core.Pubky,
+    id: 'user-2' as Pubky,
     name: 'Jane Smith',
     bio: 'Another bio',
     image: null,
@@ -135,13 +159,11 @@ const mockConnectionsResult = {
 
 describe('ProfileFollowing', () => {
   beforeEach(() => {
-    vi.mocked(Hooks.useProfileConnections).mockImplementation(mockUseProfileConnections);
-    vi.mocked(Hooks.useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useInfiniteScroll>>(mockUseInfiniteScroll()),
+    vi.mocked(useProfileConnections).mockImplementation(mockUseProfileConnections);
+    vi.mocked(useInfiniteScroll).mockReturnValue(
+      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
     );
-    vi.mocked(Hooks.useFollowUser).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useFollowUser>>(mockUseFollowUser()),
-    );
+    vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
   });
 
   it('renders empty state when no connections', () => {
@@ -150,7 +172,7 @@ describe('ProfileFollowing', () => {
   });
 
   it('renders loading state with skeleton list when isLoading is true', () => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
+    vi.mocked(useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
     render(<ProfileFollowing />);
     expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
     expect(screen.getByTestId('heading')).toHaveTextContent('Following');
@@ -159,7 +181,7 @@ describe('ProfileFollowing', () => {
   });
 
   it('renders connections when there are items', () => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockConnectionsResult);
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
 
     render(<ProfileFollowing />);
     const userItems = screen.getAllByTestId('user-list-item');
@@ -169,7 +191,7 @@ describe('ProfileFollowing', () => {
   });
 
   it('passes followButtonVariant="icon" to UserListItem', () => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockConnectionsResult);
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
 
     render(<ProfileFollowing />);
     const userItems = screen.getAllByTestId('user-list-item');
@@ -181,13 +203,11 @@ describe('ProfileFollowing', () => {
 
 describe('ProfileFollowing - Snapshots', () => {
   beforeEach(() => {
-    vi.mocked(Hooks.useProfileConnections).mockImplementation(mockUseProfileConnections);
-    vi.mocked(Hooks.useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useInfiniteScroll>>(mockUseInfiniteScroll()),
+    vi.mocked(useProfileConnections).mockImplementation(mockUseProfileConnections);
+    vi.mocked(useInfiniteScroll).mockReturnValue(
+      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
     );
-    vi.mocked(Hooks.useFollowUser).mockReturnValue(
-      asOpaque<ReturnType<typeof Hooks.useFollowUser>>(mockUseFollowUser()),
-    );
+    vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
   });
 
   it('matches snapshot with no connections', () => {
@@ -196,13 +216,13 @@ describe('ProfileFollowing - Snapshots', () => {
   });
 
   it('matches snapshot when loading', () => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
+    vi.mocked(useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
     const { container } = render(<ProfileFollowing />);
     expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with connections', () => {
-    vi.mocked(Hooks.useProfileConnections).mockReturnValue(mockConnectionsResult);
+    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
 
     const { container } = render(<ProfileFollowing />);
     expect(container).toMatchSnapshot();

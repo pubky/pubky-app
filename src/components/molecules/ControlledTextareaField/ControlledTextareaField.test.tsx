@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { useForm } from 'react-hook-form';
+import { describe, expect, it } from 'vitest';
 import { ControlledTextareaField } from './ControlledTextareaField';
 
 interface TestFormData {

@@ -2,13 +2,13 @@
 
 import { Frown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
+import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmptyState';
 
 export function NotificationsEmpty() {
   const t = useTranslations('notifications.empty');
 
   return (
-    <Molecules.ProfilePageEmptyState
+    <IllustratedEmptyState
       imageSrc="/images/notifications-empty-state.webp"
       imageAlt={t('alt')}
       icon={Frown}

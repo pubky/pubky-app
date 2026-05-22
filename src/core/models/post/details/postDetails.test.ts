@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import * as Core from '@/core';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { resetDatabase } from '@/database/franky/franky.helpers';
+import { buildCompositeId } from '@/models/models.utils';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { NexusPostDetails } from '@/services/nexus/nexus.types';
 
 describe('PostDetailsModel', () => {
   beforeEach(async () => {
-    await Core.resetDatabase();
+    await resetDatabase();
   });
 
   const testPostId1 = 'post-test-1';
@@ -11,7 +15,7 @@ describe('PostDetailsModel', () => {
   const testAuthor = 'test-author-pubky';
 
   // Mock data that simulates the API response (includes author)
-  const MOCK_NEXUS_POST_DETAILS: Omit<Core.NexusPostDetails, 'id'> = {
+  const MOCK_NEXUS_POST_DETAILS: Omit<NexusPostDetails, 'id'> = {
     content: 'This is a test post content',
     indexed_at: Date.now(),
     author: testAuthor,
@@ -24,8 +28,8 @@ describe('PostDetailsModel', () => {
   const createPostDetailsData = (
     originalId: string,
     nexusDetails: typeof MOCK_NEXUS_POST_DETAILS,
-  ): Core.PostDetailsModelSchema => {
-    const compositeId = Core.buildCompositeId({ pubky: nexusDetails.author, id: originalId });
+  ): PostDetailsModelSchema => {
+    const compositeId = buildCompositeId({ pubky: nexusDetails.author, id: originalId });
     // eslint-disable-next-line
     const { author, ...detailsWithoutAuthor } = nexusDetails;
     return { ...detailsWithoutAuthor, id: compositeId };
@@ -35,9 +39,9 @@ describe('PostDetailsModel', () => {
     it('should create PostDetailsModel instance with all properties', () => {
       const mockPostDetailsData = createPostDetailsData(testPostId1, MOCK_NEXUS_POST_DETAILS);
 
-      const postDetails = new Core.PostDetailsModel(mockPostDetailsData);
+      const postDetails = new PostDetailsModel(mockPostDetailsData);
 
-      expect(postDetails.id).toBe(Core.buildCompositeId({ pubky: testAuthor, id: testPostId1 }));
+      expect(postDetails.id).toBe(buildCompositeId({ pubky: testAuthor, id: testPostId1 }));
       expect(postDetails.content).toBe(mockPostDetailsData.content);
       expect(postDetails.indexed_at).toBe(mockPostDetailsData.indexed_at);
       expect(postDetails.kind).toBe(mockPostDetailsData.kind);
@@ -49,7 +53,7 @@ describe('PostDetailsModel', () => {
       const mockNexusDetails = { ...MOCK_NEXUS_POST_DETAILS, attachments: null };
       const mockPostDetailsData = createPostDetailsData(testPostId1, mockNexusDetails);
 
-      const postDetails = new Core.PostDetailsModel(mockPostDetailsData);
+      const postDetails = new PostDetailsModel(mockPostDetailsData);
 
       expect(postDetails.attachments).toBeNull();
     });
@@ -59,43 +63,43 @@ describe('PostDetailsModel', () => {
     it('should create post details', async () => {
       const mockPostDetailsData = createPostDetailsData(testPostId1, MOCK_NEXUS_POST_DETAILS);
 
-      const result = await Core.PostDetailsModel.create(mockPostDetailsData);
+      const result = await PostDetailsModel.create(mockPostDetailsData);
       expect(result).toBe(mockPostDetailsData.id);
     });
 
     it('should find post details by id', async () => {
       const mockPostDetailsData = createPostDetailsData(testPostId1, MOCK_NEXUS_POST_DETAILS);
-      const compositeId = Core.buildCompositeId({ pubky: testAuthor, id: testPostId1 });
+      const compositeId = buildCompositeId({ pubky: testAuthor, id: testPostId1 });
 
-      await Core.PostDetailsModel.create(mockPostDetailsData);
-      const result = await Core.PostDetailsModel.findById(compositeId);
+      await PostDetailsModel.create(mockPostDetailsData);
+      const result = await PostDetailsModel.findById(compositeId);
 
       expect(result).not.toBeNull();
-      expect(result!).toBeInstanceOf(Core.PostDetailsModel);
+      expect(result!).toBeInstanceOf(PostDetailsModel);
       expect(result!.id).toBe(compositeId);
       expect(result!.content).toBe(MOCK_NEXUS_POST_DETAILS.content);
     });
 
     it('should return null for non-existent post details', async () => {
       const nonExistentId = 'non-existent-post-999';
-      const result = await Core.PostDetailsModel.findById(nonExistentId);
+      const result = await PostDetailsModel.findById(nonExistentId);
       expect(result).toBeNull();
     });
 
     it('should bulk save post details from tuples', async () => {
-      const mockPostDetails: Core.PostDetailsModelSchema[] = [
+      const mockPostDetails: PostDetailsModelSchema[] = [
         createPostDetailsData(testPostId1, MOCK_NEXUS_POST_DETAILS),
         createPostDetailsData(testPostId2, { ...MOCK_NEXUS_POST_DETAILS, content: 'Second post content' }),
       ];
 
-      const result = await Core.PostDetailsModel.bulkSave(mockPostDetails);
+      const result = await PostDetailsModel.bulkSave(mockPostDetails);
       expect(result).toBeDefined();
 
       // Verify the data was saved correctly
-      const compositeId1 = Core.buildCompositeId({ pubky: testAuthor, id: testPostId1 });
-      const compositeId2 = Core.buildCompositeId({ pubky: testAuthor, id: testPostId2 });
-      const postDetails1 = await Core.PostDetailsModel.findById(compositeId1);
-      const postDetails2 = await Core.PostDetailsModel.findById(compositeId2);
+      const compositeId1 = buildCompositeId({ pubky: testAuthor, id: testPostId1 });
+      const compositeId2 = buildCompositeId({ pubky: testAuthor, id: testPostId2 });
+      const postDetails1 = await PostDetailsModel.findById(compositeId1);
+      const postDetails2 = await PostDetailsModel.findById(compositeId2);
 
       expect(postDetails1).not.toBeNull();
       expect(postDetails2).not.toBeNull();
@@ -104,23 +108,23 @@ describe('PostDetailsModel', () => {
     });
 
     it('should handle empty array in bulk save', async () => {
-      const result = await Core.PostDetailsModel.bulkSave([]);
+      const result = await PostDetailsModel.bulkSave([]);
       // bulkPut with empty array returns undefined, which is expected
       expect(result).toBeUndefined();
     });
 
     it('should handle different post kinds', async () => {
-      const mockPostDetails: Core.PostDetailsModelSchema[] = [
+      const mockPostDetails: PostDetailsModelSchema[] = [
         createPostDetailsData(testPostId1, { ...MOCK_NEXUS_POST_DETAILS, kind: 'short' }),
         createPostDetailsData(testPostId2, { ...MOCK_NEXUS_POST_DETAILS, kind: 'long' }),
       ];
 
-      await Core.PostDetailsModel.bulkSave(mockPostDetails);
+      await PostDetailsModel.bulkSave(mockPostDetails);
 
-      const compositeId1 = Core.buildCompositeId({ pubky: testAuthor, id: testPostId1 });
-      const compositeId2 = Core.buildCompositeId({ pubky: testAuthor, id: testPostId2 });
-      const postDetails1 = await Core.PostDetailsModel.findById(compositeId1);
-      const postDetails2 = await Core.PostDetailsModel.findById(compositeId2);
+      const compositeId1 = buildCompositeId({ pubky: testAuthor, id: testPostId1 });
+      const compositeId2 = buildCompositeId({ pubky: testAuthor, id: testPostId2 });
+      const postDetails1 = await PostDetailsModel.findById(compositeId1);
+      const postDetails2 = await PostDetailsModel.findById(compositeId2);
 
       expect(postDetails1).not.toBeNull();
       expect(postDetails2).not.toBeNull();
@@ -129,17 +133,17 @@ describe('PostDetailsModel', () => {
     });
 
     it('should handle posts with and without attachments', async () => {
-      const mockPostDetails: Core.PostDetailsModelSchema[] = [
+      const mockPostDetails: PostDetailsModelSchema[] = [
         createPostDetailsData(testPostId1, { ...MOCK_NEXUS_POST_DETAILS, attachments: ['file1.jpg'] }),
         createPostDetailsData(testPostId2, { ...MOCK_NEXUS_POST_DETAILS, attachments: null }),
       ];
 
-      await Core.PostDetailsModel.bulkSave(mockPostDetails);
+      await PostDetailsModel.bulkSave(mockPostDetails);
 
-      const compositeId1 = Core.buildCompositeId({ pubky: testAuthor, id: testPostId1 });
-      const compositeId2 = Core.buildCompositeId({ pubky: testAuthor, id: testPostId2 });
-      const postDetails1 = await Core.PostDetailsModel.findById(compositeId1);
-      const postDetails2 = await Core.PostDetailsModel.findById(compositeId2);
+      const compositeId1 = buildCompositeId({ pubky: testAuthor, id: testPostId1 });
+      const compositeId2 = buildCompositeId({ pubky: testAuthor, id: testPostId2 });
+      const postDetails1 = await PostDetailsModel.findById(compositeId1);
+      const postDetails2 = await PostDetailsModel.findById(compositeId2);
 
       expect(postDetails1).not.toBeNull();
       expect(postDetails2).not.toBeNull();

@@ -1,8 +1,8 @@
-import * as Core from '@/core';
 import { Session } from '@synonymdev/pubky';
+import type { Pubky } from '@/models/models.types';
 
 export interface AuthInitParams {
-  currentUserPubky: Core.Pubky | null;
+  currentUserPubky: Pubky | null;
   session: Session | null;
   /** null = unknown/undetermined, false = no profile, true = has profile */
   hasProfile: boolean | null;
@@ -21,7 +21,7 @@ export interface AuthState extends AuthInitParams {
 export interface AuthActions {
   reset: () => void;
   init: (params: AuthInitParams) => void;
-  setCurrentUserPubky: (pubky: Core.Pubky | null) => void;
+  setCurrentUserPubky: (pubky: Pubky | null) => void;
   setSession: (session: Session | null) => void;
   setIsRestoringSession: (isRestoringSession: boolean) => void;
   setHasProfile: (hasProfile: boolean) => void;
@@ -33,7 +33,7 @@ export interface AuthActions {
 }
 
 export interface AuthSelectors {
-  selectCurrentUserPubky: () => Core.Pubky;
+  selectCurrentUserPubky: () => Pubky;
   selectIsAuthenticated: () => boolean;
   selectSession: () => Session | null;
 }

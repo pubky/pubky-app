@@ -7,7 +7,7 @@ import type * as React from 'react';
 /**
  * Base item structure for filter radiogroups
  */
-export interface FilterItem<T = string> {
+export interface FilterListItem<T = string> {
   key: T;
   label: string;
   icon: React.ComponentType<{ className?: string }>;

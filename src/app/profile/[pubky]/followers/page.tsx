@@ -1,5 +1,1 @@
-import * as Templates from '@/templates';
-
-export default function DynamicProfileFollowersPage() {
-  return <Templates.ProfilePageFollowers />;
-}
+export { ProfileFollowersPage as default } from '@/templates/Profile/Followers/ProfileFollowersPage';

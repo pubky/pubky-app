@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUserDetails } from './useUserDetails';
 
-// Mock @/core
+// Mock direct dependencies
 const mockGetDetails = vi.fn();
 const mockFetchDetails = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/core', () => ({
+vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getDetails: (params: { userId: string }) => mockGetDetails(params),
     fetchDetails: (params: { userId: string }) => mockFetchDetails(params),

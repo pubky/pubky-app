@@ -1,113 +1,201 @@
 import * as React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { VisualTimelinePosts } from './VisualTimelinePosts';
 import type { VisualRow } from './TimelineFeedVisual.types';
+import { VisualTimelinePosts } from './VisualTimelinePosts';
 
 const {
   mockNavigateToPost,
-  mockUseInfiniteScroll,
   mockPostHeaderUserInfo,
+  mockUseInfiniteScroll,
   mockUseVisualFeedTiles,
   mockUseIsTouchDevice,
 } = vi.hoisted(() => ({
   mockNavigateToPost: vi.fn(),
-  mockUseInfiniteScroll: vi.fn(),
   mockPostHeaderUserInfo: vi.fn(({ timeAgo }: { timeAgo?: string }) => (
     <div data-testid="visual-overlay-header">{timeAgo ? `Header:${timeAgo}` : 'Header'}</div>
   )),
+  mockUseInfiniteScroll: vi.fn(),
   mockUseVisualFeedTiles: vi.fn(),
   mockUseIsTouchDevice: vi.fn(() => false),
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
+vi.mock('./useVisualFeedTiles', () => ({
+  useVisualFeedTiles: mockUseVisualFeedTiles,
+}));
+
+vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
+  useInfiniteScroll: mockUseInfiniteScroll,
+}));
+
+vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
+  usePostNavigation: () => ({ navigateToPost: mockNavigateToPost }),
+}));
+
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: mockUseIsTouchDevice,
+}));
+
+vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
+  useViewportObserver: () => ({ ref: vi.fn(), isVisible: true }),
+}));
+
+vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
+  useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null } }),
+}));
+
+vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
+  useAvatarUrl: () => null,
+}));
+
+vi.mock('@/hooks/useRelativeTime/useRelativeTime', () => ({
+  useRelativeTime: () => ({
+    formatRelativeTime: () => '1m',
+  }),
+}));
+
+vi.mock('@/atoms/Container/Container', () => {
   return {
-    ...actual,
-    useVisualFeedTiles: undefined,
-    useInfiniteScroll: mockUseInfiniteScroll,
-    usePostNavigation: () => ({ navigateToPost: mockNavigateToPost }),
-    useIsTouchDevice: () => mockUseIsTouchDevice(),
-    useViewportObserver: () => ({ ref: vi.fn(), isVisible: true }),
-    useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null } }),
-    useAvatarUrl: () => null,
-    useRelativeTime: () => ({
-      formatRelativeTime: () => '1m',
+    Container: React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { overrideDefaults?: boolean }>(
+      function Container({ overrideDefaults: _overrideDefaults, ...props }, ref) {
+        return <div ref={ref} {...props} />;
+      },
+    ),
+  };
+});
+
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({ fill: _fill, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean }) => (
+      <img alt={alt ?? ''} {...props} />
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: (props: React.HTMLAttributes<HTMLElement>) => <span {...props} />,
+  };
+});
+
+vi.mock('@/atoms/Video/Video', () => {
+  return {
+    Video: React.forwardRef<HTMLVideoElement, React.VideoHTMLAttributes<HTMLVideoElement>>(function Video(props, ref) {
+      return <video ref={ref} {...props} />;
     }),
   };
 });
 
-vi.mock('./useVisualFeedTiles', () => ({
-  useVisualFeedTiles: mockUseVisualFeedTiles as typeof import('./useVisualFeedTiles').useVisualFeedTiles,
-}));
+vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => {
+  return {
+    PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
+      <div data-testid="visual-overlay-timestamp">{timeAgo}</div>
+    ),
+  };
+});
 
-vi.mock('@/atoms', () => ({
-  Container: React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { overrideDefaults?: boolean }>(
-    function Container({ overrideDefaults: _overrideDefaults, ...props }, ref) {
-      return <div ref={ref} {...props} />;
+vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
+  return {
+    PostHeaderUserInfo:
+      mockPostHeaderUserInfo as typeof import('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo').PostHeaderUserInfo,
+  };
+});
+
+vi.mock('@/molecules/PostText/PostText', () => {
+  return {
+    PostText: ({ content }: { content: string }) => <div data-testid="visual-overlay-text">{content}</div>,
+  };
+});
+
+vi.mock('@/molecules/PostText/PostText.utils', () => {
+  return {
+    truncateAtWordBoundary: (content: string, limit: number) => {
+      return content.length > limit ? `${content.slice(0, limit)}...` : content;
     },
-  ),
-  Image: ({ fill: _fill, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean }) => (
-    <img alt={alt ?? ''} {...props} />
-  ),
-  Video: React.forwardRef<HTMLVideoElement, React.VideoHTMLAttributes<HTMLVideoElement>>(function Video(props, ref) {
-    return <video ref={ref} {...props} />;
-  }),
-  Typography: (props: React.HTMLAttributes<HTMLElement>) => <span {...props} />,
-}));
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  TimelineStateWrapper: ({
-    children,
-    loading,
-    error,
-    hasItems,
-    emptyComponent,
-  }: {
-    children: React.ReactNode;
-    loading: boolean;
-    error: string | null;
-    hasItems: boolean;
-    emptyComponent?: React.ReactNode;
-  }) => {
-    if (loading) return <div data-testid="timeline-loading">Loading</div>;
-    if (error && !hasItems) return <div data-testid="timeline-error-state">{error}</div>;
-    if (!hasItems) return <>{emptyComponent ?? <div data-testid="timeline-empty">Empty</div>}</>;
-    return <>{children}</>;
-  },
-  TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more</div>,
-  TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">{message}</div>,
-  TimelineEndMessage: () => <div data-testid="timeline-end">End</div>,
-  PostHeaderUserInfo:
-    mockPostHeaderUserInfo as typeof import('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo').PostHeaderUserInfo,
-  PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
-    <div data-testid="visual-overlay-timestamp">{timeAgo}</div>
-  ),
-  PostText: ({ content }: { content: string }) => <div data-testid="visual-overlay-text">{content}</div>,
-  truncateAtWordBoundary: (content: string, limit: number) => {
-    return content.length > limit ? `${content.slice(0, limit)}...` : content;
-  },
-}));
+vi.mock('@/molecules/Timeline/TimelineEndMessage', () => {
+  return {
+    TimelineEndMessage: () => <div data-testid="timeline-end">End</div>,
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  ClickableTagsList: () => <div data-testid="visual-overlay-tags">Tags</div>,
-  PostActionsBar: ({
-    onReplyClick,
-  }: {
-    onTagClick?: () => void;
-    onReplyClick?: () => void;
-    onRepostClick?: () => void;
-  }) => (
-    <button data-testid="visual-overlay-reply" onClick={onReplyClick}>
-      Reply
-    </button>
-  ),
-  DialogReply: ({ open }: { postId: string; open: boolean; onOpenChangeAction: (open: boolean) => void }) =>
-    open ? <div data-testid="reply-dialog">Reply dialog</div> : null,
-  DialogRepost: ({ open }: { postId: string; open: boolean; onOpenChangeAction: (open: boolean) => void }) =>
-    open ? <div data-testid="repost-dialog">Repost dialog</div> : null,
-  PostContentBlurred: ({ postId }: { postId: string; className?: string }) => <div>{postId}</div>,
-}));
+vi.mock('@/molecules/Timeline/TimelineError', () => {
+  return {
+    TimelineError: ({ message }: { message: string }) => <div data-testid="timeline-error">{message}</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper')>();
+  return {
+    ...actual,
+    TimelineStateWrapper: ({
+      children,
+      loading,
+      error,
+      hasItems,
+      loadingComponent,
+      emptyComponent,
+    }: {
+      children: React.ReactNode;
+      loading: boolean;
+      error: string | null;
+      hasItems: boolean;
+      loadingComponent?: React.ReactNode;
+      emptyComponent?: React.ReactNode;
+    }) => {
+      if (loading) return <>{loadingComponent ?? <div data-testid="timeline-loading">Loading</div>}</>;
+      if (error && !hasItems) return <div data-testid="timeline-error-state">{error}</div>;
+      if (!hasItems) return <>{emptyComponent ?? <div data-testid="timeline-empty">Empty</div>}</>;
+      return <>{children}</>;
+    },
+  };
+});
+
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
+  return {
+    ClickableTagsList: () => <div data-testid="visual-overlay-tags">Tags</div>,
+  };
+});
+
+vi.mock('@/organisms/DialogReply/DialogReply', () => {
+  return {
+    DialogReply: ({ open }: { postId: string; open: boolean; onOpenChangeAction: (open: boolean) => void }) =>
+      open ? <div data-testid="reply-dialog">Reply dialog</div> : null,
+  };
+});
+
+vi.mock('@/organisms/DialogRepost/DialogRepost', () => {
+  return {
+    DialogRepost: ({ open }: { postId: string; open: boolean; onOpenChangeAction: (open: boolean) => void }) =>
+      open ? <div data-testid="repost-dialog">Repost dialog</div> : null,
+  };
+});
+
+vi.mock('@/organisms/PostActionsBar/PostActionsBar', () => {
+  return {
+    PostActionsBar: ({
+      onReplyClick,
+    }: {
+      onTagClick?: () => void;
+      onReplyClick?: () => void;
+      onRepostClick?: () => void;
+    }) => (
+      <button data-testid="visual-overlay-reply" onClick={onReplyClick}>
+        Reply
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostContentBlurred/PostContentBlurred', () => {
+  return {
+    PostContentBlurred: ({ postId }: { postId: string; className?: string }) => <div>{postId}</div>,
+  };
+});
 
 function createRows(): VisualRow[] {
   return [
@@ -229,6 +317,7 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
   });
 
   it('does not render the filtered empty state while file metadata is being fetched', () => {
@@ -252,6 +341,103 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+  });
+
+  it('keeps the initial skeleton and backfills while the first visual rows are unavailable', async () => {
+    const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={true}
+        loadMore={mockLoadMore}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+    expect(mockUseInfiniteScroll).toHaveBeenCalledWith({
+      onLoadMore: expect.any(Function),
+      hasMore: false,
+      isLoading: true,
+      threshold: 3000,
+      debounceMs: 20,
+    });
+
+    await waitFor(() => {
+      expect(mockLoadMore).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('backfills initial rows while tile probes are pending', async () => {
+    const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: true,
+      hasPendingFiles: false,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={true}
+        loadMore={mockLoadMore}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockLoadMore).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('renders visual grid skeletons during initial loading', () => {
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={true}
+        loadingMore={false}
+        error={null}
+        hasMore={true}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+    expect(screen.getAllByTestId('visual-feed-skeleton-row')).toHaveLength(3);
+    expect(screen.getAllByTestId('visual-feed-skeleton-tile').length).toBeGreaterThan(0);
+  });
+
+  it('does not add full-row skeletons while loading more posts', () => {
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={true}
+        error={null}
+        hasMore={true}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+    expect(screen.queryByTestId('visual-feed-skeleton')).not.toBeInTheDocument();
   });
 
   it('falls back to the main image when the preview image fails', () => {
@@ -307,6 +493,24 @@ describe('VisualTimelinePosts', () => {
     fireEvent.error(image);
 
     expect(image).toHaveAttribute('src', '/main-image.jpg');
+  });
+
+  it('uses the black tile background while media loads', () => {
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    const tile = screen.getByLabelText('Open post author:post1');
+
+    expect(tile).toHaveClass('bg-black');
+    expect(tile).not.toHaveClass('animate-pulse');
   });
 
   it('renders the timestamp in a separate top-right timestamp block', () => {

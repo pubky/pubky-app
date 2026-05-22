@@ -1,0 +1,51 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProfileUserNotFoundDiscoveryView - Snapshots > matches snapshot 1`] = `
+<div
+  class="pb-24 lg:pb-12"
+  data-has-gradient-background="false"
+  data-show-right-mobile-button="false"
+  data-testid="content-layout"
+>
+  <div
+    data-testid="content-layout-left-slot"
+  >
+    <div
+      data-testid="hot-feed-sidebar"
+    />
+  </div>
+  <div
+    data-testid="content-layout-right-slot"
+  >
+    <div
+      data-testid="hot-feed-right-sidebar"
+    />
+  </div>
+  <div
+    data-testid="content-layout-left-drawer-slot"
+  >
+    <div
+      data-testid="hot-feed-drawer"
+    />
+  </div>
+  <div
+    data-testid="content-layout-right-drawer-slot"
+  >
+    <div
+      data-testid="hot-feed-right-drawer"
+    />
+  </div>
+  <div
+    class="flex flex-col gap-12"
+    data-override="true"
+    data-testid="container"
+  >
+    <div
+      data-testid="user-not-found-mock"
+    />
+    <div
+      data-testid="hot-active-users"
+    />
+  </div>
+</div>
+`;

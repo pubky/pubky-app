@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Pubky } from '@/core';
-import { asOpaque } from '@/test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 const mockFile = vi.fn();
 const mockFolder = vi.fn();
@@ -14,27 +15,36 @@ vi.mock('pubky-app-specs', () => ({
 }));
 
 // Mock config
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/database', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/database')>();
   return {
     ...actual,
     DB_NAME: 'test-db',
     DB_VERSION: 1,
-    MODERATED_TAGS: [],
-    MODERATION_ID: 'test-moderation-id',
   };
 });
 
-// Mock the Env module (admin credentials are now server-side only)
-vi.mock('@/libs/env/env', () => ({
-  Env: {
-    HOMESERVER_ADMIN_URL: 'http://test-admin.com',
-    HOMESERVER_ADMIN_PASSWORD: 'test-password',
-  },
+vi.mock('@/config/moderation', () => ({
+  MODERATED_TAGS: [],
+  MODERATION_ID: 'test-moderation-id',
 }));
 
+// Mock the Env module (admin credentials are now server-side only).
+// Merge with real Env so @/config/database still gets NEXT_PUBLIC_DB_NAME / NEXT_PUBLIC_DB_VERSION
+// (franky is loaded via the module graph; a partial Env would break Dexie.version()).
+vi.mock('@/libs/env/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/env/env')>();
+  return {
+    Env: {
+      ...actual.Env,
+      HOMESERVER_ADMIN_URL: 'http://test-admin.com',
+      HOMESERVER_ADMIN_PASSWORD: 'test-password',
+    },
+  };
+});
+
 // Mock HomeserverService methods
-vi.mock('@/core/services/homeserver', () => ({
+vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     list: vi.fn(),
     get: vi.fn(),
@@ -96,11 +106,9 @@ beforeEach(() => {
 });
 
 let ProfileApplication: typeof import('./profile').ProfileApplication;
-let Core: typeof import('@/core');
 
 beforeEach(async () => {
   vi.resetModules();
-  Core = await import('@/core');
   ({ ProfileApplication } = await import('./profile'));
 });
 
@@ -110,8 +118,8 @@ describe('ProfileApplication.downloadData', () => {
   it('should package files into a zip and trigger download', async () => {
     const dataUrls = [`pubky://${pubky}/pub/pubky.app/profile.json`, `pubky://${pubky}/pub/pubky.app/avatar.png`];
 
-    vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(dataUrls);
-    vi.spyOn(Core.HomeserverService, 'get').mockImplementation(async (url: string) => {
+    vi.spyOn(HomeserverService, 'list').mockResolvedValue(dataUrls);
+    vi.spyOn(HomeserverService, 'get').mockImplementation(async (url: string) => {
       if (url.endsWith('profile.json')) {
         return new Response(JSON.stringify({ name: 'Test User' }), { status: 200 });
       } else {
@@ -154,9 +162,9 @@ describe('ProfileApplication.downloadData', () => {
   });
 
   it('should pass Infinity as limit to HomeserverService.list', async () => {
-    const listSpy = vi.spyOn(Core.HomeserverService, 'list').mockResolvedValue(['file1.json', 'file2.json']);
+    const listSpy = vi.spyOn(HomeserverService, 'list').mockResolvedValue(['file1.json', 'file2.json']);
     // Return a new Response for each call since Response body can only be read once
-    vi.spyOn(Core.HomeserverService, 'get').mockImplementation(async () => new Response('{}', { status: 200 }));
+    vi.spyOn(HomeserverService, 'get').mockImplementation(async () => new Response('{}', { status: 200 }));
 
     await ProfileApplication.downloadData({ pubky });
 
@@ -169,8 +177,8 @@ describe('ProfileApplication.downloadData', () => {
   });
 
   it('should propagate error when list fails', async () => {
-    vi.spyOn(Core.HomeserverService, 'list').mockRejectedValue(new Error('list failed'));
-    const getSpy = vi.spyOn(Core.HomeserverService, 'get');
+    vi.spyOn(HomeserverService, 'list').mockRejectedValue(new Error('list failed'));
+    const getSpy = vi.spyOn(HomeserverService, 'get');
 
     await expect(ProfileApplication.downloadData({ pubky })).rejects.toThrow('list failed');
 

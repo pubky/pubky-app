@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
 import React, { createRef } from 'react';
 import type { MDXEditorMethods } from '@mdxeditor/editor';
-import { asOpaque } from '@/test-utils';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { asOpaque } from '@/test-utils/type-assertions';
 import InitializedMDXEditor from './InitializedMDXEditor';
 
 // Mock config - use a smaller value for easier testing
 const MOCK_MAX_LENGTH = 1000;
-vi.mock('@/config', () => ({
+vi.mock('@/config/posts', () => ({
   ARTICLE_MAX_CHARACTER_LENGTH: 1000,
 }));
 
@@ -120,96 +120,115 @@ vi.mock('@codemirror/language-data', () => ({
 let capturedOnEmojiSelect: ((emoji: { native: string }) => void) | null = null;
 
 // Mock EmojiPickerDialog
-vi.mock('@/components/molecules', () => ({
-  EmojiPickerDialog: ({
-    open,
-    onOpenChange,
-    onEmojiSelect,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onEmojiSelect: (emoji: { native: string }) => void;
-  }) => {
-    // Capture the callback for testing
-    capturedOnEmojiSelect = onEmojiSelect;
-    if (!open) return null;
-    return (
-      <div data-testid="emoji-picker-dialog">
-        <button
-          data-testid="emoji-select-button"
-          onClick={() => {
-            // Match real EmojiPickerDialog behavior: call onEmojiSelect then close
-            onEmojiSelect({ native: '🎉' });
-            onOpenChange(false);
-          }}
-        >
-          Select Emoji
-        </button>
-      </div>
-    );
-  },
-}));
+vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
+  return {
+    EmojiPickerDialog: ({
+      open,
+      onOpenChange,
+      onEmojiSelect,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onEmojiSelect: (emoji: { native: string }) => void;
+    }) => {
+      // Capture the callback for testing
+      capturedOnEmojiSelect = onEmojiSelect;
+      if (!open) return null;
+      return (
+        <div data-testid="emoji-picker-dialog">
+          <button
+            data-testid="emoji-select-button"
+            onClick={() => {
+              // Match real EmojiPickerDialog behavior: call onEmojiSelect then close
+              onEmojiSelect({ native: '🎉' });
+              onOpenChange(false);
+            }}
+          >
+            Select Emoji
+          </button>
+        </div>
+      );
+    },
+  };
+});
 
 // Mock useEmojiInsert hook
 const mockHandleMarkdownEmojiSelect = vi.fn();
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => mockHandleMarkdownEmojiSelect),
 }));
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div className={className} data-override-defaults={overrideDefaults} {...props}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    className,
-    overrideDefaults,
-    ...props
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <span className={className} data-override-defaults={overrideDefaults} {...props}>
-      {children}
-    </span>
-  ),
-  Button: ({
-    children,
-    className,
-    variant,
-    size,
-    disabled,
-    ...props
-  }: {
-    children?: React.ReactNode;
-    className?: string;
-    variant?: string;
-    size?: string;
-    disabled?: boolean;
-    title?: string;
-    onClick?: () => void;
-  }) => (
-    <button className={className} data-variant={variant} data-size={size} disabled={disabled} {...props}>
-      {children}
-    </button>
-  ),
-  Textarea: vi.fn(({ className, readOnly, ...props }: Record<string, unknown>) => (
-    <textarea className={className as string} readOnly={readOnly as boolean} {...(props as Record<string, string>)} />
-  )),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      className,
+      variant,
+      size,
+      disabled,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      className?: string;
+      variant?: string;
+      size?: string;
+      disabled?: boolean;
+      title?: string;
+      onClick?: () => void;
+    }) => (
+      <button className={className} data-variant={variant} data-size={size} disabled={disabled} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div className={className} data-override-defaults={overrideDefaults} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Textarea/Textarea', () => {
+  return {
+    Textarea: vi.fn(({ className, readOnly, ...props }: Record<string, unknown>) => (
+      <textarea className={className as string} readOnly={readOnly as boolean} {...(props as Record<string, string>)} />
+    )),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <span className={className} data-override-defaults={overrideDefaults} {...props}>
+        {children}
+      </span>
+    ),
+  };
+});
 
 /** Creates a mock editor ref with stub methods for mode-switching tests. */
 function createMockEditorRef(markdown = '') {

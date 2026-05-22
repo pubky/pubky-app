@@ -660,12 +660,11 @@ exports[`DialogPrivacy - Snapshots > matches snapshot for default DialogPrivacy 
             privacy@synonym.to
           </a>
           . Please include your name, public key, and email address, and indicate you are making a “Privacy Rights” request. If we deny your rights request and you would like to appeal, you may contact us again at
-           
           <a
             data-testid="link"
             href="mailto:privacy@synonym.to"
           >
-            privacy@synonym.to
+             privacy@synonym.to
           </a>
           . In addition, you may delete your account or data associated with your account at any time by visiting the ‘Settings’ dashboard within the Pubky application.
         </p>

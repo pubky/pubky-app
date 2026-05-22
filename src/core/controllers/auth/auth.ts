@@ -1,10 +1,42 @@
-import * as Core from '@/core';
+import { AuthApplication } from '@/application/auth/auth';
+import type { TKeypairParams } from '@/application/auth/auth.types';
+import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
+import { SettingsApplication } from '@/application/settings/settings';
+import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
+import { TagApplication } from '@/application/tag/tag';
+import type {
+  TLoginWithEncryptedFileParams,
+  TLoginWithMnemonicParams,
+  TPubkyParams,
+  TSignUpParams,
+} from '@/controllers/auth/auth.types';
+import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
+import { StreamCoordinator } from '@/coordinators/streams/stream';
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
+import { clearDatabase } from '@/database/franky/franky.helpers';
 import { setLocaleCookie } from '@/i18n/utils';
 import type { AppError } from '@/libs/error/error';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
+import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { clearCookies, sleep } from '@/libs/utils/utils';
+import type { Pubky } from '@/models/models.types';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
+import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
+import type { TGenerateAuthUrlResult, THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useHomeStore } from '@/stores/home/home.store';
+import { useHotStore } from '@/stores/hot/hot.store';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import { useMigrationStore } from '@/stores/migration/migration.store';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { useSearchStore } from '@/stores/search/search.store';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import type { SettingsState } from '@/stores/settings/settings.types';
+import { useSignInStore } from '@/stores/signIn/signIn.store';
 
 export class AuthController {
   private constructor() {} // Prevent instantiation
@@ -22,8 +54,8 @@ export class AuthController {
    * @returns Promise resolving to true if the session was restored successfully, false otherwise
    */
   static async restorePersistedSession(): Promise<boolean> {
-    const authStore = Core.useAuthStore.getState();
-    const result = await Core.AuthApplication.restorePersistedSession({ authStore });
+    const authStore = useAuthStore.getState();
+    const result = await AuthApplication.restorePersistedSession({ authStore });
     if (!result) {
       await this.cleanupLocalState();
       return false;
@@ -44,14 +76,14 @@ export class AuthController {
    * @param params.keypair - The cryptographic keypair for the user
    * @returns Configured homeserver service instance
    */
-  private static async signIn({ keypair }: Core.TKeypairParams): Promise<boolean> {
+  private static async signIn({ keypair }: TKeypairParams): Promise<boolean> {
     // Clear query clients to ensure no stale cache from previous session
     clearAllQueryClients();
     // Clear database before sign in to ensure clean state
-    await Core.clearDatabase();
+    await clearDatabase();
     // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
-    Core.useMigrationStore.getState().reset();
-    const session = await Core.AuthApplication.signIn({ keypair });
+    useMigrationStore.getState().reset();
+    const session = await AuthApplication.signIn({ keypair });
     if (!session) {
       Logger.error('Failed to sign in. Please try again.', { keypair });
       return false;
@@ -66,14 +98,14 @@ export class AuthController {
    * @param params.session - The user session data
    * @param params.pubky - The user's public key identifier
    */
-  private static async hydrateMeImAlive({ pubky }: Core.TPubkyParams) {
-    const signInStore = Core.useSignInStore.getState();
+  private static async hydrateMeImAlive({ pubky }: TPubkyParams) {
+    const signInStore = useSignInStore.getState();
     const {
       meta: { url },
-    } = Core.NotificationNormalizer.to(pubky);
+    } = NotificationNormalizer.to(pubky);
 
     // Progress callback to update signInStore from Controller layer (respecting architecture rules)
-    const onProgress: Core.BootstrapProgressCallback = (step) => {
+    const onProgress: BootstrapProgressCallback = (step) => {
       switch (step) {
         case 'bootstrapFetched':
           signInStore.setBootstrapFetched(true); // Step 3 complete (60%)
@@ -87,16 +119,21 @@ export class AuthController {
       }
     };
 
-    const localSettings = Core.SettingsNormalizer.extractState(Core.useSettingsStore.getState());
-    const { notification, remoteSettings } = await Core.BootstrapApplication.initialize(
-      { pubky, lastReadUrl: url, localSettings },
-      onProgress,
-    );
-    Core.useNotificationStore.getState().setState(notification);
+    const localSettings = SettingsNormalizer.extractState(useSettingsStore.getState());
+
+    // Sync settings from homeserver before bootstrap; errors are logged and fall back to local settings.
+    const remoteSettings = await this.syncSettings(pubky, localSettings);
+
+    // Resolve final preferences: remote settings win if available, otherwise use local
+    const preferences = (remoteSettings ?? localSettings).notifications;
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
+
+    const notification = await BootstrapApplication.initialize({ pubky, lastReadUrl: url, allowedTypes }, onProgress);
+    useNotificationStore.getState().setState(notification);
 
     // Apply remote settings to store + cookie (store mutation stays in Controller layer)
     if (remoteSettings) {
-      Core.useSettingsStore.getState().loadFromHomeserver(remoteSettings);
+      useSettingsStore.getState().loadFromHomeserver(remoteSettings);
       setLocaleCookie(remoteSettings.language);
       Logger.info('Settings loaded from homeserver', { pubky });
     }
@@ -107,12 +144,12 @@ export class AuthController {
    * @param params - Object containing session data from authentication
    * @param params.session - The user session data
    */
-  static async initializeAuthenticatedSession({ session }: Core.THomeserverSessionResult) {
-    const signInStore = Core.useSignInStore.getState();
+  static async initializeAuthenticatedSession({ session }: THomeserverSessionResult) {
+    const signInStore = useSignInStore.getState();
     signInStore.reset(); // Reset for fresh sign-in
     signInStore.setAuthUrlResolved(true); // Step 1 complete (20%)
 
-    const authStore = Core.useAuthStore.getState();
+    const authStore = useAuthStore.getState();
 
     try {
       this.cancelActiveAuthFlow();
@@ -120,7 +157,7 @@ export class AuthController {
 
       authStore.init({ session, currentUserPubky: pubky, hasProfile: null });
 
-      const isSignedUp = await Core.AuthApplication.userIsSignedUp({ pubky });
+      const isSignedUp = await AuthApplication.userIsSignedUp({ pubky });
       signInStore.setProfileChecked(true); // Step 2 complete (40%)
 
       if (isSignedUp) {
@@ -143,16 +180,16 @@ export class AuthController {
    * @param params.secretKey - The secret key for the user
    * @param params.signupToken - Invitation code for user registration
    */
-  static async signUp({ secretKey, signupToken }: Core.TSignUpParams) {
+  static async signUp({ secretKey, signupToken }: TSignUpParams) {
     // Clear query clients to ensure no stale cache from previous session
     clearAllQueryClients();
     // Clear database before sign up to ensure clean state
-    await Core.clearDatabase();
+    await clearDatabase();
     // Skip post-migration resync — new user has no homeserver data to resync
-    Core.useMigrationStore.getState().reset();
+    useMigrationStore.getState().reset();
     const keypair = Identity.keypairFromSecretKey(secretKey);
-    const { session } = await Core.AuthApplication.signUp({ keypair, signupToken });
-    const authStore = Core.useAuthStore.getState();
+    const { session } = await AuthApplication.signUp({ keypair, signupToken });
+    const authStore = useAuthStore.getState();
     const initialState = { session, currentUserPubky: Identity.z32FromSession({ session }), hasProfile: false };
     authStore.init(initialState);
   }
@@ -163,7 +200,7 @@ export class AuthController {
    * @param params.mnemonic - The mnemonic phrase for key derivation
    * @returns Promise resolving to true if authentication succeeded, false otherwise
    */
-  static async loginWithMnemonic({ mnemonic }: Core.TLoginWithMnemonicParams): Promise<boolean> {
+  static async loginWithMnemonic({ mnemonic }: TLoginWithMnemonicParams): Promise<boolean> {
     const keypair = Identity.keypairFromMnemonic(mnemonic);
     return await this.signIn({ keypair });
   }
@@ -175,10 +212,7 @@ export class AuthController {
    * @param params.password - The password to decrypt the recovery file
    * @returns Promise resolving to true if authentication succeeded, false otherwise
    */
-  static async loginWithEncryptedFile({
-    encryptedFile,
-    password,
-  }: Core.TLoginWithEncryptedFileParams): Promise<boolean> {
+  static async loginWithEncryptedFile({ encryptedFile, password }: TLoginWithEncryptedFileParams): Promise<boolean> {
     const keypair = await Identity.decryptRecoveryFile({ encryptedFile, passphrase: password });
     return await this.signIn({ keypair });
   }
@@ -190,11 +224,11 @@ export class AuthController {
    * @returns Promise resolving to the generated authentication URL with wrapped approval
    */
   private static async wrapAuthFlow(
-    generateFn: () => Promise<Core.TGenerateAuthUrlResult>,
-  ): Promise<Core.TGenerateAuthUrlResult> {
-    await Core.clearDatabase();
+    generateFn: () => Promise<TGenerateAuthUrlResult>,
+  ): Promise<TGenerateAuthUrlResult> {
+    await clearDatabase();
     // Skip post-migration resync — full bootstrap below covers all data
-    Core.useMigrationStore.getState().reset();
+    useMigrationStore.getState().reset();
     const token = Symbol('auth-flow');
     this.cancelActiveAuthFlow();
     this.activeAuthFlow = { token, cancel: null };
@@ -219,18 +253,28 @@ export class AuthController {
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store, clears cookies,
-   * IndexedDB, query cache, singletons, in-memory stream pagination queues, and persisted localStorage keys.
+   * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
+   * and mute-sync `sessionStorage` cursors.
    * Used by both logout() and restorePersistedSession() on failure.
    */
   private static async cleanupLocalState() {
+    // Capture pubky before resetting auth store; used to scope marker cleanup.
+    const pubky = useAuthStore.getState().currentUserPubky;
+    if (pubky) {
+      TagApplication.clearViewerMarkers(pubky);
+    }
+
+    // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
+    clearMuteSyncCursorSessionStorage();
+
     // Reset singletons
-    Core.PubkySpecsSingleton.reset();
-    Core.TtlCoordinator.resetInstance();
-    Core.StreamCoordinator.resetInstance();
-    Core.NotificationCoordinator.resetInstance();
+    PubkySpecsSingleton.reset();
+    TtlCoordinator.resetInstance();
+    StreamCoordinator.resetInstance();
+    NotificationCoordinator.resetInstance();
 
     // Clear in-memory feed stream queues
-    Core.postStreamQueue.clear();
+    postStreamQueue.clear();
 
     // Cancel active auth flows
     this.cancelActiveAuthFlow();
@@ -241,30 +285,30 @@ export class AuthController {
     // Reset all Zustand stores.
     // Settings reset() keeps `language`,
     // so the "/logout" page stays in the chosen language while remote settings still win on next login.
-    Core.useOnboardingStore.getState().reset();
-    Core.useAuthStore.getState().reset();
-    Core.useSignInStore.getState().reset();
-    Core.useLocalFilesStore.getState().reset();
-    Core.useHomeStore.getState().reset();
-    Core.useHotStore.getState().reset();
-    Core.useSearchStore.getState().reset();
-    Core.useNotificationStore.getState().reset();
-    Core.useSettingsStore.getState().reset();
+    useOnboardingStore.getState().reset();
+    useAuthStore.getState().reset();
+    useSignInStore.getState().reset();
+    useLocalFilesStore.getState().reset();
+    useHomeStore.getState().reset();
+    useHotStore.getState().reset();
+    useSearchStore.getState().reset();
+    useNotificationStore.getState().reset();
+    useSettingsStore.getState().reset();
 
     // Clear cookies (locale cookie excluded — device-level UI preference, not sensitive data)
     clearCookies(['locale']);
 
-    await Core.clearDatabase();
+    await clearDatabase();
     // Skip post-migration resync — full cleanup resets all state
-    Core.useMigrationStore.getState().reset();
+    useMigrationStore.getState().reset();
   }
 
   /**
    * Generates an authentication URL for external authentication flows.
    * @returns Promise resolving to the generated authentication URL
    */
-  static async getAuthUrl(): Promise<Core.TGenerateAuthUrlResult> {
-    return this.wrapAuthFlow(() => Core.AuthApplication.generateAuthUrl());
+  static async getAuthUrl(): Promise<TGenerateAuthUrlResult> {
+    return this.wrapAuthFlow(() => AuthApplication.generateAuthUrl());
   }
 
   /**
@@ -273,15 +317,15 @@ export class AuthController {
    * @param inviteCode - The invite code for signup
    * @returns Promise resolving to the generated signup authentication URL
    */
-  static async getSignupAuthUrl(inviteCode: string): Promise<Core.TGenerateAuthUrlResult> {
-    return this.wrapAuthFlow(() => Core.AuthApplication.generateSignupAuthUrl(inviteCode));
+  static async getSignupAuthUrl(inviteCode: string): Promise<TGenerateAuthUrlResult> {
+    return this.wrapAuthFlow(() => AuthApplication.generateSignupAuthUrl(inviteCode));
   }
 
   /**
    * Logs out the current user from both the homeserver and local application state.
    */
   static async logout() {
-    let authStore = Core.useAuthStore.getState();
+    let authStore = useAuthStore.getState();
 
     // Set logging out flag immediately to prevent flash of weird states in UI
     authStore.setIsLoggingOut(true);
@@ -295,13 +339,13 @@ export class AuthController {
       if (!didRestoreSession) {
         return;
       }
-      authStore = Core.useAuthStore.getState();
+      authStore = useAuthStore.getState();
       session = authStore.session;
     }
 
     if (session) {
       try {
-        await Core.AuthApplication.logout({ session });
+        await AuthApplication.logout({ session });
       } catch (error) {
         Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
       }
@@ -315,7 +359,7 @@ export class AuthController {
    * Waits for Nexus to index the user's profile.json, then bootstraps notifications and data.
    */
   static async bootstrapWithDelay() {
-    const authStore = Core.useAuthStore.getState();
+    const authStore = useAuthStore.getState();
     const pubky = authStore.selectCurrentUserPubky();
     // Wait 5 seconds before bootstrap to let Nexus index the user
     Logger.info(`Waiting 5 seconds to index ${pubky} profile.json in Nexus before bootstrap...`);
@@ -325,10 +369,24 @@ export class AuthController {
   }
 
   /**
+   * Syncs user settings with the homeserver.
+   * Returns remote settings if newer, null otherwise.
+   * All failures are treated as non-blocking and fall back to local settings.
+   */
+  private static async syncSettings(pubky: Pubky, localSettings: SettingsState): Promise<SettingsState | null> {
+    try {
+      return await SettingsApplication.initializeSettings(pubky, localSettings);
+    } catch (error) {
+      Logger.error('Failed to initialize settings during bootstrap', { error, pubky });
+      return null;
+    }
+  }
+
+  /**
    * Generates a signup token for user registration. This is just for testing environments
    * @returns Promise resolving to the generated signup token
    */
   static async generateSignupToken() {
-    return await Core.AuthApplication.generateSignupToken();
+    return await AuthApplication.generateSignupToken();
   }
 }

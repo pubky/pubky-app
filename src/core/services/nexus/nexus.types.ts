@@ -1,3 +1,6 @@
+import type { Pubky, Timestamp } from '@/models/models.types';
+import type { TagModel } from '@/models/shared/tag/tag';
+
 /**
  * Nexus API Types
  *
@@ -7,8 +10,6 @@
  *
  * For internal utility types (URL building, fetch options), see `nexus.utils.types.ts`
  */
-
-import { type Pubky, type Timestamp, type TagModel } from '@/core';
 
 // =============================================================================
 // Request Parameter Types & Enums
@@ -99,7 +100,7 @@ export type NexusUserLink = {
   url: string;
 };
 
-/** Core user profile details from Nexus API */
+/** Primary user profile details from Nexus API */
 export type NexusUserDetails = {
   name: string;
   bio: string;
@@ -178,7 +179,7 @@ export type NexusUserIdsStream = Pubky[];
 // Response Types - Post
 // =============================================================================
 
-/** Core post details from Nexus API */
+/** Primary post details from Nexus API */
 export type NexusPostDetails = {
   id: string;
   content: string;

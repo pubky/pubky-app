@@ -1,10 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import type { PostPageBreadcrumbProps } from './PostPageBreadcrumb.types';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/atoms/DropdownMenu/DropdownMenu';
 import type { Ancestor } from '@/hooks/usePostAncestors/usePostAncestors.types';
+import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbSeparator } from '@/molecules/Breadcrumb/Breadcrumb';
+import type { PostPageBreadcrumbProps } from './PostPageBreadcrumb.types';
 
 /**
  * PostPageBreadcrumb Organism
@@ -33,20 +38,20 @@ export function PostPageBreadcrumb({ ancestors, userDetailsMap, onNavigate }: Po
 
     return (
       <React.Fragment key={ancestor.postId}>
-        <Molecules.BreadcrumbItem
+        <BreadcrumbItem
           variant={isLast ? 'current' : 'link'}
           onClick={isLast ? undefined : () => onNavigate(ancestor.postId)}
           data-testid={`breadcrumb-item-${index}`}
         >
           {userName}
-        </Molecules.BreadcrumbItem>
-        {!isLast && <Molecules.BreadcrumbSeparator size="sm" />}
+        </BreadcrumbItem>
+        {!isLast && <BreadcrumbSeparator size="sm" />}
       </React.Fragment>
     );
   };
 
   return (
-    <Molecules.Breadcrumb size="md" data-testid="post-breadcrumb">
+    <Breadcrumb size="md" data-testid="post-breadcrumb">
       {/* Case 1: No Truncation needed */}
       {!shouldTruncate && ancestors.map((ancestor, index) => renderItem(ancestor, index, ancestors.length))}
 
@@ -58,27 +63,27 @@ export function PostPageBreadcrumb({ ancestors, userDetailsMap, onNavigate }: Po
 
           {/* 2. Dropdown for Middle Items - using raw li to avoid nested button */}
           <li className="flex items-center justify-center gap-2.5 text-muted-foreground">
-            <Atoms.DropdownMenu>
-              <Atoms.DropdownMenuTrigger
+            <DropdownMenu>
+              <DropdownMenuTrigger
                 className="flex items-center gap-1 outline-none"
                 data-testid="breadcrumb-ellipsis-trigger"
               >
-                <Molecules.BreadcrumbEllipsis className="h-4 w-4" />
-              </Atoms.DropdownMenuTrigger>
-              <Atoms.DropdownMenuContent align="start" data-testid="breadcrumb-dropdown-content">
+                <BreadcrumbEllipsis className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" data-testid="breadcrumb-dropdown-content">
                 {ancestors.slice(1, -2).map((ancestor) => (
-                  <Atoms.DropdownMenuItem
+                  <DropdownMenuItem
                     key={ancestor.postId}
                     onClick={() => onNavigate(ancestor.postId)}
                     data-testid={`breadcrumb-dropdown-item-${ancestor.postId}`}
                   >
                     {userDetailsMap.get(ancestor.userId) || 'Unknown'}
-                  </Atoms.DropdownMenuItem>
+                  </DropdownMenuItem>
                 ))}
-              </Atoms.DropdownMenuContent>
-            </Atoms.DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </li>
-          <Molecules.BreadcrumbSeparator size="sm" />
+          <BreadcrumbSeparator size="sm" />
 
           {/* 3. Last Two Items */}
           {ancestors.slice(-2).map((ancestor, i) => {
@@ -88,6 +93,6 @@ export function PostPageBreadcrumb({ ancestors, userDetailsMap, onNavigate }: Po
           })}
         </>
       )}
-    </Molecules.Breadcrumb>
+    </Breadcrumb>
   );
 }

@@ -1,6 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import useEmblaCarousel from 'embla-carousel-react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './Carousel';
 
 // Mock embla-carousel-react
 const mockScrollPrev = vi.fn();
@@ -22,10 +24,6 @@ const mockApi = {
 vi.mock('embla-carousel-react', () => ({
   default: vi.fn(() => [vi.fn(), mockApi]),
 }));
-
-// Import components after mocking
-import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from './Carousel';
-import useEmblaCarousel from 'embla-carousel-react';
 
 describe('Carousel', () => {
   beforeEach(() => {

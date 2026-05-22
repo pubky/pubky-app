@@ -1,14 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as Core from '@/core';
-import * as Config from '@/config';
-import type { ConnectionType, UserConnectionData, UseProfileConnectionsResult } from './useProfileConnections.types';
-import { Logger } from '@/libs/logger/logger';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
+import { FileController } from '@/controllers/file/file';
+import { StreamUserController } from '@/controllers/stream/users/users';
+import { UserController } from '@/controllers/user/user';
 import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import type { UserStreamCompositeId } from '@/models/stream/user/userStream.types';
+import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import type { NexusTag, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import type { ConnectionType, UseProfileConnectionsResult, UserConnectionData } from './useProfileConnections.types';
 
-export type { ConnectionType, UserConnectionData, UseProfileConnectionsResult };
+export type { ConnectionType, UseProfileConnectionsResult, UserConnectionData };
 export { CONNECTION_TYPE } from './useProfileConnections.types';
 
 // ============================================================================
@@ -19,7 +27,7 @@ export { CONNECTION_TYPE } from './useProfileConnections.types';
  * useProfileConnections
  *
  * Hook for fetching and managing profile connections (followers, following, friends).
- * Uses Core StreamUserController for pagination and Dexie for reactive user details.
+ * Uses StreamUserController for pagination and Dexie for reactive user details.
  *
  * @param type - Type of connections to fetch: 'followers', 'following', or 'friends'
  * @param userId - Optional user ID (defaults to current authenticated user)
@@ -32,13 +40,13 @@ export { CONNECTION_TYPE } from './useProfileConnections.types';
  * );
  * ```
  */
-export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky): UseProfileConnectionsResult {
+export function useProfileConnections(type: ConnectionType, userId?: Pubky): UseProfileConnectionsResult {
   // Get current user from auth store if userId not provided
-  const { currentUserPubky } = Core.useAuthStore();
+  const { currentUserPubky } = useAuthStore();
   const targetUserId = userId ?? currentUserPubky;
 
   // State for user IDs (pagination)
-  const [userIds, setUserIds] = useState<Core.Pubky[]>([]);
+  const [userIds, setUserIds] = useState<Pubky[]>([]);
   const [skip, setSkip] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -46,17 +54,17 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
   const [hasMore, setHasMore] = useState(true);
 
   // Refs for stable callbacks
-  const userIdsRef = useRef<Core.Pubky[]>([]);
+  const userIdsRef = useRef<Pubky[]>([]);
 
   // Build stream ID: userId:connectionType (e.g., 'user123:followers')
-  const streamId = targetUserId ? (`${targetUserId}:${type}` as Core.UserStreamCompositeId) : null;
+  const streamId = targetUserId ? (`${targetUserId}:${type}` as UserStreamCompositeId) : null;
 
   // Subscribe to stream changes for reactive updates (follow/unfollow)
   const cachedStream = useLiveQuery(
     async () => {
       try {
         if (!streamId) return null;
-        return (await Core.LocalStreamUsersService.findById(streamId))?.stream ?? null;
+        return (await LocalStreamUsersService.findById(streamId))?.stream ?? null;
       } catch (error) {
         Logger.error('[useProfileConnections] Failed to query cached stream', { streamId, error });
         return null;
@@ -69,7 +77,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
   // Sync userIds when stream changes in cache (e.g., after follow/unfollow)
   useEffect(() => {
     if (cachedStream !== null && !isLoading) {
-      const hasPaginated = skip > Config.NEXUS_USERS_PER_PAGE;
+      const hasPaginated = skip > NEXUS_USERS_PER_PAGE;
       if (hasPaginated) return;
 
       userIdsRef.current = cachedStream;
@@ -81,30 +89,30 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
   const userDetailsMap = useLiveQuery(
     async () => {
       try {
-        if (userIds.length === 0) return new Map<Core.Pubky, Core.NexusUserDetails>();
-        return await Core.UserController.getManyDetails({ userIds });
+        if (userIds.length === 0) return new Map<Pubky, NexusUserDetails>();
+        return await UserController.getManyDetails({ userIds });
       } catch (error) {
         Logger.error('[useProfileConnections] Failed to query user details', { userIds, error });
-        return new Map<Core.Pubky, Core.NexusUserDetails>();
+        return new Map<Pubky, NexusUserDetails>();
       }
     },
     [userIds],
-    new Map<Core.Pubky, Core.NexusUserDetails>(),
+    new Map<Pubky, NexusUserDetails>(),
   );
 
   // Subscribe to user counts from local database (reactive via Controller)
   const userCountsMap = useLiveQuery(
     async () => {
       try {
-        if (userIds.length === 0) return new Map<Core.Pubky, Core.NexusUserCounts>();
-        return await Core.UserController.getManyCounts({ userIds });
+        if (userIds.length === 0) return new Map<Pubky, NexusUserCounts>();
+        return await UserController.getManyCounts({ userIds });
       } catch (error) {
         Logger.error('[useProfileConnections] Failed to query user counts', { userIds, error });
-        return new Map<Core.Pubky, Core.NexusUserCounts>();
+        return new Map<Pubky, NexusUserCounts>();
       }
     },
     [userIds],
-    new Map<Core.Pubky, Core.NexusUserCounts>(),
+    new Map<Pubky, NexusUserCounts>(),
   );
 
   // Subscribe to relationships from local database (reactive via Controller)
@@ -112,19 +120,19 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
   const userRelationshipsMap = useLiveQuery(
     async () => {
       try {
-        if (userIds.length === 0) return new Map<Core.Pubky, Core.UserRelationshipsModelSchema>();
-        return await Core.UserController.getManyRelationships({ userIds });
+        if (userIds.length === 0) return new Map<Pubky, UserRelationshipsModelSchema>();
+        return await UserController.getManyRelationships({ userIds });
       } catch (error) {
         Logger.error('[useProfileConnections] Failed to query user relationships', { userIds, error });
-        return new Map<Core.Pubky, Core.UserRelationshipsModelSchema>();
+        return new Map<Pubky, UserRelationshipsModelSchema>();
       }
     },
     [userIds],
-    new Map<Core.Pubky, Core.UserRelationshipsModelSchema>(),
+    new Map<Pubky, UserRelationshipsModelSchema>(),
   );
 
   // State for user tags (fetched with local-first strategy + API fallback)
-  const [userTagsMap, setUserTagsMap] = useState<Map<Core.Pubky, Core.NexusTag[]>>(new Map());
+  const [userTagsMap, setUserTagsMap] = useState<Map<Pubky, NexusTag[]>>(new Map());
 
   // Fetch user tags (local-first with API fallback for missing)
   useEffect(() => {
@@ -135,7 +143,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
 
     const fetchTags = async () => {
       try {
-        const tagsMap = await Core.UserController.getManyTagsOrFetch({ userIds });
+        const tagsMap = await UserController.getManyTagsOrFetch({ userIds });
         setUserTagsMap(tagsMap);
       } catch (err) {
         Logger.error('[useProfileConnections] Failed to fetch user tags:', err);
@@ -154,7 +162,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
       const relationship = userRelationshipsMap.get(id);
       const userTags = userTagsMap.get(id);
       // Only compute CDN avatar URL if user has an image set
-      const avatarUrl = details?.image ? Core.FileController.getAvatarUrl(id) : null;
+      const avatarUrl = details?.image ? FileController.getAvatarUrl(id) : null;
       // Extract tag labels from NexusTag objects
       const tags = userTags?.map((tag) => tag.label) ?? [];
 
@@ -210,10 +218,10 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
       try {
         const currentSkip = isInitialLoad ? 0 : skip;
 
-        const result = await Core.StreamUserController.getOrFetchStreamSlice({
+        const result = await StreamUserController.getOrFetchStreamSlice({
           streamId,
           skip: currentSkip,
-          limit: Config.NEXUS_USERS_PER_PAGE,
+          limit: NEXUS_USERS_PER_PAGE,
         });
 
         const pageIds = result.nextPageIds;
@@ -234,7 +242,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Core.Pubky)
         setSkip(nextSkip);
 
         // Check hasMore based on response length
-        const hasMoreConnections = pageIds.length >= Config.NEXUS_USERS_PER_PAGE;
+        const hasMoreConnections = pageIds.length >= NEXUS_USERS_PER_PAGE;
         setHasMore(hasMoreConnections);
 
         // Update state with all IDs (including duplicates for cursor tracking)

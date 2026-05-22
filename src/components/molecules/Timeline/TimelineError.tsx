@@ -1,4 +1,5 @@
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 
 interface TimelineErrorProps {
   message: string;
@@ -11,10 +12,10 @@ interface TimelineErrorProps {
  */
 export function TimelineError({ message }: TimelineErrorProps) {
   return (
-    <Atoms.Container className="flex items-center justify-center py-4">
-      <Atoms.Typography size="sm" className="text-destructive">
+    <Container className="flex items-center justify-center py-4">
+      <Typography size="sm" className="text-destructive">
         Error loading more posts: {message}
-      </Atoms.Typography>
-    </Atoms.Container>
+      </Typography>
+    </Container>
   );
 }

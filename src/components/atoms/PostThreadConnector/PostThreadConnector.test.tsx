@@ -1,35 +1,37 @@
-import { vi, describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { PostThreadConnector } from './PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from './PostThreadConnector.constants';
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-    style,
-    'data-testid': dataTestId,
-    'data-variant': dataVariant,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-    style?: React.CSSProperties;
-    'data-testid'?: string;
-    'data-variant'?: string;
-  }) => (
-    <div
-      data-testid={dataTestId}
-      data-variant={dataVariant}
-      className={className}
-      style={style}
-      data-override-defaults={overrideDefaults}
-    >
-      {children}
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+      style,
+      'data-testid': dataTestId,
+      'data-variant': dataVariant,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+      style?: React.CSSProperties;
+      'data-testid'?: string;
+      'data-variant'?: string;
+    }) => (
+      <div
+        data-testid={dataTestId}
+        data-variant={dataVariant}
+        className={className}
+        style={style}
+        data-override-defaults={overrideDefaults}
+      >
+        {children}
+      </div>
+    ),
+  };
+});
 
 describe('PostThreadConnector', () => {
   describe('Functionality', () => {

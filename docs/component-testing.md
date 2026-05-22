@@ -129,16 +129,18 @@ Each helper takes a `Partial<T>` (or a named `T` type parameter) and buries the 
 
 ```typescript
 // Before — silently disables the type check on AuthStore and the keyboard event
-import * as Core from '@/core';
+import type { AuthStore } from '@/stores/auth/auth.types';
+
 const authStore = {
   currentUserPubky: 'abc',
   signIn: vi.fn(),
-} as unknown as Core.AuthStore;
+} as unknown as AuthStore;
 
 const event = { key: 'Enter', preventDefault: vi.fn() } as any;
 
 // After — the helpers type-check the partials and add sensible defaults
-import { mockAuthStore, mockKeyboardEvent } from '@/test-utils';
+import { mockKeyboardEvent } from '@/test-utils/react-events';
+import { mockAuthStore } from '@/test-utils/stores';
 
 const authStore = mockAuthStore({
   currentUserPubky: 'abc',

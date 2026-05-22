@@ -1,55 +1,64 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { SearchInputBar } from './SearchInputBar';
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    style,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; style?: React.CSSProperties }>) => (
-    <div className={className} style={style} {...props}>
-      {children}
-    </div>
-  ),
-  Input: ({
-    type,
-    placeholder,
-    value,
-    onChange,
-    onKeyDown,
-    onFocus,
-    readOnly,
-    className,
-    ...props
-  }: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input
-      type={type}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      onKeyDown={onKeyDown}
-      onFocus={onFocus}
-      readOnly={readOnly}
-      className={className}
-      {...props}
-    />
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      style,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; style?: React.CSSProperties }>) => (
+      <div className={className} style={style} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
-    <span data-testid={`active-tag-${label}`}>
-      {label}
-      {showClose && (
-        <button data-testid={`remove-tag-${label}`} onClick={onClose}>
-          x
-        </button>
-      )}
-    </span>
-  ),
-}));
+vi.mock('@/atoms/Input/Input', () => {
+  return {
+    Input: ({
+      type,
+      placeholder,
+      value,
+      onChange,
+      onKeyDown,
+      onFocus,
+      readOnly,
+      className,
+      ...props
+    }: React.InputHTMLAttributes<HTMLInputElement>) => (
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        onFocus={onFocus}
+        readOnly={readOnly}
+        className={className}
+        {...props}
+      />
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostTag/PostTag', () => {
+  return {
+    PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
+      <span data-testid={`active-tag-${label}`}>
+        {label}
+        {showClose && (
+          <button data-testid={`remove-tag-${label}`} onClick={onClose}>
+            x
+          </button>
+        )}
+      </span>
+    ),
+  };
+});
 
 // Use real implementations - cn is a pure utility function, Search is an icon component
 // Both should use real implementations per guidelines

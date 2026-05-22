@@ -1,8 +1,28 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE, PUBKY_INVALID_TOO_LONG } from '@/test-utils/pubky';
 import { SinglePost } from './SinglePost';
 
-vi.mock('@/organisms/ContentLayout', () => ({
+const VALID_COMPOSITE_POST_ID = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
+
+const SHORT_POST_DETAILS = {
+  id: VALID_COMPOSITE_POST_ID,
+  indexed_at: Date.now(),
+  kind: 'short' as const,
+  uri: `pubky://${PUBKY_52_STAGING_FIXTURE}/pub/pubky.app/posts/${POST_ID_STAGING_FIXTURE}`,
+  content: 'Hello',
+  attachments: [],
+  is_moderated: false,
+  is_blurred: false,
+} satisfies EnrichedPostDetails;
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: vi.fn(),
+}));
+
+vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
   ContentLayout: ({
     children,
     leftSidebarContent,
@@ -30,12 +50,12 @@ vi.mock('@/organisms/ContentLayout', () => ({
   ),
 }));
 
-vi.mock('@/organisms/SinglePostLeftSidebar', () => ({
+vi.mock('@/organisms/SinglePostLeftSidebar/SinglePostLeftSidebar', () => ({
   SinglePostLeftSidebar: () => <div data-testid="single-post-left-sidebar">SinglePostLeftSidebar</div>,
   SinglePostLeftDrawer: () => <div data-testid="single-post-left-drawer">SinglePostLeftDrawer</div>,
 }));
 
-vi.mock('@/organisms/SinglePostRightPanel', () => ({
+vi.mock('@/organisms/SinglePostRightPanel/SinglePostRightPanel', () => ({
   SinglePostRightPanel: ({ postId, showFeedback = true }: { postId: string; showFeedback?: boolean }) => (
     <div data-testid="single-post-right-panel" data-post-id={postId} data-show-feedback={String(showFeedback)}>
       SinglePostRightPanel
@@ -43,70 +63,116 @@ vi.mock('@/organisms/SinglePostRightPanel', () => ({
   ),
 }));
 
-vi.mock('@/organisms/SinglePostContent', () => ({
-  SinglePostContent: ({ postId }: { postId: string }) => (
-    <div data-testid="single-post-content" data-post-id={postId}>
+vi.mock('@/organisms/PostNotFoundDiscoveryView/PostNotFoundDiscoveryView', () => ({
+  PostNotFoundDiscoveryView: ({ postId }: { postId: string }) => (
+    <div data-testid="post-not-found-discovery" data-post-id={postId}>
+      PostNotFoundDiscoveryView
+    </div>
+  ),
+}));
+
+vi.mock('@/organisms/SinglePostContent/SinglePostContent', () => ({
+  SinglePostContent: ({ postId, postDetails }: { postId: string; postDetails: EnrichedPostDetails }) => (
+    <div data-testid="single-post-content" data-post-id={postId} data-has-post-details={String(!!postDetails)}>
       SinglePostContent
     </div>
   ),
 }));
 
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
-  return {
-    ...actual,
-  };
-});
-
 describe('SinglePost', () => {
-  it('renders content layout shell', () => {
-    render(<SinglePost postId="author:post-1" />);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: SHORT_POST_DETAILS,
+      isLoading: false,
+    });
+  });
+
+  it('renders post not found discovery when composite id has invalid pubky segment', () => {
+    const invalidComposite = `${PUBKY_INVALID_TOO_LONG}:${POST_ID_STAGING_FIXTURE}`;
+    render(<SinglePost postId={invalidComposite} />);
+
+    const notFound = screen.getByTestId('post-not-found-discovery');
+    expect(notFound).toHaveAttribute('data-post-id', invalidComposite);
+    expect(screen.queryByTestId('content-layout')).not.toBeInTheDocument();
+    expect(usePostDetails).toHaveBeenCalledWith(invalidComposite, { enabled: false });
+  });
+
+  it('renders post not found discovery when post cannot be resolved', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: null,
+      isLoading: false,
+    });
+
+    render(<SinglePost postId={VALID_COMPOSITE_POST_ID} />);
+
+    const notFound = screen.getByTestId('post-not-found-discovery');
+    expect(notFound).toHaveAttribute('data-post-id', VALID_COMPOSITE_POST_ID);
+    expect(screen.queryByTestId('content-layout')).not.toBeInTheDocument();
+  });
+
+  it('renders content layout shell when post is loading', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: null,
+      isLoading: true,
+    });
+
+    render(<SinglePost postId={VALID_COMPOSITE_POST_ID} />);
 
     expect(screen.getByTestId('content-layout')).toBeInTheDocument();
   });
 
+  it('renders content layout shell when post exists', () => {
+    render(<SinglePost postId={VALID_COMPOSITE_POST_ID} />);
+
+    expect(usePostDetails).toHaveBeenCalledWith(VALID_COMPOSITE_POST_ID, { enabled: true });
+    expect(screen.getByTestId('content-layout')).toBeInTheDocument();
+  });
+
   it('renders SinglePostLeftSidebar in left sidebar', () => {
-    render(<SinglePost postId="author:post-1" />);
+    render(<SinglePost postId={VALID_COMPOSITE_POST_ID} />);
 
     expect(screen.getByTestId('single-post-left-sidebar')).toBeInTheDocument();
     expect(screen.getByTestId('left-sidebar')).toContainElement(screen.getByTestId('single-post-left-sidebar'));
   });
 
   it('renders SinglePostLeftDrawer in left drawer', () => {
-    render(<SinglePost postId="author:post-1" />);
+    render(<SinglePost postId={VALID_COMPOSITE_POST_ID} />);
 
     expect(screen.getByTestId('single-post-left-drawer')).toBeInTheDocument();
     expect(screen.getByTestId('left-drawer')).toContainElement(screen.getByTestId('single-post-left-drawer'));
   });
 
   it('renders SinglePostRightPanel in right sidebar with postId', () => {
-    render(<SinglePost postId="author:post-123" />);
+    render(<SinglePost postId={VALID_COMPOSITE_POST_ID} />);
 
     const rightSidebar = screen.getByTestId('right-sidebar');
     const rightPanel = within(rightSidebar).getByTestId('single-post-right-panel');
 
-    expect(rightPanel).toHaveAttribute('data-post-id', 'author:post-123');
+    expect(rightPanel).toHaveAttribute('data-post-id', VALID_COMPOSITE_POST_ID);
     expect(rightPanel).toHaveAttribute('data-show-feedback', 'true');
   });
 
   it('renders SinglePostRightPanel in right drawer with postId and hidden feedback', () => {
-    render(<SinglePost postId="author:post-123" />);
+    render(<SinglePost postId={VALID_COMPOSITE_POST_ID} />);
 
     const rightDrawer = screen.getByTestId('right-drawer');
     const rightPanel = within(rightDrawer).getByTestId('single-post-right-panel');
 
-    expect(rightPanel).toHaveAttribute('data-post-id', 'author:post-123');
+    expect(rightPanel).toHaveAttribute('data-post-id', VALID_COMPOSITE_POST_ID);
     expect(rightPanel).toHaveAttribute('data-show-feedback', 'false');
   });
 
-  it('renders SinglePostContent with postId', () => {
-    render(<SinglePost postId="author:post-123" />);
+  it('renders SinglePostContent with postId and details when loaded', () => {
+    render(<SinglePost postId={VALID_COMPOSITE_POST_ID} />);
 
-    expect(screen.getByTestId('single-post-content')).toHaveAttribute('data-post-id', 'author:post-123');
+    const el = screen.getByTestId('single-post-content');
+    expect(el).toHaveAttribute('data-post-id', VALID_COMPOSITE_POST_ID);
+    expect(el).toHaveAttribute('data-has-post-details', 'true');
   });
 
   it('matches snapshot', () => {
-    const { container } = render(<SinglePost postId="author:post-1" />);
+    const { container } = render(<SinglePost postId={VALID_COMPOSITE_POST_ID} />);
     expect(container).toMatchSnapshot();
   });
 });

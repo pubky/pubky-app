@@ -8,7 +8,7 @@
     "title": "<highlight>解锁</highlight>网络。",
     "subtitle": "你的密钥，你的内容，你的规则。",
     "signIn": "登录",
-    "createAccount": "创建账户",
+    "joinNow": "立即加入",
     "aTetherCompany": "<tether>tether.</tether> 旗下公司",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026。保留所有权利。"
   },
@@ -157,7 +157,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "创建账户",
+      "joinNow": "立即加入",
       "identityKeys": "身份密钥",
       "usePubkyRing": "使用 Pubky Ring",
       "yourPubky": "您的 pubky",
@@ -383,7 +383,7 @@
       "neverShareMobile": "永远不要与任何人分享此文件和密码。",
       "password": "密码",
       "passwordPlaceholder": "输入强密码",
-      "passwordHint": "建议使用8个或更多字符，包含大小写字母、数字和符号。",
+      "passwordHint": "建议使用较长的<passphraseLink>密码短语</passphraseLink>，长度<minLen>超过16个字符</minLen>，以获得更好的安全性。",
       "repeatPassword": "重复密码",
       "repeatPasswordPlaceholder": "重复您的密码",
       "passwordsDoNotMatch": "密码不匹配",
@@ -443,10 +443,26 @@
     "viewOriginal": "查看原帖",
     "youReposted": "你转发了",
     "newPostsSingular": "查看 {count} 条新帖子",
-    "newPostsPlural": "查看 {count} 条新帖子"
+    "newPostsPlural": "查看 {count} 条新帖子",
+    "replies": "回复",
+    "notFound": {
+      "title": "未找到帖子",
+      "subtitle": "此帖子不可用。可能已被删除，或链接已失效。",
+      "imageAlt": "未找到帖子",
+      "backToFeed": "返回信息流",
+      "viewProfile": "查看个人资料",
+      "exploreTags": "浏览标签"
+    }
   },
   "profile": {
     "title": "个人资料",
+    "notFound": {
+      "title": "未找到用户",
+      "subtitle": "您查找的用户不存在或可能已被移除。",
+      "imageAlt": "未找到用户",
+      "backToFeed": "返回信息流",
+      "exploreTags": "浏览标签"
+    },
     "tabs": {
       "notifications": "通知",
       "posts": "帖子",
@@ -465,8 +481,9 @@
     },
     "actions": {
       "title": "个人资料操作",
-      "edit": "编辑",
+      "editProfile": "编辑个人资料",
       "link": "链接",
+      "profileLink": "个人资料链接",
       "loggingOut": "退出中...",
       "signOut": "退出",
       "unfollowing": "取消关注中...",
@@ -1010,10 +1027,11 @@
     "couldNotFind": "无法找到请求的资源"
   },
   "password": {
-    "weak": "密码较弱",
-    "fair": "密码一般",
-    "good": "密码良好",
-    "strong": "密码很强！"
+    "veryWeak": "非常弱",
+    "weak": "弱",
+    "moderate": "中等",
+    "strong": "强",
+    "veryStrong": "非常强"
   },
   "quickReply": {
     "prompts": ["您对此有什么看法？", "您怎么看？", "您同意吗？", "有其他见解吗？", "您会怎么回应？"]

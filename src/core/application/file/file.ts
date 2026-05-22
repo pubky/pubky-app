@@ -1,5 +1,19 @@
-import * as Core from '@/core';
+import type { FilesListParams } from '@/application/file/file.types';
+import type { TGetFileUrlParams, TGetMetadataParams, TUploadFileParams } from '@/controllers/file/file.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalFileService } from '@/services/local/file/file';
+import { NexusFileService } from '@/services/nexus/file/file';
+import { filesApi } from '@/services/nexus/file/file.api';
+import type { NexusFileDetails, NexusFileUrls } from '@/services/nexus/nexus.types';
 
 /**
  * File Application
@@ -10,6 +24,30 @@ import { HttpMethod } from '@/libs/http/http.types';
 export class FileApplication {
   private constructor() {} // Prevent instantiation
 
+  static async toFileAttachment({ file, pubky }: TUploadFileParams): Promise<TFileAttachmentResult> {
+    let sanitizedFile: File;
+    try {
+      sanitizedFile = await stripImageMetadata(file);
+    } catch (error) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Image sanitization failed', {
+        service: ErrorService.Local,
+        operation: 'toFileAttachment',
+        cause: error,
+      });
+    }
+    let blobData: Uint8Array;
+    try {
+      blobData = new Uint8Array(await sanitizedFile.arrayBuffer());
+    } catch (error) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to read file content', {
+        service: ErrorService.Local,
+        operation: 'toFileAttachment',
+        cause: error,
+      });
+    }
+    return FileNormalizer.toFileAttachment({ file: sanitizedFile, blobData, pubky });
+  }
+
   /**
    * Uploads a file to the homeserver and persists it locally and persist it locally.
    * First uploads the blob data, then creates the file record.
@@ -18,20 +56,20 @@ export class FileApplication {
    * @param params.blobResult - Normalized blob result
    * @param params.fileResult - Normalized file result
    */
-  static async commitCreate({ fileAttachments }: Core.FilesListParams) {
+  static async commitCreate({ fileAttachments }: FilesListParams) {
     await Promise.all(
       fileAttachments.map(async (fileAttachment) => {
         const { blobResult, fileResult } = fileAttachment;
         // Upload Blob
-        await Core.HomeserverService.putBlob({ url: blobResult.meta.url, blob: blobResult.blob.data });
+        await HomeserverService.putBlob({ url: blobResult.meta.url, blob: blobResult.blob.data });
         // Create File Record
-        await Core.HomeserverService.request({
+        await HomeserverService.request({
           method: HttpMethod.PUT,
           url: fileResult.meta.url,
           bodyJson: fileResult.file.toJson(),
         });
         // Persist Files locally
-        await Core.LocalFileService.create({ blobResult, fileResult });
+        await LocalFileService.create({ blobResult, fileResult });
       }),
     );
   }
@@ -44,23 +82,23 @@ export class FileApplication {
     await Promise.all(
       fileAttachments.map(async (fileUri) => {
         // Delete the file metadata
-        await Core.HomeserverService.delete(fileUri);
-        const fileCompositeId = Core.buildCompositeIdFromPubkyUri({
+        await HomeserverService.delete(fileUri);
+        const fileCompositeId = buildCompositeIdFromPubkyUri({
           uri: fileUri,
-          domain: Core.CompositeIdDomain.FILES,
+          domain: CompositeIdDomain.FILES,
         });
         if (fileCompositeId) {
-          const file = await Core.LocalFileService.read(fileCompositeId);
+          const file = await LocalFileService.read(fileCompositeId);
           if (file) {
             // Delete the file blob
-            await Core.HomeserverService.delete(file.src);
-            await Core.LocalFileService.deleteById(fileCompositeId);
+            await HomeserverService.delete(file.src);
+            await LocalFileService.deleteById(fileCompositeId);
           } else {
-            const file = (await Core.HomeserverService.request({ method: HttpMethod.GET, url: fileUri })) as {
+            const file = (await HomeserverService.request({ method: HttpMethod.GET, url: fileUri })) as {
               src: string;
             };
             // Delete the file blob
-            await Core.HomeserverService.delete(file.src);
+            await HomeserverService.delete(file.src);
           }
         }
       }),
@@ -72,12 +110,12 @@ export class FileApplication {
    * @param fileAttachments - The file attachments to get the metadata for
    * @returns The metadata for the file attachments
    */
-  static async getMetadata({ fileAttachments }: Core.TGetMetadataParams) {
+  static async getMetadata({ fileAttachments }: TGetMetadataParams) {
     const compositeFileIds = fileAttachments.flatMap((uri) => {
-      const compositeId = Core.buildCompositeIdFromPubkyUri({ uri, domain: Core.CompositeIdDomain.FILES });
+      const compositeId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
       return compositeId ? [compositeId] : [];
     });
-    const files = await Core.LocalFileService.findByIds(compositeFileIds);
+    const files = await LocalFileService.findByIds(compositeFileIds);
     return files;
   }
 
@@ -87,8 +125,8 @@ export class FileApplication {
    * @param version - Optional version string/number for cache busting
    * @returns The avatar URL
    */
-  static getAvatarUrl(pubky: Core.Pubky, version?: string | number): string {
-    return Core.filesApi.getAvatarUrl(pubky, version);
+  static getAvatarUrl(pubky: Pubky, version?: string | number): string {
+    return filesApi.getAvatarUrl(pubky, version);
   }
 
   /**
@@ -97,9 +135,9 @@ export class FileApplication {
    * @param variant - The variant of the file
    * @returns The file URL
    */
-  static getFileUrl({ fileId, variant }: Core.TGetFileUrlParams): string {
-    const { pubky, id } = Core.parseCompositeId(fileId);
-    return Core.filesApi.getFileUrl({ pubky, file_id: id, variant });
+  static getFileUrl({ fileId, variant }: TGetFileUrlParams): string {
+    const { pubky, id } = parseCompositeId(fileId);
+    return filesApi.getFileUrl({ pubky, file_id: id, variant });
   }
 
   /**
@@ -108,24 +146,24 @@ export class FileApplication {
    *
    * @param fileAttachments - Array of file metadata objects already available (no HTTP fetch needed)
    */
-  static async persistFiles(fileAttachments: Core.NexusFileDetails[]) {
+  static async persistFiles(fileAttachments: NexusFileDetails[]) {
     if (fileAttachments.length === 0) {
       return;
     }
 
     const filesWithCompositeIds = fileAttachments.map((file) => {
-      const compositeId = Core.buildCompositeIdFromPubkyUri({
+      const compositeId = buildCompositeIdFromPubkyUri({
         uri: file.uri,
-        domain: Core.CompositeIdDomain.FILES,
+        domain: CompositeIdDomain.FILES,
       });
       return {
         ...file,
-        urls: typeof file.urls === 'string' ? (JSON.parse(file.urls) as Core.NexusFileUrls) : file.urls,
+        urls: typeof file.urls === 'string' ? (JSON.parse(file.urls) as NexusFileUrls) : file.urls,
         id: compositeId,
       };
     });
 
-    await Core.LocalFileService.createMany({ files: filesWithCompositeIds as Core.NexusFileDetails[] });
+    await LocalFileService.createMany({ files: filesWithCompositeIds as NexusFileDetails[] });
   }
 
   /**
@@ -139,7 +177,7 @@ export class FileApplication {
       return;
     }
 
-    const nexusFiles = await Core.NexusFileService.fetchFiles(fileUris);
+    const nexusFiles = await NexusFileService.fetchFiles(fileUris);
     await this.persistFiles(nexusFiles);
   }
 }

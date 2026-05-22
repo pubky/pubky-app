@@ -1,5 +1,5 @@
-import * as Core from '@/core';
+import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 
 export type TPersistFilesParams = {
-  files: Core.NexusFileDetails[];
+  files: NexusFileDetails[];
 };

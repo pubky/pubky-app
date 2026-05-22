@@ -1,5 +1,5 @@
-import * as Core from '@/core';
+import type { TPubkyParams } from '@/controllers/auth/auth.types';
 
-export type TBootstrapParams = Core.TPubkyParams & {
+export type TBootstrapParams = TPubkyParams & {
   lastReadUrl: string;
 };

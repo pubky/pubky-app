@@ -5,8 +5,9 @@ exports[`ProfilePageContainer > matches snapshot 1`] = `
   data-actions-count="9"
   data-active-page="notifications"
   data-filter-bar-page="notifications"
+  data-is-header-loading="false"
   data-is-loading="false"
-  data-profile="{\\"name\\":\\"Test User\\",\\"bio\\":\\"Test bio\\",\\"publicKey\\":\\"pubkyuser123\\",\\"emoji\\":\\"🌴\\",\\"status\\":\\"Available\\",\\"avatarUrl\\":\\"https://example.com/avatar.jpg\\",\\"link\\":\\"https://example.com/profile/user123\\"}"
+  data-profile="{\\"name\\":\\"Test User\\",\\"bio\\":\\"Test bio\\",\\"publicKey\\":\\"68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y\\",\\"emoji\\":\\"🌴\\",\\"status\\":\\"Available\\",\\"avatarUrl\\":\\"https://example.com/avatar.jpg\\",\\"link\\":\\"https://example.com/profile/68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y\\"}"
   data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7}"
   data-testid="profile-page-layout"
 >

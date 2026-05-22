@@ -1,27 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { useRepostInfo } from './useRepostInfo';
-import * as Core from '@/core';
 
 // Hoist mock data
 const { mockRelationships, setMockRelationships } = vi.hoisted(() => {
-  const relationshipsData = { current: undefined as Core.PostRelationshipsModelSchema | null | undefined };
+  const relationshipsData = { current: undefined as PostRelationshipsModelSchema | null | undefined };
   return {
     mockRelationships: relationshipsData,
-    setMockRelationships: (value: Core.PostRelationshipsModelSchema | null | undefined) => {
+    setMockRelationships: (value: PostRelationshipsModelSchema | null | undefined) => {
       relationshipsData.current = value;
     },
   };
 });
 
-// Mock dexie-react-hooks
-vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: vi.fn((_queryFn, _deps) => {
-    return mockRelationships.current;
-  }),
+// Mock local-first query hook
+vi.mock('@/hooks/useLocalFirstQuery/useLocalFirstQuery', () => ({
+  useLocalFirstQuery: vi.fn(() => ({
+    data: mockRelationships.current,
+    isLoading: mockRelationships.current === undefined,
+  })),
 }));
 
-// Mock Core
+// Mock direct dependencies
 const { mockBuildCompositeIdFromPubkyUri, mockGetPostRelationships } = vi.hoisted(() => ({
   mockBuildCompositeIdFromPubkyUri: vi.fn(),
   mockGetPostRelationships: vi.fn(),
@@ -29,31 +30,35 @@ const { mockBuildCompositeIdFromPubkyUri, mockGetPostRelationships } = vi.hoiste
 
 const mockFetch = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
-vi.mock('@/core', async () => {
-  const actual = await vi.importActual('@/core');
-  return {
-    ...actual,
-    PostController: {
-      // Included for safety if the mocked useLiveQuery ever executes the queryFn.
-      getPostRelationships: mockGetPostRelationships,
-      getRelationships: mockGetPostRelationships,
-      fetch: mockFetch,
-    },
-    buildCompositeIdFromPubkyUri: mockBuildCompositeIdFromPubkyUri,
-  };
-});
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    // Included for safety if the mocked useLiveQuery ever executes the queryFn.
+    getPostRelationships: mockGetPostRelationships,
+    getRelationships: mockGetPostRelationships,
+    fetch: mockFetch,
+  },
+}));
+vi.mock('@/models/models.utils', () => ({
+  buildCompositeIdFromPubkyUri: mockBuildCompositeIdFromPubkyUri,
+  parseCompositeId: (compositeId: string) => {
+    const separatorIndex = compositeId.indexOf(':');
+    if (separatorIndex === -1) {
+      throw new Error('Invalid composite ID');
+    }
+    return {
+      pubky: compositeId.slice(0, separatorIndex),
+      id: compositeId.slice(separatorIndex + 1),
+    };
+  },
+}));
 
 // Mock hooks
 const mockCurrentUserPubky = 'current-user-pubky';
-vi.mock('@/hooks', async () => {
-  const actual = await vi.importActual('@/hooks');
-  return {
-    ...actual,
-    useCurrentUserProfile: vi.fn(() => ({
-      currentUserPubky: mockCurrentUserPubky,
-    })),
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: vi.fn(() => ({
+    currentUserPubky: mockCurrentUserPubky,
+  })),
+}));
 
 describe('useRepostInfo', () => {
   const mockPostId = 'author:post-123';

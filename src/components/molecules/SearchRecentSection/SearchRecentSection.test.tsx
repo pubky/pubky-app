@@ -1,70 +1,89 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
 import { SearchRecentSection } from './SearchRecentSection';
-import type { Pubky } from '@/core';
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    onClick,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; onClick?: () => void }>) => (
-    <div className={className} onClick={onClick} {...props}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    className,
-    size,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; size?: string }>) => (
-    <span className={className} data-size={size} {...props}>
-      {children}
-    </span>
-  ),
-  Button: ({
-    children,
-    className,
-    onClick,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; onClick?: () => void }>) => (
-    <button className={className} onClick={onClick} {...props}>
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      className,
+      onClick,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; onClick?: () => void }>) => (
+      <button className={className} onClick={onClick} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
 
-vi.mock('@/molecules', () => ({
-  SearchRecentItem: ({
-    type,
-    user,
-    tag,
-    onUserClick,
-    onTagClick,
-  }: {
-    type: string;
-    user?: { id: string };
-    tag?: { tag: string };
-    onUserClick?: (userId: string) => void;
-    onTagClick?: (tagName: string) => void;
-  }) => (
-    <div
-      data-testid={type === 'user' ? `user-item-${user?.id}` : `tag-item-${tag?.tag}`}
-      onClick={() => {
-        if (type === 'user' && user && onUserClick) onUserClick(user.id);
-        if (type === 'tag' && tag && onTagClick) onTagClick(tag.tag);
-      }}
-    >
-      {type === 'user' ? `User: ${user?.id}` : `Tag: ${tag?.tag}`}
-    </div>
-  ),
-  RECENT_ITEM_TYPE: {
-    USER: 'user',
-    TAG: 'tag',
-  },
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onClick,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; onClick?: () => void }>) => (
+      <div className={className} onClick={onClick} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      size,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; size?: string }>) => (
+      <span className={className} data-size={size} {...props}>
+        {children}
+      </span>
+    ),
+  };
+});
+
+vi.mock('@/molecules/SearchRecentItem/SearchRecentItem', () => {
+  return {
+    SearchRecentItem: ({
+      type,
+      user,
+      tag,
+      onUserClick,
+      onTagClick,
+    }: {
+      type: string;
+      user?: { id: string };
+      tag?: { tag: string };
+      onUserClick?: (userId: string) => void;
+      onTagClick?: (tagName: string) => void;
+    }) => (
+      <div
+        data-testid={type === 'user' ? `user-item-${user?.id}` : `tag-item-${tag?.tag}`}
+        onClick={() => {
+          if (type === 'user' && user && onUserClick) onUserClick(user.id);
+          if (type === 'tag' && tag && onTagClick) onTagClick(tag.tag);
+        }}
+      >
+        {type === 'user' ? `User: ${user?.id}` : `Tag: ${tag?.tag}`}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/SearchRecentItem/SearchRecentItem.constants', () => {
+  return {
+    RECENT_ITEM_TYPE: {
+      USER: 'user',
+      TAG: 'tag',
+    },
+  };
+});
 
 // Use real icon implementations - icons should never be mocked per guidelines
 

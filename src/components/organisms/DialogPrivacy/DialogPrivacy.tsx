@@ -1,4 +1,8 @@
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/atoms/Dialog/Dialog';
+import { Link } from '@/atoms/Link/Link';
+import { List } from '@/atoms/List/List';
+import { Typography } from '@/atoms/Typography/Typography';
 
 const EMAIL_PRIVACY_URL = 'mailto:privacy@synonym.to';
 
@@ -10,37 +14,37 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
   const baseCSS = 'text-muted-foreground text-base font-normal';
 
   const defaultTrigger = (
-    <Atoms.Typography as="span" size="sm" className="cursor-pointer font-medium text-brand">
+    <Typography as="span" size="sm" className="cursor-pointer font-medium text-brand">
       Privacy Policy
-    </Atoms.Typography>
+    </Typography>
   );
 
   return (
-    <Atoms.Dialog>
-      <Atoms.DialogTrigger asChild>{trigger || defaultTrigger}</Atoms.DialogTrigger>
-      <Atoms.DialogContent className="sm:max-w-xl" hiddenTitle="Privacy Policy">
-        <Atoms.DialogHeader className="pr-6">
-          <Atoms.DialogTitle>Privacy Policy</Atoms.DialogTitle>
-        </Atoms.DialogHeader>
-        <Atoms.Container className="h-[320px] overflow-y-auto pr-4">
-          <Atoms.Container className="flex-col gap-4">
+    <Dialog>
+      <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
+      <DialogContent className="sm:max-w-xl" hiddenTitle="Privacy Policy">
+        <DialogHeader className="pr-6">
+          <DialogTitle>Privacy Policy</DialogTitle>
+        </DialogHeader>
+        <Container className="h-[320px] overflow-y-auto pr-4">
+          <Container className="flex-col gap-4">
             {/** Section 1 */}
-            <Atoms.Typography className={baseCSS}>Effective Date: January 29, 2026</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>Effective Date: January 29, 2026</Typography>
+            <Typography className={baseCSS}>
               SCOPE
               <br /> This Privacy Policy (“Policy“) describes how Synonym Software Ltd. treats personal information on
               the Pubky progressive web application and the products, services and features made available as part of
               the application (collectively, the “Platform“).
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               POLICY SUMMARY
               <br /> This summary offers a concise overview of how Synonym Software Ltd. (“Synonym“) collects, uses,
               shares, and protects your personal information on the Pubky platform. For full details, please read the
               complete Privacy Policy.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 2 */}
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>
               NOTICE AT COLLECTION
               <br />
               We collect, and in the past 12 months have collected, the following categories of information from and
@@ -53,20 +57,20 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
               are defined by the California Consumer Privacy Act (“CCPA”) or General Data Protection Regulation
               (“GDPR”). For a description of your rights under the CCPA or GDPR, and instructions on how to exercise
               your rights, please see the Your Privacy Rights section below.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               We will retain each of these categories of personal information for as long as it is necessary for the
               purposes for which it was collected. Retention periods are determined based on: (i) duration of the user
               relationship; (ii) legal and regulatory requirements; (iii) security and fraud-prevention needs; and (iv)
               dispute resolution obligations. When data is no longer required, it is securely deleted or anonymized.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 3 */}
-            <Atoms.Typography className={baseCSS}>TYPES OF INFORMATION WE COLLECT</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>TYPES OF INFORMATION WE COLLECT</Typography>
+            <Typography className={baseCSS}>
               We collect information from you and about you. Here are some examples of the information we may collect:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>
                 <strong>Identifiers.</strong> This includes your Pubky address and cryptographic keys.
               </li>
@@ -103,15 +107,15 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
               <li>
                 <strong>Bookmarks.</strong> This includes posts you have bookmarked for later viewing.
               </li>
-            </Atoms.List>
+            </List>
 
             {/** Section 4 */}
-            <Atoms.Typography className={baseCSS}>LEGAL BASIS</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>LEGAL BASIS</Typography>
+            <Typography className={baseCSS}>
               We must have a lawful basis (a valid legal reason) for using your information, and more specifically
               personal data. Our legal basis will be one of the following:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>
                 <strong>Consent:</strong> You have agreed to us collecting your personal data, or sensitive personal
                 data, for example when you tick a box to indicate consent.
@@ -137,15 +141,15 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
                 regulations or guidance, such as our obligation to prevent fraud or support you if you are, or become, a
                 vulnerable user.
               </li>
-            </Atoms.List>
+            </List>
 
             {/** Section 5 */}
-            <Atoms.Typography className={baseCSS}>HOW WE COLLECT YOUR INFORMATION</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>HOW WE COLLECT YOUR INFORMATION</Typography>
+            <Typography className={baseCSS}>
               We collect your information in different ways. Below are some examples of how we may collect your
               information.
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>
                 <strong>Directly From You.</strong> For example, when you create a profile, post on the Platform, or
                 submit an inquiry to us.
@@ -171,14 +175,12 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
                 views, referral sources, device types, and general usage trends. Such services operate without
                 advertising cookies or cross-site tracking.
               </li>
-            </Atoms.List>
+            </List>
 
             {/** Section 6 */}
-            <Atoms.Typography className={baseCSS}>HOW WE USE YOUR INFORMATION</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
-              Examples of how we may use your information include:
-            </Atoms.Typography>
-            <Atoms.List>
+            <Typography className={baseCSS}>HOW WE USE YOUR INFORMATION</Typography>
+            <Typography className={baseCSS}>Examples of how we may use your information include:</Typography>
+            <List>
               <li>
                 <strong>To Run and Improve Our Platform and Business.</strong> We may use your information to operate
                 and improve the Platform. We may also use your information to provide you with information about our
@@ -198,67 +200,65 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
               <li>
                 <strong>As Requested or Directed By You.</strong>
               </li>
-            </Atoms.List>
+            </List>
 
             {/** Section 7 */}
-            <Atoms.Typography className={baseCSS}>HUMAN VERIFICATION</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>HUMAN VERIFICATION</Typography>
+            <Typography className={baseCSS}>
               To prevent spam and verify you are not a robot, we offer the following verification options:
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>SMS Verification.</strong> We use a third-party SMS verification service to send one-time codes to
               your phone number. During this process, we collect:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>Your phone number (stored in hashed form)</li>
               <li>Your IP address</li>
               <li>Your device user-agent</li>
               <li>Verification attempts at timestamps</li>
-            </Atoms.List>
-            <Atoms.Typography className={baseCSS}>
+            </List>
+            <Typography className={baseCSS}>
               Phone number verifications are rate-limited to prevent abuse. SMS verification may not be available in all
               regions.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Lightning Payment Verification.</strong> As an alternative, you may verify that you are not a
               robot by making a small Lightning Network payment. During this process, we collect:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>Payment hash (invoice identifier)</li>
               <li>Payment amount</li>
               <li>Payment timestamp</li>
-            </Atoms.List>
-            <Atoms.Typography className={baseCSS}>
+            </List>
+            <Typography className={baseCSS}>
               Lightning payments are processed through our own infrastructure. Lightning verification may not be
               available in all regions due to applicable laws and regulatory requirements.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Invite Code Verification.</strong> You may also verify your account using an invite code provided
               by another user or by Synonym.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               <strong>Local Storage.</strong> The Pubky App stores data locally on your device using browser storage
               technologies (IndexedDB) to provide a fast, offline-capable experience. Locally stored data includes:
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>Your profile information and posts</li>
               <li>Your social connections (following, followers, friends)</li>
               <li>Cached content from users you interact with</li>
               <li>Notification history</li>
               <li>Bookmarked posts</li>
               <li>Media file metadata</li>
-            </Atoms.List>
-            <Atoms.Typography className={baseCSS}>
+            </List>
+            <Typography className={baseCSS}>
               This data remains on your device and syncs with our servers when you&apos;re online. You can clear this
               data through your browser settings.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 8 */}
-            <Atoms.Typography className={baseCSS}>HOW WE SHARE YOUR INFORMATION</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
-              We may share your information in the following ways:
-            </Atoms.Typography>
-            <Atoms.List>
+            <Typography className={baseCSS}>HOW WE SHARE YOUR INFORMATION</Typography>
+            <Typography className={baseCSS}>We may share your information in the following ways:</Typography>
+            <List>
               <li>
                 <strong>Internally.</strong> We may share your information with our parent, subsidiary, and affiliate
                 entities.
@@ -291,59 +291,59 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
               <li>
                 <strong>As Requested or Directed By You.</strong>
               </li>
-            </Atoms.List>
+            </List>
 
             {/** Section 9 */}
-            <Atoms.Typography className={baseCSS}>CHILDREN UNDER 18</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>CHILDREN UNDER 18</Typography>
+            <Typography className={baseCSS}>
               The Platform where this Policy is located is meant for adults. We do not knowingly collect personally
               identifiable data from persons under the age of 18, and strive to comply with the provisions of COPPA (The
               Children’s Online Privacy Protection Act). If you are a parent or legal guardian and think your child
               under 18 has provided us with information, please contact us at{' '}
-              <Atoms.Link href={EMAIL_PRIVACY_URL}>privacy@synonym.to</Atoms.Link>. You can also write to us at the
-              address listed at the end of this website Policy. Please mark your inquiries “COPPA Information Request.”
-              Parents, you can learn more about how to protect children’s privacy on-line{' '}
-              <Atoms.Link
+              <Link href={EMAIL_PRIVACY_URL}>privacy@synonym.to</Link>. You can also write to us at the address listed
+              at the end of this website Policy. Please mark your inquiries “COPPA Information Request.” Parents, you
+              can learn more about how to protect children’s privacy on-line{' '}
+              <Link
                 target="_blank"
                 href="https://www.consumer.ftc.gov/articles/0031-protecting-your-childs-privacy-online"
               >
                 here
-              </Atoms.Link>
+              </Link>
               .
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 10 */}
-            <Atoms.Typography className={baseCSS}>CHOICES REGARDING YOUR INFORMATION</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>CHOICES REGARDING YOUR INFORMATION</Typography>
+            <Typography className={baseCSS}>
               You have certain choices about how we use your information. Certain choices you make are browser and
               device specific.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>SMS Messages:</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>SMS Messages:</Typography>
+            <Typography className={baseCSS}>
               We may send you SMS messages in order to verify your identity as part of the account creation process.
               Note that message and data rates may apply. The frequency of messages may vary. You may reply “HELP” if
               you need assistance or “STOP” to stop receiving SMS messages. If you opt out, we may send you a
               confirmation SMS message to acknowledge your request. We do not sell or share phone numbers to third
               parties for their own marketing purposes.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>Cookies & Other Tracking Technologies:</Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <Typography className={baseCSS}>Cookies & Other Tracking Technologies:</Typography>
+            <List>
               <li>
                 <strong>Cookies:</strong> Non-essential cookies are used only where permitted by applicable law and,
                 where required, with your consent. You may withdraw consent at any time. For more information on how to
                 control browser cookies,{' '}
-                <Atoms.Link
+                <Link
                   target="_blank"
                   href="https://www.networkadvertising.org/understanding-online-advertising/what-are-my-options"
                 >
                   click here
-                </Atoms.Link>
+                </Link>
                 . Note that deleting or blocking cookies may impact your experience on our website, as some features may
                 not be available. Certain options you select are browser and device specific.
               </li>
-            </Atoms.List>
-            <Atoms.Typography className={baseCSS}>Our Do Not Track Policy:</Atoms.Typography>
-            <Atoms.List>
+            </List>
+            <Typography className={baseCSS}>Our Do Not Track Policy:</Typography>
+            <List>
               <li>
                 <strong>
                   Some browsers have “do not track” features that allow you to tell a website not to track you. These
@@ -353,17 +353,17 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
                 all of the tracking described here will stop.
               </li>
               <li>Options you select are browser and device specific.</li>
-            </Atoms.List>
+            </List>
 
             {/** Section 11 */}
-            <Atoms.Typography className={baseCSS}>YOUR PRIVACY RIGHTS</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>YOUR PRIVACY RIGHTS</Typography>
+            <Typography className={baseCSS}>
               Based on your state or country of residence, you may have the rights listed below with respect to the
               personal information that we maintain about you. We may take steps to verify your identity, as permitted
               or required under applicable law, before we process your request. Verification may include asking you to
               provide information about yourself that we can match against information already in our possession.
-            </Atoms.Typography>
-            <Atoms.List>
+            </Typography>
+            <List>
               <li>
                 <strong>Notice.</strong> This means that you can request that we disclose what personal information we
                 have collected about you, including the categories of personal information, the categories of sources
@@ -427,47 +427,47 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
               <li>
                 <strong>Complaint.</strong> You have a right to lodge a complaint with a relevant supervisory authority.
               </li>
-            </Atoms.List>
-            <Atoms.Typography className={baseCSS}>
+            </List>
+            <Typography className={baseCSS}>
               Agents that you have authorized to act on your behalf may also submit requests as instructed below. The
               agent must also provide evidence that they have your written permission to submit a request on your
               behalf. If we are unable to verify the authenticity of a request, we may ask you for more information or
               may deny the request.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Synonym or third-party providers may use machine learning models or automated decision-making technology
               (“ADMT”) to perform fraud detection and geoblocking, which might restrict data subjects’ access to the
               products, services, and features available through the Pubky platform. Data subjects have the right to
               obtain human intervention to express their point of view and contest such ADMT.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Individuals who wish to exercise their rights as provided in this section, including submitting a request
               to opt-out or to access information about our use of ADMT, can contact us at{' '}
-              <Atoms.Link href={EMAIL_PRIVACY_URL}>privacy@synonym.to</Atoms.Link>. Please include your name, public
-              key, and email address, and indicate you are making a “Privacy Rights” request. If we deny your rights
-              request and you would like to appeal, you may contact us again at{' '}
-              <Atoms.Link href={EMAIL_PRIVACY_URL}>privacy@synonym.to</Atoms.Link>. In addition, you may delete your
-              account or data associated with your account at any time by visiting the ‘Settings’ dashboard within the
-              Pubky application.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+              <Link href={EMAIL_PRIVACY_URL}>privacy@synonym.to</Link>. Please include your name, public key, and email
+              address, and indicate you are making a “Privacy Rights” request. If we deny your rights request and you
+              would like to appeal, you may contact us again at
+              <Link href={EMAIL_PRIVACY_URL}> privacy@synonym.to</Link>. In addition, you may delete your account or
+              data associated with your account at any time by visiting the ‘Settings’ dashboard within the Pubky
+              application.
+            </Typography>
+            <Typography className={baseCSS}>
               Should you wish to report a complaint or if you feel that we have not addressed your concern in a
               satisfactory manner, you may contact the supervisory authority of your state or country.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 12 */}
-            <Atoms.Typography className={baseCSS}>SECURITY</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>SECURITY</Typography>
+            <Typography className={baseCSS}>
               The Internet is not 100% secure. We cannot promise that your use of our Platform will be completely safe.
               We encourage you to use caution when using the Internet. While we use reasonable means to safeguard
               personal information under our control, due to the decentralized nature of the Platform, any information
               that you upload to the Platform may be shared in different locations and different servers. This may
               include servers not controlled or maintained by Synonym.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 13 */}
-            <Atoms.Typography className={baseCSS}>STORAGE AND TRANSFER OF INFORMATION</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>STORAGE AND TRANSFER OF INFORMATION</Typography>
+            <Typography className={baseCSS}>
               Due to the decentralized nature of the Platform, information we maintain may be stored or hosted in any
               jurisdiction, including the United States. If you live outside of the United States, you understand and
               agree that we may transfer your personal information to the United States. This Platform is subject to the
@@ -475,45 +475,45 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
               country. Personal information processed and stored in another country, including the United States, may be
               subject to disclosure or access requests by the governments, courts or law enforcement or regulatory
               agencies in that country according to its laws.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               Where personal data is transferred outside the European Economic Area, such transfers are carried out on
               the basis of appropriate safeguards under Article 44-49 GDPR, including Standard Contractual Clauses via
               third-party service providers.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 14 */}
-            <Atoms.Typography className={baseCSS}>LINKS</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>LINKS</Typography>
+            <Typography className={baseCSS}>
               Our Platform may contain links to other third-party sites or platform that are not governed by this
               Policy. If you click on a link to a third-party site, you will be taken to a site we do not control. We
               are not responsible for the privacy practices used by third-party sites. We suggest that you read the
               privacy policies of those sites carefully.
-            </Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            </Typography>
+            <Typography className={baseCSS}>
               When you view posts containing links to video or social media platforms, your browser may load embedded
               content directly from those services (e.g., YouTube, Twitter/X, Vimeo). Those services may collect
               information according to their own privacy policies.
-            </Atoms.Typography>
+            </Typography>
 
             {/** Section 15 */}
-            <Atoms.Typography className={baseCSS}>HOW TO CONTACT US</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>HOW TO CONTACT US</Typography>
+            <Typography className={baseCSS}>
               If you have any questions, comments or concerns with respect to our privacy practices or this Policy, or
               wish to update your information, please feel free to contact us at{' '}
-              <Atoms.Link href={EMAIL_PRIVACY_URL}>privacy@synonym.to</Atoms.Link>.
-            </Atoms.Typography>
+              <Link href={EMAIL_PRIVACY_URL}>privacy@synonym.to</Link>.
+            </Typography>
 
             {/** Section 16 */}
-            <Atoms.Typography className={baseCSS}>CHANGES IN POLICY</Atoms.Typography>
-            <Atoms.Typography className={baseCSS}>
+            <Typography className={baseCSS}>CHANGES IN POLICY</Typography>
+            <Typography className={baseCSS}>
               From time to time, we may change our Policy. We will notify you of any material changes to our Policy as
               required by law. We will also post an updated copy on our Platform. Please check our Platform periodically
               for updates.
-            </Atoms.Typography>
-          </Atoms.Container>
-        </Atoms.Container>
-      </Atoms.DialogContent>
-    </Atoms.Dialog>
+            </Typography>
+          </Container>
+        </Container>
+      </DialogContent>
+    </Dialog>
   );
 }

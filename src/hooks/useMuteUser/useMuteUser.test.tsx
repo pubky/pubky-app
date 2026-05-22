@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { useMuteUser } from './useMuteUser';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod } from '@/libs/http/http.types';
+import { useMuteUser } from './useMuteUser';
 
 const { mockUseAuthStore, mockCommitMute, mockIsAppError, mockLogger } = vi.hoisted(() => ({
   mockUseAuthStore: vi.fn(),
@@ -13,8 +13,10 @@ const { mockUseAuthStore, mockCommitMute, mockIsAppError, mockLogger } = vi.hois
   },
 }));
 
-vi.mock('@/core', () => ({
+vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: () => mockUseAuthStore(),
+}));
+vi.mock('@/controllers/mute/mute', () => ({
   MuteController: {
     commitMute: (...args: unknown[]) => mockCommitMute(...args),
   },

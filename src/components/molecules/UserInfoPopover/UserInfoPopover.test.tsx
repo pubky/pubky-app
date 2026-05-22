@@ -1,11 +1,9 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserInfoPopover } from './UserInfoPopover';
 
-vi.mock('@/atoms', async () => {
-  const React = await import('react');
-  const OpenContext = React.createContext(false);
-
+vi.mock('@/atoms/Popover/Popover', () => {
   return {
     Popover: ({
       children,
@@ -52,6 +50,8 @@ vi.mock('@/atoms', async () => {
     },
   };
 });
+
+const OpenContext = React.createContext(false);
 
 vi.mock('./components/UserInfoPopoverContent/UserInfoPopoverContent', () => ({
   UserInfoPopoverContent: () => <div data-testid="popover-inner-content">Content</div>,

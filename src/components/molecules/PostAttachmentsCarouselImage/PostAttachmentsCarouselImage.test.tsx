@@ -1,35 +1,37 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { PostAttachmentsCarouselImage } from './PostAttachmentsCarouselImage';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { PostAttachmentsCarouselImage } from './PostAttachmentsCarouselImage';
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Image: ({
-    src,
-    alt,
-    className,
-    id,
-    onLoad,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    alt: string;
-    className?: string;
-    id?: string;
-    onLoad?: () => void;
-    'data-testid'?: string;
-  }) => (
-    <img
-      data-testid={dataTestId || `image-${src.includes('feed') ? 'feed' : 'main'}`}
-      src={src}
-      alt={alt}
-      className={className}
-      id={id}
-      onLoad={onLoad}
-    />
-  ),
-}));
+vi.mock('@/atoms/Image/Image', () => {
+  return {
+    Image: ({
+      src,
+      alt,
+      className,
+      id,
+      onLoad,
+      'data-testid': dataTestId,
+    }: {
+      src: string;
+      alt: string;
+      className?: string;
+      id?: string;
+      onLoad?: () => void;
+      'data-testid'?: string;
+    }) => (
+      <img
+        data-testid={dataTestId || `image-${src.includes('feed') ? 'feed' : 'main'}`}
+        src={src}
+        alt={alt}
+        className={className}
+        id={id}
+        onLoad={onLoad}
+      />
+    ),
+  };
+});
 
 const createMockImage = (overrides: Partial<AttachmentConstructed> = {}): AttachmentConstructed => ({
   type: 'image/jpeg',

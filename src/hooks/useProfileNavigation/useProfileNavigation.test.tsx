@@ -1,8 +1,8 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useProfileNavigation } from './useProfileNavigation';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
-import { PROFILE_ROUTES } from '@/app';
+import { PROFILE_ROUTES } from '@/app/routes';
+import { useProfileNavigation } from './useProfileNavigation';
 
 // Mock Next.js navigation hooks
 const mockPush = vi.fn();
@@ -19,7 +19,7 @@ vi.mock('next/navigation', () => ({
 const mockPubky = 'user123';
 const mockIsOwnProfile = vi.fn(() => true);
 
-vi.mock('@/providers', () => ({
+vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: () => ({
     pubky: mockPubky,
     isOwnProfile: mockIsOwnProfile(),
@@ -30,7 +30,7 @@ vi.mock('@/providers', () => ({
 // Mock useIsMobile - default to desktop
 const mockIsMobile = vi.fn(() => false);
 
-vi.mock('@/hooks/useIsMobile', () => ({
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockIsMobile(),
 }));
 
@@ -41,6 +41,10 @@ describe('useProfileNavigation', () => {
     mockPathname.mockReturnValue(PROFILE_ROUTES.PROFILE);
     mockIsOwnProfile.mockReturnValue(true);
     mockIsMobile.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
   });
 
   describe('activePage', () => {
@@ -335,13 +339,13 @@ describe('useProfileNavigation', () => {
       mockIsOwnProfile.mockReturnValue(false);
     });
 
-    it('should return PROFILE for other user base route on mobile', () => {
+    it('should return POSTS for other user base route on mobile', () => {
       mockIsMobile.mockReturnValue(true);
       mockPathname.mockReturnValue('/profile/user123');
 
       const { result } = renderHook(() => useProfileNavigation());
 
-      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.PROFILE);
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.POSTS);
     });
 
     it('should return POSTS for other user base route on desktop', () => {
@@ -353,17 +357,17 @@ describe('useProfileNavigation', () => {
       expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.POSTS);
     });
 
-    it('should map filterBarActivePage to POSTS when activePage is PROFILE on mobile', () => {
+    it('should use POSTS for filterBarActivePage on other user base route on mobile', () => {
       mockIsMobile.mockReturnValue(true);
       mockPathname.mockReturnValue('/profile/user123');
 
       const { result } = renderHook(() => useProfileNavigation());
 
-      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.PROFILE);
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.POSTS);
       expect(result.current.filterBarActivePage).toBe(PROFILE_PAGE_TYPES.POSTS);
     });
 
-    it('should return POSTS for explicit /posts route regardless of viewport', () => {
+    it('should return POSTS for legacy /posts pathname regardless of viewport', () => {
       mockPathname.mockReturnValue('/profile/user123/posts');
 
       mockIsMobile.mockReturnValue(true);
@@ -399,7 +403,7 @@ describe('useProfileNavigation', () => {
       expect(mockPush).toHaveBeenCalledWith('/profile/user123/profile');
     });
 
-    it('should navigate to /posts subpath for other users', () => {
+    it('should navigate to base profile URL for other users posts tab', () => {
       mockPathname.mockReturnValue('/profile/user123');
 
       const { result } = renderHook(() => useProfileNavigation());
@@ -408,7 +412,33 @@ describe('useProfileNavigation', () => {
         result.current.navigateToPage(PROFILE_PAGE_TYPES.POSTS);
       });
 
-      expect(mockPush).toHaveBeenCalledWith('/profile/user123/posts');
+      expect(mockPush).toHaveBeenCalledWith('/profile/user123');
+    });
+
+    it('should navigate to the canonical posts route on mobile', () => {
+      mockIsMobile.mockReturnValue(true);
+      mockPathname.mockReturnValue('/profile/user123');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      act(() => {
+        result.current.navigateToPage(PROFILE_PAGE_TYPES.POSTS);
+      });
+
+      expect(mockPush).toHaveBeenCalledWith('/profile/user123');
+    });
+
+    it('should navigate to the canonical posts route from another mobile profile tab', () => {
+      mockIsMobile.mockReturnValue(true);
+      mockPathname.mockReturnValue('/profile/user123/profile');
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      act(() => {
+        result.current.navigateToPage(PROFILE_PAGE_TYPES.POSTS);
+      });
+
+      expect(mockPush).toHaveBeenCalledWith('/profile/user123');
     });
   });
 

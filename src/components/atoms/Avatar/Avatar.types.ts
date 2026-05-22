@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { Avatar as AvatarPrimitive } from 'radix-ui';
 import { type VariantProps } from 'class-variance-authority';
+import { Avatar as AvatarPrimitive } from 'radix-ui';
 import { avatarVariants } from './Avatar.variants';
 
 export interface AvatarProps

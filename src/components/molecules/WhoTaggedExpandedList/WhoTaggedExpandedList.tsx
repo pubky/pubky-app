@@ -1,14 +1,16 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
+import { Container } from '@/atoms/Container/Container';
+import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
-import type { WhoTaggedExpandedListProps } from './WhoTaggedExpandedList.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { TaggerUserRow } from '../TaggerUserRow/TaggerUserRow';
 import { WhoTaggedExpandedListSkeleton } from './WhoTaggedExpandedList.skeleton';
+import type { WhoTaggedExpandedListProps } from './WhoTaggedExpandedList.types';
 
 /**
  * WhoTaggedExpandedList
@@ -24,10 +26,10 @@ export function WhoTaggedExpandedList({
   'data-testid': dataTestId,
 }: WhoTaggedExpandedListProps) {
   const router = useRouter();
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
-  const { requireAuth } = Hooks.useRequireAuth();
-  const { currentUserPubky } = Core.useAuthStore();
-  const { getUsersWithAvatars } = Hooks.useBulkUserAvatars(taggerIds);
+  const { toggleFollow, isUserLoading } = useFollowUser();
+  const { requireAuth } = useRequireAuth();
+  const { currentUserPubky } = useAuthStore();
+  const { getUsersWithAvatars } = useBulkUserAvatars(taggerIds);
 
   // Build fallback map for user data not yet in IndexedDB
   const fallbackMap = new Map<string, TaggerWithAvatar>();
@@ -62,7 +64,7 @@ export function WhoTaggedExpandedList({
   }
 
   return (
-    <Atoms.Container
+    <Container
       aria-label="Who tagged expanded list"
       role="list"
       overrideDefaults
@@ -70,7 +72,7 @@ export function WhoTaggedExpandedList({
       data-testid={dataTestId || 'who-tagged-expanded-list'}
     >
       {taggers.map((tagger) => (
-        <Molecules.TaggerUserRow
+        <TaggerUserRow
           key={tagger.id}
           tagger={tagger}
           isLoading={isUserLoading(tagger.id)}
@@ -79,6 +81,6 @@ export function WhoTaggedExpandedList({
           onFollowClick={handleFollowClick}
         />
       ))}
-    </Atoms.Container>
+    </Container>
   );
 }

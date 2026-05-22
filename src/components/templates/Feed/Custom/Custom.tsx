@@ -1,25 +1,25 @@
-import * as Organisms from '@/organisms';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
+import { FeedNavigation } from '@/organisms/FeedNavigation/FeedNavigation';
+import { PostInput } from '@/organisms/PostInput/PostInput';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
+/**
+ * The `/feed/[id]` route's page body. Rendered as `{children}` inside the
+ * shared `(feeds)/layout.tsx` `<ContentLayout>` — the sidebars, drawers, and
+ * right-rail are now hoisted into that layout (see
+ * `app/(feeds)/_shell/configs.tsx`'s `customFeed` entry), so this template
+ * only renders the feed body.
+ */
 export function Custom() {
   return (
     <>
-      <Organisms.ContentLayout
-        feedVariant={TIMELINE_FEED_VARIANT.CUSTOM}
-        leftSidebarContent={<Organisms.CustomFeedFilters variant="sidebar" />}
-        rightSidebarContent={<Organisms.HomeFeedRightSidebar />}
-        leftDrawerContent={<Organisms.CustomFeedFilters variant="drawer" />}
-        rightDrawerContent={<Organisms.HomeFeedRightDrawer />}
-        leftDrawerContentMobile={<Organisms.CustomFeedFilters variant="drawer" />}
-        rightDrawerContentMobile={<Organisms.FeedNavigation className="lg:hidden" />}
-      >
-        <Organisms.AlertBackup />
-        <Organisms.FeedNavigation className="hidden lg:flex" />
-        <Organisms.TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM}>
-          <Organisms.PostInput variant={POST_INPUT_VARIANT.POST} />
-        </Organisms.TimelineFeed>
-      </Organisms.ContentLayout>
+      <AlertBackup />
+      <FeedNavigation className="hidden lg:flex" />
+      <TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM}>
+        <PostInput variant={POST_INPUT_VARIANT.POST} />
+      </TimelineFeed>
     </>
   );
 }

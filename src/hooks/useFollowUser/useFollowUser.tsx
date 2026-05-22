@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import * as Core from '@/core';
-import type { UseFollowUserResult } from './useFollowUser.types';
+import { useCallback, useState } from 'react';
+import { UserController } from '@/controllers/user/user';
+import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { isAppError } from '@/libs/error/error.utils';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import type { UseFollowUserResult } from './useFollowUser.types';
 
 /**
  * useFollowUser
@@ -29,14 +31,14 @@ import { isAppError } from '@/libs/error/error.utils';
  * ```
  */
 export function useFollowUser(): UseFollowUserResult {
-  const { currentUserPubky } = Core.useAuthStore();
+  const { currentUserPubky } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<UseFollowUserResult['loadingAction']>(null);
-  const [loadingUserId, setLoadingUserId] = useState<Core.Pubky | null>(null);
+  const [loadingUserId, setLoadingUserId] = useState<Pubky | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const toggleFollow = useCallback(
-    async (userId: Core.Pubky, isCurrentlyFollowing: boolean) => {
+    async (userId: Pubky, isCurrentlyFollowing: boolean) => {
       if (!currentUserPubky) {
         setError('User not authenticated');
         return;
@@ -55,7 +57,7 @@ export function useFollowUser(): UseFollowUserResult {
       try {
         const action = isCurrentlyFollowing ? HttpMethod.DELETE : HttpMethod.PUT;
 
-        await Core.UserController.commitFollow(action, {
+        await UserController.commitFollow(action, {
           follower: currentUserPubky,
           followee: userId,
         });
@@ -78,7 +80,7 @@ export function useFollowUser(): UseFollowUserResult {
   );
 
   const isUserLoading = useCallback(
-    (userId: Core.Pubky) => isLoading && loadingUserId === userId,
+    (userId: Pubky) => isLoading && loadingUserId === userId,
     [isLoading, loadingUserId],
   );
 

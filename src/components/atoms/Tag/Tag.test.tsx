@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { Tag } from './Tag';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { generateRandomColor, hexToRgba } from '@/libs/utils/utils';
+import { Tag } from './Tag';
 
 describe('Tag', () => {
   it('renders tag with count', () => {
@@ -10,6 +10,11 @@ describe('Tag', () => {
     expect(screen.getByText('bitcoin')).toBeInTheDocument();
     expect(screen.getByText('16')).toBeInTheDocument();
     expect(screen.getByTestId('tag-count')).toBeInTheDocument();
+  });
+
+  it('allows overriding count data-cy selector', () => {
+    render(<Tag name="bitcoin" count={16} countDataCy="post-tag-count" />);
+    expect(screen.getByText('16')).toHaveAttribute('data-cy', 'post-tag-count');
   });
 
   it('does not render count when not provided', () => {

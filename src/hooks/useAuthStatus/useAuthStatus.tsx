@@ -1,13 +1,12 @@
 import { useMemo } from 'react';
-
-import * as Core from '@/core';
-// Import directly from local types to avoid circular dependency with @/hooks barrel
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { AuthStatus, type AuthStatusResult } from './useAuthStatus.types';
 
 export function useAuthStatus(): AuthStatusResult {
   // Get state from stores
-  const onboardingStore = Core.useOnboardingStore();
-  const authStore = Core.useAuthStore();
+  const onboardingStore = useOnboardingStore();
+  const authStore = useAuthStore();
 
   const authStatusResult = useMemo((): AuthStatusResult => {
     // On page reload sessionExport (serialized credentials in localStorage) is restored

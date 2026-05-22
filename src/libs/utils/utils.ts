@@ -1,15 +1,16 @@
-import { clsx, type ClassValue } from 'clsx';
+import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { SnapshotSerializer } from 'vitest';
+import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
+import { parseCompositeId } from '@/models/models.utils';
+import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
+import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 import type {
-  ExtractInitialsProps,
   CopyToClipboardProps,
+  ExtractInitialsProps,
   FormatPublicKeyProps,
   GetDisplayTagsOptions,
 } from './utils.types';
-import type { PostInputVariant } from '@/organisms';
-import * as Config from '@/config';
-import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -36,7 +37,7 @@ export function stripPubkyPrefix(key: string): string {
 
 export function formatPublicKey({
   key,
-  length = Config.DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH,
+  length = DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH,
   includePrefix = false,
 }: FormatPublicKeyProps) {
   if (!key) return '';
@@ -64,6 +65,31 @@ export function formatPublicKey({
  */
 export function isPubkyIdentifier(value: string): boolean {
   return /^[a-z0-9]{52}$/.test(value);
+}
+
+function parseValidPostCompositeId(compositeId: string): { pubky: string; id: string } | null {
+  try {
+    const { pubky, id } = parseCompositeId(compositeId);
+    if (!isPubkyIdentifier(pubky) || id.length === 0) return null;
+    return { pubky, id };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True when `compositeId` parses as `author:postId` and `author` is a valid pubky identifier.
+ * Used to reject malformed `/post/:userId/:postId` URLs without treating them as a cache miss.
+ */
+export function isValidPostCompositeId(compositeId: string): boolean {
+  return parseValidPostCompositeId(compositeId) !== null;
+}
+
+/**
+ * Author pubky from `author:postId` when {@link isValidPostCompositeId} is true; otherwise `null`.
+ */
+export function getValidAuthorPubkyFromPostCompositeId(compositeId: string): string | null {
+  return parseValidPostCompositeId(compositeId)?.pubky ?? null;
 }
 
 export async function copyToClipboard({ text }: CopyToClipboardProps) {
@@ -573,7 +599,7 @@ export function sanitizeTagInput(value: string): string {
  */
 export function isValidTagLabel(value: string): boolean {
   const charCount = getCharacterCount(value);
-  return charCount > 0 && charCount <= Config.TAG_MAX_LENGTH && sanitizeTagInput(value) === value;
+  return charCount > 0 && charCount <= TAG_MAX_LENGTH && sanitizeTagInput(value) === value;
 }
 
 /**

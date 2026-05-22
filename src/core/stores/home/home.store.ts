@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { persist, devtools } from 'zustand/middleware';
-import { HomeStore, homeInitialState } from './home.types';
-import { createHomeActions } from './home.actions';
+import { devtools, persist } from 'zustand/middleware';
 import { HOME_PERSIST_KEY } from '../persistedKeys';
+import { createHomeActions } from './home.actions';
+import { homeInitialState, HomeStore } from './home.types';
 
 // Store creation
 export const useHomeStore = create<HomeStore>()(

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { ProfilePageLayoutWrapper } from './ProfilePageLayoutWrapper';
 
 describe('ProfilePageLayoutWrapper', () => {
@@ -30,6 +30,16 @@ describe('ProfilePageLayoutWrapper', () => {
     );
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper).toHaveClass('mx-auto', 'w-full');
+  });
+
+  it('keeps mobile spacing but removes the extra desktop top margin', () => {
+    const { container } = render(
+      <ProfilePageLayoutWrapper>
+        <div>Test</div>
+      </ProfilePageLayoutWrapper>,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper).toHaveClass('mt-6', 'lg:mt-0');
   });
 
   it('has correct padding classes', () => {

@@ -1,11 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { Checkbox as CheckboxPrimitive } from 'radix-ui';
-import * as Atoms from '@/atoms';
-import type { CheckboxProps } from './Checkbox.types';
 import { Check } from 'lucide-react';
+import { Checkbox as CheckboxPrimitive } from 'radix-ui';
 import { cn } from '@/libs/utils/utils';
+import { Container } from '../Container/Container';
+import { Label } from '../Label/Label';
+import { Typography } from '../Typography/Typography';
+import type { CheckboxProps } from './Checkbox.types';
+
 const Checkbox = React.forwardRef<React.ComponentRef<typeof CheckboxPrimitive.Root>, CheckboxProps>(
   ({ className, label, description, id, ...props }, ref) => {
     const generatedId = React.useId();
@@ -34,26 +37,24 @@ const Checkbox = React.forwardRef<React.ComponentRef<typeof CheckboxPrimitive.Ro
       return checkboxElement;
     }
     return (
-      <Atoms.Container overrideDefaults className="flex items-start gap-2">
+      <Container overrideDefaults className="flex items-start gap-2">
         {checkboxElement}
         {(label || description) && (
-          <Atoms.Container overrideDefaults className="flex flex-col gap-1.5">
+          <Container overrideDefaults className="flex flex-col gap-1.5">
             {label && (
-              <Atoms.Label
+              <Label
                 htmlFor={checkboxId}
                 className="cursor-pointer text-base leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
               >
                 {label}
-              </Atoms.Label>
+              </Label>
             )}
             {description && (
-              <Atoms.Typography className="text-sm leading-normal text-muted-foreground">
-                {description}
-              </Atoms.Typography>
+              <Typography className="text-sm leading-normal text-muted-foreground">{description}</Typography>
             )}
-          </Atoms.Container>
+          </Container>
         )}
-      </Atoms.Container>
+      </Container>
     );
   },
 );

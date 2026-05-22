@@ -1,9 +1,9 @@
-import { AuthStore } from './auth.types';
 import { ZustandGet } from '../stores.types';
+import { AuthStore } from './auth.types';
 
 // Selectors - State access functions with validation
 export const createAuthSelectors = (get: ZustandGet<AuthStore>) => ({
-  // call: Core.useAuthStore((state) => state.selectCurrentUserPubky())
+  // call: useAuthStore((state) => state.selectCurrentUserPubky())
   selectCurrentUserPubky: () => {
     const pubky = get().currentUserPubky;
     if (pubky === null) {

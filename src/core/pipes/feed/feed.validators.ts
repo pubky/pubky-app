@@ -1,5 +1,10 @@
 import validationLimits from 'pubky-app-specs/validationLimits.json';
-import * as Core from '@/core';
+import {
+  isFeedDeleteParams,
+  type TFeedPersistCreateParams,
+  type TFeedPersistDeleteParams,
+  type TFeedPersistParams,
+} from '@/application/feed/feed.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -55,8 +60,8 @@ export class FeedValidators {
    * @param params - Parameters to validate
    * @throws Error if params are invalid for DELETE action
    */
-  static validateDeleteParams(params: Core.TFeedPersistParams): asserts params is Core.TFeedPersistDeleteParams {
-    if (!Core.isFeedDeleteParams(params)) {
+  static validateDeleteParams(params: TFeedPersistParams): asserts params is TFeedPersistDeleteParams {
+    if (!isFeedDeleteParams(params)) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid params for DELETE action', {
         service: ErrorService.PubkyAppSpecs,
         operation: 'validateDeleteParams',
@@ -72,8 +77,8 @@ export class FeedValidators {
    * @param params - Parameters to validate
    * @throws Error if params are invalid for PUT action
    */
-  static validatePutParams(params: Core.TFeedPersistParams): asserts params is Core.TFeedPersistCreateParams {
-    if (Core.isFeedDeleteParams(params)) {
+  static validatePutParams(params: TFeedPersistParams): asserts params is TFeedPersistCreateParams {
+    if (isFeedDeleteParams(params)) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid params for PUT action', {
         service: ErrorService.PubkyAppSpecs,
         operation: 'validatePutParams',

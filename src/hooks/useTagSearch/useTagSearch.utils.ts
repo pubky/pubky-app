@@ -1,5 +1,5 @@
 import { APP_ROUTES } from '@/app/routes';
-import { addTagToArray } from '@/core/stores/search/search.utils';
+import { addTagToArray } from '@/stores/search/search.utils';
 
 /**
  * Builds search URL from tags array

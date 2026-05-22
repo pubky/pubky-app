@@ -1,10 +1,10 @@
-import * as Core from '@/core';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 
 export interface UseStreamPaginationOptions {
   /**
    * Stream ID to fetch posts from
    */
-  streamId: Core.PostStreamId;
+  streamId: PostStreamId;
   /**
    * Optional limit for posts per page (defaults to NEXUS_POSTS_PER_PAGE)
    */

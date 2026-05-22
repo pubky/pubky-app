@@ -1,4 +1,6 @@
-import * as Core from '@/core';
+import { OgMetadataApplication } from '@/application/og-metadata/og-metadata';
+import type { TOgMetadataParams, TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
+import { OgMetadataValidators } from '@/pipes/og-metadata/og-metadata.validators';
 
 /**
  * Controller for OG metadata fetching.
@@ -17,11 +19,11 @@ export class OgMetadataController {
    * @returns Normalized OG metadata result
    * @throws AppError if validation fails or fetching fails
    */
-  static async fetch(params: Core.TOgMetadataParams): Promise<Core.TOgMetadataResult> {
+  static async fetch(params: TOgMetadataParams): Promise<TOgMetadataResult> {
     // Validate and parse URL using pipes layer
-    const validatedUrl = await Core.OgMetadataValidators.validate(params.url);
+    const validatedUrl = await OgMetadataValidators.validate(params.url);
 
     // Delegate to application layer
-    return Core.OgMetadataApplication.fetch(validatedUrl);
+    return OgMetadataApplication.fetch(validatedUrl);
   }
 }

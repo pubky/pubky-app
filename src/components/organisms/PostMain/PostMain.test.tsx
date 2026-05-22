@@ -1,10 +1,13 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as Hooks from '@/hooks';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { PostMain } from './PostMain';
-import { PostMainLayoutProvider } from './PostMainLayout';
-import { POST_THREAD_CONNECTOR_VARIANTS } from '@/components/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { PostMainLayoutProvider } from './PostMainLayoutContext';
 
 // Use vi.hoisted to define mock functions before vi.mock calls (which are hoisted)
 const { mockPostHeader } = vi.hoisted(() => ({
@@ -16,9 +19,22 @@ const { mockPostHeader } = vi.hoisted(() => ({
 }));
 
 // Minimal atoms used by PostMain
-vi.mock('@/atoms', async () => {
-  const { POST_THREAD_CONNECTOR_VARIANTS } =
-    await import('@/components/atoms/PostThreadConnector/PostThreadConnector.constants');
+vi.mock('@/atoms/Card/Card', () => {
+  return {
+    Card: vi.fn(({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card" data-class-name={className}>
+        {children}
+      </div>
+    )),
+    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="card-content" data-class-name={className}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: (
       props: React.PropsWithChildren<{
@@ -41,137 +57,175 @@ vi.mock('@/atoms', async () => {
         </div>
       );
     },
-    Card: vi.fn(({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="card" data-class-name={className}>
-        {children}
-      </div>
-    )),
-    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="card-content" data-class-name={className}>
-        {children}
-      </div>
-    ),
+  };
+});
+
+vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', () => {
+  return {
     PostThreadConnector: ({ height, variant }: { height: number; variant?: string }) => (
       <div data-testid="thread-connector" data-height={height} data-variant={variant}>
         ThreadConnector
       </div>
     ),
-    POST_THREAD_CONNECTOR_VARIANTS,
   };
 });
 
 // Stub organisms composed inside PostMain
-vi.mock('@/organisms', () => ({
-  PostHeader: ({
-    postId,
-    size,
-    timeAgoPlacement,
-  }: {
-    postId: string;
-    size?: 'normal' | 'large';
-    timeAgoPlacement?: 'top-right' | 'bottom-left';
-  }) => mockPostHeader({ postId, size, timeAgoPlacement }),
-  PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
-    <div data-testid="post-content" data-text-class-name={textClassName}>
-      PostContent {postId}
-    </div>
-  ),
-  PostActionsBar: ({
-    postId,
-    className,
-    onTagClick,
-    onReplyClick,
-    onRepostClick,
-  }: {
-    postId: string;
-    className?: string;
-    onTagClick?: () => void;
-    onReplyClick?: () => void;
-    onRepostClick?: () => void;
-  }) => (
-    <div data-testid="post-actions" data-class-name={className}>
-      Actions {postId}
-      {onTagClick && (
-        <button data-testid="tag-button" onClick={onTagClick}>
-          Tag
-        </button>
-      )}
-      {onReplyClick && <button onClick={onReplyClick}>Reply</button>}
-      {onRepostClick && <button onClick={onRepostClick}>Repost</button>}
-    </div>
-  ),
-  PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
-    <div data-testid="post-tags-panel" data-post-id={postId} data-class-name={className}>
-      PostTagsPanel {postId}
-    </div>
-  ),
-  DialogReply: ({
-    postId,
-    open,
-    onOpenChangeAction,
-  }: {
-    postId: string;
-    open: boolean;
-    onOpenChangeAction: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog-reply" data-post-id={postId} data-open={open} onClick={() => onOpenChangeAction(false)}>
-      DialogReply
-    </div>
-  ),
-  DialogRepost: ({
-    postId,
-    open,
-    onOpenChangeAction,
-  }: {
-    postId: string;
-    open: boolean;
-    onOpenChangeAction: (open: boolean) => void;
-  }) => (
-    <div data-testid="dialog-repost" data-post-id={postId} data-open={open} onClick={() => onOpenChangeAction(false)}>
-      DialogRepost
-    </div>
-  ),
-  ClickableTagsList: ({
-    taggedId,
-    taggedKind,
-    showCount: _showCount,
-    showInput: _showInput,
-    showAddButton: _showAddButton,
-    addMode: _addMode,
-  }: {
-    taggedId: string;
-    taggedKind: unknown;
-    showCount?: boolean;
-    showInput?: boolean;
-    showAddButton?: boolean;
-    addMode?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <div
-      data-testid="clickable-tags-list"
-      data-tagged-id={taggedId}
-      data-tagged-kind={String(taggedKind)}
-      data-show-add-button={String(_showAddButton)}
-    >
-      ClickableTagsList {taggedId}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
+  return {
+    ClickableTagsList: ({
+      taggedId,
+      taggedKind,
+      showCount: _showCount,
+      showInput: _showInput,
+      showAddButton: _showAddButton,
+      addMode: _addMode,
+    }: {
+      taggedId: string;
+      taggedKind: unknown;
+      showCount?: boolean;
+      showInput?: boolean;
+      showAddButton?: boolean;
+      addMode?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <div
+        data-testid="clickable-tags-list"
+        data-tagged-id={taggedId}
+        data-tagged-kind={String(taggedKind)}
+        data-show-add-button={String(_showAddButton)}
+      >
+        ClickableTagsList {taggedId}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/DialogReply/DialogReply', () => {
+  return {
+    DialogReply: ({
+      postId,
+      open,
+      onOpenChangeAction,
+    }: {
+      postId: string;
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog-reply" data-post-id={postId} data-open={open} onClick={() => onOpenChangeAction(false)}>
+        DialogReply
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/DialogRepost/DialogRepost', () => {
+  return {
+    DialogRepost: ({
+      postId,
+      open,
+      onOpenChangeAction,
+    }: {
+      postId: string;
+      open: boolean;
+      onOpenChangeAction: (open: boolean) => void;
+    }) => (
+      <div data-testid="dialog-repost" data-post-id={postId} data-open={open} onClick={() => onOpenChangeAction(false)}>
+        DialogRepost
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostActionsBar/PostActionsBar', () => {
+  return {
+    PostActionsBar: ({
+      postId,
+      className,
+      onTagClick,
+      onReplyClick,
+      onRepostClick,
+    }: {
+      postId: string;
+      className?: string;
+      onTagClick?: () => void;
+      onReplyClick?: () => void;
+      onRepostClick?: () => void;
+    }) => (
+      <div data-testid="post-actions" data-class-name={className}>
+        Actions {postId}
+        {onTagClick && (
+          <button data-testid="tag-button" onClick={onTagClick}>
+            Tag
+          </button>
+        )}
+        {onReplyClick && <button onClick={onReplyClick}>Reply</button>}
+        {onRepostClick && <button onClick={onRepostClick}>Repost</button>}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostContent/PostContent', () => {
+  return {
+    PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
+      <div data-testid="post-content" data-text-class-name={textClassName}>
+        PostContent {postId}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostHeader/PostHeader', () => {
+  return {
+    PostHeader: ({
+      postId,
+      size,
+      timeAgoPlacement,
+    }: {
+      postId: string;
+      size?: 'normal' | 'large';
+      timeAgoPlacement?: 'top-right' | 'bottom-left';
+    }) => mockPostHeader({ postId, size, timeAgoPlacement }),
+  };
+});
+
+vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => {
+  return {
+    PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
+      <div data-testid="post-tags-panel" data-post-id={postId} data-class-name={className}>
+        PostTagsPanel {postId}
+      </div>
+    ),
+  };
+});
 
 // Stub molecules used by PostMain
-vi.mock('@/molecules', () => ({
-  PostTagsList: ({ postId }: { postId: string }) => <div data-testid="post-tags-list">PostTagsList {postId}</div>,
-  PostDeleted: () => <div data-testid="post-deleted">PostDeleted</div>,
-  RepostHeader: () => <div data-testid="repost-header">You reposted</div>,
-}));
+vi.mock('@/molecules/PostDeleted/PostDeleted', () => {
+  return {
+    PostDeleted: () => <div data-testid="post-deleted">PostDeleted</div>,
+  };
+});
+
+vi.mock('@/molecules/RepostHeader/RepostHeader', () => {
+  return {
+    RepostHeader: () => <div data-testid="repost-header">You reposted</div>,
+  };
+});
 
 // Mock hooks
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useElementHeight/useElementHeight', () => ({
   useElementHeight: vi.fn(() => ({
     ref: vi.fn(),
     height: 150,
   })),
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(() => ({
     postDetails: {
       id: 'post-123',
@@ -184,6 +238,9 @@ vi.mock('@/hooks', () => ({
       is_blurred: false,
     },
   })),
+}));
+
+vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
   useRepostInfo: vi.fn(() => ({
     isRepost: false,
     repostAuthorId: null,
@@ -192,24 +249,43 @@ vi.mock('@/hooks', () => ({
     isLoading: false,
     hasError: false,
   })),
+}));
+
+vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
   usePostHeaderVisibility: vi.fn(() => ({
     showRepostHeader: false,
     shouldShowPostHeader: true,
   })),
+}));
+
+vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
   useTtlSubscription: vi.fn(() => ({
     ref: vi.fn(),
     isVisible: false,
   })),
 }));
 
+vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
+  usePostNavigation: vi.fn(),
+}));
+
 describe('PostMain', () => {
-  const mockUseIsMobile = vi.mocked(Hooks.useIsMobile);
+  const mockUseIsMobile = vi.mocked(useIsMobile);
+  const mockHandlePostClick = vi.fn();
+  const mockHandlePostAuxClick = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockPostHeader.mockClear();
     mockUseIsMobile.mockReturnValue(false);
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostNavigation).mockReturnValue({
+      getPostHref: vi.fn(() => '/post/author/post-abc'),
+      navigateToPost: vi.fn(),
+      handlePostClick: mockHandlePostClick,
+      handlePostAuxClick: mockHandlePostAuxClick,
+      handlePostKeyDown: vi.fn(),
+    });
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'post-123',
         indexed_at: 0,
@@ -234,16 +310,38 @@ describe('PostMain', () => {
     expect(screen.getByTestId('post-actions')).toBeInTheDocument();
   });
 
-  it('invokes onClick handler when clickable area is clicked', () => {
-    const onClick = vi.fn();
+  it('invokes navigation click handler when clickable area is clicked', () => {
+    render(<PostMain postId="post-abc" />);
 
-    render(<PostMain postId="post-abc" onClick={onClick} />);
-
-    // Click the cursor-pointer div (second child of relative container)
     const clickableArea = screen.getByTestId('card').parentElement;
     if (clickableArea) {
       fireEvent.click(clickableArea);
-      expect(onClick).toHaveBeenCalledTimes(1);
+      expect(mockHandlePostClick).toHaveBeenCalledTimes(1);
+      expect(mockHandlePostClick.mock.calls[0][0]).toBe('post-abc');
+    }
+  });
+
+  it('invokes aux-click handler for middle-click on the clickable area', () => {
+    render(<PostMain postId="post-abc" />);
+
+    const clickableArea = screen.getByTestId('card').parentElement;
+    if (clickableArea) {
+      fireEvent(clickableArea, new MouseEvent('auxclick', { bubbles: true, button: 1 }));
+      expect(mockHandlePostAuxClick).toHaveBeenCalledTimes(1);
+      expect(mockHandlePostAuxClick.mock.calls[0][0]).toBe('post-abc');
+    }
+  });
+
+  it('does not navigate or show pointer cursor when isNavigable is false', () => {
+    render(<PostMain postId="post-abc" isNavigable={false} />);
+
+    const clickableArea = screen.getByTestId('card').parentElement;
+    if (clickableArea) {
+      fireEvent.click(clickableArea);
+      fireEvent(clickableArea, new MouseEvent('auxclick', { bubbles: true, button: 1 }));
+      expect(mockHandlePostClick).not.toHaveBeenCalled();
+      expect(mockHandlePostAuxClick).not.toHaveBeenCalled();
+      expect(clickableArea).toHaveAttribute('data-class-name', expect.not.stringContaining('cursor-pointer'));
     }
   });
 
@@ -263,7 +361,7 @@ describe('PostMain', () => {
   });
 
   it('renders PostDeleted when post is deleted', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'post-deleted',
         indexed_at: 0,
@@ -297,7 +395,7 @@ describe('PostMain', () => {
   });
 
   it('shows repost header when post is a repost by current user', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -309,7 +407,7 @@ describe('PostMain', () => {
   });
 
   it('hides PostHeader for simple repost (no content) by current user', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
@@ -323,7 +421,7 @@ describe('PostMain', () => {
   });
 
   it('shows PostHeader for quote repost (with content) by current user', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -337,7 +435,7 @@ describe('PostMain', () => {
   });
 
   it('shows PostHeader and hides repost header for repost by another user even without content', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,
@@ -351,7 +449,7 @@ describe('PostMain', () => {
   });
 
   it('shows PostHeader for repost with attachments but no text by current user', () => {
-    const mockUsePostDetails = vi.mocked(Hooks.usePostDetails);
+    const mockUsePostDetails = vi.mocked(usePostDetails);
     mockUsePostDetails.mockReturnValue({
       postDetails: {
         id: 'me:repost-with-attachments-1',
@@ -366,7 +464,7 @@ describe('PostMain', () => {
       isLoading: false,
     });
 
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -380,7 +478,7 @@ describe('PostMain', () => {
   });
 
   it('shows PostHeader when postDetails is loading (undefined)', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -395,7 +493,7 @@ describe('PostMain', () => {
   });
 
   it('shows PostHeader when postDetails is null', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -456,8 +554,8 @@ describe('PostMain', () => {
     expect(rightSection).toBeDefined();
   });
 
-  it('applies wide repost-header padding when reposting in side layout', () => {
-    vi.mocked(Hooks.usePostHeaderVisibility).mockReturnValue({
+  it('keeps repost header flush with the card edge in side layout', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
     });
@@ -468,11 +566,9 @@ describe('PostMain', () => {
       </PostMainLayoutProvider>,
     );
 
-    const containers = screen.getAllByTestId('container');
-    const repostWrapper = containers.find((container) =>
-      container.getAttribute('data-class-name')?.includes('px-12 pt-12 pb-6'),
-    );
-    expect(repostWrapper).toBeDefined();
+    const repostHeader = screen.getByTestId('repost-header');
+    expect(repostHeader.parentElement).toHaveAttribute('data-testid', 'card');
+    expect(repostHeader.parentElement).not.toHaveAttribute('data-testid', 'card-content');
   });
 
   it('keeps default size and timestamp placement for inline tags layout', () => {
@@ -593,11 +689,11 @@ describe('PostMain - Snapshots', () => {
     // Reset mocked hook return values that are overridden in earlier (non-snapshot) tests.
     // Without this, running the full suite (e.g. CI `test:coverage`) can leak mocked
     // implementations into snapshot tests and cause snapshot drift.
-    vi.mocked(Hooks.usePostHeaderVisibility).mockReturnValue({
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,
     });
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'post-123',
         indexed_at: 0,
@@ -628,7 +724,7 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot with deleted post', () => {
-    vi.mocked(Hooks.usePostDetails).mockReturnValue({
+    vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'post-deleted-123',
         indexed_at: 0,
@@ -646,7 +742,7 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot for simple repost by current user (no content)', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
@@ -657,7 +753,7 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot for quote repost by current user (with content)', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
@@ -668,7 +764,7 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot for repost by another user', () => {
-    const mockUsePostHeaderVisibility = vi.mocked(Hooks.usePostHeaderVisibility);
+    const mockUsePostHeaderVisibility = vi.mocked(usePostHeaderVisibility);
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,

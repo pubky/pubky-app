@@ -1,50 +1,45 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FileController } from '@/controllers/file/file';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { FeedbackCard } from './FeedbackCard';
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
 
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
 
-// Mock Core module
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    useAuthStore: vi.fn(),
-    ProfileController: {
-      read: vi.fn(),
-    },
-    UserController: {
-      getDetails: vi.fn().mockResolvedValue(null),
-      getOrFetchDetails: vi.fn().mockResolvedValue(null),
-    },
-    FileController: {
-      getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
-    },
-  };
-});
+// Mock dependencies
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(),
+}));
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    read: vi.fn(),
+  },
+}));
+vi.mock('@/controllers/user/user', () => ({
+  UserController: {
+    getDetails: vi.fn().mockResolvedValue(null),
+    getOrFetchDetails: vi.fn().mockResolvedValue(null),
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    getAvatarUrl: vi.fn((pubky: string) => `https://cdn.example.com/avatar/${pubky}`),
+  },
+}));
 
-// Mock Hooks module - passthrough to the real implementation but using mocked dependencies
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useCurrentUserProfile: vi.fn(),
-    // useAvatarUrl will use the real implementation which calls our mocked FileController
-  };
-});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: vi.fn(),
+}));
 
 // Mock Organisms
-vi.mock('@/organisms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/organisms')>();
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
-    ...actual,
-    DialogFeedback: () => <div data-testid="dialog-feedback" />,
     AvatarWithFallback: ({
       avatarUrl,
       name,
@@ -74,12 +69,16 @@ vi.mock('@/organisms', async (importOriginal) => {
   };
 });
 
+vi.mock('@/organisms/DialogFeedback/DialogFeedback', () => {
+  return {
+    DialogFeedback: () => <div data-testid="dialog-feedback" />,
+  };
+});
+
 // Mock Molecules
 const mockToast = vi.fn();
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    ...actual,
     useToast: vi.fn(() => ({
       toast: mockToast,
     })),
@@ -87,10 +86,26 @@ vi.mock('@/molecules', async (importOriginal) => {
 });
 
 // Mock Atoms
-vi.mock('@/atoms', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/atoms')>();
+vi.mock('@/atoms/Button/Button', () => {
   return {
-    ...actual,
+    Button: ({
+      children,
+      className,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      [key: string]: unknown;
+    }) => (
+      <button data-testid="button" className={className} {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
     Container: ({
       children,
       className,
@@ -106,19 +121,11 @@ vi.mock('@/atoms', async (importOriginal) => {
         {children}
       </div>
     ),
-    Button: ({
-      children,
-      className,
-      ...props
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      [key: string]: unknown;
-    }) => (
-      <button data-testid="button" className={className} {...props}>
-        {children}
-      </button>
-    ),
+  };
+});
+
+vi.mock('@/atoms/Heading/Heading', () => {
+  return {
     Heading: ({
       children,
       level,
@@ -140,17 +147,17 @@ vi.mock('@/atoms', async (importOriginal) => {
 describe('FeedbackCard', () => {
   const mockPubky = 'user123pubky';
   const mockUseLiveQuery = vi.mocked(useLiveQuery);
-  const mockUseAuthStore = vi.mocked(Core.useAuthStore);
-  const mockUseCurrentUserProfile = vi.mocked(Hooks.useCurrentUserProfile);
+  const mockUseAuthStore = vi.mocked(useAuthStore);
+  const mockUseCurrentUserProfile = vi.mocked(useCurrentUserProfile);
 
   beforeEach(() => {
     vi.clearAllMocks();
     // Make useCurrentUserProfile delegate to the existing mocks
-    mockUseCurrentUserProfile.mockImplementation((): Hooks.UseCurrentUserProfileResult => {
+    mockUseCurrentUserProfile.mockImplementation((): ReturnType<typeof useCurrentUserProfile> => {
       const currentUserPubky = mockUseAuthStore(
         (state: { currentUserPubky: string | null }) => state.currentUserPubky,
       ) as string | null;
-      const userDetails = mockUseLiveQuery(() => null, [], null) as Core.NexusUserDetails | null | undefined;
+      const userDetails = mockUseLiveQuery(() => null, [], null) as NexusUserDetails | null | undefined;
       return { userDetails, currentUserPubky };
     });
   });
@@ -299,7 +306,7 @@ describe('FeedbackCard', () => {
     });
 
     it('does not call getAvatarUrl when image is not available', async () => {
-      const mockGetAvatarUrl = vi.mocked(Core.FileController.getAvatarUrl);
+      const mockGetAvatarUrl = vi.mocked(FileController.getAvatarUrl);
       mockUseAuthStore.mockReturnValue({ currentUserPubky: mockPubky } as never);
       mockUseLiveQuery.mockReturnValue({
         name: 'Miguel',
@@ -317,7 +324,7 @@ describe('FeedbackCard', () => {
     });
 
     it('calls getAvatarUrl with correct pubky when image exists', async () => {
-      const mockGetAvatarUrl = vi.mocked(Core.FileController.getAvatarUrl);
+      const mockGetAvatarUrl = vi.mocked(FileController.getAvatarUrl);
       mockUseAuthStore.mockReturnValue({ currentUserPubky: mockPubky } as never);
       mockUseLiveQuery.mockReturnValue({
         id: mockPubky,
@@ -333,7 +340,7 @@ describe('FeedbackCard', () => {
     });
 
     it('does not call getAvatarUrl when currentUserPubky is null', async () => {
-      const mockGetAvatarUrl = vi.mocked(Core.FileController.getAvatarUrl);
+      const mockGetAvatarUrl = vi.mocked(FileController.getAvatarUrl);
       mockUseAuthStore.mockReturnValue({ currentUserPubky: null } as never);
       mockUseLiveQuery.mockReturnValue(null as never); // When no pubky, userDetails should be null
 
@@ -441,17 +448,17 @@ describe('FeedbackCard', () => {
 describe('FeedbackCard - Snapshots', () => {
   const mockPubky = 'user123pubky';
   const mockUseLiveQuery = vi.mocked(useLiveQuery);
-  const mockUseAuthStore = vi.mocked(Core.useAuthStore);
-  const mockUseCurrentUserProfile = vi.mocked(Hooks.useCurrentUserProfile);
+  const mockUseAuthStore = vi.mocked(useAuthStore);
+  const mockUseCurrentUserProfile = vi.mocked(useCurrentUserProfile);
 
   beforeEach(() => {
     vi.clearAllMocks();
     // Make useCurrentUserProfile delegate to the existing mocks
-    mockUseCurrentUserProfile.mockImplementation((): Hooks.UseCurrentUserProfileResult => {
+    mockUseCurrentUserProfile.mockImplementation((): ReturnType<typeof useCurrentUserProfile> => {
       const currentUserPubky = mockUseAuthStore(
         (state: { currentUserPubky: string | null }) => state.currentUserPubky,
       ) as string | null;
-      const userDetails = mockUseLiveQuery(() => null, [], null) as Core.NexusUserDetails | null | undefined;
+      const userDetails = mockUseLiveQuery(() => null, [], null) as NexusUserDetails | null | undefined;
       return { userDetails, currentUserPubky };
     });
   });

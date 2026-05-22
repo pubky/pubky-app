@@ -1,7 +1,8 @@
 'use client';
 
-import * as Core from '@/core';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
+import { PostController } from '@/controllers/post/post';
+import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import type { UsePostCountsResult } from './usePostCounts.types';
 
 /**
@@ -23,9 +24,9 @@ import type { UsePostCountsResult } from './usePostCounts.types';
  * ```
  */
 export function usePostCounts(compositeId: string | null | undefined): UsePostCountsResult {
-  const { data, isLoading } = useLocalFirstQuery<Core.PostCountsModelSchema>({
-    queryFn: () => Core.PostController.getCounts({ compositeId: compositeId! }),
-    fetchFn: () => Core.PostController.fetch({ compositeId: compositeId! }),
+  const { data, isLoading } = useLocalFirstQuery<PostCountsModelSchema>({
+    queryFn: () => PostController.getCounts({ compositeId: compositeId! }),
+    fetchFn: () => PostController.fetch({ compositeId: compositeId! }),
     deps: [compositeId],
     enabled: !!compositeId,
   });

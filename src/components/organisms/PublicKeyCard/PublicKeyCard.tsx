@@ -1,25 +1,33 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Copy, Key, Share } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Atoms from '@/atoms';
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
-import { Copy, Share, Key } from 'lucide-react';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { ProfileController } from '@/controllers/profile/profile';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { Logger } from '@/libs/logger/logger';
 import { shareWithFallback } from '@/libs/share/share';
 import { withPubkyPrefix } from '@/libs/utils/utils';
+import { ActionSection } from '@/molecules/ActionSection/ActionSection';
+import { ContentCard } from '@/molecules/Content/Content';
+import { InputField } from '@/molecules/InputField/InputField';
+import { PopoverPublicKey } from '@/molecules/PopoverPublicKey/PopoverPublicKey';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+
 export function PublicKeyCard() {
   const t = useTranslations('onboarding.pubky');
-  const secretKey = Core.useOnboardingStore((state) => state.secretKey);
-  const pubky = Core.useAuthStore((state) => state.currentUserPubky);
+  const secretKey = useOnboardingStore((state) => state.secretKey);
+  const pubky = useAuthStore((state) => state.currentUserPubky);
   const displayPubky = pubky ? withPubkyPrefix(pubky) : '';
-  const { copyToClipboard } = Hooks.useCopyToClipboard();
-  const { toast } = Molecules.useToast();
+  const { copyToClipboard } = useCopyToClipboard();
+  const { toast } = useToast();
   useEffect(() => {
     if (!secretKey) {
-      Core.ProfileController.generateSecrets();
+      ProfileController.generateSecrets();
     }
   }, [secretKey]);
   const handleCopyToClipboard = () => {
@@ -90,7 +98,7 @@ export function PublicKeyCard() {
     },
   ];
   return (
-    <Molecules.ContentCard
+    <ContentCard
       image={{
         src: '/images/key.webp',
         alt: 'Key',
@@ -98,14 +106,14 @@ export function PublicKeyCard() {
         height: 192,
       }}
     >
-      <Atoms.Container className="flex-row items-center gap-1">
-        <Atoms.Heading level={3} size="lg">
+      <Container className="flex-row items-center gap-1">
+        <Heading level={3} size="lg">
           {t('title')}
-        </Atoms.Heading>
-        <Molecules.PopoverPublicKey />
-      </Atoms.Container>
-      <Molecules.ActionSection actions={actions} className="w-full flex-col items-start justify-start gap-3">
-        <Molecules.InputField
+        </Heading>
+        <PopoverPublicKey />
+      </Container>
+      <ActionSection actions={actions} className="w-full flex-col items-start justify-start gap-3">
+        <InputField
           value={displayPubky}
           variant="dashed"
           readOnly
@@ -117,7 +125,7 @@ export function PublicKeyCard() {
           className="w-full max-w-[576px]"
           dataCy="pubky-display"
         />
-      </Molecules.ActionSection>
-    </Molecules.ContentCard>
+      </ActionSection>
+    </ContentCard>
   );
 }

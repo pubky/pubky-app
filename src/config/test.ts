@@ -1,12 +1,10 @@
 import '@testing-library/jest-dom';
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
-
 import React from 'react';
-import { vi, expect } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import { beforeAll, afterAll, afterEach, beforeEach } from 'vitest';
-
+import { expect, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
 // Import English messages for i18n mock
 import enMessages from '../../messages/en.json';
 
@@ -15,7 +13,7 @@ import enMessages from '../../messages/en.json';
 // =============================================================================
 // The Env singleton in @/libs/env/env is parsed at module load time.
 // If we import from @/libs/utils/utils before setting process.env, the import chain
-// (@/libs/utils/utils -> @/config -> @/libs/env/env) will initialize Env with wrong values.
+// (@/libs/utils/utils -> @/config/<module> -> @/libs/env/env) will initialize Env with wrong values.
 // See: https://github.com/pubky/pubky-app/issues/1101
 
 process.env.NEXT_PUBLIC_DB_VERSION = '1';
@@ -32,7 +30,7 @@ process.env.NEXT_PUBLIC_MODERATION_ID = 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1do
 process.env.NEXT_PUBLIC_MODERATED_TAGS = '["nudity"]';
 process.env.NEXT_PUBLIC_EXCHANGE_RATE_API = 'https://api1.blocktank.to/api/fx/rates/btc';
 process.env.NEXT_PUBLIC_HOMEGATE_URL = 'https://localhost:5000/';
-process.env.NEXT_PUBLIC_DEFAULT_HTTP_RELAY = 'http://localhost:15412/link/';
+process.env.NEXT_PUBLIC_DEFAULT_HTTP_RELAY = 'http://localhost:15412/inbox/';
 process.env.NEXT_PUBLIC_APP_VERSION = '0.0.0-test';
 
 // Chatwoot configuration (required for feedback feature)
@@ -44,6 +42,8 @@ process.env.SUPPORT_FEEDBACK_INBOX_ID = '26';
 // =============================================================================
 // NOW we can safely import app code that depends on Env
 // =============================================================================
+
+const { db } = await import('@/database/franky/franky');
 
 // Global snapshot serializer to normalize Radix UI generated IDs
 // This ensures snapshot tests are consistent across test runs
@@ -283,8 +283,6 @@ vi.mock('next/font/google', () => ({
     className: 'inter-tight',
   })),
 }));
-
-const { db } = await import('@/core');
 
 afterEach(() => {
   cleanup();

@@ -1,59 +1,51 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Home } from './Home';
 
+const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
+
 // Mock Organisms
-vi.mock('@/organisms', () => ({
-  DialogWelcome: () => <div data-testid="dialog-welcome">DialogWelcome</div>,
-  ContentLayout: ({
-    children,
-    leftSidebarContent,
-    rightSidebarContent,
-    leftDrawerContent,
-    rightDrawerContent,
-    leftDrawerContentMobile,
-    rightDrawerContentMobile,
-  }: {
-    children: React.ReactNode;
-    leftSidebarContent: React.ReactNode;
-    rightSidebarContent: React.ReactNode;
-    leftDrawerContent: React.ReactNode;
-    rightDrawerContent: React.ReactNode;
-    leftDrawerContentMobile: React.ReactNode;
-    rightDrawerContentMobile: React.ReactNode;
-  }) => (
-    <div data-testid="content-layout">
-      <div data-testid="left-sidebar">{leftSidebarContent}</div>
-      <div data-testid="right-sidebar">{rightSidebarContent}</div>
-      <div data-testid="left-drawer">{leftDrawerContent}</div>
-      <div data-testid="right-drawer">{rightDrawerContent}</div>
-      <div data-testid="left-drawer-mobile">{leftDrawerContentMobile}</div>
-      <div data-testid="right-drawer-mobile">{rightDrawerContentMobile}</div>
-      {children}
-    </div>
-  ),
-  HomeFeedSidebar: () => <div data-testid="home-feed-sidebar">HomeFeedSidebar</div>,
-  HomeFeedRightSidebar: () => <div data-testid="home-feed-right-sidebar">HomeFeedRightSidebar</div>,
-  HomeFeedDrawer: () => <div data-testid="home-feed-drawer">HomeFeedDrawer</div>,
-  HomeFeedRightDrawer: () => <div data-testid="home-feed-right-drawer">HomeFeedRightDrawer</div>,
-  HomeFeedDrawerMobile: () => <div data-testid="home-feed-drawer-mobile">HomeFeedDrawerMobile</div>,
-  AlertBackup: () => <div data-testid="alert-backup">AlertBackup</div>,
-  FeedNavigation: ({ className }: { className?: string }) => (
-    <div data-testid="feed-navigation" data-classname={className}>
-      FeedNavigation
-    </div>
-  ),
-  TimelineFeed: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
-    <div data-testid="timeline-feed" data-variant={variant}>
-      {children}
-    </div>
-  ),
-  PostInput: ({ dataCy, variant }: { dataCy?: string; variant?: string }) => (
-    <div data-testid="post-input" data-cy={dataCy} data-variant={variant}>
-      PostInput
-    </div>
-  ),
-}));
+vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
+  return {
+    AlertBackup: () => <div data-testid="alert-backup">AlertBackup</div>,
+  };
+});
+
+vi.mock('@/organisms/DialogWelcome/DialogWelcome', () => {
+  return {
+    DialogWelcome: () => <div data-testid="dialog-welcome">DialogWelcome</div>,
+  };
+});
+
+vi.mock('@/organisms/FeedNavigation/FeedNavigation', () => {
+  return {
+    FeedNavigation: ({ className }: { className?: string }) => (
+      <div data-testid="feed-navigation" data-classname={className}>
+        FeedNavigation
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/PostInput/PostInput', () => {
+  return {
+    PostInput: ({ dataCy, variant }: { dataCy?: string; variant?: string }) => (
+      <div data-testid="post-input" data-cy={dataCy} data-variant={variant}>
+        PostInput
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => {
+  return {
+    TimelineFeed: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
+      <div data-testid="timeline-feed" data-variant={variant}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock constants
 vi.mock('@/organisms/PostInput/PostInput.constants', () => ({
@@ -62,8 +54,8 @@ vi.mock('@/organisms/PostInput/PostInput.constants', () => ({
   },
 }));
 
-vi.mock('@/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config')>();
+vi.mock('@/config/feed', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/feed')>();
   return {
     ...actual,
     TIMELINE_FEED_VARIANT: {
@@ -74,9 +66,9 @@ vi.mock('@/config', async (importOriginal) => {
 });
 
 describe('Home', () => {
-  it('renders without errors', () => {
-    render(<Home />);
-    expect(screen.getByTestId('content-layout')).toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.sessionStorage.clear();
   });
 
   it('renders DialogWelcome', () => {
@@ -84,55 +76,16 @@ describe('Home', () => {
     expect(screen.getByTestId('dialog-welcome')).toBeInTheDocument();
   });
 
-  it('renders HomeFeedSidebar in left sidebar', () => {
+  it('renders AlertBackup', () => {
     render(<Home />);
-    expect(screen.getByTestId('home-feed-sidebar')).toBeInTheDocument();
-    expect(screen.getByTestId('left-sidebar')).toContainElement(screen.getByTestId('home-feed-sidebar'));
-  });
-
-  it('renders HomeFeedRightSidebar in right sidebar', () => {
-    render(<Home />);
-    expect(screen.getByTestId('home-feed-right-sidebar')).toBeInTheDocument();
-    expect(screen.getByTestId('right-sidebar')).toContainElement(screen.getByTestId('home-feed-right-sidebar'));
-  });
-
-  it('renders HomeFeedDrawer in left drawer', () => {
-    render(<Home />);
-    expect(screen.getByTestId('home-feed-drawer')).toBeInTheDocument();
-    expect(screen.getByTestId('left-drawer')).toContainElement(screen.getByTestId('home-feed-drawer'));
-  });
-
-  it('renders HomeFeedRightDrawer in right drawer', () => {
-    render(<Home />);
-    expect(screen.getByTestId('home-feed-right-drawer')).toBeInTheDocument();
-    expect(screen.getByTestId('right-drawer')).toContainElement(screen.getByTestId('home-feed-right-drawer'));
-  });
-
-  it('renders HomeFeedDrawerMobile in left drawer mobile', () => {
-    render(<Home />);
-    expect(screen.getByTestId('home-feed-drawer-mobile')).toBeInTheDocument();
-    expect(screen.getByTestId('left-drawer-mobile')).toContainElement(screen.getByTestId('home-feed-drawer-mobile'));
-  });
-
-  it('renders FeedNavigation in right drawer mobile with lg:hidden class', () => {
-    render(<Home />);
-    const rightDrawerMobile = screen.getByTestId('right-drawer-mobile');
-    const feedNav = rightDrawerMobile.querySelector('[data-testid="feed-navigation"]');
-    expect(feedNav).toBeInTheDocument();
-    expect(feedNav).toHaveAttribute('data-classname', 'lg:hidden');
+    expect(screen.getByTestId('alert-backup')).toBeInTheDocument();
   });
 
   it('renders FeedNavigation in main content with hidden lg:flex class', () => {
     render(<Home />);
-    const contentLayout = screen.getByTestId('content-layout');
-    const feedNavs = contentLayout.querySelectorAll('[data-testid="feed-navigation"]');
-    const mainFeedNav = Array.from(feedNavs).find((el) => el.getAttribute('data-classname') === 'hidden lg:flex');
+    const feedNavs = screen.getAllByTestId('feed-navigation');
+    const mainFeedNav = feedNavs.find((el) => el.getAttribute('data-classname') === 'hidden lg:flex');
     expect(mainFeedNav).toBeInTheDocument();
-  });
-
-  it('renders AlertBackup', () => {
-    render(<Home />);
-    expect(screen.getByTestId('alert-backup')).toBeInTheDocument();
   });
 
   it('renders TimelineFeed with HOME variant', () => {
@@ -154,6 +107,41 @@ describe('Home', () => {
     const postInput = screen.getByTestId('post-input');
     expect(postInput).toHaveAttribute('data-cy', 'home-post-input');
     expect(postInput).toHaveAttribute('data-variant', 'post');
+  });
+
+  it('does not render a ContentLayout shell (hoisted into (feeds)/layout.tsx)', () => {
+    render(<Home />);
+    expect(screen.queryByTestId('content-layout')).not.toBeInTheDocument();
+  });
+});
+
+describe('Home — force-scroll-top behavior', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.sessionStorage.clear();
+  });
+
+  it('forces scroll to top when flagged before entering /home', () => {
+    window.sessionStorage.setItem(FORCE_HOME_SCROLL_TOP_KEY, '1');
+
+    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+      cb(0);
+      return 1;
+    });
+
+    render(<Home />);
+
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+    expect(window.sessionStorage.getItem(FORCE_HOME_SCROLL_TOP_KEY)).toBeNull();
+  });
+
+  it('does not scroll when flag is absent', () => {
+    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+
+    render(<Home />);
+
+    expect(scrollToSpy).not.toHaveBeenCalled();
   });
 });
 

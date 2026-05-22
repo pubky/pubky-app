@@ -1,19 +1,19 @@
-import * as Core from '@/core';
+import type { StreamSorting, TPaginationParams, TPaginationRangeParams } from '@/services/nexus/nexus.types';
 
-export type TTagParams = Core.TPaginationParams & {
+export type TTagParams = TPaginationParams & {
   tag: string;
 };
 
 export type TTagSearchParams = TTagParams &
-  Core.TPaginationRangeParams & {
-    sorting?: Core.StreamSorting;
+  TPaginationRangeParams & {
+    sorting?: StreamSorting;
   };
 
-export type TPrefixSearchParams = Core.TPaginationParams & {
+export type TPrefixSearchParams = TPaginationParams & {
   prefix: string;
 };
 
-export type TSearchQueryParams = Core.TTagSearchParams | Core.TPrefixSearchParams;
+export type TSearchQueryParams = TTagSearchParams | TPrefixSearchParams;
 
 // Common return type for search results (array of IDs/labels)
 export type TSearchResult = string[];

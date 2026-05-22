@@ -1,8 +1,10 @@
 'use client';
 
-import * as Core from '@/core';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery';
-import { ProfileStats, UseProfileStatsResult } from './useProfileStats.types';
+import { UserController } from '@/controllers/user/user';
+import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import type { NexusUserCounts } from '@/services/nexus/nexus.types';
+import { useNotificationStore } from '@/stores/notification/notification.store';
+import { ProfileStats, UseProfileStatsOptions, UseProfileStatsResult } from './useProfileStats.types';
 
 /**
  * Hook for fetching and transforming user profile statistics.
@@ -17,19 +19,22 @@ import { ProfileStats, UseProfileStatsResult } from './useProfileStats.types';
  * by `useLocalFirstQuery` which gates both arms via `enabled`.
  *
  * @param userId - The user ID to fetch stats for
+ * @param options - Optional gate; queries run only when `userId` is non-empty and `enabled` is not false
  * @returns Profile statistics and loading state
  */
-export function useProfileStats(userId: string): UseProfileStatsResult {
+export function useProfileStats(userId: string, options?: UseProfileStatsOptions): UseProfileStatsResult {
+  const enabled = isLocalFirstQueryEnabled(userId, options?.enabled);
+
   // Fetch user counts using local-first pattern — replaces manual useLiveQuery + buggy useEffect
-  const { data: userCounts, isLoading } = useLocalFirstQuery<Core.NexusUserCounts>({
-    queryFn: () => Core.UserController.getCounts({ userId }),
-    fetchFn: () => Core.UserController.fetchCounts({ userId }),
-    deps: [userId],
-    enabled: !!userId,
+  const { data: userCounts, isLoading } = useLocalFirstQuery<NexusUserCounts>({
+    queryFn: () => UserController.getCounts({ userId }),
+    fetchFn: () => UserController.fetchCounts({ userId }),
+    deps: [userId, enabled],
+    enabled,
   });
 
   // Get unread notifications count reactively from Zustand store
-  const unreadNotificationsCount = Core.useNotificationStore((state) => state.selectUnread());
+  const unreadNotificationsCount = useNotificationStore((state) => state.selectUnread());
 
   // Build stats object from user counts
   // IMPORTANT: Backend counts.posts includes replies, so we subtract to get actual posts

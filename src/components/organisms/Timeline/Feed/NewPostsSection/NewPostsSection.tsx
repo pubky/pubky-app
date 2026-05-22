@@ -1,15 +1,22 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
+import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
+import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { useIsScrolledFromTop } from '@/hooks/useIsScrolledFromTop/useIsScrolledFromTop';
+import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { NewPostsButton } from '@/molecules/NewPostsButton/NewPostsButton';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 
 interface NewPostsSectionProps {
-  streamId: Core.PostStreamId;
+  streamId: PostStreamId;
+  variant: TimelineFeedVariant;
   postIds: string[];
-  mutedUserIdSet: Set<string>;
+  mutedUserIdSet: Set<Pubky>;
   loading: boolean;
   prependPosts: (postIds: string | string[]) => Promise<void>;
 }
@@ -20,23 +27,36 @@ interface NewPostsSectionProps {
  * Isolated component for the "New Posts" button.
  * Owns useIsScrolledFromTop and useUnreadPosts so neither scroll events
  * nor coordinator polls propagate re-renders to the parent feed content.
+ *
+ * Bookmarks: unread "new posts" counts must not apply the mute list, so bookmarked
+ * posts from muted authors stay consistent with the feed (#1804).
  */
-export function NewPostsSection({ streamId, postIds, mutedUserIdSet, loading, prependPosts }: NewPostsSectionProps) {
-  const { unreadPostIds } = Hooks.useUnreadPosts({ streamId });
+export function NewPostsSection({
+  streamId,
+  variant,
+  postIds,
+  mutedUserIdSet,
+  loading,
+  prependPosts,
+}: NewPostsSectionProps) {
+  const { unreadPostIds } = useUnreadPosts({ streamId });
   const t = useTranslations('toast.post');
-  const isScrolled = Hooks.useIsScrolledFromTop();
+  const isScrolled = useIsScrolledFromTop();
 
   const displayedPostIds = new Set(postIds);
   const notDisplayed = unreadPostIds.filter((id) => !displayedPostIds.has(id));
-  const actualNewPostIds = Core.MuteFilter.filterPostsSafe(notDisplayed, mutedUserIdSet);
+  const actualNewPostIds =
+    variant === TIMELINE_FEED_VARIANT.BOOKMARKS
+      ? notDisplayed
+      : MuteFilter.filterPostsSafe(notDisplayed, mutedUserIdSet);
   const actualNewCount = actualNewPostIds.length;
 
   const handleNewPostsClick = async () => {
     try {
-      await Core.StreamPostsController.mergeUnreadStreamWithPostStream({ streamId });
-      await Core.StreamPostsController.clearUnreadStream({ streamId });
+      await StreamPostsController.mergeUnreadStreamWithPostStream({ streamId });
+      await StreamPostsController.clearUnreadStream({ streamId });
 
-      const existingPosts = await Core.StreamPostsController.filterDeletedPosts(actualNewPostIds);
+      const existingPosts = await StreamPostsController.filterDeletedPosts(actualNewPostIds);
       const displayedPostIdsSet = new Set(postIds);
       const postsToAdd = existingPosts.filter((id) => !displayedPostIdsSet.has(id));
 
@@ -47,7 +67,7 @@ export function NewPostsSection({ streamId, postIds, mutedUserIdSet, loading, pr
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       Logger.error('Failed to load new posts:', error);
-      Molecules.showErrorToast({
+      showErrorToast({
         title: t('failedToLoadPosts'),
         description: t('failedToLoadPostsDesc'),
       });
@@ -55,7 +75,7 @@ export function NewPostsSection({ streamId, postIds, mutedUserIdSet, loading, pr
   };
 
   return (
-    <Molecules.NewPostsButton
+    <NewPostsButton
       count={actualNewCount}
       onClick={handleNewPostsClick}
       visible={actualNewCount > 0 && !loading}

@@ -1,8 +1,8 @@
 'use client';
-
-import * as Atoms from '@/atoms';
-import type { TagSuggestionsDropdownProps } from './TagSuggestionsDropdown.types';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
+import type { TagSuggestionsDropdownProps } from './TagSuggestionsDropdown.types';
 
 export function TagSuggestionsDropdown({
   suggestions,
@@ -12,14 +12,14 @@ export function TagSuggestionsDropdown({
   onMouseDown,
 }: TagSuggestionsDropdownProps) {
   return (
-    <Atoms.Container
+    <Container
       data-testid="tag-suggestions-dropdown"
       overrideDefaults={true}
       className="rounded-md border border-border bg-popover"
       onMouseDown={onMouseDown}
     >
       {suggestions.map((tag, index) => (
-        <Atoms.Container
+        <Container
           key={tag.label}
           overrideDefaults={true}
           className={cn(
@@ -29,11 +29,11 @@ export function TagSuggestionsDropdown({
           onClick={() => onSelect(tag.label)}
           onMouseEnter={() => onSelectIndexChange(index)}
         >
-          <Atoms.Typography as="span" className="text-sm font-medium text-popover-foreground">
+          <Typography as="span" className="text-sm font-medium text-popover-foreground">
             {tag.label}
-          </Atoms.Typography>
-        </Atoms.Container>
+          </Typography>
+        </Container>
       ))}
-    </Atoms.Container>
+    </Container>
   );
 }

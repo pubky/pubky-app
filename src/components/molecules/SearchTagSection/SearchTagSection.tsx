@@ -1,5 +1,6 @@
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
+import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
+import { PostTag } from '../PostTag/PostTag';
 import type { SearchTagSectionProps } from './SearchTagSection.types';
 
 /**
@@ -12,15 +13,15 @@ export function SearchTagSection({ title, tags, onTagClick }: SearchTagSectionPr
   if (tags.length === 0) return null;
 
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-2">
-      <Atoms.Typography size="xs" className="tracking-widest text-muted-foreground uppercase">
+    <Container overrideDefaults className="flex flex-col gap-2">
+      <Typography size="xs" className="tracking-widest text-muted-foreground uppercase">
         {title}
-      </Atoms.Typography>
-      <Atoms.Container overrideDefaults className="flex flex-wrap gap-3">
+      </Typography>
+      <Container overrideDefaults className="flex flex-wrap gap-3">
         {tags.map((tag) => (
-          <Molecules.PostTag key={tag.name} label={tag.name} onClick={() => onTagClick(tag.name)} />
+          <PostTag key={tag.name} label={tag.name} onClick={() => onTagClick(tag.name)} />
         ))}
-      </Atoms.Container>
-    </Atoms.Container>
+      </Container>
+    </Container>
   );
 }

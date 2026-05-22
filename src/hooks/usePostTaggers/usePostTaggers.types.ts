@@ -1,7 +1,7 @@
-import type * as Core from '@/core';
+import type { Pubky } from '@/models/models.types';
 
 export type TaggersState = {
-  ids: Core.Pubky[];
+  ids: Pubky[];
   skip: number;
   isLoading: boolean;
   hasMore: boolean;
@@ -11,7 +11,7 @@ export type TaggersState = {
 export type TaggersStateMap = Map<string, TaggersState>;
 
 export interface UsePostTaggersResult {
-  taggersByLabel: Map<string, Core.Pubky[]>;
+  taggersByLabel: Map<string, Pubky[]>;
   taggerStates: TaggersStateMap;
-  fetchAllTaggers: (label: string, initialIds: Core.Pubky[], totalCount?: number) => Promise<void>;
+  fetchAllTaggers: (label: string, initialIds: Pubky[], totalCount?: number) => Promise<void>;
 }

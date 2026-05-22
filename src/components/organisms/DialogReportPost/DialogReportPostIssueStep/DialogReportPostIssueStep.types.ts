@@ -1,4 +1,4 @@
-import type { ReportIssueType } from '@/core/pipes/report';
+import type { ReportIssueType } from '@/pipes/report/report.types';
 
 export interface DialogReportPostIssueStepProps {
   /** Handler when an issue type is selected and Next is clicked */

@@ -1,8 +1,7 @@
 'use client';
 
-// Import directly to avoid circular dependency with @/hooks barrel
-import { usePostDetails } from '@/hooks/usePostDetails';
-import { useRepostInfo } from '@/hooks/useRepostInfo';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import type { UsePostHeaderVisibilityResult } from './usePostHeaderVisibility.types';
 
 /**

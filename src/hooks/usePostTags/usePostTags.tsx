@@ -1,13 +1,17 @@
 'use client';
 
-import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslations } from 'next-intl';
-import * as Core from '@/core';
-import { toast } from '@/molecules/Toaster/use-toast';
-import type { UsePostTagsResult, UsePostTagsOptions } from './usePostTags.types';
+import { TagKind } from '@/application/tag/tag.types';
+import { PostController } from '@/controllers/post/post';
+import { TagController } from '@/controllers/tag/tag';
 import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
+import { toast } from '@/molecules/Toaster/use-toast';
+import type { NexusTag } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { TAGS_PER_PAGE } from './usePostTags.constants';
+import type { UsePostTagsOptions, UsePostTagsResult } from './usePostTags.types';
 
 /**
  * Hook for fetching and managing post tags with pagination.
@@ -26,7 +30,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
 
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (unauthenticated views should still render tags)
-  const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
+  const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const viewerId = customViewerId ?? currentUserId;
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -36,7 +40,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   const [hasFetched, setHasFetched] = useState(false);
 
   // Track zero-tagger tags with their original index for order preservation
-  const [zeroTaggerTags, setZeroTaggerTags] = useState<Map<string, { tag: Core.NexusTag; index: number }>>(new Map());
+  const [zeroTaggerTags, setZeroTaggerTags] = useState<Map<string, { tag: NexusTag; index: number }>>(new Map());
 
   // Track the order of tags as they were originally loaded
   const [tagOrder, setTagOrder] = useState<Map<string, number>>(new Map());
@@ -57,7 +61,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   const tagsCollection = useLiveQuery(
     async () => {
       if (!postId) return null;
-      return await Core.PostController.getTags({ compositeId: postId });
+      return await PostController.getTags({ compositeId: postId });
     },
     [postId],
     undefined,
@@ -68,7 +72,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   const postCounts = useLiveQuery(
     async () => {
       if (!postId) return null;
-      return await Core.PostController.getCounts({ compositeId: postId });
+      return await PostController.getCounts({ compositeId: postId });
     },
     [postId],
     undefined,
@@ -82,10 +86,11 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
 
     const fetchInitialTags = async () => {
       try {
-        const fetchedTags = await Core.PostController.fetchTags({
+        const fetchedTags = await PostController.fetchTags({
           compositeId: postId,
           skip: 0,
           limit: TAGS_PER_PAGE,
+          viewerId: viewerId ?? undefined,
         });
 
         if (stale) return;
@@ -105,7 +110,13 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     return () => {
       stale = true;
     };
-  }, [postId, hasFetched]);
+    // `viewerId` is listed for parity with the user-tags hook (`useTagged`),
+    // but the `hasFetched` guard above means a mid-mount viewer change
+    // (e.g. user logs in on the same page) will not trigger a re-fetch.
+    // This matches existing behaviour and is out of scope for #1721.
+    // To support that case in the future, reset `hasFetched` when viewerId
+    // changes — see the `prevPostIdRef` pattern below for the shape.
+  }, [postId, hasFetched, viewerId]);
 
   const isLoading = tagsCollection === undefined;
 
@@ -150,7 +161,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     const baseTagLabels = new Set(baseTags.map((t) => t.label.toLowerCase()));
 
     // Get zero-tagger tags that aren't in baseTags
-    const zeroTagsToAdd: Array<{ tag: Core.NexusTag; index: number }> = [];
+    const zeroTagsToAdd: Array<{ tag: NexusTag; index: number }> = [];
     zeroTaggerTags.forEach((value, label) => {
       if (!baseTagLabels.has(label)) {
         zeroTagsToAdd.push(value);
@@ -194,10 +205,11 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     setIsLoadingMore(true);
     try {
       const skip = loadedCountRef.current;
-      const newTags = await Core.PostController.fetchTags({
+      const newTags = await PostController.fetchTags({
         compositeId: postId,
         skip,
         limit: TAGS_PER_PAGE,
+        viewerId: viewerId ?? undefined,
       });
 
       // IMPORTANT: Increment by fetched count, not by unique tags in UI.
@@ -215,7 +227,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     } finally {
       setIsLoadingMore(false);
     }
-  }, [postId, isLoadingMore, hasMore, tTags]);
+  }, [postId, isLoadingMore, hasMore, viewerId, tTags]);
 
   const handleTagAdd = useCallback(
     async (tagString: string): Promise<{ success: boolean; error?: string }> => {
@@ -232,11 +244,11 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       }
 
       try {
-        await Core.TagController.commitCreate({
+        await TagController.commitCreate({
           taggedId: postId,
           label,
           taggerId: viewerId,
-          taggedKind: Core.TagKind.POST,
+          taggedKind: TagKind.POST,
         });
 
         // Remove from zero-tagger list if it was there
@@ -280,7 +292,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           // Track zero-tagger tag BEFORE delete to preserve order
           if (currentTag && (currentTag.taggers_count ?? 0) === 1) {
             const originalIndex = tagOrder.get(labelLower) ?? currentTagIndex;
-            const zeroTag: Core.NexusTag = {
+            const zeroTag: NexusTag = {
               ...currentTag,
               taggers: [],
               taggers_count: 0,
@@ -293,11 +305,11 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
             });
           }
 
-          await Core.TagController.commitDelete({
+          await TagController.commitDelete({
             taggedId: postId,
             label: tag.label,
             taggerId: viewerId,
-            taggedKind: Core.TagKind.POST,
+            taggedKind: TagKind.POST,
           });
 
           toast({
@@ -305,11 +317,11 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
             description: tTags('removedDesc', { label: tag.label }),
           });
         } else {
-          await Core.TagController.commitCreate({
+          await TagController.commitCreate({
             taggedId: postId,
             label: tag.label,
             taggerId: viewerId,
-            taggedKind: Core.TagKind.POST,
+            taggedKind: TagKind.POST,
           });
 
           // Remove from zero-tagger list

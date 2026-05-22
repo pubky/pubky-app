@@ -1,11 +1,12 @@
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
+import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
+import { CreateProfileForm } from '@/organisms/CreateProfileForm/CreateProfileForm';
+import { CreateProfileHeader } from '@/organisms/CreateProfileHeader/CreateProfileHeader';
 
 export function Profile() {
   return (
-    <Molecules.OnboardingLayout testId="profile-content">
-      <Organisms.CreateProfileHeader />
-      <Organisms.CreateProfileForm />
-    </Molecules.OnboardingLayout>
+    <OnboardingLayout testId="profile-content">
+      <CreateProfileHeader />
+      <CreateProfileForm />
+    </OnboardingLayout>
   );
 }

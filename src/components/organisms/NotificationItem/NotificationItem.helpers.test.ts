@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolvePubkyToNames } from './NotificationItem.helpers';
 
 // Valid 52-char lowercase alphanumeric keys for testing
@@ -9,7 +9,7 @@ const { mockGetOrFetchDetails } = vi.hoisted(() => ({
   mockGetOrFetchDetails: vi.fn(),
 }));
 
-vi.mock('@/core/controllers/user/user', () => ({
+vi.mock('@/controllers/user/user', () => ({
   UserController: {
     getOrFetchDetails: mockGetOrFetchDetails,
   },

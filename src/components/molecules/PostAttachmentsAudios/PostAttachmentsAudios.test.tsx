@@ -1,35 +1,42 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { PostAttachmentsAudios } from './PostAttachmentsAudios';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { PostAttachmentsAudios } from './PostAttachmentsAudios';
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    'data-testid': dataTestId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'data-testid'?: string;
-  }) => (
-    <div data-testid={dataTestId || 'container'} className={className}>
-      {children}
-    </div>
-  ),
-  Audio: ({
-    src,
-    className,
-    onClick,
-    'data-testid': dataTestId,
-  }: {
-    src: string;
-    className?: string;
-    onClick?: (e: React.MouseEvent) => void;
-    'data-testid'?: string;
-  }) => <audio data-testid={dataTestId || 'audio'} src={src} className={className} onClick={onClick} controls />,
-}));
+vi.mock('@/atoms/Audio/Audio', () => {
+  return {
+    Audio: ({
+      src,
+      className,
+      onClick,
+      'data-testid': dataTestId,
+    }: {
+      src: string;
+      className?: string;
+      onClick?: (e: React.MouseEvent) => void;
+      'data-testid'?: string;
+    }) => <audio data-testid={dataTestId || 'audio'} src={src} className={className} onClick={onClick} controls />,
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      'data-testid': dataTestId,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'data-testid'?: string;
+    }) => (
+      <div data-testid={dataTestId || 'container'} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 const createMockAudio = (overrides: Partial<AttachmentConstructed> = {}): AttachmentConstructed => ({
   type: 'audio',

@@ -1,7 +1,7 @@
 'use client';
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTagSuggestions } from './useTagSuggestions';
 import { TAG_SUGGESTIONS_DEFAULT_LIMIT } from './useTagSuggestions.constants';
 
@@ -12,8 +12,8 @@ const { mockGetTagsByPrefix } = vi.hoisted(() => {
   };
 });
 
-// Mock Core
-vi.mock('@/core', () => ({
+// Mock dependencies
+vi.mock('@/controllers/search/search', () => ({
   SearchController: {
     getTagsByPrefix: (...args: unknown[]) => mockGetTagsByPrefix(...args),
   },

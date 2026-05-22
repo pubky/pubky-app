@@ -1,13 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { buildCompositeId } from '@/models/models.utils';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { sortPostIdsByTimestamp } from './sorting';
-import * as Core from '@/core';
 
 describe('sortPostIdsByTimestamp', () => {
   const DEFAULT_AUTHOR = 'test-user';
   const BASE_TIMESTAMP = 1000000;
 
-  const createPostDetails = (postId: string, timestamp: number): Core.PostDetailsModelSchema => ({
-    id: Core.buildCompositeId({ pubky: DEFAULT_AUTHOR, id: postId }),
+  const createPostDetails = (postId: string, timestamp: number): PostDetailsModelSchema => ({
+    id: buildCompositeId({ pubky: DEFAULT_AUTHOR, id: postId }),
     content: `Content for ${postId}`,
     indexed_at: timestamp,
     kind: 'short',
@@ -17,13 +19,13 @@ describe('sortPostIdsByTimestamp', () => {
 
   const persistPostDetails = async (postId: string, timestamp: number) => {
     const details = createPostDetails(postId, timestamp);
-    await Core.PostDetailsModel.upsert(details);
+    await PostDetailsModel.upsert(details);
     return details.id;
   };
 
   beforeEach(async () => {
     // Clear post details table before each test
-    await Core.PostDetailsModel.clear();
+    await PostDetailsModel.clear();
   });
 
   it('should return empty array for empty input', async () => {
@@ -75,7 +77,7 @@ describe('sortPostIdsByTimestamp', () => {
       //
       // Input order represents the correct chronological order from API/cache
       const post1Id = await persistPostDetails('post1', BASE_TIMESTAMP + 2000); // newest
-      const post2Id = Core.buildCompositeId({ pubky: DEFAULT_AUTHOR, id: 'post2' }); // NOT persisted
+      const post2Id = buildCompositeId({ pubky: DEFAULT_AUTHOR, id: 'post2' }); // NOT persisted
       const post3Id = await persistPostDetails('post3', BASE_TIMESTAMP); // oldest
 
       // Input is already correctly sorted (newest first)
@@ -93,9 +95,9 @@ describe('sortPostIdsByTimestamp', () => {
     it('should preserve order when multiple posts are missing details', async () => {
       // More complex scenario where multiple posts are missing details
       const newestId = await persistPostDetails('newest', BASE_TIMESTAMP + 4000);
-      const newerId = Core.buildCompositeId({ pubky: DEFAULT_AUTHOR, id: 'newer' }); // missing
+      const newerId = buildCompositeId({ pubky: DEFAULT_AUTHOR, id: 'newer' }); // missing
       const middleId = await persistPostDetails('middle', BASE_TIMESTAMP + 2000);
-      const olderId = Core.buildCompositeId({ pubky: DEFAULT_AUTHOR, id: 'older' }); // missing
+      const olderId = buildCompositeId({ pubky: DEFAULT_AUTHOR, id: 'older' }); // missing
       const oldestId = await persistPostDetails('oldest', BASE_TIMESTAMP);
 
       const inputOrder = [newestId, newerId, middleId, olderId, oldestId];
@@ -122,7 +124,7 @@ describe('sortPostIdsByTimestamp', () => {
     it('should demonstrate the bug: missing newest post moves to end', async () => {
       // This test demonstrates the current buggy behavior
       // where a missing post gets sorted to the end because it has timestamp 0
-      const newest = Core.buildCompositeId({ pubky: DEFAULT_AUTHOR, id: 'newest' }); // missing - should be first!
+      const newest = buildCompositeId({ pubky: DEFAULT_AUTHOR, id: 'newest' }); // missing - should be first!
       const middle = await persistPostDetails('middle', BASE_TIMESTAMP + 1000);
       const oldest = await persistPostDetails('oldest', BASE_TIMESTAMP);
 

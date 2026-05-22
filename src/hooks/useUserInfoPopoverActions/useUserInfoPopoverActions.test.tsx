@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { mockMouseEvent } from '@/test-utils';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mockMouseEvent } from '@/test-utils/react-events';
 import { useUserInfoPopoverActions } from './useUserInfoPopoverActions';
 
 const mockPush = vi.fn();
@@ -10,11 +10,11 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-vi.mock('@/hooks', () => ({
+vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
   useFollowUser: () => mockUseFollowUser(),
 }));
 
-vi.mock('@/app', () => ({
+vi.mock('@/app/routes', () => ({
   SETTINGS_ROUTES: { EDIT: '/settings/edit' },
 }));
 

@@ -1,5 +1,5 @@
-import { HomeStore, HomeActions, homeInitialState, HomeActionTypes } from './home.types';
 import { ZustandSet } from '../stores.types';
+import { HomeActions, HomeActionTypes, homeInitialState, HomeStore } from './home.types';
 
 // Actions/Mutators - State modification functions
 export const createHomeActions = (set: ZustandSet<HomeStore>): HomeActions => ({

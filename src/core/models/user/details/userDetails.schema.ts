@@ -1,6 +1,6 @@
-import * as Core from '@/core';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 
-export type UserDetailsModelSchema = Core.NexusUserDetails;
+export type UserDetailsModelSchema = NexusUserDetails;
 
 // Keep only the primary key index. Profile fields are read by id.
 export const userDetailsTableSchema = `

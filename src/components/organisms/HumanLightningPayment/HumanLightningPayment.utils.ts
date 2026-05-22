@@ -1,4 +1,8 @@
-import { HomegateController, THomegateAwaitLnVerificationResult, THomegateCreateLnVerificationResult } from '@/core';
+import type {
+  THomegateAwaitLnVerificationResult,
+  THomegateCreateLnVerificationResult,
+} from '@/application/homegate/homegate.types';
+import { HomegateController } from '@/controllers/homegate/homegate';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { getRetryAfter, isAppError, isRetryable } from '@/libs/error/error.utils';
 

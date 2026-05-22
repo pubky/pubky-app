@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OG_PATTERNS, extractFromHtml } from './html';
+import { extractFromHtml, OG_PATTERNS } from './html';
 
 describe('html', () => {
   describe('OG_PATTERNS', () => {

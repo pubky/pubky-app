@@ -1,19 +1,23 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as Core from '@/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
+import { UserCountsModel } from '@/models/user/counts/userCounts';
+import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { LocalUserService } from '@/services/local/user/user';
+import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { LocalProfileService } from './profile';
 
 describe('LocalProfileService', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    await Core.UserDetailsModel.table.clear();
-    await Core.UserCountsModel.table.clear();
+    await UserDetailsModel.table.clear();
+    await UserCountsModel.table.clear();
   });
 
   describe('upsertDetails', () => {
-    const userId = 'test-user-id' as Core.Pubky;
+    const userId = 'test-user-id' as Pubky;
 
     it('should upsert user details into local database', async () => {
-      const userDetails: Core.NexusUserDetails = {
+      const userDetails: NexusUserDetails = {
         id: userId,
         name: 'Test User',
         bio: 'Test bio',
@@ -25,14 +29,14 @@ describe('LocalProfileService', () => {
 
       await LocalProfileService.upsertDetails(userDetails);
 
-      const result = await Core.LocalUserService.readDetails({ userId });
+      const result = await LocalUserService.readDetails({ userId });
       expect(result).not.toBeNull();
       expect(result!.id).toBe(userId);
       expect(result!.name).toBe('Test User');
     });
 
     it('should update existing user details', async () => {
-      const initialDetails: Core.NexusUserDetails = {
+      const initialDetails: NexusUserDetails = {
         id: userId,
         name: 'Initial Name',
         bio: 'Initial bio',
@@ -44,7 +48,7 @@ describe('LocalProfileService', () => {
 
       await LocalProfileService.upsertDetails(initialDetails);
 
-      const updatedDetails: Core.NexusUserDetails = {
+      const updatedDetails: NexusUserDetails = {
         id: userId,
         name: 'Updated Name',
         bio: 'Updated bio',
@@ -56,17 +60,17 @@ describe('LocalProfileService', () => {
 
       await LocalProfileService.upsertDetails(updatedDetails);
 
-      const result = await Core.LocalUserService.readDetails({ userId });
+      const result = await LocalUserService.readDetails({ userId });
       expect(result!.name).toBe('Updated Name');
       expect(result!.bio).toBe('Updated bio');
     });
   });
 
   describe('upsertCounts', () => {
-    const userId = 'test-user-id' as Core.Pubky;
+    const userId = 'test-user-id' as Pubky;
 
     it('should upsert user counts into local database', async () => {
-      const userCounts: Core.NexusUserCounts = {
+      const userCounts: NexusUserCounts = {
         posts: 10,
         replies: 5,
         followers: 100,
@@ -80,7 +84,7 @@ describe('LocalProfileService', () => {
 
       await LocalProfileService.upsertCounts(userId, userCounts);
 
-      const result = await Core.LocalUserService.readCounts({ userId });
+      const result = await LocalUserService.readCounts({ userId });
       expect(result).not.toBeNull();
       expect(result!.id).toBe(userId);
       expect(result!.posts).toBe(10);
@@ -91,7 +95,7 @@ describe('LocalProfileService', () => {
     });
 
     it('should update existing user counts', async () => {
-      const initialCounts: Core.NexusUserCounts = {
+      const initialCounts: NexusUserCounts = {
         posts: 5,
         replies: 2,
         followers: 50,
@@ -105,7 +109,7 @@ describe('LocalProfileService', () => {
 
       await LocalProfileService.upsertCounts(userId, initialCounts);
 
-      const updatedCounts: Core.NexusUserCounts = {
+      const updatedCounts: NexusUserCounts = {
         posts: 15,
         replies: 8,
         followers: 150,
@@ -119,7 +123,7 @@ describe('LocalProfileService', () => {
 
       await LocalProfileService.upsertCounts(userId, updatedCounts);
 
-      const result = await Core.LocalUserService.readCounts({ userId });
+      const result = await LocalUserService.readCounts({ userId });
       expect(result!.posts).toBe(15);
       expect(result!.replies).toBe(8);
       expect(result!.followers).toBe(150);
@@ -128,7 +132,7 @@ describe('LocalProfileService', () => {
     });
 
     it('should handle zero counts', async () => {
-      const zeroCounts: Core.NexusUserCounts = {
+      const zeroCounts: NexusUserCounts = {
         posts: 0,
         replies: 0,
         followers: 0,
@@ -142,7 +146,7 @@ describe('LocalProfileService', () => {
 
       await LocalProfileService.upsertCounts(userId, zeroCounts);
 
-      const result = await Core.LocalUserService.readCounts({ userId });
+      const result = await LocalUserService.readCounts({ userId });
       expect(result).not.toBeNull();
       expect(result!.posts).toBe(0);
       expect(result!.followers).toBe(0);

@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { REACH } from '@/stores/home/home.types';
 import { FilterReach } from './FilterReach';
-import { REACH } from '@/core';
 
 describe('FilterReach', () => {
   it('renders with default selected tab and proper ARIA attributes', () => {

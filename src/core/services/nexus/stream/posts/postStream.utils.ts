@@ -1,5 +1,22 @@
-import * as Core from '@/core';
+import type { TFetchStreamParams } from '@/application/stream/posts/post.types';
 import { Env } from '@/libs/env/env';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import type {
+  THandleNotCommonStreamParamsParams,
+  TSetStreamPaginationParams,
+} from '@/services/local/stream/posts/post.types';
+import { StreamSorting } from '@/services/nexus/nexus.types';
+import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
+import {
+  StreamKind,
+  StreamOrder,
+  StreamSource,
+  type TPostStreamFetchParams,
+  type TStreamBase,
+  type TStreamExtraParams,
+  type TStreamIdBreakdown,
+  type TStreamSource,
+} from '@/services/nexus/stream/posts/postStream.types';
 
 /**
  * Creates parameters for fetching a post stream based on the stream ID and pagination settings.
@@ -15,14 +32,14 @@ export function createPostStreamParams({
   streamHead,
   viewerId,
   order,
-}: Core.TFetchStreamParams): Core.TPostStreamFetchParams {
+}: TFetchStreamParams): TPostStreamFetchParams {
   const [sorting, invokeEndpoint, content, tags] = breakDownStreamId(streamId);
 
-  const params: Core.TStreamBase = {};
+  const params: TStreamBase = {};
   params.viewer_id = viewerId ?? undefined;
   params.sorting = parseSorting(sorting);
   params.tags = tags;
-  if (content && invokeEndpoint !== Core.StreamSource.REPLIES) {
+  if (content && invokeEndpoint !== StreamSource.REPLIES) {
     params.kind = parseContent(content);
   }
   params.limit = limit;
@@ -37,11 +54,8 @@ export function createPostStreamParams({
  * @param authorId - The author identifier for the stream
  * @param postId - Optional post identifier for post-specific streams
  */
-function handleNotCommonStreamParams({
-  authorId,
-  postId,
-}: Core.THandleNotCommonStreamParamsParams): Core.TStreamExtraParams {
-  const extraParams: Core.TStreamExtraParams = {
+function handleNotCommonStreamParams({ authorId, postId }: THandleNotCommonStreamParamsParams): TStreamExtraParams {
+  const extraParams: TStreamExtraParams = {
     author_id: authorId,
   };
 
@@ -56,13 +70,13 @@ function handleNotCommonStreamParams({
  * @param params - The base stream parameters object to modify
  * @param streamTail - The pagination tail value (timestamp of last post in current page)
  */
-function setStreamPagination({ params, streamTail, streamHead }: Core.TSetStreamPaginationParams) {
-  if (params.sorting === Core.StreamSorting.ENGAGEMENT) {
+function setStreamPagination({ params, streamTail, streamHead }: TSetStreamPaginationParams) {
+  if (params.sorting === StreamSorting.ENGAGEMENT) {
     params.skip = streamTail; // post amount of the stream, page number * limit
   } else {
     // For ASCENDING order, streamTail is the timestamp of the newest post we have
     // We want posts NEWER than that, so we use it as 'end' (minimum timestamp)
-    if (params.order === Core.StreamOrder.ASCENDING) {
+    if (params.order === StreamOrder.ASCENDING) {
       if (streamTail > 0) {
         // Use end to set minimum timestamp - get posts with timestamp > streamTail
         params.end = streamTail + 1;
@@ -85,10 +99,10 @@ function setStreamPagination({ params, streamTail, streamHead }: Core.TSetStream
  * Validates and converts a string to StreamSource enum.
  * @param value - The string value to validate and convert
  */
-function toStreamSource({ value }: Core.TStreamSource): Core.StreamSource {
+function toStreamSource({ value }: TStreamSource): StreamSource {
   // Check if the value is a valid StreamSource
-  if (Object.values(Core.StreamSource).includes(value as Core.StreamSource)) {
-    return value as Core.StreamSource;
+  if (Object.values(StreamSource).includes(value as StreamSource)) {
+    return value as StreamSource;
   }
   throw new Error(`Invalid stream source: ${value}`);
 }
@@ -98,22 +112,22 @@ function toStreamSource({ value }: Core.TStreamSource): Core.StreamSource {
  * NOTE: There are some special streams that does not follow timline pattern as post_replies, author_replies and author.
  * @param streamId - The stream ID to break down
  */
-export function breakDownStreamId(streamId: Core.PostStreamId): Core.TStreamIdBreakdown {
+export function breakDownStreamId(streamId: PostStreamId): TStreamIdBreakdown {
   const [sorting, invokeEndpoint, kind, tags] = streamId.split(':');
   // Tags are separated by ',' character. Only the first MAX_STREAM_TAGS are considered.
   const limitTags = tags
-    ? tags.split(Core.POST_STREAM_TAG_DELIMITER).slice(0, Env.NEXT_MAX_STREAM_TAGS).join(Core.POST_STREAM_TAG_DELIMITER)
+    ? tags.split(POST_STREAM_TAG_DELIMITER).slice(0, Env.NEXT_MAX_STREAM_TAGS).join(POST_STREAM_TAG_DELIMITER)
     : undefined;
 
   if (kind) {
-    if (sorting === Core.StreamSource.REPLIES) {
+    if (sorting === StreamSource.REPLIES) {
       // [pubky, post_replies, postId]
       return [invokeEndpoint, toStreamSource({ value: sorting }), kind, limitTags];
     }
     // Applies to timeline pattern
     return [sorting, toStreamSource({ value: invokeEndpoint }), kind, limitTags];
   }
-  // That case covers Core.StreamSource.AUTHOR_REPLIES and Core.StreamSource.AUTHOR
+  // That case covers StreamSource.AUTHOR_REPLIES and StreamSource.AUTHOR
   // i.e. [pubky, author_replies | author, undefined]
   return [invokeEndpoint, toStreamSource({ value: sorting }), undefined, limitTags];
 }
@@ -122,10 +136,10 @@ export function breakDownStreamId(streamId: Core.PostStreamId): Core.TStreamIdBr
  * Parses a sorting string into the corresponding StreamSorting enum value.
  * @param sorting - The sorting string to parse
  */
-function parseSorting(sorting: string): Core.StreamSorting | undefined {
-  const sortingMap: Record<string, Core.StreamSorting> = {
-    timeline: Core.StreamSorting.TIMELINE,
-    total_engagement: Core.StreamSorting.ENGAGEMENT,
+function parseSorting(sorting: string): StreamSorting | undefined {
+  const sortingMap: Record<string, StreamSorting> = {
+    timeline: StreamSorting.TIMELINE,
+    total_engagement: StreamSorting.ENGAGEMENT,
   };
   return sortingMap[sorting];
 }
@@ -134,19 +148,19 @@ function parseSorting(sorting: string): Core.StreamSorting | undefined {
  * Parses a content string into the corresponding StreamKind enum value.
  * @param content - The content string to parse
  */
-function parseContent(content: string): Core.StreamKind | undefined {
+function parseContent(content: string): StreamKind | undefined {
   // When content is 'all', return undefined (no kind filter)
   if (content === 'all') {
     return undefined;
   }
 
-  const contentMap: Record<string, Core.StreamKind> = {
-    short: Core.StreamKind.SHORT,
-    long: Core.StreamKind.LONG,
-    image: Core.StreamKind.IMAGE,
-    video: Core.StreamKind.VIDEO,
-    link: Core.StreamKind.LINK,
-    file: Core.StreamKind.FILE,
+  const contentMap: Record<string, StreamKind> = {
+    short: StreamKind.SHORT,
+    long: StreamKind.LONG,
+    image: StreamKind.IMAGE,
+    video: StreamKind.VIDEO,
+    link: StreamKind.LINK,
+    file: StreamKind.FILE,
   };
   return contentMap[content];
 }

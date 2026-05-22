@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { TimelineStateWrapper } from './TimelineStateWrapper';
 
 vi.mock('next-intl', () => ({
@@ -10,14 +10,21 @@ vi.mock('../TimelineLoading', () => ({
   TimelineLoading: () => <div data-testid="default-loading">Default Loading...</div>,
 }));
 
-vi.mock('@/atoms', () => ({
-  Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
-    <div {...props}>{children}</div>
-  ),
-  Typography: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
-    <span {...props}>{children}</span>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+      <div {...props}>{children}</div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+      <span {...props}>{children}</span>
+    ),
+  };
+});
 
 describe('TimelineStateWrapper', () => {
   const mockChildren = <div data-testid="mock-children">Children Content</div>;

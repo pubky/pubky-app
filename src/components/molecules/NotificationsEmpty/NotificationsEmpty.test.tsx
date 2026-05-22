@@ -1,13 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { NotificationsEmpty } from './NotificationsEmpty';
 
-// Mock ProfilePageEmptyState
-vi.mock('@/molecules', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules')>();
+// Mock IllustratedEmptyState
+vi.mock('@/molecules/IllustratedEmptyState/IllustratedEmptyState', () => {
   return {
-    ...actual,
-    ProfilePageEmptyState: ({
+    IllustratedEmptyState: ({
       imageSrc,
       imageAlt,
       icon: Icon,

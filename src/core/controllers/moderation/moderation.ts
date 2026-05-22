@@ -1,25 +1,30 @@
-import * as Core from '@/core';
+import { ModerationApplication } from '@/application/moderation/moderation';
+import type { EnrichedPostDetails, EnrichedUserDetails } from '@/application/moderation/moderation.types';
+import type { ModerationType } from '@/models/moderation/moderation.schema';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 
 export class ModerationController {
   private constructor() {}
 
   private static get isBlurDisabledGlobally(): boolean {
-    return !Core.useSettingsStore.getState().privacy.blurCensored;
+    return !useSettingsStore.getState().privacy.blurCensored;
   }
 
   /**
    * Un-blur a moderated item (post or profile).
    */
   static async unBlur(id: string): Promise<void> {
-    return Core.ModerationApplication.setUnBlur(id);
+    return ModerationApplication.setUnBlur(id);
   }
 
-  static async enrichPosts(posts: Core.PostDetailsModelSchema[]): Promise<Core.EnrichedPostDetails[]> {
-    return Core.ModerationApplication.enrichPostsWithModeration(posts, this.isBlurDisabledGlobally);
+  static async enrichPosts(posts: PostDetailsModelSchema[]): Promise<EnrichedPostDetails[]> {
+    return ModerationApplication.enrichPostsWithModeration(posts, this.isBlurDisabledGlobally);
   }
 
-  static async enrichUsers(users: Core.UserDetailsModelSchema[]): Promise<Core.EnrichedUserDetails[]> {
-    return Core.ModerationApplication.enrichUsersWithModeration(users, this.isBlurDisabledGlobally);
+  static async enrichUsers(users: UserDetailsModelSchema[]): Promise<EnrichedUserDetails[]> {
+    return ModerationApplication.enrichUsersWithModeration(users, this.isBlurDisabledGlobally);
   }
 
   /**
@@ -27,8 +32,8 @@ export class ModerationController {
    */
   static async getModerationStatus(
     id: string,
-    type: Core.ModerationType,
+    type: ModerationType,
   ): Promise<{ is_moderated: boolean; is_blurred: boolean }> {
-    return Core.ModerationApplication.getModerationStatus(id, type, this.isBlurDisabledGlobally);
+    return ModerationApplication.getModerationStatus(id, type, this.isBlurDisabledGlobally);
   }
 }

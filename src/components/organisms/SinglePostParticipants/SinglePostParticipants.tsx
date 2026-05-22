@@ -2,13 +2,15 @@
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import * as Hooks from '@/hooks';
-import * as Core from '@/core';
 import { APP_ROUTES } from '@/app/routes';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
+import { usePostParticipants } from '@/hooks/usePostParticipants/usePostParticipants';
+import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { UserListItem } from '../UserListItem/UserListItem';
 import { SinglePostParticipantsSkeleton } from './SinglePostParticipants.skeleton';
-import type { SinglePostParticipantsProps, ParticipantItemProps } from './SinglePostParticipants.types';
+import type { ParticipantItemProps, SinglePostParticipantsProps } from './SinglePostParticipants.types';
 
 /**
  * Individual participant item with reactive follow status
@@ -20,11 +22,11 @@ function ParticipantItem({
   onFollowClick,
   isUserLoading,
 }: ParticipantItemProps) {
-  const { isFollowing, isLoading: isFollowStatusLoading } = Hooks.useIsFollowing(participant.id);
+  const { isFollowing, isLoading: isFollowStatusLoading } = useIsFollowing(participant.id);
   const isCurrentUser = participant.id === currentUserId;
 
   return (
-    <Organisms.UserListItem
+    <UserListItem
       user={{
         id: participant.id,
         name: participant.name,
@@ -55,9 +57,9 @@ function ParticipantItem({
 export function SinglePostParticipants({ postId, className }: SinglePostParticipantsProps) {
   const t = useTranslations('common');
   const router = useRouter();
-  const currentUserId = Core.useAuthStore((state) => state.currentUserPubky);
-  const { participants, isLoading } = Hooks.usePostParticipants(postId, { limit: 10 });
-  const { toggleFollow, isUserLoading } = Hooks.useFollowUser();
+  const currentUserId = useAuthStore((state) => state.currentUserPubky);
+  const { participants, isLoading } = usePostParticipants(postId, { limit: 10 });
+  const { toggleFollow, isUserLoading } = useFollowUser();
 
   const handleUserClick = (pubky: string) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
@@ -77,7 +79,7 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
   }
 
   return (
-    <Molecules.SidebarSection title={t('participants')} className={className} data-testid="single-post-participants">
+    <SidebarSection title={t('participants')} className={className} data-testid="single-post-participants">
       {participants.map((participant) => (
         <ParticipantItem
           key={participant.id}
@@ -88,6 +90,6 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
           isUserLoading={isUserLoading}
         />
       ))}
-    </Molecules.SidebarSection>
+    </SidebarSection>
   );
 }

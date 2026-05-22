@@ -1,16 +1,23 @@
 'use client';
 
 import { forwardRef, useImperativeHandle, useRef } from 'react';
-import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
-import { mergeTagSuggestions, TAG_INPUT_BLUR_DELAY_MS } from '@/hooks/useTagInput';
-import { TAG_MAX_LENGTH } from '@/config';
-import type { TagInputProps, TagInputHandle } from './TagInput.types';
-import { TagSuggestionsDropdown } from './TagSuggestionsDropdown';
 import { Smile, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { Input } from '@/atoms/Input/Input';
+import { Popover, PopoverAnchor, PopoverContent } from '@/atoms/Popover/Popover';
+import { TAG_MAX_LENGTH } from '@/config/posts';
+import { useListboxNavigation } from '@/hooks/useListboxNavigation/useListboxNavigation';
+import { useTagInput } from '@/hooks/useTagInput/useTagInput';
+import { TAG_INPUT_BLUR_DELAY_MS } from '@/hooks/useTagInput/useTagInput.constants';
+import { mergeTagSuggestions } from '@/hooks/useTagInput/useTagInput.utils';
+import { useTagSuggestions } from '@/hooks/useTagSuggestions/useTagSuggestions';
 import { cn } from '@/libs/utils/utils';
+import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
+import type { TagInputHandle, TagInputProps } from './TagInput.types';
+import { TagSuggestionsDropdown } from './TagSuggestionsDropdown/TagSuggestionsDropdown';
+
 export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagInput(
   {
     onTagAdd,
@@ -29,7 +36,9 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     excludeFromApiSuggestions = [],
     addOnSuggestionClick = false,
     autoFocus = false,
+    containerVariant = 'dashed',
     className,
+    style,
   },
   ref,
 ) {
@@ -43,6 +52,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
   const apiExcludeTags = [...new Set([...excludeFromApiSuggestions, ...existingTagLabels])];
   const isAtLimit = maxTags !== undefined && currentTagsCount >= maxTags;
   const isDisabled = disabled || isAtLimit;
+  const isDashedVariant = containerVariant === 'dashed';
 
   // Use viewerTags for duplicate checking, fallback to existingTags
   const tagsForDuplicateCheck = viewerTags ?? existingTags;
@@ -60,7 +70,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     handleTagSubmit,
     handleEmojiSelect,
     handlePaste,
-  } = Hooks.useTagInput({
+  } = useTagInput({
     onTagAdd,
     existingTags: tagsForDuplicateCheck.map((t) => t.label),
     allTags: existingTags,
@@ -70,7 +80,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
   }));
 
   // Fetch API suggestions when enabled
-  const { suggestions: apiSuggestions } = Hooks.useTagSuggestions({
+  const { suggestions: apiSuggestions } = useTagSuggestions({
     query: inputValue,
     excludeTags: apiExcludeTags,
     enabled: enableApiSuggestions && showSuggestions,
@@ -82,7 +92,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     setSelectedIndex: setSelectedSuggestionIndex,
     handleKeyDown: handleListboxKeyDown,
     resetSelection,
-  } = Hooks.useListboxNavigation({
+  } = useListboxNavigation({
     items: displaySuggestions,
     isOpen: isListboxOpen,
     onSelect: (item) => {
@@ -141,19 +151,22 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
   const displayPlaceholder = isAtLimit ? defaultLimitReachedPlaceholder : defaultPlaceholder;
   return (
     <>
-      <Atoms.Popover open={isListboxOpen}>
-        <Atoms.PopoverAnchor asChild>
-          <Atoms.Container
+      <Popover open={isListboxOpen}>
+        <PopoverAnchor asChild>
+          <Container
             ref={containerRef}
             overrideDefaults={true}
             className={cn(
-              'relative flex h-8 w-full items-center gap-1 rounded-md border border-dashed border-input pr-1 pl-3 shadow-sm',
+              'relative flex h-8 w-full items-center gap-1 rounded-md pr-1 pl-3',
+              isDashedVariant && 'border border-dashed border-input shadow-sm transition-all duration-300',
               onClick && 'cursor-pointer',
               className,
+              isAtLimit && 'w-40',
             )}
+            style={style}
             onClick={onClick}
           >
-            <Atoms.Input
+            <Input
               data-cy="add-tag-input"
               ref={inputRef}
               type="text"
@@ -168,7 +181,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               maxLength={TAG_MAX_LENGTH}
               autoFocus={autoFocus}
               className={cn(
-                'flex-1 bg-transparent p-0 text-sm leading-5 font-bold caret-white',
+                '-mt-0.5 h-full flex-1 bg-transparent p-0 text-sm leading-8 font-bold caret-white',
                 'border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none',
                 'placeholder:font-bold',
                 isAtLimit ? 'placeholder:text-destructive' : 'placeholder:text-input',
@@ -177,22 +190,23 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               )}
             />
 
-            <Atoms.Button
+            <Button
               overrideDefaults={true}
               onMouseDown={preventBlur}
               onClick={() => setShowEmojiPicker(true)}
               className={cn(
-                'shadow-xs-dark hover:shadow-xs-dark inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1',
+                'inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1',
+                isDashedVariant && 'shadow-xs-dark hover:shadow-xs-dark',
                 isDisabled && onClick && 'pointer-events-none',
               )}
               aria-label="Open emoji picker"
               disabled={isDisabled}
             >
               <Smile className="size-4" strokeWidth={2} />
-            </Atoms.Button>
+            </Button>
 
             {showCloseButton && (
-              <Atoms.Button
+              <Button
                 overrideDefaults={true}
                 onMouseDown={preventBlur}
                 onClick={onClose}
@@ -200,10 +214,10 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
                 aria-label="Close tag input"
               >
                 <X className="size-3" strokeWidth={2} />
-              </Atoms.Button>
+              </Button>
             )}
-          </Atoms.Container>
-        </Atoms.PopoverAnchor>
+          </Container>
+        </PopoverAnchor>
 
         {isListboxOpen && (
           /**
@@ -223,7 +237,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
            * This allows the input to remain focused while the user interacts with suggestions,
            * and ensures the popover only closes when we explicitly set isListboxOpen to false.
            */
-          <Atoms.PopoverContent
+          <PopoverContent
             align="start"
             side="bottom"
             sideOffset={1}
@@ -241,11 +255,11 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               onSelectIndexChange={setSelectedSuggestionIndex}
               onMouseDown={preventBlur}
             />
-          </Atoms.PopoverContent>
+          </PopoverContent>
         )}
-      </Atoms.Popover>
+      </Popover>
 
-      <Molecules.EmojiPickerDialog
+      <EmojiPickerDialog
         open={showEmojiPicker && !disabled}
         onOpenChange={handleEmojiPickerClose}
         onEmojiSelect={handleEmojiSelect}

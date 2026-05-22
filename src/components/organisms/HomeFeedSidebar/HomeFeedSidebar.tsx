@@ -1,11 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
-import { TIMELINE_FEED_VARIANT } from '@/config';
+import { Container } from '@/atoms/Container/Container';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
+import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
+import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
+import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
+import { useHomeStore } from '@/stores/home/home.store';
 import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
@@ -15,7 +18,7 @@ import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
 /**
  * HomeFeedFilters
  *
- * Base component for Home feed filters - manages filter state via Core.useHomeStore.
+ * Base component for Home feed filters - manages filter state via useHomeStore.
  * Used by sidebar (desktop) and drawer (tablet/mobile) variants.
  *
  * Order follows Figma design: Reach → Sort → Layout → Content
@@ -28,8 +31,8 @@ function HomeFeedFilters({
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
   variant = 'drawer',
 }: HomeFeedSidebarProps) {
-  const { layout, setLayout, reach, setReach, sort, setSort, content, setContent } = Core.useHomeStore();
-  const { isPhoneViewport, isVisualActive } = Hooks.useFeedLayoutResolution(feedVariant);
+  const { layout, setLayout, reach, setReach, sort, setSort, content, setContent } = useHomeStore();
+  const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
   const resolvedContent = resolveVisualFeedContent({
     content,
     variant: feedVariant,
@@ -40,40 +43,32 @@ function HomeFeedFilters({
   const showVisualLayout = allowVisualLayout && !isPhoneViewport;
 
   return (
-    <Atoms.Container overrideDefaults className="flex flex-col gap-6">
-      {!hideReachFilter && <Molecules.FilterReach selectedTab={reach} onTabChange={setReach} />}
-      <Molecules.FilterSort selectedTab={sort} onTabChange={setSort} />
+    <Container overrideDefaults className="flex flex-col gap-6">
+      {!hideReachFilter && <FilterReach selectedTab={reach} onTabChange={setReach} />}
+      <FilterSort selectedTab={sort} onTabChange={setSort} />
       {variant === 'sidebar' ? (
-        <Atoms.Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
+        <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
           {!hideLayoutFilter && (
-            <Molecules.FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
+            <FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
           )}
-          <Molecules.FilterContent
-            selectedTab={resolvedContent}
-            onTabChange={setContent}
-            disabledTabs={disabledContentTabs}
-          />
-        </Atoms.Container>
+          <FilterContent selectedTab={resolvedContent} onTabChange={setContent} disabledTabs={disabledContentTabs} />
+        </Container>
       ) : (
         <>
           {!hideLayoutFilter && (
-            <Molecules.FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
+            <FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
           )}
-          <Molecules.FilterContent
-            selectedTab={resolvedContent}
-            onTabChange={setContent}
-            disabledTabs={disabledContentTabs}
-          />
+          <FilterContent selectedTab={resolvedContent} onTabChange={setContent} disabledTabs={disabledContentTabs} />
         </>
       )}
-    </Atoms.Container>
+    </Container>
   );
 }
 
 /**
  * HomeFeedSidebar
  *
- * Left sidebar for Home feed (desktop) - manages filter state via Core.useHomeStore.
+ * Left sidebar for Home feed (desktop) - manages filter state via useHomeStore.
  * Desktop version with sticky positioning.
  */
 export function HomeFeedSidebar({
@@ -94,7 +89,7 @@ export function HomeFeedSidebar({
 /**
  * HomeFeedDrawer
  *
- * Left drawer for Home feed (tablet) - manages filter state via Core.useHomeStore.
+ * Left drawer for Home feed (tablet) - manages filter state via useHomeStore.
  */
 export function HomeFeedDrawer({
   hideReachFilter = false,
@@ -114,7 +109,7 @@ export function HomeFeedDrawer({
 /**
  * HomeFeedDrawerMobile
  *
- * Left drawer for Home feed (mobile) - manages filter state via Core.useHomeStore.
+ * Left drawer for Home feed (mobile) - manages filter state via useHomeStore.
  * Note: Mobile version doesn't show layout filter.
  */
 export function HomeFeedDrawerMobile({

@@ -1,5 +1,11 @@
-import * as Core from '@/core';
-import * as Config from '@/config';
+import { UserStreamApplication } from '@/application/stream/users/users';
+import type {
+  TGetOrFetchUsersParams,
+  TReadUserStreamChunkParams,
+  TReadUserStreamChunkResponse,
+} from '@/application/stream/users/users.types';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 /**
  * Stream User Controller
@@ -21,34 +27,77 @@ export class StreamUserController {
    */
   static async getOrFetchStreamSlice({
     streamId,
-    limit = Config.NEXUS_USERS_PER_PAGE,
+    limit = NEXUS_USERS_PER_PAGE,
     skip,
-  }: Core.TReadUserStreamChunkParams): Promise<Core.TReadUserStreamChunkResponse> {
+    allowPartialCache,
+  }: TReadUserStreamChunkParams): Promise<TReadUserStreamChunkResponse> {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile followers/following)
-    const viewerId = Core.useAuthStore.getState().currentUserPubky;
+    const viewerId = useAuthStore.getState().currentUserPubky;
 
     const {
       nextPageIds,
       cacheMissUserIds,
       skip: nextSkip,
-    } = await Core.UserStreamApplication.getOrFetchStreamSlice({
+      isExhausted,
+    } = await UserStreamApplication.getOrFetchStreamSlice({
+      streamId,
+      skip,
+      limit,
+      viewerId: viewerId ?? undefined,
+      ...(allowPartialCache !== undefined && { allowPartialCache }),
+    });
+
+    // Background fetch for missing users (non-blocking)
+    if (cacheMissUserIds.length > 0) {
+      // TODO: When TTL is implemented, we can return to void
+      await UserStreamApplication.fetchMissingUsersFromNexus({
+        cacheMissUserIds,
+        viewerId: viewerId ?? undefined,
+      });
+    }
+
+    return { nextPageIds, skip: nextSkip, isExhausted };
+  }
+
+  /**
+   * Refresh a slice of a user stream from Nexus and update the local cache.
+   *
+   * Always hits the network; the application layer still reads the cached stream so
+   * non-initial pages are merged/deduped with existing entries. Missing user details
+   * are hydrated as a follow-up, mirroring `getOrFetchStreamSlice`.
+   *
+   * Named `refresh*` rather than `fetch*` because the implementation consults local
+   * cache as a merge source — `fetch*` is reserved for network-only paths per
+   * `AGENTS.md`.
+   */
+  static async refreshStreamSlice({
+    streamId,
+    limit = NEXUS_USERS_PER_PAGE,
+    skip,
+  }: TReadUserStreamChunkParams): Promise<TReadUserStreamChunkResponse> {
+    const viewerId = useAuthStore.getState().currentUserPubky;
+
+    const {
+      nextPageIds,
+      cacheMissUserIds,
+      skip: nextSkip,
+      isExhausted,
+    } = await UserStreamApplication.refreshStreamSlice({
       streamId,
       skip,
       limit,
       viewerId: viewerId ?? undefined,
     });
 
-    // Background fetch for missing users (non-blocking)
     if (cacheMissUserIds.length > 0) {
-      // TODO: When TTL is implemented, we can return to void
-      await Core.UserStreamApplication.fetchMissingUsersFromNexus({
+      await UserStreamApplication.fetchMissingUsersFromNexus({
         cacheMissUserIds,
         viewerId: viewerId ?? undefined,
       });
     }
 
-    return { nextPageIds, skip: nextSkip };
+    return { nextPageIds, skip: nextSkip, isExhausted };
   }
 
   /**
@@ -57,10 +106,10 @@ export class StreamUserController {
    *
    * @param userIds - Array of user IDs to ensure are cached
    */
-  static async getOrFetchUsers({ userIds }: Pick<Core.TGetOrFetchUsersParams, 'userIds'>): Promise<void> {
-    const viewerId = Core.useAuthStore.getState().currentUserPubky;
+  static async getOrFetchUsers({ userIds }: Pick<TGetOrFetchUsersParams, 'userIds'>): Promise<void> {
+    const viewerId = useAuthStore.getState().currentUserPubky;
 
-    await Core.UserStreamApplication.getOrFetchUsers({
+    await UserStreamApplication.getOrFetchUsers({
       userIds,
       viewerId: viewerId ?? undefined,
     });

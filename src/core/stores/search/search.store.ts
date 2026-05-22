@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { persist, devtools } from 'zustand/middleware';
-import { SearchStore, searchInitialState } from './search.types';
-import { createSearchActions } from './search.actions';
+import { devtools, persist } from 'zustand/middleware';
 import { SEARCH_PERSIST_KEY } from '../persistedKeys';
+import { createSearchActions } from './search.actions';
+import { searchInitialState, SearchStore } from './search.types';
 
 /**
  * Search Store

@@ -1,5 +1,6 @@
-import * as Core from '@/core';
-import * as Types from './feedback.types';
+import { FeedbackApplication } from '@/application/feedback/feedback';
+import { FeedbackValidators } from '@/pipes/feedback/feedback.validators';
+import type { TFeedbackSubmitParams } from './feedback.types';
 
 /**
  * Controller for feedback submission.
@@ -18,12 +19,12 @@ export class FeedbackController {
    * @param params.name - User's display name
    * @throws AppError if validation fails or submission fails
    */
-  static async submit(params: Types.TFeedbackSubmitParams): Promise<void> {
+  static async submit(params: TFeedbackSubmitParams): Promise<void> {
     // Validate and normalize inputs using pipes layer
-    const pubky = Core.FeedbackValidators.validatePubky(params.pubky);
-    const comment = Core.FeedbackValidators.validateComment(params.comment);
-    const name = Core.FeedbackValidators.validateName(params.name);
+    const pubky = FeedbackValidators.validatePubky(params.pubky);
+    const comment = FeedbackValidators.validateComment(params.comment);
+    const name = FeedbackValidators.validateName(params.name);
 
-    await Core.FeedbackApplication.submit({ pubky, comment, name });
+    await FeedbackApplication.submit({ pubky, comment, name });
   }
 }

@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { NotificationItem } from './NotificationItem';
-import { NotificationType } from '@/core/models/notification/notification.types';
-import * as Core from '@/core';
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -13,16 +12,12 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock hooks
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useUserProfile: vi.fn(() => ({
-      profile: { name: 'User', avatarUrl: undefined },
-      isLoading: false,
-    })),
-  };
-});
+vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
+  useUserProfile: vi.fn(() => ({
+    profile: { name: 'User', avatarUrl: undefined },
+    isLoading: false,
+  })),
+}));
 
 vi.mock('@/libs/logger/logger', async () => {
   const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
@@ -37,95 +32,124 @@ vi.mock('@/libs/logger/logger', async () => {
   };
 });
 
-// Mock Core module
-vi.mock('@/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/core')>();
-  return {
-    ...actual,
-    ProfileController: {
-      read: vi.fn(() => Promise.resolve(null)),
+// Mock dependencies
+vi.mock('@/controllers/profile/profile', () => ({
+  ProfileController: {
+    read: vi.fn(() => Promise.resolve(null)),
+  },
+}));
+vi.mock('@/controllers/user/user', () => ({
+  UserController: {
+    getDetails: vi.fn(() => Promise.resolve(null)),
+  },
+}));
+vi.mock('@/services/local/post/post', () => ({
+  LocalPostService: {
+    readPostDetails: vi.fn(() => Promise.resolve(null)),
+  },
+}));
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    get getOrFetch() {
+      return mockGetOrFetch;
     },
-    UserController: {
-      getDetails: vi.fn(() => Promise.resolve(null)),
-    },
-    LocalPostService: {
-      readPostDetails: vi.fn(() => Promise.resolve(null)),
-    },
-    PostController: {
-      get getOrFetch() {
-        return mockGetOrFetch;
-      },
-    },
-    FileController: {
-      getAvatarUrl: vi.fn((id: string) => `https://cdn.example.com/avatar/${id}`),
-    },
-    useAuthStore: {
-      getState: vi.fn(() => ({
-        currentUserPubky: 'test-user-pubky',
-      })),
-    },
-    useNotificationStore: vi.fn((selector) => {
-      const state = { lastRead: 0, setLastRead: vi.fn() };
-      return selector ? selector(state) : state;
-    }),
-  };
-});
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    getAvatarUrl: vi.fn((id: string) => `https://cdn.example.com/avatar/${id}`),
+  },
+}));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: {
+    getState: vi.fn(() => ({
+      currentUserPubky: 'test-user-pubky',
+    })),
+  },
+}));
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: vi.fn((selector) => {
+    const state = { lastRead: 0, setLastRead: vi.fn() };
+    return selector ? selector(state) : state;
+  }),
+}));
 
 // Mock organisms
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({ name, avatarUrl, className }: { name: string; avatarUrl?: string; className?: string }) => (
-    <div data-testid="avatar-with-fallback" data-name={name} data-avatar={avatarUrl} className={className}>
-      {avatarUrl ? <img src={avatarUrl} alt={name} /> : <span>{name[0]}</span>}
-    </div>
-  ),
-}));
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({ name, avatarUrl, className }: { name: string; avatarUrl?: string; className?: string }) => (
+      <div data-testid="avatar-with-fallback" data-name={name} data-avatar={avatarUrl} className={className}>
+        {avatarUrl ? <img src={avatarUrl} alt={name} /> : <span>{name[0]}</span>}
+      </div>
+    ),
+  };
+});
 
 // Mock molecules
 const mockToast = vi.fn();
 const mockGetOrFetch = vi.fn<() => Promise<{ kind: string; content: string } | null>>(() => Promise.resolve(null));
-vi.mock('@/molecules', () => ({
-  PostTag: ({ label, onClick }: { label: string; onClick?: (e: React.MouseEvent) => void }) => (
-    <span data-testid="post-tag" onClick={onClick}>
-      {label}
-    </span>
-  ),
-  NotificationIcon: ({ type, showBadge }: { type: NotificationType; showBadge?: boolean }) => (
-    <div data-testid="notification-icon" data-type={type} data-badge={showBadge ? 'true' : 'false'}>
-      Icon
-    </div>
-  ),
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/NotificationIcon/NotificationIcon', () => {
+  return {
+    NotificationIcon: ({ type, showBadge }: { type: NotificationType; showBadge?: boolean }) => (
+      <div data-testid="notification-icon" data-type={type} data-badge={showBadge ? 'true' : 'false'}>
+        Icon
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostTag/PostTag', () => {
+  return {
+    PostTag: ({ label, onClick }: { label: string; onClick?: (e: React.MouseEvent) => void }) => (
+      <span data-testid="post-tag" onClick={onClick}>
+        {label}
+      </span>
+    ),
+  };
+});
+
+vi.mock('@/molecules/Toaster/use-toast', () => {
+  return {
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
 // Mock atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: React.MouseEventHandler;
-  }) => (
-    <div data-testid="container" className={className} onClick={onClick}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    as: Tag = 'p',
-    className,
-  }: {
-    children: React.ReactNode;
-    as?: React.ElementType;
-    className?: string;
-  }) => (
-    <Tag data-testid="typography" className={className}>
-      {children}
-    </Tag>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: React.MouseEventHandler;
+    }) => (
+      <div data-testid="container" className={className} onClick={onClick}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      as: Tag = 'p',
+      className,
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+      className?: string;
+    }) => (
+      <Tag data-testid="typography" className={className}>
+        {children}
+      </Tag>
+    ),
+  };
+});
 
 describe('NotificationItem', () => {
   beforeEach(() => {
@@ -140,7 +164,7 @@ describe('NotificationItem', () => {
     type: NotificationType.Follow,
     timestamp: Date.now() - 1000 * 60 * 30, // 30 minutes ago
     followed_by: 'user1',
-  } as Core.FlatNotification;
+  } as FlatNotification;
 
   it('renders notification text correctly', () => {
     render(<NotificationItem notification={baseNotification} isUnread={false} />);
@@ -196,7 +220,7 @@ describe('NotificationItem', () => {
       tagged_by: 'user1',
       tag_label: 'bitcoin',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
     expect(screen.getByTestId('post-tag')).toBeInTheDocument();
     expect(screen.getByText('bitcoin')).toBeInTheDocument();
@@ -210,7 +234,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
     // Username and action text are now separate links
     expect(screen.getByText('User')).toBeInTheDocument();
@@ -237,7 +261,7 @@ describe('NotificationItem', () => {
       tagged_by: 'user1',
       tag_label: 'bitcoin',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
 
     const tag = screen.getByTestId('post-tag');
@@ -254,7 +278,7 @@ describe('NotificationItem', () => {
       tagged_by: 'user1',
       tag_label: 'developer',
       profile_uri: 'user1',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
 
     const tag = screen.getByTestId('post-tag');
@@ -271,7 +295,7 @@ describe('NotificationItem', () => {
       tagged_by: 'user1',
       tag_label: 'c++',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
 
     const tag = screen.getByTestId('post-tag');
@@ -297,7 +321,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
 
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
 
@@ -322,7 +346,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
 
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
 
@@ -347,7 +371,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
 
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
 
@@ -370,7 +394,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
 
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
 
@@ -392,7 +416,7 @@ describe('NotificationItem', () => {
       replied_by: 'replier-user',
       parent_post_uri: 'pubky://original-author/pub/pubky.app/posts/parent-post-id',
       reply_uri: 'pubky://replier-user/pub/pubky.app/posts/reply-post-id',
-    } as Core.FlatNotification;
+    } as FlatNotification;
 
     render(<NotificationItem notification={replyNotification} isUnread={false} />);
 
@@ -435,7 +459,7 @@ describe('NotificationItem', () => {
       tagged_by: 'user1',
       tag_label: 'bitcoin',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
 
     // PostTag mock renders a span, but let's verify the closest('a, button') guard
@@ -455,7 +479,7 @@ describe('NotificationItem', () => {
       replied_by: 'user1',
       parent_post_uri: 'pubky://original-author/pub/pubky.app/posts/parent-post-id',
       reply_uri: 'pubky://user1/pub/pubky.app/posts/reply-post-id',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={replyNotification} isUnread={false} />);
 
     const actionLink = screen.getByText('replied to your post').closest('a')!;
@@ -470,7 +494,7 @@ describe('NotificationItem', () => {
       type: NotificationType.NewFriend,
       timestamp: Date.now() - 1000 * 60 * 30,
       followed_by: 'user1',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={friendNotification} isUnread={false} />);
 
     const actionLink = screen.getByText('is now your friend').closest('a')!;
@@ -486,7 +510,7 @@ describe('NotificationItem', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       tagged_by: 'user1',
       tag_label: 'developer',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={tagProfileNotification} isUnread={false} />);
 
     const actionLink = screen.getByText('tagged your profile').closest('a')!;
@@ -503,7 +527,7 @@ describe('NotificationItem', () => {
       replied_by: 'user1',
       parent_post_uri: 'pubky://original-author/pub/pubky.app/posts/parent-post-id',
       reply_uri: 'pubky://user1/pub/pubky.app/posts/reply-post-id',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     render(<NotificationItem notification={replyNotification} isUnread={false} />);
 
     // The timestamp and icon share the same parent Link — use the icon as a stable selector
@@ -528,7 +552,7 @@ describe('NotificationItem - Snapshots', () => {
       type: NotificationType.Follow,
       timestamp: Date.now() - 1000 * 60 * 30,
       followed_by: 'user1',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });
@@ -541,7 +565,7 @@ describe('NotificationItem - Snapshots', () => {
       tagged_by: 'user1',
       tag_label: 'bitcoin',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });
@@ -553,7 +577,7 @@ describe('NotificationItem - Snapshots', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'user1:post123',
-    } as Core.FlatNotification;
+    } as FlatNotification;
     const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -1,9 +1,12 @@
 'use client';
 
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Hooks from '@/hooks';
-import * as Providers from '@/providers';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { useTagged } from '@/hooks/useTagged/useTagged';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { TaggedEmpty } from '@/molecules/TaggedEmpty/TaggedEmpty';
+import { TaggedSection } from '@/molecules/TaggedSection/TaggedSection';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { ProfileTaggedSkeleton } from './ProfileTagged.skeleton';
 
 /**
@@ -19,13 +22,12 @@ import { ProfileTaggedSkeleton } from './ProfileTagged.skeleton';
  */
 export function ProfileTagged() {
   // Get the profile pubky from context
-  const { pubky } = Providers.useProfileContext();
+  const { pubky } = useProfileContext();
 
   // Get user profile data for the target user
-  const { profile } = Hooks.useUserProfile(pubky ?? '');
+  const { profile } = useUserProfile(pubky ?? '');
 
-  const { tags, count, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } =
-    Hooks.useTagged(pubky);
+  const { tags, count, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } = useTagged(pubky);
 
   const userName = profile?.name || '';
 
@@ -35,15 +37,15 @@ export function ProfileTagged() {
 
   // Show empty state only after loading is complete and there are no tags
   if (tags.length === 0) {
-    return <Molecules.TaggedEmpty onTagAdd={handleTagAdd} />;
+    return <TaggedEmpty onTagAdd={handleTagAdd} />;
   }
 
   return (
-    <Atoms.Container className="gap-3">
-      <Atoms.Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
+    <Container className="gap-3">
+      <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
         Tagged ({count})
-      </Atoms.Heading>
-      <Molecules.TaggedSection
+      </Heading>
+      <TaggedSection
         tags={tags}
         userName={userName}
         handleTagAdd={handleTagAdd}
@@ -52,6 +54,6 @@ export function ProfileTagged() {
         isLoadingMore={isLoadingMore}
         loadMore={loadMore}
       />
-    </Atoms.Container>
+    </Container>
   );
 }

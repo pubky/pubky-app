@@ -2,23 +2,28 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import * as Atoms from '@/atoms';
+import { Container } from '@/atoms/Container/Container';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
 import { MENU_VARIANT } from '@/config/ui';
-import * as Hooks from '@/hooks';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import { PostMenuActionsContent } from './PostMenuActionsContent';
+import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
+import { DialogEditPost } from '../DialogEditPost/DialogEditPost';
+import { DialogReportPost } from '../DialogReportPost/DialogReportPost';
 import type { PostMenuActionsProps } from './PostMenuActions.types';
+import { PostMenuActionsContent } from './PostMenuActionsContent/PostMenuActionsContent';
 
 export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   const t = useTranslations('post.actions');
-  const isMobile = Hooks.useIsMobile();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const { deletePost, isDeleting } = Hooks.useDeletePost();
-  const { requireAuth } = Hooks.useRequireAuth();
+  const { deletePost, isDeleting } = useDeletePost();
+  const { requireAuth } = useRequireAuth();
   const closeMenu = () => setOpen(false);
 
   const handleReportClick = () => {
@@ -51,13 +56,13 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   return (
     <>
       {isMobile ? (
-        <Atoms.Sheet open={open} onOpenChange={handleOpenChange}>
-          <Atoms.SheetTrigger asChild>{trigger}</Atoms.SheetTrigger>
-          <Atoms.SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
-            <Atoms.SheetHeader>
-              <Atoms.SheetTitle className="sr-only">{t('title')}</Atoms.SheetTitle>
-            </Atoms.SheetHeader>
-            <Atoms.Container overrideDefaults className="flex flex-col gap-2">
+        <Sheet open={open} onOpenChange={handleOpenChange}>
+          <SheetTrigger asChild>{trigger}</SheetTrigger>
+          <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
+            <SheetHeader>
+              <SheetTitle className="sr-only">{t('title')}</SheetTitle>
+            </SheetHeader>
+            <Container overrideDefaults className="flex flex-col gap-2">
               <PostMenuActionsContent
                 postId={postId}
                 variant={MENU_VARIANT.SHEET}
@@ -67,13 +72,13 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
                 onDeleteClick={handleDeleteClick}
                 isDeleting={isDeleting}
               />
-            </Atoms.Container>
-          </Atoms.SheetContent>
-        </Atoms.Sheet>
+            </Container>
+          </SheetContent>
+        </Sheet>
       ) : (
-        <Atoms.DropdownMenu open={open} onOpenChange={handleOpenChange}>
-          <Atoms.DropdownMenuTrigger asChild>{trigger}</Atoms.DropdownMenuTrigger>
-          <Atoms.DropdownMenuContent
+        <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+          <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+          <DropdownMenuContent
             align="end"
             className="flex w-56 flex-col gap-2.5"
             onCloseAutoFocus={(e) => e.preventDefault()}
@@ -87,12 +92,12 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
               onDeleteClick={handleDeleteClick}
               isDeleting={isDeleting}
             />
-          </Atoms.DropdownMenuContent>
-        </Atoms.DropdownMenu>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
-      <Organisms.DialogReportPost open={reportDialogOpen} onOpenChange={setReportDialogOpen} postId={postId} />
-      <Organisms.DialogEditPost open={editDialogOpen} onOpenChangeAction={setEditDialogOpen} postId={postId} />
-      <Molecules.DialogConfirmDelete
+      <DialogReportPost open={reportDialogOpen} onOpenChange={setReportDialogOpen} postId={postId} />
+      <DialogEditPost open={editDialogOpen} onOpenChangeAction={setEditDialogOpen} postId={postId} />
+      <DialogConfirmDelete
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         onConfirm={handleDeleteConfirm}

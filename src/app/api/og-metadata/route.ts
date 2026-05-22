@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Core from '@/core';
+import { OgMetadataController } from '@/controllers/og-metadata/og-metadata';
 import { handleApiError } from '@/libs/api/route-error-handler';
 
 /**
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const url = searchParams.get('url');
 
-    const metadata = await Core.OgMetadataController.fetch({ url });
+    const metadata = await OgMetadataController.fetch({ url });
 
     return NextResponse.json(metadata, CACHE_HEADERS);
   } catch (error) {

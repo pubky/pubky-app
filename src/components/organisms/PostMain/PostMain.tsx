@@ -1,41 +1,62 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
-import * as Core from '@/core';
-import * as Hooks from '@/hooks';
-import * as Atoms from '@/atoms';
-import * as Molecules from '@/molecules';
-import * as Organisms from '@/organisms';
-import type { PostTagsPanelHandle } from '@/organisms';
-import { POST_TAGS_MAX_COUNT, POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config';
-import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms';
-
-import type { PostMainProps } from './PostMain.types';
-import { usePostMainLayout, WIDE_POST_LAYOUT_CLASSES } from './PostMainLayout';
+import React, { useRef } from 'react';
+import { Card, CardContent } from '@/atoms/Card/Card';
+import { Container } from '@/atoms/Container/Container';
+import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
+import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
+import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
+import { RepostHeader } from '@/molecules/RepostHeader/RepostHeader';
+import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
+import { PostContent } from '../PostContent/PostContent';
+import { PostHeader } from '../PostHeader/PostHeader';
+import { PostInlineTagsActions } from '../PostInlineTagsActions/PostInlineTagsActions';
+import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
+import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
+import type { PostMainProps } from './PostMain.types';
+import { usePostMainLayout } from './PostMainLayoutContext';
+import { WIDE_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 
-export function PostMain({ postId, onClick, className, isReply = false, isLastReply = false }: PostMainProps) {
-  const isMobile = Hooks.useIsMobile();
+// Stops click and middle-click from bubbling to the outer post-card navigation
+// (so action buttons and tag panels don't trigger a navigate / new-tab open).
+const stopCardPropagation = (event: React.MouseEvent) => event.stopPropagation();
+
+export function PostMain({
+  postId,
+  className,
+  isReply = false,
+  isLastReply = false,
+  pinActionsToBottom = false,
+  isNavigable = true,
+}: PostMainProps) {
+  const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
   const isWideLayout = effectiveTagsLayout === 'side';
-  const { postDetails } = Hooks.usePostDetails(postId);
+  const { postDetails } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
 
-  const { showRepostHeader, shouldShowPostHeader } = Hooks.usePostHeaderVisibility(postId);
+  const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
-  const [replyDialogOpen, setReplyDialogOpen] = useState(false);
-  const [repostDialogOpen, setRepostDialogOpen] = useState(false);
-  const [tagsExpanded, setTagsExpanded] = useState(false);
+  const { showRepostHeader, shouldShowPostHeader } = usePostHeaderVisibility(postId);
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
 
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
 
   // Get post height for thread connector
-  const { ref: cardRef, height: postHeight } = Hooks.useElementHeight();
+  const { ref: cardRef, height: postHeight } = useElementHeight();
 
   // Subscribe to TTL coordinator based on viewport visibility
-  const { ref: ttlRef } = Hooks.useTtlSubscription({
+  const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
     id: postId,
   });
@@ -43,127 +64,85 @@ export function PostMain({ postId, onClick, className, isReply = false, isLastRe
   // Determine thread connector variant based on reply status
   const connectorVariant = isLastReply ? POST_THREAD_CONNECTOR_VARIANTS.LAST : POST_THREAD_CONNECTOR_VARIANTS.REGULAR;
 
-  const handleReplyClick = () => {
-    setReplyDialogOpen(true);
-  };
-
-  const handleRepostClick = () => {
-    setRepostDialogOpen(true);
-  };
-
-  const handleFooterClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-  };
-
   return (
     <>
-      <Atoms.Container
+      <Container
         ref={ttlRef}
         overrideDefaults
-        onClick={onClick}
-        className={cn('relative flex min-w-0 cursor-pointer', isReply && 'pl-3')}
+        onClick={isNavigable ? (e) => handlePostClick(postId, e) : undefined}
+        onAuxClick={isNavigable ? (e) => handlePostAuxClick(postId, e) : undefined}
+        className={cn('relative flex min-w-0', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
-          <Atoms.Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">
-            <Atoms.PostThreadConnector height={postHeight} variant={connectorVariant} />
-          </Atoms.Container>
+          <Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">
+            <PostThreadConnector height={postHeight} variant={connectorVariant} />
+          </Container>
         )}
-        <Atoms.Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
+        <Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
           {isDeleted ? (
-            <Molecules.PostDeleted />
+            <PostDeleted />
           ) : (
-            <Atoms.CardContent className={cn('flex min-w-0 flex-col', isWideLayout ? 'p-0' : 'gap-4 p-6')}>
-              {showRepostHeader && (
-                <Atoms.Container overrideDefaults className={cn(isWideLayout && 'px-12 pt-12 pb-6')}>
-                  <Molecules.RepostHeader />
-                </Atoms.Container>
-              )}
-              {isWideLayout ? (
-                <Atoms.Container className={WIDE_POST_LAYOUT_CLASSES.shell}>
-                  <Atoms.Container className={WIDE_POST_LAYOUT_CLASSES.leftColumn}>
-                    {shouldShowPostHeader && (
-                      <Organisms.PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
-                    )}
-                    <Organisms.PostContent postId={postId} textClassName={WIDE_POST_LAYOUT_CLASSES.bodyText} />
-                    <Atoms.Container overrideDefaults onClick={handleFooterClick} className="flex flex-col gap-4">
-                      <Organisms.PostTagsPanel
-                        ref={mobileTagsPanelRef}
-                        postId={postId}
-                        widthMode="full"
-                        className="lg:hidden"
-                      />
-                      <Organisms.PostActionsBar
-                        postId={postId}
-                        onTagClick={() => {
-                          mobileTagsPanelRef.current?.focus();
-                          desktopTagsPanelRef.current?.focus();
-                        }}
-                        onReplyClick={handleReplyClick}
-                        onRepostClick={handleRepostClick}
-                      />
-                    </Atoms.Container>
-                  </Atoms.Container>
-                  <Atoms.Container
-                    overrideDefaults
-                    onClick={handleFooterClick}
-                    className={WIDE_POST_LAYOUT_CLASSES.rightColumn}
-                  >
-                    <Organisms.PostTagsPanel
-                      ref={desktopTagsPanelRef}
+            <>
+              {showRepostHeader && <RepostHeader />}
+              <CardContent className={cn('flex min-w-0 flex-col', isWideLayout ? 'p-0' : 'gap-4 p-6')}>
+                {isWideLayout ? (
+                  <Container className="flex min-w-0 flex-col lg:flex-row">
+                    <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
+                      {shouldShowPostHeader && (
+                        <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
+                      )}
+                      <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
+                      {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
+                      <Container
+                        overrideDefaults
+                        onClick={stopCardPropagation}
+                        onAuxClick={stopCardPropagation}
+                        className="flex flex-col gap-4"
+                      >
+                        <PostTagsPanel
+                          ref={mobileTagsPanelRef}
+                          postId={postId}
+                          widthMode="full"
+                          className="lg:hidden"
+                        />
+                        <PostActionsBar
+                          postId={postId}
+                          onTagClick={() => {
+                            mobileTagsPanelRef.current?.focus();
+                            desktopTagsPanelRef.current?.focus();
+                          }}
+                          onReplyClick={openReplyDialog}
+                          onRepostClick={openRepostDialog}
+                        />
+                      </Container>
+                    </Container>
+                    <Container
+                      overrideDefaults
+                      onClick={stopCardPropagation}
+                      onAuxClick={stopCardPropagation}
+                      className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
+                    >
+                      <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
+                    </Container>
+                  </Container>
+                ) : (
+                  <>
+                    {shouldShowPostHeader && <PostHeader postId={postId} />}
+                    <PostContent postId={postId} />
+                    <PostInlineTagsActions
                       postId={postId}
-                      widthMode="full"
-                      className="w-full"
+                      onReplyClick={openReplyDialog}
+                      onRepostClick={openRepostDialog}
+                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end"
                     />
-                  </Atoms.Container>
-                </Atoms.Container>
-              ) : (
-                <>
-                  {shouldShowPostHeader && <Organisms.PostHeader postId={postId} />}
-                  <Organisms.PostContent postId={postId} />
-                  <Atoms.Container
-                    onClick={handleFooterClick}
-                    className={cn(
-                      'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
-                      tagsExpanded ? 'md:items-end' : 'md:items-start',
-                    )}
-                  >
-                    {tagsExpanded ? (
-                      <Organisms.PostTagsPanel
-                        postId={postId}
-                        widthMode="fit"
-                        autoFocusInput
-                        enableLoadingSkeleton={false}
-                        className="flex-1"
-                      />
-                    ) : (
-                      <Organisms.ClickableTagsList
-                        taggedId={postId}
-                        taggedKind={Core.TagKind.POST}
-                        maxTags={POST_TAGS_MAX_COUNT}
-                        maxTagLength={POST_TAGS_MAX_LENGTH}
-                        maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
-                        showCount={true}
-                        showInput={false}
-                        showAddButton={true}
-                        addMode={true}
-                      />
-                    )}
-                    <Organisms.PostActionsBar
-                      postId={postId}
-                      onTagClick={() => setTagsExpanded((prev) => !prev)}
-                      onReplyClick={handleReplyClick}
-                      onRepostClick={handleRepostClick}
-                      className="w-full shrink-0 justify-start sm:w-auto md:justify-end"
-                    />
-                  </Atoms.Container>
-                </>
-              )}
-            </Atoms.CardContent>
+                  </>
+                )}
+              </CardContent>
+            </>
           )}
-        </Atoms.Card>
-      </Atoms.Container>
-      <Organisms.DialogReply postId={postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
-      <Organisms.DialogRepost postId={postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
+        </Card>
+      </Container>
+      {dialogs}
     </>
   );
 }

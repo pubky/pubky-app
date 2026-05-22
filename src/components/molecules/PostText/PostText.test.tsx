@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TAG_MAX_LENGTH } from '@/config/posts';
 import { PostText } from './PostText';
 import { TRUNCATION_LIMIT } from './PostText.constants';
 
@@ -10,59 +11,77 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock @/atoms
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <div data-testid="container" data-override-defaults={overrideDefaults} className={className}>
-      {children}
-    </div>
-  ),
-  Button: ({
-    children,
-    className,
-    'aria-label': ariaLabel,
-    overrideDefaults,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    'aria-label'?: string;
-    overrideDefaults?: boolean;
-  }) => (
-    <button data-override-defaults={overrideDefaults} className={className} aria-label={ariaLabel}>
-      {children}
-    </button>
-  ),
-}));
+vi.mock('@/atoms/Button/Button', () => {
+  return {
+    Button: ({
+      children,
+      className,
+      'aria-label': ariaLabel,
+      overrideDefaults,
+      ...rest
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      'aria-label'?: string;
+      overrideDefaults?: boolean;
+      [key: string]: unknown;
+    }) => (
+      <button data-override-defaults={overrideDefaults} className={className} aria-label={ariaLabel} {...rest}>
+        {children}
+      </button>
+    ),
+  };
+});
+
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      overrideDefaults,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      overrideDefaults?: boolean;
+    }) => (
+      <div data-testid="container" data-override-defaults={overrideDefaults} className={className}>
+        {children}
+      </div>
+    ),
+  };
+});
 
 // Mock @/molecules
-vi.mock('@/molecules', () => ({
-  PostCodeBlock: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
-    <code data-testid="post-code-block" className={className}>
-      {children}
-    </code>
-  ),
-  PostHashtags: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
-    <a data-testid="post-hashtag" href={href}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock('@/molecules/PostCodeBlock/PostCodeBlock', () => {
+  return {
+    PostCodeBlock: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+      <code data-testid="post-code-block" className={className}>
+        {children}
+      </code>
+    ),
+  };
+});
+
+vi.mock('@/molecules/PostHashtags/PostHashtags', () => {
+  return {
+    PostHashtags: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
+      <a data-testid="post-hashtag" href={href}>
+        {children}
+      </a>
+    ),
+  };
+});
 
 // Mock @/organisms
-vi.mock('@/organisms', () => ({
-  PostMentions: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
-    <a data-testid="post-mention" href={href}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock('@/organisms/PostMentions/PostMentions', () => {
+  return {
+    PostMentions: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
+      <a data-testid="post-mention" href={href}>
+        {children}
+      </a>
+    ),
+  };
+});
 
 // Helper to generate content of specific length
 const generateContent = (length: number): string => {
@@ -568,6 +587,17 @@ describe('PostText', () => {
       expect(hashtag).toHaveTextContent('#hello-world_test');
     });
 
+    it('renders hashtags with spec-allowed symbols (@ ? ; * ")', () => {
+      render(<PostText content="Tags #foo@bar #what? #semi;colon #star*tag" />);
+
+      const hashtags = screen.getAllByTestId('post-hashtag');
+      expect(hashtags).toHaveLength(4);
+      expect(hashtags[0]).toHaveTextContent('#foo@bar');
+      expect(hashtags[1]).toHaveTextContent('#what?');
+      expect(hashtags[2]).toHaveTextContent('#semi;colon');
+      expect(hashtags[3]).toHaveTextContent('#star*tag');
+    });
+
     it('renders hashtags with numbers', () => {
       render(<PostText content="Check #web3 tag" />);
 
@@ -587,6 +617,22 @@ describe('PostText', () => {
 
       expect(screen.getByText('bold').tagName).toBe('STRONG');
       expect(screen.getByTestId('post-hashtag')).toHaveTextContent('#hashtag');
+    });
+
+    it('does not render overlong hashtag as PostHashtags link', () => {
+      const label = 'a'.repeat(TAG_MAX_LENGTH + 1);
+      const content = `Intro #${label} outro`;
+      const { container } = render(<PostText content={content} />);
+
+      expect(screen.queryByTestId('post-hashtag')).not.toBeInTheDocument();
+      expect(container.textContent).toContain(`#${label}`);
+    });
+
+    it('does not render inline hash without whitespace boundary as PostHashtags link', () => {
+      const { container } = render(<PostText content="Hello#Notatag" />);
+
+      expect(screen.queryByTestId('post-hashtag')).not.toBeInTheDocument();
+      expect(container.textContent).toBe('Hello#Notatag');
     });
   });
 
@@ -753,6 +799,7 @@ describe('PostText', () => {
       render(<PostText content={longContent} />);
 
       const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
+      expect(showMoreButton).toHaveAttribute('data-allow-post-navigation');
       expect(showMoreButton).toHaveClass('cursor-pointer');
       expect(showMoreButton).toHaveClass('text-brand');
       expect(showMoreButton).toHaveClass('mt-4');
@@ -1000,7 +1047,7 @@ Third line`}
   });
 
   it('matches snapshot for hashtag with mixed hyphens and underscores', () => {
-    const { container } = render(<PostText content="Check out #hello-world_test-example tag" />);
+    const { container } = render(<PostText content="Check out #hello-world_test tag" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 

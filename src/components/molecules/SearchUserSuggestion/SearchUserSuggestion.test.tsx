@@ -1,38 +1,47 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
 import { SearchUserSuggestion } from './SearchUserSuggestion';
-import type { Pubky } from '@/core';
 
-vi.mock('@/atoms', () => ({
-  Container: ({
-    children,
-    className,
-    onClick,
-    ...props
-  }: React.PropsWithChildren<{ className?: string; onClick?: () => void }>) => (
-    <div className={className} onClick={onClick} {...props}>
-      {children}
-    </div>
-  ),
-  Typography: ({
-    children,
-    className,
-    as: Component = 'span',
-    ...props
-  }: React.PropsWithChildren<{ className?: string; as?: React.ElementType }>) => (
-    <Component className={className} {...props}>
-      {children}
-    </Component>
-  ),
-}));
+vi.mock('@/atoms/Container/Container', () => {
+  return {
+    Container: ({
+      children,
+      className,
+      onClick,
+      ...props
+    }: React.PropsWithChildren<{ className?: string; onClick?: () => void }>) => (
+      <div className={className} onClick={onClick} {...props}>
+        {children}
+      </div>
+    ),
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  AvatarWithFallback: ({ name, size }: { name: string; avatarUrl?: string; size: string }) => (
-    <div data-testid="avatar" data-name={name} data-size={size}>
-      Avatar
-    </div>
-  ),
-}));
+vi.mock('@/atoms/Typography/Typography', () => {
+  return {
+    Typography: ({
+      children,
+      className,
+      as: Component = 'span',
+      ...props
+    }: React.PropsWithChildren<{ className?: string; as?: React.ElementType }>) => (
+      <Component className={className} {...props}>
+        {children}
+      </Component>
+    ),
+  };
+});
+
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({ name, size }: { name: string; avatarUrl?: string; size: string }) => (
+      <div data-testid="avatar" data-name={name} data-size={size}>
+        Avatar
+      </div>
+    ),
+  };
+});
 
 // Use real utility implementations - formatPublicKey and truncateString are pure functions
 // Pure utility functions should never be mocked per guidelines

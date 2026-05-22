@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { Vimeo } from './ProviderVimeo';
+import { describe, expect, it } from 'vitest';
 import { VIDEO_EMBED_PROPS } from '../Provider.constants';
+import { Vimeo } from './ProviderVimeo';
 
 describe('ProviderVimeo', () => {
   describe('domains', () => {

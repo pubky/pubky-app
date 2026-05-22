@@ -2,8 +2,43 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
+import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
+import { StreamCoordinator } from '@/coordinators/streams/stream';
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 
-import * as Core from '@/core';
+function getAppCoordinators() {
+  return {
+    notification: NotificationCoordinator.getInstance(),
+    stream: StreamCoordinator.getInstance(),
+    ttl: TtlCoordinator.getInstance(),
+    muteListSync: MuteListSyncCoordinator.getInstance(),
+  };
+}
+
+function applyRouteToCoordinators(pathname: string): void {
+  const coordinators = getAppCoordinators();
+  void coordinators.notification.setRoute(pathname);
+  void coordinators.stream.setRoute(pathname);
+  coordinators.ttl.setRoute(pathname);
+  coordinators.muteListSync.setRoute(pathname);
+}
+
+function startAppCoordinators(): void {
+  const coordinators = getAppCoordinators();
+  void coordinators.notification.start();
+  void coordinators.stream.start();
+  coordinators.ttl.start();
+  coordinators.muteListSync.start();
+}
+
+function stopAppCoordinators(): void {
+  const coordinators = getAppCoordinators();
+  coordinators.notification.stop();
+  coordinators.stream.stop();
+  coordinators.ttl.stop();
+  coordinators.muteListSync.stop();
+}
 
 /**
  * CoordinatorsManager
@@ -12,7 +47,8 @@ import * as Core from '@/core';
  * This component has no UI - it only manages coordinator lifecycles.
  *
  * Responsibilities:
- * - Initialize coordinators on mount (NotificationCoordinator, StreamCoordinator)
+ * - Initialize coordinators on mount (NotificationCoordinator, StreamCoordinator,
+ *   MuteListSyncCoordinator, TtlCoordinator)
  * - Start coordination when the component is mounted
  * - Track route changes and inform coordinators
  * - Stop coordination and cleanup when unmounted
@@ -25,36 +61,17 @@ import * as Core from '@/core';
 export function CoordinatorsManager() {
   const pathname = usePathname();
 
-  // Start coordinators on mount, stop on unmount
+  // Apply route before start() on mount so route-based coordinators see the real pathname immediately.
   useEffect(() => {
-    const notificationCoordinator = Core.NotificationCoordinator.getInstance();
-    const streamCoordinator = Core.StreamCoordinator.getInstance();
-    const ttlCoordinator = Core.TtlCoordinator.getInstance();
+    applyRouteToCoordinators(pathname);
+  }, [pathname]);
 
-    // Start the coordinators
-    notificationCoordinator.start();
-    streamCoordinator.start();
-    ttlCoordinator.start();
-
-    // Cleanup: stop coordinators when component unmounts
+  useEffect(() => {
+    startAppCoordinators();
     return () => {
-      notificationCoordinator.stop();
-      streamCoordinator.stop();
-      ttlCoordinator.stop();
+      stopAppCoordinators();
     };
   }, []);
 
-  // Update coordinators with current route for route-based activation/deactivation
-  useEffect(() => {
-    const notificationCoordinator = Core.NotificationCoordinator.getInstance();
-    const streamCoordinator = Core.StreamCoordinator.getInstance();
-    const ttlCoordinator = Core.TtlCoordinator.getInstance();
-
-    notificationCoordinator.setRoute(pathname);
-    streamCoordinator.setRoute(pathname);
-    ttlCoordinator.setRoute(pathname);
-  }, [pathname]);
-
-  // This component has no UI - it only manages coordinator lifecycles
   return null;
 }

@@ -1,81 +1,111 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TIMELINE_FEED_VARIANT } from '@/config';
-import * as Core from '@/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
+import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
+
+const mockUsePullToRefresh = vi.hoisted(() =>
+  vi.fn(
+    (): UsePullToRefreshResult => ({
+      state: 'idle',
+      pullDistance: 0,
+    }),
+  ),
+);
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks')>();
-  return {
-    ...actual,
-    useStreamPagination: vi.fn(),
-    useMutedUsers: vi.fn(() => ({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: vi.fn(() => false),
-      isLoading: false,
-    })),
-  };
-});
-
-vi.mock('@/hooks/useUnreadPosts', () => ({
-  useUnreadPosts: vi.fn(() => ({ unreadPostIds: [], unreadCount: 0 })),
+vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
+  useStreamPagination: vi.fn(),
 }));
 
-vi.mock('@/hooks/useIsScrolledFromTop', () => ({
-  useIsScrolledFromTop: vi.fn(() => false),
-}));
-
-const { mockUsePullToRefresh } = vi.hoisted(() => ({
-  mockUsePullToRefresh: vi.fn((): import('@/hooks/usePullToRefresh/usePullToRefresh.types').UsePullToRefreshResult => ({
-    state: 'idle',
-    pullDistance: 0,
+vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
+  useMutedUsers: vi.fn(() => ({
+    mutedUserIds: [],
+    mutedUserIdSet: new Set(),
+    isMuted: vi.fn(() => false),
+    isLoading: false,
   })),
 }));
 
-vi.mock('@/hooks/usePullToRefresh', () => ({
+vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => ({
+  useUnreadPosts: vi.fn(() => ({ unreadPostIds: [], unreadCount: 0 })),
+}));
+
+vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
+  useIsScrolledFromTop: vi.fn(() => false),
+}));
+
+vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => ({
   usePullToRefresh: mockUsePullToRefresh,
 }));
 
-vi.mock('@/molecules', () => ({
-  TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
-  NewPostsButton: ({ visible, count }: { visible: boolean; count: number }) =>
-    visible ? <div data-testid="new-posts-button">{count} new posts</div> : null,
-  PullToRefreshIndicator: ({ state }: { state: string }) =>
-    state !== 'idle' ? <div data-testid="pull-to-refresh">{state}</div> : null,
-  showErrorToast: vi.fn(),
-}));
+vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
+  return {
+    NewPostsButton: ({ visible, count }: { visible: boolean; count: number }) =>
+      visible ? <div data-testid="new-posts-button">{count} new posts</div> : null,
+  };
+});
 
-vi.mock('@/organisms', () => ({
-  TimelinePosts: ({
-    postIds,
-    loading,
-    hasMore,
-  }: {
-    postIds: string[];
-    loading: boolean;
-    loadingMore: boolean;
-    error: string | null;
-    hasMore: boolean;
-    loadMore: () => void;
-    tagsLayout: string;
-  }) => (
-    <div data-testid="timeline-posts">
-      <span data-testid="post-count">{postIds.length}</span>
-      <span data-testid="loading">{loading.toString()}</span>
-      <span data-testid="has-more">{hasMore.toString()}</span>
-    </div>
-  ),
-}));
+vi.mock('@/molecules/PullToRefreshIndicator/PullToRefreshIndicator', () => {
+  return {
+    PullToRefreshIndicator: ({ state }: { state: string }) =>
+      state !== 'idle' ? <div data-testid="pull-to-refresh">{state}</div> : null,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoading', () => {
+  return {
+    TimelineLoading: () => <div data-testid="timeline-loading">Loading...</div>,
+  };
+});
+
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
+  return {
+    showErrorToast: vi.fn(),
+  };
+});
+
+vi.mock('@/organisms/Timeline/Posts/Posts', () => {
+  return {
+    TimelinePosts: ({
+      postIds,
+      loading,
+      hasMore,
+    }: {
+      postIds: string[];
+      loading: boolean;
+      loadingMore: boolean;
+      error: string | null;
+      hasMore: boolean;
+      loadMore: () => void;
+      tagsLayout: string;
+    }) => (
+      <div data-testid="timeline-posts">
+        <span data-testid="post-count">{postIds.length}</span>
+        <span data-testid="loading">{loading.toString()}</span>
+        <span data-testid="has-more">{hasMore.toString()}</span>
+      </div>
+    ),
+  };
+});
 
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();
 const mockPrependPosts = vi.fn();
 const mockRemovePosts = vi.fn();
+
+const defaultMutedUsersResult = {
+  mutedUserIds: [],
+  mutedUserIdSet: new Set<string>(),
+  isMuted: vi.fn(() => false),
+  isLoading: false,
+};
 
 const defaultPaginationResult = {
   postIds: ['post1', 'post2', 'post3'],
@@ -88,14 +118,14 @@ const defaultPaginationResult = {
   prependPosts: mockPrependPosts,
   removePosts: mockRemovePosts,
 };
-
-const { useStreamPagination } = await import('@/hooks');
 const mockUseStreamPagination = vi.mocked(useStreamPagination);
+const mockUseMutedUsers = vi.mocked(useMutedUsers);
 
 describe('TimelineFeedContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
+    mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
     mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
   });
 
@@ -109,7 +139,7 @@ describe('TimelineFeedContent', () => {
     it('renders content when streamId is provided', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -121,7 +151,7 @@ describe('TimelineFeedContent', () => {
     it('renders children above post list', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         >
@@ -137,13 +167,13 @@ describe('TimelineFeedContent', () => {
     it('passes streamId to useStreamPagination', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
       );
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
-        streamId: Core.PostStreamTypes.TIMELINE_ALL_ALL,
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
       });
     });
 
@@ -154,7 +184,7 @@ describe('TimelineFeedContent', () => {
       });
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -165,7 +195,7 @@ describe('TimelineFeedContent', () => {
     it('passes post count to TimelinePosts', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -178,7 +208,7 @@ describe('TimelineFeedContent', () => {
     it('enables pull-to-refresh for home variant', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -194,7 +224,7 @@ describe('TimelineFeedContent', () => {
     it('disables pull-to-refresh for bookmarks variant', () => {
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
           variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
           tagsLayout="inline"
         />,
@@ -208,7 +238,7 @@ describe('TimelineFeedContent', () => {
       mockUsePullToRefresh.mockReturnValue({ state: 'pulling' as const, pullDistance: 50 });
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
           variant={TIMELINE_FEED_VARIANT.HOME}
           tagsLayout="inline"
         />,
@@ -220,12 +250,187 @@ describe('TimelineFeedContent', () => {
       mockUsePullToRefresh.mockReturnValue({ state: 'pulling' as const, pullDistance: 50 });
       render(
         <TimelineFeedWithStream
-          streamId={Core.PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
           variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
           tagsLayout="inline"
         />,
       );
       expect(screen.queryByTestId('pull-to-refresh')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Mute set changes', () => {
+    const renderHomeFeed = () =>
+      render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+        />,
+      );
+
+    it('does not refresh on initial mount', () => {
+      mockUseMutedUsers.mockReturnValue({
+        ...defaultMutedUsersResult,
+        mutedUserIds: ['muted-user'],
+        mutedUserIdSet: new Set(['muted-user']),
+      });
+
+      renderHomeFeed();
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+    });
+
+    it('removes visible posts when a user is muted', () => {
+      let mutedUserIds: string[] = [];
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['muted-user:post-1', 'other-user:post-2'],
+      });
+      mockUseMutedUsers.mockImplementation(() => ({
+        ...defaultMutedUsersResult,
+        mutedUserIds,
+        mutedUserIdSet: new Set(mutedUserIds),
+      }));
+
+      const { rerender } = renderHomeFeed();
+      expect(mockRemovePosts).not.toHaveBeenCalled();
+
+      mutedUserIds = ['muted-user'];
+      rerender(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockRemovePosts).toHaveBeenCalledWith(['muted-user:post-1']);
+      expect(mockRefresh).not.toHaveBeenCalled();
+    });
+
+    it('refreshes the feed when a user is unmuted', () => {
+      let mutedUserIds = ['muted-user'];
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['muted-user:post-1', 'other-user:post-2'],
+      });
+      mockUseMutedUsers.mockImplementation(() => ({
+        ...defaultMutedUsersResult,
+        mutedUserIds,
+        mutedUserIdSet: new Set(mutedUserIds),
+      }));
+
+      const { rerender } = renderHomeFeed();
+      expect(mockRefresh).not.toHaveBeenCalled();
+
+      mockRemovePosts.mockClear();
+      mutedUserIds = [];
+      rerender(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockRefresh).toHaveBeenCalledTimes(1);
+      expect(mockRemovePosts).not.toHaveBeenCalled();
+    });
+
+    it('prefers refresh when mute changes both add and remove users', () => {
+      let mutedUserIds = ['previous-muted-user'];
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['new-muted-user:post-1', 'other-user:post-2'],
+      });
+      mockUseMutedUsers.mockImplementation(() => ({
+        ...defaultMutedUsersResult,
+        mutedUserIds,
+        mutedUserIdSet: new Set(mutedUserIds),
+      }));
+
+      const { rerender } = renderHomeFeed();
+
+      mockRemovePosts.mockClear();
+      mutedUserIds = ['new-muted-user'];
+      rerender(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockRefresh).toHaveBeenCalledTimes(1);
+      expect(mockRemovePosts).not.toHaveBeenCalled();
+    });
+
+    it('does not remove or refresh posts for profile feeds', () => {
+      let mutedUserIds = ['muted-user'];
+      const profileStreamId = 'author:profile-user' as PostStreamId;
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['muted-user:post-1', 'other-user:post-2'],
+      });
+      mockUseMutedUsers.mockImplementation(() => ({
+        ...defaultMutedUsersResult,
+        mutedUserIds,
+        mutedUserIdSet: new Set(mutedUserIds),
+      }));
+
+      const { rerender } = render(
+        <TimelineFeedWithStream
+          streamId={profileStreamId}
+          variant={TIMELINE_FEED_VARIANT.PROFILE}
+          tagsLayout="inline"
+        />,
+      );
+
+      mutedUserIds = [];
+      rerender(
+        <TimelineFeedWithStream
+          streamId={profileStreamId}
+          variant={TIMELINE_FEED_VARIANT.PROFILE}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+      expect(mockRemovePosts).not.toHaveBeenCalled();
+    });
+
+    it('does not remove or refresh posts for bookmarks feeds', () => {
+      let mutedUserIds = ['muted-user'];
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['muted-user:post-1', 'other-user:post-2'],
+      });
+      mockUseMutedUsers.mockImplementation(() => ({
+        ...defaultMutedUsersResult,
+        mutedUserIds,
+        mutedUserIdSet: new Set(mutedUserIds),
+      }));
+
+      const { rerender } = render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+          tagsLayout="inline"
+        />,
+      );
+
+      mutedUserIds = [];
+      rerender(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+      expect(mockRemovePosts).not.toHaveBeenCalled();
     });
   });
 });
@@ -234,6 +439,7 @@ describe('TimelineFeedContent - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
+    mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
     mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
   });
 
@@ -247,7 +453,7 @@ describe('TimelineFeedContent - Snapshots', () => {
   it('matches snapshot with posts', () => {
     const { container } = render(
       <TimelineFeedWithStream
-        streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
         variant={TIMELINE_FEED_VARIANT.HOME}
         tagsLayout="inline"
       />,
@@ -258,7 +464,7 @@ describe('TimelineFeedContent - Snapshots', () => {
   it('matches snapshot with children', () => {
     const { container } = render(
       <TimelineFeedWithStream
-        streamId={Core.PostStreamTypes.TIMELINE_ALL_ALL}
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
         variant={TIMELINE_FEED_VARIANT.HOME}
         tagsLayout="inline"
       >

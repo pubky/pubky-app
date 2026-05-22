@@ -1,9 +1,11 @@
-import * as Core from '@/core';
+import { TagStreamModel } from '@/models/stream/tag/tagStream';
+import type { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
+import type { NexusHotTag } from '@/services/nexus/nexus.types';
 
 export class LocalStreamTagsService {
   private constructor() {}
 
-  static async upsert(streamId: Core.TagStreamTypes, stream: Core.NexusHotTag[]): Promise<void> {
-    await Core.TagStreamModel.upsert(streamId, stream);
+  static async upsert(streamId: TagStreamTypes, stream: NexusHotTag[]): Promise<void> {
+    await TagStreamModel.upsert(streamId, stream);
   }
 }
