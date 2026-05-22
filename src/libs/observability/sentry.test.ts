@@ -1,15 +1,8 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
 import { describe, expect, it, vi } from 'vitest';
-import { AppError, type AppErrorParams } from '@/libs/error/error';
-import {
-  AuthErrorCode,
-  ClientErrorCode,
-  NetworkErrorCode,
-  RateLimitErrorCode,
-  ServerErrorCode,
-  TimeoutErrorCode,
-} from '@/libs/error/error.codes';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -113,45 +106,6 @@ function createCapturedAppError({
   });
 }
 
-type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
-
-type ExpectedOgMetadataErrorParams = DistributiveOmit<
-  AppErrorParams,
-  'message' | 'service' | 'operation' | 'context'
-> & {
-  reason?: string;
-  statusCode?: number;
-  operation?: string;
-  context?: Record<string, unknown>;
-};
-
-function createExpectedOgMetadataError(
-  {
-    reason = 'dns_failed',
-    statusCode = HttpStatusCode.SERVICE_UNAVAILABLE,
-    operation = 'fetchOgMetadata',
-    context = {},
-    ...errorParams
-  }: ExpectedOgMetadataErrorParams = {
-    category: ErrorCategory.Network,
-    code: NetworkErrorCode.DNS_FAILED,
-  },
-): AppError {
-  return new AppError({
-    ...errorParams,
-    message: 'OG metadata failed',
-    service: ErrorService.NextJsServer,
-    operation,
-    context: {
-      source: 'og_metadata',
-      reason,
-      cachePolicy: 'no-store',
-      statusCode,
-      ...context,
-    },
-  });
-}
-
 describe('shouldEnableSentry', () => {
   it('is disabled when NEXT_PUBLIC_TESTNET is true outside unit-test guards', async () => {
     vi.resetModules();
@@ -176,50 +130,33 @@ describe('shouldEnableSentry', () => {
 });
 
 describe('captureAppError filtering', () => {
-  it('drops expected OG metadata external failures', async () => {
+  it('drops OG image DNS failures from shared image normalization', async () => {
     await withEnabledSentryCapture(({ captureAppError, captureException }) => {
-      const errors = [
-        createExpectedOgMetadataError(),
-        createExpectedOgMetadataError({
-          category: ErrorCategory.Network,
-          code: NetworkErrorCode.CONNECTION_FAILED,
-          reason: 'network',
-        }),
-        createExpectedOgMetadataError({
-          category: ErrorCategory.Timeout,
-          code: TimeoutErrorCode.REQUEST_TIMEOUT,
-          reason: 'timeout',
-          statusCode: HttpStatusCode.REQUEST_TIMEOUT,
-        }),
-        createExpectedOgMetadataError({
-          category: ErrorCategory.RateLimit,
-          code: RateLimitErrorCode.RATE_LIMITED,
-          reason: 'rate_limit',
-          statusCode: HttpStatusCode.TOO_MANY_REQUESTS,
-        }),
-        createExpectedOgMetadataError({
-          category: ErrorCategory.Server,
-          code: ServerErrorCode.SERVICE_UNAVAILABLE,
-          reason: 'http_error',
-        }),
-      ];
+      const error = new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.DNS_FAILED,
+        message: 'DNS resolution failed',
+        service: ErrorService.NextJsServer,
+        operation: 'validateDns',
+        context: { hostname: 'cdn.example.test', statusCode: HttpStatusCode.BAD_REQUEST },
+      });
 
-      for (const error of errors) {
-        captureAppError(error);
-        expect(shouldDropAppErrorFromSentry(error)).toBe(true);
-      }
+      captureAppError(error);
 
+      expect(shouldDropAppErrorFromSentry(error)).toBe(true);
       expect(captureException).not.toHaveBeenCalled();
     });
   });
 
-  it('keeps OG metadata internal server errors reportable', async () => {
+  it('keeps OG metadata fetch errors reportable unless handled before Err creation', async () => {
     await withEnabledSentryCapture(({ captureAppError, captureException }) => {
-      const error = createExpectedOgMetadataError({
+      const error = new AppError({
         category: ErrorCategory.Server,
         code: ServerErrorCode.UNKNOWN_ERROR,
-        reason: 'internal_error',
-        statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
+        message: 'OG metadata failed',
+        service: ErrorService.NextJsServer,
+        operation: 'fetchOgMetadata',
+        context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
 
       captureAppError(error);
@@ -231,12 +168,13 @@ describe('captureAppError filtering', () => {
 
   it('keeps OG metadata SSRF guard errors reportable', async () => {
     await withEnabledSentryCapture(({ captureAppError, captureException }) => {
-      const error = createExpectedOgMetadataError({
+      const error = new AppError({
         category: ErrorCategory.Auth,
         code: AuthErrorCode.FORBIDDEN,
-        reason: 'unsafe_ip',
-        statusCode: HttpStatusCode.FORBIDDEN,
-        operation: 'validateDnsForOgMetadata',
+        message: 'Blocked IP range',
+        service: ErrorService.NextJsServer,
+        operation: 'validateDns',
+        context: { hostname: '169.254.169.254', statusCode: HttpStatusCode.FORBIDDEN },
       });
 
       captureAppError(error);

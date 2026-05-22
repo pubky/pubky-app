@@ -13,11 +13,6 @@ import { isIpSafe } from '@/libs/network/network';
 
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5MB
 
-type TDnsSafetyResult =
-  | { ok: true }
-  | { ok: false; reason: 'dns_failed'; cause?: unknown }
-  | { ok: false; reason: 'unsafe_ip' };
-
 /**
  * Checks whether a URL uses HTTP or HTTPS protocol.
  */
@@ -26,100 +21,51 @@ export function isHttpProtocol(url: URL): boolean {
 }
 
 /**
- * Resolves DNS and checks whether the resulting IP can be fetched safely.
- *
- * This helper does not create AppError instances. Callers that model DNS failure
- * as an expected outcome can consume the result directly; throwing callers should
- * wrap the result at their boundary.
+ * Resolves DNS for hostname and validates the resolved IP is safe.
+ * Prevents SSRF attacks by checking IP before the actual fetch.
  */
-export async function checkDnsSafety(hostname: string): Promise<TDnsSafetyResult> {
+export async function validateDns(hostname: string): Promise<void> {
   // Keep Node.js-only modules out of client bundles if this helper is imported from UI code.
   // See #1435.
   const { isIP } = await import(/* webpackIgnore: true */ 'net');
   const dns = await import(/* webpackIgnore: true */ 'dns/promises');
 
-  const resolvedIps: string[] = [];
-
-  // Resolve hostname to IPs: use as-is if already an IP, otherwise DNS resolve to IPv4.
-  if (isIP(hostname)) {
-    resolvedIps.push(hostname);
-  } else {
-    try {
-      const addresses = await dns.resolve4(hostname);
-      resolvedIps.push(...addresses);
-    } catch (error) {
-      if (isExpectedDnsResolutionError(error)) {
-        return { ok: false, reason: 'dns_failed', cause: error };
-      }
-
-      throw error;
-    }
-  }
-
-  if (resolvedIps.length === 0) {
-    return { ok: false, reason: 'dns_failed' };
-  }
-
-  // Reject if any resolved address is private/reserved because fetch may connect to any returned A record.
-  if (resolvedIps.some((ip) => !isIpSafe(ip))) {
-    return { ok: false, reason: 'unsafe_ip' };
-  }
-
-  return { ok: true };
-}
-
-/**
- * Resolves DNS for hostname and validates the resolved IP is safe.
- * Prevents SSRF attacks by checking IP before the actual fetch.
- */
-export async function validateDns(hostname: string): Promise<void> {
-  let result: TDnsSafetyResult;
+  let resolvedIp: string;
 
   try {
-    result = await checkDnsSafety(hostname);
+    // Resolve hostname to IP: use as-is if already an IP, otherwise DNS resolve to IPv4.
+    if (isIP(hostname)) {
+      resolvedIp = hostname;
+    } else {
+      const addresses = await dns.resolve4(hostname);
+      if (!addresses || addresses.length === 0) {
+        throw Err.network(NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
+          service: ErrorService.NextJsServer,
+          operation: 'validateDns',
+          context: { hostname, statusCode: HttpStatusCode.BAD_REQUEST },
+        });
+      }
+      resolvedIp = addresses[0];
+    }
   } catch (error) {
-    throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'DNS safety check failed', {
-      service: ErrorService.NextJsServer,
-      operation: 'validateDns',
-      cause: error,
-      context: { hostname, statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
-    });
-  }
+    if (error instanceof AppError) throw error;
 
-  if (result.ok) {
-    return;
-  }
-
-  if (result.reason === 'dns_failed') {
     throw Err.network(NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
       service: ErrorService.NextJsServer,
       operation: 'validateDns',
-      cause: result.cause,
+      cause: error,
       context: { hostname, statusCode: HttpStatusCode.BAD_REQUEST },
     });
   }
 
-  if (result.reason === 'unsafe_ip') {
+  // Reject private/reserved IP ranges to prevent SSRF (e.g. localhost, 10.x, 192.168.x).
+  if (!isIpSafe(resolvedIp)) {
     throw Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
       service: ErrorService.NextJsServer,
       operation: 'validateDns',
       context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },
     });
   }
-}
-
-function isExpectedDnsResolutionError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-
-  const code = 'code' in error ? error.code : undefined;
-  return (
-    code === 'ENOTFOUND' ||
-    code === 'ESERVFAIL' ||
-    code === 'ETIMEDOUT' ||
-    code === 'ETIMEOUT' ||
-    code === 'EAI_AGAIN' ||
-    code === 'ENODATA'
-  );
 }
 
 /**

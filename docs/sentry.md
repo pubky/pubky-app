@@ -26,14 +26,14 @@ For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('ac
 
 ### OG metadata enrichment
 
-`/api/og-metadata` is best-effort link-preview enrichment. Expected external outcomes either return fallback metadata
-without an `AppError`, or create narrowly-marked `AppError`s that are dropped by `shouldDropAppErrorFromSentry`:
+`/api/og-metadata` is best-effort link-preview enrichment. Expected external outcomes should normally be handled before
+`Err.*` creation so they do not create Sentry issues:
 
-- Durable outcomes such as forbidden/not-found/gone pages or non-HTML content return fallback metadata.
-- Expected `og:image` normalization failures such as dead image hosts or unsafe image IPs drop the image without
-  creating Sentry issues.
-- Transient outcomes such as DNS failure, network failure, timeout, rate limiting, or remote 5xx return direct no-store
-  route responses and are filtered out of Sentry as low-value external telemetry.
+- Expected remote failures such as forbidden/not-found/gone pages, non-HTML content, DNS failure, network failure,
+  timeout, rate limiting, or remote 5xx return fallback metadata.
+- Invalid user URLs return a normal `400` response from the controller/route without `Err.validation`.
+- Shared `og:image` DNS validation may still create an `AppError`; `shouldDropAppErrorFromSentry` filters only that
+  narrow DNS-failure case as low-value image enrichment telemetry.
 - Security/anomaly cases on the main page fetch path, such as private IPs, non-HTTP redirects, redirect loops, oversized
   bodies, and parser/runtime surprises remain reportable through `Err.*`.
 

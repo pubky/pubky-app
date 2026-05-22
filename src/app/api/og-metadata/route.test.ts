@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { OgMetadataController } from '@/controllers/og-metadata/og-metadata';
-import { AuthErrorCode, ClientErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -76,7 +76,7 @@ describe('API Route: /api/og-metadata', () => {
       expect(fetchSpy).toHaveBeenCalledWith({ url: null });
     });
 
-    it('should return 400 for validation failures without cache headers', async () => {
+    it('should return 400 for validation failures', async () => {
       vi.spyOn(OgMetadataController, 'fetch').mockResolvedValue({
         ok: false,
         message: 'Invalid URL',
@@ -89,7 +89,6 @@ describe('API Route: /api/og-metadata', () => {
 
       expect(response.status).toBe(400);
       expect(data.error).toBe('Invalid URL');
-      expect(response.headers.get('Cache-Control')).toBe('no-store');
     });
 
     it('should return 403 for AppError with statusCode 403', async () => {
@@ -106,28 +105,6 @@ describe('API Route: /api/og-metadata', () => {
 
       expect(response.status).toBe(403);
       expect(data.error).toBe('Blocked IP range');
-    });
-
-    it('should return no-store non-2xx for expected transient OG metadata errors', async () => {
-      const appError = Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Timed out fetching OG metadata', {
-        service: ErrorService.NextJsServer,
-        operation: 'fetchOgMetadata',
-        context: {
-          source: 'og_metadata',
-          reason: 'timeout',
-          cachePolicy: 'no-store',
-          statusCode: HttpStatusCode.REQUEST_TIMEOUT,
-        },
-      });
-      vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(appError);
-
-      const request = createRequest('https://slow-site.com');
-      const response = await GET(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(408);
-      expect(data.error).toBe('Failed to fetch metadata');
-      expect(response.headers.get('Cache-Control')).toBe('no-store');
     });
 
     it('should return 413 for AppError with statusCode 413', async () => {

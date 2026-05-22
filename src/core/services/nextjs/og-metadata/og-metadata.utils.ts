@@ -6,11 +6,9 @@ import { ErrorService } from '@/libs/error/error.types';
 import { extractFromHtml, OG_PATTERNS } from '@/libs/html/html';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { decodeHtmlEntities, truncateMiddle, truncateString } from '@/libs/utils/utils';
-import { isHttpProtocol } from '../nextjs.utils';
+import { isHttpProtocol, normalizeImageUrl } from '../nextjs.utils';
 
 const MEDIA_TYPES = ['image', 'video', 'audio'] as const;
-
-type NormalizeImageUrl = (image: string, baseUrl: string) => Promise<string | null>;
 
 /**
  * Detects media content types (image/video/audio) and returns early.
@@ -31,11 +29,7 @@ export function detectMediaType(url: string, response: Response): TOgMetadataRes
 /**
  * Extracts OG metadata from HTML, normalizes image URLs, and applies truncation.
  */
-export async function extractMetadata(
-  url: string,
-  html: string,
-  normalizeImage: NormalizeImageUrl,
-): Promise<TOgMetadataResult> {
+export async function extractMetadata(url: string, html: string): Promise<TOgMetadataResult> {
   // Extract title (og:title → <title> fallback)
   const ogTitle = extractFromHtml(html, OG_PATTERNS.TITLE);
   const titleTag = html.match(OG_PATTERNS.TITLE_TAG)?.[1] || null;
@@ -46,7 +40,7 @@ export async function extractMetadata(
   const image = extractFromHtml(html, OG_PATTERNS.IMAGE);
 
   // Normalize and validate image URL
-  const normalizedImage = image ? await normalizeImage(image, url) : null;
+  const normalizedImage = image ? await normalizeImageUrl(image, url) : null;
 
   return {
     url: truncateMiddle(url, URL_TRUNCATE_LENGTH),
