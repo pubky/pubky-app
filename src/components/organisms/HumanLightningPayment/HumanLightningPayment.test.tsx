@@ -213,6 +213,7 @@ describe('HumanLightningPayment', () => {
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'error',
+        title: 'Error',
         description: 'Please try again later. If the problem persists, please contact support.',
       });
     });
@@ -233,6 +234,7 @@ describe('HumanLightningPayment', () => {
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'error',
+        title: 'Error',
         description: 'Please try again later. If the problem persists, please contact support.',
       });
     });

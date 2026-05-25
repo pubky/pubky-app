@@ -235,6 +235,7 @@ describe('useTagged', () => {
 
     expect(addResult!).toEqual({ success: false, error: 'Failed to add tag' });
     expect(mockMocks.mockToast).toHaveBeenCalledWith({
+      variant: 'error',
       title: 'Failed to add tag',
       description: 'Could not add "ethereum". Please try again.',
     });

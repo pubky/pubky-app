@@ -634,8 +634,8 @@ describe('PostInput', () => {
     expect(mockToast).toHaveBeenCalledTimes(1);
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: expect.any(String),
-        description: expect.any(String),
+        variant: 'error',
+        description: 'Failed to parse article content',
       }),
     );
   });
