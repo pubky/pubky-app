@@ -28,7 +28,6 @@ import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './usePr
 export function useProfileMenuActions(userId: string): UseProfileMenuActionsResult {
   const t = useTranslations('profile.actions');
   const tToast = useTranslations('toast');
-  const tErrors = useTranslations('errors');
   const { profile, isLoading: isProfileLoading } = useUserProfile(userId);
   const { isFollowing, isLoading: isFollowingLoading } = useIsFollowing(userId);
   const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser();
@@ -63,7 +62,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
         await toggleFollow(userId, isFollowing);
       } catch (error) {
         toast({
-          title: tErrors('title'),
+          variant: 'error',
           description: isAppError(error) ? error.message : tToast('follow.failed'),
         });
       }
@@ -81,7 +80,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
         await copyPubky(withPubkyPrefix(userId));
       } catch (error) {
         toast({
-          title: tErrors('title'),
+          variant: 'error',
           description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
         });
       }
@@ -98,7 +97,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
         await copyLink(profileUrl);
       } catch (error) {
         toast({
-          title: tErrors('title'),
+          variant: 'error',
           description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
         });
       }
@@ -131,7 +130,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
         });
       } catch (error) {
         toast({
-          title: tErrors('title'),
+          variant: 'error',
           description: isAppError(error) ? error.message : tToast('mute.failed'),
         });
       }

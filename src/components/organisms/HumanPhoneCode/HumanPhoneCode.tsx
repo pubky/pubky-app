@@ -51,12 +51,14 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
         onSuccess(result.signupCode);
       } else {
         toast({
+          variant: 'warning',
           title: t('invalid'),
         });
         setIsVerifyingCode(false);
       }
     } catch {
       toast({
+        variant: 'error',
         title: t('verifyFailed'),
         description: t('verifyFailedDescription'),
       });

@@ -173,9 +173,8 @@ describe('useDeletePost', () => {
     });
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
+      variant: 'error',
       description: 'Failed to delete post. Please try again.',
-      className: 'destructive border-destructive bg-destructive text-destructive-foreground',
     });
   });
 

@@ -435,6 +435,7 @@ describe('PublicKeyCard', () => {
 
     expect(mockShareWithFallback).toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
       title: 'Share failed',
       description: 'Unable to share right now. Please try again.',
     });

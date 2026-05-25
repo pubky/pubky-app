@@ -47,7 +47,7 @@ import type {
 
 export function usePostMenuActions(postId: string, options: UsePostMenuActionsOptions): UsePostMenuActionsResult {
   const t = useTranslations('post.actions');
-  const tToast = useTranslations('toast');
+
   const tMute = useTranslations('toast.mute');
   const tCopy = useTranslations('toast.copy');
   const tFollow = useTranslations('toast.follow');
@@ -96,7 +96,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
           await toggleFollow(postAuthorId, isFollowing);
         } catch (error) {
           toast({
-            title: tToast('error'),
+            variant: 'error',
             description: isAppError(error) ? error.message : tFollow('failed'),
           });
         }
@@ -114,7 +114,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         await copyPubky(withPubkyPrefix(postAuthorId));
       } catch (error) {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
         });
       }
@@ -130,7 +130,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         await copyLink(postUrl);
       } catch (error) {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
         });
       }
@@ -147,7 +147,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
           await copyText(postDetails?.content ?? '');
         } catch (error) {
           toast({
-            title: tToast('error'),
+            variant: 'error',
             description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
           });
         }
@@ -181,7 +181,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
           });
         } catch (error) {
           toast({
-            title: tToast('error'),
+            variant: 'error',
             description: isAppError(error) ? error.message : tMute('failed'),
           });
         }

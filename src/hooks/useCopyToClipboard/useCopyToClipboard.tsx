@@ -34,6 +34,7 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
         return true;
       } catch (error) {
         toast({
+          variant: 'error',
           title: resolvedErrorTitle,
           description: resolvedErrorDescription,
         });

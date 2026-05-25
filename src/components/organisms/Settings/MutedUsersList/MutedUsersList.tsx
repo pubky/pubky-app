@@ -39,7 +39,7 @@ export function MutedUsersList() {
       });
     } catch (error) {
       toast({
-        title: tCommon('error'),
+        variant: 'error',
         description: isAppError(error) ? error.message : tToast('failed'),
       });
     }
@@ -56,6 +56,7 @@ export function MutedUsersList() {
       const failedCount = results.filter((r) => r.status === 'rejected').length;
       if (failedCount > 0) {
         toast({
+          variant: 'warning',
           title: t('partialSuccess'),
           description: t('partialSuccessDesc', {
             success: idsToUnmute.length - failedCount,
@@ -70,7 +71,7 @@ export function MutedUsersList() {
       }
     } catch (error) {
       toast({
-        title: tCommon('error'),
+        variant: 'error',
         description: isAppError(error) ? error.message : tToast('failed'),
       });
     } finally {

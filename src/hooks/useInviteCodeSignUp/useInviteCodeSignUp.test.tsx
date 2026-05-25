@@ -142,6 +142,7 @@ describe('useInviteCodeSignUp', () => {
     ).rejects.toThrow();
 
     expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
       title: 'Error - Failed to sign up',
       description: 'Something went wrong. Please try again.',
     });
@@ -162,6 +163,7 @@ describe('useInviteCodeSignUp', () => {
     ).rejects.toThrow();
 
     expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
       title: 'Error - Failed to sign up',
       description: 'Invalid or expired invite code.',
     });
@@ -211,6 +213,7 @@ describe('useInviteCodeSignUp', () => {
     expect(mockSignUp).toHaveBeenCalledTimes(4);
     expect(mockClearSecrets).not.toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
       title: 'Error - Failed to sign up',
       description: 'Network down',
     });

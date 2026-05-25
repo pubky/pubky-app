@@ -62,6 +62,7 @@ export function PublicKeyCard() {
           },
           onError: () => {
             toast({
+              variant: 'error',
               title: t('shareFailed'),
               description: t('shareFailedDescription'),
             });

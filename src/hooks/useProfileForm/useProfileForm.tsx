@@ -355,6 +355,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           Logger.error('Session expired while saving profile', error);
           setSubmitTextKey('tryAgain');
           toast({
+            variant: 'error',
             title: tProfile('sessionExpired'),
             description: tProfile('sessionExpiredDesc'),
           });
@@ -366,6 +367,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           Logger.error('Failed to save profile in Homeserver', error);
           setSubmitTextKey('tryAgain');
           toast({
+            variant: 'error',
             title: tProfile('saveFailed'),
             description: tProfile('saveFailedDesc'),
           });
@@ -375,6 +377,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
       setSubmitTextKey('tryAgain');
       toast({
+        variant: 'error',
         title: tProfile('fetchFailed'),
         description: mode === 'create' ? tProfile('fetchFailedDesc') : tProfile('updateFailed'),
       });

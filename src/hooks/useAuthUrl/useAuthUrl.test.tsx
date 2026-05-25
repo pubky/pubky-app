@@ -179,6 +179,7 @@ describe('useAuthUrl', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
         title: 'Authorization was not completed',
         description: 'The signer did not complete authorization. Please try again.',
       });
@@ -307,6 +308,7 @@ describe('useAuthUrl', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
         title: 'Sign in failed. Please try again.',
         description: 'Unable to complete authorization with Pubky Ring. Please try again.',
       });
@@ -320,6 +322,7 @@ describe('useAuthUrl', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
         title: 'QR code generation failed',
         description: 'Unable to generate sign-in QR code. Please refresh and try again.',
       });

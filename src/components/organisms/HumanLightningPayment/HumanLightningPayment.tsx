@@ -41,9 +41,10 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       if (verificationRef.current) {
         verificationRef.current.abort();
       }
-      const toastVerificationError = (error: unknown) => {
+      const onVerificationError = (error: unknown) => {
         toast({
           title: tCommon('error'),
+          variant: 'error',
           description: isAppError(error) ? error.message : t('requestFailedDescription'),
         });
       };
@@ -54,21 +55,23 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
             title: t('paymentSuccess'),
           });
         } catch (error) {
-          toastVerificationError(error);
+          onVerificationError(error);
         }
       };
       const onPaymentExpired = () => {
         setIsPaymentExpired(true);
         toast({
+          variant: 'warning',
           title: t('paymentExpired'),
         });
       };
-      const client = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired, toastVerificationError);
+      const client = await VerificationHandler.create(onPaymentConfirmed, onPaymentExpired, onVerificationError);
       verificationRef.current = client;
       setVerification(client);
       setIsPaymentExpired(false);
     } catch {
       toast({
+        variant: 'error',
         title: t('requestFailed'),
         description: t('requestFailedDescription'),
       });
@@ -108,6 +111,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       });
     } catch {
       toast({
+        variant: 'error',
         title: t('copyFailed'),
       });
     }

@@ -1646,7 +1646,7 @@ describe('usePostInput', () => {
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: expect.stringContaining('has unsupported type'),
       });
     });
@@ -1668,7 +1668,7 @@ describe('usePostInput', () => {
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: expect.stringContaining('exceeds the maximum size of 5MB'),
       });
     });
@@ -1693,7 +1693,7 @@ describe('usePostInput', () => {
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: expect.stringContaining(`exceeds the maximum size of ${maxOtherSizeLabel}`),
       });
     });
@@ -1719,7 +1719,7 @@ describe('usePostInput', () => {
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: `Maximum of ${POST_ATTACHMENT_MAX_FILES} files allowed`,
       });
     });
@@ -1748,7 +1748,7 @@ describe('usePostInput', () => {
       // Should add only 1 file and show error for the rest
       expect(mockSetAttachments).toHaveBeenCalled();
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: expect.stringContaining(`Maximum of ${POST_ATTACHMENT_MAX_FILES} files allowed`),
       });
     });
@@ -1769,6 +1769,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
         title: 'Errors',
         description: expect.any(String),
       });
@@ -2082,7 +2083,7 @@ describe('usePostInput', () => {
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: `Maximum of ${ARTICLE_ATTACHMENT_MAX_FILES} files allowed`,
       });
     });
@@ -2105,7 +2106,7 @@ describe('usePostInput', () => {
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: expect.stringContaining('has unsupported type'),
       });
     });

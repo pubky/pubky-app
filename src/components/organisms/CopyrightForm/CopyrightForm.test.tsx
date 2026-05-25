@@ -4,16 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CopyrightForm } from './CopyrightForm';
 
 // Mock @/molecules
-const { mockToast, mockShowErrorToast } = vi.hoisted(() => ({
+const { mockToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),
-  mockShowErrorToast: vi.fn(),
 }));
-vi.mock('@/molecules/Toaster/showErrorToast', () => {
-  return {
-    showErrorToast: mockShowErrorToast,
-  };
-});
-
 vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     toast: mockToast,
@@ -267,7 +260,8 @@ describe('CopyrightForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockShowErrorToast).toHaveBeenCalledWith({
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
         description: 'Validation failed',
       });
     });

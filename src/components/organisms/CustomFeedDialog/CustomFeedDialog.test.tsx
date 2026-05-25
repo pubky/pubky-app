@@ -954,7 +954,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: 'Could not create feed, please try again or reach out to support.',
       });
     });
@@ -1093,7 +1093,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: 'Could not edit feed, please try again or reach out to support.',
       });
     });
@@ -1181,7 +1181,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: 'Could not delete feed, please try again or reach out to support.',
       });
     });

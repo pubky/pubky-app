@@ -417,9 +417,8 @@ describe('usePost', () => {
 
       // Toast should be called directly in catch block
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: 'Failed to post reply. Please try again.',
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
 
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to submit reply:', mockError);
@@ -663,9 +662,8 @@ describe('usePost', () => {
 
       // Toast should be called directly in catch block
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: 'Failed to create post. Please try again.',
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
 
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to create post:', mockError);
@@ -1139,9 +1137,8 @@ describe('usePost', () => {
 
       // Toast should be called directly in catch block
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: 'Failed to repost. Please try again.',
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
 
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to repost:', mockError);
@@ -1383,9 +1380,8 @@ describe('usePost', () => {
         });
 
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
+          variant: 'error',
           description: 'Failed to edit post. Please try again.',
-          className: 'destructive border-destructive bg-destructive text-destructive-foreground',
         });
         expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to edit post:', mockError);
       });

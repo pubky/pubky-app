@@ -310,7 +310,7 @@ export function usePostInput({
 
       if (availableSlots <= 0) {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tFile('maxFiles', { max: ATTACHMENT_MAX_FILES }),
         });
         return;
@@ -347,7 +347,8 @@ export function usePostInput({
 
       if (errors.length > 0) {
         toast({
-          title: errors.length > 1 ? tToast('errors') : tToast('error'),
+          variant: 'error',
+          ...(errors.length > 1 ? { title: tToast('errors') } : {}),
           description: errors.join('\n'),
         });
       }

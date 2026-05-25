@@ -183,6 +183,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         return { success: true };
       } catch {
         toast({
+          variant: 'error',
           title: tTags('addFailed'),
           description: tTags('addFailedDesc', { label }),
         });
@@ -261,6 +262,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           });
         }
         toast({
+          variant: 'error',
           title: userIsTagger ? tTags('removeFailed') : tTags('addFailed'),
           description: userIsTagger
             ? tTags('removeFailedDesc', { label: tag.label })

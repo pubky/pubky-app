@@ -224,6 +224,7 @@ describe('usePostTags', () => {
 
       expect(response!).toEqual({ success: false, error: 'Failed to add tag' });
       expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
         title: 'Failed to add tag',
         description: 'Could not add "broken-tag". Please try again.',
       });

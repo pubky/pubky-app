@@ -353,7 +353,7 @@ describe('NotificationItem', () => {
     // Wait for the async post fetch to complete and toast to be called
     await vi.waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: 'Failed to parse article content',
       });
     });

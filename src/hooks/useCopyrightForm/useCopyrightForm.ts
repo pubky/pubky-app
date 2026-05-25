@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { type FieldErrors, useForm } from 'react-hook-form';
 import { postJson } from '@/libs/api/client-request';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 import { toast } from '@/molecules/Toaster/use-toast';
 import { COPYRIGHT_ROLES, copyrightFormDefaultValues } from './useCopyrightForm.constants';
 import { type CopyrightFormData, copyrightFormSchema } from './useCopyrightForm.types';
@@ -30,7 +29,8 @@ export function useCopyrightForm() {
       form.reset();
       toast({ title: tToast('success'), description: tCopyright('success') });
     } catch (error) {
-      showErrorToast({
+      toast({
+        variant: 'error',
         description: error instanceof Error ? error.message : tCopyright('error'),
       });
     }

@@ -215,7 +215,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tDialog('feedCreateError'),
         });
       } finally {
@@ -246,7 +246,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tDialog('feedEditError'),
         });
       } finally {
@@ -271,7 +271,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       router.push(APP_ROUTES.HOME);
     } catch {
       toast({
-        title: tToast('error'),
+        variant: 'error',
         description: tDialog('feedDeleteError'),
       });
     } finally {

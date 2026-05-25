@@ -162,6 +162,7 @@ describe('useCopyToClipboard', () => {
 
     await expect(result.current.copyToClipboard('test text')).resolves.toBe(false);
     expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
       title: 'copyFailed',
       description: 'copyFailedDesc',
     });

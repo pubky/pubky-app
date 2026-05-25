@@ -41,6 +41,7 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
         switch (result.errorType) {
           case SmsCodeErrorType.BLOCKED:
             toast({
+              variant: 'error',
               title: t('blocked'),
               description: t('blockedDescription'),
             });
@@ -52,6 +53,7 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
                 })
               : t('tooManyAttemptsDescription');
             toast({
+              variant: 'error',
               title: t('tooManyAttempts'),
               description: retryMessage,
             });
@@ -59,18 +61,21 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
           }
           case SmsCodeErrorType.RATE_LIMITED_WEEKLY:
             toast({
+              variant: 'error',
               title: t('weeklyLimitReached'),
               description: t('weeklyLimitDescription'),
             });
             break;
           case SmsCodeErrorType.RATE_LIMITED_YEARLY:
             toast({
+              variant: 'error',
               title: t('yearlyLimitReached'),
               description: t('yearlyLimitDescription'),
             });
             break;
           default:
             toast({
+              variant: 'error',
               title: t('sendFailed'),
               description: t('sendFailedDescription'),
             });
@@ -80,6 +85,7 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
       onCodeSent(phoneNumber);
     } catch {
       toast({
+        variant: 'error',
         title: t('sendFailed'),
         description: t('sendFailedDescription'),
       });

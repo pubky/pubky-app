@@ -291,7 +291,7 @@ describe('usePostArticle', () => {
       );
 
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: 'Failed to parse article content',
       });
       expect(result.current.title).toBe('');
@@ -317,7 +317,7 @@ describe('usePostArticle', () => {
       });
 
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: 'Failed to load article cover image',
       });
       expect(result.current.coverImage).toBeNull();

@@ -37,6 +37,7 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
     if (currentMedia) {
       currentMedia.requestFullscreen().catch((error) => {
         toast({
+          variant: 'error',
           title: tFullscreen('error'),
           description: error,
         });

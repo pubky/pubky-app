@@ -48,23 +48,7 @@ export function usePost(): UsePostReturn {
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const { toast } = useToast();
-  const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
-
-  const showErrorToast = (description: string) => {
-    toast({
-      title: tToast('error'),
-      description,
-      className: 'destructive border-destructive bg-destructive text-destructive-foreground',
-    });
-  };
-
-  const showSuccessToast = (title: string, description: string) => {
-    toast({
-      title,
-      description,
-    });
-  };
 
   const reply = async ({ postId, onSuccess }: UsePostReplyOptions) => {
     // allow empty content and attachments
@@ -91,7 +75,7 @@ export function usePost(): UsePostReturn {
       onSuccess?.(createdPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to submit reply:', err);
-      showErrorToast(tPost('replyFailed'));
+      toast({ variant: 'error', description: tPost('replyFailed') });
     } finally {
       setIsSubmitting(false);
     }
@@ -129,7 +113,7 @@ export function usePost(): UsePostReturn {
       onSuccess?.(createdPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to create post:', err);
-      showErrorToast(tPost('postFailed'));
+      toast({ variant: 'error', description: tPost('postFailed') });
     } finally {
       setIsSubmitting(false);
     }
@@ -173,7 +157,7 @@ export function usePost(): UsePostReturn {
       onSuccess?.(createdPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to repost:', err);
-      showErrorToast(tPost('repostFailed'));
+      toast({ variant: 'error', description: tPost('repostFailed') });
     } finally {
       setIsSubmitting(false);
     }
@@ -194,11 +178,14 @@ export function usePost(): UsePostReturn {
       setContent('');
       setIsArticle(false);
       setArticleTitle('');
-      showSuccessToast(tPost('postEdited'), tPost('postEditedDesc'));
+      toast({
+        title: tPost('postEdited'),
+        description: tPost('postEditedDesc'),
+      });
       onSuccess?.(editPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to edit post:', err);
-      showErrorToast(tPost('editFailed'));
+      toast({ variant: 'error', description: tPost('editFailed') });
     } finally {
       setIsSubmitting(false);
     }

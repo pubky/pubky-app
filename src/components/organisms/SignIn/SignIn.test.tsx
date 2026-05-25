@@ -441,6 +441,37 @@ describe('SignInContent', () => {
     });
   });
 
+  it('shows error toast when copying auth URL fails', async () => {
+    mockCopyAuthUrl.mockRejectedValueOnce(new Error('Clipboard denied'));
+    vi.mocked(useMobileAuth).mockReturnValue({
+      url: 'pubkyring://authorize?token=test123',
+      isLoading: false,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+
+    const { toast } = await import('@/molecules/Toaster/use-toast');
+
+    await act(async () => {
+      render(<SignInContent />);
+    });
+
+    const qrButton = screen.getByLabelText('Copy authentication link');
+    await act(async () => {
+      fireEvent.click(qrButton);
+    });
+
+    expect(mockCopyAuthUrl).toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith({
+      variant: 'error',
+      title: messages.toast.copy.copyFailed,
+      description: messages.toast.copy.copyFailedDesc,
+    });
+  });
+
   it('opens expired dialog and disables authorize action when auth flow is expired', async () => {
     vi.mocked(useMobileAuth).mockReturnValue({
       url: '',

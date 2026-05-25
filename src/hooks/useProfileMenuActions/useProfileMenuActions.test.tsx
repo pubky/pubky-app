@@ -235,7 +235,7 @@ describe('useProfileMenuActions', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
+          variant: 'error',
           description: 'Failed to update follow status',
         });
       });
@@ -324,7 +324,7 @@ describe('useProfileMenuActions', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
+          variant: 'error',
           description: 'Failed to update mute status',
         });
       });
@@ -387,7 +387,7 @@ describe('useProfileMenuActions', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
+          variant: 'error',
           description: 'Copy failed',
         });
       });
@@ -408,7 +408,7 @@ describe('useProfileMenuActions', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
+          variant: 'error',
           description: 'Copy failed',
         });
       });

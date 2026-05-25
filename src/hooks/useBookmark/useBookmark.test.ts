@@ -148,7 +148,7 @@ describe('useBookmark', () => {
     });
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
+      variant: 'error',
       description: 'You must be logged in to bookmark posts',
     });
     expect(BookmarkController.commitCreate).not.toHaveBeenCalled();
@@ -169,7 +169,7 @@ describe('useBookmark', () => {
     });
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
+      variant: 'error',
       description: 'Failed to add bookmark',
     });
     // State should not change on error
