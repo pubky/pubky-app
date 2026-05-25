@@ -31,7 +31,7 @@ import type { ContentLayoutProps, StickySidebarProps } from './ContentLayout.typ
  */
 function StickySidebar({ children }: StickySidebarProps) {
   const stickyTop = LAYOUT_DIMENSIONS.HEADER_OFFSET_MAIN;
-  const sidebarMaxHeight = `calc(100svh - ${stickyTop}px - ${LAYOUT_DIMENSIONS.SIDEBAR_BOTTOM_OFFSET}px)`;
+  const sidebarMaxHeight = `calc(100svh - ${stickyTop}px)`;
 
   return (
     <Container

@@ -2,8 +2,8 @@
 
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostController } from '@/controllers/post/post';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import type { UsePostDetailsResult } from './usePostDetails.types';
+import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import type { UsePostDetailsOptions, UsePostDetailsResult } from './usePostDetails.types';
 
 /**
  * Hook to get post details from local database with live updates.
@@ -13,12 +13,17 @@ import type { UsePostDetailsResult } from './usePostDetails.types';
  * 1. fetchFn (useEffect): Ensures data exists (fetch from Nexus if missing)
  * 2. queryFn (useLiveQuery): Reads current data reactively from local DB
  */
-export function usePostDetails(compositeId: string | null | undefined): UsePostDetailsResult {
+export function usePostDetails(
+  compositeId: string | null | undefined,
+  options?: UsePostDetailsOptions,
+): UsePostDetailsResult {
+  const enabled = isLocalFirstQueryEnabled(compositeId, options?.enabled);
+
   const { data, isLoading } = useLocalFirstQuery<EnrichedPostDetails>({
     queryFn: () => PostController.getDetails({ compositeId: compositeId! }),
     fetchFn: () => PostController.fetch({ compositeId: compositeId! }),
-    deps: [compositeId],
-    enabled: !!compositeId,
+    deps: [compositeId, enabled],
+    enabled,
   });
 
   return {

@@ -1,9 +1,13 @@
 import type { BlobResult, FileResult } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { FileDetailsModel } from '@/models/file/fileDetails';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { FileNormalizer } from '@/pipes/file/file.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
@@ -14,6 +18,16 @@ import { asOpaque } from '@/test-utils/type-assertions';
 // Avoid pulling WASM-heavy deps from type-only modules
 vi.mock('pubky-app-specs', () => ({
   getValidMimeTypes: () => ['image/jpeg', 'image/png'],
+}));
+
+vi.mock('@/libs/image/stripImageMetadata', () => ({
+  stripImageMetadata: vi.fn(),
+}));
+
+vi.mock('@/pipes/file/file.normalizer', () => ({
+  FileNormalizer: {
+    toFileAttachment: vi.fn(),
+  },
 }));
 
 // Mock HomeserverService methods
@@ -114,6 +128,74 @@ beforeEach(async () => {
 });
 
 describe('FileApplication', () => {
+  describe('toFileAttachment', () => {
+    it('sanitizes file before normalizing it', async () => {
+      const rawFile = new File(['raw'], 'photo.jpg', { type: 'image/jpeg' });
+      const sanitizedFile = new File(['sanitized'], 'obfuscated.jpg', { type: 'image/jpeg' });
+      const fileAttachment = {
+        blobResult: createMockBlobResult(),
+        fileResult: createMockFileResult(),
+      };
+
+      vi.mocked(stripImageMetadata).mockResolvedValueOnce(sanitizedFile);
+      vi.mocked(FileNormalizer.toFileAttachment).mockReturnValueOnce(fileAttachment);
+
+      const result = await FileApplication.toFileAttachment({ file: rawFile, pubky: TEST_PUBKY });
+
+      expect(stripImageMetadata).toHaveBeenCalledWith(rawFile);
+      expect(FileNormalizer.toFileAttachment).toHaveBeenCalledWith({
+        file: sanitizedFile,
+        blobData: expect.any(Uint8Array),
+        pubky: TEST_PUBKY,
+      });
+      expect(result).toBe(fileAttachment);
+    });
+
+    it('wraps sanitization failures as AppError', async () => {
+      const rawFile = new File(['raw'], 'photo.jpg', { type: 'image/jpeg' });
+      vi.mocked(stripImageMetadata).mockRejectedValueOnce(new Error('sanitize failed'));
+
+      try {
+        await FileApplication.toFileAttachment({ file: rawFile, pubky: TEST_PUBKY });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toMatchObject({
+          name: 'AppError',
+          category: ErrorCategory.Validation,
+          code: ValidationErrorCode.INVALID_INPUT,
+          service: ErrorService.Local,
+          operation: 'toFileAttachment',
+          message: 'Image sanitization failed',
+        });
+      }
+      expect(FileNormalizer.toFileAttachment).not.toHaveBeenCalled();
+    });
+
+    it('wraps file read failures as AppError', async () => {
+      const rawFile = new File(['raw'], 'photo.jpg', { type: 'image/jpeg' });
+      const sanitizedFile = new File(['sanitized'], 'obfuscated.jpg', { type: 'image/jpeg' });
+      const readError = new Error('arrayBuffer failed');
+      vi.spyOn(sanitizedFile, 'arrayBuffer').mockRejectedValueOnce(readError);
+      vi.mocked(stripImageMetadata).mockResolvedValueOnce(sanitizedFile);
+
+      try {
+        await FileApplication.toFileAttachment({ file: rawFile, pubky: TEST_PUBKY });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toMatchObject({
+          name: 'AppError',
+          category: ErrorCategory.Validation,
+          code: ValidationErrorCode.INVALID_INPUT,
+          service: ErrorService.Local,
+          operation: 'toFileAttachment',
+          message: 'Failed to read file content',
+          cause: readError,
+        });
+      }
+      expect(FileNormalizer.toFileAttachment).not.toHaveBeenCalled();
+    });
+  });
+
   describe('commitCreate', () => {
     it('uploads blob and then file record to homeserver', async () => {
       const fileJson = { id: 'file-1', kind: 'image' };

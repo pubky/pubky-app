@@ -8,12 +8,12 @@
  */
 import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { ProfilePageEmptyState } from '../ProfilePageEmptyState/ProfilePageEmptyState';
+import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmptyState';
 
 export function SearchEmptyState() {
   const t = useTranslations('search.empty');
   return (
-    <ProfilePageEmptyState
+    <IllustratedEmptyState
       imageSrc="/images/tagged-empty-state.webp"
       imageAlt={t('alt')}
       icon={Search}

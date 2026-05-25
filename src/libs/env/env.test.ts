@@ -51,6 +51,10 @@ describe('Environment variables configuration', () => {
     expect(typeof Env.NEXT_PUBLIC_NOTIFICATION_POLL_ON_START).toBe('boolean');
   });
 
+  it('should default NEXT_PUBLIC_NOTIFICATION_POLL_ON_START to true when the env var is unset', () => {
+    expect(Env.NEXT_PUBLIC_NOTIFICATION_POLL_ON_START).toBe(true);
+  });
+
   it('should transform number strings correctly', () => {
     expect(typeof Env.NEXT_PUBLIC_DB_VERSION).toBe('number');
     expect(typeof Env.NEXT_PUBLIC_TTL_POST_MS).toBe('number');

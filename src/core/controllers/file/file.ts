@@ -6,7 +6,6 @@ import type {
   TUploadFileParams,
 } from '@/controllers/file/file.types';
 import type { Pubky } from '@/models/models.types';
-import { FileNormalizer } from '@/pipes/file/file.normalizer';
 
 /**
  * File Controller
@@ -28,7 +27,7 @@ export class FileController {
    */
   static async commitCreate({ file, pubky }: TUploadFileParams): Promise<string> {
     // 1. Normalize File Attachment
-    const fileAttachment = await FileNormalizer.toFileAttachment({ file, pubky });
+    const fileAttachment = await FileApplication.toFileAttachment({ file, pubky });
     // 2. Upload to homeserver
     await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
     return fileAttachment.fileResult.meta.url;
