@@ -30,7 +30,9 @@ describe('PostNotFound', () => {
     render(<PostNotFound postId={VALID_COMPOSITE} />);
 
     expect(screen.getByText('post.notFound.title')).toBeInTheDocument();
-    expect(screen.getByText('post.notFound.subtitle')).toBeInTheDocument();
+    const textBlock = screen.getByText('post.notFound.title').parentElement;
+    expect(textBlock).toHaveTextContent('post.notFound.subtitle1');
+    expect(textBlock).toHaveTextContent('post.notFound.subtitle2');
     expect(screen.getByRole('button', { name: 'post.notFound.backToFeed' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'post.notFound.viewProfile' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'post.notFound.exploreTags' })).toBeInTheDocument();

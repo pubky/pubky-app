@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { AppError } from '@/libs/error/error';
-import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { ClientErrorCode, DatabaseErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { hasHttpStatus, isNotFound } from '@/libs/error/error.utils';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 describe('Error Library', () => {
   describe('AppError (Category-based)', () => {
@@ -97,6 +99,31 @@ describe('Error Library', () => {
 
         expect(error.traceId).toBe('updated-trace');
       });
+    });
+  });
+
+  describe('Error utilities', () => {
+    it('detects AppErrors with a specific HTTP status context', () => {
+      const error = Err.client(ClientErrorCode.NOT_FOUND, 'Not found', {
+        service: ErrorService.Nexus,
+        operation: 'fetchNexus',
+        context: { statusCode: HttpStatusCode.NOT_FOUND },
+      });
+
+      expect(hasHttpStatus(error, HttpStatusCode.NOT_FOUND)).toBe(true);
+      expect(hasHttpStatus(error, HttpStatusCode.BAD_REQUEST)).toBe(false);
+      expect(hasHttpStatus(new Error('plain'), HttpStatusCode.NOT_FOUND)).toBe(false);
+    });
+
+    it('keeps semantic not-found separate from HTTP status context', () => {
+      const httpContextOnlyError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Unexpected response', {
+        service: ErrorService.Nexus,
+        operation: 'fetchNexus',
+        context: { statusCode: HttpStatusCode.NOT_FOUND },
+      });
+
+      expect(hasHttpStatus(httpContextOnlyError, HttpStatusCode.NOT_FOUND)).toBe(true);
+      expect(isNotFound(httpContextOnlyError)).toBe(false);
     });
   });
 });

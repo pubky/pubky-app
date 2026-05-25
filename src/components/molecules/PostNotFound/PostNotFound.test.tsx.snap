@@ -13,8 +13,8 @@ exports[`PostNotFound > Snapshots > matches snapshot with View profile 1`] = `
     decoding="async"
     loading="lazy"
     sizes="100vw"
-    src="/_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=3840&q=75"
-    srcset="/_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=640&q=75 640w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=750&q=75 750w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=828&q=75 828w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=1080&q=75 1080w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=1200&q=75 1200w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=1920&q=75 1920w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=2048&q=75 2048w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=3840&q=75 3840w"
+    src="/_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=3840&q=75"
+    srcset="/_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=640&q=75 640w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=750&q=75 750w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=828&q=75 828w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=1080&q=75 1080w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=1200&q=75 1200w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=1920&q=75 1920w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=2048&q=75 2048w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=3840&q=75 3840w"
     style="position: absolute; height: 100%; width: 100%; left: 0px; top: 0px; right: 0px; bottom: 0px; color: transparent;"
   />
   <div
@@ -59,7 +59,9 @@ exports[`PostNotFound > Snapshots > matches snapshot with View profile 1`] = `
       class="text-center text-base leading-6 font-medium text-secondary-foreground"
       data-testid="typography"
     >
-      post.notFound.subtitle
+      post.notFound.subtitle1
+      <br />
+      post.notFound.subtitle2
     </p>
   </div>
   <div
@@ -177,8 +179,8 @@ exports[`PostNotFound > Snapshots > matches snapshot without View profile 1`] = 
     decoding="async"
     loading="lazy"
     sizes="100vw"
-    src="/_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=3840&q=75"
-    srcset="/_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=640&q=75 640w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=750&q=75 750w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=828&q=75 828w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=1080&q=75 1080w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=1200&q=75 1200w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=1920&q=75 1920w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=2048&q=75 2048w, /_next/image?url=%2Fimages%2Fconnections-empty-state.webp&w=3840&q=75 3840w"
+    src="/_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=3840&q=75"
+    srcset="/_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=640&q=75 640w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=750&q=75 750w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=828&q=75 828w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=1080&q=75 1080w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=1200&q=75 1200w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=1920&q=75 1920w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=2048&q=75 2048w, /_next/image?url=%2Fimages%2Fpost-not-found-empty-state.webp&w=3840&q=75 3840w"
     style="position: absolute; height: 100%; width: 100%; left: 0px; top: 0px; right: 0px; bottom: 0px; color: transparent;"
   />
   <div
@@ -223,7 +225,9 @@ exports[`PostNotFound > Snapshots > matches snapshot without View profile 1`] = 
       class="text-center text-base leading-6 font-medium text-secondary-foreground"
       data-testid="typography"
     >
-      post.notFound.subtitle
+      post.notFound.subtitle1
+      <br />
+      post.notFound.subtitle2
     </p>
   </div>
   <div
