@@ -124,10 +124,12 @@ try {
       router.push('/login');
       return;
     }
-    toast.error(getErrorMessage(error));
+    toast({ variant: 'error', description: getErrorMessage(error) });
   }
 }
 ```
+
+See `docs/components.md` — _Toasts_ for variant usage and copy conventions.
 
 ## Error Utilities
 
