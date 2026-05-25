@@ -1,10 +1,10 @@
 'use client';
 
 import { type ComponentType, forwardRef } from 'react';
-import { Bell, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
+import { Bell, CircleUserRound, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
 import { PROFILE_PAGE_TYPES, type ProfilePageType } from '@/app/profile/types';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { CircleUserRound, UsersRound2 } from '@/icons';
+import { UsersRound2 } from '@/icons';
 import { MobileTabBar } from '../MobileTabBar/MobileTabBar';
 import type { MobileTabBarItem } from '../MobileTabBar/MobileTabBar.types';
 
