@@ -477,7 +477,8 @@ describe('PostHeaderUserInfo - Navigation', () => {
     const usernameLink = profileLinks[1];
 
     expect(usernameLink.closest('.w-0.flex-1')).toBeInTheDocument();
-    expect(usernameLink).toHaveClass('block', 'w-full', 'min-w-0', 'max-w-full');
+    expect(usernameLink).toHaveClass('block', 'w-fit', 'min-w-0', 'max-w-full');
+    expect(usernameLink).not.toHaveClass('w-full');
     expect(screen.getByText(longName)).toHaveClass('w-full', 'truncate', 'max-w-full');
   });
 });

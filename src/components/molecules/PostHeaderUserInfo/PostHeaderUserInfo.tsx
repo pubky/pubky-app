@@ -55,7 +55,7 @@ export function PostHeaderUserInfo({
         />
       </Link>
       <Container overrideDefaults className="w-0 min-w-0 flex-1">
-        <Link href={profileUrl} onClick={handleLinkClick} className="block w-full max-w-full min-w-0">
+        <Link href={profileUrl} onClick={handleLinkClick} className="block w-fit max-w-full min-w-0">
           <Typography
             className={cn(
               'block w-full max-w-full cursor-pointer truncate font-bold text-foreground',
