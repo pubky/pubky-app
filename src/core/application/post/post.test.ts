@@ -20,7 +20,8 @@ import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostService } from '@/services/local/post/post';
-import type { NexusTaggers } from '@/services/nexus/nexus.types';
+import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
+import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
 import { asOpaque } from '@/test-utils/type-assertions';
 
@@ -35,6 +36,12 @@ vi.mock('@/services/local/post/post', () => ({
     readCounts: vi.fn(),
     readTags: vi.fn(),
     readRelationships: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/local/tag/post/tag.post', () => ({
+  LocalPostTagService: {
+    mergeTags: vi.fn(),
   },
 }));
 
@@ -1001,6 +1008,44 @@ describe('Post Application', () => {
 
       expect(getTagsSpy).toHaveBeenCalledWith('author:post123');
       expect(result).toEqual(mockTags);
+    });
+  });
+
+  describe('fetchTags', () => {
+    const params = {
+      compositeId: 'author:post123',
+      skip: 0,
+      limit: 3,
+      viewerId: 'viewer123' as Pubky,
+    };
+
+    it('should return empty tags without merging local state', async () => {
+      const nexusSpy = vi.spyOn(NexusPostService, 'getPostTags').mockResolvedValue([]);
+      const mergeSpy = vi.spyOn(LocalPostTagService, 'mergeTags').mockResolvedValue(undefined);
+
+      const result = await PostApplication.fetchTags(params);
+
+      expect(result).toEqual([]);
+      expect(nexusSpy).toHaveBeenCalledWith(params);
+      expect(mergeSpy).not.toHaveBeenCalled();
+    });
+
+    it('should merge non-empty Nexus tags into local state', async () => {
+      const tags: NexusTag[] = [
+        { label: 'bitcoin', taggers: ['viewer123' as Pubky], taggers_count: 1, relationship: true },
+      ];
+      const nexusSpy = vi.spyOn(NexusPostService, 'getPostTags').mockResolvedValue(tags);
+      const mergeSpy = vi.spyOn(LocalPostTagService, 'mergeTags').mockResolvedValue(undefined);
+
+      const result = await PostApplication.fetchTags(params);
+
+      expect(result).toEqual(tags);
+      expect(nexusSpy).toHaveBeenCalledWith(params);
+      expect(mergeSpy).toHaveBeenCalledWith({
+        postId: params.compositeId,
+        tags,
+        viewerId: params.viewerId,
+      });
     });
   });
 

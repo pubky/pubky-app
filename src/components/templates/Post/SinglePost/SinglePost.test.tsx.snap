@@ -19,7 +19,7 @@ exports[`SinglePost > matches snapshot 1`] = `
       data-testid="right-sidebar"
     >
       <div
-        data-post-id="author:post-1"
+        data-post-id="68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y:00353GZ1H40WG"
         data-show-feedback="true"
         data-testid="single-post-right-panel"
       >
@@ -39,7 +39,7 @@ exports[`SinglePost > matches snapshot 1`] = `
       data-testid="right-drawer"
     >
       <div
-        data-post-id="author:post-1"
+        data-post-id="68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y:00353GZ1H40WG"
         data-show-feedback="false"
         data-testid="single-post-right-panel"
       >
@@ -47,7 +47,8 @@ exports[`SinglePost > matches snapshot 1`] = `
       </div>
     </div>
     <div
-      data-post-id="author:post-1"
+      data-has-post-details="true"
+      data-post-id="68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y:00353GZ1H40WG"
       data-testid="single-post-content"
     >
       SinglePostContent

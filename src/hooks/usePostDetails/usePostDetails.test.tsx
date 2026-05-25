@@ -85,6 +85,12 @@ describe('usePostDetails', () => {
     expect(mockReadPostDetails).not.toHaveBeenCalled();
   });
 
+  it('does not call getDetails when enabled is false', () => {
+    renderHook(() => usePostDetails('user-123:post-123', { enabled: false }));
+
+    expect(mockReadPostDetails).not.toHaveBeenCalled();
+  });
+
   it('does not call getPostDetails when compositeId is undefined', () => {
     renderHook(() => usePostDetails(undefined));
 

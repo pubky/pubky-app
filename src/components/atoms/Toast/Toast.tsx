@@ -84,7 +84,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn('text-sm leading-normal font-bold text-popover-foreground', className)}
+    className={cn('min-w-0 text-sm leading-normal font-bold break-words text-popover-foreground', className)}
     {...props}
   />
 ));
@@ -93,7 +93,11 @@ const ToastDescription = React.forwardRef<
   React.ComponentRef<typeof ToastPrimitives.Description>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Description>
 >(({ className, ...props }, ref) => (
-  <ToastPrimitives.Description ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
+  <ToastPrimitives.Description
+    ref={ref}
+    className={cn('min-w-0 text-sm wrap-anywhere text-muted-foreground', className)}
+    {...props}
+  />
 ));
 ToastDescription.displayName = ToastPrimitives.Description.displayName;
 export {

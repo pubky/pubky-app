@@ -8,7 +8,7 @@
     "title": "<highlight>Desbloquea</highlight> la web.",
     "subtitle": "Tus claves, tu contenido, tus reglas.",
     "signIn": "Iniciar sesión",
-    "createAccount": "Crear cuenta",
+    "joinNow": "Únete ahora",
     "aTetherCompany": "una empresa de <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Todos los derechos reservados."
   },
@@ -157,7 +157,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "Crear cuenta",
+      "joinNow": "Únete ahora",
       "identityKeys": "Claves de identidad",
       "usePubkyRing": "Usar Pubky Ring",
       "yourPubky": "Tu pubky",
@@ -444,10 +444,26 @@
     "youReposted": "Republicaste",
     "newPostsSingular": "Ver {count} nueva publicación",
     "newPostsPlural": "Ver {count} nuevas publicaciónes",
-    "replies": "Respuestas"
+    "replies": "Respuestas",
+    "notFound": {
+      "title": "Publicación no encontrada",
+      "subtitle1": "Esta publicación no está disponible.",
+      "subtitle2": "Es posible que se haya eliminado o que el enlace ya no sea válido.",
+      "imageAlt": "Publicación no encontrada",
+      "backToFeed": "Volver al feed",
+      "viewProfile": "Ver perfil",
+      "exploreTags": "Explorar etiquetas"
+    }
   },
   "profile": {
     "title": "Perfil",
+    "notFound": {
+      "title": "Usuario no encontrado",
+      "subtitle": "El usuario que buscas no existe o puede haber sido eliminado.",
+      "imageAlt": "Usuario no encontrado",
+      "backToFeed": "Volver al feed",
+      "exploreTags": "Explorar etiquetas"
+    },
     "tabs": {
       "notifications": "Notificaciones",
       "posts": "Publicaciones",

@@ -8,7 +8,7 @@
     "title": "<highlight>Entsperre</highlight> das Web.",
     "subtitle": "Deine Schlüssel, deine Inhalte, deine Regeln.",
     "signIn": "Anmelden",
-    "createAccount": "Konto erstellen",
+    "joinNow": "Jetzt beitreten",
     "aTetherCompany": "ein <tether>tether.</tether> Unternehmen",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Alle Rechte vorbehalten."
   },
@@ -157,7 +157,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "Konto erstellen",
+      "joinNow": "Jetzt beitreten",
       "identityKeys": "Identitätsschlüssel",
       "usePubkyRing": "Pubky Ring verwenden",
       "yourPubky": "Ihr Pubky",
@@ -444,10 +444,26 @@
     "youReposted": "Du hast geteilt",
     "newPostsSingular": "{count} neuen Beitrag anzeigen",
     "newPostsPlural": "{count} neue Beiträge anzeigen",
-    "replies": "Antworten"
+    "replies": "Antworten",
+    "notFound": {
+      "title": "Beitrag nicht gefunden",
+      "subtitle1": "Dieser Beitrag ist nicht verfügbar.",
+      "subtitle2": "Er wurde möglicherweise entfernt oder der Link ist nicht mehr gültig.",
+      "imageAlt": "Beitrag nicht gefunden",
+      "backToFeed": "Zurück zum Feed",
+      "viewProfile": "Profil ansehen",
+      "exploreTags": "Tags entdecken"
+    }
   },
   "profile": {
     "title": "Profil",
+    "notFound": {
+      "title": "Nutzer nicht gefunden",
+      "subtitle": "Der gesuchte Nutzer existiert nicht oder wurde möglicherweise entfernt.",
+      "imageAlt": "Nutzer nicht gefunden",
+      "backToFeed": "Zurück zum Feed",
+      "exploreTags": "Tags entdecken"
+    },
     "tabs": {
       "notifications": "Benachrichtigungen",
       "posts": "Beiträge",

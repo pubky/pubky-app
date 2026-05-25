@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
@@ -15,24 +14,21 @@ import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayo
 import { useHomeStore } from '@/stores/home/home.store';
 import { PostPageHeader } from '../PostPageHeader/PostPageHeader';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
-import { SinglePostContentSkeleton } from './SinglePostContent.skeleton';
 import type { SinglePostContentProps } from './SinglePostContent.types';
 
 /**
  * SinglePostContent Organism
  *
- * Contains all the business logic and hooks for displaying a single post page:
+ * Renders a resolved single post (the parent template loads `postDetails` via `usePostDetails`).
+ *
  * - Main post card (FULL WIDTH) with tags panel in two-column layout
- * - Below: Two columns with Replies timeline (larger) and Participants sidebar (smaller)
+ * - Below: two columns with Replies timeline (larger) and Participants sidebar (smaller)
  *
  * For unauthenticated users (following pubky-app pattern):
  * - Only the main post card with tags is shown
  * - QuickReply, Replies, and Participants are hidden
- *
- * This organism handles all data fetching and state management,
- * following the atomic design pattern where only organisms can call hooks.
  */
-export function SinglePostContent({ postId }: SinglePostContentProps) {
+export function SinglePostContent({ postId, postDetails }: SinglePostContentProps) {
   const t = useTranslations('post');
   const layout = useHomeStore((state) => state.layout);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
@@ -41,12 +37,7 @@ export function SinglePostContent({ postId }: SinglePostContentProps) {
   const { isAuthenticated } = useRequireAuth();
 
   // Check if parent post is deleted to determine replyability
-  const { postDetails } = usePostDetails(postId);
-  const isDeleted = isPostDeleted(postDetails?.content);
-
-  if (!postDetails) {
-    return <SinglePostContentSkeleton />;
-  }
+  const isDeleted = isPostDeleted(postDetails.content);
 
   const isArticle = postDetails.kind === 'long';
 

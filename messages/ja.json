@@ -8,7 +8,7 @@
     "title": "ウェブを<highlight>解放</highlight>する。",
     "subtitle": "あなたの鍵、あなたのコンテンツ、あなたのルール。",
     "signIn": "サインイン",
-    "createAccount": "アカウント作成",
+    "joinNow": "今すぐ参加",
     "aTetherCompany": "<tether>tether.</tether>グループ企業",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. 無断転載を禁じます。"
   },
@@ -157,7 +157,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "アカウント作成",
+      "joinNow": "今すぐ参加",
       "identityKeys": "IDキー",
       "usePubkyRing": "Pubky Ringを使用",
       "yourPubky": "あなたのpubky",
@@ -444,10 +444,26 @@
     "youReposted": "リポストしました",
     "newPostsSingular": "{count}件の新しい投稿を見る",
     "newPostsPlural": "{count}件の新しい投稿を見る",
-    "replies": "返信"
+    "replies": "返信",
+    "notFound": {
+      "title": "投稿が見つかりません",
+      "subtitle1": "この投稿は表示できません。",
+      "subtitle2": "削除されたか、リンクが無効になっている可能性があります。",
+      "imageAlt": "投稿が見つかりません",
+      "backToFeed": "フィードに戻る",
+      "viewProfile": "プロフィールを見る",
+      "exploreTags": "タグを見る"
+    }
   },
   "profile": {
     "title": "プロフィール",
+    "notFound": {
+      "title": "ユーザーが見つかりません",
+      "subtitle": "お探しのユーザーは存在しないか、削除された可能性があります。",
+      "imageAlt": "ユーザーが見つかりません",
+      "backToFeed": "フィードに戻る",
+      "exploreTags": "タグを見る"
+    },
     "tabs": {
       "notifications": "通知",
       "posts": "投稿",

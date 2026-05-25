@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { useLocalFirstQuery } from './useLocalFirstQuery';
+import { isLocalFirstQueryEnabled, useLocalFirstQuery } from './useLocalFirstQuery';
 import type { UseLocalFirstQueryParams } from './useLocalFirstQuery.types';
 
 // Shared variable that the useLiveQuery mock reads from.
@@ -451,5 +451,23 @@ describe('useLocalFirstQuery', () => {
 
     expect(result2.current.data).toEqual(mockData);
     expect(result2.current.isLoading).toBe(false);
+  });
+});
+
+describe('isLocalFirstQueryEnabled', () => {
+  it('requires a truthy entity id', () => {
+    expect(isLocalFirstQueryEnabled(undefined)).toBe(false);
+    expect(isLocalFirstQueryEnabled(null)).toBe(false);
+    expect(isLocalFirstQueryEnabled('')).toBe(false);
+    expect(isLocalFirstQueryEnabled('user-1')).toBe(true);
+  });
+
+  it('respects explicit enabled=false', () => {
+    expect(isLocalFirstQueryEnabled('user-1', false)).toBe(false);
+    expect(isLocalFirstQueryEnabled('user-1', true)).toBe(true);
+  });
+
+  it('defaults optionsEnabled to true when undefined', () => {
+    expect(isLocalFirstQueryEnabled('user-1', undefined)).toBe(true);
   });
 });

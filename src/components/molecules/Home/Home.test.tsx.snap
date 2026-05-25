@@ -122,12 +122,12 @@ exports[`Home - Snapshots > matches snapshot for HomeSectionTitle with default p
   class="flex-row items-start gap-2"
   data-testid="container"
 >
-  <p
-    class="self-center font-light text-brand sm:text-2xl"
+  <h2
+    class="self-center text-xl font-light text-brand sm:text-2xl"
     data-size="md"
     data-testid="typography"
   >
     Your keys, your content, your rules.
-  </p>
+  </h2>
 </div>
 `;
