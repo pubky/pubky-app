@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { getProfileRoute, isDynamicPublicRoute, PROFILE_ROUTES } from './routes';
+import {
+  APP_ROUTES,
+  getProfileRoute,
+  isDynamicPublicRoute,
+  isNavItemActive,
+  PROFILE_ROUTES,
+  SETTINGS_ROUTES,
+} from './routes';
 
 describe('isDynamicPublicRoute', () => {
   describe('invite routes', () => {
@@ -145,5 +152,34 @@ describe('getProfileRoute', () => {
 
   it('preserves sub-paths other than posts', () => {
     expect(getProfileRoute(PROFILE_ROUTES.FOLLOWERS, pubky)).toBe(`/profile/${pubky}/followers`);
+  });
+});
+
+describe('isNavItemActive', () => {
+  it('matches exact href when activePrefix is omitted', () => {
+    expect(isNavItemActive('/home', { href: APP_ROUTES.HOME })).toBe(true);
+    expect(isNavItemActive('/hot', { href: APP_ROUTES.HOT })).toBe(true);
+    expect(isNavItemActive('/search', { href: APP_ROUTES.HOT })).toBe(false);
+  });
+
+  it('matches sub-routes under href when activePrefix is omitted', () => {
+    expect(isNavItemActive('/hot/trending', { href: APP_ROUTES.HOT })).toBe(true);
+  });
+
+  it('matches exact and nested routes under activePrefix', () => {
+    const collectionsItem = { href: APP_ROUTES.COLLECTIONS, activePrefix: APP_ROUTES.COLLECTIONS };
+
+    expect(isNavItemActive('/collections', collectionsItem)).toBe(true);
+    expect(isNavItemActive('/collections/bookmarks', collectionsItem)).toBe(true);
+    expect(isNavItemActive('/collections/other', collectionsItem)).toBe(true);
+  });
+
+  it('highlights settings from default account href using settings prefix', () => {
+    const settingsItem = { href: SETTINGS_ROUTES.ACCOUNT, activePrefix: APP_ROUTES.SETTINGS };
+
+    expect(isNavItemActive('/settings/account', settingsItem)).toBe(true);
+    expect(isNavItemActive('/settings/notifications', settingsItem)).toBe(true);
+    expect(isNavItemActive('/settings/edit', settingsItem)).toBe(true);
+    expect(isNavItemActive('/home', settingsItem)).toBe(false);
   });
 });

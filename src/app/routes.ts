@@ -184,3 +184,23 @@ export function getProfileRoute(route: PROFILE_ROUTES, pubky?: string): string {
 
   return `/profile/${pubky}${subPath}`;
 }
+
+// ============================================================================
+// Navigation Active State
+// ============================================================================
+
+type NavItemActiveConfig = {
+  href: string;
+  activePrefix?: string;
+};
+
+/**
+ * Returns whether a pathname should highlight a primary nav item.
+ *
+ * Uses `activePrefix` when set (e.g. Settings → any `/settings/*` route),
+ * otherwise falls back to exact href match and sub-routes under `href`.
+ */
+export function isNavItemActive(pathname: string, item: NavItemActiveConfig): boolean {
+  const activePath = item.activePrefix ?? item.href;
+  return pathname === activePath || pathname.startsWith(`${activePath}/`);
+}

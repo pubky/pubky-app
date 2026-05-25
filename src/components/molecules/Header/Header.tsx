@@ -4,7 +4,7 @@ import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import { Flame, Home, Library, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
+import { APP_ROUTES, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -158,9 +158,7 @@ export function HeaderNavigationButtons({
           href={item.href}
           icon={item.icon}
           label={t(item.labelKey)}
-          isActive={
-            pathname === item.href || Boolean(item.activePrefix && pathname.startsWith(`${item.activePrefix}/`))
-          }
+          isActive={isNavItemActive(pathname, item)}
           dataCy={item.dataCy}
         />
       ))}

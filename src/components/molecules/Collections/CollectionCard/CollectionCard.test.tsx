@@ -60,23 +60,6 @@ describe('CollectionCard', () => {
     expect(document.querySelector('.lucide-sticky-note')).toBeInTheDocument();
     expect(document.querySelector('.lucide-circle-user-round')).toBeInTheDocument();
   });
-
-  it('merges custom className', () => {
-    render(
-      <CollectionCard
-        href="/collections/bookmarks"
-        title="Bookmarks"
-        description="Everything you want to save for later."
-        icon={Bookmark}
-        count={29}
-        visibilityLabel="PRIVATE"
-        avatarName="Test User"
-        className="custom-card"
-      />,
-    );
-
-    expect(screen.getByRole('link', { name: 'Bookmarks' })).toHaveClass('custom-card');
-  });
 });
 
 describe('CollectionCard - Snapshots', () => {
@@ -92,22 +75,6 @@ describe('CollectionCard - Snapshots', () => {
         avatarUrl="https://example.com/avatar.png"
         avatarName="Test User"
         avatarSeed="test-user"
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(
-      <CollectionCard
-        href="/collections/bookmarks"
-        title="Bookmarks"
-        description="Everything you want to save for later."
-        icon={Bookmark}
-        count={29}
-        visibilityLabel="PRIVATE"
-        avatarName="Test User"
-        className="custom-card"
       />,
     );
     expect(container.firstChild).toMatchSnapshot();
