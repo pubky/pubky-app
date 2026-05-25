@@ -1,41 +1,31 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import {
-  Toast,
-  TOAST_ICONS,
-  ToastAction,
-  ToastDescription,
-  toastIconVariants,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from '@/atoms/Toast/Toast';
+import { Toast, ToastAction, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/atoms/Toast/Toast';
 import { useToast } from './use-toast';
 
 export function Toaster() {
   const { toasts, dismiss } = useToast();
   const tCommon = useTranslations('common');
-  const tToast = useTranslations('toast');
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, dismissButton, variant, ...props }) {
-        const toastVariant = variant ?? 'default';
-        const Icon = TOAST_ICONS[toastVariant];
-        const effectiveTitle = title ?? (toastVariant === 'error' ? tToast('genericErrorTitle') : undefined);
-
+      {toasts.map(function ({ id, title, description, action, dismissButton, ...props }) {
         return (
-          <Toast key={id} variant={toastVariant} data-cy="toast" {...props}>
-            <Icon className={toastIconVariants({ variant: toastVariant })} aria-hidden />
+          <Toast
+            key={id}
+            data-cy="toast"
+            className="flex items-center justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
+            {...props}
+          >
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              {effectiveTitle && <ToastTitle>{effectiveTitle}</ToastTitle>}
+              {title && <ToastTitle>{title}</ToastTitle>}
               {description && <ToastDescription>{description}</ToastDescription>}
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {action}
               {dismissButton && (
-                <ToastAction altText={tCommon('ok')} variant={toastVariant} onClick={() => dismiss(id)}>
+                <ToastAction altText={tCommon('ok')} onClick={() => dismiss(id)}>
                   {tCommon('ok')}
                 </ToastAction>
               )}
