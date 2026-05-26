@@ -440,9 +440,10 @@
     "newPostsPlural": "See {count} new posts",
     "replies": "Replies",
     "notFound": {
-      "title": "Post not found",
-      "subtitle": "This post isn't available. It may have been removed or the link is no longer valid.",
-      "imageAlt": "Post not found",
+      "title": "Post Not Found",
+      "subtitle1": "This post isn't available.",
+      "subtitle2": "It may have been removed or the link is no longer valid.",
+      "imageAlt": "Post Not Found",
       "backToFeed": "Back to Feed",
       "viewProfile": "View profile",
       "exploreTags": "Explore Tags"
@@ -451,9 +452,9 @@
   "profile": {
     "title": "Profile",
     "notFound": {
-      "title": "User not found",
+      "title": "User Not Found",
       "subtitle": "The user you're looking for doesn't exist or may have been removed.",
-      "imageAlt": "User not found",
+      "imageAlt": "User Not Found",
       "backToFeed": "Back to Feed",
       "exploreTags": "Explore Tags"
     },

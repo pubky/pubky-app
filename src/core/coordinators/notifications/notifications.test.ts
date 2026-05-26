@@ -206,7 +206,7 @@ describe('NotificationCoordinator', () => {
       const coordinator = NotificationCoordinator.getInstance();
 
       // Rapidly change configuration multiple times
-      coordinator.configure({ intervalMs: 1_000 });
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.configure({ intervalMs: 2_000 });
       coordinator.configure({ intervalMs: 500 });
       coordinator.configure({ intervalMs: 3_000 });

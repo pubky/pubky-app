@@ -447,7 +447,8 @@
     "replies": "Antworten",
     "notFound": {
       "title": "Beitrag nicht gefunden",
-      "subtitle": "Dieser Beitrag ist nicht verfügbar. Er wurde möglicherweise entfernt oder der Link ist nicht mehr gültig.",
+      "subtitle1": "Dieser Beitrag ist nicht verfügbar.",
+      "subtitle2": "Er wurde möglicherweise entfernt oder der Link ist nicht mehr gültig.",
       "imageAlt": "Beitrag nicht gefunden",
       "backToFeed": "Zurück zum Feed",
       "viewProfile": "Profil ansehen",

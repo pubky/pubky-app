@@ -447,7 +447,8 @@
     "replies": "回复",
     "notFound": {
       "title": "未找到帖子",
-      "subtitle": "此帖子不可用。可能已被删除，或链接已失效。",
+      "subtitle1": "此帖子不可用。",
+      "subtitle2": "可能已被删除，或链接已失效。",
       "imageAlt": "未找到帖子",
       "backToFeed": "返回信息流",
       "viewProfile": "查看个人资料",
