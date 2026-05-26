@@ -8,7 +8,7 @@ import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
-import { createCanceledError, handleError, isRetryableRelayPollError } from './error.utils';
+import { createCanceledError, extractStatusCode, handleError } from './error.utils';
 import type {
   CancelableAuthApproval,
   PubPath,
@@ -192,11 +192,17 @@ export const createCancelableAuthApproval = (
         if (maybeSession) return maybeSession;
       } catch (error) {
         if (canceled) throw createCanceledError();
-        if (isRetryableRelayPollError(error)) {
-          await sleep(pollIntervalMs);
-          continue;
-        }
-        throw error;
+        // tryPollOnce throws only when the SDK has given up retrying.
+        // The flow is dead, so fail fast with SESSION_EXPIRED instead of retrying our loop.
+        throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Auth flow polling failed', {
+          service: ErrorService.Homeserver,
+          operation: 'awaitApproval',
+          context: {
+            originalError: error instanceof Error ? error.message : String(error),
+            statusCode: extractStatusCode(error),
+          },
+          cause: error,
+        });
       }
 
       await sleep(pollIntervalMs);
