@@ -192,8 +192,10 @@ export const createCancelableAuthApproval = (
         if (maybeSession) return maybeSession;
       } catch (error) {
         if (canceled) throw createCanceledError();
-        // tryPollOnce throws only when the SDK has given up retrying.
-        // The flow is dead, so fail fast with SESSION_EXPIRED instead of retrying our loop.
+        // From the caller's view, tryPollOnce is one-shot: one call, one outcome
+        // (pubky SDK 0.8 — it doesn't loop or retry on our behalf). If it throws,
+        // we treat the flow as dead and fail fast — showing "session expired" now
+        // is better UX than letting the user wait minutes on a flow that may already be dead.
         throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Auth flow polling failed', {
           service: ErrorService.Homeserver,
           operation: 'awaitApproval',
