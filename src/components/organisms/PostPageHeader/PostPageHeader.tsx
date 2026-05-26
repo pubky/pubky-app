@@ -80,8 +80,12 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
           className="flex w-full min-w-0 items-baseline text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
           data-testid="post-page-title"
         >
-          <span className="shrink-0 pr-1">{titlePrefix} </span>
-          <span className="min-w-0 flex-1 truncate">{authorName}</span>
+          <Typography as="span" className="shrink-0 pr-1">
+            {titlePrefix}{' '}
+          </Typography>
+          <Typography as="span" className="min-w-0 flex-1 truncate">
+            {authorName}
+          </Typography>
         </Typography>
 
         {/* Breadcrumb (only for replies) */}
