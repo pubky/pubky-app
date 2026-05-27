@@ -1,14 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  AuthErrorCode,
-  ClientErrorCode,
-  NetworkErrorCode,
-  ServerErrorCode,
-  ValidationErrorCode,
-} from '@/libs/error/error.codes';
+import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { HttpStatusCode } from '@/libs/http/http.types';
-import { checkDnsSafety, normalizeImageUrl, readResponseBody, validateDns } from './nextjs.utils';
+import { checkDnsSafety, normalizeImageUrl, readResponseBody } from './nextjs.utils';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -139,67 +132,6 @@ describe('checkDnsSafety', () => {
     mockIsIpSafe.mockReturnValue(false);
 
     await expect(checkDnsSafety('unsafe.test')).resolves.toEqual({ ok: false, reason: 'unsafe_ip' });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// validateDns
-// ---------------------------------------------------------------------------
-
-describe('validateDns', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsIP.mockReturnValue(0); // not an IP by default
-    mockIsIpSafe.mockReturnValue(true); // safe by default
-  });
-
-  it('should resolve hostname via DNS and pass when IP is safe', async () => {
-    mockResolve4.mockResolvedValueOnce(['1.2.3.4']);
-
-    await expect(validateDns('example.com')).resolves.toBeUndefined();
-    expect(mockResolve4).toHaveBeenCalledWith('example.com');
-  });
-
-  it('should skip DNS resolution when hostname is already an IP', async () => {
-    mockIsIP.mockReturnValue(4); // IPv4
-    mockIsIpSafe.mockReturnValue(true);
-
-    await expect(validateDns('1.2.3.4')).resolves.toBeUndefined();
-    expect(mockResolve4).not.toHaveBeenCalled();
-  });
-
-  it('should throw network error when DNS resolves to empty addresses', async () => {
-    mockResolve4.mockResolvedValueOnce([]);
-
-    await expect(validateDns('empty.com')).rejects.toMatchObject({
-      category: ErrorCategory.Network,
-      code: NetworkErrorCode.DNS_FAILED,
-      service: ErrorService.NextJsServer,
-      context: { hostname: 'empty.com', statusCode: HttpStatusCode.BAD_REQUEST },
-    });
-  });
-
-  it('should throw auth error when resolved IP is unsafe (SSRF)', async () => {
-    mockResolve4.mockResolvedValueOnce(['127.0.0.1']);
-    mockIsIpSafe.mockReturnValue(false);
-
-    await expect(validateDns('unsafe.test')).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
-      service: ErrorService.NextJsServer,
-    });
-  });
-
-  it('should wrap raw DNS errors into AppError with cause', async () => {
-    const nativeError = new Error('ENOTFOUND');
-    mockResolve4.mockRejectedValueOnce(nativeError);
-
-    await expect(validateDns('bad.com')).rejects.toMatchObject({
-      category: ErrorCategory.Network,
-      code: NetworkErrorCode.DNS_FAILED,
-      cause: nativeError,
-      context: { hostname: 'bad.com', statusCode: HttpStatusCode.BAD_REQUEST },
-    });
   });
 });
 

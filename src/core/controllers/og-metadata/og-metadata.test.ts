@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OgMetadataApplication } from '@/application/og-metadata/og-metadata';
 import type { TOgMetadataParams } from '@/application/og-metadata/og-metadata.types';
-import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -81,7 +81,6 @@ describe('OgMetadataController', () => {
         ok: false,
         message: 'Invalid URL',
         statusCode: HttpStatusCode.BAD_REQUEST,
-        code: ValidationErrorCode.MISSING_FIELD,
       });
 
       await expect(OgMetadataController.fetch(createParams())).resolves.toEqual({

@@ -11,6 +11,7 @@ import { buildFallbackMetadata, detectMediaType, extractMetadata, validateRedire
 const MAX_REDIRECTS = 5;
 const FETCH_TIMEOUT_MS = 10_000;
 const OG_METADATA_OPERATION = 'fetchOgMetadata';
+const DNS_SAFETY_OPERATION = 'checkDnsSafety';
 
 const FETCH_HEADERS = {
   'User-Agent':
@@ -44,7 +45,7 @@ export class NextJsOgMetadataService {
       const dnsResult = await checkDnsSafety(hostname);
       if (!dnsResult.ok) {
         if (dnsResult.reason === 'unsafe_ip') {
-          throwBlockedIpError(hostname, 'checkDnsSafety');
+          throwBlockedIpError(hostname, DNS_SAFETY_OPERATION);
         }
         return fallback(url, dnsResult.reason, { hostname });
       }
@@ -155,7 +156,7 @@ async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgRedirectF
     const redirectDnsResult = await checkDnsSafety(redirectUrl.hostname);
     if (!redirectDnsResult.ok) {
       if (redirectDnsResult.reason === 'unsafe_ip') {
-        throwBlockedIpError(redirectUrl.hostname, 'checkDnsSafety');
+        throwBlockedIpError(redirectUrl.hostname, DNS_SAFETY_OPERATION);
       }
       return { ok: false, reason: redirectDnsResult.reason, url: redirectUrl.toString() };
     }
@@ -253,5 +254,9 @@ function isAbortError(error: unknown): boolean {
 }
 
 function getErrorName(error: unknown): string | undefined {
-  return error instanceof Error ? error.name : undefined;
+  if (error instanceof Error) return error.name;
+  if (typeof error === 'object' && error !== null && 'name' in error && typeof error.name === 'string') {
+    return error.name;
+  }
+  return undefined;
 }

@@ -1,9 +1,8 @@
-import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { HttpStatusCode } from '@/libs/http/http.types';
 
 type TOgMetadataValidationResult =
   | { ok: true; url: URL }
-  | { ok: false; message: string; statusCode: HttpStatusCode.BAD_REQUEST; code: ValidationErrorCode };
+  | { ok: false; message: string; statusCode: HttpStatusCode.BAD_REQUEST };
 
 type TOgMetadataValidationFailure = Extract<TOgMetadataValidationResult, { ok: false }>;
 
@@ -21,19 +20,19 @@ export class OgMetadataValidators {
    */
   static async validateSafe(url: string | null): Promise<TOgMetadataValidationResult> {
     if (!url || typeof url !== 'string') {
-      return validationFailure(ValidationErrorCode.MISSING_FIELD, 'Invalid URL');
+      return validationFailure('Invalid URL');
     }
 
     const normalized = url.trim();
     if (!normalized) {
-      return validationFailure(ValidationErrorCode.MISSING_FIELD, 'Invalid URL');
+      return validationFailure('Invalid URL');
     }
 
     let parsed: URL;
     try {
       parsed = new URL(normalized);
     } catch {
-      return validationFailure(ValidationErrorCode.FORMAT_ERROR, 'Malformed URL');
+      return validationFailure('Malformed URL');
     }
 
     const failure =
@@ -50,7 +49,7 @@ export class OgMetadataValidators {
    */
   private static validateProtocolSafe(parsed: URL): TOgMetadataValidationFailure | null {
     if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return validationFailure(ValidationErrorCode.INVALID_INPUT, 'Invalid protocol. Only HTTP and HTTPS are allowed.');
+      return validationFailure('Invalid protocol. Only HTTP and HTTPS are allowed.');
     }
     return null;
   }
@@ -64,7 +63,7 @@ export class OgMetadataValidators {
 
     // Empty hostname (e.g., "http:///path")
     if (!hostname || hostname.trim() === '') {
-      return validationFailure(ValidationErrorCode.INVALID_INPUT, 'Invalid hostname. URL must include a domain name.');
+      return validationFailure('Invalid hostname. URL must include a domain name.');
     }
 
     // IP addresses and localhost skip domain structure checks
@@ -77,35 +76,26 @@ export class OgMetadataValidators {
 
     // Trailing dot in hostname (e.g., "http://example.com.")
     if (hostname.endsWith('.')) {
-      return validationFailure(
-        ValidationErrorCode.FORMAT_ERROR,
-        'Invalid hostname. Domain must not end with a trailing dot.',
-      );
+      return validationFailure('Invalid hostname. Domain must not end with a trailing dot.');
     }
 
     const parts = hostname.split('.');
 
     // Single-label hostnames without a TLD (e.g., "http://intranet")
     if (parts.length < 2) {
-      return validationFailure(
-        ValidationErrorCode.FORMAT_ERROR,
-        'Invalid hostname. Domain must include a top-level domain (TLD).',
-      );
+      return validationFailure('Invalid hostname. Domain must include a top-level domain (TLD).');
     }
 
     // TLD too short (e.g., "http://example.a")
     const tld = parts[parts.length - 1];
     if (!tld || tld.length < 2) {
-      return validationFailure(
-        ValidationErrorCode.FORMAT_ERROR,
-        'Invalid hostname. Top-level domain (TLD) must be at least 2 characters.',
-      );
+      return validationFailure('Invalid hostname. Top-level domain (TLD) must be at least 2 characters.');
     }
 
     // Empty domain before TLD (e.g., "http://.com")
     const domain = parts.slice(0, -1).join('.');
     if (!domain || domain.trim() === '') {
-      return validationFailure(ValidationErrorCode.FORMAT_ERROR, 'Invalid hostname. Domain name cannot be empty.');
+      return validationFailure('Invalid hostname. Domain name cannot be empty.');
     }
 
     return null;
@@ -116,12 +106,12 @@ export class OgMetadataValidators {
    */
   private static validateNotOnionSafe(parsed: URL): TOgMetadataValidationFailure | null {
     if (parsed.hostname.toLowerCase().endsWith('.onion')) {
-      return validationFailure(ValidationErrorCode.INVALID_INPUT, 'Tor .onion addresses are not supported.');
+      return validationFailure('Tor .onion addresses are not supported.');
     }
     return null;
   }
 }
 
-function validationFailure(code: ValidationErrorCode, message: string): TOgMetadataValidationFailure {
-  return { ok: false, code, message, statusCode: HttpStatusCode.BAD_REQUEST };
+function validationFailure(message: string): TOgMetadataValidationFailure {
+  return { ok: false, message, statusCode: HttpStatusCode.BAD_REQUEST };
 }

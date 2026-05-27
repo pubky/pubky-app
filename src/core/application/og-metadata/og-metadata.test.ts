@@ -66,7 +66,7 @@ const simpleHtml = (title: string) =>
  *
  * These tests verify the full stack (application → service → utils) working together
  * as a blackbox. Unit-level tests for individual functions live in:
- * - src/core/services/nextjs/nextjs.utils.test.ts (validateDns, readResponseBody, normalizeImageUrl)
+ * - src/core/services/nextjs/nextjs.utils.test.ts (checkDnsSafety, readResponseBody, normalizeImageUrl)
  * - src/core/services/nextjs/og-metadata/og-metadata.utils.test.ts (fetchOgMetadata)
  * - src/core/services/nextjs/og-metadata/og-metadata.test.ts (NextJsOgMetadataService)
  */

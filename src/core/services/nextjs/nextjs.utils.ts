@@ -1,11 +1,5 @@
 import { AppError } from '@/libs/error/error';
-import {
-  AuthErrorCode,
-  ClientErrorCode,
-  NetworkErrorCode,
-  ServerErrorCode,
-  ValidationErrorCode,
-} from '@/libs/error/error.codes';
+import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -75,42 +69,6 @@ export async function checkDnsSafety(hostname: string): Promise<TDnsSafetyResult
   }
 
   return { ok: true };
-}
-
-/**
- * Resolves DNS for hostname and validates the resolved IP is safe.
- * Prevents SSRF attacks by checking IP before the actual fetch.
- */
-export async function validateDns(hostname: string): Promise<void> {
-  let result: TDnsSafetyResult;
-
-  try {
-    result = await checkDnsSafety(hostname);
-  } catch (error) {
-    throw Err.network(NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
-      service: ErrorService.NextJsServer,
-      operation: 'validateDns',
-      cause: error,
-      context: { hostname, statusCode: HttpStatusCode.BAD_REQUEST },
-    });
-  }
-
-  if (result.ok) return;
-
-  if (result.reason === 'unsafe_ip') {
-    throw Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
-      service: ErrorService.NextJsServer,
-      operation: 'validateDns',
-      context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },
-    });
-  }
-
-  throw Err.network(NetworkErrorCode.DNS_FAILED, 'DNS resolution failed', {
-    service: ErrorService.NextJsServer,
-    operation: 'validateDns',
-    cause: result.cause,
-    context: { hostname, statusCode: HttpStatusCode.BAD_REQUEST },
-  });
 }
 
 function isExpectedDnsResolutionError(error: unknown): boolean {

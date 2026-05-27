@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { OgMetadataValidators } from './og-metadata.validators';
 
@@ -15,98 +14,87 @@ vi.mock('net', () => ({
 describe('OgMetadataValidators', () => {
   describe('validateSafe', () => {
     describe('missing/empty URL', () => {
-      it('should return MISSING_FIELD for empty string', async () => {
+      it('should return failure for empty string', async () => {
         await expect(OgMetadataValidators.validateSafe('')).resolves.toEqual({
           ok: false,
-          code: ValidationErrorCode.MISSING_FIELD,
           message: 'Invalid URL',
           statusCode: HttpStatusCode.BAD_REQUEST,
         });
       });
 
-      it('should return MISSING_FIELD for null', async () => {
+      it('should return failure for null', async () => {
         await expect(OgMetadataValidators.validateSafe(null)).resolves.toMatchObject({
           ok: false,
-          code: ValidationErrorCode.MISSING_FIELD,
         });
       });
     });
 
     describe('malformed URL', () => {
-      it('should return FORMAT_ERROR for unparseable URL', async () => {
+      it('should return failure for unparseable URL', async () => {
         await expect(OgMetadataValidators.validateSafe('not-a-valid-url')).resolves.toMatchObject({
           ok: false,
-          code: ValidationErrorCode.FORMAT_ERROR,
           message: 'Malformed URL',
         });
       });
     });
 
     describe('invalid protocol', () => {
-      it('should return INVALID_INPUT for file:// protocol', async () => {
+      it('should return failure for file:// protocol', async () => {
         await expect(OgMetadataValidators.validateSafe('file:///etc/passwd')).resolves.toMatchObject({
           ok: false,
-          code: ValidationErrorCode.INVALID_INPUT,
           message: expect.stringContaining('Invalid protocol'),
         });
       });
 
-      it('should return INVALID_INPUT for ftp:// protocol', async () => {
+      it('should return failure for ftp:// protocol', async () => {
         await expect(OgMetadataValidators.validateSafe('ftp://example.com')).resolves.toMatchObject({
           ok: false,
-          code: ValidationErrorCode.INVALID_INPUT,
           message: expect.stringContaining('Invalid protocol'),
         });
       });
 
-      it('should return INVALID_INPUT for javascript: protocol', async () => {
+      it('should return failure for javascript: protocol', async () => {
         await expect(OgMetadataValidators.validateSafe('javascript:alert(1)')).resolves.toMatchObject({
           ok: false,
-          code: ValidationErrorCode.INVALID_INPUT,
         });
       });
     });
 
     describe('invalid hostname', () => {
-      it('should return FORMAT_ERROR for trailing dot hostname', async () => {
+      it('should return failure for trailing dot hostname', async () => {
         await expect(OgMetadataValidators.validateSafe('https://example.com.')).resolves.toMatchObject({
           ok: false,
-          code: ValidationErrorCode.FORMAT_ERROR,
           message: expect.stringContaining('trailing dot'),
         });
       });
 
-      it('should return FORMAT_ERROR for single-part hostname', async () => {
+      it('should return failure for single-part hostname', async () => {
         await expect(OgMetadataValidators.validateSafe('https://invalid')).resolves.toMatchObject({
           ok: false,
-          code: ValidationErrorCode.FORMAT_ERROR,
           message: expect.stringContaining('top-level domain'),
         });
       });
 
-      it('should return FORMAT_ERROR for TLD less than 2 characters', async () => {
+      it('should return failure for TLD less than 2 characters', async () => {
         await expect(OgMetadataValidators.validateSafe('https://example.c')).resolves.toMatchObject({
           ok: false,
-          code: ValidationErrorCode.FORMAT_ERROR,
           message: expect.stringContaining('TLD'),
         });
       });
 
-      it('should return FORMAT_ERROR for www. with no TLD', async () => {
+      it('should return failure for www. with no TLD', async () => {
         await expect(OgMetadataValidators.validateSafe('https://www.')).resolves.toMatchObject({
           ok: false,
-          code: ValidationErrorCode.FORMAT_ERROR,
         });
       });
     });
 
     describe('.onion addresses', () => {
-      it('should return INVALID_INPUT for .onion address', async () => {
+      it('should return failure for .onion address', async () => {
         await expect(
           OgMetadataValidators.validateSafe('https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion'),
         ).resolves.toMatchObject({
           ok: false,
-          code: ValidationErrorCode.INVALID_INPUT,
           message: expect.stringContaining('Tor .onion addresses are not supported'),
         });
       });

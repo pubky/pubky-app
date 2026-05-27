@@ -72,6 +72,11 @@ const EXPECTED_DNS_ERROR_CODES = [
   'EDESTRUCTION',
 ];
 
+const spyOnLoggerWarn = async () => {
+  const { Logger } = await import('@/libs/logger/logger');
+  return vi.spyOn(Logger, 'warn');
+};
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -142,6 +147,7 @@ describe('NextJsOgMetadataService', () => {
   });
 
   it('should return durable fallback for non-HTML, non-media content type', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     mockFetch.mockResolvedValue(createOkResponse('application/json'));
 
     const result = await NextJsOgMetadataService.fetch(new URL('https://example.com/api'));
@@ -152,6 +158,15 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'non_html',
+        hostname: 'example.com',
+        contentType: 'application/json',
+      }),
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -194,6 +209,7 @@ describe('NextJsOgMetadataService', () => {
   });
 
   it('should return fallback metadata for 429 responses', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     mockFetch.mockResolvedValue(createErrorResponse(429));
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/rate-limited'))).resolves.toMatchObject({
@@ -202,9 +218,19 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'rate_limit',
+        hostname: 'example.com',
+        statusCode: 429,
+      }),
+    );
   });
 
   it('should return fallback metadata for remote 500 responses', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     mockFetch.mockResolvedValue(createErrorResponse(500));
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/fail'))).resolves.toMatchObject({
@@ -213,9 +239,19 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'http_error',
+        hostname: 'example.com',
+        statusCode: 500,
+      }),
+    );
   });
 
   it('should return fallback metadata for remote 504 responses', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     mockFetch.mockResolvedValue(createErrorResponse(504));
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/gateway-timeout'))).resolves.toMatchObject({
@@ -224,6 +260,15 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'timeout',
+        hostname: 'example.com',
+        statusCode: 504,
+      }),
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -371,6 +416,7 @@ describe('NextJsOgMetadataService', () => {
   // -------------------------------------------------------------------------
 
   it('should abort fetch when request exceeds timeout', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     // Mock setTimeout to invoke the callback immediately to trigger abort.
     vi.spyOn(globalThis, 'setTimeout').mockImplementation((fn: TimerHandler) => {
       if (typeof fn === 'function') fn();
@@ -387,6 +433,15 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'timeout',
+        hostname: 'slow.test',
+        errorName: 'AbortError',
+      }),
+    );
 
     vi.mocked(globalThis.setTimeout).mockRestore();
   });
@@ -403,6 +458,7 @@ describe('NextJsOgMetadataService', () => {
   });
 
   it('should return fallback metadata for raw fetch failures', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     const rawError = new TypeError('ECONNRESET');
     mockFetch.mockRejectedValueOnce(rawError);
 
@@ -412,6 +468,15 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'network',
+        hostname: 'example.com',
+        errorName: 'TypeError',
+      }),
+    );
   });
 
   it('should block redirects to non-HTTP protocols', async () => {
@@ -456,6 +521,7 @@ describe('NextJsOgMetadataService', () => {
   // -------------------------------------------------------------------------
 
   it.each(EXPECTED_DNS_ERROR_CODES)('should return fallback metadata for expected DNS failure %s', async (code) => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     mockResolve4.mockRejectedValue(createDnsError(code));
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toMatchObject({
@@ -464,6 +530,14 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'dns_failed',
+        hostname: 'example.com',
+      }),
+    );
   });
 
   it('should reject private main URL IPs before fetching', async () => {
