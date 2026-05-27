@@ -170,14 +170,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         try {
           await toggleMute(postAuthorId, isUserMuted);
           toast({
-            title: isUserMuted ? tMute('unmuted') : tMute('muted'),
-            description: isUserMuted
-              ? tMute('unmutedDesc', {
-                  username,
-                })
-              : tMute('mutedDesc', {
-                  username,
-                }),
+            title: isUserMuted ? tMute('unmuted', { username }) : tMute('muted', { username }),
           });
         } catch (error) {
           toast({

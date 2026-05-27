@@ -59,13 +59,9 @@ vi.mock('next-intl', () => ({
       case 'loadFailedDesc':
         return 'Could not load more tags. Please try again.';
       case 'added':
-        return 'Tag added';
-      case 'addedDesc':
-        return `"${values?.label}" was added successfully.`;
+        return values?.label ? `Tag added: ${values.label}` : 'Tag added';
       case 'removed':
-        return 'Tag removed';
-      case 'removedDesc':
-        return `"${values?.label}" was removed successfully.`;
+        return values?.label ? `Tag removed: ${values.label}` : 'Tag removed';
       case 'addFailed':
         return 'Failed to add tag';
       case 'addFailedDesc':
@@ -207,8 +203,7 @@ describe('usePostTags', () => {
 
       expect(response!).toEqual({ success: true });
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Tag added',
-        description: '"test-tag" was added successfully.',
+        title: 'Tag added: test-tag',
       });
     });
 
@@ -296,8 +291,7 @@ describe('usePostTags', () => {
       });
 
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Tag removed',
-        description: '"solo-tag" was removed successfully.',
+        title: 'Tag removed: solo-tag',
       });
     });
   });

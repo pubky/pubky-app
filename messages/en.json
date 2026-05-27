@@ -195,7 +195,7 @@
       "resend": "Resend Code",
       "resendTimer": "Resend Code ({seconds}s)",
       "verify": "Verify Code",
-      "valid": "Verification Code Valid",
+      "valid": "Verification code valid",
       "invalid": "Verification Code Invalid. Try again.",
       "verifyFailed": "Failed to verify sms code",
       "verifyFailedDescription": "Please try again later. If the problem persists, please contact support."
@@ -281,8 +281,7 @@
       "expired": "Expired",
       "openingRing": "Opening Pubky Ring...",
       "authorize": "Authorize with Pubky Ring",
-      "linkCopied": "Link copied",
-      "linkCopiedDescription": "Authentication link copied to clipboard.",
+      "linkCopied": "Authentication link copied",
       "linkFailed": "Unable to link to signer application Pubky Ring",
       "tryAgain": "Please try again.",
       "authInitFailedTitle": "Sign in failed. Please try again.",
@@ -336,8 +335,7 @@
       "generating": "Generating pubky...",
       "myPubky": "My Pubky",
       "shareText": "Here is my Pubky:\n{displayPubky}",
-      "shareUnavailable": "Sharing unavailable",
-      "shareUnavailableDescription": "We copied your pubky so you can paste it into your favorite app.",
+      "shareUnavailable": "Sharing unavailable, pubky copied",
       "shareFailed": "Share failed",
       "shareFailedDescription": "Unable to share right now. Please try again.",
       "signUpFailed": "Error - Failed to sign up",
@@ -391,7 +389,8 @@
       "instructions": "Download and install the mobile app. Then continue to the next step.",
       "alternative": "Use <pubkyRing>Pubky Ring</pubkyRing> or any other <pubkyCore>Pubky Core</pubkyCore>–powered keychain, or create your keys in the browser (less secure).",
       "createInBrowser": "Create keys in browser",
-      "continueWithRing": "Continue with Pubky Ring"
+      "continueWithRing": "Continue with Pubky Ring",
+      "inviteCodeApplied": "Invite code applied: {code}"
     },
     "createProfile": {
       "title": "Create your <highlight>profile.</highlight>",
@@ -656,11 +655,11 @@
       "filterTags": "Filter on Content Tags",
       "saveFeed": "Save Feed",
       "deleteFeed": "Delete Feed",
-      "feedCreated": "Feed {name} created!",
+      "feedCreated": "Feed created: {name}",
       "feedCreateError": "Could not create feed, please try again or reach out to support.",
-      "feedEdited": "Feed {name} edited!",
+      "feedEdited": "Feed updated: {name}",
       "feedEditError": "Could not edit feed, please try again or reach out to support.",
-      "feedDeleted": "Feed {name} deleted!",
+      "feedDeleted": "Feed deleted: {name}",
       "feedDeleteError": "Could not delete feed, please try again or reach out to support."
     }
   },
@@ -887,25 +886,19 @@
     "genericErrorTitle": "Uh oh! Something went wrong!",
     "post": {
       "replyPosted": "Reply posted",
-      "replyPostedDesc": "Your reply has been posted successfully.",
       "replyFailed": "Failed to post reply. Please try again.",
       "postCreated": "Post created",
-      "postCreatedDesc": "Your post has been created successfully.",
       "postFailed": "Failed to create post. Please try again.",
-      "repostSuccess": "Reposted!",
-      "repostSuccessDesc": "You successfully reposted a post by {author}!",
-      "repostSuccessDescFallback": "Your repost has been created successfully.",
+      "repostSuccess": "Reposted {author}'s post",
+      "repostSuccessFallback": "Reposted",
       "repostUndo": "Undo",
       "repostFailed": "Failed to repost. Please try again.",
-      "postEdited": "Post edited",
-      "postEditedDesc": "Your post has been edited successfully.",
+      "postEdited": "Post updated",
       "editFailed": "Failed to edit post. Please try again.",
       "postDeleted": "Post deleted",
-      "postDeletedDesc": "Your post has been deleted",
       "deleteFailed": "Failed to delete post. Please try again.",
       "invalidPostId": "Invalid post ID. Please try again.",
-      "attachmentsCleared": "Attachments cleared",
-      "attachmentsClearedDesc": "Articles support one cover image only.",
+      "attachmentsCleared": "Articles support one cover image",
       "failedToLoadPosts": "Failed to load new posts",
       "failedToLoadPostsDesc": "Unable to display new posts. Please try again.",
       "parseError": "Failed to parse article content",
@@ -913,10 +906,8 @@
       "attachmentsLoadFailed": "Failed to load post attachments"
     },
     "bookmark": {
-      "added": "Bookmark added",
-      "addedDesc": "Post saved to your bookmarks",
-      "removed": "Bookmark removed",
-      "removedDesc": "Post removed from your bookmarks",
+      "added": "Post saved to bookmarks",
+      "removed": "Post removed from bookmarks",
       "addFailed": "Failed to add bookmark",
       "removeFailed": "Failed to remove bookmark",
       "loginRequired": "You must be logged in to bookmark posts"
@@ -933,15 +924,12 @@
       "failed": "Failed to update follow status"
     },
     "mute": {
-      "muted": "User muted",
-      "unmuted": "User unmuted",
-      "mutedDesc": "{username} has been muted.",
-      "unmutedDesc": "{username} has been unmuted.",
+      "muted": "{username} muted",
+      "unmuted": "{username} unmuted",
       "failed": "Failed to update mute status"
     },
     "profile": {
       "updated": "Profile updated",
-      "updatedDesc": "Your profile has been updated successfully.",
       "sessionExpired": "Session expired",
       "sessionExpiredDesc": "Please sign out and sign in again to continue.",
       "saveFailed": "Failed to save profile",
@@ -961,7 +949,7 @@
       "submitFailedDesc": "Failed to submit feedback. Please try again."
     },
     "copyright": {
-      "success": "Request sent successfully",
+      "success": "Request sent",
       "error": "Error sending request",
       "submitFailed": "Failed to submit request"
     },
@@ -973,10 +961,8 @@
       "userIdRequired": "User ID is required",
       "loginRequired": "You must be logged in to add tags",
       "alreadyAdded": "You have already added this tag",
-      "added": "Tag added",
-      "addedDesc": "\"{label}\" was added successfully.",
-      "removed": "Tag removed",
-      "removedDesc": "\"{label}\" was removed successfully.",
+      "added": "Tag added: {label}",
+      "removed": "Tag removed: {label}",
       "addFailed": "Failed to add tag",
       "addFailedDesc": "Could not add \"{label}\". Please try again.",
       "removeFailed": "Failed to remove tag",
@@ -1114,10 +1100,8 @@
     "unmute": "Unmute",
     "unmuteAll": "Unmute all users",
     "noMutedUsers": "No muted users yet",
-    "userUnmuted": "User unmuted",
-    "userUnmutedDesc": "{username} has been unmuted.",
+    "userUnmuted": "{username} unmuted",
     "allUsersUnmuted": "All users unmuted",
-    "allUsersUnmutedDesc": "All muted users have been unmuted.",
     "partialSuccess": "Partial success",
     "partialSuccessDesc": "{success} users unmuted, {failed} failed."
   },

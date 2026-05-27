@@ -225,8 +225,7 @@ describe('CopyrightForm', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Request sent successfully',
+        title: 'Request sent',
       });
     });
   });

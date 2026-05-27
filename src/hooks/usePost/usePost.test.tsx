@@ -263,7 +263,6 @@ describe('usePost', () => {
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Reply posted',
-          description: 'Your reply has been posted successfully.',
           dismissButton: true,
         }),
       );
@@ -515,7 +514,6 @@ describe('usePost', () => {
       expect(result.current.articleTitle).toBe('');
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Post created',
-        description: 'Your post has been created successfully.',
         dismissButton: true,
       });
       expect(mockOnSuccess).toHaveBeenCalled();
@@ -755,7 +753,6 @@ describe('usePost', () => {
       expect(result.current.articleTitle).toBe('');
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Post created',
-        description: 'Your post has been created successfully.',
         dismissButton: true,
       });
       expect(mockOnSuccess).toHaveBeenCalled();
@@ -1214,8 +1211,7 @@ describe('usePost', () => {
 
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Reposted!',
-          description: 'You successfully reposted a post by John Doe!',
+          title: "Reposted John Doe's post",
         }),
       );
     });
@@ -1233,8 +1229,7 @@ describe('usePost', () => {
 
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Reposted!',
-          description: 'Your repost has been created successfully.',
+          title: 'Reposted',
         }),
       );
     });
@@ -1285,8 +1280,7 @@ describe('usePost', () => {
         });
         expect(mockOnSuccess).toHaveBeenCalled();
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Post edited',
-          description: 'Your post has been edited successfully.',
+          title: 'Post updated',
         });
       });
 
@@ -1461,8 +1455,7 @@ describe('usePost', () => {
         });
         expect(mockOnSuccess).toHaveBeenCalled();
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Post edited',
-          description: 'Your post has been edited successfully.',
+          title: 'Post updated',
         });
       });
 

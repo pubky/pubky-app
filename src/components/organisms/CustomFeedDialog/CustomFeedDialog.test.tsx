@@ -932,8 +932,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Feed My Feed created!',
+        title: 'Feed created: My Feed',
       });
       expect(mockPush).toHaveBeenCalledWith('/feed/new-feed-123');
     });
@@ -1070,8 +1069,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Feed Bitcoin News edited!',
+        title: 'Feed updated: Bitcoin News',
       });
       expect(mockPush).toHaveBeenCalledWith('/feed/feed-abc123');
     });
@@ -1159,8 +1157,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Feed Bitcoin News deleted!',
+        title: 'Feed deleted: Bitcoin News',
       });
       expect(mockPush).toHaveBeenCalledWith('/home');
     });

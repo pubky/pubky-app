@@ -9,7 +9,6 @@ import { COPYRIGHT_ROLES, copyrightFormDefaultValues } from './useCopyrightForm.
 import { type CopyrightFormData, copyrightFormSchema } from './useCopyrightForm.types';
 
 export function useCopyrightForm() {
-  const tToast = useTranslations('toast');
   const tCopyright = useTranslations('toast.copyright');
   const form = useForm<CopyrightFormData>({
     resolver: zodResolver(copyrightFormSchema),
@@ -27,7 +26,7 @@ export function useCopyrightForm() {
       });
 
       form.reset();
-      toast({ title: tToast('success'), description: tCopyright('success') });
+      toast({ title: tCopyright('success') });
     } catch (error) {
       toast({
         variant: 'error',

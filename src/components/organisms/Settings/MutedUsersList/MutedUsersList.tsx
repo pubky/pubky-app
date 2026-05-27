@@ -32,8 +32,7 @@ export function MutedUsersList() {
     try {
       await toggleMute(userId, true);
       toast({
-        title: t('userUnmuted'),
-        description: t('userUnmutedDesc', {
+        title: t('userUnmuted', {
           username: userName || userId,
         }),
       });
@@ -66,7 +65,6 @@ export function MutedUsersList() {
       } else {
         toast({
           title: t('allUsersUnmuted'),
-          description: t('allUsersUnmutedDesc'),
         });
       }
     } catch (error) {

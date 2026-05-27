@@ -67,8 +67,7 @@ describe('Install template', () => {
 
     expect(mockSetInviteCode).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Invite code applied',
-      description: 'Your invite code YVB2-YFRN-GDY0 has been applied.',
+      title: 'Invite code applied: YVB2-YFRN-GDY0',
     });
   });
 

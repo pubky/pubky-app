@@ -106,8 +106,8 @@ export const SignInContent = () => {
     try {
       await copyAuthUrl();
       toast({
+        variant: 'info',
         title: t('linkCopied'),
-        description: t('linkCopiedDescription'),
       });
     } catch (error) {
       Logger.error('Failed to copy auth URL to clipboard:', error);

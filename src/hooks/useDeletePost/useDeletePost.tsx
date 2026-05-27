@@ -60,7 +60,6 @@ export function useDeletePost(): UseDeletePostResult {
       Logger.info('[useDeletePost] Post deleted successfully', { postId });
       toast({
         title: tPost('postDeleted'),
-        description: tPost('postDeletedDesc'),
         dismissButton: true,
       });
     } catch (error) {

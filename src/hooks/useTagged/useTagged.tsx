@@ -177,8 +177,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         });
 
         toast({
-          title: tTags('added'),
-          description: tTags('addedDesc', { label }),
+          title: tTags('added', { label }),
         });
         return { success: true };
       } catch {
@@ -233,8 +232,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           await TagController.commitDelete(params);
 
           toast({
-            title: tTags('removed'),
-            description: tTags('removedDesc', { label: tag.label }),
+            title: tTags('removed', { label: tag.label }),
           });
         } else {
           // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
@@ -248,8 +246,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           });
 
           toast({
-            title: tTags('added'),
-            description: tTags('addedDesc', { label: tag.label }),
+            title: tTags('added', { label: tag.label }),
           });
         }
       } catch {

@@ -81,14 +81,12 @@ export function useBookmark(postId: string): UseBookmarkResult {
         setIsBookmarked(false);
         toast({
           title: tBookmark('removed'),
-          description: tBookmark('removedDesc'),
         });
       } else {
         await BookmarkController.commitCreate({ postId, userId: currentUserPubky });
         setIsBookmarked(true);
         toast({
           title: tBookmark('added'),
-          description: tBookmark('addedDesc'),
         });
       }
     } catch (error) {

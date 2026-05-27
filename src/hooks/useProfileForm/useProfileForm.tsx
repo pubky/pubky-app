@@ -344,7 +344,6 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         }
         toast({
           title: tProfile('updated'),
-          description: tProfile('updatedDesc'),
         });
         router.push(PROFILE_ROUTES.PROFILE);
       }

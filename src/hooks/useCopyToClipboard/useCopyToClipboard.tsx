@@ -25,8 +25,8 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
         await copyToClipboard({ text });
 
         toast({
+          variant: 'info',
           title: resolvedSuccessTitle,
-          description: text,
           dismissButton: true,
         });
 

@@ -314,8 +314,7 @@ describe('usePostMenuActions', () => {
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockAuthorId, false);
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'User muted',
-        description: 'Test Author has been muted.',
+        title: 'Test Author muted',
       });
     });
 

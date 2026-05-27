@@ -65,13 +65,9 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, values?: { label?: string }) => {
     switch (key) {
       case 'added':
-        return 'Tag added';
-      case 'addedDesc':
-        return `"${values?.label}" was added successfully.`;
+        return values?.label ? `Tag added: ${values.label}` : 'Tag added';
       case 'removed':
-        return 'Tag removed';
-      case 'removedDesc':
-        return `"${values?.label}" was removed successfully.`;
+        return values?.label ? `Tag removed: ${values.label}` : 'Tag removed';
       case 'addFailed':
         return 'Failed to add tag';
       case 'addFailedDesc':
@@ -213,8 +209,7 @@ describe('useTagged', () => {
       taggedKind: TagKind.USER,
     });
     expect(mockMocks.mockToast).toHaveBeenCalledWith({
-      title: 'Tag added',
-      description: '"ethereum" was added successfully.',
+      title: 'Tag added: ethereum',
     });
   });
 
@@ -268,8 +263,7 @@ describe('useTagged', () => {
       taggedKind: TagKind.USER,
     });
     expect(mockMocks.mockToast).toHaveBeenCalledWith({
-      title: 'Tag removed',
-      description: '"bitcoin" was removed successfully.',
+      title: 'Tag removed: bitcoin',
     });
   });
 

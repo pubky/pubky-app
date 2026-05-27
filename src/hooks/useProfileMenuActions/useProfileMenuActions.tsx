@@ -119,14 +119,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await toggleMute(userId, isUserMuted);
         toast({
-          title: isUserMuted ? tToast('mute.unmuted') : tToast('mute.muted'),
-          description: isUserMuted
-            ? tToast('mute.unmutedDesc', {
-                username,
-              })
-            : tToast('mute.mutedDesc', {
-                username,
-              }),
+          title: isUserMuted ? tToast('mute.unmuted', { username }) : tToast('mute.muted', { username }),
         });
       } catch (error) {
         toast({

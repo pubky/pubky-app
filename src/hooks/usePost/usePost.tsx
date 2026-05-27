@@ -69,7 +69,6 @@ export function usePost(): UsePostReturn {
       setAttachments([]);
       toast({
         title: tPost('replyPosted'),
-        description: tPost('replyPostedDesc'),
         dismissButton: true,
       });
       onSuccess?.(createdPostId);
@@ -107,7 +106,6 @@ export function usePost(): UsePostReturn {
       setArticleTitle('');
       toast({
         title: tPost('postCreated'),
-        description: tPost('postCreatedDesc'),
         dismissButton: true,
       });
       onSuccess?.(createdPostId);
@@ -137,10 +135,9 @@ export function usePost(): UsePostReturn {
       setAttachments([]);
 
       const toastInstance = toast({
-        title: tPost('repostSuccess'),
-        description: originalAuthorName
-          ? tPost('repostSuccessDesc', { author: originalAuthorName })
-          : tPost('repostSuccessDescFallback'),
+        title: originalAuthorName
+          ? tPost('repostSuccess', { author: originalAuthorName })
+          : tPost('repostSuccessFallback'),
         action: (
           <ToastAction
             altText={tPost('repostUndo')}
@@ -180,7 +177,6 @@ export function usePost(): UsePostReturn {
       setArticleTitle('');
       toast({
         title: tPost('postEdited'),
-        description: tPost('postEditedDesc'),
       });
       onSuccess?.(editPostId);
     } catch (err) {
@@ -195,8 +191,8 @@ export function usePost(): UsePostReturn {
   useEffect(() => {
     if (isArticle && attachments.length > 0) {
       toast({
+        variant: 'warning',
         title: tPost('attachmentsCleared'),
-        description: tPost('attachmentsClearedDesc'),
       });
       setAttachments([]);
     }

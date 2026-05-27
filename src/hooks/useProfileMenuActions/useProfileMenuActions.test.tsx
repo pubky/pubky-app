@@ -117,10 +117,8 @@ describe('useProfileMenuActions', () => {
           'copy.profileLinkCopied': 'Profile link copied to clipboard',
           'copy.copyFailed': 'Copy failed',
           'follow.failed': 'Failed to update follow status',
-          'mute.muted': 'User muted',
-          'mute.unmuted': 'User unmuted',
-          'mute.mutedDesc': '{username} has been muted.',
-          'mute.unmutedDesc': '{username} has been unmuted.',
+          'mute.muted': '{username} muted',
+          'mute.unmuted': '{username} unmuted',
           'mute.failed': 'Failed to update mute status',
         },
         errors: {
@@ -286,8 +284,7 @@ describe('useProfileMenuActions', () => {
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockUserId, false);
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'User muted',
-        description: 'Test User has been muted.',
+        title: 'Test User muted',
       });
     });
 
@@ -304,8 +301,7 @@ describe('useProfileMenuActions', () => {
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockUserId, true);
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'User unmuted',
-        description: 'Test User has been unmuted.',
+        title: 'Test User unmuted',
       });
     });
 

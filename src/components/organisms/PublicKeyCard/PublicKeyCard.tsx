@@ -55,8 +55,8 @@ export function PublicKeyCard() {
           onSuccess: (result) => {
             if (result.method === 'fallback') {
               toast({
+                variant: 'warning',
                 title: t('shareUnavailable'),
-                description: t('shareUnavailableDescription'),
               });
             }
           },

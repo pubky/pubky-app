@@ -107,6 +107,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         text,
       });
       toast({
+        variant: 'info',
         title: t('invoiceCopied'),
       });
     } catch {

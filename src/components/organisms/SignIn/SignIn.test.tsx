@@ -436,8 +436,8 @@ describe('SignInContent', () => {
 
     expect(mockCopyAuthUrl).toHaveBeenCalled();
     expect(toast).toHaveBeenCalledWith({
-      title: 'Link copied',
-      description: 'Authentication link copied to clipboard.',
+      variant: 'info',
+      title: 'Authentication link copied',
     });
   });
 

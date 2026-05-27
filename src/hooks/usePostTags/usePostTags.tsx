@@ -261,8 +261,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         });
 
         toast({
-          title: tTags('added'),
-          description: tTags('addedDesc', { label }),
+          title: tTags('added', { label }),
         });
         return { success: true };
       } catch {
@@ -315,8 +314,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           });
 
           toast({
-            title: tTags('removed'),
-            description: tTags('removedDesc', { label: tag.label }),
+            title: tTags('removed', { label: tag.label }),
           });
         } else {
           await TagController.commitCreate({
@@ -334,8 +332,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           });
 
           toast({
-            title: tTags('added'),
-            description: tTags('addedDesc', { label: tag.label }),
+            title: tTags('added', { label: tag.label }),
           });
         }
       } catch {

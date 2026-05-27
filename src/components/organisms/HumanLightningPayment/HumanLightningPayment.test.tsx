@@ -146,7 +146,7 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-invoice' });
-      expect(mockToast).toHaveBeenCalledWith({ title: 'Invoice copied to clipboard' });
+      expect(mockToast).toHaveBeenCalledWith({ variant: 'info', title: 'Invoice copied to clipboard' });
     });
   });
 

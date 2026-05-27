@@ -103,8 +103,7 @@ describe('useBookmark', () => {
     });
     expect(result.current.isBookmarked).toBe(true);
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Bookmark added',
-      description: 'Post saved to your bookmarks',
+      title: 'Post saved to bookmarks',
     });
   });
 
@@ -128,8 +127,7 @@ describe('useBookmark', () => {
     });
     expect(result.current.isBookmarked).toBe(false);
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Bookmark removed',
-      description: 'Post removed from your bookmarks',
+      title: 'Post removed from bookmarks',
     });
   });
 

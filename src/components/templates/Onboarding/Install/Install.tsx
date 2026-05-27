@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { formatInviteCode } from '@/libs/utils/utils';
 import { InstallCard, InstallFooter, InstallHeader, InstallNavigation } from '@/molecules/Install/Install';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
@@ -10,6 +11,7 @@ import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 export function Install() {
   const searchParams = useSearchParams();
+  const t = useTranslations('onboarding.install');
   const { toast } = useToast();
   const hasInitialisedFromUrlRef = useRef(false);
   const inviteCodeFromUrl = formatInviteCode(searchParams.get('inviteCode') ?? '');
@@ -24,10 +26,9 @@ export function Install() {
 
     useOnboardingStore.getState().setInviteCode(inviteCodeFromUrl);
     toast({
-      title: 'Invite code applied',
-      description: `Your invite code ${inviteCodeFromUrl} has been applied.`,
+      title: t('inviteCodeApplied', { code: inviteCodeFromUrl }),
     });
-  }, [hasInviteCodeFromUrl, inviteCodeFromUrl, toast]);
+  }, [hasInviteCodeFromUrl, inviteCodeFromUrl, t, toast]);
 
   return (
     <OnboardingLayout testId="install-content" navigation={<InstallNavigation />}>
