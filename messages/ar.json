@@ -254,7 +254,8 @@
     "scan": {
       "titleMobile": "انقر <highlight>للتفويض.</highlight>",
       "titleDesktop": "امسح <highlight>رمز QR.</highlight>",
-      "subtitle": "افتح Pubky Ring، انشئ pubky وامسح رمز QR.",
+      "subtitleMobile": "اضغط على الزر لفتح Pubky Ring، ثم فوّض باستخدام pubky الخاص بك.",
+      "subtitleDesktop": "افتح Pubky Ring، اضغط على 'اضافة pubky'، وامسح رمز QR هذا.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
 

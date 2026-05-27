@@ -254,7 +254,8 @@
     "scan": {
       "titleMobile": "点击<highlight>授权。</highlight>",
       "titleDesktop": "扫描<highlight>二维码。</highlight>",
-      "subtitle": "打开 Pubky Ring，创建一个 pubky，然后扫描二维码。",
+      "subtitleMobile": "点击按钮打开 Pubky Ring，并使用您的 pubky 进行授权。",
+      "subtitleDesktop": "打开 Pubky Ring，点击'添加 pubky'，并扫描此二维码。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
 

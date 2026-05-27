@@ -254,7 +254,8 @@
     "scan": {
       "titleMobile": "タップして<highlight>認証。</highlight>",
       "titleDesktop": "<highlight>QRコード</highlight>をスキャン。",
-      "subtitle": "Pubky Ringを開き、pubkyを作成してQRをスキャンしてください。",
+      "subtitleMobile": "ボタンをタップしてPubky Ringを開き、pubkyで認証してください。",
+      "subtitleDesktop": "Pubky Ringを開き、「pubkyを追加」をタップして、このQRをスキャンしてください。",
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
 

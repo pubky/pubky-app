@@ -254,7 +254,8 @@
     "scan": {
       "titleMobile": "Toca para <highlight>autorizar.</highlight>",
       "titleDesktop": "Escanea el <highlight>código QR.</highlight>",
-      "subtitle": "Abre Pubky Ring, crea un pubky y escanea el QR.",
+      "subtitleMobile": "Toca el botón para abrir Pubky Ring y autoriza con tu pubky.",
+      "subtitleDesktop": "Abre Pubky Ring, toca 'Agregar pubky', y escanea este QR.",
       "generating": "Generando código QR...",
       "generatingShort": "Generando...",
 
