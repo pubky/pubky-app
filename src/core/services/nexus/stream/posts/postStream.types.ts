@@ -25,6 +25,7 @@ export enum StreamKind {
   VIDEO = 'video',
   LINK = 'link',
   FILE = 'file',
+  COLLECTION = 'collection',
 }
 
 export enum StreamOrder {

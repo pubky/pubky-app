@@ -3,7 +3,7 @@
 exports[`CollectionCard - Snapshots > matches snapshot with default props 1`] = `
 <a
   aria-label="Bookmarks"
-  class="block w-full lg:max-w-[588px]"
+  class="block w-full lg:max-w-xl"
   data-cy="collection-card"
   href="/collections/bookmarks"
 >
@@ -77,7 +77,7 @@ exports[`CollectionCard - Snapshots > matches snapshot with default props 1`] = 
               />
             </svg>
             <span
-              class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+              class="text-xs leading-4 font-medium tracking-widest uppercase"
               data-testid="typography"
             >
               29
@@ -101,11 +101,11 @@ exports[`CollectionCard - Snapshots > matches snapshot with default props 1`] = 
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                d="M18 20a6 6 0 0 0-12 0"
+                d="M17.925 20.056a6 6 0 0 0-11.851.001"
               />
               <circle
                 cx="12"
-                cy="10"
+                cy="11"
                 r="4"
               />
               <circle
@@ -115,7 +115,7 @@ exports[`CollectionCard - Snapshots > matches snapshot with default props 1`] = 
               />
             </svg>
             <span
-              class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+              class="text-xs leading-4 font-medium tracking-widest uppercase"
               data-testid="typography"
             >
               PRIVATE

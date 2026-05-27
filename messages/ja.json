@@ -1234,10 +1234,45 @@
   },
   "collections": {
     "title": "マイコレクション",
+    "new": {
+      "cta": "新しいコレクション",
+      "title": "新しいコレクション",
+      "nameLabel": "タイトル",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "説明",
+      "descriptionPlaceholder": "ビットコインの主要な貢献者のベスト",
+      "backgroundLabel": "背景",
+      "addImage": "画像を追加",
+      "removeImage": "画像を削除",
+      "coverImageInvalid": "カバー画像は画像ファイルである必要があります。",
+      "coverImageTooLarge": "カバー画像が大きすぎます。",
+      "nameRequired": "コレクションのタイトルは必須です。",
+      "cancel": "キャンセル",
+      "save": "コレクションを保存",
+      "saving": "保存中...",
+      "created": "コレクション「{name}」を作成しました",
+      "createFailed": "コレクションの作成に失敗しました。"
+    },
     "bookmarks": {
       "title": "ブックマーク",
       "description": "あとで見たいものをすべて保存できます。"
     },
     "private": "非公開"
+  },
+  "postSave": {
+    "title": "投稿を保存",
+    "description": "この投稿を保存する場所を選択してください。",
+    "open": "投稿を保存",
+    "loading": "保存オプションを読み込み中",
+    "bookmarks": "ブックマーク",
+    "newCollection": "新しいコレクション",
+    "collectionNamePlaceholder": "コレクション名",
+    "createCollection": "コレクションを作成",
+    "loadingCollections": "コレクションを読み込み中...",
+    "addedToCollection": "投稿を「{name}」に追加しました。",
+    "removedFromCollection": "投稿を「{name}」から削除しました。",
+    "updateCollectionFailed": "コレクションの更新に失敗しました。",
+    "collectionCreated": "コレクションを作成し、投稿を保存しました。",
+    "createCollectionFailed": "コレクションの作成に失敗しました。"
   }
 }

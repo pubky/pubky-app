@@ -1234,10 +1234,45 @@
   },
   "collections": {
     "title": "Minhas coleções",
+    "new": {
+      "cta": "Nova coleção",
+      "title": "Nova coleção",
+      "nameLabel": "Título",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "Descrição",
+      "descriptionPlaceholder": "O melhor dos maiores contribuidores do Bitcoin",
+      "backgroundLabel": "Plano de fundo",
+      "addImage": "Adicionar imagem",
+      "removeImage": "Remover imagem",
+      "coverImageInvalid": "A imagem de capa deve ser um arquivo de imagem.",
+      "coverImageTooLarge": "A imagem de capa é muito grande.",
+      "nameRequired": "O título da coleção é obrigatório.",
+      "cancel": "Cancelar",
+      "save": "Salvar coleção",
+      "saving": "Salvando...",
+      "created": "Coleção {name} criada",
+      "createFailed": "Falha ao criar a coleção."
+    },
     "bookmarks": {
       "title": "Favoritos",
       "description": "Tudo o que você quer salvar para mais tarde."
     },
     "private": "PRIVADO"
+  },
+  "postSave": {
+    "title": "Salvar publicação",
+    "description": "Escolha onde esta publicação deve ser salva.",
+    "open": "Salvar publicação",
+    "loading": "Carregando opções de salvamento",
+    "bookmarks": "Favoritos",
+    "newCollection": "Nova coleção",
+    "collectionNamePlaceholder": "Nome da coleção",
+    "createCollection": "Criar coleção",
+    "loadingCollections": "Carregando coleções...",
+    "addedToCollection": "Publicação adicionada a {name}.",
+    "removedFromCollection": "Publicação removida de {name}.",
+    "updateCollectionFailed": "Falha ao atualizar a coleção.",
+    "collectionCreated": "Coleção criada e publicação salva.",
+    "createCollectionFailed": "Falha ao criar a coleção."
   }
 }

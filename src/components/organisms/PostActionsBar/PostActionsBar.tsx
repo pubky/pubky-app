@@ -1,16 +1,15 @@
 'use client';
 
 import { cva } from 'class-variance-authority';
-import { Bookmark, Ellipsis, Loader2, MessageCircle, Repeat, Tag } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { Ellipsis, MessageCircle, Repeat, Tag } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn } from '@/libs/utils/utils';
 import { PostMenuActions } from '../PostMenuActions/PostMenuActions';
+import { PostSavePicker } from '../PostSavePicker/PostSavePicker';
 import { PostActionsBarSkeleton } from './PostActionsBar.skeleton';
 import type { ActionButtonConfig, PostActionsBarProps } from './PostActionsBar.types';
 
@@ -44,16 +43,8 @@ export function PostActionsBar({
   className,
   variant = 'default',
 }: PostActionsBarProps) {
-  const t = useTranslations('common');
   const { postCounts, isLoading: isCountsLoading } = usePostCounts(postId);
-  const {
-    isBookmarked,
-    isLoading: isBookmarkLoading,
-    isToggling: isBookmarkToggling,
-    toggle: toggleBookmark,
-  } = useBookmark(postId);
   const { requireAuth } = useRequireAuth();
-  const isBookmarkBusy = isBookmarkLoading || isBookmarkToggling;
   const buttonClassName = postActionsButtonVariants({
     variant,
   });
@@ -91,18 +82,6 @@ export function PostActionsBar({
       onClick: () => requireAuth(() => onRepostClick?.()),
       ariaLabel: `Repost (${postCounts.reposts})`,
     },
-    {
-      id: 'bookmark',
-      icon: isBookmarkBusy ? Loader2 : Bookmark,
-      onClick: () => requireAuth(() => toggleBookmark()),
-      ariaLabel: isBookmarkBusy ? t('loadingBookmark') : isBookmarked ? t('removeBookmark') : t('addBookmark'),
-      className: 'w-10',
-      iconProps: {
-        fill: isBookmarked && !isBookmarkBusy ? 'currentColor' : 'none',
-        className: isBookmarkBusy ? 'animate-spin' : undefined,
-      },
-      disabled: isBookmarkBusy,
-    },
   ];
   const moreButton = (
     <Button {...commonButtonProps} aria-label="More options" data-cy="post-more-btn">
@@ -131,6 +110,7 @@ export function PostActionsBar({
           </Button>
         ),
       )}
+      <PostSavePicker postId={postId} buttonClassName={buttonClassName} />
       <PostMenuActions postId={postId} trigger={moreButton} />
     </Container>
   );

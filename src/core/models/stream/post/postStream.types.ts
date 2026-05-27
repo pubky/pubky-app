@@ -1,9 +1,9 @@
-import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 
 // Post Stream ID Pattern: sorting:source:kind
 // - SORTING: timeline (recent), total_engagement (popularity)
 // - SOURCE: all, following, friends, me, bookmarks, post_replies, author, author_replies
-// - KIND: all, short (posts), long (articles), image, video, link, file
+// - KIND: all, short (posts), long (articles), image, video, link, file, collection
 //
 // Dynamic Post Reply Stream ID Pattern: postReplies:compositePostId
 // - compositePostId format: author:postId (e.g., "did:key:abc123:post456")
@@ -103,14 +103,20 @@ export enum PostStreamTypes {
 
 export type ReplyStreamCompositeId = `${StreamSource.REPLIES}:${string}`;
 export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
+export type AuthorKindStreamCompositeId = `${StreamSource.AUTHOR}:${string}:${StreamKind}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
 
 export function buildPostReplyStreamId(compositePostId: string): ReplyStreamCompositeId {
   return `${StreamSource.REPLIES}:${compositePostId}`;
 }
 
+export function buildAuthorCollectionStreamId(authorId: string): AuthorKindStreamCompositeId {
+  return `${StreamSource.AUTHOR}:${authorId}:${StreamKind.COLLECTION}`;
+}
+
 export type PostStreamId =
   | PostStreamTypes
   | ReplyStreamCompositeId
   | AuthorStreamCompositeId
+  | AuthorKindStreamCompositeId
   | AuthorRepliesStreamCompositeId;

@@ -35,7 +35,7 @@ export function CollectionCard({
       href={href}
       aria-label={title}
       data-cy="collection-card"
-      className="block w-full lg:max-w-[588px]"
+      className="block w-full lg:max-w-xl"
     >
       <Card className="gap-3 rounded-md py-0">
         <CardContent className="flex flex-col gap-3 p-6">
@@ -58,7 +58,7 @@ export function CollectionCard({
                   <Typography
                     as="span"
                     overrideDefaults
-                    className="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+                    className="text-xs leading-4 font-medium tracking-widest uppercase"
                   >
                     {count}
                   </Typography>
@@ -69,7 +69,7 @@ export function CollectionCard({
                 <Typography
                   as="span"
                   overrideDefaults
-                  className="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+                  className="text-xs leading-4 font-medium tracking-widest uppercase"
                 >
                   {visibilityLabel}
                 </Typography>

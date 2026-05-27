@@ -1234,10 +1234,45 @@
   },
   "collections": {
     "title": "Meine Sammlungen",
+    "new": {
+      "cta": "Neue Sammlung",
+      "title": "Neue Sammlung",
+      "nameLabel": "Titel",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "Beschreibung",
+      "descriptionPlaceholder": "Das Beste von den größten Beitragenden in Bitcoin",
+      "backgroundLabel": "Hintergrund",
+      "addImage": "Bild hinzufügen",
+      "removeImage": "Bild entfernen",
+      "coverImageInvalid": "Das Coverbild muss eine Bilddatei sein.",
+      "coverImageTooLarge": "Das Coverbild ist zu groß.",
+      "nameRequired": "Sammlungstitel ist erforderlich.",
+      "cancel": "Abbrechen",
+      "save": "Sammlung speichern",
+      "saving": "Wird gespeichert...",
+      "created": "Sammlung {name} erstellt",
+      "createFailed": "Sammlung konnte nicht erstellt werden."
+    },
     "bookmarks": {
       "title": "Lesezeichen",
       "description": "Alles, was du für später speichern möchtest."
     },
     "private": "PRIVAT"
+  },
+  "postSave": {
+    "title": "Beitrag speichern",
+    "description": "Wähle, wo dieser Beitrag gespeichert werden soll.",
+    "open": "Beitrag speichern",
+    "loading": "Speicheroptionen werden geladen",
+    "bookmarks": "Lesezeichen",
+    "newCollection": "Neue Sammlung",
+    "collectionNamePlaceholder": "Name der Sammlung",
+    "createCollection": "Sammlung erstellen",
+    "loadingCollections": "Sammlungen werden geladen...",
+    "addedToCollection": "Beitrag zu {name} hinzugefügt.",
+    "removedFromCollection": "Beitrag aus {name} entfernt.",
+    "updateCollectionFailed": "Sammlung konnte nicht aktualisiert werden.",
+    "collectionCreated": "Sammlung erstellt und Beitrag gespeichert.",
+    "createCollectionFailed": "Sammlung konnte nicht erstellt werden."
   }
 }

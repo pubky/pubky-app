@@ -27,6 +27,31 @@ export const TAG_MAX_LENGTH = validationLimits.tagLabelMaxLength;
 /** Maximum character length for feedback comments */
 export const FEEDBACK_MAX_CHARACTER_LENGTH = 1000;
 
+/** Maximum character length for collection names */
+export const COLLECTION_NAME_MAX_CHARACTER_LENGTH = validationLimits.collectionNameMaxLength;
+
+/** Maximum character length for collection descriptions */
+export const COLLECTION_DESCRIPTION_MAX_CHARACTER_LENGTH = validationLimits.collectionDescriptionMaxLength;
+
+/** Maximum number of items allowed per collection */
+export const COLLECTION_ITEMS_MAX_COUNT = validationLimits.collectionItemsMaxCount;
+
+/** Maximum character length for serialized collection content */
+export const COLLECTION_CONTENT_MAX_LENGTH = validationLimits.collectionContentMaxLength;
+
+/** Maximum character length for a collection item URI (same limit as post attachment URLs in spec). */
+export const COLLECTION_ITEM_URI_MAX_LENGTH = validationLimits.postAttachmentUrlMaxLength;
+
+/**
+ * Maximum character length for a collection cover image URL.
+ * Reuses the spec's post attachment URL limit (cover_image is bound to the
+ * same `post_attachment_url_max_length` and protocol allowlist on the BE).
+ */
+export const COLLECTION_COVER_IMAGE_URL_MAX_LENGTH = validationLimits.postAttachmentUrlMaxLength;
+
+/** Allowed URL protocols for collection item URIs and cover images (spec post-attachment allowlist). */
+export const COLLECTION_COVER_IMAGE_ALLOWED_PROTOCOLS = validationLimits.postAllowedAttachmentProtocols;
+
 /**
  * Supported MIME types for file attachments.
  * Imported directly from pubky-app-specs to ensure consistency.

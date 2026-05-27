@@ -7,10 +7,12 @@ import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import type { CollectionContentInput } from '@/models/post/collection/collectionPost.types';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { PostValidatorData } from '@/pipes/pipes.types';
+import { CollectionPostContent } from '@/pipes/post/post.collection';
 
 export class PostNormalizer {
   private constructor() {}
@@ -26,10 +28,37 @@ export class PostNormalizer {
    */
   static mapKindToEnum(kind: string): PubkyAppPostKind {
     const normalized = kind.toLowerCase();
-    if (normalized === 'long' || normalized === '1') {
+    if (normalized === 'long' || normalized === String(PubkyAppPostKind.Long)) {
       return PubkyAppPostKind.Long;
     }
+    if (normalized === 'collection' || normalized === String(PubkyAppPostKind.Collection)) {
+      return PubkyAppPostKind.Collection;
+    }
     return PubkyAppPostKind.Short;
+  }
+
+  static async toCollection(collection: CollectionContentInput, specsPubky: Pubky): Promise<PostResult> {
+    try {
+      const builder = PubkySpecsSingleton.get(specsPubky);
+      const normalized = CollectionPostContent.normalize(collection);
+      return builder.createCollectionPost(
+        normalized.name,
+        normalized.description,
+        normalized.items,
+        normalized.cover_image,
+      );
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, message, {
+        service: ErrorService.PubkyAppSpecs,
+        operation: 'createCollectionPost',
+        context: { specsPubky, itemCount: collection.items?.length ?? 0 },
+        cause: error,
+      });
+    }
   }
 
   static async to(post: PostValidatorData, specsPubky: Pubky): Promise<PostResult> {
@@ -62,10 +91,12 @@ export class PostNormalizer {
       if (error instanceof AppError) {
         throw error;
       }
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
+      const message = error instanceof Error ? error.message : String(error);
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, message, {
         service: ErrorService.PubkyAppSpecs,
         operation: 'createPost',
         context: { post, specsPubky },
+        cause: error,
       });
     }
   }

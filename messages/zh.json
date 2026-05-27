@@ -1228,10 +1228,45 @@
   },
   "collections": {
     "title": "我的收藏集",
+    "new": {
+      "cta": "新建收藏集",
+      "title": "新建收藏集",
+      "nameLabel": "标题",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "描述",
+      "descriptionPlaceholder": "来自比特币最大贡献者的精选",
+      "backgroundLabel": "背景",
+      "addImage": "添加图片",
+      "removeImage": "移除图片",
+      "coverImageInvalid": "封面图片必须是图片文件。",
+      "coverImageTooLarge": "封面图片太大。",
+      "nameRequired": "收藏集标题为必填项。",
+      "cancel": "取消",
+      "save": "保存收藏集",
+      "saving": "保存中...",
+      "created": "收藏集 {name} 已创建",
+      "createFailed": "创建收藏集失败。"
+    },
     "bookmarks": {
       "title": "书签",
       "description": "保存你想稍后查看的所有内容。"
     },
     "private": "私密"
+  },
+  "postSave": {
+    "title": "保存帖子",
+    "description": "选择将此帖子保存到哪里。",
+    "open": "保存帖子",
+    "loading": "正在加载保存选项",
+    "bookmarks": "书签",
+    "newCollection": "新建收藏集",
+    "collectionNamePlaceholder": "收藏集名称",
+    "createCollection": "创建收藏集",
+    "loadingCollections": "正在加载收藏集...",
+    "addedToCollection": "帖子已添加到 {name}。",
+    "removedFromCollection": "帖子已从 {name} 移除。",
+    "updateCollectionFailed": "更新收藏集失败。",
+    "collectionCreated": "收藏集已创建并保存帖子。",
+    "createCollectionFailed": "创建收藏集失败。"
   }
 }

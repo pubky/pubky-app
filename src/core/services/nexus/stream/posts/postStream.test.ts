@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, test, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import {
+  buildAuthorCollectionStreamId,
+  type PostStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
 import { type NexusPost, type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import {
@@ -589,6 +593,7 @@ describe('createPostStreamParams', () => {
       { kind: 'video', tags: 'tutorials,vlogs', expectedKind: StreamKind.VIDEO },
       { kind: 'link', tags: 'resources,refs', expectedKind: StreamKind.LINK },
       { kind: 'file', tags: 'docs,pdfs', expectedKind: StreamKind.FILE },
+      { kind: 'collection', tags: 'lists,research', expectedKind: StreamKind.COLLECTION },
     ])('should handle tags in $kind content stream', ({ kind, tags, expectedKind }) => {
       const streamIdWithTags = `timeline:bookmarks:${kind}:${tags}` as PostStreamId;
       const result = createPostStreamParams({
@@ -602,6 +607,25 @@ describe('createPostStreamParams', () => {
       expect(result.params.tags).toBe(tags);
       expect(result.params.kind).toBe(expectedKind);
       expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
+    });
+  });
+
+  describe('Collection streams', () => {
+    it('should fetch authored collections with source author and kind collection', () => {
+      const authorId = 'author-pubky-id';
+      const result = createPostStreamParams({
+        streamId: buildAuthorCollectionStreamId(authorId),
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.invokeEndpoint).toBe(StreamSource.AUTHOR);
+      expect(result.extraParams.author_id).toBe(authorId);
+      expect(result.extraParams.post_id).toBeUndefined();
+      expect(result.params.kind).toBe(StreamKind.COLLECTION);
+      expect(result.params.limit).toBe(20);
     });
   });
 });

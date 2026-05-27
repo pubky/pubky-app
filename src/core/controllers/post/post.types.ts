@@ -12,6 +12,27 @@ export interface TCreatePostParams {
   originalPostId?: string;
 }
 
+export interface TCreateCollectionParams {
+  authorId: Pubky;
+  name: string;
+  description?: string | null;
+  items?: string[] | null;
+  /**
+   * Optional cover image. Either:
+   * - a `File` (uploaded to the homeserver, the resulting `pubky://` URL is
+   *   stored as `cover_image` in the collection envelope), or
+   * - a string URL already accessible by Nexus (pubky/http/https), or
+   * - `null` / `undefined` for no cover.
+   */
+  coverImage?: File | string | null;
+}
+
+export interface TUpdateCollectionItemParams {
+  collectionId: string;
+  postId: string;
+  shouldAdd: boolean;
+}
+
 export interface TDeletePostParams {
   compositePostId: string;
 }

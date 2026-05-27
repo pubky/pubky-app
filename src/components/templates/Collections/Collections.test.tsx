@@ -112,6 +112,7 @@ describe('Collections', () => {
     render(<Collections />);
 
     expect(screen.getByRole('heading', { name: 'My Collections' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New Collection' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Bookmarks' })).toHaveAttribute('href', '/collections/bookmarks');
     expect(screen.getByText('Everything you want to save for later.')).toBeInTheDocument();
     expect(screen.getByText('29')).toBeInTheDocument();

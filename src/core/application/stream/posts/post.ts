@@ -289,6 +289,10 @@ export class PostStreamApplication {
     };
   }
 
+  static async fetchStreamSlice(params: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
+    return await this.fetchStreamFromNexus(params);
+  }
+
   // ============================================================================
   // Internal Helpers
   // ============================================================================

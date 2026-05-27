@@ -446,11 +446,13 @@ describe('posts', () => {
     cy.findFirstPostInFeedFiltered(postContent1, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-bookmark-btn"]').click();
     });
+    cy.get('[data-cy="post-save-bookmarks-option"]').click();
 
     createQuickPost(postContent2);
     cy.findFirstPostInFeedFiltered(postContent2, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-bookmark-btn"]').click();
     });
+    cy.get('[data-cy="post-save-bookmarks-option"]').click();
 
     cy.get('a[href="/collections"]').first().click();
     cy.location('pathname').should('eq', '/collections');
@@ -467,6 +469,7 @@ describe('posts', () => {
       .then(($posts) => {
         $posts.each((_idx, element) => {
           cy.wrap(element).find('[data-cy="post-bookmark-btn"]').click();
+          cy.get('[data-cy="post-save-bookmarks-option"]').click();
         });
       });
 

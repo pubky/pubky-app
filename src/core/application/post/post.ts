@@ -10,19 +10,24 @@ import type {
   TFetchMorePostTagsParams,
   TFetchPostTaggersParams,
 } from '@/controllers/post/post.types';
+import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { parseCompositeId } from '@/models/models.utils';
+import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
+import { buildAuthorCollectionStreamId } from '@/models/stream/post/postStream.types';
+import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostService } from '@/services/local/post/post';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
@@ -142,6 +147,46 @@ export class PostApplication {
     });
 
     return await LocalPostService.readDetails({ postId: compositeId });
+  }
+
+  static async getAuthoredCollections({ authorId }: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
+    const streamId = buildAuthorCollectionStreamId(authorId);
+    const stream = await LocalStreamPostsService.read({ streamId });
+
+    if (!stream) return null;
+
+    const details = await LocalPostService.readDetailsByIdsPreserveOrder(stream.stream);
+
+    return details
+      .filter((post): post is PostDetailsModelSchema => post !== undefined && post.kind === 'collection')
+      .map((post) => {
+        const content = CollectionPostContent.parse(post.content);
+        return content ? { details: post, content } : null;
+      })
+      .filter((collection): collection is CollectionPost => collection !== null);
+  }
+
+  static async fetchAuthoredCollections({
+    authorId,
+    viewerId,
+  }: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
+    const streamId = buildAuthorCollectionStreamId(authorId);
+    const { cacheMissPostIds } = await PostStreamApplication.fetchStreamSlice({
+      streamId,
+      streamHead: SKIP_FETCH_NEW_POSTS,
+      streamTail: NOT_FOUND_CACHED_STREAM,
+      limit: 100,
+      viewerId: viewerId ?? null,
+    });
+
+    if (cacheMissPostIds.length > 0) {
+      await PostStreamApplication.fetchMissingPostsFromNexus({
+        cacheMissPostIds,
+        viewerId,
+      });
+    }
+
+    return await this.getAuthoredCollections({ authorId, viewerId });
   }
 
   static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags }: TCreatePostInput) {

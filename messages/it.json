@@ -1234,10 +1234,45 @@
   },
   "collections": {
     "title": "Le mie collezioni",
+    "new": {
+      "cta": "Nuova collezione",
+      "title": "Nuova collezione",
+      "nameLabel": "Titolo",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "Descrizione",
+      "descriptionPlaceholder": "Il meglio dai maggiori contributori di Bitcoin",
+      "backgroundLabel": "Sfondo",
+      "addImage": "Aggiungi immagine",
+      "removeImage": "Rimuovi immagine",
+      "coverImageInvalid": "L'immagine di copertina deve essere un file immagine.",
+      "coverImageTooLarge": "L'immagine di copertina è troppo grande.",
+      "nameRequired": "Il titolo della collezione è obbligatorio.",
+      "cancel": "Annulla",
+      "save": "Salva collezione",
+      "saving": "Salvataggio...",
+      "created": "Collezione {name} creata",
+      "createFailed": "Impossibile creare la collezione."
+    },
     "bookmarks": {
       "title": "Segnalibri",
       "description": "Tutto ciò che vuoi salvare per dopo."
     },
     "private": "PRIVATO"
+  },
+  "postSave": {
+    "title": "Salva post",
+    "description": "Scegli dove salvare questo post.",
+    "open": "Salva post",
+    "loading": "Caricamento opzioni di salvataggio",
+    "bookmarks": "Segnalibri",
+    "newCollection": "Nuova collezione",
+    "collectionNamePlaceholder": "Nome della collezione",
+    "createCollection": "Crea collezione",
+    "loadingCollections": "Caricamento collezioni...",
+    "addedToCollection": "Post aggiunto a {name}.",
+    "removedFromCollection": "Post rimosso da {name}.",
+    "updateCollectionFailed": "Impossibile aggiornare la collezione.",
+    "collectionCreated": "Collezione creata e post salvato.",
+    "createCollectionFailed": "Impossibile creare la collezione."
   }
 }

@@ -44,7 +44,8 @@ export function createPostStreamParams({
   }
   params.limit = limit;
   params.order = order;
-  let extraParams = handleNotCommonStreamParams({ authorId: sorting, postId: content });
+  const postId = invokeEndpoint === StreamSource.REPLIES ? content : undefined;
+  let extraParams = handleNotCommonStreamParams({ authorId: sorting, postId });
   setStreamPagination({ params, streamTail, streamHead });
   return { params, invokeEndpoint, extraParams };
 }
@@ -124,6 +125,10 @@ export function breakDownStreamId(streamId: PostStreamId): TStreamIdBreakdown {
       // [pubky, post_replies, postId]
       return [invokeEndpoint, toStreamSource({ value: sorting }), kind, limitTags];
     }
+    if (sorting === StreamSource.AUTHOR) {
+      // [author, pubky, kind]
+      return [invokeEndpoint, toStreamSource({ value: sorting }), kind, limitTags];
+    }
     // Applies to timeline pattern
     return [sorting, toStreamSource({ value: invokeEndpoint }), kind, limitTags];
   }
@@ -161,6 +166,7 @@ function parseContent(content: string): StreamKind | undefined {
     video: StreamKind.VIDEO,
     link: StreamKind.LINK,
     file: StreamKind.FILE,
+    collection: StreamKind.COLLECTION,
   };
   return contentMap[content];
 }
