@@ -2,9 +2,10 @@
 
 import { PostController } from '@/controllers/post/post';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import type { CollectionPost } from '@/models/post/collection/collectionPost.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
-type AuthoredCollections = NonNullable<Awaited<ReturnType<typeof PostController.getAuthoredCollections>>>;
+type AuthoredCollections = CollectionPost[];
 
 type UseAuthoredCollectionsResult = {
   collections: AuthoredCollections;
