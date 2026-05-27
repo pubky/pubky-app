@@ -326,13 +326,15 @@ describe('ContentLayout', () => {
 describe('ContentLayout - Custom Feed Layout Override', () => {
   beforeEach(() => {
     mockUseCustomFeed.mockReturnValue(undefined);
+    mockHomeLayout = 'columns';
   });
 
-  it('hides sidebars when custom feed layout is wide', () => {
+  it('hides sidebars when custom feed route layout is wide', () => {
     mockUseCustomFeed.mockReturnValue({ layout: 'wide' });
 
     render(
       <ContentLayout
+        feedVariant="custom"
         showLeftSidebar={true}
         leftSidebarContent={<div data-testid="left-sidebar-content">Left Sidebar</div>}
         showRightSidebar={true}
@@ -347,11 +349,12 @@ describe('ContentLayout - Custom Feed Layout Override', () => {
     expect(screen.queryByText('Right Sidebar')).not.toBeInTheDocument();
   });
 
-  it('shows ButtonFilters when custom feed layout is wide and drawer content exists', () => {
+  it('shows ButtonFilters when custom feed route layout is wide and drawer content exists', () => {
     mockUseCustomFeed.mockReturnValue({ layout: 'wide' });
 
     render(
       <ContentLayout
+        feedVariant="custom"
         showLeftSidebar={true}
         leftDrawerContent={<div>Left Drawer</div>}
         showRightSidebar={true}
@@ -365,11 +368,12 @@ describe('ContentLayout - Custom Feed Layout Override', () => {
     expect(screen.getByTestId('button-filters-right')).toBeInTheDocument();
   });
 
-  it('keeps sidebars visible when custom feed layout is columns', () => {
+  it('keeps sidebars visible when custom feed route layout is columns', () => {
     mockUseCustomFeed.mockReturnValue({ layout: 'columns' });
 
     render(
       <ContentLayout
+        feedVariant="custom"
         showLeftSidebar={true}
         leftSidebarContent={<div data-testid="left-sidebar-content">Left Sidebar</div>}
         showRightSidebar={true}
@@ -385,12 +389,13 @@ describe('ContentLayout - Custom Feed Layout Override', () => {
     expect(rightElements.length).toBeGreaterThan(0);
   });
 
-  it('custom feed wide layout overrides home store columns layout', () => {
+  it('custom feed route wide layout overrides home store columns layout', () => {
     // Home store is 'columns' by default in mock, custom feed overrides to 'wide'
     mockUseCustomFeed.mockReturnValue({ layout: 'wide' });
 
     render(
       <ContentLayout
+        feedVariant="custom"
         showLeftSidebar={true}
         leftSidebarContent={<div data-testid="left-sidebar-content">Left Sidebar</div>}
         leftDrawerContent={<div>Left Drawer</div>}
@@ -405,11 +410,34 @@ describe('ContentLayout - Custom Feed Layout Override', () => {
     expect(screen.getByTestId('button-filters-left')).toBeInTheDocument();
   });
 
-  it('does not show ButtonFilters when custom feed layout is wide but no drawer content', () => {
+  it('uses home store layout on home route even when a latched custom feed layout is wide', () => {
     mockUseCustomFeed.mockReturnValue({ layout: 'wide' });
 
     render(
-      <ContentLayout showLeftSidebar={true} showRightSidebar={true}>
+      <ContentLayout
+        feedVariant="home"
+        showLeftSidebar={true}
+        leftSidebarContent={<div data-testid="left-sidebar-content">Left Sidebar</div>}
+        leftDrawerContent={<div>Left Drawer</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div data-testid="right-sidebar-content">Right Sidebar</div>}
+        rightDrawerContent={<div>Right Drawer</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.getByText('Left Sidebar')).toBeInTheDocument();
+    expect(screen.getByText('Right Sidebar')).toBeInTheDocument();
+    expect(screen.queryByTestId('button-filters-left')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('button-filters-right')).not.toBeInTheDocument();
+  });
+
+  it('does not show ButtonFilters when custom feed route layout is wide but no drawer content', () => {
+    mockUseCustomFeed.mockReturnValue({ layout: 'wide' });
+
+    render(
+      <ContentLayout feedVariant="custom" showLeftSidebar={true} showRightSidebar={true}>
         <div>Test Content</div>
       </ContentLayout>,
     );
@@ -423,6 +451,7 @@ describe('ContentLayout - Custom Feed Layout Override', () => {
 
     const { container } = render(
       <ContentLayout
+        feedVariant="custom"
         showLeftSidebar={true}
         leftSidebarContent={<div>Left Sidebar</div>}
         leftDrawerContent={<div>Left Drawer</div>}
@@ -441,6 +470,7 @@ describe('ContentLayout - Custom Feed Layout Override', () => {
 
     const { container } = render(
       <ContentLayout
+        feedVariant="custom"
         showLeftSidebar={true}
         leftSidebarContent={<div>Left Sidebar</div>}
         showRightSidebar={true}
