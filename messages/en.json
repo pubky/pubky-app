@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "Create account",
       "joinNow": "Join now",
       "identityKeys": "Identity keys",
       "usePubkyRing": "Use Pubky Ring",

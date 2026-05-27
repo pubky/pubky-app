@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "إنشاء حساب",
       "joinNow": "انضم الآن",
       "identityKeys": "مفاتيح الهوية",
       "usePubkyRing": "استخدام Pubky Ring",

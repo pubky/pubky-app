@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "アカウントを作成",
       "joinNow": "今すぐ参加",
       "identityKeys": "IDキー",
       "usePubkyRing": "Pubky Ringを使用",

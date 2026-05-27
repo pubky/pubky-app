@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "创建账户",
       "joinNow": "立即加入",
       "identityKeys": "身份密钥",
       "usePubkyRing": "使用 Pubky Ring",
