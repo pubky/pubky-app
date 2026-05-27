@@ -7,18 +7,12 @@ export const FAQ_SECTIONS: FAQSection[] = [
     questions: [
       {
         id: '1',
-        question: 'Why does Pubky require invite codes?',
-        answer:
-          "Pubky uses invite codes as a temporary measure to prevent spam and server overload. Users need an invite code to create a user on our Homeserver. We don't create a user for the Pubky App, but on our Homeserver. As the infrastructure improves and more homeservers come online, invite codes may no longer be necessary.",
-      },
-      {
-        id: '2',
         question: 'How do I use Pubky Ring with the web app?',
         answer:
           'First, create your keypair in the Pubky Ring app. Then visit the Pubky web app and log in using the same keypair. The apps are connected through your cryptographic identity.',
       },
       {
-        id: '3',
+        id: '2',
         question: 'Why does login sometimes fail when using the PWA on Android?',
         answer: `Some browsers focused on security and privacy, like Vanadium or Tor, disable Just-In-Time (JIT) compilation for JavaScript by default, which prevents Pubky App from functioning properly.
 
@@ -48,8 +42,7 @@ To restore with a .pkarr file:
       {
         id: '5',
         question: 'Can I restore my Pubky account on another device?',
-        answer:
-          'Yes, if you have your .pkarr file or seed phrase. (Seed phrase support will be added in future versions of Pubky Ring.)',
+        answer: 'Yes, if you have your .pkarr file or seed phrase.',
       },
       {
         id: '6',
@@ -66,7 +59,7 @@ To restore with a .pkarr file:
         id: '8',
         question: 'I downloaded a .txt file instead of a .pkarr backup. What do I do?',
         answer:
-          'This happens if you chose the mnemonic (seed phrase) backup option. Pubky Ring does not yet support seed import. Wait for future updates or recreate your account with a .pkarr backup.',
+          'This happens if you chose the mnemonic (seed phrase) backup option. Wait for future updates or recreate your account with a .pkarr backup.',
       },
       {
         id: '9',
