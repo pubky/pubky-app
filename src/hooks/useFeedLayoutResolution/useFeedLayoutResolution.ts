@@ -21,14 +21,7 @@ export interface FeedLayoutResolution {
   isPhoneViewport: boolean;
 }
 
-export const VISUAL_SUPPORTED_FEED_VARIANTS = new Set<TimelineFeedVariant>([
-  TIMELINE_FEED_VARIANT.HOME,
-  TIMELINE_FEED_VARIANT.BOOKMARKS,
-  TIMELINE_FEED_VARIANT.CUSTOM,
-  TIMELINE_FEED_VARIANT.SEARCH,
-]);
-
-export const WIDE_SUPPORTED_FEED_VARIANTS = new Set<TimelineFeedVariant>([
+const RICH_LAYOUT_SUPPORTED_FEED_VARIANTS = new Set<TimelineFeedVariant>([
   TIMELINE_FEED_VARIANT.HOME,
   TIMELINE_FEED_VARIANT.BOOKMARKS,
   TIMELINE_FEED_VARIANT.CUSTOM,
@@ -41,9 +34,9 @@ export function resolveFeedLayout({
   isPhoneViewport,
 }: FeedLayoutResolutionInput): FeedLayoutResolution {
   const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
-  const isVisualSupported = !isPhoneViewport && VISUAL_SUPPORTED_FEED_VARIANTS.has(variant);
+  const isVisualSupported = !isPhoneViewport && RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
   const isWideRequested = requestedLayout === LAYOUT.WIDE;
-  const isWideSupported = WIDE_SUPPORTED_FEED_VARIANTS.has(variant);
+  const isWideSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
   const effectiveLayout =
     (isVisualRequested && !isVisualSupported) || (isWideRequested && !isWideSupported)
       ? LAYOUT.COLUMNS
