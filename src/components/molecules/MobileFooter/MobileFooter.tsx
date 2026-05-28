@@ -94,7 +94,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
     <Container
       overrideDefaults
       className={cn(
-        'fixed bottom-0 z-40 w-full overflow-x-auto bg-linear-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden',
+        'fixed bottom-0 z-40 w-full overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden',
         className,
       )}
       style={
