@@ -47,7 +47,7 @@ describe('ActionButtons', () => {
     fireEvent.click(exploreButton);
 
     expect(exploreButton).toBeInTheDocument();
-    expect(document.querySelector('.lucide-house')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-eye')).toBeInTheDocument();
     expect(mockOnExplore).toHaveBeenCalledTimes(1);
   });
 });

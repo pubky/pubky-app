@@ -1,5 +1,5 @@
 'use client';
-import { Activity, SlidersHorizontal, UserRoundPlus } from 'lucide-react';
+import { Activity, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
@@ -51,19 +51,19 @@ export function MobileHeader({
 
         <Logo />
 
-        {/* Right icon - Join for unauthenticated, Activity for authenticated */}
-        {!isAuthenticated ? (
+        {/* Right icon - always Activity; action depends on auth */}
+        {showRightButton ? (
           <Button
-            variant="secondary"
+            variant="ghost"
             size="icon"
-            className="size-12"
-            onClick={() => setShowSignInDialog(true)}
-            aria-label="Join Pubky"
+            onClick={() => {
+              if (!isAuthenticated) {
+                setShowSignInDialog(true);
+                return;
+              }
+              onRightIconClick?.();
+            }}
           >
-            <UserRoundPlus className="size-6" />
-          </Button>
-        ) : showRightButton ? (
-          <Button variant="ghost" size="icon" onClick={onRightIconClick}>
             <Activity className="size-6" />
           </Button>
         ) : (

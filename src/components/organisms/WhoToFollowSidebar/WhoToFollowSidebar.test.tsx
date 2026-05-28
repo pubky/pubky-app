@@ -6,6 +6,7 @@ const hooksMocks = vi.hoisted(() => ({
   useUserStream: vi.fn(),
   toggleFollow: vi.fn(),
   pathname: '/',
+  currentUserPubky: 'current-user',
 }));
 
 vi.mock('next/navigation', () => ({
@@ -17,6 +18,13 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/hooks/useUserStream/useUserStream', () => ({
   useUserStream: hooksMocks.useUserStream,
+}));
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn((selector) => {
+    const state = { currentUserPubky: hooksMocks.currentUserPubky };
+    return selector ? selector(state) : state;
+  }),
 }));
 
 vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
@@ -51,6 +59,7 @@ describe('WhoToFollowSidebar', () => {
     hooksMocks.useUserStream.mockReset();
     hooksMocks.toggleFollow.mockResolvedValue(undefined);
     hooksMocks.pathname = '/';
+    hooksMocks.currentUserPubky = 'current-user';
   });
 
   it('shows loading skeletons while stream is loading', () => {
@@ -142,6 +151,80 @@ describe('WhoToFollowSidebar', () => {
         }),
       );
     });
+  });
+
+  it('uses recommended stream for authenticated users', () => {
+    hooksMocks.currentUserPubky = 'signed-in-user';
+    hooksMocks.useUserStream.mockReturnValue({
+      users: [],
+      userIds: [],
+      isLoading: false,
+      isLoadingMore: false,
+      hasMore: false,
+      error: null,
+      loadMore: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    render(<WhoToFollowSidebar />);
+
+    expect(hooksMocks.useUserStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        streamId: 'recommended:all:all',
+        includeRelationships: true,
+        excludeFollowing: true,
+      }),
+    );
+  });
+
+  it('uses most followed stream for guests', () => {
+    hooksMocks.currentUserPubky = '';
+    hooksMocks.useUserStream.mockReturnValue({
+      users: [],
+      userIds: [],
+      isLoading: false,
+      isLoadingMore: false,
+      hasMore: false,
+      error: null,
+      loadMore: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    render(<WhoToFollowSidebar />);
+
+    expect(hooksMocks.useUserStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        streamId: 'most_followed:all:all',
+        includeRelationships: false,
+        excludeFollowing: false,
+      }),
+    );
+  });
+
+  it('renders only 3 users for guests', () => {
+    hooksMocks.currentUserPubky = '';
+    hooksMocks.useUserStream.mockReturnValue({
+      users: [
+        { id: 'user-1', name: 'User One', image: null, avatarUrl: null, isFollowing: false },
+        { id: 'user-2', name: 'User Two', image: null, avatarUrl: null, isFollowing: false },
+        { id: 'user-3', name: 'User Three', image: null, avatarUrl: null, isFollowing: false },
+        { id: 'user-4', name: 'User Four', image: null, avatarUrl: null, isFollowing: false },
+      ],
+      userIds: ['user-1', 'user-2', 'user-3', 'user-4'],
+      isLoading: false,
+      isLoadingMore: false,
+      hasMore: false,
+      error: null,
+      loadMore: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    render(<WhoToFollowSidebar />);
+
+    expect(screen.getByText('User One')).toBeInTheDocument();
+    expect(screen.getByText('User Two')).toBeInTheDocument();
+    expect(screen.getByText('User Three')).toBeInTheDocument();
+    expect(screen.queryByText('User Four')).not.toBeInTheDocument();
   });
 });
 

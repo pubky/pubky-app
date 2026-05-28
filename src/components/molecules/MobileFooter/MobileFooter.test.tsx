@@ -396,17 +396,24 @@ describe('MobileFooter', () => {
     expect(footerContainer).toHaveClass('transition-transform', 'duration-75');
   });
 
-  it('renders public explore navigation without account links when unauthenticated on a core explore route', () => {
+  it('renders public explore navigation with gated account actions when unauthenticated on a core explore route', () => {
     mockCurrentUserPubky = null;
     mockIsCoreExploreRoute = true;
 
     render(<MobileFooter />);
 
     const links = screen.getAllByRole('link');
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/search', '/hot']);
-    expect(document.querySelector('.lucide-bookmark')).not.toBeInTheDocument();
-    expect(document.querySelector('.lucide-settings')).not.toBeInTheDocument();
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/home',
+      '/search',
+      '/hot',
+      '/bookmarks',
+      '/settings/account',
+    ]);
+    expect(document.querySelector('.lucide-bookmark')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
     expect(screen.queryByTestId('avatar-with-fallback')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join Pubky' })).toBeInTheDocument();
   });
 
   it('does not render on unauthenticated dynamic public routes', () => {

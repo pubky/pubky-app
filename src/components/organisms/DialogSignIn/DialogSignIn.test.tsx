@@ -72,13 +72,15 @@ describe('DialogSignIn', () => {
       expect(signInLink).toHaveTextContent('Sign In');
     });
 
-    it('renders UserPlus and KeyRound icons', () => {
+    it('renders button icons and card illustrations', () => {
       mockShowSignInDialog.value = true;
       render(<DialogSignIn />);
 
       const dialog = screen.getByRole('dialog');
-      expect(dialog.querySelectorAll('.lucide-user-plus')).toHaveLength(2);
-      expect(dialog.querySelectorAll('.lucide-key-round')).toHaveLength(2);
+      expect(dialog.querySelectorAll('.lucide-user-plus')).toHaveLength(1);
+      expect(dialog.querySelectorAll('.lucide-arrow-right')).toHaveLength(1);
+      expect(screen.getByAltText('New here?')).toHaveAttribute('src', '/images/new-here.svg');
+      expect(screen.getByAltText('Already have an account?')).toHaveAttribute('src', '/images/sign-in.svg');
     });
   });
 

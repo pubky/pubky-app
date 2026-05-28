@@ -16,6 +16,7 @@ import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
 import { CompactUserListItemSkeleton } from '@/organisms/CompactUserListItemSkeleton/CompactUserListItemSkeleton';
 import { UserListItem } from '@/organisms/UserListItem/UserListItem';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 /**
  * WhoToFollowSidebar
@@ -30,18 +31,21 @@ export function WhoToFollowSidebar() {
   const tCommon = useTranslations('common');
   const router = useRouter();
   const pathname = usePathname();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const isAuthenticated = Boolean(currentUserPubky);
   const { preservedFollowedUserIds, handleFollowClick, isUserLoading } = useWhoToFollowFollowPreservation({
     resetKey: pathname,
   });
   const { users, isLoading: isStreamLoading } = useUserStream({
-    streamId: UserStreamTypes.RECOMMENDED,
+    streamId: isAuthenticated ? UserStreamTypes.RECOMMENDED : UserStreamTypes.MOST_FOLLOWED,
     limit: WHO_TO_FOLLOW_USER_LIMIT,
     bufferSize: WHO_TO_FOLLOW_BUFFER_SIZE,
     refillThreshold: WHO_TO_FOLLOW_REFILL_THRESHOLD,
-    includeRelationships: true,
-    excludeFollowing: true,
+    includeRelationships: isAuthenticated,
+    excludeFollowing: isAuthenticated,
     preserveFollowedUserIds: preservedFollowedUserIds,
   });
+  const visibleUsers = isAuthenticated ? users : users.slice(0, WHO_TO_FOLLOW_USER_LIMIT);
 
   const handleUserClick = (pubky: Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
@@ -63,7 +67,7 @@ export function WhoToFollowSidebar() {
         ? Array.from({
             length: WHO_TO_FOLLOW_USER_LIMIT,
           }).map((_, index) => <CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />)
-        : users.map((user) => (
+        : visibleUsers.map((user) => (
             <UserListItem
               key={user.id}
               user={user}

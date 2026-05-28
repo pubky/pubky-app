@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bookmark, Flame, Home, Search, Settings } from 'lucide-react';
+import { Bookmark, Flame, Home, Search, Settings, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
+import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FileController } from '@/controllers/file/file';
@@ -33,6 +34,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
   const tCommon = useTranslations('common');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
+  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const { isCoreExploreRoute, isPublicRoute } = usePublicRoute();
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const unreadNotifications = useNotificationStore((state) => state.selectUnread());
@@ -81,9 +83,8 @@ export function MobileFooter({ className }: MobileFooterProps) {
       label: 'Settings',
     },
   ];
-  const publicExploreHrefs: string[] = [APP_ROUTES.HOME, APP_ROUTES.SEARCH, APP_ROUTES.HOT];
-  const publicExploreNavItems = authenticatedNavItems.filter((item) => publicExploreHrefs.includes(item.href));
-  const navItems = isAuthenticated ? authenticatedNavItems : publicExploreNavItems;
+  const protectedNavHrefs = new Set<string>([APP_ROUTES.BOOKMARKS, SETTINGS_ROUTES.ACCOUNT]);
+  const navItems = authenticatedNavItems;
 
   if (!isAuthenticated && !isCoreExploreRoute) {
     return null;
@@ -93,7 +94,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
     <Container
       overrideDefaults
       className={cn(
-        'fixed bottom-0 z-40 w-full overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden',
+        'fixed bottom-0 z-40 w-full overflow-x-auto bg-linear-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden',
         className,
       )}
       style={
@@ -119,6 +120,12 @@ export function MobileFooter({ className }: MobileFooterProps) {
               href={item.href}
               aria-label={item.label}
               onClick={(event) => {
+                if (!isAuthenticated && protectedNavHrefs.has(item.href)) {
+                  event.preventDefault();
+                  setShowSignInDialog(true);
+                  return;
+                }
+
                 // Don't hijack modified clicks (new tab/window, etc.)
                 if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
                 if (!isHome) return;
@@ -149,7 +156,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
             </Link>
           );
         })}
-        {isAuthenticated && (
+        {isAuthenticated ? (
           <Link
             data-cy="footer-nav-profile-btn"
             href={APP_ROUTES.PROFILE}
@@ -180,6 +187,16 @@ export function MobileFooter({ className }: MobileFooterProps) {
               </Badge>
             )}
           </Link>
+        ) : (
+          <Button
+            variant="secondary"
+            size="icon"
+            className="size-12 items-center justify-center border bg-white/5"
+            aria-label="Join Pubky"
+            onClick={() => setShowSignInDialog(true)}
+          >
+            <UserRoundPlus className="size-6" />
+          </Button>
         )}
       </Container>
     </Container>

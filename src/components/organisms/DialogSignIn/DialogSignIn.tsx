@@ -12,8 +12,9 @@
  *
  * Inspired by pubky-app's Join modal but uses Franky's design patterns.
  */
+import Image from 'next/image';
 import Link from 'next/link';
-import { KeyRound, UserPlus } from 'lucide-react';
+import { ArrowRight, UserPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
@@ -43,13 +44,16 @@ export function DialogSignIn() {
               <Typography as="h3" size="md" className="font-bold">
                 {t('newHere')}
               </Typography>
-              <Typography as="p" size="sm" className="text-muted-foreground">
-                {t('newHereDescription')}
-              </Typography>
             </Container>
 
             <Container className="flex flex-1 items-center justify-center py-4">
-              <UserPlus className="size-16 text-muted-foreground/50" />
+              <Image
+                src="/images/new-here.svg"
+                alt={t('newHere')}
+                width={220}
+                height={220}
+                className="h-[87px] w-auto max-w-[220px] sm:h-auto sm:w-full"
+              />
             </Container>
 
             <Button asChild className="w-full">
@@ -66,18 +70,21 @@ export function DialogSignIn() {
               <Typography as="h3" size="md" className="font-bold">
                 {t('alreadyHaveAccount')}
               </Typography>
-              <Typography as="p" size="sm" className="text-muted-foreground">
-                {t('alreadyHaveAccountDescription')}
-              </Typography>
             </Container>
 
             <Container className="flex flex-1 items-center justify-center py-4">
-              <KeyRound className="size-16 text-muted-foreground/50" />
+              <Image
+                src="/images/sign-in.svg"
+                alt={t('alreadyHaveAccount')}
+                width={220}
+                height={220}
+                className="h-[87px] w-auto max-w-[220px] sm:h-auto sm:w-full"
+              />
             </Container>
 
             <Button asChild variant="secondary" className="w-full">
               <Link href={AUTH_ROUTES.SIGN_IN} onClick={handleClose}>
-                <KeyRound className="mr-2 size-4" />
+                <ArrowRight className="mr-2 size-4" />
                 {t('signInButton')}
               </Link>
             </Button>

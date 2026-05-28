@@ -167,24 +167,23 @@ describe('MobileHeader', () => {
     expect(rightButton).toHaveClass('hover:bg-accent/50', 'transition-all');
   });
 
-  it('shows filter and join buttons when unauthenticated on a core explore route', () => {
+  it('shows filter and activity buttons when unauthenticated on a core explore route', () => {
     mockCurrentUserPubky = null;
     mockIsCoreExploreRoute = true;
 
     render(<MobileHeader />);
 
     expect(document.querySelector('.lucide-sliders-horizontal')).toBeInTheDocument();
-    expect(document.querySelector('.lucide-user-round-plus')).toBeInTheDocument();
-    expect(document.querySelector('.lucide-activity')).not.toBeInTheDocument();
+    expect(document.querySelector('.lucide-activity')).toBeInTheDocument();
   });
 
-  it('opens sign-in dialog from join button when unauthenticated', () => {
+  it('opens sign-in dialog from activity button when unauthenticated', () => {
     mockCurrentUserPubky = null;
 
     render(<MobileHeader />);
 
-    const joinButton = screen.getByRole('button', { name: 'Join Pubky' });
-    fireEvent.click(joinButton);
+    const activityButton = document.querySelector('.lucide-activity')?.closest('button');
+    fireEvent.click(activityButton!);
 
     expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
   });
