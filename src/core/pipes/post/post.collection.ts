@@ -11,7 +11,7 @@ import {
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { CollectionContent, CollectionContentInput } from '@/models/post/collection/collectionPost.types';
+import type { CollectionContentInput } from '@/models/post/collection/collectionPost.types';
 
 const ALLOWED_COLLECTION_URL_PROTOCOLS = new Set(
   COLLECTION_COVER_IMAGE_ALLOWED_PROTOCOLS.map((scheme) => `${scheme}:`),
@@ -74,10 +74,10 @@ function isValidCollectionCoverImageUrl(url: string): boolean {
   }
 }
 
-function normalizeCoverImage(input: string | null | undefined): string | null {
-  if (input == null) return null;
+function normalizeCoverImage(input: string | null | undefined): string | undefined {
+  if (input == null) return undefined;
   const trimmed = input.trim();
-  if (!trimmed) return null;
+  if (!trimmed) return undefined;
 
   if (trimmed.length > COLLECTION_COVER_IMAGE_URL_MAX_LENGTH) {
     throwCollectionValidation('Collection cover image URL is too long', {
@@ -95,10 +95,26 @@ function normalizeCoverImage(input: string | null | undefined): string | null {
   return trimmed;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === 'string';
+}
+
+function isOptionalStringArray(value: unknown): value is string[] | undefined {
+  return value === undefined || (Array.isArray(value) && value.every((item) => typeof item === 'string'));
+}
+
+function isNullableString(value: unknown): value is string | null | undefined {
+  return value == null || typeof value === 'string';
+}
+
 export class CollectionPostContent {
   private constructor() {}
 
-  static normalize(input: CollectionContentInput): CollectionContent {
+  static normalize(input: CollectionContentInput): PubkyAppCollectionContent {
     const name = input.name.trim();
     const description = (input.description ?? '').trim();
     const items = normalizeCollectionItemUris(input.items ?? []);
@@ -130,7 +146,7 @@ export class CollectionPostContent {
       });
     }
 
-    const collection: CollectionContent = { name, description, items, cover_image };
+    const collection: PubkyAppCollectionContent = { name, description, items, cover_image };
     if (JSON.stringify(collection).length > COLLECTION_CONTENT_MAX_LENGTH) {
       throwCollectionValidation('Collection content is too long', {
         field: 'content',
@@ -153,52 +169,57 @@ export class CollectionPostContent {
    * side goes through `PubkySpecsBuilder.createCollectionPost(...)` which builds
    * and serializes the envelope itself.
    */
-  static parse(content: string): CollectionContent | null {
-    let parsed: Partial<PubkyAppCollectionContent>;
+  static parse(content: string): PubkyAppCollectionContent | null {
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(content) as Partial<PubkyAppCollectionContent>;
+      parsed = JSON.parse(content);
     } catch {
       return null;
     }
 
-    if (typeof parsed.name !== 'string') return null;
-    if (parsed.description !== undefined && typeof parsed.description !== 'string') return null;
-    if (parsed.items !== undefined && !Array.isArray(parsed.items)) return null;
-    if (parsed.items && !parsed.items.every((item): item is string => typeof item === 'string')) return null;
-    if (parsed.cover_image !== undefined && parsed.cover_image !== null && typeof parsed.cover_image !== 'string') {
-      return null;
-    }
+    if (!isRecord(parsed)) return null;
+
+    const { name, description, items, cover_image } = parsed;
+
+    if (typeof name !== 'string') return null;
+    if (!isOptionalString(description)) return null;
+    if (!isOptionalStringArray(items)) return null;
+    if (!isNullableString(cover_image)) return null;
 
     return this.normalize({
-      name: parsed.name,
-      description: parsed.description ?? '',
-      items: parsed.items ?? [],
-      coverImage: parsed.cover_image ?? null,
+      name,
+      description: description ?? '',
+      items: items ?? [],
+      coverImage: cover_image ?? undefined,
     });
   }
 
-  static addItem(collection: CollectionContent, itemUri: string): CollectionContent {
+  static addItem(collection: PubkyAppCollectionContent, itemUri: string): PubkyAppCollectionContent {
     const trimmedUri = itemUri.trim();
-    if (collection.items.includes(trimmedUri)) {
+    const items = collection.items ?? [];
+
+    if (items.includes(trimmedUri)) {
       return collection;
     }
 
     return this.normalize({
       ...collection,
-      items: [...collection.items, trimmedUri],
+      items: [...items, trimmedUri],
       coverImage: collection.cover_image,
     });
   }
 
-  static removeItem(collection: CollectionContent, itemUri: string): CollectionContent {
+  static removeItem(collection: PubkyAppCollectionContent, itemUri: string): PubkyAppCollectionContent {
     const trimmedUri = itemUri.trim();
-    if (!collection.items.includes(trimmedUri)) {
+    const items = collection.items ?? [];
+
+    if (!items.includes(trimmedUri)) {
       return collection;
     }
 
     return this.normalize({
       ...collection,
-      items: collection.items.filter((item) => item !== trimmedUri),
+      items: items.filter((item) => item !== trimmedUri),
       coverImage: collection.cover_image,
     });
   }

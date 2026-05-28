@@ -1,13 +1,6 @@
+import type { PubkyAppCollectionContent } from 'pubky-app-specs';
 import type { Pubky } from '@/models/models.types';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
-
-export type CollectionContent = {
-  name: string;
-  description: string;
-  items: string[];
-  /** Optional cover image URL (pubky/http/https). `null` when not set. */
-  cover_image: string | null;
-};
 
 export type CollectionContentInput = {
   name: string;
@@ -19,7 +12,7 @@ export type CollectionContentInput = {
 
 export type CollectionPost = {
   details: PostDetailsModelSchema;
-  content: CollectionContent;
+  content: PubkyAppCollectionContent;
 };
 
 export type TAuthoredCollectionsParams = {

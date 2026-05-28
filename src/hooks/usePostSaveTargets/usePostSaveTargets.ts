@@ -47,8 +47,8 @@ export function usePostSaveTargets(postId: string): UsePostSaveTargetsResult {
   const saveTargets: PostSaveCollectionTarget[] = collections.map((collection) => ({
     id: collection.details.id,
     name: collection.content.name,
-    description: collection.content.description,
-    isSaved: collection.content.items.includes(postUri),
+    description: collection.content.description ?? '',
+    isSaved: (collection.content.items ?? []).includes(postUri),
     isUpdating: updatingCollectionIds.has(collection.details.id),
   }));
 

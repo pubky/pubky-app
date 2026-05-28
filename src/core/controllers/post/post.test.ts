@@ -695,7 +695,6 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [targetPostUri],
-            cover_image: null,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -729,7 +728,7 @@ describe('PostController', () => {
 
         expect(toEditSpy).toHaveBeenCalledWith({
           compositePostId: collectionPostId,
-          content: JSON.stringify({ name: 'Saved posts', description: '', items: [], cover_image: null }),
+          content: JSON.stringify({ name: 'Saved posts', description: '', items: [] }),
           currentUserPubky: testData.authorPubky,
         });
       } finally {

@@ -15,7 +15,7 @@ describe('CollectionPostContent', () => {
         name: 'AI papers',
         description: 'Best stuff',
         items: [],
-        cover_image: null,
+        cover_image: undefined,
       });
     });
 
@@ -95,7 +95,7 @@ describe('CollectionPostContent', () => {
         name: 'Links',
         description: '',
         items: [VALID_ITEM_URI, 'https://example.com/post'],
-        cover_image: null,
+        cover_image: undefined,
       });
     });
 
@@ -136,7 +136,7 @@ describe('CollectionPostContent', () => {
         name: 'Proof of Work',
         description: 'Bitcoin writing',
         items: [VALID_ITEM_URI],
-        cover_image: null,
+        cover_image: undefined,
       });
     });
 
@@ -166,7 +166,25 @@ describe('CollectionPostContent', () => {
         name: 'Minimal',
         description: '',
         items: [],
-        cover_image: null,
+        cover_image: undefined,
+      });
+    });
+
+    it('parses pubky-app-specs envelopes with null cover_image', () => {
+      expect(
+        CollectionPostContent.parse(
+          JSON.stringify({
+            name: 'Saved posts',
+            description: '',
+            items: [VALID_ITEM_URI],
+            cover_image: null,
+          }),
+        ),
+      ).toEqual({
+        name: 'Saved posts',
+        description: '',
+        items: [VALID_ITEM_URI],
+        cover_image: undefined,
       });
     });
 

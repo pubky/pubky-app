@@ -476,7 +476,7 @@ describe('PostNormalizer', () => {
         'Proof of Work',
         'Bitcoin writing',
         [buildPubkyUri(TEST_PUBKY.USER_2, 'posts/post-1')],
-        null,
+        undefined,
       );
     });
 
