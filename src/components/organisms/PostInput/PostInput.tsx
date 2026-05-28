@@ -109,131 +109,104 @@ export function PostInput({
 
   const { isAuthenticated, requireAuth } = useRequireAuth();
 
-  const openSignInDialog = React.useCallback(() => {
+  const openSignInDialog = () => {
     requireAuth(() => undefined);
-  }, [requireAuth]);
+  };
 
-  const handleExpandWithAuth = React.useCallback(() => {
+  const handleExpandWithAuth = () => {
     requireAuth(handleExpand);
-  }, [handleExpand, requireAuth]);
+  };
 
-  const handleSubmitWithAuth = React.useCallback(() => {
+  const handleSubmitWithAuth = () => {
     return requireAuth(handleSubmit);
-  }, [handleSubmit, requireAuth]);
+  };
 
-  const setTagsWithAuth = React.useCallback<React.Dispatch<React.SetStateAction<string[]>>>(
-    (value) => {
-      if (!isAuthenticated) {
-        openSignInDialog();
-        return;
-      }
-      setTags(value);
-    },
-    [isAuthenticated, openSignInDialog, setTags],
-  );
+  const setTagsWithAuth: React.Dispatch<React.SetStateAction<string[]>> = (value) => {
+    if (!isAuthenticated) {
+      openSignInDialog();
+      return;
+    }
+    setTags(value);
+  };
 
-  const setAttachmentsWithAuth = React.useCallback<React.Dispatch<React.SetStateAction<File[]>>>(
-    (value) => {
-      if (!isAuthenticated) {
-        openSignInDialog();
-        return;
-      }
-      setAttachments(value);
-    },
-    [isAuthenticated, openSignInDialog, setAttachments],
-  );
+  const setAttachmentsWithAuth: React.Dispatch<React.SetStateAction<File[]>> = (value) => {
+    if (!isAuthenticated) {
+      openSignInDialog();
+      return;
+    }
+    setAttachments(value);
+  };
 
-  const handleChangeWithAuth = React.useCallback(
-    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      if (!isAuthenticated) {
-        openSignInDialog();
-        return;
-      }
-      handleChange(event);
-    },
-    [handleChange, isAuthenticated, openSignInDialog],
-  );
+  const handleChangeWithAuth = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (!isAuthenticated) {
+      openSignInDialog();
+      return;
+    }
+    handleChange(event);
+  };
 
-  const handleArticleTitleChangeWithAuth = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (!isAuthenticated) {
-        openSignInDialog();
-        return;
-      }
-      handleArticleTitleChange(event);
-    },
-    [handleArticleTitleChange, isAuthenticated, openSignInDialog],
-  );
+  const handleArticleTitleChangeWithAuth = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAuthenticated) {
+      openSignInDialog();
+      return;
+    }
+    handleArticleTitleChange(event);
+  };
 
-  const handleArticleBodyChangeWithAuth = React.useCallback(
-    (markdown: string, initialMarkdownNormalize: boolean) => {
-      if (!isAuthenticated) {
-        openSignInDialog();
-        return;
-      }
-      handleArticleBodyChange(markdown, initialMarkdownNormalize);
-    },
-    [handleArticleBodyChange, isAuthenticated, openSignInDialog],
-  );
+  const handleArticleBodyChangeWithAuth = (markdown: string, initialMarkdownNormalize: boolean) => {
+    if (!isAuthenticated) {
+      openSignInDialog();
+      return;
+    }
+    handleArticleBodyChange(markdown, initialMarkdownNormalize);
+  };
 
-  const handleFilesAddedWithAuth = React.useCallback(
-    (files: File[]) => {
-      if (!isAuthenticated) {
-        openSignInDialog();
-        return;
-      }
-      handleFilesAdded(files);
-    },
-    [handleFilesAdded, isAuthenticated, openSignInDialog],
-  );
+  const handleFilesAddedWithAuth = (files: File[]) => {
+    if (!isAuthenticated) {
+      openSignInDialog();
+      return;
+    }
+    handleFilesAdded(files);
+  };
 
-  const handleFileClickWithAuth = React.useCallback(() => {
+  const handleFileClickWithAuth = () => {
     requireAuth(handleFileClick);
-  }, [handleFileClick, requireAuth]);
+  };
 
-  const handleArticleClickWithAuth = React.useCallback(() => {
+  const handleArticleClickWithAuth = () => {
     requireAuth(handleArticleClick);
-  }, [handleArticleClick, requireAuth]);
+  };
 
-  const handleEmojiSelectWithAuth = React.useCallback(
-    (emoji: { native: string }) => {
-      if (!isAuthenticated) {
-        openSignInDialog();
-        return;
-      }
-      handleEmojiSelect(emoji);
-    },
-    [handleEmojiSelect, isAuthenticated, openSignInDialog],
-  );
+  const handleEmojiSelectWithAuth = (emoji: { native: string }) => {
+    if (!isAuthenticated) {
+      openSignInDialog();
+      return;
+    }
+    handleEmojiSelect(emoji);
+  };
 
-  const handlePasteWithAuth = React.useCallback(
-    (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      if (!isAuthenticated) {
-        event.preventDefault();
-        openSignInDialog();
-        return;
-      }
-      handlePaste(event);
-    },
-    [handlePaste, isAuthenticated, openSignInDialog],
-  );
+  const handlePasteWithAuth = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!isAuthenticated) {
+      event.preventDefault();
+      openSignInDialog();
+      return;
+    }
+    handlePaste(event);
+  };
 
-  const handleDragEventWithAuth = React.useCallback(
-    (event: React.DragEvent, handler: (event: React.DragEvent) => void) => {
-      if (!isAuthenticated) {
-        event.preventDefault();
-        event.stopPropagation();
-        openSignInDialog();
-        return;
-      }
-      handler(event);
-    },
-    [isAuthenticated, openSignInDialog],
-  );
+  const handleDragEventWithAuth = (event: React.DragEvent, handler: (event: React.DragEvent) => void) => {
+    if (!isAuthenticated) {
+      event.preventDefault();
+      event.stopPropagation();
+      openSignInDialog();
+      return;
+    }
+    handler(event);
+  };
 
-  const isValid = React.useCallback(() => {
+  const isValid = () => {
     return canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
-  }, [variant, content, attachments, isSubmitting, isArticle, articleTitle]);
+  };
 
   const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitWithAuth, {
     requireModifier: true,

@@ -35,18 +35,12 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const tCommon = useTranslations('common');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
-  const { isCoreExploreRoute, isPublicRoute } = usePublicRoute();
+  const { isCoreExploreRoute } = usePublicRoute();
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const unreadNotifications = useNotificationStore((state) => state.selectUnread());
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
   const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset();
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
-
-  // Hide footer for unauthenticated users on dynamic public routes.
-  // Core explore routes use a reduced public footer below.
-  if (!isAuthenticated && isPublicRoute) {
-    return null;
-  }
 
   // Get avatar URL and fallback initial - same logic as desktop header
   const avatarUrl =
@@ -84,8 +78,8 @@ export function MobileFooter({ className }: MobileFooterProps) {
     },
   ];
   const protectedNavHrefs = new Set<string>([APP_ROUTES.BOOKMARKS, SETTINGS_ROUTES.ACCOUNT]);
-  const navItems = authenticatedNavItems;
-
+  // Hide footer for unauthenticated users on non-explore routes (including dynamic public routes).
+  // Core explore routes use a reduced public footer below (checked after avatar computation).
   if (!isAuthenticated && !isCoreExploreRoute) {
     return null;
   }
@@ -109,7 +103,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
         overrideDefaults
         className="mx-auto flex max-w-[380px] items-center justify-between sm:max-w-[600px] md:max-w-[720px]"
       >
-        {navItems.map((item) => {
+        {authenticatedNavItems.map((item) => {
           const Icon = item.icon;
           const activePath = item.activePrefix ?? item.href;
           const isHome = item.href === APP_ROUTES.HOME;
