@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hot } from './Hot';
 
-const mockUseLayoutReset = vi.fn();
 let mockIsMobile = false;
 
 // Mock dependencies
@@ -13,11 +12,6 @@ vi.mock('@/stores/hot/hot.store', () => ({
     timeframe: 'this_month',
     setTimeframe: vi.fn(),
   })),
-}));
-
-// Mock Hooks
-vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
-  useLayoutReset: () => mockUseLayoutReset(),
 }));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
@@ -56,12 +50,19 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
       children,
       hasGradientBackground,
       className,
+      disableWideShellLayout,
     }: {
       children: React.ReactNode;
       hasGradientBackground?: boolean;
       className?: string;
+      disableWideShellLayout?: boolean;
     }) => (
-      <div data-testid="content-layout" data-has-gradient-background={hasGradientBackground} className={className}>
+      <div
+        data-testid="content-layout"
+        data-has-gradient-background={hasGradientBackground}
+        data-disable-wide-shell-layout={String(disableWideShellLayout)}
+        className={className}
+      >
         {children}
       </div>
     ),
@@ -148,7 +149,6 @@ vi.mock('@/atoms/Heading/Heading', () => {
 describe('Hot', () => {
   beforeEach(() => {
     mockIsMobile = false;
-    mockUseLayoutReset.mockClear();
   });
 
   it('renders without errors', () => {
@@ -156,9 +156,9 @@ describe('Hot', () => {
     expect(screen.getByTestId('content-layout')).toBeInTheDocument();
   });
 
-  it('restores the unsupported wide layout on mount', () => {
+  it('disables wide shell layout without resetting the saved feed preference', () => {
     render(<Hot />);
-    expect(mockUseLayoutReset).toHaveBeenCalled();
+    expect(screen.getByTestId('content-layout')).toHaveAttribute('data-disable-wide-shell-layout', 'true');
   });
 
   it('renders HotMobileMenu', () => {

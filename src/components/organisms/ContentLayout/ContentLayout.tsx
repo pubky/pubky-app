@@ -66,6 +66,7 @@ export function ContentLayout({
   className,
   classNameWrapperContent,
   feedVariant,
+  disableWideShellLayout,
 }: ContentLayoutProps) {
   const { layout: homeLayout } = useHomeStore();
   const customFeed = useCustomFeed();
@@ -88,8 +89,9 @@ export function ContentLayout({
     : {
         effectiveLayout: requestedLayout,
       };
+  const shellLayout = disableWideShellLayout && effectiveLayout === LAYOUT.WIDE ? LAYOUT.COLUMNS : effectiveLayout;
   const usesWideShellLayout =
-    effectiveLayout === LAYOUT.WIDE || (feedVariant !== undefined && effectiveLayout === LAYOUT.VISUAL);
+    shellLayout === LAYOUT.WIDE || (feedVariant !== undefined && shellLayout === LAYOUT.VISUAL);
 
   // Close drawers when switching from wide-shell to inline sidebars on desktop
   // This prevents the drawer from staying open when sidebars become visible inline

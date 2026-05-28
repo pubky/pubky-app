@@ -19,6 +19,8 @@ export interface ContentLayoutProps {
   className?: string;
   classNameWrapperContent?: string;
   feedVariant?: TimelineFeedVariant;
+  /** Render page-local chrome as columns even when the persisted feed preference is wide. */
+  disableWideShellLayout?: boolean;
 }
 
 export interface StickySidebarProps {

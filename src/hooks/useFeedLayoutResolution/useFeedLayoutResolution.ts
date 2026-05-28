@@ -28,6 +28,13 @@ export const VISUAL_SUPPORTED_FEED_VARIANTS = new Set<TimelineFeedVariant>([
   TIMELINE_FEED_VARIANT.SEARCH,
 ]);
 
+export const WIDE_SUPPORTED_FEED_VARIANTS = new Set<TimelineFeedVariant>([
+  TIMELINE_FEED_VARIANT.HOME,
+  TIMELINE_FEED_VARIANT.BOOKMARKS,
+  TIMELINE_FEED_VARIANT.CUSTOM,
+  TIMELINE_FEED_VARIANT.SEARCH,
+]);
+
 export function resolveFeedLayout({
   requestedLayout,
   variant,
@@ -35,7 +42,12 @@ export function resolveFeedLayout({
 }: FeedLayoutResolutionInput): FeedLayoutResolution {
   const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
   const isVisualSupported = !isPhoneViewport && VISUAL_SUPPORTED_FEED_VARIANTS.has(variant);
-  const effectiveLayout = isVisualRequested && !isVisualSupported ? LAYOUT.COLUMNS : requestedLayout;
+  const isWideRequested = requestedLayout === LAYOUT.WIDE;
+  const isWideSupported = WIDE_SUPPORTED_FEED_VARIANTS.has(variant);
+  const effectiveLayout =
+    (isVisualRequested && !isVisualSupported) || (isWideRequested && !isWideSupported)
+      ? LAYOUT.COLUMNS
+      : requestedLayout;
 
   return {
     requestedLayout,
