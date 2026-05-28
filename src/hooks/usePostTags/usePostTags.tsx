@@ -174,8 +174,9 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       }
     });
 
-    // Recently-added-by-viewer labels float to the front (negative sort index, latest first).
-    // Other tags keep their original `tagOrder` (or Infinity if unseen yet).
+    // Only applied to baseTags: recently-added-by-viewer labels added to the front
+    // (negative sort index, latest first); everything else keeps its original `tagOrder`.
+    // Zero-tagger tags keep their own stored index instead.
     const computeSortIndex = (label: string): number => {
       const lower = label.toLowerCase();
       const recentCounter = recentlyAddedLabels.get(lower);
@@ -192,10 +193,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         tag,
         index: computeSortIndex(tag.label),
       })),
-      ...zeroTagsToAdd.map((item) => ({
-        tag: item.tag,
-        index: computeSortIndex(item.tag.label),
-      })),
+      ...zeroTagsToAdd,
     ];
 
     allTagsWithIndex.sort((a, b) => a.index - b.index);
