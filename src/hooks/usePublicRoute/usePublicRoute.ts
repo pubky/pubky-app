@@ -2,7 +2,10 @@
 
 import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
-import { isDynamicPublicRoute } from '@/app/routes';
+import {
+  isCoreExploreRoute as matchCoreExploreRoute,
+  isDynamicPublicRoute as matchDynamicPublicRoute,
+} from '@/app/routes';
 import type { UsePublicRouteResult } from './usePublicRoute.types';
 
 export type { UsePublicRouteResult } from './usePublicRoute.types';
@@ -14,13 +17,29 @@ export type { UsePublicRouteResult } from './usePublicRoute.types';
  * - /post/[userId]/[postId] - viewing a single post
  * - /profile/[pubky] - viewing another user's profile
  *
+ * Core explore routes are app-shell routes that unauthenticated users can browse:
+ * - /home
+ * - /hot
+ * - /search
+ *
  * This hook only handles route awareness. It does NOT check authentication status.
  * Use this in combination with `useRequireAuth` when you need both.
  */
 export function usePublicRoute(): UsePublicRouteResult {
   const pathname = usePathname();
 
-  const isPublicRoute = useMemo(() => isDynamicPublicRoute(pathname), [pathname]);
+  const result = useMemo(() => {
+    const isCoreExploreRoute = matchCoreExploreRoute(pathname);
+    const isDynamicPublicRoute = matchDynamicPublicRoute(pathname);
 
-  return { isPublicRoute };
+    return {
+      // Backwards-compatible name used by existing post/profile minimal chrome.
+      isPublicRoute: isDynamicPublicRoute,
+      isCoreExploreRoute,
+      isDynamicPublicRoute,
+      isPublicExploreRoute: isCoreExploreRoute || isDynamicPublicRoute,
+    };
+  }, [pathname]);
+
+  return result;
 }

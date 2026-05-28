@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
-import { Bookmark, Flame, Home, Settings } from 'lucide-react';
+import { Bookmark, Flame, Home, Settings, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
@@ -15,6 +15,8 @@ import { GITHUB_URL, TELEGRAM_URL, TWITTER_GETPUBKY_URL } from '@/config/externa
 import { Github2, Telegram, XTwitter } from '@/icons';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { SearchInput } from '@/organisms/SearchInput/SearchInput';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { ProgressSteps } from '../ProgressSteps/ProgressSteps';
 
 export interface HeaderContainerProps {
@@ -116,6 +118,20 @@ const NAVIGATION_ITEMS: NavigationItemConfig[] = [
     dataCy: 'header-settings-btn',
   },
 ];
+const EXPLORE_NAVIGATION_ITEMS: NavigationItemConfig[] = [
+  {
+    href: APP_ROUTES.HOME,
+    icon: Home,
+    labelKey: 'home',
+    dataCy: 'header-home-btn',
+  },
+  {
+    href: APP_ROUTES.HOT,
+    icon: Flame,
+    labelKey: 'hot',
+    dataCy: 'header-hot-btn',
+  },
+];
 type NavigationButtonProps = {
   href: string;
   icon: React.ComponentType<{
@@ -181,6 +197,39 @@ export function HeaderNavigationButtons({
           </Badge>
         )}
       </Link>
+    </Container>
+  );
+}
+
+export function HeaderExploreNavigationButtons() {
+  const pathname = usePathname();
+  const tHeader = useTranslations('header');
+  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
+
+  return (
+    <Container className="hidden min-w-0 flex-1 flex-row items-center justify-end gap-3 lg:flex">
+      <SearchInput />
+      {EXPLORE_NAVIGATION_ITEMS.map((item) => (
+        <NavigationButton
+          key={item.href}
+          href={item.href}
+          icon={item.icon}
+          label={tHeader(item.labelKey)}
+          isActive={pathname === item.href}
+          dataCy={item.dataCy}
+        />
+      ))}
+
+      <Button
+        variant="secondary"
+        size="icon"
+        className="h-12 w-12 border bg-white/5"
+        onClick={() => setShowSignInDialog(true)}
+        aria-label="Join Pubky"
+        data-testid="header-explore-join-button"
+      >
+        <UserRoundPlus className="size-6" />
+      </Button>
     </Container>
   );
 }

@@ -13,6 +13,7 @@ import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
@@ -106,16 +107,145 @@ export function PostInput({
     onArticleModeChange,
   });
 
+  const { isAuthenticated, requireAuth } = useRequireAuth();
+
+  const openSignInDialog = React.useCallback(() => {
+    requireAuth(() => undefined);
+  }, [requireAuth]);
+
+  const handleExpandWithAuth = React.useCallback(() => {
+    requireAuth(handleExpand);
+  }, [handleExpand, requireAuth]);
+
+  const handleSubmitWithAuth = React.useCallback(() => {
+    return requireAuth(handleSubmit);
+  }, [handleSubmit, requireAuth]);
+
+  const setTagsWithAuth = React.useCallback<React.Dispatch<React.SetStateAction<string[]>>>(
+    (value) => {
+      if (!isAuthenticated) {
+        openSignInDialog();
+        return;
+      }
+      setTags(value);
+    },
+    [isAuthenticated, openSignInDialog, setTags],
+  );
+
+  const setAttachmentsWithAuth = React.useCallback<React.Dispatch<React.SetStateAction<File[]>>>(
+    (value) => {
+      if (!isAuthenticated) {
+        openSignInDialog();
+        return;
+      }
+      setAttachments(value);
+    },
+    [isAuthenticated, openSignInDialog, setAttachments],
+  );
+
+  const handleChangeWithAuth = React.useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      if (!isAuthenticated) {
+        openSignInDialog();
+        return;
+      }
+      handleChange(event);
+    },
+    [handleChange, isAuthenticated, openSignInDialog],
+  );
+
+  const handleArticleTitleChangeWithAuth = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isAuthenticated) {
+        openSignInDialog();
+        return;
+      }
+      handleArticleTitleChange(event);
+    },
+    [handleArticleTitleChange, isAuthenticated, openSignInDialog],
+  );
+
+  const handleArticleBodyChangeWithAuth = React.useCallback(
+    (markdown: string, initialMarkdownNormalize: boolean) => {
+      if (!isAuthenticated) {
+        openSignInDialog();
+        return;
+      }
+      handleArticleBodyChange(markdown, initialMarkdownNormalize);
+    },
+    [handleArticleBodyChange, isAuthenticated, openSignInDialog],
+  );
+
+  const handleFilesAddedWithAuth = React.useCallback(
+    (files: File[]) => {
+      if (!isAuthenticated) {
+        openSignInDialog();
+        return;
+      }
+      handleFilesAdded(files);
+    },
+    [handleFilesAdded, isAuthenticated, openSignInDialog],
+  );
+
+  const handleFileClickWithAuth = React.useCallback(() => {
+    requireAuth(handleFileClick);
+  }, [handleFileClick, requireAuth]);
+
+  const handleArticleClickWithAuth = React.useCallback(() => {
+    requireAuth(handleArticleClick);
+  }, [handleArticleClick, requireAuth]);
+
+  const handleEmojiSelectWithAuth = React.useCallback(
+    (emoji: { native: string }) => {
+      if (!isAuthenticated) {
+        openSignInDialog();
+        return;
+      }
+      handleEmojiSelect(emoji);
+    },
+    [handleEmojiSelect, isAuthenticated, openSignInDialog],
+  );
+
+  const handlePasteWithAuth = React.useCallback(
+    (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (!isAuthenticated) {
+        event.preventDefault();
+        openSignInDialog();
+        return;
+      }
+      handlePaste(event);
+    },
+    [handlePaste, isAuthenticated, openSignInDialog],
+  );
+
+  const handleDragEventWithAuth = React.useCallback(
+    (event: React.DragEvent, handler: (event: React.DragEvent) => void) => {
+      if (!isAuthenticated) {
+        event.preventDefault();
+        event.stopPropagation();
+        openSignInDialog();
+        return;
+      }
+      handler(event);
+    },
+    [isAuthenticated, openSignInDialog],
+  );
+
   const isValid = React.useCallback(() => {
     return canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
   }, [variant, content, attachments, isSubmitting, isArticle, articleTitle]);
 
-  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmit, {
+  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitWithAuth, {
     requireModifier: true,
   });
 
   // Combined keyboard handler: mention popover takes priority, then enter submit
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!isAuthenticated) {
+      e.preventDefault();
+      openSignInDialog();
+      return;
+    }
     if (handleMentionKeyDown(e)) return;
     enterSubmitHandler(e);
   };
@@ -178,11 +308,11 @@ export function PostInput({
         isWideLayout ? 'p-12' : 'p-4',
         isDragging ? 'border-brand' : 'border-input',
       )}
-      onClick={handleExpand}
-      onDragEnter={isEdit ? undefined : handleDragEnter}
-      onDragLeave={isEdit ? undefined : handleDragLeave}
-      onDragOver={isEdit ? undefined : handleDragOver}
-      onDrop={isEdit ? undefined : handleDrop}
+      onClick={handleExpandWithAuth}
+      onDragEnter={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragEnter)}
+      onDragLeave={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragLeave)}
+      onDragOver={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragOver)}
+      onDrop={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDrop)}
     >
       {/* Drag overlay */}
       {isDragging && (
@@ -200,9 +330,9 @@ export function PostInput({
           <Input
             placeholder={t('articleTitle')}
             defaultValue={articleTitle}
-            onChange={handleArticleTitleChange}
+            onChange={handleArticleTitleChangeWithAuth}
             maxLength={ARTICLE_TITLE_MAX_CHARACTER_LENGTH}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !isAuthenticated}
             className="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
           />
         )}
@@ -225,13 +355,14 @@ export function PostInput({
               variant="inline"
               className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
               value={content}
-              onChange={handleChange}
-              onFocus={handleExpand}
+              onChange={handleChangeWithAuth}
+              onFocus={handleExpandWithAuth}
               onKeyDown={handleKeyDown}
-              onPaste={isEdit ? undefined : handlePaste}
+              onPaste={isEdit ? undefined : handlePasteWithAuth}
               maxLength={POST_MAX_CHARACTER_LENGTH}
               rows={1}
               disabled={isSubmitting}
+              readOnly={!isAuthenticated}
               aria-haspopup="listbox"
               autoFocus={autoFocusTextarea}
             />
@@ -252,11 +383,11 @@ export function PostInput({
           <PostInputAttachments
             ref={fileInputRef}
             attachments={attachments}
-            setAttachments={setAttachments}
-            handleFilesAdded={handleFilesAdded}
+            setAttachments={setAttachmentsWithAuth}
+            handleFilesAdded={handleFilesAddedWithAuth}
             isSubmitting={isSubmitting}
             isArticle={isArticle}
-            handleFileClick={handleFileClick}
+            handleFileClick={handleFileClickWithAuth}
           />
         )}
 
@@ -265,8 +396,8 @@ export function PostInput({
             ref={markdownEditorRef}
             autoFocus
             markdown={sanitizeCodeBlockLanguages(content)}
-            onChange={handleArticleBodyChange}
-            readOnly={isSubmitting}
+            onChange={handleArticleBodyChangeWithAuth}
+            readOnly={isSubmitting || !isAuthenticated}
           />
         )}
 
@@ -281,14 +412,15 @@ export function PostInput({
           tags={tags}
           isSubmitting={isSubmitting}
           isArticle={isArticle}
-          setTags={setTags}
-          onSubmit={handleSubmit}
+          isDisabled={!isAuthenticated}
+          setTags={setTagsWithAuth}
+          onSubmit={handleSubmitWithAuth}
           showEmojiPicker={showEmojiPicker}
           setShowEmojiPicker={setShowEmojiPicker}
-          onEmojiSelect={handleEmojiSelect}
-          onImageClick={handleFileClick}
-          onArticleClick={handleArticleClick}
-          isPostDisabled={!isValid()}
+          onEmojiSelect={handleEmojiSelectWithAuth}
+          onImageClick={handleFileClickWithAuth}
+          onArticleClick={handleArticleClickWithAuth}
+          isPostDisabled={isAuthenticated ? !isValid() : false}
           submitMode={variant}
           parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
           characterLimit={characterLimit}

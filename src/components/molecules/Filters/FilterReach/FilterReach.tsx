@@ -8,35 +8,43 @@ import { REACH, type ReachType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps } from '../Filters.types';
 
+interface FilterReachProps extends BaseFilterProps<ReachType> {
+  hideAccountScopedOptions?: boolean;
+}
+
 export function FilterReach({
   selectedTab,
   defaultSelectedTab = REACH.ALL,
   onTabChange,
   disabled,
-}: BaseFilterProps<ReachType>) {
+  hideAccountScopedOptions = false,
+}: FilterReachProps) {
   const t = useTranslations('filters.reach');
   const items = React.useMemo(
-    () => [
-      {
-        key: REACH.ALL,
-        label: t('all'),
-        icon: Radio,
-        disabled,
-      },
-      {
-        key: REACH.FOLLOWING,
-        label: t('following'),
-        icon: UsersRound2,
-        disabled,
-      },
-      {
-        key: REACH.FRIENDS,
-        label: t('friends'),
-        icon: HeartHandshake,
-        disabled,
-      },
-    ],
-    [t, disabled],
+    () =>
+      [
+        {
+          key: REACH.ALL,
+          label: t('all'),
+          icon: Radio,
+          disabled,
+        },
+        {
+          key: REACH.FOLLOWING,
+          label: t('following'),
+          icon: UsersRound2,
+          disabled,
+          accountScoped: true,
+        },
+        {
+          key: REACH.FRIENDS,
+          label: t('friends'),
+          icon: HeartHandshake,
+          disabled,
+          accountScoped: true,
+        },
+      ].filter((item) => !hideAccountScopedOptions || !item.accountScoped),
+    [t, disabled, hideAccountScopedOptions],
   );
   return (
     <FilterRadioGroup

@@ -8,6 +8,7 @@ import { Container } from '@/atoms/Container/Container';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
@@ -29,6 +30,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = useTagSearch();
   const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = useSearchStore();
   const isMobile = useIsMobile();
+  const { isAuthenticated, requireAuth } = useRequireAuth();
 
   const handleEnter = (value: string) => {
     if (!isValidTagLabel(value.trim().toLowerCase())) {
@@ -89,6 +91,30 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const hasSuggestions = isFocused;
   const suggestionsId = 'search-suggestions';
 
+  const handleProtectedFocus = () => {
+    if (!isAuthenticated) {
+      requireAuth(() => undefined);
+      return;
+    }
+    handleFocus();
+  };
+
+  const handleProtectedInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAuthenticated) {
+      requireAuth(() => undefined);
+      return;
+    }
+    handleInputChange(e);
+  };
+
+  const handleProtectedKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isAuthenticated) {
+      requireAuth(() => undefined);
+      return;
+    }
+    handleKeyDown(e);
+  };
+
   return (
     <Container ref={containerRef} data-testid="search-input" className="relative min-w-0">
       {/* Input bar with active tags */}
@@ -101,9 +127,9 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
         suggestionsId={hasSuggestions ? suggestionsId : undefined}
         inputRef={inputRef}
         onTagRemove={removeTagFromSearch}
-        onInputChange={handleInputChange}
-        onKeyDown={handleKeyDown}
-        onFocus={handleFocus}
+        onInputChange={handleProtectedInputChange}
+        onKeyDown={handleProtectedKeyDown}
+        onFocus={handleProtectedFocus}
         autoFocus={autoFocus}
       />
 

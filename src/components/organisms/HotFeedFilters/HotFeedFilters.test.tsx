@@ -1,16 +1,23 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMEFRAME } from '@/stores/hot/hot.types';
 import { FilterTimeframe, HotFeedDrawer, HotFeedSidebar } from './HotFeedFilters';
+
+let mockCurrentUserPubky: string | null = 'viewer-pubky';
 
 // Mock store
 vi.mock('@/stores/hot/hot.store', () => ({
   useHotStore: vi.fn(() => ({
-    reach: 'all',
+    reach: 'following',
     setReach: vi.fn(),
     timeframe: 'today',
     setTimeframe: vi.fn(),
   })),
+}));
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
+    selector({ currentUserPubky: mockCurrentUserPubky }),
 }));
 
 // Mock Atoms
@@ -46,8 +53,26 @@ vi.mock('@/atoms/Filter/Filter', () => {
 // Mock Molecules
 vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
-    FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
+    FilterReach: ({
+      selectedTab,
+      hideAccountScopedOptions,
+    }: {
+      selectedTab?: string;
+      hideAccountScopedOptions?: boolean;
+    }) => (
+      <div
+        data-testid="filter-reach"
+        data-selected-tab={selectedTab}
+        data-hide-account-scoped={String(hideAccountScopedOptions)}
+      >
+        FilterReach
+      </div>
+    ),
   };
+});
+
+beforeEach(() => {
+  mockCurrentUserPubky = 'viewer-pubky';
 });
 
 describe('FilterTimeframe', () => {
@@ -80,6 +105,15 @@ describe('HotFeedSidebar', () => {
 
     expect(screen.getByTestId('filter-reach')).toBeInTheDocument();
     expect(screen.getByText('Today')).toBeInTheDocument();
+  });
+
+  it('forces all reach and keeps account-scoped reach controls visible when logged out', () => {
+    mockCurrentUserPubky = null;
+
+    render(<HotFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-hide-account-scoped', 'false');
   });
 
   it('matches snapshot', () => {

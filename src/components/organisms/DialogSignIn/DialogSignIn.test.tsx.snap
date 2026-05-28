@@ -105,8 +105,8 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           </svg>
         </div>
         <a
-          data-testid="link--"
-          href="/"
+          data-testid="link--onboarding-human"
+          href="/onboarding/human"
         >
           <svg
             aria-hidden="true"

@@ -1,4 +1,4 @@
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { describe, expect, it, vi } from 'vitest';
@@ -7,7 +7,14 @@ import { useNotificationStore } from '@/stores/notification/notification.store';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 import { HeaderHome } from '../HeaderHome/HeaderHome';
 import { HeaderSignIn } from '../HeaderSignIn/HeaderSignIn';
-import { HeaderContainer, HeaderNavigationButtons, HeaderOnboarding, HeaderSocialLinks, HeaderTitle } from './Header';
+import {
+  HeaderContainer,
+  HeaderExploreNavigationButtons,
+  HeaderNavigationButtons,
+  HeaderOnboarding,
+  HeaderSocialLinks,
+  HeaderTitle,
+} from './Header';
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -140,6 +147,7 @@ vi.mock('@/app/routes', async (importOriginal) => {
 
 describe('Header Components', () => {
   const mockPush = vi.fn();
+  const mockSetShowSignInDialog = vi.fn();
   const mockRouter = {
     push: mockPush,
     back: vi.fn(),
@@ -151,7 +159,14 @@ describe('Header Components', () => {
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
-    vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
+    vi.mocked(usePathname).mockReturnValue('/home');
+    vi.mocked(useAuthStore).mockImplementation((selector) => {
+      const state = {
+        currentUserPubky: 'test-pubky',
+        setShowSignInDialog: mockSetShowSignInDialog,
+      };
+      return selector(state as never);
+    });
     vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
     vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
   });
@@ -416,6 +431,28 @@ describe('Header Components', () => {
       buttons.forEach((button) => {
         expect(button).toHaveClass('w-12', 'h-12');
       });
+    });
+  });
+
+  describe('HeaderExploreNavigationButtons', () => {
+    it('renders public explore navigation without account links', () => {
+      render(<HeaderExploreNavigationButtons />);
+
+      const links = screen.getAllByRole('link');
+      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot']);
+      expect(screen.getByTestId('search-input')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-house')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-bookmark')).not.toBeInTheDocument();
+      expect(document.querySelector('.lucide-settings')).not.toBeInTheDocument();
+    });
+
+    it('opens sign-in dialog from the Join button', () => {
+      render(<HeaderExploreNavigationButtons />);
+
+      fireEvent.click(screen.getByTestId('header-explore-join-button'));
+
+      expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
     });
   });
 

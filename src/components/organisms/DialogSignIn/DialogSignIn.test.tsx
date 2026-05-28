@@ -54,12 +54,12 @@ describe('DialogSignIn', () => {
       expect(screen.getByText('Already have an account?')).toBeInTheDocument();
     });
 
-    it('renders Join Pubky link pointing to root', () => {
+    it('renders Join Pubky link pointing to human onboarding', () => {
       mockShowSignInDialog.value = true;
       render(<DialogSignIn />);
 
-      const joinLink = screen.getByTestId('link--');
-      expect(joinLink).toHaveAttribute('href', '/');
+      const joinLink = screen.getByTestId('link--onboarding-human');
+      expect(joinLink).toHaveAttribute('href', '/onboarding/human');
       expect(joinLink).toHaveTextContent('Join Pubky');
     });
 
@@ -87,7 +87,7 @@ describe('DialogSignIn', () => {
       mockShowSignInDialog.value = true;
       render(<DialogSignIn />);
 
-      const joinLink = screen.getByTestId('link--');
+      const joinLink = screen.getByTestId('link--onboarding-human');
       fireEvent.click(joinLink);
 
       expect(mockSetShowSignInDialog).toHaveBeenCalledWith(false);

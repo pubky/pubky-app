@@ -33,14 +33,15 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
   const tCommon = useTranslations('common');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
-  const { isPublicRoute } = usePublicRoute();
+  const { isCoreExploreRoute, isPublicRoute } = usePublicRoute();
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const unreadNotifications = useNotificationStore((state) => state.selectUnread());
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
   const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset();
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
-  // Hide footer for unauthenticated users on public routes
+  // Hide footer for unauthenticated users on dynamic public routes.
+  // Core explore routes use a reduced public footer below.
   if (!isAuthenticated && isPublicRoute) {
     return null;
   }
@@ -52,7 +53,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       ? FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
       : undefined);
   const avatarName = userDetails?.name || 'U';
-  const navItems = [
+  const authenticatedNavItems = [
     {
       href: APP_ROUTES.HOME,
       icon: Home,
@@ -80,6 +81,14 @@ export function MobileFooter({ className }: MobileFooterProps) {
       label: 'Settings',
     },
   ];
+  const publicExploreHrefs: string[] = [APP_ROUTES.HOME, APP_ROUTES.SEARCH, APP_ROUTES.HOT];
+  const publicExploreNavItems = authenticatedNavItems.filter((item) => publicExploreHrefs.includes(item.href));
+  const navItems = isAuthenticated ? authenticatedNavItems : publicExploreNavItems;
+
+  if (!isAuthenticated && !isCoreExploreRoute) {
+    return null;
+  }
+
   return (
     <Container
       overrideDefaults
@@ -140,36 +149,38 @@ export function MobileFooter({ className }: MobileFooterProps) {
             </Link>
           );
         })}
-        <Link
-          data-cy="footer-nav-profile-btn"
-          href={APP_ROUTES.PROFILE}
-          aria-label={tCommon('profile')}
-          className="relative shrink-0 rounded-full"
-        >
-          <AvatarWithFallback
-            avatarUrl={avatarUrl}
-            name={avatarName}
-            fallbackSeed={currentUserPubky || avatarName}
-            size="lg"
-            className="cursor-pointer"
-            alt={tCommon('profile')}
-          />
-          {unreadNotifications > 0 && (
-            <Badge
-              data-testid="mobile-notification-counter"
-              data-cy="mobile-notification-counter"
-              className="absolute right-0 bottom-0 h-5 w-5 rounded-full bg-brand shadow-sm"
-              variant="secondary"
-            >
-              <Typography
-                className={cn('font-semibold text-primary-foreground', unreadNotifications > 21 && 'text-xs')}
-                size="xs"
+        {isAuthenticated && (
+          <Link
+            data-cy="footer-nav-profile-btn"
+            href={APP_ROUTES.PROFILE}
+            aria-label={tCommon('profile')}
+            className="relative shrink-0 rounded-full"
+          >
+            <AvatarWithFallback
+              avatarUrl={avatarUrl}
+              name={avatarName}
+              fallbackSeed={currentUserPubky || avatarName}
+              size="lg"
+              className="cursor-pointer"
+              alt={tCommon('profile')}
+            />
+            {unreadNotifications > 0 && (
+              <Badge
+                data-testid="mobile-notification-counter"
+                data-cy="mobile-notification-counter"
+                className="absolute right-0 bottom-0 h-5 w-5 rounded-full bg-brand shadow-sm"
+                variant="secondary"
               >
-                {unreadNotifications > 21 ? '21+' : unreadNotifications}
-              </Typography>
-            </Badge>
-          )}
-        </Link>
+                <Typography
+                  className={cn('font-semibold text-primary-foreground', unreadNotifications > 21 && 'text-xs')}
+                  size="xs"
+                >
+                  {unreadNotifications > 21 ? '21+' : unreadNotifications}
+                </Typography>
+              </Badge>
+            )}
+          </Link>
+        )}
       </Container>
     </Container>
   );

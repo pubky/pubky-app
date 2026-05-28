@@ -10,7 +10,10 @@ import {
   FilterList,
   FilterRoot,
 } from '@/atoms/Filter/Filter';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { REACH } from '@/stores/home/home.types';
 import { useHotStore } from '@/stores/hot/hot.store';
 import { TIMEFRAME, type TimeframeType } from '@/stores/hot/hot.types';
 
@@ -91,9 +94,17 @@ export function FilterTimeframe({ selectedTab = TIMEFRAME.THIS_MONTH, onTabChang
  */
 export function HotFeedSidebar() {
   const { reach, setReach, timeframe, setTimeframe } = useHotStore();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const { requireAuth } = useRequireAuth();
+  const isAuthenticated = Boolean(currentUserPubky);
+  const effectiveReach = isAuthenticated ? reach : REACH.ALL;
   return (
     <>
-      <FilterReach selectedTab={reach} onTabChange={setReach} />
+      <FilterReach
+        selectedTab={effectiveReach}
+        onTabChange={(tab) => requireAuth(() => setReach(tab))}
+        hideAccountScopedOptions={false}
+      />
       <div className="sticky top-[100px] w-full self-start">
         <FilterTimeframe selectedTab={timeframe} onTabChange={setTimeframe} />
       </div>
@@ -109,9 +120,17 @@ export function HotFeedSidebar() {
  */
 export function HotFeedDrawer() {
   const { reach, setReach, timeframe, setTimeframe } = useHotStore();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const { requireAuth } = useRequireAuth();
+  const isAuthenticated = Boolean(currentUserPubky);
+  const effectiveReach = isAuthenticated ? reach : REACH.ALL;
   return (
     <div className="flex flex-col gap-6">
-      <FilterReach selectedTab={reach} onTabChange={setReach} />
+      <FilterReach
+        selectedTab={effectiveReach}
+        onTabChange={(tab) => requireAuth(() => setReach(tab))}
+        hideAccountScopedOptions={false}
+      />
       <FilterTimeframe selectedTab={timeframe} onTabChange={setTimeframe} />
     </div>
   );

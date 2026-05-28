@@ -4,11 +4,14 @@ import * as React from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
 import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
 import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
+import { REACH } from '@/stores/home/home.types';
 import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
@@ -32,6 +35,10 @@ function HomeFeedFilters({
   variant = 'drawer',
 }: HomeFeedSidebarProps) {
   const { layout, setLayout, reach, setReach, sort, setSort, content, setContent } = useHomeStore();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const { requireAuth } = useRequireAuth();
+  const isAuthenticated = Boolean(currentUserPubky);
+  const effectiveReach = isAuthenticated ? reach : REACH.ALL;
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
   const resolvedContent = resolveVisualFeedContent({
     content,
@@ -44,7 +51,13 @@ function HomeFeedFilters({
 
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
-      {!hideReachFilter && <FilterReach selectedTab={reach} onTabChange={setReach} />}
+      {!hideReachFilter && (
+        <FilterReach
+          selectedTab={effectiveReach}
+          onTabChange={(tab) => requireAuth(() => setReach(tab))}
+          hideAccountScopedOptions={false}
+        />
+      )}
       <FilterSort selectedTab={sort} onTabChange={setSort} />
       {variant === 'sidebar' ? (
         <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">

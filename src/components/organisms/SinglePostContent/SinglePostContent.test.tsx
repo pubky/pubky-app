@@ -4,22 +4,36 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostAncestors } from '@/hooks/usePostAncestors/usePostAncestors';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
 import { SinglePostContent } from './SinglePostContent';
 
-// Mock hooks
-const mockUseRequireAuth = vi.fn(
-  (): UseRequireAuthResult => ({
-    isAuthenticated: true,
-    requireAuth: <T,>(action: () => T) => action(),
-  }),
-);
+const mockHomeStore = vi.hoisted(() => {
+  const state = {
+    layout: 'columns',
+    setLayout: (layout: string) => {
+      state.layout = layout;
+    },
+    reset: () => {
+      state.layout = 'columns';
+    },
+  };
 
+  return { state };
+});
+
+vi.mock('@/stores/home/home.store', () => ({
+  useHomeStore: Object.assign(
+    (selector: (state: typeof mockHomeStore.state) => unknown) => selector(mockHomeStore.state),
+    {
+      getState: () => mockHomeStore.state,
+    },
+  ),
+}));
+
+// Mock hooks
 const SHORT_POST_DETAILS = {
   id: 'author:post123',
   indexed_at: Date.now(),
@@ -67,10 +81,6 @@ const mockUsePostAncestors = vi.fn(() => ({
 const mockUseUserDetailsFromIds = vi.fn(() => ({
   users: [],
   isLoading: false,
-}));
-
-vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
-  useRequireAuth: vi.fn(),
 }));
 
 vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
@@ -259,7 +269,6 @@ describe('SinglePostContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useHomeStore.getState().reset();
-    vi.mocked(useRequireAuth).mockReturnValue(mockUseRequireAuth());
     vi.mocked(usePostCounts).mockReturnValue(mockUsePostCounts());
     vi.mocked(usePostAncestors).mockReturnValue(mockUsePostAncestors());
     vi.mocked(useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
@@ -298,15 +307,10 @@ describe('SinglePostContent', () => {
       expect(screen.getByText('Replies')).toBeInTheDocument();
     });
 
-    it('does not render Replies heading for unauthenticated article posts', () => {
-      vi.mocked(useRequireAuth).mockReturnValue({
-        isAuthenticated: false,
-        requireAuth: <T,>(_action: () => T) => undefined,
-      });
-
+    it('renders Replies heading for logged-out article posts', () => {
       render(<SinglePostContent postId={mockPostId} postDetails={ARTICLE_POST_DETAILS} />);
 
-      expect(screen.queryByText('Replies')).not.toBeInTheDocument();
+      expect(screen.getByText('Replies')).toBeInTheDocument();
     });
 
     it('does not render Replies heading for short posts', () => {
@@ -353,16 +357,10 @@ describe('SinglePostContent', () => {
   });
 
   describe('authentication', () => {
-    it('hides replies section when not authenticated', () => {
-      vi.mocked(useRequireAuth).mockReturnValue({
-        isAuthenticated: false,
-        requireAuth: <T,>(_action: () => T) => undefined,
-      });
-
+    it('renders replies section for logged-out readers', () => {
       render(<SinglePostContent postId={mockPostId} postDetails={SHORT_POST_DETAILS} />);
 
-      expect(screen.queryByTestId('thread-tree')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('quick-reply')).not.toBeInTheDocument();
+      expect(screen.getByTestId('thread-tree')).toBeInTheDocument();
       expect(screen.queryByTestId('single-post-participants')).not.toBeInTheDocument();
     });
   });
@@ -373,7 +371,6 @@ describe('SinglePostContent', () => {
     beforeEach(() => {
       vi.clearAllMocks();
       useHomeStore.getState().reset();
-      vi.mocked(useRequireAuth).mockReturnValue(mockUseRequireAuth());
       vi.mocked(usePostCounts).mockReturnValue(mockUsePostCounts());
       vi.mocked(usePostAncestors).mockReturnValue(mockUsePostAncestors());
       vi.mocked(useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
@@ -391,16 +388,6 @@ describe('SinglePostContent', () => {
 
     it('matches snapshot with deleted parent post', () => {
       const { container } = render(<SinglePostContent postId={mockPostId} postDetails={DELETED_SHORT_POST_DETAILS} />);
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot when not authenticated', () => {
-      vi.mocked(useRequireAuth).mockReturnValue({
-        isAuthenticated: false,
-        requireAuth: <T,>(_action: () => T) => undefined,
-      });
-
-      const { container } = render(<SinglePostContent postId={mockPostId} postDetails={SHORT_POST_DETAILS} />);
       expect(container).toMatchSnapshot();
     });
   });

@@ -52,14 +52,20 @@ vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
 // Mock @/app
 vi.mock('@/app/routes', () => ({
   PUBLIC_ROUTES: ['/landing'],
-  isDynamicPublicRoute: (path: string) => path.startsWith('/post/') || path.startsWith('/profile/'),
+  isDynamicPublicRoute: (path: string) => {
+    const segments = path.split('/').filter(Boolean);
+    return (
+      (segments[0] === 'post' && segments.length === 3) ||
+      (segments[0] === 'profile' && segments.length === 2 && segments[1].length === 52)
+    );
+  },
 }));
 
 // Mock @/providers/RouteGuardProvider/RouteGuardProvider.constants
 vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
   ROUTE_ACCESS_MAP: {
     AUTHENTICATED: { allowedRoutes: ['/feed', '/settings'], redirectTo: '/feed' },
-    UNAUTHENTICATED: { allowedRoutes: ['/login', '/landing'], redirectTo: '/login' },
+    UNAUTHENTICATED: { allowedRoutes: ['/login', '/landing', '/home', '/hot', '/search'], redirectTo: '/login' },
     NEEDS_PROFILE_CREATION: { allowedRoutes: ['/create-profile'], redirectTo: '/create-profile' },
   },
 }));
@@ -348,6 +354,54 @@ describe('RouteGuardProvider — migration resync', () => {
     );
 
     expect(screen.getByText('redirecting')).toBeInTheDocument();
+  });
+
+  it('allows unauthenticated users to render core explore routes after auth loading resolves', () => {
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.currentUserPubky = null;
+    mocks.pathname = '/home';
+
+    render(
+      <RouteGuardProvider>
+        <div>Explore Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(screen.getByText('Explore Content')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('still protects bookmarks for unauthenticated users', () => {
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.currentUserPubky = null;
+    mocks.pathname = '/bookmarks';
+
+    render(
+      <RouteGuardProvider>
+        <div>Bookmarks Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.queryByText('Bookmarks Content')).not.toBeInTheDocument();
+  });
+
+  it('keeps profile-creation users on onboarding instead of core explore routes', () => {
+    mocks.status = 'NEEDS_PROFILE_CREATION';
+    mocks.isLoading = false;
+    mocks.pathname = '/home';
+
+    render(
+      <RouteGuardProvider>
+        <div>Explore Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.queryByText('Explore Content')).not.toBeInTheDocument();
+    expect(mocks.mockRouterPush).toHaveBeenCalledWith('/create-profile');
   });
 
   it('calls router.refresh() when storeLanguage differs from serverLocale', () => {

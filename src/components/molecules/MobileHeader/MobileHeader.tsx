@@ -1,7 +1,8 @@
 'use client';
-import { Activity, SlidersHorizontal, UserRound } from 'lucide-react';
+import { Activity, SlidersHorizontal, UserRoundPlus } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { Logo } from '../Logo/Logo';
@@ -25,7 +26,8 @@ export function MobileHeader({
 }: MobileHeaderProps) {
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
-  const showLeftIcon = showLeftButton && isAuthenticated;
+  const { isCoreExploreRoute } = usePublicRoute();
+  const showLeftIcon = showLeftButton && (isAuthenticated || isCoreExploreRoute);
   return (
     <Container
       overrideDefaults
@@ -58,7 +60,7 @@ export function MobileHeader({
             onClick={() => setShowSignInDialog(true)}
             aria-label="Join Pubky"
           >
-            <UserRound className="size-6" />
+            <UserRoundPlus className="size-6" />
           </Button>
         ) : showRightButton ? (
           <Button variant="ghost" size="icon" onClick={onRightIconClick}>

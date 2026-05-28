@@ -15,6 +15,7 @@
 import Link from 'next/link';
 import { KeyRound, UserPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -52,7 +53,7 @@ export function DialogSignIn() {
             </Container>
 
             <Button asChild className="w-full">
-              <Link href="/" onClick={handleClose}>
+              <Link href={ONBOARDING_ROUTES.HUMAN} onClick={handleClose}>
                 <UserPlus className="mr-2 size-4" />
                 {t('joinButton')}
               </Link>
@@ -75,7 +76,7 @@ export function DialogSignIn() {
             </Container>
 
             <Button asChild variant="secondary" className="w-full">
-              <Link href="/sign-in" onClick={handleClose}>
+              <Link href={AUTH_ROUTES.SIGN_IN} onClick={handleClose}>
                 <KeyRound className="mr-2 size-4" />
                 {t('signInButton')}
               </Link>

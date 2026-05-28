@@ -3,7 +3,12 @@
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
-import { HeaderContainer, HeaderOnboarding, HeaderTitle } from '@/molecules/Header/Header';
+import {
+  HeaderContainer,
+  HeaderExploreNavigationButtons,
+  HeaderOnboarding,
+  HeaderTitle,
+} from '@/molecules/Header/Header';
 import { HeaderHome } from '@/molecules/HeaderHome/HeaderHome';
 import { HeaderJoin } from '@/molecules/HeaderJoin/HeaderJoin';
 import { HeaderSignIn } from '@/molecules/HeaderSignIn/HeaderSignIn';
@@ -15,7 +20,7 @@ export function Header() {
   const pathname = usePathname();
   const t = useTranslations('onboarding.steps');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
-  const { isPublicRoute } = usePublicRoute();
+  const { isCoreExploreRoute, isPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
   const isCopyrightPage = pathname === '/copyright';
@@ -26,7 +31,8 @@ export function Header() {
   // Hide header on mobile when:
   // - User is authenticated (not during onboarding) - they use MobileHeader
   // - User is on public route (post/profile) - they use MobileHeader with Join button
-  const shouldHideHeaderOnMobile = (isAuthenticated && !isOnboarding) || isPublicRoute;
+  // - User is on a core explore route - they use MobileHeader + MobileFooter public navigation
+  const shouldHideHeaderOnMobile = (isAuthenticated && !isOnboarding) || isPublicRoute || isCoreExploreRoute;
   // Show title only for onboarding/logout pages (when stepConfig exists) and user is not authenticated,
   // or during profile setup (step 5)
   const shouldShowTitle = currentTitle && (!isAuthenticated || currentStep === 5);
@@ -38,6 +44,7 @@ export function Header() {
   // Determine which header content to show:
   // - Onboarding: HeaderOnboarding
   // - Authenticated: HeaderSignIn (navigation + avatar)
+  // - Unauthenticated on core explore route (home/hot/search): public explore navigation + join
   // - Unauthenticated on public route (post/profile): HeaderJoin (minimal, just join icon)
   // - Unauthenticated on landing/other: HeaderHome (social links + sign in)
   const renderHeaderContent = () => {
@@ -46,6 +53,9 @@ export function Header() {
     }
     if (isAuthenticated) {
       return <HeaderSignIn />;
+    }
+    if (isCoreExploreRoute) {
+      return <HeaderExploreNavigationButtons />;
     }
     if (isPublicRoute) {
       return <HeaderJoin />;

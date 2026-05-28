@@ -5,6 +5,7 @@ import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFee
 
 const mockSetContent = vi.fn();
 const mockUseHomeStore = vi.fn();
+let mockCurrentUserPubky: string | null = 'viewer-pubky';
 const mockFilterContent = vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
   <div
     data-testid="filter-content"
@@ -17,6 +18,11 @@ const mockFilterContent = vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?:
 
 // Mock useHomeStore
 vi.mock('@/stores/home/home.types', () => ({
+  REACH: {
+    ALL: 'all',
+    FOLLOWING: 'following',
+    FRIENDS: 'friends',
+  },
   CONTENT: {
     ALL: 'all',
     SHORT: 'short',
@@ -29,6 +35,11 @@ vi.mock('@/stores/home/home.types', () => ({
 }));
 vi.mock('@/stores/home/home.store', () => ({
   useHomeStore: () => mockUseHomeStore(),
+}));
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
+    selector({ currentUserPubky: mockCurrentUserPubky }),
 }));
 
 const mockUseFeedLayoutResolution = vi.fn(() => ({
@@ -73,7 +84,21 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
 
 vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
-    FilterReach: () => <div data-testid="filter-reach">FilterReach</div>,
+    FilterReach: ({
+      selectedTab,
+      hideAccountScopedOptions,
+    }: {
+      selectedTab?: string;
+      hideAccountScopedOptions?: boolean;
+    }) => (
+      <div
+        data-testid="filter-reach"
+        data-selected-tab={selectedTab}
+        data-hide-account-scoped={String(hideAccountScopedOptions)}
+      >
+        FilterReach
+      </div>
+    ),
   };
 });
 
@@ -85,6 +110,7 @@ vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
 
 beforeEach(() => {
   mockSetContent.mockClear();
+  mockCurrentUserPubky = 'viewer-pubky';
   mockUseHomeStore.mockReturnValue({
     layout: 'columns',
     setLayout: vi.fn(),
@@ -163,6 +189,15 @@ describe('HomeFeedSidebar', () => {
 
     expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'all');
     expect(mockSetContent).not.toHaveBeenCalled();
+  });
+
+  it('forces all reach and keeps account-scoped reach controls visible when logged out', () => {
+    mockCurrentUserPubky = null;
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-hide-account-scoped', 'false');
   });
 });
 
