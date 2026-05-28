@@ -165,7 +165,7 @@ export function PostInput({
   const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
   const isMobile = useIsMobile();
-  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
+  const inheritedTagsLayout = usePostMainLayout()?.tagsLayout ?? 'inline';
   const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
 
   return (

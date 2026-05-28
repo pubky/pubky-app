@@ -1,0 +1,121 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BookmarksCollectionHeader - Snapshots > matches snapshot with default props 1`] = `
+<div
+  class="flex w-full flex-col gap-4 rounded-md bg-card p-6 lg:p-12"
+  data-testid="bookmarks-collection-header"
+>
+  <h1
+    class="w-full break-words text-5xl leading-none font-bold text-white lg:text-6xl"
+    data-testid="typography"
+  >
+    Bookmarks
+  </h1>
+  <div
+    class="flex w-full flex-wrap items-center gap-6"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 items-center gap-3 lg:flex-none"
+      data-testid="container"
+    >
+      <div
+        data-alt="Test User"
+        data-avatar-url="https://example.com/avatar.png"
+        data-fallback-seed="test-pubky"
+        data-name="Test User"
+        data-size="md"
+        data-testid="avatar-with-fallback"
+      >
+        Test User
+      </div>
+      <span
+        class="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-white"
+        data-testid="typography"
+      >
+        Test User
+      </span>
+    </div>
+    <div
+      class="flex shrink-0 items-center gap-3 text-muted-foreground"
+      data-testid="container"
+    >
+      <div
+        class="flex items-center gap-1"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sticky-note size-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+          />
+          <path
+            d="M15 3v5a1 1 0 0 0 1 1h5"
+          />
+        </svg>
+        <span
+          class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+          data-testid="typography"
+        >
+          29
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-1"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-circle-user-round size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M17.925 20.056a6 6 0 0 0-11.851.001"
+          />
+          <circle
+            cx="12"
+            cy="11"
+            r="4"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+        </svg>
+        <span
+          class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+          data-testid="typography"
+        >
+          PRIVATE
+        </span>
+      </div>
+    </div>
+  </div>
+  <p
+    class="w-full text-xl leading-7 font-light text-muted-foreground lg:text-2xl lg:leading-8"
+    data-testid="typography"
+  >
+    Everything you saved for later
+  </p>
+</div>
+`;

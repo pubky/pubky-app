@@ -1,0 +1,21 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BookmarksEmptyState - Snapshots > matches snapshot with default props 1`] = `
+<div
+  class="flex min-h-48 w-full flex-col items-center justify-center gap-2 rounded-md px-6 py-12 text-center"
+  data-testid="bookmarks-empty-state"
+>
+  <h2
+    class="text-xl leading-7 font-bold text-foreground"
+    data-testid="typography"
+  >
+    No bookmarks yet
+  </h2>
+  <p
+    class="max-w-md text-base leading-6 font-medium text-muted-foreground"
+    data-testid="typography"
+  >
+    Save posts to Bookmarks and they will appear here.
+  </p>
+</div>
+`;

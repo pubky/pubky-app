@@ -1,117 +1,125 @@
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useCollectionsOwner } from '@/hooks/useCollectionsOwner/useCollectionsOwner';
 import { Bookmarks } from './Bookmarks';
+
+vi.mock('@/hooks/useCollectionsOwner/useCollectionsOwner', () => ({
+  useCollectionsOwner: vi.fn(),
+}));
+
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
+  AvatarWithFallback: ({
+    avatarUrl,
+    name,
+    fallbackSeed,
+    size,
+  }: {
+    avatarUrl?: string;
+    name: string;
+    fallbackSeed?: string;
+    size?: string;
+  }) => (
+    <div
+      data-testid="avatar-with-fallback"
+      data-avatar-url={avatarUrl}
+      data-name={name}
+      data-fallback-seed={fallbackSeed}
+      data-size={size}
+    >
+      {name}
+    </div>
+  ),
+}));
 
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
   ContentLayout: ({
     children,
-    feedVariant,
+    showLeftSidebar,
+    showLeftMobileButton,
     showRightMobileButton,
-    leftSidebarContent,
-    rightSidebarContent,
-    leftDrawerContent,
-    rightDrawerContent,
-    leftDrawerContentMobile,
+    showRightSidebar,
+    className,
   }: {
     children: ReactNode;
-    feedVariant?: string;
+    showLeftSidebar?: boolean;
+    showLeftMobileButton?: boolean;
     showRightMobileButton?: boolean;
-    leftSidebarContent?: ReactNode;
-    rightSidebarContent?: ReactNode;
-    leftDrawerContent?: ReactNode;
-    rightDrawerContent?: ReactNode;
-    leftDrawerContentMobile?: ReactNode;
+    showRightSidebar?: boolean;
+    className?: string;
   }) => (
     <div
       data-testid="content-layout"
-      data-feed-variant={feedVariant}
+      data-show-left-sidebar={String(showLeftSidebar)}
+      data-show-left-mobile-button={String(showLeftMobileButton)}
+      data-show-right-sidebar={String(showRightSidebar)}
       data-show-right-mobile-button={String(showRightMobileButton)}
+      className={className}
     >
-      <div data-testid="left-sidebar">{leftSidebarContent}</div>
-      <div data-testid="right-sidebar">{rightSidebarContent}</div>
-      <div data-testid="left-drawer">{leftDrawerContent}</div>
-      <div data-testid="right-drawer">{rightDrawerContent}</div>
-      <div data-testid="left-drawer-mobile">{leftDrawerContentMobile}</div>
       {children}
     </div>
   ),
 }));
 
-vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', () => ({
-  HomeFeedRightDrawer: () => <div data-testid="home-feed-right-drawer">HomeFeedRightDrawer</div>,
-  HomeFeedRightSidebar: () => <div data-testid="home-feed-right-sidebar">HomeFeedRightSidebar</div>,
-}));
-
-vi.mock('@/organisms/HomeFeedSidebar/HomeFeedSidebar', () => ({
-  HomeFeedDrawer: ({ feedVariant, hideReachFilter }: { feedVariant: string; hideReachFilter?: boolean }) => (
-    <div
-      data-testid="home-feed-drawer"
-      data-feed-variant={feedVariant}
-      data-hide-reach-filter={String(hideReachFilter)}
-    >
-      HomeFeedDrawer
-    </div>
-  ),
-  HomeFeedDrawerMobile: ({ feedVariant, hideReachFilter }: { feedVariant: string; hideReachFilter?: boolean }) => (
-    <div
-      data-testid="home-feed-drawer-mobile"
-      data-feed-variant={feedVariant}
-      data-hide-reach-filter={String(hideReachFilter)}
-    >
-      HomeFeedDrawerMobile
-    </div>
-  ),
-  HomeFeedSidebar: ({ feedVariant, hideReachFilter }: { feedVariant: string; hideReachFilter?: boolean }) => (
-    <div
-      data-testid="home-feed-sidebar"
-      data-feed-variant={feedVariant}
-      data-hide-reach-filter={String(hideReachFilter)}
-    >
-      HomeFeedSidebar
+vi.mock('@/organisms/Collections/BookmarksCollectionPosts/BookmarksCollectionPosts', () => ({
+  BookmarksCollectionPosts: ({ emptyComponent }: { emptyComponent: ReactNode }) => (
+    <div data-testid="bookmarks-collection-posts">
+      <div data-testid="bookmarks-empty-prop">{emptyComponent}</div>
     </div>
   ),
 }));
 
-vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
-  TimelineFeed: ({ variant }: { variant: string }) => (
-    <div data-testid="timeline-feed" data-variant={variant}>
-      TimelineFeed
-    </div>
-  ),
-}));
-
-vi.mock('@/config/feed', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/config/feed')>();
-  return {
-    ...actual,
-    TIMELINE_FEED_VARIANT: {
-      ...actual.TIMELINE_FEED_VARIANT,
-      BOOKMARKS: 'bookmarks',
-    },
-  };
-});
+const defaultOwner = {
+  currentUserPubky: 'test-pubky',
+  avatarUrl: 'https://example.com/avatar/test-pubky?v=123',
+  avatarName: 'Test User',
+  avatarSeed: 'test-pubky',
+  bookmarkCount: 29,
+  isCountsLoading: false,
+};
 
 describe('Bookmarks', () => {
-  it('renders TimelineFeed with BOOKMARKS variant', () => {
-    render(<Bookmarks />);
-    const timelineFeed = screen.getByTestId('timeline-feed');
-    expect(timelineFeed).toBeInTheDocument();
-    expect(timelineFeed).toHaveAttribute('data-variant', 'bookmarks');
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useCollectionsOwner).mockReturnValue(defaultOwner);
   });
 
-  it('renders its own ContentLayout shell outside the feeds route group', () => {
+  it('renders the dedicated bookmarks collection posts list', () => {
+    render(<Bookmarks />);
+    expect(screen.getByTestId('bookmarks-collection-posts')).toBeInTheDocument();
+  });
+
+  it('renders its own collection detail shell outside the feeds route group', () => {
     render(<Bookmarks />);
     const contentLayout = screen.getByTestId('content-layout');
-    expect(contentLayout).toHaveAttribute('data-feed-variant', 'bookmarks');
+    expect(contentLayout).toHaveAttribute('data-show-left-sidebar', 'false');
+    expect(contentLayout).toHaveAttribute('data-show-left-mobile-button', 'false');
+    expect(contentLayout).toHaveAttribute('data-show-right-sidebar', 'false');
     expect(contentLayout).toHaveAttribute('data-show-right-mobile-button', 'false');
   });
 
-  it('renders bookmarks filters with reach filter hidden', () => {
+  it('renders the Bookmarks system collection header', () => {
     render(<Bookmarks />);
-    expect(screen.getByTestId('home-feed-sidebar')).toHaveAttribute('data-hide-reach-filter', 'true');
-    expect(screen.getByTestId('home-feed-drawer')).toHaveAttribute('data-hide-reach-filter', 'true');
-    expect(screen.getByTestId('home-feed-drawer-mobile')).toHaveAttribute('data-hide-reach-filter', 'true');
+    const header = screen.getByTestId('bookmarks-collection-header');
+    expect(header).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Bookmarks' })).toBeInTheDocument();
+    expect(screen.getByText('Everything you saved for later')).toBeInTheDocument();
+    expect(header).toHaveTextContent('Test User');
+    expect(header).toHaveTextContent('29');
+    expect(header).toHaveTextContent('PRIVATE');
+  });
+
+  it('does not render system collection edit actions', () => {
+    render(<Bookmarks />);
+    expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /rename/i })).not.toBeInTheDocument();
+  });
+
+  it('passes the Bookmarks empty state to the dedicated posts list', () => {
+    render(<Bookmarks />);
+    expect(screen.getByTestId('bookmarks-empty-state')).toBeInTheDocument();
+    expect(screen.getByText('No bookmarks yet')).toBeInTheDocument();
   });
 });
 

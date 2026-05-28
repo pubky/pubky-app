@@ -1255,7 +1255,12 @@
     },
     "bookmarks": {
       "title": "ブックマーク",
-      "description": "あとで見たいものをすべて保存できます。"
+      "description": "あとで見たいものをすべて保存できます。",
+      "ownerLabel": "{name} が整理",
+      "postSingular": "件の投稿",
+      "postPlural": "件の投稿",
+      "emptyTitle": "ブックマークはまだありません",
+      "emptyDescription": "投稿をブックマークに保存すると、ここに表示されます。"
     },
     "private": "非公開"
   },

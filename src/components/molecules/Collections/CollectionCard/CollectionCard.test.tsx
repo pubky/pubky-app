@@ -36,7 +36,7 @@ describe('CollectionCard', () => {
       <CollectionCard
         href="/collections/bookmarks"
         title="Bookmarks"
-        description="Everything you want to save for later."
+        description="Everything you saved for later"
         icon={Bookmark}
         count={29}
         visibilityLabel="PRIVATE"
@@ -49,7 +49,7 @@ describe('CollectionCard', () => {
     const link = screen.getByRole('link', { name: 'Bookmarks' });
     expect(link).toHaveAttribute('href', '/collections/bookmarks');
     expect(screen.getByText('Bookmarks')).toBeInTheDocument();
-    expect(screen.getByText('Everything you want to save for later.')).toBeInTheDocument();
+    expect(screen.getByText('Everything you saved for later')).toBeInTheDocument();
     expect(screen.getByText('29')).toBeInTheDocument();
     expect(screen.getByText('PRIVATE')).toBeInTheDocument();
     expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute(
@@ -68,7 +68,7 @@ describe('CollectionCard - Snapshots', () => {
       <CollectionCard
         href="/collections/bookmarks"
         title="Bookmarks"
-        description="Everything you want to save for later."
+        description="Everything you saved for later"
         icon={Bookmark}
         count={29}
         visibilityLabel="PRIVATE"

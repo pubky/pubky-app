@@ -1255,7 +1255,9 @@
     },
     "bookmarks": {
       "title": "Lesezeichen",
-      "description": "Alles, was du für später speichern möchtest."
+      "description": "Alles, was du für später gespeichert hast",
+      "emptyTitle": "Noch keine Lesezeichen",
+      "emptyDescription": "Speichere Beiträge in den Lesezeichen, dann erscheinen sie hier."
     },
     "private": "PRIVAT"
   },

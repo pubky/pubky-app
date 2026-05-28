@@ -1249,7 +1249,12 @@
     },
     "bookmarks": {
       "title": "الإشارات المرجعية",
-      "description": "كل ما تريد حفظه لوقت لاحق."
+      "description": "كل ما تريد حفظه لوقت لاحق.",
+      "ownerLabel": "منسقة بواسطة {name}",
+      "postSingular": "منشور",
+      "postPlural": "منشورات",
+      "emptyTitle": "لا توجد إشارات مرجعية بعد",
+      "emptyDescription": "احفظ المنشورات في الإشارات المرجعية وستظهر هنا."
     },
     "private": "خاص"
   },

@@ -1255,7 +1255,9 @@
     },
     "bookmarks": {
       "title": "Bookmarks",
-      "description": "Everything you want to save for later."
+      "description": "Everything you saved for later",
+      "emptyTitle": "No bookmarks yet",
+      "emptyDescription": "Save posts to Bookmarks and they will appear here."
     },
     "private": "PRIVATE"
   },

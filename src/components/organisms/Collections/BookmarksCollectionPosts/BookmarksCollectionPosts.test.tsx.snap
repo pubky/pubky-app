@@ -1,0 +1,51 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BookmarksCollectionPosts - Snapshots > matches snapshot with bookmarked posts 1`] = `
+<div
+  class="mx-auto w-full flex-col flex"
+  data-cy="bookmarks-collection-posts-container"
+  data-testid="container"
+>
+  <div
+    class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+    data-cy="bookmarks-collection-posts"
+    data-testid="container"
+    role="feed"
+  >
+    <div
+      aria-posinset="1"
+      aria-setsize="2"
+      class="mx-auto w-full flex-col flex min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      data-cy="post-card"
+      data-testid="container"
+      role="article"
+      tabindex="0"
+    >
+      <div
+        data-testid="post-main-author1:post1"
+      >
+        author1:post1
+      </div>
+    </div>
+    <div
+      aria-posinset="2"
+      aria-setsize="2"
+      class="mx-auto w-full flex-col flex min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      data-cy="post-card"
+      data-testid="container"
+      role="article"
+      tabindex="0"
+    >
+      <div
+        data-testid="post-main-author2:post2"
+      >
+        author2:post2
+      </div>
+    </div>
+    <div
+      class="col-span-full h-5"
+      data-testid="container"
+    />
+  </div>
+</div>
+`;

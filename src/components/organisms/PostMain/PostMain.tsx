@@ -38,7 +38,9 @@ export function PostMain({
   isNavigable = true,
 }: PostMainProps) {
   const isMobile = useIsMobile();
-  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
+  const layoutConfig = usePostMainLayout();
+  const inheritedTagsLayout = layoutConfig?.tagsLayout ?? 'inline';
+  const isCollectionSurface = layoutConfig?.surface === 'collection';
   const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
   const isWideLayout = effectiveTagsLayout === 'side';
   const { postDetails } = usePostDetails(postId);
@@ -133,7 +135,14 @@ export function PostMain({
                       postId={postId}
                       onReplyClick={openReplyDialog}
                       onRepostClick={openRepostDialog}
-                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+                      className={
+                        isCollectionSurface ? 'flex flex-wrap items-center justify-between gap-x-2 gap-y-4' : undefined
+                      }
+                      actionsClassName={
+                        isCollectionSurface
+                          ? 'shrink-0 justify-end'
+                          : 'w-full shrink-0 justify-start sm:w-auto md:justify-end'
+                      }
                     />
                   </>
                 )}

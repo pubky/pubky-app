@@ -1,36 +1,48 @@
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+'use client';
+
+import { useTranslations } from 'next-intl';
+import { Container } from '@/atoms/Container/Container';
+import { useCollectionsOwner } from '@/hooks/useCollectionsOwner/useCollectionsOwner';
+import { BookmarksCollectionHeader } from '@/molecules/Collections/BookmarksCollectionHeader/BookmarksCollectionHeader';
+import { BookmarksEmptyState } from '@/molecules/Collections/BookmarksEmptyState/BookmarksEmptyState';
+import { BookmarksCollectionPosts } from '@/organisms/Collections/BookmarksCollectionPosts/BookmarksCollectionPosts';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
-import { HomeFeedRightDrawer, HomeFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
-import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organisms/HomeFeedSidebar/HomeFeedSidebar';
-import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
 /**
  * Bookmarks Page Template
  *
- * Displays the user's bookmarked posts with filtering capabilities.
- * Reuses the same sidebar components from Home page for UI consistency.
- *
- * Sort and Content filters affect the bookmarks stream.
- * Reach filter is hidden as it's not supported by the Nexus API for bookmarks.
+ * Displays the user's bookmarked posts as a system collection detail page.
+ * The post data still comes from the existing bookmarks stream.
  */
 export function Bookmarks() {
+  const t = useTranslations('collections');
+  const { avatarUrl, avatarName, avatarSeed, bookmarkCount } = useCollectionsOwner();
+
   return (
     <ContentLayout
-      feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+      showLeftSidebar={false}
+      showRightSidebar={false}
+      showLeftMobileButton={false}
       showRightMobileButton={false}
-      leftSidebarContent={
-        <HomeFeedSidebar hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
-      }
-      rightSidebarContent={<HomeFeedRightSidebar />}
-      leftDrawerContent={
-        <HomeFeedDrawer hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
-      }
-      rightDrawerContent={<HomeFeedRightDrawer />}
-      leftDrawerContentMobile={
-        <HomeFeedDrawerMobile hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
-      }
+      className="pb-24 lg:pb-12 xl:!px-0"
+      classNameWrapperContent="gap-6"
     >
-      <TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
+      <Container overrideDefaults className="flex w-full flex-col gap-6">
+        <BookmarksCollectionHeader
+          title={t('bookmarks.title')}
+          description={t('bookmarks.description')}
+          visibilityLabel={t('private')}
+          postCount={bookmarkCount}
+          ownerAvatarUrl={avatarUrl}
+          ownerName={avatarName}
+          ownerSeed={avatarSeed}
+        />
+        <BookmarksCollectionPosts
+          emptyComponent={
+            <BookmarksEmptyState title={t('bookmarks.emptyTitle')} description={t('bookmarks.emptyDescription')} />
+          }
+        />
+      </Container>
     </ContentLayout>
   );
 }

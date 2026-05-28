@@ -1,12 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import type { TagsLayout } from './PostMain.types';
+import type { PostMainSurface, TagsLayout } from './PostMain.types';
 
-const PostMainLayoutContext = React.createContext<TagsLayout | undefined>(undefined);
+export interface PostMainLayoutConfig {
+  tagsLayout: TagsLayout;
+  surface?: PostMainSurface;
+}
+
+const PostMainLayoutContext = React.createContext<PostMainLayoutConfig | undefined>(undefined);
 
 interface PostMainLayoutProviderProps {
   tagsLayout: TagsLayout;
+  surface?: PostMainSurface;
   children: React.ReactNode;
 }
 
@@ -14,8 +20,8 @@ interface PostMainLayoutProviderProps {
  * Provides the surface-level tags layout to every PostMain rendered beneath it,
  * including those reached via the recursive ThreadTree -> ReplyWithNested chain.
  */
-export function PostMainLayoutProvider({ tagsLayout, children }: PostMainLayoutProviderProps) {
-  return <PostMainLayoutContext.Provider value={tagsLayout}>{children}</PostMainLayoutContext.Provider>;
+export function PostMainLayoutProvider({ tagsLayout, surface = 'default', children }: PostMainLayoutProviderProps) {
+  return <PostMainLayoutContext.Provider value={{ tagsLayout, surface }}>{children}</PostMainLayoutContext.Provider>;
 }
 
 export function usePostMainLayout() {

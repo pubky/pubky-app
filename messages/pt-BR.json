@@ -1255,7 +1255,12 @@
     },
     "bookmarks": {
       "title": "Favoritos",
-      "description": "Tudo o que você quer salvar para mais tarde."
+      "description": "Tudo o que você quer salvar para mais tarde.",
+      "ownerLabel": "Organizado por {name}",
+      "postSingular": "publicação",
+      "postPlural": "publicações",
+      "emptyTitle": "Ainda não há favoritos",
+      "emptyDescription": "Salve publicações nos Favoritos e elas aparecerão aqui."
     },
     "private": "PRIVADO"
   },

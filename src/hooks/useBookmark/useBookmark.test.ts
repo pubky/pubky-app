@@ -1,7 +1,9 @@
+import { usePathname } from 'next/navigation';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import type { Pubky } from '@/models/models.types';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { mockAuthStore } from '@/test-utils/stores';
 import { useBookmark } from './useBookmark';
@@ -16,6 +18,12 @@ vi.mock('@/controllers/bookmark/bookmark', () => ({
     commitCreate: vi.fn(),
     commitDelete: vi.fn(),
   },
+}));
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
+  useTimelineFeedContext: vi.fn(() => null),
+}));
+vi.mock('next/navigation', () => ({
+  usePathname: vi.fn(() => '/'),
 }));
 
 // Mock molecules (useToast)
@@ -33,6 +41,8 @@ describe('useBookmark', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useAuthStore).mockImplementation((selector) => selector(mockAuthStore({ currentUserPubky: mockUserId })));
+    vi.mocked(useTimelineFeedContext).mockReturnValue(null);
+    vi.mocked(usePathname).mockReturnValue('/');
   });
 
   it('returns isBookmarked false when post is not bookmarked', async () => {
@@ -131,6 +141,52 @@ describe('useBookmark', () => {
       title: 'Bookmark removed',
       description: 'Post removed from your bookmarks',
     });
+  });
+
+  it('removes the post from the visible bookmarks timeline after unbookmarking', async () => {
+    const removePosts = vi.fn();
+    vi.mocked(usePathname).mockReturnValue('/collections/bookmarks');
+    vi.mocked(useTimelineFeedContext).mockReturnValue({
+      prependPosts: vi.fn(),
+      removePosts,
+    });
+    vi.mocked(BookmarkController.exists).mockResolvedValue(true);
+    vi.mocked(BookmarkController.commitDelete).mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useBookmark(mockPostId));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.toggle();
+    });
+
+    expect(removePosts).toHaveBeenCalledWith(mockPostId);
+  });
+
+  it('does not remove the post from other routes after unbookmarking', async () => {
+    const removePosts = vi.fn();
+    vi.mocked(usePathname).mockReturnValue('/home');
+    vi.mocked(useTimelineFeedContext).mockReturnValue({
+      prependPosts: vi.fn(),
+      removePosts,
+    });
+    vi.mocked(BookmarkController.exists).mockResolvedValue(true);
+    vi.mocked(BookmarkController.commitDelete).mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useBookmark(mockPostId));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.toggle();
+    });
+
+    expect(removePosts).not.toHaveBeenCalled();
   });
 
   it('shows error toast when user is not logged in', async () => {

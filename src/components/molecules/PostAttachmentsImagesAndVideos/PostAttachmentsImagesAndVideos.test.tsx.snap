@@ -15,6 +15,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with GIF 
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -46,6 +47,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -59,7 +61,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       </button>
     </div>
     <video
-      class="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/mixed-video.mp4"
@@ -215,6 +217,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -232,6 +235,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -249,6 +253,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -428,6 +433,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -554,7 +560,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
     data-testid="container"
   >
     <video
-      class="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/single-carousel-video.mp4"
@@ -671,13 +677,13 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
     data-testid="container"
   >
     <video
-      class="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/carousel-video1.mp4"
     />
     <video
-      class="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/carousel-video2.mp4"
@@ -844,6 +850,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with four
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -861,6 +868,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with four
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -878,6 +886,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with four
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -895,6 +904,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with four
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -926,6 +936,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mixe
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -939,7 +950,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mixe
       </button>
     </div>
     <video
-      class="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/mixed-video.mp4"
@@ -949,6 +960,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mixe
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -980,6 +992,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mult
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -997,6 +1010,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mult
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -1014,6 +1028,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mult
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -1041,19 +1056,19 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mult
     data-testid="container"
   >
     <video
-      class="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/video1.mp4"
     />
     <video
-      class="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/video2.mp4"
     />
     <video
-      class="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/video3.mp4"
@@ -1077,6 +1092,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with sing
       data-testid="dialog-trigger"
     >
       <button
+        class=""
         data-override-defaults="true"
         data-testid="button"
       >
@@ -1104,7 +1120,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with sing
     data-testid="container"
   >
     <video
-      class="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/snapshot-video.mp4"

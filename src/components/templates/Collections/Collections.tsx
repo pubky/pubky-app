@@ -6,31 +6,14 @@ import { COLLECTION_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
-import { FileController } from '@/controllers/file/file';
-import { UserController } from '@/controllers/user/user';
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import { useCollectionsOwner } from '@/hooks/useCollectionsOwner/useCollectionsOwner';
 import { CollectionCard } from '@/molecules/Collections/CollectionCard/CollectionCard';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { NewCollectionDialog } from '@/organisms/NewCollectionDialog/NewCollectionDialog';
-import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 export function Collections() {
   const t = useTranslations('collections');
-  const { userDetails, currentUserPubky } = useCurrentUserProfile();
-  const localAvatarUrl = useLocalFilesStore((state) => state.profile);
-  const { data: userCounts } = useLocalFirstQuery({
-    queryFn: () => UserController.getCounts({ userId: currentUserPubky! }),
-    fetchFn: () => UserController.fetchCounts({ userId: currentUserPubky! }),
-    deps: [currentUserPubky],
-    enabled: !!currentUserPubky,
-  });
-  const avatarUrl =
-    localAvatarUrl ??
-    (currentUserPubky && userDetails?.image
-      ? FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
-      : undefined);
-  const avatarName = userDetails?.name || 'U';
+  const { avatarUrl, avatarName, avatarSeed, bookmarkCount } = useCollectionsOwner();
 
   return (
     <ContentLayout showLeftMobileButton={false} showRightMobileButton={false} className="pb-24 lg:pb-12 xl:!px-0">
@@ -53,11 +36,11 @@ export function Collections() {
             title={t('bookmarks.title')}
             description={t('bookmarks.description')}
             icon={Bookmark}
-            count={userCounts?.bookmarks}
+            count={bookmarkCount}
             visibilityLabel={t('private')}
             avatarUrl={avatarUrl}
             avatarName={avatarName}
-            avatarSeed={currentUserPubky ?? avatarName}
+            avatarSeed={avatarSeed}
           />
         </Container>
       </Container>

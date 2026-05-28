@@ -1255,7 +1255,9 @@
     },
     "bookmarks": {
       "title": "Signets",
-      "description": "Tout ce que vous souhaitez enregistrer pour plus tard."
+      "description": "Tout ce que vous avez enregistré pour plus tard",
+      "emptyTitle": "Aucun signet pour le moment",
+      "emptyDescription": "Enregistrez des publications dans les signets et elles apparaîtront ici."
     },
     "private": "PRIVÉ"
   },

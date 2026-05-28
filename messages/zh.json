@@ -1249,7 +1249,12 @@
     },
     "bookmarks": {
       "title": "书签",
-      "description": "保存你想稍后查看的所有内容。"
+      "description": "保存你想稍后查看的所有内容。",
+      "ownerLabel": "由 {name} 整理",
+      "postSingular": "篇帖子",
+      "postPlural": "篇帖子",
+      "emptyTitle": "还没有书签",
+      "emptyDescription": "将帖子保存到书签后，它们会显示在这里。"
     },
     "private": "私密"
   },

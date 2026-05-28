@@ -1,10 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { COLLECTION_ROUTES } from '@/app/routes';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export interface UseBookmarkResult {
@@ -38,6 +41,8 @@ export function useBookmark(postId: string): UseBookmarkResult {
   const tToast = useTranslations('toast');
   const tBookmark = useTranslations('toast.bookmark');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const timelineFeed = useTimelineFeedContext();
+  const pathname = usePathname();
 
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +69,7 @@ export function useBookmark(postId: string): UseBookmarkResult {
       });
   }, [postId]);
 
-  const toggle = useCallback(async (): Promise<void> => {
+  const toggle = async (): Promise<void> => {
     if (!currentUserPubky) {
       toast({
         title: tToast('error'),
@@ -80,6 +85,9 @@ export function useBookmark(postId: string): UseBookmarkResult {
       if (isBookmarked) {
         await BookmarkController.commitDelete({ postId, userId: currentUserPubky });
         setIsBookmarked(false);
+        if (pathname === COLLECTION_ROUTES.BOOKMARKS) {
+          timelineFeed?.removePosts(postId);
+        }
         toast({
           title: tBookmark('removed'),
           description: tBookmark('removedDesc'),
@@ -101,7 +109,7 @@ export function useBookmark(postId: string): UseBookmarkResult {
     } finally {
       setIsToggling(false);
     }
-  }, [postId, currentUserPubky, isBookmarked, isToggling, toast, tToast, tBookmark]);
+  };
 
   return {
     isBookmarked,

@@ -102,7 +102,7 @@ export function QuickReply({
   const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_SPACER_HEIGHT : undefined;
 
   const isMobile = useIsMobile();
-  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
+  const inheritedTagsLayout = usePostMainLayout()?.tagsLayout ?? 'inline';
   const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
 
   return (

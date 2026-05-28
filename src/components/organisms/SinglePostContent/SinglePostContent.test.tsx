@@ -205,7 +205,7 @@ vi.mock('@/organisms/PostMain/PostMain', async () => {
       pinActionsToBottom?: boolean;
       isNavigable?: boolean;
     }) => {
-      const inheritedTagsLayout = usePostMainLayout();
+      const inheritedTagsLayout = usePostMainLayout()?.tagsLayout;
       return (
         <div
           data-testid="post-main"
