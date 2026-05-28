@@ -7,7 +7,7 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
   data-testid="container"
 >
   <div
-    data-class-name="min-w-0 flex-1 gap-0 rounded-md py-0"
+    data-class-name="@container/post min-w-0 flex-1 gap-0 overflow-hidden rounded-md py-0"
     data-testid="card"
   >
     <div
@@ -32,7 +32,7 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
         me:quote-repost-1
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex flex-col items-start gap-2 @md/post:flex-row @md/post:flex-wrap @md/post:justify-between @md/post:gap-x-2 @md/post:gap-y-4 @md/post:items-start"
         data-testid="container"
       >
         <div
@@ -45,7 +45,7 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
           me:quote-repost-1
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start @md/post:w-auto @md/post:justify-end"
           data-testid="post-actions"
         >
           Actions 
@@ -75,7 +75,7 @@ exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] 
   data-testid="container"
 >
   <div
-    data-class-name="min-w-0 flex-1 gap-0 rounded-md py-0"
+    data-class-name="@container/post min-w-0 flex-1 gap-0 overflow-hidden rounded-md py-0"
     data-testid="card"
   >
     <div
@@ -95,7 +95,7 @@ exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] 
         other-user:repost-1
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex flex-col items-start gap-2 @md/post:flex-row @md/post:flex-wrap @md/post:justify-between @md/post:gap-x-2 @md/post:gap-y-4 @md/post:items-start"
         data-testid="container"
       >
         <div
@@ -108,7 +108,7 @@ exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] 
           other-user:repost-1
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start @md/post:w-auto @md/post:justify-end"
           data-testid="post-actions"
         >
           Actions 
@@ -138,7 +138,7 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
   data-testid="container"
 >
   <div
-    data-class-name="min-w-0 flex-1 gap-0 rounded-md py-0"
+    data-class-name="@container/post min-w-0 flex-1 gap-0 overflow-hidden rounded-md py-0"
     data-testid="card"
   >
     <div
@@ -157,7 +157,7 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
         me:simple-repost-1
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex flex-col items-start gap-2 @md/post:flex-row @md/post:flex-wrap @md/post:justify-between @md/post:gap-x-2 @md/post:gap-y-4 @md/post:items-start"
         data-testid="container"
       >
         <div
@@ -170,7 +170,7 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
           me:simple-repost-1
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start @md/post:w-auto @md/post:justify-end"
           data-testid="post-actions"
         >
           Actions 
@@ -200,7 +200,7 @@ exports[`PostMain - Snapshots > matches snapshot with default state 1`] = `
   data-testid="container"
 >
   <div
-    data-class-name="min-w-0 flex-1 gap-0 rounded-md py-0"
+    data-class-name="@container/post min-w-0 flex-1 gap-0 overflow-hidden rounded-md py-0"
     data-testid="card"
   >
     <div
@@ -220,7 +220,7 @@ exports[`PostMain - Snapshots > matches snapshot with default state 1`] = `
         post-123
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex flex-col items-start gap-2 @md/post:flex-row @md/post:flex-wrap @md/post:justify-between @md/post:gap-x-2 @md/post:gap-y-4 @md/post:items-start"
         data-testid="container"
       >
         <div
@@ -233,7 +233,7 @@ exports[`PostMain - Snapshots > matches snapshot with default state 1`] = `
           post-123
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start @md/post:w-auto @md/post:justify-end"
           data-testid="post-actions"
         >
           Actions 
@@ -263,7 +263,7 @@ exports[`PostMain - Snapshots > matches snapshot with deleted post 1`] = `
   data-testid="container"
 >
   <div
-    data-class-name="min-w-0 flex-1 gap-0 rounded-md py-0"
+    data-class-name="@container/post min-w-0 flex-1 gap-0 overflow-hidden rounded-md py-0"
     data-testid="card"
   >
     <div
@@ -282,7 +282,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
   data-testid="container"
 >
   <div
-    data-class-name="min-w-0 flex-1 gap-0 rounded-md py-0"
+    data-class-name="@container/post min-w-0 flex-1 gap-0 overflow-hidden rounded-md py-0"
     data-testid="card"
   >
     <div
@@ -302,7 +302,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
         post-no-reply-456
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex flex-col items-start gap-2 @md/post:flex-row @md/post:flex-wrap @md/post:justify-between @md/post:gap-x-2 @md/post:gap-y-4 @md/post:items-start"
         data-testid="container"
       >
         <div
@@ -315,7 +315,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
           post-no-reply-456
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start @md/post:w-auto @md/post:justify-end"
           data-testid="post-actions"
         >
           Actions 
@@ -358,7 +358,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
     </div>
   </div>
   <div
-    data-class-name="min-w-0 flex-1 gap-0 rounded-md py-0"
+    data-class-name="@container/post min-w-0 flex-1 gap-0 overflow-hidden rounded-md py-0"
     data-testid="card"
   >
     <div
@@ -378,7 +378,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
         post-reply-123
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex flex-col items-start gap-2 @md/post:flex-row @md/post:flex-wrap @md/post:justify-between @md/post:gap-x-2 @md/post:gap-y-4 @md/post:items-start"
         data-testid="container"
       >
         <div
@@ -391,7 +391,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
           post-reply-123
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start @md/post:w-auto @md/post:justify-end"
           data-testid="post-actions"
         >
           Actions 

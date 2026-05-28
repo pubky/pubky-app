@@ -19,7 +19,7 @@ exports[`Bookmarks - Snapshots > matches snapshot 1`] = `
         data-testid="bookmarks-collection-header"
       >
         <h1
-          class="w-full break-words text-5xl leading-none font-bold text-white lg:text-6xl"
+          class="w-full text-5xl leading-none font-bold break-words text-white lg:text-6xl"
           data-testid="typography"
         >
           Bookmarks

@@ -18,7 +18,6 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
 import { cn } from '@/libs/utils/utils';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
-import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
 import { PostAttachmentsCarouselImage } from '../PostAttachmentsCarouselImage/PostAttachmentsCarouselImage';
 import { useToast } from '../Toaster/use-toast';
 
@@ -64,21 +63,20 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
     };
   }, []);
   const isOnlyMedia = imagesAndVideos.length === 1;
-  const isCollectionSurface = usePostMainLayout()?.surface === 'collection';
-  const singleMediaCollectionClass = isCollectionSurface && isOnlyMedia;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* Grid layout */}
-      <Container display="grid" className={cn('gap-3 sm:grid-cols-2', singleMediaCollectionClass && 'grid-cols-1')}>
+      {/* Grid layout — breakpoints follow the post card (@container/post on PostMain), not the viewport */}
+      <Container display="grid" className="min-w-0 gap-3 @sm/post:grid-cols-2">
         {imagesAndVideos.map((media, i) =>
           media.type.startsWith('image') ? (
             <DialogTrigger
               key={i}
               asChild
               className={cn(
-                'relative h-52 w-full cursor-pointer sm:last:odd:col-span-2',
-                singleMediaCollectionClass ? 'aspect-video h-auto' : 'only:static only:h-auto only:w-fit',
+                'relative h-52 w-full cursor-pointer @sm/post:last:odd:col-span-2',
+                isOnlyMedia &&
+                  'only:aspect-video only:h-auto only:w-full only:max-w-full @md/post:only:static @md/post:only:w-fit',
               )}
             >
               <Button
@@ -87,19 +85,16 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
                   e.stopPropagation();
                   setCurrentIndex(i);
                 }}
-                className={cn(singleMediaCollectionClass && 'h-full w-full')}
+                className={cn(isOnlyMedia && 'only:relative only:h-full only:w-full')}
               >
                 <Image
                   src={media.type === 'image/gif' ? media.urls.main : (media.urls.feed as string)}
                   alt={media.name}
-                  fill={!isOnlyMedia || singleMediaCollectionClass}
+                  fill={!isOnlyMedia}
                   className={cn(
-                    'rounded-md',
-                    singleMediaCollectionClass
-                      ? 'object-cover object-center'
-                      : isOnlyMedia
-                        ? 'max-h-96 w-fit object-contain'
-                        : 'object-cover object-center',
+                    'rounded-md object-cover object-center',
+                    isOnlyMedia &&
+                      'only:h-full only:w-full only:object-cover @md/post:only:static @md/post:only:h-auto @md/post:only:max-h-96 @md/post:only:w-fit @md/post:only:object-contain',
                   )}
                 />
               </Button>
@@ -113,10 +108,10 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
               src={media.urls.main}
               pauseVideo={open}
               className={cn(
-                'h-52 w-full cursor-auto sm:last:odd:col-span-2',
-                singleMediaCollectionClass
-                  ? 'aspect-video h-auto max-h-none w-full'
-                  : 'only:h-auto only:max-h-96 only:w-fit',
+                'h-52 w-full cursor-auto @sm/post:last:odd:col-span-2',
+                isOnlyMedia
+                  ? 'only:aspect-video only:h-auto only:w-full only:max-w-full @md/post:only:h-auto @md/post:only:max-h-96 @md/post:only:w-fit'
+                  : undefined,
               )}
             />
           ),

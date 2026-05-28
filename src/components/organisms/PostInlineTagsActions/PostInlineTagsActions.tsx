@@ -30,8 +30,8 @@ export function PostInlineTagsActions({
     <Container
       onClick={(event) => event.stopPropagation()}
       className={cn(
-        'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
-        tagsExpanded ? 'md:items-end' : 'md:items-start',
+        'flex flex-col items-start gap-2 @md/post:flex-row @md/post:flex-wrap @md/post:items-center @md/post:justify-between @md/post:gap-x-2 @md/post:gap-y-4',
+        tagsExpanded ? '@md/post:items-end' : '@md/post:items-start',
         className,
       )}
     >
@@ -41,7 +41,7 @@ export function PostInlineTagsActions({
           widthMode="fit"
           autoFocusInput
           enableLoadingSkeleton={false}
-          className="flex-1"
+          className="min-w-0 flex-1"
         />
       ) : (
         <ClickableTagsList
@@ -53,6 +53,7 @@ export function PostInlineTagsActions({
           showInput={false}
           showAddButton={true}
           addMode={true}
+          className="min-w-0 flex-1"
         />
       )}
       <PostActionsBar
@@ -60,7 +61,7 @@ export function PostInlineTagsActions({
         onTagClick={() => setTagsExpanded((prev) => !prev)}
         onReplyClick={onReplyClick}
         onRepostClick={onRepostClick}
-        className={actionsClassName}
+        className={cn('w-full shrink-0 justify-start @md/post:w-auto @md/post:justify-end', actionsClassName)}
       />
     </Container>
   );

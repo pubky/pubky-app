@@ -6,7 +6,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with GIF 
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
@@ -15,13 +15,13 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with GIF 
       data-testid="dialog-trigger"
     >
       <button
-        class=""
+        class="only:relative only:h-full only:w-full"
         data-override-defaults="true"
         data-testid="button"
       >
         <img
           alt="animated.gif"
-          class="rounded-md max-h-96 w-fit object-contain"
+          class="rounded-md object-cover object-center only:h-full only:w-full only:object-cover @md/post:only:static @md/post:only:h-auto @md/post:only:max-h-96 @md/post:only:w-fit @md/post:only:object-contain"
           data-fill="false"
           data-testid="image"
           src="https://example.com/animated.gif"
@@ -38,7 +38,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
@@ -61,7 +61,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       </button>
     </div>
     <video
-      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
+      class="h-52 w-full cursor-auto @sm/post:last:odd:col-span-2"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/mixed-video.mp4"
@@ -208,7 +208,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
@@ -424,7 +424,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
@@ -433,13 +433,13 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       data-testid="dialog-trigger"
     >
       <button
-        class=""
+        class="only:relative only:h-full only:w-full"
         data-override-defaults="true"
         data-testid="button"
       >
         <img
           alt="dialog-image.jpg"
-          class="rounded-md max-h-96 w-fit object-contain"
+          class="rounded-md object-cover object-center only:h-full only:w-full only:object-cover @md/post:only:static @md/post:only:h-auto @md/post:only:max-h-96 @md/post:only:w-fit @md/post:only:object-contain"
           data-fill="false"
           data-testid="image"
           src="https://example.com/dialog-feed.jpg"
@@ -555,12 +555,12 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
     <video
-      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
+      class="h-52 w-full cursor-auto @sm/post:last:odd:col-span-2 only:aspect-video only:h-auto only:w-full only:max-w-full @md/post:only:h-auto @md/post:only:max-h-96 @md/post:only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/single-carousel-video.mp4"
@@ -672,18 +672,18 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
     <video
-      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
+      class="h-52 w-full cursor-auto @sm/post:last:odd:col-span-2"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/carousel-video1.mp4"
     />
     <video
-      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
+      class="h-52 w-full cursor-auto @sm/post:last:odd:col-span-2"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/carousel-video2.mp4"
@@ -828,7 +828,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with empt
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   />
@@ -841,7 +841,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with four
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
@@ -927,7 +927,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mixe
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
@@ -950,7 +950,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mixe
       </button>
     </div>
     <video
-      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
+      class="h-52 w-full cursor-auto @sm/post:last:odd:col-span-2"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/mixed-video.mp4"
@@ -983,7 +983,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mult
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
@@ -1051,24 +1051,24 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mult
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
     <video
-      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
+      class="h-52 w-full cursor-auto @sm/post:last:odd:col-span-2"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/video1.mp4"
     />
     <video
-      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
+      class="h-52 w-full cursor-auto @sm/post:last:odd:col-span-2"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/video2.mp4"
     />
     <video
-      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
+      class="h-52 w-full cursor-auto @sm/post:last:odd:col-span-2"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/video3.mp4"
@@ -1083,7 +1083,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with sing
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
@@ -1092,13 +1092,13 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with sing
       data-testid="dialog-trigger"
     >
       <button
-        class=""
+        class="only:relative only:h-full only:w-full"
         data-override-defaults="true"
         data-testid="button"
       >
         <img
           alt="snapshot-image.jpg"
-          class="rounded-md max-h-96 w-fit object-contain"
+          class="rounded-md object-cover object-center only:h-full only:w-full only:object-cover @md/post:only:static @md/post:only:h-auto @md/post:only:max-h-96 @md/post:only:w-fit @md/post:only:object-contain"
           data-fill="false"
           data-testid="image"
           src="https://example.com/snapshot-feed.jpg"
@@ -1115,12 +1115,12 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with sing
   data-testid="dialog"
 >
   <div
-    class="gap-3 sm:grid-cols-2"
+    class="min-w-0 gap-3 @sm/post:grid-cols-2"
     data-display="grid"
     data-testid="container"
   >
     <video
-      class="h-52 w-full cursor-auto sm:last:odd:col-span-2 only:h-auto only:max-h-96 only:w-fit"
+      class="h-52 w-full cursor-auto @sm/post:last:odd:col-span-2 only:aspect-video only:h-auto only:w-full only:max-w-full @md/post:only:h-auto @md/post:only:max-h-96 @md/post:only:w-fit"
       data-pause-video="false"
       data-testid="video"
       src="https://example.com/snapshot-video.mp4"

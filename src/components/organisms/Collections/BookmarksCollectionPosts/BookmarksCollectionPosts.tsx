@@ -46,7 +46,7 @@ export function BookmarksCollectionPosts({ emptyComponent }: BookmarksCollection
 
   return (
     <TimelineFeedContext.Provider value={{ prependPosts, removePosts }}>
-      <PostMainLayoutProvider tagsLayout={tagsLayout} surface="collection">
+      <PostMainLayoutProvider tagsLayout={tagsLayout}>
         <TimelineStateWrapper
           loading={loading}
           error={error}

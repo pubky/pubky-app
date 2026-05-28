@@ -10,7 +10,6 @@ import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { PostArticle } from '../PostArticle/PostArticle';
 import { PostAttachments } from '../PostAttachments/PostAttachments';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
-import { usePostMainLayout } from '../PostMain/PostMainLayoutContext';
 import { PostContentBaseSkeleton } from './PostContentBase.skeleton';
 import type { PostContentBaseProps } from './PostContentBase.types';
 
@@ -21,7 +20,6 @@ import type { PostContentBaseProps } from './PostContentBase.types';
  */
 export function PostContentBase({ postId, className, textClassName }: PostContentBaseProps) {
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
-  const isCollectionSurface = usePostMainLayout()?.surface === 'collection';
 
   // Fetch post details for content
   const { postDetails } = usePostDetails(postId);
@@ -45,7 +43,7 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
         content={postDetails.content}
         attachments={postDetails.attachments}
         localAttachments={localAttachments}
-        className={cn(isCollectionSurface && 'flex-col lg:flex-col', className)}
+        className={className}
       />
     );
 

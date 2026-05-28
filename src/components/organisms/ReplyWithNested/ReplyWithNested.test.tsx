@@ -68,7 +68,7 @@ vi.mock('@/atoms/PostThreadSpacer/PostThreadSpacer', () => {
 vi.mock('@/organisms/PostMain/PostMain', () => {
   return {
     PostMain: ({ postId, isLastReply }: { postId: string; isLastReply: boolean }) => {
-      const tagsLayout = usePostMainLayout()?.tagsLayout;
+      const tagsLayout = usePostMainLayout();
 
       return (
         <div

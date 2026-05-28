@@ -38,9 +38,7 @@ export function PostMain({
   isNavigable = true,
 }: PostMainProps) {
   const isMobile = useIsMobile();
-  const layoutConfig = usePostMainLayout();
-  const inheritedTagsLayout = layoutConfig?.tagsLayout ?? 'inline';
-  const isCollectionSurface = layoutConfig?.surface === 'collection';
+  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
   const isWideLayout = effectiveTagsLayout === 'side';
   const { postDetails } = usePostDetails(postId);
@@ -80,7 +78,10 @@ export function PostMain({
             <PostThreadConnector height={postHeight} variant={connectorVariant} />
           </Container>
         )}
-        <Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
+        <Card
+          ref={cardRef}
+          className={cn('@container/post min-w-0 flex-1 gap-0 overflow-hidden rounded-md py-0', className)}
+        >
           {isDeleted ? (
             <PostDeleted />
           ) : (
@@ -135,14 +136,6 @@ export function PostMain({
                       postId={postId}
                       onReplyClick={openReplyDialog}
                       onRepostClick={openRepostDialog}
-                      className={
-                        isCollectionSurface ? 'flex flex-wrap items-center justify-between gap-x-2 gap-y-4' : undefined
-                      }
-                      actionsClassName={
-                        isCollectionSurface
-                          ? 'shrink-0 justify-end'
-                          : 'w-full shrink-0 justify-start sm:w-auto md:justify-end'
-                      }
                     />
                   </>
                 )}
