@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { resolveFeedLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -68,7 +69,10 @@ export function ContentLayout({
 }: ContentLayoutProps) {
   const { layout: homeLayout } = useHomeStore();
   const customFeed = useCustomFeed();
-  const customFeedLayout = customFeed?.layout !== undefined ? pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
+  const customFeedLayout =
+    feedVariant === TIMELINE_FEED_VARIANT.CUSTOM && customFeed?.layout !== undefined
+      ? pubkyLayoutToHomeLayout(customFeed.layout)
+      : undefined;
   const requestedLayout = customFeedLayout ?? homeLayout;
 
   const [drawerFilterOpen, setDrawerFilterOpen] = useState(false);
