@@ -9,7 +9,7 @@ exports[`HeaderButtonSignIn - Snapshots > matches snapshot for default HeaderBut
 >
   <svg
     aria-hidden="true"
-    class="lucide lucide-user-round-plus size-4"
+    class="lucide lucide-log-in size-4"
     fill="none"
     height="24"
     stroke="currentColor"
@@ -21,21 +21,16 @@ exports[`HeaderButtonSignIn - Snapshots > matches snapshot for default HeaderBut
     xmlns="http://www.w3.org/2000/svg"
   >
     <path
-      d="M2 21a8 8 0 0 1 13.292-6"
-    />
-    <circle
-      cx="10"
-      cy="8"
-      r="5"
+      d="m10 17 5-5-5-5"
     />
     <path
-      d="M19 16v6"
+      d="M15 12H3"
     />
     <path
-      d="M22 19h-6"
+      d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
     />
   </svg>
-  New here?
+  Sign in
 </button>
 `;
 
@@ -48,7 +43,7 @@ exports[`HeaderButtonSignIn - Snapshots > matches snapshot with custom className
 >
   <svg
     aria-hidden="true"
-    class="lucide lucide-user-round-plus size-4"
+    class="lucide lucide-log-in size-4"
     fill="none"
     height="24"
     stroke="currentColor"
@@ -60,20 +55,15 @@ exports[`HeaderButtonSignIn - Snapshots > matches snapshot with custom className
     xmlns="http://www.w3.org/2000/svg"
   >
     <path
-      d="M2 21a8 8 0 0 1 13.292-6"
-    />
-    <circle
-      cx="10"
-      cy="8"
-      r="5"
+      d="m10 17 5-5-5-5"
     />
     <path
-      d="M19 16v6"
+      d="M15 12H3"
     />
     <path
-      d="M22 19h-6"
+      d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
     />
   </svg>
-  New here?
+  Sign in
 </button>
 `;

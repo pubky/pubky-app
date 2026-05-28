@@ -303,33 +303,33 @@ describe('Header Components', () => {
   });
 
   describe('HeaderButtonSignIn', () => {
-    it('renders new here button', () => {
+    it('renders sign in button', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('New here?');
+      const button = screen.getByText('Sign in');
       expect(button).toBeInTheDocument();
     });
 
     it('handles click events', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('New here?');
+      const button = screen.getByText('Sign in');
       fireEvent.click(button);
 
-      expect(mockPush).toHaveBeenCalledWith('/onboarding/human');
+      expect(mockPush).toHaveBeenCalledWith('/sign-in');
     });
 
     it('applies correct classes', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('New here?');
+      const button = screen.getByText('Sign in');
       expect(button).toHaveAttribute('data-variant', 'secondary');
     });
 
     it('renders with login icon', () => {
       render(<HeaderButtonSignIn />);
 
-      expect(document.querySelector('.lucide-user-round-plus')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-log-in')).toBeInTheDocument();
     });
   });
 
@@ -339,7 +339,7 @@ describe('Header Components', () => {
 
       expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
       // The component now renders the actual button instead of a mock
-      expect(screen.getByText('New here?')).toBeInTheDocument();
+      expect(screen.getByText('Sign in')).toBeInTheDocument();
     });
 
     it('applies correct classes', () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, UserRoundPlus } from 'lucide-react';
+import { Eye, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -18,13 +18,13 @@ export function ActionButtons({ className, onCreateAccount, onExplore, ...props 
   return (
     <Container className={cn('gap-3 sm:flex-row sm:items-center', className)} {...props}>
       {onExplore && (
-        <Button id="explore-btn" variant="secondary" className="w-full flex-1 sm:w-auto" size="lg" onClick={onExplore}>
-          <Home className="mr-2 h-4 w-4" />
+        <Button id="explore-btn" variant="secondary" className="sm:w-auto" size="lg" onClick={onExplore}>
+          <Eye className="h-4 w-4" />
           {t('explore')}
         </Button>
       )}
-      <Button id="create-account-btn" className="w-full flex-1 sm:w-auto" size="lg" onClick={onCreateAccount}>
-        <UserRoundPlus className="mr-2 h-4 w-4" />
+      <Button id="create-account-btn" className="sm:w-auto" size="lg" onClick={onCreateAccount}>
+        <UserRoundPlus className="h-4 w-4" />
         {t('joinNow')}
       </Button>
     </Container>
