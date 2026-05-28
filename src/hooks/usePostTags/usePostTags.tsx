@@ -45,6 +45,10 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   // Track the order of tags as they were originally loaded
   const [tagOrder, setTagOrder] = useState<Map<string, number>>(new Map());
 
+  // In-memory-only: labels the viewer just added are pinned to the front of the list.
+  const [recentlyAddedLabels, setRecentlyAddedLabels] = useState<Map<string, number>>(new Map());
+  const addCounterRef = useRef(0);
+
   // Reset state when postId changes
   useEffect(() => {
     if (prevPostIdRef.current !== postId) {
@@ -53,6 +57,8 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       prevPostIdRef.current = postId;
       setZeroTaggerTags(new Map());
       setTagOrder(new Map());
+      setRecentlyAddedLabels(new Map());
+      addCounterRef.current = 0;
       setHasFetched(false);
     }
   }, [postId]);
@@ -168,24 +174,34 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       }
     });
 
-    if (zeroTagsToAdd.length === 0) {
+    // Recently-added-by-viewer labels float to the front (negative sort index, latest first).
+    // Other tags keep their original `tagOrder` (or Infinity if unseen yet).
+    const computeSortIndex = (label: string): number => {
+      const lower = label.toLowerCase();
+      const recentCounter = recentlyAddedLabels.get(lower);
+      if (recentCounter !== undefined) return -recentCounter;
+      return tagOrder.get(lower) ?? Infinity;
+    };
+
+    if (zeroTagsToAdd.length === 0 && recentlyAddedLabels.size === 0) {
       return baseTags;
     }
 
-    // Merge and sort by original index
     const allTagsWithIndex = [
       ...baseTags.map((tag) => ({
         tag,
-        index: tagOrder.get(tag.label.toLowerCase()) ?? Infinity,
+        index: computeSortIndex(tag.label),
       })),
-      ...zeroTagsToAdd,
+      ...zeroTagsToAdd.map((item) => ({
+        tag: item.tag,
+        index: computeSortIndex(item.tag.label),
+      })),
     ];
 
-    // Sort by original index to preserve order
     allTagsWithIndex.sort((a, b) => a.index - b.index);
 
     return allTagsWithIndex.map((item) => item.tag);
-  }, [localTags, zeroTaggerTags, tagOrder]);
+  }, [localTags, zeroTaggerTags, tagOrder, recentlyAddedLabels]);
 
   // Initialize loadedCountRef when initial data is available from IndexedDB
   // This ensures skip starts from the correct value on first loadMore call
@@ -258,11 +274,10 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           next.delete(labelLower);
           return next;
         });
+        addCounterRef.current += 1;
+        const counter = addCounterRef.current;
+        setRecentlyAddedLabels((prev) => new Map(prev).set(labelLower, counter));
 
-        toast({
-          title: tTags('added'),
-          description: tTags('addedDesc', { label }),
-        });
         return { success: true };
       } catch {
         toast({
@@ -312,9 +327,12 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
             taggedKind: TagKind.POST,
           });
 
-          toast({
-            title: tTags('removed'),
-            description: tTags('removedDesc', { label: tag.label }),
+          // Removing the tag clears its "recently added" pinning so the natural
+          // ordering takes over again if it ever resurfaces.
+          setRecentlyAddedLabels((prev) => {
+            const next = new Map(prev);
+            next.delete(labelLower);
+            return next;
           });
         } else {
           await TagController.commitCreate({
@@ -329,11 +347,6 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
             const next = new Map(prev);
             next.delete(labelLower);
             return next;
-          });
-
-          toast({
-            title: tTags('added'),
-            description: tTags('addedDesc', { label: tag.label }),
           });
         }
       } catch {
