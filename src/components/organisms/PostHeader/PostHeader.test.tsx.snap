@@ -6,7 +6,6 @@ exports[`PostHeader - Snapshots > matches snapshot in loaded state 1`] = `
   data-testid="container"
 >
   <div
-    data-class-name="w-0 flex-1"
     data-size="normal"
     data-testid="post-header-user-info"
   >

@@ -52,7 +52,6 @@ export function PostHeader({
         size={size}
         timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
         indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
-        className="w-0 flex-1"
       />
       {timeAgo && timeAgoPlacement === 'top-right' && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />}
     </Container>
