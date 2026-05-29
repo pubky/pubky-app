@@ -11,7 +11,7 @@ import {
   Signer,
 } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
-import { DEFAULT_HTTP_RELAY, HOMESERVER, PKARR_RELAYS, TESTNET } from '@/config/network';
+import { DEFAULT_HTTP_RELAY, HOMESERVER, HOMESERVER_URL, PKARR_RELAYS, TESTNET } from '@/config/network';
 import type { TPublicKeyParams } from '@/controllers/auth/auth.types';
 import { Env } from '@/libs/env/env';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
@@ -140,6 +140,28 @@ export class HomeserverService {
         statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
         alwaysUseHomeserverError: true,
       });
+    }
+  }
+
+  /**
+   * Verifies a signup token (invite code) against the homeserver.
+   *
+   * Performs a GET to the homeserver's `/signup_tokens/<token>` endpoint. This is a
+   * homeserver-root endpoint that cannot be reached via the homeserver pubkey (its PKARR
+   * record has no resolvable HTTPS endpoint), so the explicit {@link HOMESERVER_URL} is used.
+   *
+   * @param signupToken - The signup token / invite code to verify
+   * @returns `true` if the token is valid (200 response), `false` otherwise (including on network errors)
+   */
+  static async verifySignupToken(signupToken: string): Promise<boolean> {
+    try {
+      const url = `${HOMESERVER_URL}/signup_tokens/${encodeURIComponent(signupToken)}`;
+      const response = await this.getPubkySdk().client.fetch(url, { method: HttpMethod.GET });
+      Logger.debug('Signup token verification response', { status: response.status });
+      return response.ok;
+    } catch (error) {
+      Logger.warn('Signup token verification failed', { error });
+      return false;
     }
   }
 

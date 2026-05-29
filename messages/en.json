@@ -391,7 +391,11 @@
       "instructions": "Download and install the mobile app. Then continue to the next step.",
       "alternative": "Use <pubkyRing>Pubky Ring</pubkyRing> or any other <pubkyCore>Pubky Core</pubkyCore>–powered keychain, or create your keys in the browser (less secure).",
       "createInBrowser": "Create keys in browser",
-      "continueWithRing": "Continue with Pubky Ring"
+      "continueWithRing": "Continue with Pubky Ring",
+      "inviteCodeApplied": "Invite code applied",
+      "inviteCodeAppliedDescription": "Your invite code {inviteCode} has been applied.",
+      "invalidInviteCode": "Invalid invite code",
+      "invalidInviteCodeDescription": "This invite code is invalid or has expired. Please use a valid invite code."
     },
     "createProfile": {
       "title": "Create your <highlight>profile.</highlight>",

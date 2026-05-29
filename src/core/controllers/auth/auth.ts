@@ -389,4 +389,13 @@ export class AuthController {
   static async generateSignupToken() {
     return await AuthApplication.generateSignupToken();
   }
+
+  /**
+   * Verifies an invite code (signup token) against the homeserver before applying it.
+   * @param inviteCode - The invite code to verify
+   * @returns Promise resolving to `true` if the invite code is valid, `false` otherwise
+   */
+  static async verifySignupToken(inviteCode: string): Promise<boolean> {
+    return await AuthApplication.verifySignupToken(inviteCode);
+  }
 }

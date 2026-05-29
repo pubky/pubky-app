@@ -1,16 +1,28 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ROOT_ROUTES } from '@/app/routes';
 import { Install } from './Install';
 
 const mockSearchParamsGet = vi.fn<(key: string) => string | null>(() => null);
 const mockToast = vi.fn();
 const mockSetInviteCode = vi.fn();
+const mockReplace = vi.fn();
+const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<boolean>>();
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: mockSearchParamsGet,
   }),
+  useRouter: () => ({
+    replace: mockReplace,
+  }),
+}));
+
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    verifySignupToken: (inviteCode: string) => mockVerifySignupToken(inviteCode),
+  },
 }));
 
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
@@ -50,6 +62,9 @@ describe('Install template', () => {
     mockSearchParamsGet.mockReturnValue(null);
     mockToast.mockClear();
     mockSetInviteCode.mockClear();
+    mockReplace.mockClear();
+    mockVerifySignupToken.mockReset();
+    mockVerifySignupToken.mockResolvedValue(true);
   });
 
   it('renders install onboarding content', () => {
@@ -61,20 +76,44 @@ describe('Install template', () => {
     expect(screen.getByTestId('install-footer')).toBeInTheDocument();
   });
 
-  it('applies invite code from URL and shows toast', () => {
+  it('applies invite code from URL and shows toast when the code is valid', async () => {
     mockSearchParamsGet.mockReturnValueOnce('YVB2-YFRN-GDY0');
+    mockVerifySignupToken.mockResolvedValue(true);
     render(<Install />);
 
-    expect(mockSetInviteCode).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+    await waitFor(() => {
+      expect(mockSetInviteCode).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+    });
+    expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Invite code applied',
       description: 'Your invite code YVB2-YFRN-GDY0 has been applied.',
     });
+    expect(mockReplace).not.toHaveBeenCalled();
+    // Stays on the install page with the install content visible
+    expect(screen.getByTestId('install-card')).toBeInTheDocument();
   });
 
-  it('does not set invite code when URL param is missing', () => {
+  it('does not apply the invite code and redirects home when the code is invalid', async () => {
+    mockSearchParamsGet.mockReturnValueOnce('YVB2-YFRN-GDY0');
+    mockVerifySignupToken.mockResolvedValue(false);
     render(<Install />);
 
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(ROOT_ROUTES);
+    });
+    expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+    expect(mockSetInviteCode).not.toHaveBeenCalled();
+    expect(mockToast).toHaveBeenCalledWith({
+      title: 'Invalid invite code',
+      description: 'This invite code is invalid or has expired. Please use a valid invite code.',
+    });
+  });
+
+  it('does not verify or set invite code when URL param is missing', () => {
+    render(<Install />);
+
+    expect(mockVerifySignupToken).not.toHaveBeenCalled();
     expect(mockSetInviteCode).not.toHaveBeenCalled();
     expect(mockToast).not.toHaveBeenCalled();
   });

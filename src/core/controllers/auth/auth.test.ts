@@ -1489,4 +1489,24 @@ describe('AuthController', () => {
       expect(generateSignupTokenSpy).toHaveBeenCalled();
     });
   });
+
+  describe('verifySignupToken', () => {
+    it('should return true when the invite code is valid', async () => {
+      const verifySpy = vi.spyOn(AuthApplication, 'verifySignupToken').mockResolvedValue(true);
+
+      const result = await AuthController.verifySignupToken('YVB2-YFRN-GDY0');
+
+      expect(verifySpy).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+      expect(result).toBe(true);
+    });
+
+    it('should return false when the invite code is invalid', async () => {
+      const verifySpy = vi.spyOn(AuthApplication, 'verifySignupToken').mockResolvedValue(false);
+
+      const result = await AuthController.verifySignupToken('BADC-0DE0-0000');
+
+      expect(verifySpy).toHaveBeenCalledWith('BADC-0DE0-0000');
+      expect(result).toBe(false);
+    });
+  });
 });

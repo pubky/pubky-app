@@ -167,6 +167,26 @@ describe('AuthApplication', () => {
     });
   });
 
+  describe('verifySignupToken', () => {
+    it('should return true when the homeserver verifies the token', async () => {
+      const verifySpy = vi.spyOn(HomeserverService, 'verifySignupToken').mockResolvedValue(true);
+
+      const result = await AuthApplication.verifySignupToken('YVB2-YFRN-GDY0');
+
+      expect(verifySpy).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+      expect(result).toBe(true);
+    });
+
+    it('should return false when the homeserver rejects the token', async () => {
+      const verifySpy = vi.spyOn(HomeserverService, 'verifySignupToken').mockResolvedValue(false);
+
+      const result = await AuthApplication.verifySignupToken('BADC-0DE0-0000');
+
+      expect(verifySpy).toHaveBeenCalledWith('BADC-0DE0-0000');
+      expect(result).toBe(false);
+    });
+  });
+
   describe('restorePersistedSession', () => {
     const createMockAuthStore = (sessionExport: string | null = 'mock-session-export') =>
       mockAuthStore({

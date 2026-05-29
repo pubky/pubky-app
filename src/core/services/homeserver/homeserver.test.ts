@@ -205,6 +205,7 @@ describe('HomeserverService', () => {
 
       const expectedMethods = [
         'signUp',
+        'verifySignupToken',
         'signIn',
         'logout',
         'generateAuthUrl',
@@ -293,6 +294,45 @@ describe('HomeserverService', () => {
           // The original error message becomes the error message
           expect((error as AppError).message).toBe(originalMessage);
         }
+      });
+    });
+
+    describe('verifySignupToken', () => {
+      it('should return true when the homeserver responds with 200', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response(null, { status: 200 }));
+
+        const result = await HomeserverService.verifySignupToken('YVB2-YFRN-GDY0');
+
+        expect(result).toBe(true);
+        expect(mockState.clientFetch).toHaveBeenCalledWith(expect.stringContaining('/signup_tokens/YVB2-YFRN-GDY0'), {
+          method: HttpMethod.GET,
+        });
+      });
+
+      it('should return false when the homeserver responds with 404', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response(null, { status: 404 }));
+
+        const result = await HomeserverService.verifySignupToken('BADC-0DE0-0000');
+
+        expect(result).toBe(false);
+      });
+
+      it('should return false when the request throws', async () => {
+        mockState.clientFetch.mockRejectedValue(new Error('network error'));
+
+        const result = await HomeserverService.verifySignupToken('YVB2-YFRN-GDY0');
+
+        expect(result).toBe(false);
+      });
+
+      it('should URL-encode the signup token', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response(null, { status: 200 }));
+
+        await HomeserverService.verifySignupToken('AB CD/EF');
+
+        expect(mockState.clientFetch).toHaveBeenCalledWith(expect.stringContaining('/signup_tokens/AB%20CD%2FEF'), {
+          method: HttpMethod.GET,
+        });
       });
     });
 

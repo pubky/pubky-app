@@ -397,7 +397,11 @@
       "instructions": "Telechargez et installez l'application mobile. Ensuite, passez a l'étape suivante.",
       "alternative": "Utilisez <pubkyRing>Pubky Ring</pubkyRing> ou tout autre trousseau alimente par <pubkyCore>Pubky Core</pubkyCore>, ou crééz vos cles dans le navigateur (moins securise).",
       "createInBrowser": "Créér les cles dans le navigateur",
-      "continueWithRing": "Continuer avec Pubky Ring"
+      "continueWithRing": "Continuer avec Pubky Ring",
+      "inviteCodeApplied": "Code d'invitation appliqué",
+      "inviteCodeAppliedDescription": "Votre code d'invitation {inviteCode} a été appliqué.",
+      "invalidInviteCode": "Code d'invitation invalide",
+      "invalidInviteCodeDescription": "Ce code d'invitation est invalide ou a expiré. Veuillez utiliser un code d'invitation valide."
     },
     "createProfile": {
       "title": "Créez votre <highlight>profil.</highlight>",

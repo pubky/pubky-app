@@ -397,7 +397,11 @@
       "instructions": "قم بتحميل وتثبيت التطبيق المحمول. ثم تابع الى الخطوة التالية.",
       "alternative": "استخدم <pubkyRing>Pubky Ring</pubkyRing> او اي سلسلة مفاتيح اخرى مدعومة من <pubkyCore>Pubky Core</pubkyCore>، او انشئ مفاتيحك في المتصفح (اقل امانا).",
       "createInBrowser": "انشاء المفاتيح في المتصفح",
-      "continueWithRing": "متابعة مع Pubky Ring"
+      "continueWithRing": "متابعة مع Pubky Ring",
+      "inviteCodeApplied": "تم تطبيق رمز الدعوة",
+      "inviteCodeAppliedDescription": "تم تطبيق رمز الدعوة {inviteCode}.",
+      "invalidInviteCode": "رمز دعوة غير صالح",
+      "invalidInviteCodeDescription": "رمز الدعوة هذا غير صالح أو منتهي الصلاحية. يرجى استخدام رمز دعوة صالح."
     },
     "createProfile": {
       "title": "انشئ <highlight>ملفك الشخصي.</highlight>",

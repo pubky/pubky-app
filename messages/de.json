@@ -397,7 +397,11 @@
       "instructions": "Laden Sie die mobile App herunter und installieren Sie sie. Fahren Sie dann mit dem nächsten Schritt fort.",
       "alternative": "Verwenden Sie <pubkyRing>Pubky Ring</pubkyRing> oder einen anderen von <pubkyCore>Pubky Core</pubkyCore> betriebenen Schlüsselbund, oder erstellen Sie Ihre Schlüssel im Browser (weniger sicher).",
       "createInBrowser": "Schlüssel im Browser erstellen",
-      "continueWithRing": "Mit Pubky Ring fortfahren"
+      "continueWithRing": "Mit Pubky Ring fortfahren",
+      "inviteCodeApplied": "Einladungscode angewendet",
+      "inviteCodeAppliedDescription": "Dein Einladungscode {inviteCode} wurde angewendet.",
+      "invalidInviteCode": "Ungültiger Einladungscode",
+      "invalidInviteCodeDescription": "Dieser Einladungscode ist ungültig oder abgelaufen. Bitte verwende einen gültigen Einladungscode."
     },
     "createProfile": {
       "title": "Erstellen Sie Ihr <highlight>Profil.</highlight>",
