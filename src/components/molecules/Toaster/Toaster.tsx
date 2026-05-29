@@ -12,15 +12,15 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, dismissButton, variant, ...props }) {
+      {toasts.map(function ({ id, title, description, action, dismissButton, variant, className, ...props }) {
         const toastVariant = variant ?? 'default';
         const Icon = TOAST_ICONS[toastVariant];
         const effectiveTitle = title ?? (toastVariant === 'error' ? tToast('genericErrorTitle') : undefined);
 
         return (
-          <Toast key={id} variant={toastVariant} data-cy="toast" {...props}>
+          <Toast key={id} variant={toastVariant} data-cy="toast" className={className} {...props}>
             <Icon className={toastIconVariants({ variant: toastVariant })} aria-hidden />
-            <div className="flex max-h-32 min-w-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-y-contain">
+            <div className="flex max-h-32 min-w-0 flex-1 flex-col items-start justify-center gap-0.5 overflow-y-auto overscroll-y-contain">
               {effectiveTitle && <ToastTitle>{effectiveTitle}</ToastTitle>}
               {description && <ToastDescription>{description}</ToastDescription>}
             </div>

@@ -145,7 +145,7 @@ describe('Toaster', () => {
     render(<Toaster />);
 
     const okButton = screen.getByRole('button', { name: 'OK' });
-    expect(okButton).toHaveClass('border-destructive', 'text-destructive');
+    expect(okButton).toHaveClass('bg-secondary', 'text-secondary-foreground');
   });
 
   it.each([
