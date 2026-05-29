@@ -27,7 +27,7 @@ export const HomeActions = () => {
     router.push(APP_ROUTES.HOME);
   };
 
-  return <ActionButtons onCreateAccount={handleCreateAccount} onExplore={handleExplore} />;
+  return <ActionButtons onCreateAccount={handleCreateAccount} onExplore={handleExplore} className="gap-4" />;
 };
 
 export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
