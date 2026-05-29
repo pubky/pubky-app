@@ -2,7 +2,7 @@ import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
-import { ClientErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -130,6 +130,42 @@ describe('shouldEnableSentry', () => {
 });
 
 describe('captureAppError filtering', () => {
+  it('keeps OG metadata fetch errors reportable unless handled before Err creation', async () => {
+    await withEnabledSentryCapture(({ captureAppError, captureException }) => {
+      const error = new AppError({
+        category: ErrorCategory.Server,
+        code: ServerErrorCode.UNKNOWN_ERROR,
+        message: 'OG metadata failed',
+        service: ErrorService.NextJsServer,
+        operation: 'fetchOgMetadata',
+        context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
+      });
+
+      captureAppError(error);
+
+      expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+      expect(captureException).toHaveBeenCalledWith(error);
+    });
+  });
+
+  it('keeps OG metadata SSRF guard errors reportable', async () => {
+    await withEnabledSentryCapture(({ captureAppError, captureException }) => {
+      const error = new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.FORBIDDEN,
+        message: 'Blocked IP range',
+        service: ErrorService.NextJsServer,
+        operation: 'checkDnsSafety',
+        context: { hostname: '169.254.169.254', statusCode: HttpStatusCode.FORBIDDEN },
+      });
+
+      captureAppError(error);
+
+      expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+      expect(captureException).toHaveBeenCalledWith(error);
+    });
+  });
+
   it('drops Nexus fetchNexus post-tags 404 errors', async () => {
     await withEnabledSentryCapture(({ captureAppError, captureException }) => {
       const error = createCapturedAppError({
