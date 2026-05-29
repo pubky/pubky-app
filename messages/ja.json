@@ -258,7 +258,7 @@
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
 
-      "expired": "期限切れ",
+      "clickToReload": "クリックして再読み込み",
 
       "openingRing": "Pubky Ringを開いています...",
 
@@ -266,13 +266,6 @@
       "authorizeSub": "<pubkyRing>Pubky Ring</pubkyRing>または<pubkyCore>Pubky Core</pubkyCore>搭載の他のキーチェーンを使用してください。",
       "linkFailed": "Pubky Ring署名アプリへの接続に失敗しました",
       "tryAgain": "再試行してください。"
-    },
-    "authExpired": {
-      "titleDesktop": "QRコードの有効期限切れ",
-      "descriptionDesktop": "このQRコードは無効になりました。更新して新しいQRコードを取得してください。",
-      "titleMobile": "認証セッションの有効期限が切れました",
-      "descriptionMobile": "認証セッションは現在無効です。更新して新しいセッションを生成し、続行してください。",
-      "refresh": "更新"
     },
     "signIn": {
       "title": "<highlight>Pubky</highlight>にログイン。",
@@ -282,7 +275,7 @@
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
 
-      "expired": "期限切れ",
+      "clickToReload": "クリックして再読み込み",
 
       "openingRing": "Pubky Ringを開いています...",
 
