@@ -1,7 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AppError } from '@/libs/error/error';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { OgMetadataValidators } from './og-metadata.validators';
 
@@ -15,173 +12,117 @@ vi.mock('net', () => ({
 }));
 
 describe('OgMetadataValidators', () => {
-  describe('validate', () => {
+  describe('validateSafe', () => {
     describe('missing/empty URL', () => {
-      it('should throw AppError with MISSING_FIELD for empty string', async () => {
-        try {
-          await OgMetadataValidators.validate('');
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-          expect(appError.service).toBe(ErrorService.NextJsServer);
-          expect(appError.operation).toBe('validate');
-          expect(appError.context).toEqual({ field: 'url', statusCode: HttpStatusCode.BAD_REQUEST });
-          expect(appError.message).toBe('Invalid URL');
-        }
+      it('should return failure for empty string', async () => {
+        await expect(OgMetadataValidators.validateSafe('')).resolves.toEqual({
+          ok: false,
+          message: 'Invalid URL',
+          statusCode: HttpStatusCode.BAD_REQUEST,
+        });
       });
 
-      it('should throw AppError with MISSING_FIELD for null', async () => {
-        try {
-          await OgMetadataValidators.validate(null);
-          expect.fail('Should have thrown');
-        } catch (error) {
-          const appError = error as AppError;
-          expect(appError.code).toBe(ValidationErrorCode.MISSING_FIELD);
-        }
+      it('should return failure for null', async () => {
+        await expect(OgMetadataValidators.validateSafe(null)).resolves.toMatchObject({
+          ok: false,
+        });
       });
     });
 
     describe('malformed URL', () => {
-      it('should throw AppError with FORMAT_ERROR for unparseable URL', async () => {
-        try {
-          await OgMetadataValidators.validate('not-a-valid-url');
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
-          expect(appError.service).toBe(ErrorService.NextJsServer);
-          expect(appError.operation).toBe('validate');
-          expect(appError.context).toEqual({ field: 'url', statusCode: HttpStatusCode.BAD_REQUEST });
-          expect(appError.message).toBe('Malformed URL');
-        }
+      it('should return failure for unparseable URL', async () => {
+        await expect(OgMetadataValidators.validateSafe('not-a-valid-url')).resolves.toMatchObject({
+          ok: false,
+          message: 'Malformed URL',
+        });
       });
     });
 
     describe('invalid protocol', () => {
-      it('should throw AppError with INVALID_INPUT for file:// protocol', async () => {
-        try {
-          await OgMetadataValidators.validate('file:///etc/passwd');
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.NextJsServer);
-          expect(appError.operation).toBe('validateProtocol');
-          expect(appError.message).toContain('Invalid protocol');
-        }
+      it('should return failure for file:// protocol', async () => {
+        await expect(OgMetadataValidators.validateSafe('file:///etc/passwd')).resolves.toMatchObject({
+          ok: false,
+          message: expect.stringContaining('Invalid protocol'),
+        });
       });
 
-      it('should throw AppError with INVALID_INPUT for ftp:// protocol', async () => {
-        try {
-          await OgMetadataValidators.validate('ftp://example.com');
-          expect.fail('Should have thrown');
-        } catch (error) {
-          const appError = error as AppError;
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.message).toContain('Invalid protocol');
-        }
+      it('should return failure for ftp:// protocol', async () => {
+        await expect(OgMetadataValidators.validateSafe('ftp://example.com')).resolves.toMatchObject({
+          ok: false,
+          message: expect.stringContaining('Invalid protocol'),
+        });
       });
 
-      it('should throw AppError with INVALID_INPUT for javascript: protocol', async () => {
-        await expect(OgMetadataValidators.validate('javascript:alert(1)')).rejects.toThrow(AppError);
+      it('should return failure for javascript: protocol', async () => {
+        await expect(OgMetadataValidators.validateSafe('javascript:alert(1)')).resolves.toMatchObject({
+          ok: false,
+        });
       });
     });
 
     describe('invalid hostname', () => {
-      it('should throw FORMAT_ERROR for trailing dot hostname', async () => {
-        try {
-          await OgMetadataValidators.validate('https://example.com.');
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
-          expect(appError.service).toBe(ErrorService.NextJsServer);
-          expect(appError.operation).toBe('validateHostname');
-          expect(appError.message).toContain('trailing dot');
-        }
+      it('should return failure for trailing dot hostname', async () => {
+        await expect(OgMetadataValidators.validateSafe('https://example.com.')).resolves.toMatchObject({
+          ok: false,
+          message: expect.stringContaining('trailing dot'),
+        });
       });
 
-      it('should throw FORMAT_ERROR for single-part hostname', async () => {
-        try {
-          await OgMetadataValidators.validate('https://invalid');
-          expect.fail('Should have thrown');
-        } catch (error) {
-          const appError = error as AppError;
-          expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
-          expect(appError.message).toContain('top-level domain');
-        }
+      it('should return failure for single-part hostname', async () => {
+        await expect(OgMetadataValidators.validateSafe('https://invalid')).resolves.toMatchObject({
+          ok: false,
+          message: expect.stringContaining('top-level domain'),
+        });
       });
 
-      it('should throw FORMAT_ERROR for TLD less than 2 characters', async () => {
-        try {
-          await OgMetadataValidators.validate('https://example.c');
-          expect.fail('Should have thrown');
-        } catch (error) {
-          const appError = error as AppError;
-          expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
-          expect(appError.message).toContain('TLD');
-        }
+      it('should return failure for TLD less than 2 characters', async () => {
+        await expect(OgMetadataValidators.validateSafe('https://example.c')).resolves.toMatchObject({
+          ok: false,
+          message: expect.stringContaining('TLD'),
+        });
       });
 
-      it('should throw FORMAT_ERROR for www. with no TLD', async () => {
-        try {
-          await OgMetadataValidators.validate('https://www.');
-          expect.fail('Should have thrown');
-        } catch (error) {
-          const appError = error as AppError;
-          expect(appError.code).toBe(ValidationErrorCode.FORMAT_ERROR);
-        }
+      it('should return failure for www. with no TLD', async () => {
+        await expect(OgMetadataValidators.validateSafe('https://www.')).resolves.toMatchObject({
+          ok: false,
+        });
       });
     });
 
     describe('.onion addresses', () => {
-      it('should throw INVALID_INPUT for .onion address', async () => {
-        try {
-          await OgMetadataValidators.validate('https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion');
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.NextJsServer);
-          expect(appError.operation).toBe('validateNotOnion');
-          expect(appError.message).toContain('Tor .onion addresses are not supported');
-        }
+      it('should return failure for .onion address', async () => {
+        await expect(
+          OgMetadataValidators.validateSafe('https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion'),
+        ).resolves.toMatchObject({
+          ok: false,
+          message: expect.stringContaining('Tor .onion addresses are not supported'),
+        });
       });
     });
 
     describe('valid URLs', () => {
       it('should return URL object for valid domain', async () => {
-        const result = await OgMetadataValidators.validate('https://www.example.com');
-        expect(result).toBeInstanceOf(URL);
-        expect(result.hostname).toBe('www.example.com');
+        const result = await OgMetadataValidators.validateSafe('https://www.example.com');
+        expect(result.ok).toBe(true);
+        if (result.ok) expect(result.url.hostname).toBe('www.example.com');
       });
 
       it('should return URL object for IP address (skips TLD checks)', async () => {
-        const result = await OgMetadataValidators.validate('http://1.1.1.1');
-        expect(result).toBeInstanceOf(URL);
-        expect(result.hostname).toBe('1.1.1.1');
+        const result = await OgMetadataValidators.validateSafe('http://1.1.1.1');
+        expect(result.ok).toBe(true);
+        if (result.ok) expect(result.url.hostname).toBe('1.1.1.1');
       });
 
       it('should return URL object for localhost (skips TLD checks)', async () => {
-        const result = await OgMetadataValidators.validate('http://localhost');
-        expect(result).toBeInstanceOf(URL);
-        expect(result.hostname).toBe('localhost');
+        const result = await OgMetadataValidators.validateSafe('http://localhost');
+        expect(result.ok).toBe(true);
+        if (result.ok) expect(result.url.hostname).toBe('localhost');
       });
 
       it('should return URL object for subdomain with valid TLD', async () => {
-        const result = await OgMetadataValidators.validate('https://subdomain.example.co.uk');
-        expect(result).toBeInstanceOf(URL);
-        expect(result.hostname).toBe('subdomain.example.co.uk');
+        const result = await OgMetadataValidators.validateSafe('https://subdomain.example.co.uk');
+        expect(result.ok).toBe(true);
+        if (result.ok) expect(result.url.hostname).toBe('subdomain.example.co.uk');
       });
     });
   });
