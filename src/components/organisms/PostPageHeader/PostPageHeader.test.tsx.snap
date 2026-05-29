@@ -15,13 +15,15 @@ exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = 
         data-testid="post-page-title"
       >
         <span
-          class="shrink-0 pr-1"
+          class="text-base font-medium text-foreground shrink-0 pr-1"
+          data-testid="typography"
         >
           Reply by
            
         </span>
         <span
-          class="min-w-0 flex-1 truncate"
+          class="text-base font-medium text-foreground min-w-0 flex-1 truncate"
+          data-testid="typography"
         >
           Anna
         </span>
@@ -147,13 +149,15 @@ exports[`PostPageHeader > matches snapshot for root post 1`] = `
         data-testid="post-page-title"
       >
         <span
-          class="shrink-0 pr-1"
+          class="text-base font-medium text-foreground shrink-0 pr-1"
+          data-testid="typography"
         >
           Post by
            
         </span>
         <span
-          class="min-w-0 flex-1 truncate"
+          class="text-base font-medium text-foreground min-w-0 flex-1 truncate"
+          data-testid="typography"
         >
           John
         </span>
