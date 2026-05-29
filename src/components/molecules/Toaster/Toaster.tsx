@@ -1,16 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import {
-  Toast,
-  TOAST_ICONS,
-  ToastAction,
-  ToastDescription,
-  toastIconVariants,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from '@/atoms/Toast/Toast';
+import { Toast, ToastAction, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/atoms/Toast/Toast';
+import { TOAST_ICONS, toastIconVariants } from '@/atoms/Toast/Toast.variants';
 import { useToast } from './use-toast';
 
 export function Toaster() {
