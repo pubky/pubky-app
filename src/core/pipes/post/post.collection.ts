@@ -186,12 +186,16 @@ export class CollectionPostContent {
     if (!isOptionalStringArray(items)) return null;
     if (!isNullableString(cover_image)) return null;
 
-    return this.normalize({
-      name,
-      description: description ?? '',
-      items: items ?? [],
-      coverImage: cover_image ?? undefined,
-    });
+    try {
+      return this.normalize({
+        name,
+        description: description ?? '',
+        items: items ?? [],
+        coverImage: cover_image ?? undefined,
+      });
+    } catch {
+      return null;
+    }
   }
 
   static addItem(collection: PubkyAppCollectionContent, itemUri: string): PubkyAppCollectionContent {

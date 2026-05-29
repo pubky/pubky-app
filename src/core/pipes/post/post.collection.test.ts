@@ -195,10 +195,10 @@ describe('CollectionPostContent', () => {
       expect(CollectionPostContent.parse(JSON.stringify({ name: 'Bad cover', cover_image: 42 }))).toBeNull();
     });
 
-    it('throws when the envelope shape is valid but content fails validation', () => {
-      expect(() =>
+    it('returns null when the envelope shape is valid but content fails validation', () => {
+      expect(
         CollectionPostContent.parse(JSON.stringify({ name: 'Bad URI', items: ['ftp://example.com/post'] })),
-      ).toThrow('Collection item URI is invalid');
+      ).toBeNull();
     });
   });
 
