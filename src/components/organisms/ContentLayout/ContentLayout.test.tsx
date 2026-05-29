@@ -321,6 +321,29 @@ describe('ContentLayout', () => {
     expect(screen.getByTestId('button-filters-left')).toBeInTheDocument();
     expect(screen.getByTestId('button-filters-right')).toBeInTheDocument();
   });
+
+  it('keeps static page sidebars inline when wide shell layout is disabled', () => {
+    mockHomeLayout = 'wide';
+
+    render(
+      <ContentLayout
+        showLeftSidebar={true}
+        leftSidebarContent={<div>Inline Left Sidebar</div>}
+        leftDrawerContent={<div>Left Drawer</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div>Inline Right Sidebar</div>}
+        rightDrawerContent={<div>Right Drawer</div>}
+        disableWideShellLayout
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.getByText('Inline Left Sidebar')).toBeInTheDocument();
+    expect(screen.getByText('Inline Right Sidebar')).toBeInTheDocument();
+    expect(screen.queryByTestId('button-filters-left')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('button-filters-right')).not.toBeInTheDocument();
+  });
 });
 
 describe('ContentLayout - Custom Feed Layout Override', () => {

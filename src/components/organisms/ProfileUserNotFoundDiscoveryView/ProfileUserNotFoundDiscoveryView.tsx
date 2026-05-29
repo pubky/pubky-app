@@ -1,7 +1,6 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
-import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { UserNotFound } from '@/molecules/UserNotFound/UserNotFound';
 import { HotActiveUsers } from '@/organisms/HotActiveUsers/HotActiveUsers';
 import { HotDiscoveryContentLayout } from '@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout';
@@ -11,8 +10,6 @@ import { HotDiscoveryContentLayout } from '@/organisms/HotDiscoveryContentLayout
  * with {@link HotActiveUsers} under the empty state.
  */
 export function ProfileUserNotFoundDiscoveryView() {
-  useLayoutReset();
-
   return (
     <HotDiscoveryContentLayout>
       <Container overrideDefaults className="flex flex-col gap-12">

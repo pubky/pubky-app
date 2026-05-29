@@ -4,14 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE, PUBKY_INVALID_TOO_LONG } from '@/test-utils/pubky';
 import { PostNotFoundDiscoveryView } from './PostNotFoundDiscoveryView';
 
-const mockUseLayoutReset = vi.fn();
-
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
-vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
-  useLayoutReset: () => mockUseLayoutReset(),
 }));
 
 vi.mock('@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout', () => ({
@@ -53,11 +47,6 @@ const VALID_COMPOSITE = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`
 describe('PostNotFoundDiscoveryView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('calls useLayoutReset on mount', () => {
-    render(<PostNotFoundDiscoveryView postId={VALID_COMPOSITE} />);
-    expect(mockUseLayoutReset).toHaveBeenCalledTimes(1);
   });
 
   it('renders HotDiscoveryContentLayout and trending section', () => {
