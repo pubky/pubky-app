@@ -17,3 +17,5 @@ export interface TOgMetadataResult {
   title?: string | null;
   image?: string | null;
 }
+
+export type TOgMetadataFallbackReason = 'http_error' | 'non_html' | 'dns_failed' | 'network' | 'timeout' | 'rate_limit';

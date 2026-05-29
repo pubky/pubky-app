@@ -19,6 +19,7 @@ export function HotDiscoveryContentLayout({ children }: PropsWithChildren) {
       leftDrawerContent={<HotFeedDrawer />}
       rightDrawerContent={<HotFeedRightDrawer />}
       className="pb-24 lg:pb-12"
+      disableWideShellLayout
     >
       {children}
     </ContentLayout>
