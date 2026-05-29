@@ -395,7 +395,9 @@
       "inviteCodeApplied": "Invite code applied",
       "inviteCodeAppliedDescription": "Your invite code {inviteCode} has been applied.",
       "invalidInviteCode": "Invalid invite code",
-      "invalidInviteCodeDescription": "This invite code is invalid or has expired. Please use a valid invite code."
+      "invalidInviteCodeDescription": "This invite code is invalid or has expired. Please use a valid invite code.",
+      "verificationFailed": "Couldn't verify invite code",
+      "verificationFailedDescription": "We couldn't verify your invite code right now. Please check your connection and try again."
     },
     "createProfile": {
       "title": "Create your <highlight>profile.</highlight>",

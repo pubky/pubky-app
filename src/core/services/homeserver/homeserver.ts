@@ -150,18 +150,24 @@ export class HomeserverService {
    * homeserver-root endpoint that cannot be reached via the homeserver pubkey (its PKARR
    * record has no resolvable HTTPS endpoint), so the explicit {@link HOMESERVER_URL} is used.
    *
+   * A definitive homeserver response distinguishes a valid token from an invalid one, whereas
+   * a failure to reach the homeserver is surfaced as a thrown error so callers can tell
+   * "invalid token" apart from "couldn't verify right now".
+   *
    * @param signupToken - The signup token / invite code to verify
-   * @returns `true` if the token is valid (200 response), `false` otherwise (including on network errors)
+   * @returns `true` if the token is valid (200 response), `false` if the homeserver reports it
+   *   as not valid (e.g. 404).
+   * @throws When the homeserver could not be reached (network error, timeout, DNS/PKARR failure).
    */
   static async verifySignupToken(signupToken: string): Promise<boolean> {
+    const url = `${HOMESERVER_URL}/signup_tokens/${encodeURIComponent(signupToken)}`;
     try {
-      const url = `${HOMESERVER_URL}/signup_tokens/${encodeURIComponent(signupToken)}`;
       const response = await this.getPubkySdk().client.fetch(url, { method: HttpMethod.GET });
       Logger.debug('Signup token verification response', { status: response.status });
       return response.ok;
     } catch (error) {
-      Logger.warn('Signup token verification failed', { error });
-      return false;
+      Logger.warn('Signup token verification could not reach the homeserver', { error });
+      throw error;
     }
   }
 

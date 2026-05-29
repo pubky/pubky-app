@@ -401,7 +401,9 @@
       "inviteCodeApplied": "Einladungscode angewendet",
       "inviteCodeAppliedDescription": "Dein Einladungscode {inviteCode} wurde angewendet.",
       "invalidInviteCode": "Ungültiger Einladungscode",
-      "invalidInviteCodeDescription": "Dieser Einladungscode ist ungültig oder abgelaufen. Bitte verwende einen gültigen Einladungscode."
+      "invalidInviteCodeDescription": "Dieser Einladungscode ist ungültig oder abgelaufen. Bitte verwende einen gültigen Einladungscode.",
+      "verificationFailed": "Einladungscode konnte nicht überprüft werden",
+      "verificationFailedDescription": "Wir konnten deinen Einladungscode gerade nicht überprüfen. Bitte überprüfe deine Verbindung und versuche es erneut."
     },
     "createProfile": {
       "title": "Erstellen Sie Ihr <highlight>Profil.</highlight>",

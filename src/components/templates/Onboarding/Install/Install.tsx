@@ -9,6 +9,7 @@ import { AuthController } from '@/controllers/auth/auth';
 import { formatInviteCode } from '@/libs/utils/utils';
 import { InstallCard, InstallFooter, InstallHeader, InstallNavigation } from '@/molecules/Install/Install';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
@@ -30,23 +31,33 @@ export function Install() {
     hasInitialisedFromUrlRef.current = true;
 
     (async () => {
-      // Verify the invite code with the homeserver before applying it.
-      const isValid = await AuthController.verifySignupToken(inviteCodeFromUrl);
+      try {
+        // Verify the invite code with the homeserver before applying it.
+        const isValid = await AuthController.verifySignupToken(inviteCodeFromUrl);
 
-      if (isValid) {
-        useOnboardingStore.getState().setInviteCode(inviteCodeFromUrl);
+        if (isValid) {
+          useOnboardingStore.getState().setInviteCode(inviteCodeFromUrl);
+          toast({
+            title: t('inviteCodeApplied'),
+            description: t('inviteCodeAppliedDescription', { inviteCode: inviteCodeFromUrl }),
+          });
+          setIsVerifying(false);
+          return;
+        }
+
+        // The homeserver responded that the code is not valid.
         toast({
-          title: t('inviteCodeApplied'),
-          description: t('inviteCodeAppliedDescription', { inviteCode: inviteCodeFromUrl }),
+          title: t('invalidInviteCode'),
+          description: t('invalidInviteCodeDescription'),
         });
-        setIsVerifying(false);
-        return;
+      } catch {
+        // The homeserver could not be reached, so we couldn't confirm the code.
+        showErrorToast({
+          title: t('verificationFailed'),
+          description: t('verificationFailedDescription'),
+        });
       }
 
-      toast({
-        title: t('invalidInviteCode'),
-        description: t('invalidInviteCodeDescription'),
-      });
       // Keep the verifying state to avoid flashing the install page before the redirect.
       router.replace(ROOT_ROUTES);
     })();

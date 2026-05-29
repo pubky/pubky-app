@@ -401,7 +401,9 @@
       "inviteCodeApplied": "Código de convite aplicado",
       "inviteCodeAppliedDescription": "Seu código de convite {inviteCode} foi aplicado.",
       "invalidInviteCode": "Código de convite inválido",
-      "invalidInviteCodeDescription": "Este código de convite é inválido ou expirou. Use um código de convite válido."
+      "invalidInviteCodeDescription": "Este código de convite é inválido ou expirou. Use um código de convite válido.",
+      "verificationFailed": "Não foi possível verificar o código de convite",
+      "verificationFailedDescription": "Não conseguimos verificar seu código de convite agora. Verifique sua conexão e tente novamente."
     },
     "createProfile": {
       "title": "Crie seu <highlight>perfil.</highlight>",

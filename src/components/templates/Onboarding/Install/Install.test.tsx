@@ -6,6 +6,7 @@ import { Install } from './Install';
 
 const mockSearchParamsGet = vi.fn<(key: string) => string | null>(() => null);
 const mockToast = vi.fn();
+const mockShowErrorToast = vi.fn();
 const mockSetInviteCode = vi.fn();
 const mockReplace = vi.fn();
 const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<boolean>>();
@@ -56,11 +57,18 @@ vi.mock('@/molecules/Toaster/use-toast', () => {
   };
 });
 
+vi.mock('@/molecules/Toaster/showErrorToast', () => {
+  return {
+    showErrorToast: (params: unknown) => mockShowErrorToast(params),
+  };
+});
+
 describe('Install template', () => {
   beforeEach(() => {
     mockSearchParamsGet.mockReset();
     mockSearchParamsGet.mockReturnValue(null);
     mockToast.mockClear();
+    mockShowErrorToast.mockClear();
     mockSetInviteCode.mockClear();
     mockReplace.mockClear();
     mockVerifySignupToken.mockReset();
@@ -108,6 +116,25 @@ describe('Install template', () => {
       title: 'Invalid invite code',
       description: 'This invite code is invalid or has expired. Please use a valid invite code.',
     });
+    expect(mockShowErrorToast).not.toHaveBeenCalled();
+  });
+
+  it('shows an error toast and redirects home when verification fails to reach the homeserver', async () => {
+    mockSearchParamsGet.mockReturnValueOnce('YVB2-YFRN-GDY0');
+    mockVerifySignupToken.mockRejectedValue(new Error('network error'));
+    render(<Install />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(ROOT_ROUTES);
+    });
+    expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+    expect(mockSetInviteCode).not.toHaveBeenCalled();
+    expect(mockShowErrorToast).toHaveBeenCalledWith({
+      title: "Couldn't verify invite code",
+      description: "We couldn't verify your invite code right now. Please check your connection and try again.",
+    });
+    // The invalid-code warning toast is not shown for transient errors
+    expect(mockToast).not.toHaveBeenCalled();
   });
 
   it('does not verify or set invite code when URL param is missing', () => {

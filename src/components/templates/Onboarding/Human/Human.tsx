@@ -6,6 +6,7 @@ import { ONBOARDING_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { Logger } from '@/libs/logger/logger';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { HumanInviteCode } from '@/organisms/HumanInviteCode/HumanInviteCode';
 import { HumanLightningPayment } from '@/organisms/HumanLightningPayment/HumanLightningPayment';
@@ -43,10 +44,22 @@ export function Human() {
   }
 
   // Manually entered invite codes are verified with the homeserver before being applied.
-  // On failure we surface a warning toast and rethrow so HumanInviteCode resets and the
-  // user can try again with a different code.
+  // On any failure we surface a toast and rethrow so HumanInviteCode resets and the user can
+  // try again (no navigation away from this step). A homeserver that reports the code as invalid
+  // shows a warning toast; a homeserver we couldn't reach shows an error toast so the two are
+  // not conflated.
   async function onInviteCodeSuccess(inviteCode: string) {
-    const isValid = await AuthController.verifySignupToken(inviteCode);
+    let isValid: boolean;
+    try {
+      isValid = await AuthController.verifySignupToken(inviteCode);
+    } catch {
+      showErrorToast({
+        title: t('verificationFailed'),
+        description: t('verificationFailedDescription'),
+      });
+      throw new Error('Invite code verification failed');
+    }
+
     if (!isValid) {
       toast({
         title: t('invalidInviteCode'),
@@ -54,6 +67,7 @@ export function Human() {
       });
       throw new Error('Invalid invite code');
     }
+
     toast({
       title: t('inviteCodeApplied'),
       description: t('inviteCodeAppliedDescription', { inviteCode }),

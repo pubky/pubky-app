@@ -401,7 +401,9 @@
       "inviteCodeApplied": "تم تطبيق رمز الدعوة",
       "inviteCodeAppliedDescription": "تم تطبيق رمز الدعوة {inviteCode}.",
       "invalidInviteCode": "رمز دعوة غير صالح",
-      "invalidInviteCodeDescription": "رمز الدعوة هذا غير صالح أو منتهي الصلاحية. يرجى استخدام رمز دعوة صالح."
+      "invalidInviteCodeDescription": "رمز الدعوة هذا غير صالح أو منتهي الصلاحية. يرجى استخدام رمز دعوة صالح.",
+      "verificationFailed": "تعذّر التحقق من رمز الدعوة",
+      "verificationFailedDescription": "تعذّر علينا التحقق من رمز الدعوة الآن. يرجى التحقق من اتصالك والمحاولة مرة أخرى."
     },
     "createProfile": {
       "title": "انشئ <highlight>ملفك الشخصي.</highlight>",

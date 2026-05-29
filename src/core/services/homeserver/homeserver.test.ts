@@ -317,12 +317,10 @@ describe('HomeserverService', () => {
         expect(result).toBe(false);
       });
 
-      it('should return false when the request throws', async () => {
+      it('should rethrow when the homeserver cannot be reached', async () => {
         mockState.clientFetch.mockRejectedValue(new Error('network error'));
 
-        const result = await HomeserverService.verifySignupToken('YVB2-YFRN-GDY0');
-
-        expect(result).toBe(false);
+        await expect(HomeserverService.verifySignupToken('YVB2-YFRN-GDY0')).rejects.toThrow('network error');
       });
 
       it('should URL-encode the signup token', async () => {

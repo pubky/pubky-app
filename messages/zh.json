@@ -401,7 +401,9 @@
       "inviteCodeApplied": "邀请码已应用",
       "inviteCodeAppliedDescription": "您的邀请码 {inviteCode} 已应用。",
       "invalidInviteCode": "无效的邀请码",
-      "invalidInviteCodeDescription": "此邀请码无效或已过期。请使用有效的邀请码。"
+      "invalidInviteCodeDescription": "此邀请码无效或已过期。请使用有效的邀请码。",
+      "verificationFailed": "无法验证邀请码",
+      "verificationFailedDescription": "我们目前无法验证您的邀请码。请检查您的网络连接后重试。"
     },
     "createProfile": {
       "title": "创建您的<highlight>个人资料。</highlight>",

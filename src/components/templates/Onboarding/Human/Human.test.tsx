@@ -5,6 +5,7 @@ import { Human } from './Human';
 
 const mockPush = vi.fn();
 const mockToast = vi.fn();
+const mockShowErrorToast = vi.fn();
 const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<boolean>>();
 
 vi.mock('next/navigation', () => ({
@@ -17,6 +18,10 @@ vi.mock('@/molecules/Toaster/use-toast', () => ({
   useToast: () => ({
     toast: mockToast,
   }),
+}));
+
+vi.mock('@/molecules/Toaster/showErrorToast', () => ({
+  showErrorToast: (params: unknown) => mockShowErrorToast(params),
 }));
 
 vi.mock('@/controllers/auth/auth', () => ({
@@ -73,6 +78,7 @@ describe('Human template', () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockToast.mockClear();
+    mockShowErrorToast.mockClear();
     mockVerifySignupToken.mockReset();
     mockVerifySignupToken.mockResolvedValue(true);
   });
@@ -114,8 +120,29 @@ describe('Human template', () => {
       });
     });
     expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+    expect(mockShowErrorToast).not.toHaveBeenCalled();
     expect(mockPush).not.toHaveBeenCalled();
     // Still on the invite code step so the user can try again
+    expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
+  });
+
+  it('shows an error toast and stays on the invite step when verification cannot reach the homeserver', async () => {
+    mockVerifySignupToken.mockRejectedValue(new Error('network error'));
+    render(<Human />);
+
+    fireEvent.click(screen.getByTestId('human-selection'));
+    fireEvent.click(screen.getByTestId('human-invite-code'));
+
+    await waitFor(() => {
+      expect(mockShowErrorToast).toHaveBeenCalledWith({
+        title: "Couldn't verify invite code",
+        description: "We couldn't verify your invite code right now. Please check your connection and try again.",
+      });
+    });
+    expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+    // No invalid-code warning toast for transient errors, and no navigation
+    expect(mockToast).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
     expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
   });
 });

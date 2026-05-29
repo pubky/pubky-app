@@ -401,7 +401,9 @@
       "inviteCodeApplied": "Code d'invitation appliqué",
       "inviteCodeAppliedDescription": "Votre code d'invitation {inviteCode} a été appliqué.",
       "invalidInviteCode": "Code d'invitation invalide",
-      "invalidInviteCodeDescription": "Ce code d'invitation est invalide ou a expiré. Veuillez utiliser un code d'invitation valide."
+      "invalidInviteCodeDescription": "Ce code d'invitation est invalide ou a expiré. Veuillez utiliser un code d'invitation valide.",
+      "verificationFailed": "Impossible de vérifier le code d'invitation",
+      "verificationFailedDescription": "Nous n'avons pas pu vérifier votre code d'invitation pour le moment. Veuillez vérifier votre connexion et réessayer."
     },
     "createProfile": {
       "title": "Créez votre <highlight>profil.</highlight>",
