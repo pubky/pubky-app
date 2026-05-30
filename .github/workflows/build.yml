@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -32,3 +32,35 @@ jobs:
 
       - name: Build prod
         run: npm run build
+
+      - name: Smoke test production server
+        run: |
+          SERVER_LOG="$(mktemp)"
+          npm run start > "$SERVER_LOG" 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+
+          PORT=3000
+          MAX_WAIT=120
+          WAIT_INTERVAL=2
+          ELAPSED=0
+
+          while ! curl -fsS "http://localhost:${PORT}/" > /dev/null; do
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+              echo "Production server exited unexpectedly (PID ${SERVER_PID})."
+              echo "--- server log ---"
+              cat "$SERVER_LOG"
+              exit 1
+            fi
+            if [ $ELAPSED -ge $MAX_WAIT ]; then
+              echo "Production server did not become ready within ${MAX_WAIT}s."
+              echo "--- server log ---"
+              cat "$SERVER_LOG"
+              exit 1
+            fi
+            echo "Waiting for http://localhost:${PORT}/ ... (${ELAPSED}s)"
+            sleep $WAIT_INTERVAL
+            ELAPSED=$((ELAPSED + WAIT_INTERVAL))
+          done
+
+          echo "Production server is ready."

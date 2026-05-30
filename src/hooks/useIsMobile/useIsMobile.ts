@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { getBreakpoint, type Breakpoint } from '@/config/theme';
+import { useCallback, useEffect, useState } from 'react';
+import { type Breakpoint, getBreakpoint } from '@/config/theme';
 
 interface UseIsMobileOptions {
   /**

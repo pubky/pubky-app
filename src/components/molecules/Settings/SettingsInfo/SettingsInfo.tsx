@@ -1,24 +1,24 @@
 'use client';
 
 import Link from 'next/link';
+import { ChevronRight, FileText, LockKeyhole, MessageCircleQuestion } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { SETTINGS_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { FilterHeader, FilterList, FilterRoot } from '@/atoms/Filter/Filter';
 import { Image } from '@/atoms/Image/Image';
 import { Link as AtomsLink } from '@/atoms/Link/Link';
 import { SidebarButton } from '@/atoms/SidebarButton/SidebarButton';
 import { Typography } from '@/atoms/Typography/Typography';
+import { APP_VERSION } from '@/config/app';
+import { APP_RELEASE_URL } from '@/config/externalLinks';
+import { cn } from '@/libs/utils/utils';
 import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
 import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { FeedbackCard } from '@/organisms/FeedbackCard/FeedbackCard';
-
-import { SETTINGS_ROUTES } from '@/app/routes';
-import { APP_VERSION } from '@/config/app';
-import { APP_RELEASE_URL } from '@/config/externalLinks';
+import { COPYRIGHT_TEXT, FAQ_QUESTION_KEYS } from './SettingsInfo.constants';
 import type { SettingsInfoProps } from './SettingsInfo.types';
-import { FAQ_QUESTION_KEYS, COPYRIGHT_TEXT } from './SettingsInfo.constants';
-import { FileText, LockKeyhole, ChevronRight, MessageCircleQuestion } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
+
 export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) {
   const t = useTranslations('settingsInfo');
   return (

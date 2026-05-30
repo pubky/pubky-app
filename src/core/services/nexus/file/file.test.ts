@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { filesApi, buildFileBodyUrl } from './file.api';
-import { FileVariant, type TFileParams, type TFileBody } from './file.types';
+import { describe, expect, it } from 'vitest';
 import { CDN_URL, NEXUS_URL } from '@/config/nexus';
+import { buildFileBodyUrl, filesApi } from './file.api';
+import { FileVariant, type TFileBody, type TFileParams } from './file.types';
 
 const pubky = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 const encodedPubky = encodeURIComponent(pubky);

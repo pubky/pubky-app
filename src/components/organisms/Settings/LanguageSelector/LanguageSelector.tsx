@@ -1,19 +1,18 @@
 'use client';
 
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useSettingsActions } from '@/hooks/useSettingsActions/useSettingsActions';
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations, useLocale } from 'next-intl';
+import { Check, ChevronDown } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import { LANGUAGES } from './LanguageSelector.constants';
-import { Check, ChevronDown } from 'lucide-react';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useSettingsActions } from '@/hooks/useSettingsActions/useSettingsActions';
 import { cn } from '@/libs/utils/utils';
+import { LANGUAGES } from './LanguageSelector.constants';
 
 function LanguageOptions({ currentLanguage, onSelect }: { currentLanguage: string; onSelect: (code: string) => void }) {
   return (

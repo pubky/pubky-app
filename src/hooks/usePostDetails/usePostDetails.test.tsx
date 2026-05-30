@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostDetails } from './usePostDetails';
 
 // Mock direct dependencies
@@ -82,6 +82,12 @@ describe('usePostDetails', () => {
     renderHook(() => usePostDetails(null));
 
     // The query function returns early with null, so getPostDetails is never called
+    expect(mockReadPostDetails).not.toHaveBeenCalled();
+  });
+
+  it('does not call getDetails when enabled is false', () => {
+    renderHook(() => usePostDetails('user-123:post-123', { enabled: false }));
+
     expect(mockReadPostDetails).not.toHaveBeenCalled();
   });
 

@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { UseMutedUsersResult } from './useMutedUsers.types';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import type { UseMutedUsersResult } from './useMutedUsers.types';
+
 const EMPTY_ARRAY: Pubky[] = [];
 
 /**

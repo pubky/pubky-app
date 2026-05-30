@@ -1,13 +1,12 @@
 'use client';
 
+import { Container } from '@/atoms/Container/Container';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import { Container } from '@/atoms/Container/Container';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
-
 import { PostHeaderSkeleton } from './PostHeader.skeleton';
 import type { PostHeaderProps } from './PostHeader.types';
 

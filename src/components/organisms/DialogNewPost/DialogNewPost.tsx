@@ -1,17 +1,16 @@
 'use client';
 
-import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
-import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
-import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
-import { PostInput } from '../PostInput/PostInput';
-
-import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import type { DialogNewPostProps } from './DialogNewPost.types';
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { cn } from '@/libs/utils/utils';
+import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
+import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { PostInput } from '../PostInput/PostInput';
+import type { DialogNewPostProps } from './DialogNewPost.types';
 
 export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) {
   const t = useTranslations('dialogs.newPost');

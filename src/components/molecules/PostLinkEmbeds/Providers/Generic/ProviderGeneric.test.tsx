@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { asInvalid } from '@/test-utils/type-assertions';
 import type { EmbedData } from '../../Providers/Provider.types';
-import { Generic } from './ProviderGeneric';
 import { GenericPreview } from './GenericPreview';
-import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { Generic } from './ProviderGeneric';
 
 // Mock the hooks module
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({

@@ -1,18 +1,17 @@
 'use client';
 
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useRouter } from 'next/navigation';
+import { Tag } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { TaggedItem } from '../TaggedItem/TaggedItem';
-
-import { useRouter } from 'next/navigation';
-import { PROFILE_ROUTES, getProfileRoute } from '@/app/routes';
-import type { ProfilePageTaggedAsProps } from './ProfilePageTaggedAs.types';
 import { ProfilePageTaggedAsSkeleton } from './ProfilePageTaggedAs.skeleton';
-import { Tag } from 'lucide-react';
+import type { ProfilePageTaggedAsProps } from './ProfilePageTaggedAs.types';
 
 export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky }: ProfilePageTaggedAsProps) {
   const t = useTranslations('profile.sidebar');

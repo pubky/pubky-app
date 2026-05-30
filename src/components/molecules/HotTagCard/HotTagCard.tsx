@@ -4,11 +4,11 @@ import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { AvatarGroup } from '../AvatarGroup/AvatarGroup';
-
-import type { HotTagCardProps } from './HotTagCard.types';
 import { cn, generateRandomColor } from '@/libs/utils/utils';
 import { TIMEFRAME } from '@/stores/hot/hot.types';
+import { AvatarGroup } from '../AvatarGroup/AvatarGroup';
+import type { HotTagCardProps } from './HotTagCard.types';
+
 const TIMEFRAME_TRANSLATION_KEY = {
   [TIMEFRAME.TODAY]: 'postsCountToday',
   [TIMEFRAME.THIS_WEEK]: 'postsCountThisWeek',

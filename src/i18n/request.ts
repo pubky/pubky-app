@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { getRequestConfig } from 'next-intl/server';
-import { routing, type Locale } from './routing';
+import { type Locale, routing } from './routing';
 
 /**
  * i18n Request Configuration

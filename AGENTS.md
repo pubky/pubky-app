@@ -31,6 +31,7 @@ Import modules through the path aliases in `tsconfig.json` (for example `@/hooks
 - `getOrFetch*` — local first, network fallback
 - `getMany*OrFetch` — bulk local first, fetch missing (e.g., `getManyTagsOrFetch`)
 - `commitCreate*` / `commitUpdate*` / `commitDelete*` — optimistic local write + network sync
+- `subscribe*` — long-lived live stream subscription (e.g., homeserver event streams), not a one-shot fetch
 
 ### Errors
 

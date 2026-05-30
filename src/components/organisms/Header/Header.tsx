@@ -1,16 +1,16 @@
 'use client';
 
-import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { HeaderContainer, HeaderOnboarding, HeaderTitle } from '@/molecules/Header/Header';
 import { HeaderHome } from '@/molecules/HeaderHome/HeaderHome';
 import { HeaderJoin } from '@/molecules/HeaderJoin/HeaderJoin';
 import { HeaderSignIn } from '@/molecules/HeaderSignIn/HeaderSignIn';
 import { Logo } from '@/molecules/Logo/Logo';
-
-import { pathToStepConfig } from './Header.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { pathToStepConfig } from './Header.constants';
+
 export function Header() {
   const pathname = usePathname();
   const t = useTranslations('onboarding.steps');

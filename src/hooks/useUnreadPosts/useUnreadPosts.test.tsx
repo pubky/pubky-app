@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useUnreadPosts } from './useUnreadPosts';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { useUnreadPosts } from './useUnreadPosts';
+
 // Hoist mock data
 const { mockUnreadStream, setMockUnreadStream } = vi.hoisted(() => {
   const stream = { current: null as { stream: string[] } | null };

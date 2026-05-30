@@ -1,10 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PubkyAppPost, PubkyAppPostKind, type BlobResult, type FileResult } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils/type-assertions';
-import { DatabaseErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod } from '@/libs/http/http.types';
+import { type BlobResult, type FileResult, PubkyAppPost, PubkyAppPostKind } from 'pubky-app-specs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostApplication } from '@/application/post/post';
 import type { TCreatePostInput, TEditPostInput } from '@/application/post/post.types';
@@ -12,6 +7,10 @@ import { PostStreamApplication } from '@/application/stream/posts/post';
 import { TagApplication } from '@/application/tag/tag';
 import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
 import type { TFetchPostTaggersParams } from '@/controllers/post/post.types';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -21,8 +20,11 @@ import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostService } from '@/services/local/post/post';
-import type { NexusTaggers } from '@/services/nexus/nexus.types';
+import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
+import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
+import { asOpaque } from '@/test-utils/type-assertions';
+
 // Mock the Local.Post service
 vi.mock('@/services/local/post/post', () => ({
   LocalPostService: {
@@ -34,6 +36,12 @@ vi.mock('@/services/local/post/post', () => ({
     readCounts: vi.fn(),
     readTags: vi.fn(),
     readRelationships: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/local/tag/post/tag.post', () => ({
+  LocalPostTagService: {
+    mergeTags: vi.fn(),
   },
 }));
 
@@ -1000,6 +1008,44 @@ describe('Post Application', () => {
 
       expect(getTagsSpy).toHaveBeenCalledWith('author:post123');
       expect(result).toEqual(mockTags);
+    });
+  });
+
+  describe('fetchTags', () => {
+    const params = {
+      compositeId: 'author:post123',
+      skip: 0,
+      limit: 3,
+      viewerId: 'viewer123' as Pubky,
+    };
+
+    it('should return empty tags without merging local state', async () => {
+      const nexusSpy = vi.spyOn(NexusPostService, 'getPostTags').mockResolvedValue([]);
+      const mergeSpy = vi.spyOn(LocalPostTagService, 'mergeTags').mockResolvedValue(undefined);
+
+      const result = await PostApplication.fetchTags(params);
+
+      expect(result).toEqual([]);
+      expect(nexusSpy).toHaveBeenCalledWith(params);
+      expect(mergeSpy).not.toHaveBeenCalled();
+    });
+
+    it('should merge non-empty Nexus tags into local state', async () => {
+      const tags: NexusTag[] = [
+        { label: 'bitcoin', taggers: ['viewer123' as Pubky], taggers_count: 1, relationship: true },
+      ];
+      const nexusSpy = vi.spyOn(NexusPostService, 'getPostTags').mockResolvedValue(tags);
+      const mergeSpy = vi.spyOn(LocalPostTagService, 'mergeTags').mockResolvedValue(undefined);
+
+      const result = await PostApplication.fetchTags(params);
+
+      expect(result).toEqual(tags);
+      expect(nexusSpy).toHaveBeenCalledWith(params);
+      expect(mergeSpy).toHaveBeenCalledWith({
+        postId: params.compositeId,
+        tags,
+        viewerId: params.viewerId,
+      });
     });
   });
 

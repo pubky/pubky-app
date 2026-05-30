@@ -6,6 +6,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
+
 export interface FeedLayoutResolutionInput {
   requestedLayout: LayoutType;
   variant: TimelineFeedVariant;
@@ -20,7 +21,7 @@ export interface FeedLayoutResolution {
   isPhoneViewport: boolean;
 }
 
-export const VISUAL_SUPPORTED_FEED_VARIANTS = new Set<TimelineFeedVariant>([
+const RICH_LAYOUT_SUPPORTED_FEED_VARIANTS = new Set<TimelineFeedVariant>([
   TIMELINE_FEED_VARIANT.HOME,
   TIMELINE_FEED_VARIANT.BOOKMARKS,
   TIMELINE_FEED_VARIANT.CUSTOM,
@@ -33,8 +34,13 @@ export function resolveFeedLayout({
   isPhoneViewport,
 }: FeedLayoutResolutionInput): FeedLayoutResolution {
   const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
-  const isVisualSupported = !isPhoneViewport && VISUAL_SUPPORTED_FEED_VARIANTS.has(variant);
-  const effectiveLayout = isVisualRequested && !isVisualSupported ? LAYOUT.COLUMNS : requestedLayout;
+  const isVisualSupported = !isPhoneViewport && RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
+  const isWideRequested = requestedLayout === LAYOUT.WIDE;
+  const isWideSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
+  const effectiveLayout =
+    (isVisualRequested && !isVisualSupported) || (isWideRequested && !isWideSupported)
+      ? LAYOUT.COLUMNS
+      : requestedLayout;
 
   return {
     requestedLayout,

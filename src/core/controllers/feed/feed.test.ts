@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
-import type { TFeedCreateParams, TFeedUpdateParams, TFeedIdParam } from './feed.types';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedApplication } from '@/application/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
+import { asInvalid } from '@/test-utils/type-assertions';
+import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from './feed.types';
+
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
 };

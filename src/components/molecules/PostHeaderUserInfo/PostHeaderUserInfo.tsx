@@ -2,11 +2,10 @@
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { PostHeaderTimestamp } from '../PostHeaderTimestamp/PostHeaderTimestamp';
 import { UserInfoPopover } from '../UserInfoPopover/UserInfoPopover';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-
-import { cn, formatPublicKey } from '@/libs/utils/utils';
 
 interface PostHeaderUserInfoProps {
   userId: string;

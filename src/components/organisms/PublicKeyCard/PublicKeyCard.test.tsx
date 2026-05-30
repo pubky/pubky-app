@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PublicKeyCard } from './PublicKeyCard';
 
 // Mock navigator.clipboard (not needed anymore since copy is mocked directly)

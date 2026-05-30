@@ -1,14 +1,9 @@
-import { setLocaleCookie } from '@/i18n/utils';
-import type { AppError } from '@/libs/error/error';
-import { Identity } from '@/libs/identity/identity';
-import { Logger } from '@/libs/logger/logger';
-import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
-import { clearCookies, sleep } from '@/libs/utils/utils';
 import { AuthApplication } from '@/application/auth/auth';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
+import { TagApplication } from '@/application/tag/tag';
 import type {
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
@@ -19,6 +14,13 @@ import { NotificationCoordinator } from '@/coordinators/notifications/notificati
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
+import { setLocaleCookie } from '@/i18n/utils';
+import type { AppError } from '@/libs/error/error';
+import { Identity } from '@/libs/identity/identity';
+import { Logger } from '@/libs/logger/logger';
+import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
+import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
+import { clearCookies, sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
@@ -35,6 +37,7 @@ import { useSearchStore } from '@/stores/search/search.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { SettingsState } from '@/stores/settings/settings.types';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
+
 export class AuthController {
   private constructor() {} // Prevent instantiation
 
@@ -250,10 +253,20 @@ export class AuthController {
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store, clears cookies,
-   * IndexedDB, query cache, singletons, in-memory stream pagination queues, and persisted localStorage keys.
+   * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
+   * and mute-sync `sessionStorage` cursors.
    * Used by both logout() and restorePersistedSession() on failure.
    */
   private static async cleanupLocalState() {
+    // Capture pubky before resetting auth store; used to scope marker cleanup.
+    const pubky = useAuthStore.getState().currentUserPubky;
+    if (pubky) {
+      TagApplication.clearViewerMarkers(pubky);
+    }
+
+    // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
+    clearMuteSyncCursorSessionStorage();
+
     // Reset singletons
     PubkySpecsSingleton.reset();
     TtlCoordinator.resetInstance();

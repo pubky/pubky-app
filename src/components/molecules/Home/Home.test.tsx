@@ -1,8 +1,8 @@
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ElementType } from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { HomeActions, HomeFooter, HomeSectionTitle, HomePageHeading } from './Home';
+import { describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { HomeActions, HomeFooter, HomePageHeading, HomeSectionTitle } from './Home';
 
 // Mock Next.js router
 const mockPush = vi.fn();

@@ -1,8 +1,9 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { PostHeaderUserInfo } from './PostHeaderUserInfo';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatPublicKey } from '@/libs/utils/utils';
+import { PostHeaderUserInfo } from './PostHeaderUserInfo';
+
 vi.mock('@/atoms/Popover/Popover', () => {
   return {
     Popover: ({ children, hover }: { children: React.ReactNode; hover?: boolean }) => (

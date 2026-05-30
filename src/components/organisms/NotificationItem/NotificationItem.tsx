@@ -1,36 +1,35 @@
 'use client';
 
-import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { PostController } from '@/controllers/post/post';
+import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
+import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
+import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { Logger } from '@/libs/logger/logger';
+import { formatNotificationTime, isPostDeleted } from '@/libs/utils/utils';
+import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationIcon } from '@/molecules/NotificationIcon/NotificationIcon';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { useToast } from '@/molecules/Toaster/use-toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
-
-import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
-import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
 import { resolvePubkyToNames } from './NotificationItem.helpers';
 import type { NotificationItemProps } from './NotificationItem.types';
-import { Logger } from '@/libs/logger/logger';
-import { formatNotificationTime, isPostDeleted } from '@/libs/utils/utils';
-
 import {
-  getNotificationLink,
-  getUserIdFromNotification,
-  getNotificationActionKey,
-  getPostUriFromNotification,
-  pubkyUriToCompositeId,
   formatPreviewText,
+  getNotificationActionKey,
+  getNotificationLink,
+  getPostUriFromNotification,
+  getUserIdFromNotification,
   hasPostPreview,
+  pubkyUriToCompositeId,
 } from './NotificationItem.utils';
-import { PostController } from '@/controllers/post/post';
-import { NotificationType } from '@/models/notification/notification.types';
-import { useAuthStore } from '@/stores/auth/auth.store';
+
 export function NotificationItem({ notification, isUnread }: NotificationItemProps) {
   const t = useTranslations('notifications.actions');
   const tCommon = useTranslations('common');

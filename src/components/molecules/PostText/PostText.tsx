@@ -1,27 +1,26 @@
 'use client';
 
 import { memo, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { POST_ROUTES } from '@/app/routes';
+import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
+import { cn } from '@/libs/utils/utils';
+import { PostMentions } from '@/organisms/PostMentions/PostMentions';
+import { PostCodeBlock } from '../PostCodeBlock/PostCodeBlock';
+import { PostHashtags } from '../PostHashtags/PostHashtags';
+import { TRUNCATION_LIMIT } from './PostText.constants';
+import { PostTextProps, RemarkAnchorProps } from './PostText.types';
 import {
-  remarkExtractFirstParagraph,
   remarkDisallowMarkdownLinks,
+  remarkExtractFirstParagraph,
   remarkHashtags,
   remarkMentions,
   remarkPlaintextCodeblock,
   truncateAtWordBoundary,
 } from './PostText.utils';
-import { PostTextProps, RemarkAnchorProps } from './PostText.types';
-import { TRUNCATION_LIMIT } from './PostText.constants';
-import { Button } from '@/atoms/Button/Button';
-import { Container } from '@/atoms/Container/Container';
-import { PostCodeBlock } from '../PostCodeBlock/PostCodeBlock';
-import { PostHashtags } from '../PostHashtags/PostHashtags';
-import { PostMentions } from '@/organisms/PostMentions/PostMentions';
-
-import { usePathname } from 'next/navigation';
-import { POST_ROUTES } from '@/app/routes';
-import { cn } from '@/libs/utils/utils';
 
 /**
  * Renders formatted text content with markdown, hashtags, mentions, and links.
@@ -83,7 +82,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
       data-cy="post-text"
       overrideDefaults
       className={cn(
-        'text-base leading-6 font-medium wrap-anywhere hyphens-auto whitespace-pre-line text-secondary-foreground',
+        'text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground',
         className,
       )}
     >
@@ -210,6 +209,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
         <Button
           overrideDefaults
           aria-label="Show full post content"
+          data-allow-post-navigation
           className="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
         >
           Show more

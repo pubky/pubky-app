@@ -1,16 +1,16 @@
 'use client';
 
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Textarea } from '@/atoms/Textarea/Textarea';
-import { PostHeader } from '../../PostHeader/PostHeader';
-
-import type { DialogReportPostReasonStepProps } from './DialogReportPostReasonStep.types';
-import { Loader2 } from 'lucide-react';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { getCharacterCount } from '@/libs/utils/utils';
 import { REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
+import { PostHeader } from '../../PostHeader/PostHeader';
+import type { DialogReportPostReasonStepProps } from './DialogReportPostReasonStep.types';
+
 export function DialogReportPostReasonStep({
   reason,
   hasContent,

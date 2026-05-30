@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { HttpStatusCode } from '@/libs/http/http.types';
-import { handleApiError } from '@/libs/api/route-error-handler';
 import { CopyrightController } from '@/controllers/copyright/copyright';
+import { handleApiError } from '@/libs/api/route-error-handler';
+import { HttpStatusCode } from '@/libs/http/http.types';
+
 /**
  * API Route for copyright/DMCA takedown request submission to Chatwoot
  *

@@ -2,11 +2,12 @@
  * Shared test utilities for normalizer tests.
  * Provides common test data, mock factories, and assertion helpers.
  */
-import { vi } from 'vitest';
 import { PubkySpecsBuilder } from 'pubky-app-specs';
+import { vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+
 /**
  * Valid z-base32 encoded public keys for testing.
  * These are the only pubky values that pass strict validation.

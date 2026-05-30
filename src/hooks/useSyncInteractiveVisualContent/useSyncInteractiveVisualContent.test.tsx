@@ -1,8 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useSyncInteractiveVisualContent } from './useSyncInteractiveVisualContent';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT } from '@/stores/home/home.types';
+import { useSyncInteractiveVisualContent } from './useSyncInteractiveVisualContent';
+
 describe('useSyncInteractiveVisualContent', () => {
   beforeEach(() => {
     const { result } = renderHook(() => useHomeStore((state) => state.reset));

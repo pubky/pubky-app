@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import type { Pubky } from '@/models/models.types';
 import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
@@ -7,6 +7,7 @@ import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { NexusUser } from '@/services/nexus/nexus.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
+
 describe('UserStreamApplication', () => {
   const DEFAULT_USER_ID = 'user-1' as Pubky;
   const DEFAULT_VIEWER_ID = 'viewer-123' as Pubky;
@@ -307,6 +308,99 @@ describe('UserStreamApplication', () => {
         streamId,
         params: { skip: 0, limit: 2, viewer_id: DEFAULT_VIEWER_ID },
       });
+    });
+
+    it('should return a partial cached stream when allowed', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      const cachedUserIds: Pubky[] = ['recommended-1', 'recommended-2', 'recommended-3'];
+
+      await LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
+      await createUserDetails(cachedUserIds);
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch');
+
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        skip: 0,
+        limit: 10,
+        viewerId: DEFAULT_VIEWER_ID,
+        allowPartialCache: true,
+      });
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(result.nextPageIds).toEqual(cachedUserIds);
+      expect(result.isExhausted).toBe(false);
+    });
+  });
+
+  describe('refreshStreamSlice', () => {
+    it('should bypass cache and replace the cached stream on first page refresh', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      await LocalStreamUsersService.upsert({ streamId, stream: ['old-user'] as Pubky[] });
+
+      vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(['new-user-1', 'new-user-2'] as Pubky[]);
+
+      const result = await UserStreamApplication.refreshStreamSlice({
+        streamId,
+        skip: 0,
+        limit: 2,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      const cachedStream = await LocalStreamUsersService.findById(streamId);
+      expect(result.nextPageIds).toEqual(['new-user-1', 'new-user-2']);
+      expect(result.isExhausted).toBe(false);
+      expect(cachedStream?.stream).toEqual(['new-user-1', 'new-user-2']);
+    });
+
+    it('should replace the cached stream with an empty stream on empty first page refresh', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      await LocalStreamUsersService.upsert({ streamId, stream: ['old-user'] as Pubky[] });
+
+      vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue([]);
+
+      const result = await UserStreamApplication.refreshStreamSlice({
+        streamId,
+        skip: 0,
+        limit: 10,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      const cachedStream = await LocalStreamUsersService.findById(streamId);
+      expect(result.nextPageIds).toEqual([]);
+      expect(result.isExhausted).toBe(true);
+      expect(cachedStream?.stream).toEqual([]);
+    });
+
+    it('should append and dedupe later pages', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      await LocalStreamUsersService.upsert({ streamId, stream: ['user-1', 'user-2'] as Pubky[] });
+
+      vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(['user-2', 'user-3'] as Pubky[]);
+
+      await UserStreamApplication.refreshStreamSlice({
+        streamId,
+        skip: 2,
+        limit: 2,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      const cachedStream = await LocalStreamUsersService.findById(streamId);
+      expect(cachedStream?.stream).toEqual(['user-1', 'user-2', 'user-3']);
+    });
+
+    it('should mark short Nexus pages as exhausted', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(['user-1'] as Pubky[]);
+
+      const result = await UserStreamApplication.refreshStreamSlice({
+        streamId,
+        skip: 0,
+        limit: 10,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      expect(result.isExhausted).toBe(true);
+      expect(result.skip).toBe(1);
     });
   });
 

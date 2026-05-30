@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useProfileStats } from './useProfileStats';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserController } from '@/controllers/user/user';
 import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
+import { useProfileStats } from './useProfileStats';
+
 // Hoist mock data using vi.hoisted
 // Note: undefined = query not executed yet (loading), null = query executed but no data found
 const {
@@ -344,11 +345,11 @@ describe('useProfileStats', () => {
       expect(UserController.fetchCounts).not.toHaveBeenCalled();
     });
 
-    it('does not call fetchCounts when userId is empty', () => {
+    it('does not call getCounts or fetchCounts when enabled is false', () => {
       setMockUserCounts(undefined);
-      renderHook(() => useProfileStats(''));
+      renderHook(() => useProfileStats('test-user-id', { enabled: false }));
 
-      // enabled=false when userId is empty, so fetchFn should not fire
+      expect(UserController.getCounts).not.toHaveBeenCalled();
       expect(UserController.fetchCounts).not.toHaveBeenCalled();
     });
   });

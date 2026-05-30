@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { SearchUsersSection } from './SearchUsersSection';
+import { describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
+import { SearchUsersSection } from './SearchUsersSection';
+
 vi.mock('@/atoms/Container/Container', () => {
   return {
     Container: ({ children, className, ...props }: React.PropsWithChildren<{ className?: string }>) => (

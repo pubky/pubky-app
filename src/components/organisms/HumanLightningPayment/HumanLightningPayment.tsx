@@ -1,4 +1,8 @@
 'use client';
+import React, { useState } from 'react';
+import { ArrowLeft, Copy, RefreshCw, Wallet } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -6,20 +10,15 @@ import { Image } from '@/atoms/Image/Image';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
-import { PageTitle } from '@/molecules/Page/Page';
-import { useToast } from '@/molecules/Toaster/use-toast';
-
-import React, { useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
-import { useTranslations } from 'next-intl';
-import { VerificationHandler } from './HumanLightningPayment.utils';
-import { QRCodeSkeleton, PriceSkeleton } from './HumanLightningPayment.skeleton';
-import type { HumanLightningPaymentProps } from './HumanLightningPayment.types';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { RefreshCw, Wallet, ArrowLeft, Copy } from 'lucide-react';
+import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
 import { isAppError } from '@/libs/error/error.utils';
 import { cn, copyToClipboard } from '@/libs/utils/utils';
+import { PageTitle } from '@/molecules/Page/Page';
+import { useToast } from '@/molecules/Toaster/use-toast';
+import { PriceSkeleton, QRCodeSkeleton } from './HumanLightningPayment.skeleton';
+import type { HumanLightningPaymentProps } from './HumanLightningPayment.types';
+import { VerificationHandler } from './HumanLightningPayment.utils';
 
 export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPaymentProps) => {
   const t = useTranslations('onboarding.lightning');

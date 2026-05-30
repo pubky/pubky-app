@@ -1,14 +1,17 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserStreamModel } from '@/models/stream/user/userStream';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserConnectionsModel } from '@/models/user/connections/userConnections';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
 import { LocalFollowService } from '@/services/local/follow/follow';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { NexusUserCounts } from '@/services/nexus/nexus.types';
+
 const DEFAULT_USER_COUNTS: NexusUserCounts = {
   tagged: 0,
   tags: 0,
@@ -484,6 +487,15 @@ describe('LocalFollowService - Stream Updates', () => {
 
       expect(followingStream?.stream.filter((id) => id === userB).length).toBe(1);
       expect(followersStream?.stream.filter((id) => id === userA).length).toBe(1);
+    });
+
+    it('removes followed users from the recommended stream', async () => {
+      await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.RECOMMENDED, stream: [userB, userC, userD] });
+
+      await LocalFollowService.create({ follower: userA, followee: userB });
+
+      const recommendedStream = await LocalStreamUsersService.findById(UserStreamTypes.RECOMMENDED);
+      expect(recommendedStream?.stream).toEqual([userC, userD]);
     });
   });
 

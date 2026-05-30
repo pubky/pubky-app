@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { PublicKeyHeader, PublicKeyNavigation } from './Pubkey';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
+import { PublicKeyHeader, PublicKeyNavigation } from './Pubkey';
 
 // Mock Next.js router
 const mockPush = vi.fn();

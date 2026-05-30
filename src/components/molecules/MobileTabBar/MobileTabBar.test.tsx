@@ -1,8 +1,8 @@
-import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import React, { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StickyNote, Tag, UsersRound } from 'lucide-react';
+import { describe, expect, it, vi } from 'vitest';
 import { MobileTabBar } from './MobileTabBar';
 import type { MobileTabBarItem } from './MobileTabBar.types';
 
@@ -142,6 +142,13 @@ describe('MobileTabBar', () => {
     const { container } = render(<MobileTabBar items={makeItems()} data-testid="my-tab-bar" />);
     const root = container.firstChild as HTMLElement;
     expect(root).toHaveAttribute('data-testid', 'my-tab-bar');
+  });
+
+  it('forwards a ref to the root element', () => {
+    const ref = createRef<HTMLDivElement>();
+    render(<MobileTabBar ref={ref} items={makeItems()} />);
+    expect(ref.current).not.toBeNull();
+    expect(ref.current?.tagName).toBe('DIV');
   });
 
   it('applies flex items-center gap-2 to button only when showLabels is true', () => {

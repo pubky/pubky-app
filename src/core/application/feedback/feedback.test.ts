@@ -1,6 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TFeedbackSubmitInput } from './feedback.types';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -10,6 +8,9 @@ import type { Pubky } from '@/models/models.types';
 import { ChatwootService } from '@/services/chatwoot/chatwoot';
 import { CHATWOOT_FEEDBACK_MESSAGE_PREFIX, CHATWOOT_INBOX_IDS } from '@/services/chatwoot/chatwoot.constants';
 import type { TChatwootContact } from '@/services/chatwoot/chatwoot.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+import type { TFeedbackSubmitInput } from './feedback.types';
+
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,
   userName: 'Test User',

@@ -4,6 +4,7 @@ import type { ModerationType } from '@/models/moderation/moderation.schema';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+
 export class ModerationController {
   private constructor() {}
 

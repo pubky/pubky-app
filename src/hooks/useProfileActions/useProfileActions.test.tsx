@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
-
-import { useProfileActions } from './useProfileActions';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ProfileController } from '@/controllers/profile/profile';
 import { ErrorMessages } from '@/libs/error/error.messages';
 import { Logger } from '@/libs/logger/logger';
-import { ProfileController } from '@/controllers/profile/profile';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import type { Pubky } from '@/models/models.types';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { useProfileActions } from './useProfileActions';
+
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({

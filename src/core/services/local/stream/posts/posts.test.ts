@@ -1,9 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -12,7 +11,7 @@ import { PostRelationshipsModel } from '@/models/post/relationships/postRelation
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { TagModel } from '@/models/shared/tag/tag';
-import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
@@ -24,6 +23,8 @@ import type {
   NexusPostWithAttachmentMetadata,
   NexusTag,
 } from '@/services/nexus/nexus.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+
 describe('LocalStreamPostsService', () => {
   const streamId: PostStreamId = PostStreamTypes.TIMELINE_ALL_ALL;
   const DEFAULT_AUTHOR = 'user-1';

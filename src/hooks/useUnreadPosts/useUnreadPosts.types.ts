@@ -1,4 +1,5 @@
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+
 export interface UseUnreadPostsOptions {
   /**
    * Stream ID to watch for unread posts

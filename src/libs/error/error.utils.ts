@@ -1,7 +1,7 @@
 import { AppError, isAppError } from './error';
-import { ErrorCategory, ErrorService } from './error.types';
-import { ClientErrorCode, AuthErrorCode, DatabaseErrorCode, ServerErrorCode } from './error.codes';
+import { AuthErrorCode, ClientErrorCode, DatabaseErrorCode, ServerErrorCode } from './error.codes';
 import { Err } from './error.factories';
+import { ErrorCategory, ErrorService } from './error.types';
 
 // Re-export isAppError for convenience
 export { isAppError };
@@ -78,6 +78,16 @@ export const requiresLogin = (error: AppError): boolean => {
  */
 export const isNotFound = (error: AppError): boolean => {
   return error.code === ClientErrorCode.NOT_FOUND || error.code === DatabaseErrorCode.RECORD_NOT_FOUND;
+};
+
+/**
+ * Did this AppError originate from a specific HTTP status?
+ *
+ * Keep this separate from semantic helpers like isNotFound(): callers that only
+ * mean "remote HTTP 404" should not accidentally swallow local/domain misses.
+ */
+export const hasHttpStatus = (error: unknown, statusCode: number): error is AppError => {
+  return isAppError(error) && error.context?.statusCode === statusCode;
 };
 
 /**

@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useRouter } from 'next/navigation';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useRouter } from 'next/navigation';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
-
-import { DialogReportPostIssueStep } from './DialogReportPostIssueStep';
 import { REPORT_ISSUE_LABELS, REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
+import { DialogReportPostIssueStep } from './DialogReportPostIssueStep';
+
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),

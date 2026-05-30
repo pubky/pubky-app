@@ -2,36 +2,37 @@
 
 import * as React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { FileController } from '@/controllers/file/file';
+import { ModerationController } from '@/controllers/moderation/moderation';
+import { PostController } from '@/controllers/post/post';
+import { Logger } from '@/libs/logger/logger';
+import { isPostDeleted } from '@/libs/utils/utils';
+import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { FileVariant } from '@/services/nexus/file/file.types';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import {
   composeVisualRows,
-  getVisualPendingOverflowFallbackIds,
   getVisualMediaKind,
+  getVisualPendingOverflowFallbackIds,
   isVisualMediaContentType,
   parseMediaDimension,
-  resolveVisualTileSizeOptions,
   resolvePreferredVisualTileSize,
+  resolveVisualTileSizeOptions,
 } from './TimelineFeedVisual.helpers';
+import type { VisualTile } from './TimelineFeedVisual.types';
 import {
   ensureVisualTileProbe,
   getVisualTilePreferredSizeFallback,
   getVisualTileProbeCacheEntry,
   setVisualTilePreferredSizeFallback,
 } from './TimelineFeedVisualMedia.utils';
-import type { VisualTile } from './TimelineFeedVisual.types';
-import { Logger } from '@/libs/logger/logger';
-import { isPostDeleted } from '@/libs/utils/utils';
-import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import { FileController } from '@/controllers/file/file';
-import { ModerationController } from '@/controllers/moderation/moderation';
-import { PostController } from '@/controllers/post/post';
-import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
-import { CompositeIdDomain } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
-import { PostDetailsModel } from '@/models/post/details/postDetails';
-import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
-import { FileVariant } from '@/services/nexus/file/file.types';
-import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+
 type VisualFeedSnapshot = {
   tiles: VisualTile[];
   missingFileUris: string[];
@@ -289,10 +290,26 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
   }, [missingFileUris, missingFileUrisKey]);
 
   const tiles = (snapshot?.tiles ?? []).map(resolveTileProbeState);
-  const pendingOverflowFallbackIds = React.useMemo(
-    () => getVisualPendingOverflowFallbackIds(tiles, hasMore ? undefined : 0),
-    [tiles, hasMore],
-  );
+  const pendingOverflowFallbackIds = React.useMemo(() => {
+    const fallbackIds = getVisualPendingOverflowFallbackIds(tiles, hasMore ? undefined : 0);
+
+    if (!hasMore || fallbackIds.length > 0 || tiles.length < 2) {
+      return fallbackIds;
+    }
+
+    const firstPendingTileIndex = tiles.findIndex((tile) => tile.preferredSize === undefined);
+    if (firstPendingTileIndex === -1 || firstPendingTileIndex > 1) {
+      return fallbackIds;
+    }
+
+    return [
+      ...fallbackIds,
+      ...tiles
+        .slice(firstPendingTileIndex, 2)
+        .filter((tile) => tile.preferredSize === undefined)
+        .map((tile) => tile.id),
+    ];
+  }, [tiles, hasMore]);
   const pendingOverflowFallbackIdSet = React.useMemo(
     () => new Set(pendingOverflowFallbackIds),
     [pendingOverflowFallbackIds],

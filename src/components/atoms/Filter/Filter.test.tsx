@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { FilterRoot, FilterHeader, FilterList, FilterItem, FilterItemIcon, FilterItemLabel } from './Filter';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { FilterHeader, FilterItem, FilterItemIcon, FilterItemLabel, FilterList, FilterRoot } from './Filter';
 
 const MockIcon = ({ className }: { className?: string }) => <svg data-testid="mock-icon" className={className} />;
 

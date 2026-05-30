@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { PrivacySettings } from './PrivacySettings';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultPrivacyPreferences } from '@/stores/settings/settings.types';
+import { PrivacySettings } from './PrivacySettings';
+
 // Mock settings store and hook
 const mockSetShowConfirm = vi.fn();
 const mockSetBlurCensored = vi.fn();

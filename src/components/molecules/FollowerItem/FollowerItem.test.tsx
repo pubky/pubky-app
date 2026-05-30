@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { FollowerItem } from './FollowerItem';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
 import type { Pubky } from '@/models/models.types';
+import { FollowerItem } from './FollowerItem';
+
 // Mock atoms
 vi.mock('@/atoms/Button/Button', () => {
   return {

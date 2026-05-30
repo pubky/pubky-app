@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { sortPostIdsByTimestamp } from './sorting';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import { sortPostIdsByTimestamp } from './sorting';
+
 describe('sortPostIdsByTimestamp', () => {
   const DEFAULT_AUTHOR = 'test-user';
   const BASE_TIMESTAMP = 1000000;

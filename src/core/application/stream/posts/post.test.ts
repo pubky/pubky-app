@@ -1,17 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { STREAM_CACHE_MAX_AGE_MS } from '@/config/nexus';
-import { postStreamQueue } from './muting/post-stream-queue';
-import { MuteFilter } from './muting/mute-filter';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
+import { STREAM_CACHE_MAX_AGE_MS } from '@/config/nexus';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type { Pubky } from '@/models/models.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DELETED } from '@/models/post/details/postDetails.constants';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
-import { PostStreamTypes, type PostStreamId } from '@/models/stream/post/postStream.types';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamModel } from '@/models/stream/user/userStream';
@@ -24,15 +21,19 @@ import { UserTagsModel } from '@/models/user/tags/userTags';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import {
-  StreamSorting,
   type NexusFileDetails,
   type NexusFileUrls,
   type NexusPost,
   type NexusPostsKeyStream,
   type NexusUser,
+  StreamSorting,
 } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
+import { asInvalid } from '@/test-utils/type-assertions';
+import { MuteFilter } from './muting/mute-filter';
+import { postStreamQueue } from './muting/post-stream-queue';
+
 describe('PostStreamApplication', () => {
   const streamId = PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId;
   const DEFAULT_AUTHOR = 'user-1';
@@ -1810,6 +1811,28 @@ describe('PostStreamApplication', () => {
 
       // Should only contain posts from non-muted authors
       expect(result.nextPageIds).toEqual(['author-1:post-1', 'author-3:post-3']);
+    });
+
+    it('does not filter bookmark stream posts from muted authors', async () => {
+      await setupMutedUsers(['author-2'] as Pubky[]);
+
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
+        post_keys: ['author-1:post-1', 'author-2:post-2', 'author-3:post-3'],
+        last_post_score: BASE_TIMESTAMP + 2,
+      };
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      const bookmarksStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: bookmarksStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+
+      expect(result.nextPageIds).toEqual(['author-1:post-1', 'author-2:post-2', 'author-3:post-3']);
     });
 
     it('should fetch more posts until limit is reached after mute filtering', async () => {

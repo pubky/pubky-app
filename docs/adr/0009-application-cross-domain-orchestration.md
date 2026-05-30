@@ -62,6 +62,8 @@ BootstrapApplication          ← in-degree 0 (root/source node)
   └─→ SettingsApplication      (initialize settings)
 ```
 
+After bootstrap, the canonical mute list for filtering remains the homeserver-backed Dexie stream; **ongoing** cross-device alignment uses `MuteListSyncCoordinator` (homeserver event stream → `MuteController.fetchMutedUsers`), not Nexus. See [ADR-0014: Muting System](./0014-muting-system.md).
+
 `MigrationApplication` is invoked after a database recreation (version bump) to re-fetch critical homeserver data that is not automatically re-populated:
 
 ```

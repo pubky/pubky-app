@@ -1,4 +1,5 @@
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+
 export interface RepliesWithParentProps {
   /**
    * Stream ID for the replies timeline
@@ -8,5 +9,4 @@ export interface RepliesWithParentProps {
 
 export interface ReplyWithParentProps {
   replyPostId: string;
-  onPostClick: (postId: string) => void;
 }

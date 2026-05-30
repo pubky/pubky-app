@@ -1,12 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { cn } from '@/libs/utils/utils';
 import { Button } from '../Button/Button';
 import { Container } from '../Container/Container';
 import { Heading } from '../Heading/Heading';
 import { Typography } from '../Typography/Typography';
-
-import { cn } from '@/libs/utils/utils';
 
 function FilterRoot({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) {
   return (
@@ -121,4 +120,4 @@ function FilterItemLabel({
   );
 }
 
-export { FilterRoot, FilterHeader, FilterList, FilterItem, FilterItemIcon, FilterItemLabel };
+export { FilterHeader, FilterItem, FilterItemIcon, FilterItemLabel, FilterList, FilterRoot };

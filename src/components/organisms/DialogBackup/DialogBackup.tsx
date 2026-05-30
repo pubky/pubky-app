@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
@@ -14,13 +15,11 @@ import {
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import Image from 'next/image';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { DialogBackupEncrypted } from '../DialogBackupEncrypted/DialogBackupEncrypted';
 import { DialogBackupExport } from '../DialogBackupExport/DialogBackupExport';
 import { DialogBackupPhrase } from '../DialogBackupPhrase/DialogBackupPhrase';
 
-import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 interface DialogBackupProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;

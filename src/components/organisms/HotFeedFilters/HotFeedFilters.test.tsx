@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { FilterTimeframe, HotFeedSidebar, HotFeedDrawer } from './HotFeedFilters';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { TIMEFRAME } from '@/stores/hot/hot.types';
+import { FilterTimeframe, HotFeedDrawer, HotFeedSidebar } from './HotFeedFilters';
 
 // Mock store
 vi.mock('@/stores/hot/hot.store', () => ({

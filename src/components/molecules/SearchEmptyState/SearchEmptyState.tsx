@@ -1,8 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { ProfilePageEmptyState } from '../ProfilePageEmptyState/ProfilePageEmptyState';
-
 /**
  * Search Empty State Component
  *
@@ -10,10 +7,13 @@ import { ProfilePageEmptyState } from '../ProfilePageEmptyState/ProfilePageEmpty
  * Guides the user on how to search for posts.
  */
 import { Search } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmptyState';
+
 export function SearchEmptyState() {
   const t = useTranslations('search.empty');
   return (
-    <ProfilePageEmptyState
+    <IllustratedEmptyState
       imageSrc="/images/tagged-empty-state.webp"
       imageAlt={t('alt')}
       icon={Search}

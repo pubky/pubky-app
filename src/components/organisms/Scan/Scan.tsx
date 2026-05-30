@@ -1,11 +1,12 @@
 'use client';
 
-import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
-import Image from 'next/image';
-import { QRCodeSVG } from 'qrcode.react';
-import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { Key, Loader2, QrCode } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { QRCodeSVG } from 'qrcode.react';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
@@ -13,16 +14,15 @@ import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
+import { PUBKY_CORE_URL, PUBKY_RING_URL } from '@/config/externalLinks';
+import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { Logger } from '@/libs/logger/logger';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { DialogAuthExpired } from '@/molecules/DialogAuthExpired/DialogAuthExpired';
 import { PageTitle } from '@/molecules/Page/Page';
-
-import { PUBKY_RING_URL, PUBKY_CORE_URL } from '@/config/externalLinks';
-import { ONBOARDING_ROUTES } from '@/app/routes';
-import { Loader2, QrCode, Key } from 'lucide-react';
-import { Logger } from '@/libs/logger/logger';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
   const router = useRouter();

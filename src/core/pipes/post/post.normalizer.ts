@@ -1,16 +1,17 @@
-import { PostResult, PubkyAppPostEmbed, PubkyAppPostKind, PubkyAppPost } from 'pubky-app-specs';
-import { Logger } from '@/libs/logger/logger';
+import { PostResult, PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
+import type { TEditPostParams } from '@/controllers/post/post.types';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { TEditPostParams } from '@/controllers/post/post.types';
+import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { PostValidatorData } from '@/pipes/pipes.types';
+
 export class PostNormalizer {
   private constructor() {}
 

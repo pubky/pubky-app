@@ -1,8 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { Slot } from 'radix-ui';
 import { cva } from 'class-variance-authority';
+// Shadcn-based Breadcrumb with custom variants
+import { ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { Slot } from 'radix-ui';
+import { cn } from '@/libs/utils/utils';
 import type {
   BreadcrumbEllipsisProps,
   BreadcrumbItemProps,
@@ -10,9 +13,6 @@ import type {
   BreadcrumbSeparatorProps,
 } from './Breadcrumb.types';
 
-// Shadcn-based Breadcrumb with custom variants
-import { ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
 const breadcrumbVariants = cva('flex flex-wrap items-center', {
   variants: {
     size: {
@@ -185,4 +185,4 @@ export const BreadcrumbPage = React.forwardRef<HTMLSpanElement, React.ComponentP
 BreadcrumbPage.displayName = 'BreadcrumbPage';
 
 // Export variants for external use
-export { breadcrumbVariants, breadcrumbItemVariants, breadcrumbSeparatorVariants };
+export { breadcrumbItemVariants, breadcrumbSeparatorVariants, breadcrumbVariants };

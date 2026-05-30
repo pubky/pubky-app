@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { getStreamIdFromFilters, getStreamId, matchesFilters, parseStreamId } from './home.utils';
-import { SORT, REACH, CONTENT, ContentType, SortType, ReachType } from './home.types';
+import { describe, expect, it } from 'vitest';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { CONTENT, ContentType, REACH, ReachType, SORT, SortType } from './home.types';
+import { getStreamId, getStreamIdFromFilters, matchesFilters, parseStreamId } from './home.utils';
+
 describe('filters.utils', () => {
   describe('getStreamIdFromFilters', () => {
     describe('SORT mapping', () => {

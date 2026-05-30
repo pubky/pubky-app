@@ -1,10 +1,10 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
 import type { RefObject } from 'react';
-import { asOpaque } from '@/test-utils/type-assertions';
-import { mockClipboardEvent } from '@/test-utils/react-events';
-import { useTagInput } from './useTagInput';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TAG_MAX_LENGTH } from '@/config/posts';
+import { mockClipboardEvent } from '@/test-utils/react-events';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { useTagInput } from './useTagInput';
 
 // Mock useEmojiInsert
 vi.mock('../useEmojiInsert/useEmojiInsert', () => ({

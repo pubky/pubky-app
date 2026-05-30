@@ -2,6 +2,7 @@ import type { NexusHotTag } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { tagApi } from '@/services/nexus/tag/tag.api';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
+
 /**
  * Nexus Hot Service
  *

@@ -1,5 +1,5 @@
-import { OnboardingScanPage } from '@/templates/Onboarding/OnboardingScanPage/OnboardingScanPage';
 import { Metadata } from '@/molecules/Metadata/Metadata';
+import { OnboardingScanPage } from '@/templates/Onboarding/OnboardingScanPage/OnboardingScanPage';
 
 export const metadata = Metadata({
   title: 'Scan - Onboarding',

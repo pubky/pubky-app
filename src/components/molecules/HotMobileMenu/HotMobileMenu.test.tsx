@@ -1,8 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HotMobileMenu, HOT_MOBILE_MENU_ITEMS } from './HotMobileMenu';
+import { describe, expect, it, vi } from 'vitest';
+import { HOT_MOBILE_MENU_ITEMS, HotMobileMenu } from './HotMobileMenu';
 import { HotSection } from './HotMobileMenu.types';
 
 vi.mock('next-intl', () => ({

@@ -2,12 +2,12 @@
 
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { formatInviteCode } from '@/libs/utils/utils';
 import { InstallCard, InstallFooter, InstallHeader, InstallNavigation } from '@/molecules/Install/Install';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
 import { useToast } from '@/molecules/Toaster/use-toast';
-
-import { formatInviteCode } from '@/libs/utils/utils';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+
 export function Install() {
   const searchParams = useSearchParams();
   const { toast } = useToast();

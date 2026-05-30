@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { persist, devtools } from 'zustand/middleware';
-import { NotificationStore, notificationInitialState } from './notification.types';
+import { devtools, persist } from 'zustand/middleware';
+import { NOTIFICATION_PERSIST_KEY } from '../persistedKeys';
 import { createNotificationActions } from './notification.actions';
 import { createNotificationSelectors } from './notification.selectors';
-import { NOTIFICATION_PERSIST_KEY } from '../persistedKeys';
+import { notificationInitialState, NotificationStore } from './notification.types';
 
 // Store creation
 export const useNotificationStore = create<NotificationStore>()(

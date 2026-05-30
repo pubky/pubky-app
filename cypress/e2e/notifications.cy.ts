@@ -197,8 +197,7 @@ describe('notifications', () => {
     checkLatestNotification([profile1.username, 'mentioned you in post'], LatestNotificationReadState.Read);
   });
 
-  // todo: disabling notifications still shows notification, see bug https://github.com/pubky/pubky-app/issues/1603
-  it.skip('can disable being notified for profile being mentioned in a post', () => {
+  it('can disable being notified for profile being mentioned in a post', () => {
     // * profile 3 signs in and disables mention notifications
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
@@ -218,7 +217,8 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     verifyNotificationCounter(0);
     goToProfilePageFromHeader();
-    cy.get('[data-cy="notifications-list"]').should('contain.text', 'No notifications yet');
+    // todo: change text when placeholder UI is updated, see https://github.com/pubky/pubky-app/issues/1789
+    cy.get('[data-cy="profile-tab-content"]').should('contain.text', 'Nothing to see here yet');
   });
 
   it('can be notified for your post being replied to', () => {

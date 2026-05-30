@@ -1,11 +1,10 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { StickyNote, Tag, UsersRound } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { MobileTabBar } from '../MobileTabBar/MobileTabBar';
 import type { MobileTabBarItem } from '../MobileTabBar/MobileTabBar.types';
-
-import { HotSection, type HotMobileMenuItem, type HotMobileMenuProps } from './HotMobileMenu.types';
+import { type HotMobileMenuItem, type HotMobileMenuProps, HotSection } from './HotMobileMenu.types';
 
 export const HOT_MOBILE_MENU_ITEMS: HotMobileMenuItem[] = [
   { icon: Tag, section: HotSection.TAGS },

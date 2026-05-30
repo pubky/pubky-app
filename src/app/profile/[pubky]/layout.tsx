@@ -2,15 +2,16 @@
 
 import * as React from 'react';
 import { useParams } from 'next/navigation';
-import { ProfilePageContainer } from '@/organisms/ProfilePageContainer/ProfilePageContainer';
-import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
+import { ProfilePageContainer } from '@/organisms/ProfilePageContainer/ProfilePageContainer';
+import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
+
 /**
  * DynamicProfileLayout - Next.js layout for viewing other users' profiles
  *
  * This layout wraps children with ProfileProvider using the pubky from URL params.
- * Used for routes like /profile/{pubky}/followers, /profile/{pubky}/posts, etc.
+ * Used for routes like /profile/{pubky}, /profile/{pubky}/followers, etc.
  *
  * @see {@link ProfilePageContainer} for business logic
  * @see {@link ProfilePageLayout} for presentation

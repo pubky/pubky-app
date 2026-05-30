@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   extractUserIdFromAvatarUrl,
-  resolveAvatarFallbackSeed,
   resolveAvatarFallbackInitial,
+  resolveAvatarFallbackSeed,
 } from './AvatarWithFallback.utils';
 
 // Mock the config module

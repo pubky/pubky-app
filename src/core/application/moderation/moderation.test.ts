@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ModerationApplication } from './moderation';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { ModerationType } from '@/models/moderation/moderation.schema';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
 import { LocalModerationService } from '@/services/local/moderation/moderation';
+import { ModerationApplication } from './moderation';
+
 vi.mock('@/services/local/moderation/moderation', () => ({
   LocalModerationService: {
     setUnBlur: vi.fn(),

@@ -1,11 +1,11 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DialogEditPost } from './DialogEditPost';
-import { PostInput } from '../PostInput/PostInput';
-
-import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { PostInput } from '../PostInput/PostInput';
+import { DialogEditPost } from './DialogEditPost';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({
@@ -122,7 +122,6 @@ vi.mock('../PostInput/PostInput', () => ({
 
 // Use real libs - use actual implementations
 
-// Import hooks after mocking
 describe('DialogEditPost', () => {
   beforeEach(() => {
     vi.clearAllMocks();

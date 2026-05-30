@@ -1,24 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { EyeOff } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
 import { Container } from '@/atoms/Container/Container';
-import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
-
-import {
-  extractUserIdFromAvatarUrl,
-  resolveAvatarFallbackSeed,
-  resolveAvatarFallbackInitial,
-} from './AvatarWithFallback.utils';
-import type { AvatarWithFallbackProps } from './AvatarWithFallback.types';
-import { EyeOff } from 'lucide-react';
+import { ModerationController } from '@/controllers/moderation/moderation';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
-import { ModerationController } from '@/controllers/moderation/moderation';
 import { ModerationType } from '@/models/moderation/moderation.schema';
+import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import type { AvatarWithFallbackProps } from './AvatarWithFallback.types';
+import {
+  extractUserIdFromAvatarUrl,
+  resolveAvatarFallbackInitial,
+  resolveAvatarFallbackSeed,
+} from './AvatarWithFallback.utils';
+
 export type { AvatarWithFallbackProps };
 export function AvatarWithFallback({
   avatarUrl,

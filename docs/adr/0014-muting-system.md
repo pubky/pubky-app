@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — 2025-01-12
+Accepted — 2025-01-12  
+Updated — 2026-05-06 (homeserver event-stream cross-session mute sync; Nexus mute APIs removed from client)
 
 ## Context
 
@@ -75,6 +76,10 @@ Mutes sync to the homeserver for cross-device persistence:
 - **URL Pattern**: `pubky://{muter}/pub/pubky.app/mutes/{mutee}`
 - **Sequence**: Local database first (atomicity), then homeserver (durability)
 
+**Cross-session consistency (open sessions):** While the app is running, `MuteListSyncCoordinator` (started from `CoordinatorsManager`) subscribes to the homeserver **event stream** via `@synonymdev/pubky` (`eventStreamForUser`, path prefix `/pub/pubky.app/mutes/`, live mode). PUT/DEL events debounce to `MuteController.fetchMutedUsers`, which re-lists `mutes/` on the homeserver and refreshes the Dexie `UserStreamTypes.MUTED` stream. This keeps mute lists aligned across devices **without** Nexus mute APIs — mute lists are not indexed for the client there. The coordinator tears down and reopens that stream when navigating across disabled auth/onboarding routes and the rest of the app (and when auth or tab visibility policy changes), not on every in-app pathname change among allowed routes.
+
+Bootstrap and migration still call `MuteApplication.fetchMutedUsers` for initial hydration (see ADR-0009).
+
 ### Post Filtering
 
 Posts from muted users are filtered using the `MuteFilter` class:
@@ -130,17 +135,14 @@ const { posts } = await postStreamQueue.collect(streamId, {
 - Post context menu (three-dot menu → "Mute user")
 
 ```typescript
-// From a React component, use the controller layer:
+import { HttpMethod } from '@/libs/http/http.types';
 import { MuteController } from '@/controllers/mute/mute';
 
-// Mute a user
-await MuteController.commitMute('mute', { muter: currentUserId, mutee: targetUserId });
+await MuteController.commitMute(HttpMethod.PUT, { muter: currentUserId, mutee: targetUserId });
 
-// Unmute a user
-await MuteController.commitMute('unmute', { muter: currentUserId, mutee: targetUserId });
+await MuteController.commitMute(HttpMethod.DELETE, { muter: currentUserId, mutee: targetUserId });
 
-// Get all muted user IDs
-const mutedUsers = await MuteController.getMutedUsers();
+const mutedUsers = await MuteController.fetchMutedUsers(currentUserId);
 ```
 
 **Checking mute status** for UI display (e.g., showing "Muted" badge):
@@ -185,7 +187,7 @@ const mutedUsers = useSettingsStore((state) => state.muted);
 
 - Requires PostStreamQueue for efficient filtered pagination
 - Mute list loaded into memory for O(1) lookup during filtering
-- Bootstrap must sync mutes before feeds render correctly
+- Bootstrap (and DB migration resync) fetch mutes from the homeserver; **active sessions** also refresh via `MuteListSyncCoordinator` + homeserver event stream (see Homeserver Sync above)
 - Deleted post filtering uses fail-open strategy (posts without cached details are shown)
 
 ## Alternatives Considered
@@ -223,6 +225,10 @@ const mutedUsers = useSettingsStore((state) => state.muted);
 ## Implementation Notes
 
 - Mute controller: `src/core/controllers/mute/mute.ts`
+- Mute application: `src/core/application/mute/mute.ts`
+- Homeserver event-stream helper: `HomeserverService.subscribeUserEventStreamForPath` in `src/core/services/homeserver/homeserver.ts`
+- Debounce / path constants: `src/config/mute-sync.ts`
+- Coordinator: `src/core/coordinators/mute-list-sync/mute-list-sync.ts` (`MuteListSyncCoordinator`; wired from `CoordinatorsManager`)
 - Mute service: `src/core/services/local/mute/mute.ts`
 - Mute normalizer: `src/core/pipes/mute/mute.normalizer.ts`
 - Mute filter: `src/core/application/stream/posts/muting/mute-filter.ts`
@@ -237,4 +243,5 @@ const mutedUsers = useSettingsStore((state) => state.muted);
 
 - [ADR-0001: Local-First Writes](./0001-local-first-writes.md) — Muting follows local-first pattern
 - [ADR-0003: Streams as Caches](./0003-streams-as-caches.md) — MUTED stream is a user stream cache
+- [ADR-0008: Coordinators Layer](./0008-coordinators-layer.md) — `MuteListSyncCoordinator` follows the coordinators pattern
 - [ADR-0013: Post Stream Queue](./0013-post-stream-queue.md) — Enables efficient filtered pagination

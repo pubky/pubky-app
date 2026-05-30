@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { HomeFeedSidebar, HomeFeedDrawer, HomeFeedDrawerMobile } from './HomeFeedSidebar';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFeedSidebar';
 
 const mockSetContent = vi.fn();
 const mockUseHomeStore = vi.fn();

@@ -1,14 +1,15 @@
-import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import { NotificationApplication } from '@/application/notification/notification';
 import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
+import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
-import { NotificationType, type FlatNotification } from '@/models/notification/notification.types';
+import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+
 export class NotificationController {
   private constructor() {} // Prevent instantiation
 
@@ -54,13 +55,16 @@ export class NotificationController {
     // Skip if user is not authenticated (e.g., during logout)
     if (!pubky) return;
 
+    // Skip if there are no unread notifications
+    const notificationStore = useNotificationStore.getState();
+    if (notificationStore.selectUnread() === 0) return;
+
     // Create new lastRead with current timestamp using normalizer
     const lastRead = LastReadNormalizer.to(pubky);
 
     NotificationApplication.markAllAsRead(lastRead);
 
     // Update local store
-    const notificationStore = useNotificationStore.getState();
     notificationStore.setLastRead(Number(lastRead.last_read.timestamp));
     notificationStore.setUnread(0);
   }

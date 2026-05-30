@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { Avatar as AvatarPrimitive } from 'radix-ui';
 import { type VariantProps } from 'class-variance-authority';
-import { avatarVariants } from './Avatar.variants';
+import { Avatar as AvatarPrimitive } from 'radix-ui';
 import { cn } from '@/libs/utils/utils';
+import { avatarVariants } from './Avatar.variants';
 
 const Avatar = React.forwardRef<
   React.ComponentRef<typeof AvatarPrimitive.Root>,
@@ -41,4 +41,4 @@ const AvatarFallback = React.forwardRef<
 ));
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 
-export { Avatar, AvatarImage, AvatarFallback };
+export { Avatar, AvatarFallback, AvatarImage };

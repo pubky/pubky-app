@@ -1,18 +1,19 @@
 'use client';
 
-import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
-import { CONNECTION_TYPE } from '@/hooks/useProfileConnections/useProfileConnections.types';
-import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
+import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
+import { CONNECTION_TYPE } from '@/hooks/useProfileConnections/useProfileConnections.types';
+import type { Pubky } from '@/models/models.types';
 import { FollowingEmpty } from '@/molecules/FollowingEmpty/FollowingEmpty';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
 import { UserListItem } from '../UserListItem/UserListItem';
-import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
-import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
-import type { Pubky } from '@/models/models.types';
-import { useAuthStore } from '@/stores/auth/auth.store';
+
 const LOAD_MORE_SKELETON_COUNT = 2;
 
 /**
@@ -48,7 +49,7 @@ export function ProfileFollowing() {
 
   if (isLoading) {
     return (
-      <Container className="mt-6 gap-4 lg:mt-0">
+      <Container className="gap-4">
         <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
           Following
         </Heading>
@@ -66,14 +67,14 @@ export function ProfileFollowing() {
 
   if (connections.length === 0) {
     return (
-      <Container className="mt-6 lg:mt-0">
+      <Container>
         <FollowingEmpty />
       </Container>
     );
   }
 
   return (
-    <Container className="mt-6 gap-4 lg:mt-0">
+    <Container className="gap-4">
       <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
         Following {count > 0 && `(${count})`}
       </Heading>

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { MODERATED_TAGS, MODERATION_ID } from '@/config/moderation';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
@@ -12,6 +12,7 @@ import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { NexusTag, NexusUser } from '@/services/nexus/nexus.types';
+
 describe('LocalStreamUsersService', () => {
   const targetUserId = 'user-target' as Pubky;
   const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });

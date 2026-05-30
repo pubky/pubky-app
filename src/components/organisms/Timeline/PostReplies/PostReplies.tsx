@@ -1,12 +1,11 @@
 'use client';
 
+import { Container } from '@/atoms/Container/Container';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { Container } from '@/atoms/Container/Container';
-import { ThreadTree } from '../../ThreadTree/ThreadTree';
-
 import { isPostDeleted } from '@/libs/utils/utils';
+import { ThreadTree } from '../../ThreadTree/ThreadTree';
 
 interface TimelinePostRepliesProps {
   postId: string;

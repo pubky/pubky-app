@@ -11,6 +11,7 @@ import type {
   TUserStreamWithUserIdParams,
 } from '@/services/nexus/stream/users/userStream.types';
 import { createUserStreamParams } from '@/services/nexus/stream/users/userStream.utils';
+
 /**
  * Nexus User Stream Service
  *
@@ -34,7 +35,6 @@ export class NexusUserStreamService {
       case 'followers':
       case 'following':
       case 'friends':
-      case 'muted':
       case 'recommended':
         url = userStreamApi[reach](apiParams as TUserStreamWithUserIdParams);
         break;

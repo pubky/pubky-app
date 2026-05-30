@@ -1,4 +1,5 @@
 import type { PaginationParams } from '@/models/models.types';
+
 export const DEFAULT_PAGINATION: PaginationParams = {
   skip: 0,
   limit: 10,

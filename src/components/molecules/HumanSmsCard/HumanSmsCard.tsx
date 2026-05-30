@@ -1,16 +1,15 @@
 'use client';
+import { Smartphone, TriangleAlert } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import { useSmsVerificationInfo } from '@/hooks/useSmsVerificationInfo/useSmsVerificationInfo';
+import { cn } from '@/libs/utils/utils';
 import { HumanSmsCardSkeleton } from './HumanSmsCard.skeleton';
 import type { HumanSmsCardProps } from './HumanSmsCard.types';
-import { useTranslations } from 'next-intl';
-import { Smartphone, TriangleAlert } from 'lucide-react';
-import { cn } from '@/libs/utils/utils';
 
 export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
   const t = useTranslations('onboarding.sms');

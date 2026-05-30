@@ -3,6 +3,7 @@
 exports[`WhoToFollowPage - Snapshots > matches snapshot 1`] = `
 <div>
   <div
+    data-disable-wide-shell-layout="true"
     data-testid="content-layout"
   >
     <div
@@ -67,9 +68,9 @@ exports[`WhoToFollowPage - Snapshots > matches snapshot 1`] = `
       </div>
     </div>
     <div
-      data-testid="who-to-follow-page-main"
+      data-testid="who-to-follow"
     >
-      WhoToFollowPageMain
+      WhoToFollow
     </div>
   </div>
 </div>

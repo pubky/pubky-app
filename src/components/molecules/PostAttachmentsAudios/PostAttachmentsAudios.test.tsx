@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { PostAttachmentsAudios } from './PostAttachmentsAudios';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { PostAttachmentsAudios } from './PostAttachmentsAudios';
 
 // Mock @/atoms
 vi.mock('@/atoms/Audio/Audio', () => {

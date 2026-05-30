@@ -1,13 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { TaggedEmpty } from './TaggedEmpty';
 
 const mockHandleTagAdd = vi.fn().mockResolvedValue({ success: true });
 
-// Mock ProfilePageEmptyState and TagInput
-vi.mock('@/molecules/ProfilePageEmptyState/ProfilePageEmptyState', () => {
+// Mock IllustratedEmptyState and TagInput
+vi.mock('@/molecules/IllustratedEmptyState/IllustratedEmptyState', () => {
   return {
-    ProfilePageEmptyState: ({
+    IllustratedEmptyState: ({
       imageSrc,
       imageAlt,
       icon: Icon,

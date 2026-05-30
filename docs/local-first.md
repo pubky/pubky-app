@@ -34,6 +34,7 @@ Controller method names encode IO behavior and delivery guarantees:
 | `getMany*`        | IndexedDB         | No      | Bulk reads, returns `Map<Pubky, T>`                          |
 | `getOrFetch*`     | IndexedDB → Nexus | Maybe   | Local first, fallback to network                             |
 | `getMany*OrFetch` | IndexedDB → Nexus | Maybe   | Bulk local first, fetch missing (e.g., `getManyTagsOrFetch`) |
+| `subscribe*`      | Live stream       | Yes     | Long-lived subscription, not a one-shot fetch                |
 
 ### Write Operations
 
@@ -52,6 +53,7 @@ PostController.getDetails({ compositeId }); // Always local
 PostController.getOrFetchDetails({ compositeId, viewerId }); // Local first, fallback
 UserController.getManyDetails({ userIds }); // Bulk local
 UserController.getManyTagsOrFetch({ userIds }); // Bulk with fallback
+MuteController.subscribeMuteDirectoryEventStream(pubky, cursor); // Live stream subscription
 
 // Bad naming
 PostController.loadDetails(id); // Unclear source
@@ -217,7 +219,7 @@ class UserApplication {
 
 When adding controller methods:
 
-- [ ] Does the name follow `fetch*/get*/getMany*/getOrFetch*/getMany*OrFetch/commit*` pattern?
+- [ ] Does the name follow `fetch*/get*/getMany*/getOrFetch*/getMany*OrFetch/subscribe*/commit*` pattern?
 - [ ] Do write operations write to IndexedDB first?
 - [ ] Is UI updated immediately (optimistic)?
 - [ ] Does background sync handle failures gracefully?

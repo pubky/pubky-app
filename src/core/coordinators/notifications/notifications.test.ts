@@ -1,13 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, AUTH_ROUTES, ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app/routes';
-import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
-import { mockSession } from '@/test-utils/pubky';
 import { NotificationController } from '@/controllers/notification/notification';
 import type { PollingServiceConfig } from '@/coordinators/base/coordinators.types';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import type { NotificationCoordinatorConfig } from '@/coordinators/notifications/notifications.types';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
+
 // =============================================================================
 // Test Helpers
 // =============================================================================
@@ -205,7 +206,7 @@ describe('NotificationCoordinator', () => {
       const coordinator = NotificationCoordinator.getInstance();
 
       // Rapidly change configuration multiple times
-      coordinator.configure({ intervalMs: 1_000 });
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.configure({ intervalMs: 2_000 });
       coordinator.configure({ intervalMs: 500 });
       coordinator.configure({ intervalMs: 3_000 });

@@ -1,13 +1,13 @@
-import { Logger } from '@/libs/logger/logger';
 import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
+import { Logger } from '@/libs/logger/logger';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { ModerationModel } from '@/models/moderation/moderation';
-import { ModerationType, type ModerationModelSchema } from '@/models/moderation/moderation.schema';
+import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
@@ -35,6 +35,7 @@ import type {
 } from '@/services/local/stream/posts/post.types';
 import type { NexusFileDetails, NexusPostCounts, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
+
 /**
  * Local Stream Posts Service
  *

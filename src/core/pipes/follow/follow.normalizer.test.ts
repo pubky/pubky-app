@@ -1,19 +1,20 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FollowResult } from 'pubky-app-specs';
-import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  TEST_PUBKY,
-  INVALID_INPUTS,
-  setupUnitTestMocks,
-  setupIntegrationTestMocks,
-  restoreMocks,
-  buildPubkyUri,
-} from '../pipes.test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { asOpaque } from '@/test-utils/type-assertions';
+import {
+  buildPubkyUri,
+  INVALID_INPUTS,
+  restoreMocks,
+  setupIntegrationTestMocks,
+  setupUnitTestMocks,
+  TEST_PUBKY,
+} from '../pipes.test-utils';
+
 describe('FollowNormalizer', () => {
   const createMockBuilder = (overrides?: Partial<{ createFollow: ReturnType<typeof vi.fn> }>) => ({
     createFollow: vi.fn((followee: string) =>

@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+
 export type ProfileFormMode = 'create' | 'edit';
 
 export interface ProfileLink {

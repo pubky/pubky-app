@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ProfileFollowing } from './ProfileFollowing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
-import { asOpaque } from '@/test-utils/type-assertions';
 import type { Pubky } from '@/models/models.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { ProfileFollowing } from './ProfileFollowing';
+
 // Mock Providers
 vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
   useProfileContext: vi.fn(() => ({

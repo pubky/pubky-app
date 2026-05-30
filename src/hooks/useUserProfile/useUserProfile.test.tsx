@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useUserProfile } from './useUserProfile';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { useUserProfile } from './useUserProfile';
+
 // Hoist mock data using vi.hoisted
 // Note: undefined = query not executed yet (loading), null = query executed but no data found
 const mockMocks = vi.hoisted(() => {
@@ -310,6 +311,16 @@ describe('useUserProfile', () => {
 
       // Phase 1 optimization: fetchFn is skipped when data is already cached (non-null).
       // Freshness is managed by TTL Coordinator via useTtlSubscription in ProfilePageHeader.
+      expect(mockMocks.mockFetchDetails).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('enabled option', () => {
+    it('does not call UserController when enabled is false', () => {
+      mockMocks.mockUserDetails.current = null;
+      renderHook(() => useUserProfile('test-user-id', { enabled: false }));
+
+      expect(mockMocks.mockGetDetails).not.toHaveBeenCalled();
       expect(mockMocks.mockFetchDetails).not.toHaveBeenCalled();
     });
   });

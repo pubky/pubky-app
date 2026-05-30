@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import { userStreamApi, buildUserStreamBodyUrl } from './userStream.api';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { describe, expect, it } from 'vitest';
 import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import { asInvalid } from '@/test-utils/type-assertions';
+import { buildUserStreamBodyUrl, userStreamApi } from './userStream.api';
+
 describe('Users Stream API - Error Control', () => {
   const mockUserId = 'erztyis9oiaho93ckucetcf5xnxacecqwhbst5hnd7mmkf69dhby';
   const mockViewerId = 'viewer-pubky-id';
@@ -289,13 +290,12 @@ describe('Users Stream API - Error Control', () => {
   });
 
   describe('UserStreamApiEndpoint type', () => {
-    it('should have exactly 11 endpoints', () => {
+    it('should have exactly 10 endpoints', () => {
       const endpointKeys = Object.keys(userStreamApi);
-      expect(endpointKeys).toHaveLength(11);
+      expect(endpointKeys).toHaveLength(10);
       expect(endpointKeys).toContain('followers');
       expect(endpointKeys).toContain('following');
       expect(endpointKeys).toContain('friends');
-      expect(endpointKeys).toContain('muted');
       expect(endpointKeys).toContain('recommended');
       expect(endpointKeys).toContain('influencers');
       expect(endpointKeys).toContain('postReplies');
@@ -384,16 +384,6 @@ describe('NexusUserStreamService.fetch', () => {
       expect(url).toContain('source=friends');
       expect(url).toContain('skip=5');
       expect(url).toContain('limit=20');
-    });
-
-    it('should generate correct muted URL', () => {
-      const url = userStreamApi.muted({
-        user_id: mockUserId,
-        skip: 0,
-        limit: 10,
-      });
-
-      expect(url).toContain('source=muted');
     });
 
     it('should generate correct recommended URL', () => {

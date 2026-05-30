@@ -8,7 +8,7 @@
     "title": "<highlight>افتح</highlight> الويب.",
     "subtitle": "مفاتيحك، محتواك، قواعدك.",
     "signIn": "تسجيل الدخول",
-    "createAccount": "إنشاء حساب",
+    "joinNow": "انضم الآن",
     "aTetherCompany": "شركة تابعة لـ <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. جميع الحقوق محفوظة."
   },
@@ -157,7 +157,7 @@
   },
   "onboarding": {
     "steps": {
-      "createAccount": "انشاء حساب",
+      "joinNow": "انضم الآن",
       "identityKeys": "مفاتيح الهوية",
       "usePubkyRing": "استخدام Pubky Ring",
       "yourPubky": "بوبكي الخاص بك",
@@ -383,7 +383,7 @@
       "neverShareMobile": "لا تشارك هذا الملف وكلمة المرور مع اي شخص ابدا.",
       "password": "كلمة المرور",
       "passwordPlaceholder": "ادخل كلمة مرور قوية",
-      "passwordHint": "نوصي باستخدام 8 احرف او اكثر مع احرف كبيرة وصغيرة وارقام ورموز.",
+      "passwordHint": "نوصي باستخدام <passphraseLink>عبارة مرور</passphraseLink> طويلة بأكثر من <minLen>16 حرفا</minLen> لأمان أفضل.",
       "repeatPassword": "اعد كلمة المرور",
       "repeatPasswordPlaceholder": "اعد كتابة كلمة المرور",
       "passwordsDoNotMatch": "كلمات المرور غير متطابقة",
@@ -443,10 +443,27 @@
     "viewOriginal": "عرض المنشور الاصلي",
     "youReposted": "أعدت النشر",
     "newPostsSingular": "عرض {count} منشور جديد",
-    "newPostsPlural": "عرض {count} منشورات جديدة"
+    "newPostsPlural": "عرض {count} منشورات جديدة",
+    "replies": "الردود",
+    "notFound": {
+      "title": "المشاركة غير موجودة",
+      "subtitle1": "هذه المشاركة غير متاحة.",
+      "subtitle2": "قد تكون قد أُزيلت أو لم يعد الرابط صالحًا.",
+      "imageAlt": "المشاركة غير موجودة",
+      "backToFeed": "العودة إلى الصفحة الرئيسية",
+      "viewProfile": "عرض الملف الشخصي",
+      "exploreTags": "استكشاف الوسوم"
+    }
   },
   "profile": {
     "title": "الملف الشخصي",
+    "notFound": {
+      "title": "المستخدم غير موجود",
+      "subtitle": "المستخدم الذي تبحث عنه غير موجود أو قد يكون قد أُزيل.",
+      "imageAlt": "المستخدم غير موجود",
+      "backToFeed": "العودة إلى الصفحة الرئيسية",
+      "exploreTags": "استكشاف الوسوم"
+    },
     "tabs": {
       "notifications": "الاشعارات",
       "posts": "المنشورات",
@@ -465,8 +482,9 @@
     },
     "actions": {
       "title": "اجراءات الملف الشخصي",
-      "edit": "تعديل",
+      "editProfile": "تعديل الملف الشخصي",
       "link": "رابط",
+      "profileLink": "رابط الملف الشخصي",
       "loggingOut": "جاري تسجيل الخروج...",
       "signOut": "تسجيل الخروج",
       "unfollowing": "جاري الغاء المتابعة...",
@@ -961,10 +979,6 @@
       "userIdRequired": "معرف المستخدم مطلوب",
       "loginRequired": "يجب تسجيل الدخول لاضافة وسوم",
       "alreadyAdded": "لقد اضفت هذا الوسم بالفعل",
-      "added": "تمت اضافة الوسم",
-      "addedDesc": "تمت اضافة \"{label}\" بنجاح.",
-      "removed": "تمت ازالة الوسم",
-      "removedDesc": "تمت ازالة \"{label}\" بنجاح.",
       "addFailed": "فشل اضافة الوسم",
       "addFailedDesc": "تعذر اضافة \"{label}\". يرجى المحاولة مرة اخرى.",
       "removeFailed": "فشل ازالة الوسم",
@@ -1010,10 +1024,11 @@
     "couldNotFind": "تعذر العثور على المورد المطلوب"
   },
   "password": {
-    "weak": "كلمة مرور ضعيفة",
-    "fair": "كلمة مرور متوسطة",
-    "good": "كلمة مرور جيدة",
-    "strong": "كلمة مرور قوية!"
+    "veryWeak": "ضعيفة جدا",
+    "weak": "ضعيفة",
+    "moderate": "متوسطة",
+    "strong": "قوية",
+    "veryStrong": "قوية جدا"
   },
   "quickReply": {
     "prompts": ["ما رايك في هذا؟", "ما هو رايك؟", "هل توافق؟", "اي افكار اضافية؟", "كيف سترد؟"]

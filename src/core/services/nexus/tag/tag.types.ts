@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { TPaginationParams, TUserStreamReachParams } from '@/services/nexus/nexus.types';
+
 export type TTagViewParams = {
   taggerId: Pubky;
   tagId: string;

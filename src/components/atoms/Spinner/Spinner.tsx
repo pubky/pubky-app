@@ -1,9 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Container } from '../Container/Container';
-
 import { cn } from '@/libs/utils/utils';
+import { Container } from '../Container/Container';
 
 export interface SpinnerProps extends React.ComponentProps<typeof Container> {
   size?: 'sm' | 'md' | 'lg';

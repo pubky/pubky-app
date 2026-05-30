@@ -5,6 +5,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { ModelBase } from '@/models/shared/base/baseModel';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import type { TtlModelSchema } from '@/models/shared/ttl/ttl.schema';
+
 // Each domain row will have its own TTL row. e.g. UserTtlModel, PostTtlModel, etc.
 export abstract class Ttl<Id, Schema extends TtlModelSchema<Id>> extends ModelBase<Id, Schema> {
   lastUpdatedAt: number;

@@ -1,6 +1,5 @@
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-
 import { HOT_TAGS_FEATURED_COUNT } from '@/config/tags';
 import { MAX_AVATARS_DEFAULT } from './HotTagsCardsSection.constants';
 

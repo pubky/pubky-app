@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'lodash-es';
-import type { UseTagSuggestionsParams, UseTagSuggestionsResult } from './useTagSuggestions.types';
+import { SearchController } from '@/controllers/search/search';
+import { Logger } from '@/libs/logger/logger';
 import {
   TAG_SUGGESTIONS_DEBOUNCE_MS,
   TAG_SUGGESTIONS_DEFAULT_LIMIT,
   TAG_SUGGESTIONS_MIN_QUERY_LENGTH,
 } from './useTagSuggestions.constants';
-import { Logger } from '@/libs/logger/logger';
-import { SearchController } from '@/controllers/search/search';
+import type { UseTagSuggestionsParams, UseTagSuggestionsResult } from './useTagSuggestions.types';
+
 /**
  * Hook for fetching tag suggestions from the API
  *

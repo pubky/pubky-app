@@ -1,23 +1,24 @@
 'use client';
 
-import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
-import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
-import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
-import { UserListItem } from '../UserListItem/UserListItem';
-
-import { APP_ROUTES } from '@/app/routes';
-import type { HotActiveUsersProps } from './HotActiveUsers.types';
+import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { cn } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHotStore } from '@/stores/hot/hot.store';
+import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
+import { UserListItem } from '../UserListItem/UserListItem';
+import type { HotActiveUsersProps } from './HotActiveUsers.types';
+
 const DEFAULT_USERS_LIMIT = 10;
 
 /**
@@ -61,6 +62,9 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
   });
 
   const { toggleFollow, isUserLoading } = useFollowUser();
+  const { isMuted } = useMutedUsers();
+
+  const visibleUsers = users.filter((user) => !isMuted(user.id));
 
   const handleUserClick = (pubky: Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
@@ -83,11 +87,11 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
             <FullUserListItemSkeleton key={`hot-active-users-skeleton-${index}`} />
           ))}
         </Container>
-      ) : users.length === 0 ? (
+      ) : visibleUsers.length === 0 ? (
         <Typography className="font-light text-muted-foreground">{t('noUsersToShow')}</Typography>
       ) : (
         <Container className="gap-3.5 rounded-md py-2 lg:gap-3">
-          {users.map((user) => (
+          {visibleUsers.map((user) => (
             <UserListItem
               key={user.id}
               user={user}

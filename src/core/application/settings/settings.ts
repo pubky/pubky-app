@@ -1,10 +1,11 @@
+import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { AppError } from '@/libs/error/error';
 import type { Pubky } from '@/models/models.types';
-import { SettingsNormalizer, type SettingsJson } from '@/pipes/settings/settings.normalizer';
+import { type SettingsJson, SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { SettingsState } from '@/stores/settings/settings.types';
+
 /**
  * Settings application service.
  *
@@ -59,7 +60,7 @@ export class SettingsApplication {
       return settings;
     } catch (error) {
       // Handle 404, settings don't exist yet
-      if (error instanceof AppError && error.context?.statusCode === HttpStatusCode.NOT_FOUND) {
+      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
         Logger.info('[Settings] Pull complete, settings file not found (404)');
         return null;
       }

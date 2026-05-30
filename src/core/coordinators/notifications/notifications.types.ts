@@ -1,4 +1,5 @@
 import type { PollingServiceConfig, PollingServiceState } from '@/coordinators/base/coordinators.types';
+
 /**
  * Notification Polling Coordinator Types
  *

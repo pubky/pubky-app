@@ -1,11 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { WhoToFollowPage } from './WhoToFollowPage';
-
-// Mock Hooks
-vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
-  useLayoutReset: vi.fn(),
-}));
 
 // Mock Organisms - ContentLayout renders all props
 vi.mock('@/organisms/ActiveUsers/ActiveUsers', () => {
@@ -22,14 +17,16 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
       rightSidebarContent,
       leftDrawerContent,
       rightDrawerContent,
+      disableWideShellLayout,
     }: {
       children: React.ReactNode;
       leftSidebarContent?: React.ReactNode;
       rightSidebarContent?: React.ReactNode;
       leftDrawerContent?: React.ReactNode;
       rightDrawerContent?: React.ReactNode;
+      disableWideShellLayout?: boolean;
     }) => (
-      <div data-testid="content-layout">
+      <div data-testid="content-layout" data-disable-wide-shell-layout={String(disableWideShellLayout)}>
         {leftSidebarContent && <div data-testid="left-sidebar">{leftSidebarContent}</div>}
         {rightSidebarContent && <div data-testid="right-sidebar">{rightSidebarContent}</div>}
         {leftDrawerContent && <div data-testid="left-drawer">{leftDrawerContent}</div>}
@@ -46,9 +43,9 @@ vi.mock('@/organisms/FeedbackCard/FeedbackCard', () => {
   };
 });
 
-vi.mock('@/organisms/WhoToFollowPage/WhoToFollowPageMain', () => {
+vi.mock('@/organisms/WhoToFollow/WhoToFollow', () => {
   return {
-    WhoToFollowPageMain: () => <div data-testid="who-to-follow-page-main">WhoToFollowPageMain</div>,
+    WhoToFollow: () => <div data-testid="who-to-follow">WhoToFollow</div>,
   };
 });
 
@@ -65,7 +62,15 @@ vi.mock('@/molecules/Filters/FilterSortWhoToFollow/FilterSortWhoToFollow', async
 // Mock Atoms
 vi.mock('@/atoms/Container/Container', () => {
   return {
-    Container: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    Container: ({
+      children,
+      overrideDefaults: _overrideDefaults,
+      ...props
+    }: {
+      children: React.ReactNode;
+      overrideDefaults?: boolean;
+      [key: string]: unknown;
+    }) => (
       <div data-testid="container" {...props}>
         {children}
       </div>
@@ -79,9 +84,9 @@ describe('WhoToFollowPage', () => {
     expect(screen.getByTestId('content-layout')).toBeInTheDocument();
   });
 
-  it('renders WhoToFollowPageMain', () => {
+  it('renders WhoToFollow', () => {
     render(<WhoToFollowPage />);
-    expect(screen.getByTestId('who-to-follow-page-main')).toBeInTheDocument();
+    expect(screen.getByTestId('who-to-follow')).toBeInTheDocument();
   });
 
   it('renders FilterSortWhoToFollow in left sidebar and drawer', () => {
@@ -97,6 +102,11 @@ describe('WhoToFollowPage', () => {
   it('renders FeedbackCard in right sidebar and drawer', () => {
     render(<WhoToFollowPage />);
     expect(screen.getAllByTestId('feedback-card')).toHaveLength(2);
+  });
+
+  it('disables wide shell layout without resetting the saved feed preference', () => {
+    render(<WhoToFollowPage />);
+    expect(screen.getByTestId('content-layout')).toHaveAttribute('data-disable-wide-shell-layout', 'true');
   });
 });
 

@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { PopoverTradeoffs } from './PopoverTradeoffs';
+
 vi.mock('@/atoms/Popover/Popover', () => {
   return {
     Popover: ({ children }: { children: React.ReactNode }) => <div data-testid="popover">{children}</div>,

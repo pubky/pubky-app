@@ -18,12 +18,12 @@
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import {
   CONTENT,
-  LAYOUT,
-  REACH,
-  SORT,
   type ContentType,
+  LAYOUT,
   type LayoutType,
+  REACH,
   type ReachType,
+  SORT,
   type SortType,
 } from '@/stores/home/home.types';
 

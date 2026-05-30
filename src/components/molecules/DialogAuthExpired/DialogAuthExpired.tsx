@@ -1,6 +1,6 @@
 'use client';
 
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import {
@@ -11,8 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/atoms/Dialog/Dialog';
-
-import { RefreshCw } from 'lucide-react';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 type DialogAuthExpiredProps = {
   open: boolean;

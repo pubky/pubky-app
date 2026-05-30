@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { QuickReply } from './QuickReply';
 import { QUICK_REPLY_PROMPTS_COUNT } from './QuickReply.constants';
-import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
-import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayout';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 // next-intl is mocked globally in src/config/test.ts
 // The global mock uses real translations from messages/en.json
@@ -48,6 +48,7 @@ function createUsePostInputReturn(options: unknown, overrides: Record<string, un
     handleDragLeave: vi.fn(),
     handleDragOver: vi.fn(),
     handleDrop: vi.fn(),
+    handlePaste: vi.fn(),
     setTags: vi.fn(),
     ...overrides,
   };
@@ -187,6 +188,17 @@ describe('QuickReply', () => {
     );
 
     expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('placeholder', REAL_PROMPTS[0]);
+  });
+
+  it('forwards clipboard paste to usePostInput handlePaste (image attachments)', () => {
+    const handlePaste = vi.fn();
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { handlePaste }));
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    fireEvent.paste(screen.getByTestId('quick-reply-textarea'));
+
+    expect(handlePaste).toHaveBeenCalledTimes(1);
   });
 
   it('changes the placeholder across mounts (random per mount)', () => {

@@ -1,23 +1,23 @@
 'use client';
 
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useEffect } from 'react';
+import { Copy, Key, Share } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { ProfileController } from '@/controllers/profile/profile';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
+import { Logger } from '@/libs/logger/logger';
+import { shareWithFallback } from '@/libs/share/share';
+import { withPubkyPrefix } from '@/libs/utils/utils';
 import { ActionSection } from '@/molecules/ActionSection/ActionSection';
 import { ContentCard } from '@/molecules/Content/Content';
 import { InputField } from '@/molecules/InputField/InputField';
 import { PopoverPublicKey } from '@/molecules/PopoverPublicKey/PopoverPublicKey';
 import { useToast } from '@/molecules/Toaster/use-toast';
-import { Container } from '@/atoms/Container/Container';
-import { Heading } from '@/atoms/Heading/Heading';
-
-import { Copy, Share, Key } from 'lucide-react';
-import { Logger } from '@/libs/logger/logger';
-import { shareWithFallback } from '@/libs/share/share';
-import { withPubkyPrefix } from '@/libs/utils/utils';
-import { ProfileController } from '@/controllers/profile/profile';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+
 export function PublicKeyCard() {
   const t = useTranslations('onboarding.pubky');
   const secretKey = useOnboardingStore((state) => state.secretKey);

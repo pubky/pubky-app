@@ -1,6 +1,6 @@
-import { Logger } from '@/libs/logger/logger';
 import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
@@ -9,6 +9,7 @@ import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { NexusPost } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
+
 export class TtlApplication {
   private constructor() {}
 

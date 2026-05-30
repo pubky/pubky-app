@@ -41,12 +41,19 @@ The suffix indicates the mutation shape:
 
 This naming pattern aligns controller APIs with the local-first write model defined in this ADR.
 
+### Indexer lag and viewer-owned state
+
+Reads are served by Nexus, which indexes the homeserver asynchronously and can lag it by minutes. A background fetch landing after a viewer's local mutation may therefore carry pre-mutation state. For fields the viewer just changed, **Nexus must not be trusted blindly** — reconciliation has to preserve the viewer's intent until the indexer catches up.
+
+Currently applied to the tag feature (see `src/core/services/local/tag/post/`). The same constraint applies to any future local-first write whose read side goes through Nexus.
+
 ## Consequences
 
 - ✅ Perceived responsiveness stays high; UI reflects the local intent instantly.
 - ✅ Offline edits and intermittent connectivity are supported without special UI flows.
 - ⚠️ Requires reconciliation logic for conflicts, retries, and TTL/expiry management.
 - ⚠️ Local data can momentarily diverge from server truth until synchronization completes.
+- ⚠️ Nexus indexer lag can produce snap-back of viewer-owned state; reconciliation must preserve the viewer's intent (see "Indexer lag and viewer-owned state").
 
 ## Alternatives Considered
 

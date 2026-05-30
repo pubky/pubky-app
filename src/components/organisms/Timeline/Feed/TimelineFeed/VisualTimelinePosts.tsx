@@ -1,49 +1,47 @@
 'use client';
 
-import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
-import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
-import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
-import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
-import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
-import * as React from 'react';
+import React, { useEffect } from 'react';
+import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Video } from '@/atoms/Video/Video';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
+import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
+import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
+import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
+import { cn } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
 import { PostText } from '@/molecules/PostText/PostText';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
-import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { ClickableTagsList } from '../../../ClickableTagsList/ClickableTagsList';
-import { DialogReply } from '../../../DialogReply/DialogReply';
-import { DialogRepost } from '../../../DialogRepost/DialogRepost';
 import { PostActionsBar } from '../../../PostActionsBar/PostActionsBar';
 import { PostContentBlurred } from '../../../PostContentBlurred/PostContentBlurred';
-
-import { useVisualFeedTiles } from './useVisualFeedTiles';
-import { cn } from '@/libs/utils/utils';
-
 import {
   VISUAL_GRID_MAX_WIDTH_PX,
   VISUAL_TILE_ASPECT_RATIOS,
   VISUAL_TILE_COLUMN_SPANS,
 } from './TimelineFeedVisual.helpers';
+import { useVisualFeedTiles } from './useVisualFeedTiles';
+import { VisualTimelinePostsSkeleton } from './VisualTimelinePosts.skeleton';
 import type {
-  VisualTimelinePostsProps,
   VisualTileImageProps,
+  VisualTileVideoProps,
+  VisualTimelinePostsProps,
   VisualTimelineRowProps,
   VisualTimelineTileOverlayProps,
   VisualTimelineTileProps,
-  VisualTileVideoProps,
 } from './VisualTimelinePosts.types';
-import { TagKind } from '@/application/tag/tag.types';
-import { parseCompositeId } from '@/models/models.utils';
+
 function stopPropagation(event: React.SyntheticEvent) {
   event.stopPropagation();
 }
@@ -54,7 +52,7 @@ function VisualTileVideo({ tile }: VisualTileVideoProps) {
     rootMargin: '300px 0px 300px 0px',
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
 
@@ -102,7 +100,7 @@ function VisualTileImage({ tile }: VisualTileImageProps) {
   const [currentSrc, setCurrentSrc] = React.useState(tile.previewSrc);
   const hasFallenBackToMainRef = React.useRef(tile.previewSrc === tile.mainSrc);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentSrc(tile.previewSrc);
     hasFallenBackToMainRef.current = tile.previewSrc === tile.mainSrc;
   }, [tile.mainSrc, tile.previewSrc]);
@@ -221,8 +219,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
 
 function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps) {
   const isTouchDevice = useIsTouchDevice();
-  const [replyDialogOpen, setReplyDialogOpen] = React.useState(false);
-  const [repostDialogOpen, setRepostDialogOpen] = React.useState(false);
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(tile.postId);
 
   const handleNavigate = React.useCallback(() => {
     onNavigate(tile.postId);
@@ -265,14 +262,13 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
           <VisualTimelineTileOverlay
             tile={tile}
             size={size}
-            onReplyClick={() => setReplyDialogOpen(true)}
-            onRepostClick={() => setRepostDialogOpen(true)}
+            onReplyClick={openReplyDialog}
+            onRepostClick={openRepostDialog}
           />
         ) : null}
       </Container>
 
-      <DialogReply postId={tile.postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
-      <DialogRepost postId={tile.postId} open={repostDialogOpen} onOpenChangeAction={setRepostDialogOpen} />
+      {dialogs}
     </>
   );
 }
@@ -310,11 +306,29 @@ export function VisualTimelinePosts({
 }: VisualTimelinePostsProps) {
   const { navigateToPost } = usePostNavigation();
   const { rows, hasPendingTiles, hasPendingFiles } = useVisualFeedTiles({ postIds, hasMore });
+  const initialBackfillInFlightRef = React.useRef(false);
+  const hasRows = rows.length > 0;
+  const shouldBackfillInitialRows = !loading && !loadingMore && !error && postIds.length > 0 && !hasRows && hasMore;
+  const isResolvingInitialRows =
+    !error && postIds.length > 0 && !hasRows && (hasMore || loadingMore || hasPendingTiles || hasPendingFiles);
+  const isInitialLoading = loading || isResolvingInitialRows;
+
+  useEffect(() => {
+    if (!shouldBackfillInitialRows) return;
+    if (initialBackfillInFlightRef.current) return;
+
+    initialBackfillInFlightRef.current = true;
+    void Promise.resolve()
+      .then(() => loadMore())
+      .finally(() => {
+        initialBackfillInFlightRef.current = false;
+      });
+  }, [loadMore, shouldBackfillInitialRows]);
 
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
-    hasMore,
-    isLoading: loadingMore,
+    hasMore: hasMore && hasRows,
+    isLoading: loadingMore || isInitialLoading,
     threshold: 3000,
     debounceMs: 20,
   });
@@ -323,14 +337,19 @@ export function VisualTimelinePosts({
     !loading &&
     !error &&
     postIds.length > 0 &&
-    rows.length === 0 &&
+    !hasRows &&
     !hasMore &&
     !loadingMore &&
     !hasPendingTiles &&
     !hasPendingFiles;
 
   return (
-    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0 && !showFilteredEmptyState}>
+    <TimelineStateWrapper
+      loading={isInitialLoading}
+      error={error}
+      hasItems={hasRows && !showFilteredEmptyState}
+      loadingComponent={<VisualTimelinePostsSkeleton />}
+    >
       {!showFilteredEmptyState ? (
         <Container data-cy="visual-feed-container">
           <Container
@@ -345,8 +364,6 @@ export function VisualTimelinePosts({
                 ))}
               </Container>
             ))}
-
-            {loadingMore && <TimelineLoadingMore />}
 
             {error && postIds.length > 0 && <TimelineError message={error} />}
 

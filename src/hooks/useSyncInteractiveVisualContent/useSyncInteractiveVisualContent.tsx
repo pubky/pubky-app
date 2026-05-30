@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useHomeStore } from '@/stores/home/home.store';
 import type { ContentType } from '@/stores/home/home.types';
+
 /**
  * Persists visual-mode content coercion for interactive feeds that are backed by the home store.
  *

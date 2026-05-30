@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { TPaginationParams, TSkipTagsParams, TTagsPaginationParams } from '@/services/nexus/nexus.types';
+
 export type TCompositeId = {
   compositeId: string;
 };

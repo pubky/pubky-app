@@ -1,25 +1,26 @@
 'use client';
 
-import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
-import { useHotTags } from '@/hooks/useHotTags/useHotTags';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
-import { HotTagCard } from '@/molecules/HotTagCard/HotTagCard';
-
-import { APP_ROUTES } from '@/app/routes';
 import { HOT_TAGS_FEATURED_COUNT } from '@/config/tags';
-import { HotTagsCardsSectionSkeleton } from './HotTagsCardsSection.skeleton';
-import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
-import { MAX_AVATARS_MOBILE, MAX_AVATARS_DEFAULT, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
+import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
+import { useHotTags } from '@/hooks/useHotTags/useHotTags';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { cn } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
+import { HotTagCard } from '@/molecules/HotTagCard/HotTagCard';
 import type { UserStreamReach } from '@/services/nexus/nexus.types';
 import { useHotStore } from '@/stores/hot/hot.store';
+import { MAX_AVATARS_DEFAULT, MAX_AVATARS_MOBILE, MAX_AVATARS_XL } from './HotTagsCardsSection.constants';
+import { HotTagsCardsSectionSkeleton } from './HotTagsCardsSection.skeleton';
+import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
+
 /**
  * HotTagsCardsSection
  *
@@ -30,6 +31,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
   const t = useTranslations('hot');
   const router = useRouter();
   const { reach, timeframe } = useHotStore();
+  const { isMuted } = useMutedUsers();
 
   // Fetch hot tags using the hook (no limit - get all from endpoint)
   const { rawTags, isLoading, error } = useHotTags({
@@ -59,16 +61,18 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
 
   const maxAvatars = isMobile ? MAX_AVATARS_MOBILE : isBelowXL ? MAX_AVATARS_DEFAULT : MAX_AVATARS_XL;
 
-  // Collect all unique tagger IDs from featured tags only
+  // Collect unique tagger IDs for featured tags, excluding muted profiles (Hot page UX).
   const allTaggerIds = useMemo(() => {
     const ids = new Set<Pubky>();
     for (const tag of featuredTags) {
       for (const taggerId of tag.taggers_id) {
-        ids.add(taggerId);
+        if (!isMuted(taggerId)) {
+          ids.add(taggerId);
+        }
       }
     }
     return Array.from(ids);
-  }, [featuredTags]);
+  }, [featuredTags, isMuted]);
 
   // Get user avatars for all taggers
   const { getUsersWithAvatars } = useBulkUserAvatars(allTaggerIds);
@@ -119,7 +123,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
               tagName={tag.label}
               postCount={tag.tagged_count}
               timeframe={dataTimeframe}
-              taggers={getUsersWithAvatars(tag.taggers_id)}
+              taggers={getUsersWithAvatars(tag.taggers_id.filter((id) => !isMuted(id)))}
               maxAvatars={maxAvatars}
               onClick={handleTagClick}
             />

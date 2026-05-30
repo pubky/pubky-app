@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
-
-import { DialogReportPostReasonStep } from './DialogReportPostReasonStep';
 import { REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
+import { DialogReportPostReasonStep } from './DialogReportPostReasonStep';
+
 // Mock hooks
 const mockUseCurrentUserProfile = vi.fn();
 

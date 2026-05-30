@@ -1,18 +1,19 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type {
-  UseUserDetailsFromIdsParams,
-  UseUserDetailsFromIdsResult,
-  AutocompleteUserData,
-} from './useUserDetailsFromIds.types';
-import { FALLBACK_USER_NAME } from './useUserDetailsFromIds.constants';
-import { Logger } from '@/libs/logger/logger';
 import { FileController } from '@/controllers/file/file';
 import { UserController } from '@/controllers/user/user';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { FALLBACK_USER_NAME } from './useUserDetailsFromIds.constants';
+import type {
+  AutocompleteUserData,
+  UseUserDetailsFromIdsParams,
+  UseUserDetailsFromIdsResult,
+} from './useUserDetailsFromIds.types';
+
 /**
  * Hook to fetch and transform user details from a list of user IDs.
  *

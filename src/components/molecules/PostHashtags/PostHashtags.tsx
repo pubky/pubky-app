@@ -1,10 +1,9 @@
 import { JSX } from 'react';
-import { RemarkAnchorProps } from '../PostText/PostText.types';
-import { extractTextFromChildren } from '../PostText/PostText.utils';
 import { Link } from '@/atoms/Link/Link';
-
 import { Bitkit, Blocktank, BTCIcon, PubkyIcon, Synonym, Tether } from '@/icons';
 import { cn } from '@/libs/utils/utils';
+import { RemarkAnchorProps } from '../PostText/PostText.types';
+import { extractTextFromChildren } from '../PostText/PostText.utils';
 
 type TagIcons = {
   [key: string]: JSX.Element | undefined;

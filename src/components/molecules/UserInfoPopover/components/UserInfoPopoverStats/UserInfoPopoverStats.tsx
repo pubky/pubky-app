@@ -3,9 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { AvatarGroup } from '../../../AvatarGroup/AvatarGroup';
-
 import type { AvatarGroupItem } from '@/molecules/AvatarGroup/AvatarGroup.types';
+import { AvatarGroup } from '../../../AvatarGroup/AvatarGroup';
 
 interface UserInfoPopoverStatsProps {
   followersCount: number;

@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
 vi.mock('@/atoms/Container/Container', () => {
@@ -89,12 +89,22 @@ vi.mock('@/atoms/Typography/Typography', () => {
   };
 });
 
+// ProviderTwitter no longer uses `<Tweet>` directly — it composes `useTweet` +
+// `EmbeddedTweet` to normalize entities (TEMPORARY WORKAROUND for
+// https://github.com/vercel/react-tweet/issues/218). Mock those parts instead.
 vi.mock('react-tweet', () => ({
-  Tweet: ({ id }: { id: string }) => (
-    <div data-testid="twitter-tweet" data-tweet-id={id}>
-      Mocked Tweet {id}
+  useTweet: (id: string) => ({
+    data: { id_str: id },
+    error: null,
+    isLoading: false,
+  }),
+  EmbeddedTweet: ({ tweet }: { tweet: { id_str: string } }) => (
+    <div data-testid="twitter-tweet" data-tweet-id={tweet.id_str}>
+      Mocked Tweet {tweet.id_str}
     </div>
   ),
+  TweetSkeleton: () => <div data-testid="twitter-tweet-skeleton">Loading tweet</div>,
+  TweetNotFound: () => <div data-testid="twitter-tweet-not-found">Tweet not found</div>,
 }));
 
 // Mock GenericPreview to avoid act() warnings from async SWR updates

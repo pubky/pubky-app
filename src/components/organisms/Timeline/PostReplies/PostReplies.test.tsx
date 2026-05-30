@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
-import { TimelinePostReplies } from './PostReplies';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
+import { TimelinePostReplies } from './PostReplies';
+
 // Mock hooks
 const mockUseRequireAuth = vi.fn(
   (): UseRequireAuthResult => ({

@@ -1,17 +1,16 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { asOpaque } from '@/test-utils/type-assertions';
-import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
-import { usePostInput } from './usePostInput';
-import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  POST_MAX_CHARACTER_LENGTH,
-  ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
-  POST_ATTACHMENT_MAX_FILES,
   ARTICLE_ATTACHMENT_MAX_FILES,
+  ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
   ATTACHMENT_MAX_OTHER_SIZE,
+  POST_ATTACHMENT_MAX_FILES,
+  POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
+import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { usePostInput } from './usePostInput';
 
 // next-intl is mocked globally in src/config/test.ts
 // Real placeholders from messages/en.json for test assertions

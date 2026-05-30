@@ -1,4 +1,8 @@
 import { CDN_URL, NEXUS_URL } from '@/config/nexus';
+import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
+import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { nexusQueryClient } from './nexus.query-client';
 import type {
   TBuildUrlWithQueryParams,
@@ -6,10 +10,8 @@ import type {
   TFetchNexusParams,
   TQueryNexusParams,
 } from './nexus.utils.types';
-import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
-import { parseResponseOrThrow } from '@/libs/http/response.utils';
-import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
-import { ErrorService } from '@/libs/error/error.types';
+
+const FETCH_NEXUS_OPERATION = 'fetchNexus';
 
 export function buildNexusUrl(endpoint: string): string {
   return `${NEXUS_URL}/${endpoint}`;
@@ -77,11 +79,16 @@ export function createFetchOptions({ method = HttpMethod.GET, body }: TCreateFet
  * @throws {NexusError} When response is not ok or JSON parsing fails
  */
 export async function fetchNexus<T>({ url, method = HttpMethod.GET, body = null }: TFetchNexusParams): Promise<T> {
-  const response = await safeFetch(url, createFetchOptions({ method, body }), ErrorService.Nexus, 'fetchNexus');
+  const response = await safeFetch(
+    url,
+    createFetchOptions({ method, body }),
+    ErrorService.Nexus,
+    FETCH_NEXUS_OPERATION,
+  );
   if (!response.ok) {
-    throw httpResponseToError(response, ErrorService.Nexus, 'fetchNexus', url);
+    throw httpResponseToError(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
   }
-  return parseResponseOrThrow<T>(response, ErrorService.Nexus, 'fetchNexus', url);
+  return parseResponseOrThrow<T>(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
 }
 
 /**

@@ -2,30 +2,12 @@
 
 echo "🔍 Running pre-commit checks..."
 
-echo "✨ Checking code formatting..."
-if ! npm run format:check; then
+echo "✨ Formatting and linting staged files..."
+if ! npx lint-staged; then
   echo ""
-  echo "❌ Code formatting check failed!"
+  echo "❌ Staged file checks failed!"
   echo ""
-  echo "Some files are not formatted according to Prettier rules."
-  echo "Run the following command to fix formatting:"
-  echo ""
-  echo "  npm run format"
-  echo ""
-  echo "Then stage the changes and commit again:"
-  echo ""
-  echo "  git add ."
-  echo "  git commit"
-  echo ""
-  exit 1
-fi
-
-echo "🔎 Running linter..."
-if ! npm run lint; then
-  echo ""
-  echo "❌ Linter check failed!"
-  echo ""
-  echo "Please fix the linting issues and commit again."
+  echo "Please fix the reported issues, stage the changes, and commit again."
   echo ""
   exit 1
 fi

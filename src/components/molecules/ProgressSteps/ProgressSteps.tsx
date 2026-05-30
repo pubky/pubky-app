@@ -1,7 +1,7 @@
-import { Container } from '@/atoms/Container/Container';
-
 import { Check } from 'lucide-react';
+import { Container } from '@/atoms/Container/Container';
 import { cn } from '@/libs/utils/utils';
+
 interface ProgressStepsProps {
   currentStep: number;
   totalSteps: number;

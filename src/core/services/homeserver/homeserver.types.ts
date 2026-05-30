@@ -1,7 +1,7 @@
 import type { Capabilities, Session } from '@synonymdev/pubky';
-
-import { HttpMethod } from '@/libs/http/http.types';
 import type { TKeypairParams } from '@/application/auth/auth.types';
+import { HttpMethod } from '@/libs/http/http.types';
+
 export type FetchOptions = {
   method?: HttpMethod;
   body?: string | Uint8Array;
@@ -68,6 +68,11 @@ export type THomeserverListParams = {
   cursor?: string;
   reverse?: boolean;
   limit?: number;
+};
+
+export type THomeserverUserEvent = {
+  cursor: string;
+  eventType: string;
 };
 
 // Utility function parameter types

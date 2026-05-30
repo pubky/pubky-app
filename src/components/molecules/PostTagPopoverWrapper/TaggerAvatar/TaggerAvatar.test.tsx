@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { TaggerAvatar } from './TaggerAvatar';
+import { describe, expect, it, vi } from 'vitest';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
+import { TaggerAvatar } from './TaggerAvatar';
 
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {

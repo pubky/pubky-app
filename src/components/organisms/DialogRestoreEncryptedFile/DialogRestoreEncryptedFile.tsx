@@ -1,7 +1,7 @@
 'use client';
 
-import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
+import { FileText, FileUp, Loader2, RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -18,12 +18,12 @@ import {
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import { FileUp, FileText, Loader2, RotateCcw } from 'lucide-react';
+import { AuthController } from '@/controllers/auth/auth';
+import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { AppError } from '@/libs/error/error';
 import { ErrorService } from '@/libs/error/error.types';
 import { formatFileName } from '@/libs/utils/utils';
-import { AuthController } from '@/controllers/auth/auth';
+
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
   const t = useTranslations('onboarding.signIn');
   const tRestore = useTranslations('onboarding.signIn.restoreEncryptedFile');

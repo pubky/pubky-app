@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useToast } from '@/molecules/Toaster/use-toast';
-
-import { Logger } from '@/libs/logger/logger';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
+import { Logger } from '@/libs/logger/logger';
+import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
 export interface UseBookmarkResult {
   isBookmarked: boolean;
   isLoading: boolean;

@@ -1,16 +1,17 @@
-import { HttpMethod } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
+import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
+import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
-import { db } from '@/database/franky/franky';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+
 /**
  * Mapping of post kinds to their corresponding bookmark stream types.
  * The 'all' key represents the stream containing all bookmarks.

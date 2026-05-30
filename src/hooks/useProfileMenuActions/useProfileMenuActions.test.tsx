@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { isAppError } from '@/libs/error/error.utils';
 import { useProfileMenuActions } from './useProfileMenuActions';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
-import { isAppError } from '@/libs/error/error.utils';
 
 // Hoist mocks
 const {

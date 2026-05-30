@@ -1,10 +1,10 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DialogReply } from './DialogReply';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogContent } from '@/atoms/Dialog/Dialog';
-import { PostInput } from '../PostInput/PostInput';
-
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { PostInput } from '../PostInput/PostInput';
+import { DialogReply } from './DialogReply';
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({

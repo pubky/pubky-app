@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { Toast, ToastAction, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/atoms/Toast/Toast';
-
 import { useToast } from './use-toast';
 
 export function Toaster() {
@@ -16,10 +15,10 @@ export function Toaster() {
           <Toast
             key={id}
             data-cy="toast"
-            className="flex items-center justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
+            className="flex items-start justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
             {...props}
           >
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <div className="flex max-h-32 min-w-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-y-contain">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && <ToastDescription>{description}</ToastDescription>}
             </div>

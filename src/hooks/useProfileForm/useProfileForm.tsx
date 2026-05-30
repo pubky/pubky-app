@@ -1,24 +1,23 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { z } from 'zod';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useToast } from '@/molecules/Toaster/use-toast';
-
+import { z } from 'zod';
 import { HOME_ROUTES, PROFILE_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
-import { USER_NAME_MIN_LENGTH, USER_NAME_MAX_LENGTH, USER_BIO_MAX_LENGTH } from '@/config/user';
-
-import type { ProfileLink, UseProfileFormProps, UseProfileFormReturn, SubmitTextKey } from './useProfileForm.types';
-import { Logger } from '@/libs/logger/logger';
-import { generateRandomUsername } from '@/libs/utils/utils';
-import { AppError } from '@/libs/error/error';
-import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
+import { USER_BIO_MAX_LENGTH, USER_NAME_MAX_LENGTH, USER_NAME_MIN_LENGTH } from '@/config/user';
 import { AuthController } from '@/controllers/auth/auth';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
+import { AppError } from '@/libs/error/error';
+import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
+import { generateRandomUsername } from '@/libs/utils/utils';
+import { useToast } from '@/molecules/Toaster/use-toast';
 import { UserValidator } from '@/pipes/user/user.validator';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import type { ProfileLink, SubmitTextKey, UseProfileFormProps, UseProfileFormReturn } from './useProfileForm.types';
+
 const DEFAULT_LINKS: ProfileLink[] = [
   { label: 'WEBSITE', url: '' },
   { label: 'X (TWITTER)', url: '' },

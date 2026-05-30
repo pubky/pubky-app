@@ -1,12 +1,12 @@
 'use client';
+import { CirclePlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
-
-import { useTranslations } from 'next-intl';
-import { CirclePlus } from 'lucide-react';
 import { RoundedCorner } from '@/icons';
 import { cn } from '@/libs/utils/utils';
+
 interface ShowMoreRepliesProps {
   /** Number of remaining replies to show */
   count: number;
@@ -61,6 +61,7 @@ export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepl
             variant="ghost"
             size="sm"
             type="button"
+            data-post-list-card="true"
             onClick={onClick}
             className="gap-2 rounded-full px-3.5 py-2 text-xs font-bold text-foreground"
           >

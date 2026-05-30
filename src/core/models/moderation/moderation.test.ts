@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { ModerationModel } from '@/models/moderation/moderation';
 import { ModerationType } from '@/models/moderation/moderation.schema';
+
 describe('ModerationModel', () => {
   beforeEach(async () => {
     await db.initialize();

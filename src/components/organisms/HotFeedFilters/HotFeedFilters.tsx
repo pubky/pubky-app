@@ -1,7 +1,7 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { Calendar, CalendarRange, Clock, Star } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   FilterHeader,
   FilterItem,
@@ -11,9 +11,9 @@ import {
   FilterRoot,
 } from '@/atoms/Filter/Filter';
 import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
-
 import { useHotStore } from '@/stores/hot/hot.store';
 import { TIMEFRAME, type TimeframeType } from '@/stores/hot/hot.types';
+
 // ============================================================================
 // FilterTimeframe Component
 // ============================================================================

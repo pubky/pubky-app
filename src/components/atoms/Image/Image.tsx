@@ -1,7 +1,7 @@
 import * as React from 'react';
 import NextImage from 'next/image';
-import type { ImageProps } from './Image.types';
 import { cn } from '@/libs/utils/utils';
+import type { ImageProps } from './Image.types';
 
 export const Image = React.forwardRef<HTMLImageElement, ImageProps>(
   ({ className, src, alt, fill, unoptimized = true, width, height, ...props }, ref) => {

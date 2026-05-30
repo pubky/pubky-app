@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { LogoutContent, LogoutHeader, LogoutNavigation } from './Logout';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES, ROOT_ROUTES } from '@/app/routes';
+import { LogoutContent, LogoutHeader, LogoutNavigation } from './Logout';
 
 // Mock Next.js router
 const mockPush = vi.fn();

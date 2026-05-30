@@ -1,18 +1,17 @@
 'use client';
 
-import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { useStickyWhenFits } from '@/hooks/useStickyWhenFits/useStickyWhenFits';
 import * as React from 'react';
+import { Bell, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { type FilterBarPageType, PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import { Container } from '@/atoms/Container/Container';
 import { FilterItem, FilterItemIcon, FilterItemLabel } from '@/atoms/Filter/Filter';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
-
-import { PROFILE_PAGE_TYPES, type FilterBarPageType } from '@/app/profile/types';
 import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
-import { Bell, StickyNote, MessageCircle, UsersRound, HeartHandshake, Tag } from 'lucide-react';
+import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useStickyWhenFits } from '@/hooks/useStickyWhenFits/useStickyWhenFits';
 import { UsersRound2 } from '@/icons';
 import { cn } from '@/libs/utils/utils';
 

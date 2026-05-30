@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { postApi } from './post.api';
-import { type TPostViewParams, type TPostBase, type TPostTaggersParams, type TPostTagsParams } from './post.types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NEXUS_URL } from '@/config/nexus';
-import { queryNexus } from '@/services/nexus/nexus.utils';
 import type { Pubky } from '@/models/models.types';
-import type { NexusTaggers } from '@/services/nexus/nexus.types';
+import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import { NexusPostService } from '@/services/nexus/post/post';
+import { postApi } from './post.api';
+import { type TPostBase, type TPostTaggersParams, type TPostTagsParams, type TPostViewParams } from './post.types';
 
 vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();
@@ -245,6 +245,41 @@ describe('NexusPostService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('getPostTags', () => {
+    it('constructs the post-tags URL and returns queryNexus response', async () => {
+      const mockTags: NexusTag[] = [
+        { label: 'bitcoin', taggers: ['user1' as Pubky], taggers_count: 1, relationship: false },
+      ];
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockTags);
+
+      const result = await NexusPostService.getPostTags({
+        compositeId: `${pubky}:${postId}`,
+        skip: 5,
+        limit: 3,
+        viewerId: testViewerId,
+      });
+
+      expect(result).toEqual(mockTags);
+      expect(queryNexusSpy).toHaveBeenCalledWith({
+        url: `${NEXUS_URL}/v0/post/${pubky}/${postId}/tags?skip_tags=5&limit_tags=3&viewer_id=${testViewerId}`,
+      });
+    });
+
+    it('propagates queryNexus errors so Nexus retry behavior remains intact', async () => {
+      const error = new Error('nexus-fail');
+      mockQueryNexus.mockRejectedValue(error);
+
+      await expect(
+        NexusPostService.getPostTags({
+          compositeId: `${pubky}:${postId}`,
+          skip: 0,
+          limit: 3,
+          viewerId: testViewerId,
+        }),
+      ).rejects.toThrow(error);
+    });
   });
 
   describe('getPostTaggers', () => {

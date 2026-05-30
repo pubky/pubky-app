@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PostTagPopoverWrapper } from './PostTagPopoverWrapper';
-import { POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_HOVER_CLOSE_DELAY } from '@/atoms/Popover/Popover.constants';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
+import { PostTagPopoverWrapper } from './PostTagPopoverWrapper';
+import { POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
 
 const mockRouterPush = vi.fn();
 const mockFetchAllTaggers = vi.fn();

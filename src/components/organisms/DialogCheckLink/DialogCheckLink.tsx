@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Checkbox } from '@/atoms/Checkbox/Checkbox';
 import { Container } from '@/atoms/Container/Container';
@@ -13,12 +14,11 @@ import {
   DialogTitle,
 } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
-
 import { URL_TRUNCATE_LENGTH } from '@/config/urls';
-import type { DialogCheckLinkProps } from './DialogCheckLink.types';
-import { ExternalLink } from 'lucide-react';
 import { truncateMiddle } from '@/libs/utils/utils';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+import type { DialogCheckLinkProps } from './DialogCheckLink.types';
+
 export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogCheckLinkProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const { setShowConfirm } = useSettingsStore();

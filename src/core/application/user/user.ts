@@ -1,8 +1,8 @@
-import { HttpMethod } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
 import type { TUserApplicationFollowParams, TUserCountsOrFetchResult } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
+import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
@@ -22,6 +22,7 @@ import type {
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { NexusUserService } from '@/services/nexus/user/user';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
+
 export class UserApplication {
   /**
    * Get user details from local database

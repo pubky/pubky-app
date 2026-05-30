@@ -1,10 +1,11 @@
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useStreamPagination } from './useStreamPagination';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
+import { useStreamPagination } from './useStreamPagination';
+
 // Mock dependencies
 vi.mock('@/controllers/stream/posts/posts', () => ({
   StreamPostsController: {

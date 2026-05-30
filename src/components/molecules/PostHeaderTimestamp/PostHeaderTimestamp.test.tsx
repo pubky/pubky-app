@@ -1,9 +1,8 @@
-import type { ReactElement } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { ReactElement } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
-
 import { PostHeaderTimestamp } from './PostHeaderTimestamp';
 
 const TEST_DATE = new Date('2025-06-01T12:00:00Z');
