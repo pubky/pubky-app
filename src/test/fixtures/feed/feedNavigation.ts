@@ -1,7 +1,7 @@
 // Consumed by VRT test harness (mockFeedApplication and Home.vrt.test.tsx).
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import { CONTENT, LAYOUT, REACH, SORT, type HomeState } from '@/stores/home/home.types';
+import { CONTENT, type HomeState, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
 import { HOUR_MS, VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
 
 /**

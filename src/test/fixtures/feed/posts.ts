@@ -1,7 +1,7 @@
 // Consumed by VRT test harness (Home.vrt.test.tsx and post-data hook mocks).
 import type { Pubky } from '@/models/models.types';
-import type { NexusPostCounts, NexusPostDetails, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
 import { buildCompositeId } from '@/models/models.utils';
+import type { NexusPostCounts, NexusPostDetails, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
 import { HOUR_MS, MINUTE_MS, VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
 import { VRT_AUTHOR_PUBKYS } from './profiles';
 
