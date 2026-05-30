@@ -1,10 +1,14 @@
+// Intentional import order — vi.hoisted + vi.mock factories rely on stable
+// Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
+// @vitest/browser. Do not let `eslint --fix` reorder these imports.
+/* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
-import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
-import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
-import { Header } from '@/organisms/Header/Header';
-import { createZustandLikeHook } from '@/test-utils/stores';
 import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
+import { createZustandLikeHook } from '@/test-utils/stores';
+import { Header } from '@/organisms/Header/Header';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
 import { Home } from './Home';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
