@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
+import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
+import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
+import { Header } from '@/organisms/Header/Header';
+import { createZustandLikeHook } from '@/test-utils/stores';
 import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
-import { createZustandLikeHook } from '@/test-utils/stores';
-import { Header } from '@/organisms/Header/Header';
 import { Home } from './Home';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
@@ -100,6 +102,29 @@ vi.mock('@/stores/migration/migration.store', () => ({
     wasDbReset: false,
     setWasDbReset: () => {},
   }),
+}));
+
+// MobileFooter (mounted by ContentLayout) pulls notification + local-files
+// snapshots; return empty/zero state so the footer renders a neutral chrome.
+vi.mock('@/stores/notification/notification.store', () => ({
+  useNotificationStore: createZustandLikeHook({
+    selectUnread: () => 0,
+  }),
+}));
+
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: createZustandLikeHook({
+    profile: null,
+    posts: {} as Record<string, never>,
+  }),
+}));
+
+vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
+  useKeyboardOffset: () => ({ isKeyboardVisible: false, keyboardOffset: 0 }),
+}));
+
+vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
+  usePublicRoute: () => ({ isPublicRoute: false }),
 }));
 
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
@@ -372,23 +397,24 @@ vi.mock('@/controllers/file/file', () => ({
   },
 }));
 
-// Render Header alongside Home so the layout matches production. ContentLayout's
-// sidebars are `position: sticky; top: 144px` (HEADER_OFFSET_MAIN); without a
-// header above them their natural in-flow position is y=0 and sticky pulls them
-// down 144px, misaligning with the (non-sticky) center column. With Header
-// rendered, sidebars naturally sit at y=144 and sticky becomes a no-op.
-function HomeWithHeader() {
+// Home only renders the center column; sidebars live in (feeds)/layout.tsx's
+// ContentLayout. Resolve the same shell config here so VRT matches prod.
+const homeShellConfig = tryResolveFeedsShellConfig('/home')!;
+
+function HomeWithLayout() {
   return (
     <>
       <Header />
-      <Home />
+      <ContentLayout {...homeShellConfig}>
+        <Home />
+      </ContentLayout>
     </>
   );
 }
 
 describe('Home (global feed) — visual regression', () => {
   it('renders the global feed at desktop viewport', async () => {
-    const screen = await renderForVRT(<HomeWithHeader />, { viewport: { width: 1440, height: 900 } });
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: { width: 1440, height: 900 } });
     // The VRT root is the viewport-clamped wrapper added by `renderForVRT`,
     // so the screenshot is exactly the viewport size. Without it, the body
     // locator captures the full scrollable document height.
@@ -396,7 +422,7 @@ describe('Home (global feed) — visual regression', () => {
   });
 
   it('renders the global feed at mobile viewport', async () => {
-    const screen = await renderForVRT(<HomeWithHeader />, { viewport: { width: 390, height: 844 } });
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: { width: 390, height: 844 } });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-mobile');
   });
 });

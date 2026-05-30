@@ -5,6 +5,10 @@ import { playwright } from '@vitest/browser-playwright';
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
+  resolve: {
+    // Force a single copy of these packages so we never load two versions at once.
+    dedupe: ['react', 'react-dom'],
+  },
   test: {
     coverage: {
       provider: 'v8',
@@ -48,6 +52,16 @@ export default defineConfig({
       // VRT(Visual Regression Tests) run in a real Chromium browser via Playwright.
       {
         plugins: [react(), tsconfigPaths()],
+        optimizeDeps: {
+          include: [
+            'react',
+            'react-dom',
+            'react-dom/client',
+            'react/jsx-runtime',
+            'react/jsx-dev-runtime',
+            'next/font/google',
+          ],
+        },
         test: {
           name: 'vrt',
           globals: true,
