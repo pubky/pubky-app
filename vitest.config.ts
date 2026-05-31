@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { playwright } from '@vitest/browser-playwright';
+import { VRT_VIEWPORT_DESKTOP } from './src/test-utils/vrt.viewports';
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
@@ -49,7 +50,7 @@ export default defineConfig({
           server: { deps: { inline: ['react-tweet'] } },
         },
       },
-      // VRT(Visual Regression Tests) run in a real Chromium browser via Playwright.
+      // VRT(Visual Regression Tests) run in real browsers via Playwright.
       {
         plugins: [react(), tsconfigPaths()],
         optimizeDeps: {
@@ -73,10 +74,24 @@ export default defineConfig({
             enabled: true,
             provider: playwright(),
             headless: true,
+            // `viewport` below is the INITIAL browser size only. Each test
+            // resizes the page per-call via `page.viewport(w, h)` inside
+            // `renderForVRT` (see `src/test-utils/vrt.tsx`), so mobile
+            // (VRT_VIEWPORT_MOBILE) is driven by the test, not by this
+            // config. Add new sizes to `src/test-utils/vrt.viewports.ts`.
             instances: [
               {
                 browser: 'chromium',
-                viewport: { width: 1440, height: 900 },
+                viewport: VRT_VIEWPORT_DESKTOP,
+              },
+              {
+                browser: 'firefox',
+                viewport: VRT_VIEWPORT_DESKTOP,
+              },
+              {
+                // `webkit` covers Safari's rendering engine.
+                browser: 'webkit',
+                viewport: VRT_VIEWPORT_DESKTOP,
               },
             ],
           },
