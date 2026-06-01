@@ -258,7 +258,7 @@
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
 
-      "expired": "已过期",
+      "clickToReload": "点击重新加载",
 
       "openingRing": "正在打开 Pubky Ring...",
 
@@ -266,13 +266,6 @@
       "authorizeSub": "使用 <pubkyRing>Pubky Ring</pubkyRing> 或任何其他由 <pubkyCore>Pubky Core</pubkyCore> 驱动的密钥链。",
       "linkFailed": "无法连接到 Pubky Ring 签名应用",
       "tryAgain": "请重试。"
-    },
-    "authExpired": {
-      "titleDesktop": "二维码已过期",
-      "descriptionDesktop": "此二维码已失效。刷新以获取新的二维码。",
-      "titleMobile": "授权会话已过期",
-      "descriptionMobile": "你的授权会话已失效。请刷新以生成新的会话并继续。",
-      "refresh": "刷新"
     },
     "signIn": {
       "title": "登录 <highlight>Pubky。</highlight>",
@@ -282,7 +275,7 @@
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
 
-      "expired": "已过期",
+      "clickToReload": "点击重新加载",
 
       "openingRing": "正在打开 Pubky Ring...",
 

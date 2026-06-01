@@ -257,19 +257,12 @@
       "subtitle": "Open Pubky Ring, create a pubky, and scan the QR.",
       "generating": "Generating QR Code...",
       "generatingShort": "Generating...",
-      "expired": "Expired",
+      "clickToReload": "Click to reload",
       "openingRing": "Opening Pubky Ring...",
       "authorize": "Authorize with Pubky Ring",
       "authorizeSub": "Use <pubkyRing>Pubky Ring</pubkyRing> or any other <pubkyCore>Pubky Core</pubkyCore>–powered keychain.",
       "linkFailed": "Unable to link to signer application Pubky Ring",
       "tryAgain": "Please try again."
-    },
-    "authExpired": {
-      "titleDesktop": "QR code expired",
-      "descriptionDesktop": "This QR code is no longer active. Refresh to get a new one.",
-      "titleMobile": "Authorization session expired",
-      "descriptionMobile": "Your authorization session is no longer active. Refresh to generate a new one and continue.",
-      "refresh": "Refresh"
     },
     "signIn": {
       "title": "Sign in to <highlight>Pubky.</highlight>",
@@ -278,7 +271,7 @@
       "progressSubtitle": "Please wait while your Pubky experience loads.",
       "generating": "Generating QR Code...",
       "generatingShort": "Generating...",
-      "expired": "Expired",
+      "clickToReload": "Click to reload",
       "openingRing": "Opening Pubky Ring...",
       "authorize": "Authorize with Pubky Ring",
       "linkCopied": "Link copied",
