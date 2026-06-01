@@ -15,8 +15,9 @@ export class OgMetadataApplication {
    * Fetch and extract OG metadata from a validated URL.
    *
    * @param validatedUrl - Parsed and validated URL from the pipes layer
-   * @returns Normalized OG metadata result
-   * @throws AppError on DNS failure, blocked IP, fetch failure, or invalid content
+   * @returns Normalized OG metadata result. Expected enrichment failures return fallback metadata.
+   * @throws AppError when the service surfaces a security/anomaly outcome
+   * (blocked private IP, non-HTTP redirect, oversized body, redirect loop, or unexpected server error).
    */
   static async fetch(validatedUrl: URL): Promise<TOgMetadataResult> {
     return NextJsOgMetadataService.fetch(validatedUrl);

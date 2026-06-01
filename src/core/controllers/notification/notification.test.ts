@@ -288,7 +288,7 @@ describe('NotificationController', () => {
     const mockTimestamp = 1234567890;
     const mockLastReadUrl = 'pubky://test-user/pub/pubky.app/last-read';
 
-    const setupStores = (pubky: Pubky | null) => {
+    const setupStores = (pubky: Pubky | null, unreadCount = 5) => {
       const setLastRead = vi.fn();
       const setUnread = vi.fn();
 
@@ -306,6 +306,7 @@ describe('NotificationController', () => {
         mockNotificationStore({
           setLastRead,
           setUnread,
+          selectUnread: () => unreadCount,
         }),
       );
 
@@ -345,6 +346,20 @@ describe('NotificationController', () => {
       NotificationController.markAllAsRead();
 
       // When pubky is null, function returns early without calling application
+      expect(normalizerSpy).not.toHaveBeenCalled();
+      expect(applicationSpy).not.toHaveBeenCalled();
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
+    });
+
+    it('should skip processing when there are no unread notifications', () => {
+      const { setLastRead, setUnread } = setupStores(mockUserId, 0);
+
+      const normalizerSpy = vi.spyOn(LastReadNormalizer, 'to');
+      const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead');
+
+      NotificationController.markAllAsRead();
+
       expect(normalizerSpy).not.toHaveBeenCalled();
       expect(applicationSpy).not.toHaveBeenCalled();
       expect(setLastRead).not.toHaveBeenCalled();

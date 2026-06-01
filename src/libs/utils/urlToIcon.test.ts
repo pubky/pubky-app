@@ -1,19 +1,6 @@
-import {
-  Facebook,
-  Github,
-  Gitlab,
-  Instagram,
-  Link,
-  Linkedin,
-  Mail,
-  Music,
-  Phone,
-  Slack,
-  Twitch,
-  Youtube,
-} from 'lucide-react';
+import { Link, Mail, Music, Phone } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
-import { Telegram, XTwitter } from '@/icons';
+import { Facebook, Github, Gitlab, Instagram, Linkedin, Slack, Telegram, Twitch, XTwitter, Youtube } from '@/icons';
 import { getIconFromUrl, getLabelFromUrl } from './urlToIcon';
 
 describe('getIconFromUrl', () => {
