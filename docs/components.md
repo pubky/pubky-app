@@ -158,16 +158,18 @@ Component tests must use **real** `lucide-react` and `@/icons` implementations (
 
 ## Toasts
 
-Stack: atom [`Toast`](src/components/atoms/Toast/Toast.tsx) + [`Toast.variants.ts`](src/components/atoms/Toast/Toast.variants.ts), molecule [`Toaster`](src/components/molecules/Toaster/Toaster.tsx), API [`toast()`](src/components/molecules/Toaster/use-toast.ts) / `useToast()`. `<Toaster />` is mounted in the app layout.
+Stack: atom [`Toast`](src/components/atoms/Toast/Toast.tsx) + [`Toast.variants.ts`](src/components/atoms/Toast/Toast.variants.ts) + [`Toast.icons.tsx`](src/components/atoms/Toast/Toast.icons.tsx), molecule [`Toaster`](src/components/molecules/Toaster/Toaster.tsx), API [`toast()`](src/components/molecules/Toaster/use-toast.ts) / `useToast()`. `<Toaster />` is mounted in the app layout.
 
 ### Variants (`ToastVariant`)
 
-| Variant   | Use for                                         | Icon            |
-| --------- | ----------------------------------------------- | --------------- |
-| `default` | Success, confirmation, neutral completion       | `Check`         |
-| `error`   | Failures, validation errors, caught exceptions  | `CircleAlert`   |
-| `warning` | Caution, rate limits, recoverable problems      | `TriangleAlert` |
-| `info`    | Informational feedback (e.g. copy-to-clipboard) | `Info`          |
+Icons are **not** stock Lucide — they are bespoke filled shapes with knocked-out glyphs in `Toast.icons.tsx`, wired via `TOAST_ICONS` in `Toast.variants.ts` (same semantics as check / alert / info, different source and silhouette).
+
+| Variant   | Use for                                         | Icon (`TOAST_ICONS`) |
+| --------- | ----------------------------------------------- | -------------------- |
+| `default` | Success, confirmation, neutral completion       | `ToastSuccessIcon`   |
+| `error`   | Failures, validation errors, caught exceptions  | `ToastErrorIcon`     |
+| `warning` | Caution, rate limits, recoverable problems      | `ToastWarningIcon`   |
+| `info`    | Informational feedback (e.g. copy-to-clipboard) | `ToastInfoIcon`      |
 
 Colors and per-variant styling live in `Toast.variants.ts` (`toastVariants`, `toastIconVariants`, `toastActionVariants`). Update tokens there — do not ad-hoc style toasts with `className` unless intentionally overriding.
 
