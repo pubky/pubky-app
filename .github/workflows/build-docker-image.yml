@@ -77,7 +77,7 @@ env:
 
 jobs:
   check_image:
-    name: Validate and rebuild Franky
+    name: Validate and rebuild Pubky App
     outputs:
       image_tag: ${{ steps.set_tag.outputs.image_tag }}
       image_name: ${{ steps.set_tag.outputs.image_name }}
@@ -99,7 +99,7 @@ jobs:
         id: set_tag
         run: |
           echo image_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
-          echo image_name=${{ format('franky-{0}', inputs.env) }} >> $GITHUB_OUTPUT
+          echo image_name=${{ format('pubky-app-{0}', inputs.env) }} >> $GITHUB_OUTPUT
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
@@ -111,7 +111,7 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
         id: check_image
         with:
-          image: ${{ env.registry }}/${{ format('franky-{0}', inputs.env) }}
+          image: ${{ env.registry }}/${{ format('pubky-app-{0}', inputs.env) }}
           tag: ${{ steps.sha_tag.outputs.hash }}
           arch: ${{ inputs.platforms }}
 
@@ -135,7 +135,7 @@ jobs:
       - name: Build and push image pubky-app (testnet)
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
-          image: 'franky-testnet'
+          image: 'pubky-app-testnet'
           context: '.'
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}
@@ -181,7 +181,7 @@ jobs:
       - name: Build and push image pubky-app (preview)
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
-          image: franky-preview
+          image: pubky-app-preview
           context: '.'
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}
