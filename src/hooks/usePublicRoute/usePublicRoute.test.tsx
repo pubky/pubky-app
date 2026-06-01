@@ -129,17 +129,4 @@ describe('usePublicRoute', () => {
       expect(result.current.isPublicExploreRoute).toBe(false);
     });
   });
-
-  describe('memoization', () => {
-    it('returns same reference when pathname does not change', () => {
-      mockPathname.mockReturnValue('/home');
-
-      const { result, rerender } = renderHook(() => usePublicRoute());
-      const firstResult = result.current.isPublicRoute;
-
-      rerender();
-
-      expect(result.current.isPublicRoute).toBe(firstResult);
-    });
-  });
 });

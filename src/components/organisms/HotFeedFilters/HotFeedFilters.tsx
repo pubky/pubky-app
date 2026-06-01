@@ -103,7 +103,7 @@ export function HotFeedSidebar() {
       <FilterReach
         selectedTab={effectiveReach}
         onTabChange={(tab) => requireAuth(() => setReach(tab))}
-        hideAccountScopedOptions={false}
+        hideAccountScopedOptions={!isAuthenticated}
       />
       <div className="sticky top-[100px] w-full self-start">
         <FilterTimeframe selectedTab={timeframe} onTabChange={setTimeframe} />
@@ -129,7 +129,7 @@ export function HotFeedDrawer() {
       <FilterReach
         selectedTab={effectiveReach}
         onTabChange={(tab) => requireAuth(() => setReach(tab))}
-        hideAccountScopedOptions={false}
+        hideAccountScopedOptions={!isAuthenticated}
       />
       <FilterTimeframe selectedTab={timeframe} onTabChange={setTimeframe} />
     </div>

@@ -55,7 +55,7 @@ function HomeFeedFilters({
         <FilterReach
           selectedTab={effectiveReach}
           onTabChange={(tab) => requireAuth(() => setReach(tab))}
-          hideAccountScopedOptions={false}
+          hideAccountScopedOptions={!isAuthenticated}
         />
       )}
       <FilterSort selectedTab={sort} onTabChange={setSort} />

@@ -191,13 +191,13 @@ describe('HomeFeedSidebar', () => {
     expect(mockSetContent).not.toHaveBeenCalled();
   });
 
-  it('forces all reach and keeps account-scoped reach controls visible when logged out', () => {
+  it('forces all reach and hides account-scoped reach controls when logged out', () => {
     mockCurrentUserPubky = null;
 
     render(<HomeFeedSidebar />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
-    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-hide-account-scoped', 'false');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-hide-account-scoped', 'true');
   });
 });
 

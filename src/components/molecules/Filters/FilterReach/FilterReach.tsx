@@ -17,7 +17,7 @@ export function FilterReach({
   defaultSelectedTab = REACH.ALL,
   onTabChange,
   disabled,
-  hideAccountScopedOptions = false,
+  hideAccountScopedOptions,
 }: FilterReachProps) {
   const t = useTranslations('filters.reach');
   const items = React.useMemo(
