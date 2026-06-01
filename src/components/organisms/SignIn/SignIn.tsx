@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import Image from 'next/image';
 import { CheckCircle, Circle, Key, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
@@ -18,6 +17,7 @@ import { cn } from '@/libs/utils/utils';
 import { ContentCard } from '@/molecules/Content/Content';
 import { Logo } from '@/molecules/Logo/Logo';
 import { PageTitle } from '@/molecules/Page/Page';
+import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { toast } from '@/molecules/Toaster/use-toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
@@ -156,42 +156,14 @@ export const SignInContent = () => {
               disabled={isLoading || (!url && !isExpired)}
               aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
             >
-              {isLoading || (!url && !isExpired) ? (
-                <Container className="items-center gap-2">
-                  <Loader2 className="size-8 animate-spin text-background" />
-                  <Typography as="small" size="sm" className="text-background">
-                    {t('generating')}
-                  </Typography>
-                </Container>
-              ) : isExpired ? (
-                <>
-                  <Image
-                    src="/images/qr-blurred.png"
-                    alt=""
-                    width={220}
-                    height={220}
-                    className="rounded-md transition-opacity group-hover:opacity-90 group-active:opacity-80"
-                  />
-                  <span className="absolute top-1/2 right-0 -translate-y-1/2 bg-card py-2 pr-4 pl-7 text-sm font-bold whitespace-nowrap text-foreground [clip-path:polygon(0%_0%,100%_0%,100%_100%,16px_100%)]">
-                    {t('clickToReload')}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <QRCodeSVG
-                    value={url}
-                    size={220}
-                    className="transition-opacity group-hover:opacity-90 group-active:opacity-80"
-                  />
-                  <Image
-                    src="/images/ring-logo.svg"
-                    alt="Pubky Ring"
-                    width={48}
-                    height={48}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity group-hover:opacity-90 group-active:opacity-80"
-                  />
-                </>
-              )}
+              <QrCodeSlot
+                isLoading={isLoading}
+                isExpired={isExpired}
+                url={url}
+                generatingLabel={t('generating')}
+                clickToReloadLabel={t('clickToReload')}
+                activeQrHasHoverEffect
+              />
             </button>
             <Container className="w-56 flex-row items-center justify-between gap-5">
               <Link href="https://apps.apple.com/us/app/pubky-ring/id6739356756">

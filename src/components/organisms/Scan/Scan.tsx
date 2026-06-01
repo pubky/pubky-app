@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Key, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { QRCodeSVG } from 'qrcode.react';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -20,6 +19,7 @@ import { Logger } from '@/libs/logger/logger';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { PageTitle } from '@/molecules/Page/Page';
+import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 export const ScanContent = () => {
@@ -71,43 +71,14 @@ export const ScanContent = () => {
         <ContentCard layout="column">
           <Container className="items-center justify-center gap-4">
             <div className="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4">
-              {isLoading || (!url && !isExpired) ? (
-                <Container className="items-center gap-2">
-                  <Loader2 className="size-8 animate-spin text-background" />
-                  <Typography as="small" size="sm" className="text-background">
-                    {t('generating')}
-                  </Typography>
-                </Container>
-              ) : isExpired ? (
-                <button
-                  type="button"
-                  onClick={fetchUrl}
-                  aria-label="Reload sign-up QR code"
-                  className="group absolute inset-0 flex cursor-pointer items-center justify-center p-4"
-                >
-                  <Image
-                    src="/images/qr-blurred.png"
-                    alt=""
-                    width={220}
-                    height={220}
-                    className="rounded-md transition-opacity group-hover:opacity-90 group-active:opacity-80"
-                  />
-                  <span className="absolute top-1/2 right-0 -translate-y-1/2 bg-card py-2 pr-4 pl-7 text-sm font-bold whitespace-nowrap text-foreground [clip-path:polygon(0%_0%,100%_0%,100%_100%,16px_100%)]">
-                    {t('clickToReload')}
-                  </span>
-                </button>
-              ) : (
-                <>
-                  <QRCodeSVG value={url} size={220} />
-                  <Image
-                    src="/images/ring-logo.svg"
-                    alt="Pubky Ring"
-                    width={48}
-                    height={48}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                  />
-                </>
-              )}
+              <QrCodeSlot
+                isLoading={isLoading}
+                isExpired={isExpired}
+                url={url}
+                generatingLabel={t('generating')}
+                clickToReloadLabel={t('clickToReload')}
+                expiredReloadAction={{ onClick: fetchUrl, ariaLabel: 'Reload sign-up QR code' }}
+              />
             </div>
             {inviteCode && (
               <Typography as="p" className="text-lg font-semibold tracking-widest text-brand">
