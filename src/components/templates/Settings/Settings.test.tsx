@@ -6,10 +6,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/settings/account',
 }));
 
-vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
-  useLayoutReset: vi.fn(),
-}));
-
 vi.mock('@/molecules/MobileHeader/MobileHeader', () => {
   return {
     MobileHeader: () => <div data-testid="mobile-header" />,
@@ -38,7 +34,17 @@ vi.mock('@/molecules/Settings/SettingsMobileMenu/SettingsMobileMenu', () => {
 
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
   return {
-    ContentLayout: ({ children }: { children: React.ReactNode }) => <div data-testid="content-layout">{children}</div>,
+    ContentLayout: ({
+      children,
+      disableWideShellLayout,
+    }: {
+      children: React.ReactNode;
+      disableWideShellLayout?: boolean;
+    }) => (
+      <div data-testid="content-layout" data-disable-wide-shell-layout={String(disableWideShellLayout)}>
+        {children}
+      </div>
+    ),
   };
 });
 
@@ -77,6 +83,16 @@ describe('Settings', () => {
       </Settings>,
     );
     expect(screen.getByTestId('settings-mobile-menu')).toBeInTheDocument();
+  });
+
+  it('disables wide shell layout without resetting the saved feed preference', () => {
+    render(
+      <Settings>
+        <div>Test content</div>
+      </Settings>,
+    );
+
+    expect(screen.getByTestId('content-layout')).toHaveAttribute('data-disable-wide-shell-layout', 'true');
   });
 });
 
