@@ -19,7 +19,6 @@ interface PostHeaderUserInfoProps {
   size?: 'normal' | 'large';
   timeAgo?: string | null;
   indexedAt?: Date | null;
-  className?: string;
 }
 
 export function PostHeaderUserInfo({
@@ -31,7 +30,6 @@ export function PostHeaderUserInfo({
   size = 'normal',
   timeAgo,
   indexedAt,
-  className,
 }: PostHeaderUserInfoProps) {
   const formattedPublicKey = formatPublicKey({ key: userId });
   const profileUrl = `/profile/${userId}`;
@@ -42,10 +40,7 @@ export function PostHeaderUserInfo({
   };
 
   const content = (
-    <Container
-      overrideDefaults
-      className={cn('flex w-fit min-w-0 items-center', size === 'large' ? 'gap-4' : 'gap-3', className)}
-    >
+    <Container overrideDefaults className={cn('flex w-fit min-w-0 items-center', size === 'large' ? 'gap-4' : 'gap-3')}>
       <Link href={profileUrl} onClick={handleLinkClick} className="shrink-0">
         <AvatarWithFallback
           avatarUrl={avatarUrl}

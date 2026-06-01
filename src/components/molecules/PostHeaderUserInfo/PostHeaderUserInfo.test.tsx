@@ -471,12 +471,12 @@ describe('PostHeaderUserInfo - Navigation', () => {
   it('constrains the username link so long names can truncate', () => {
     const longName = 'This is an extremely long profile name that should truncate instead of expanding the post header';
 
-    render(<PostHeaderUserInfo userId="testuser123" userName={longName} showPopover={false} className="w-0 flex-1" />);
+    render(<PostHeaderUserInfo userId="testuser123" userName={longName} showPopover={false} />);
 
     const profileLinks = screen.getAllByTestId('profile-link');
     const usernameLink = profileLinks[1];
 
-    expect(usernameLink.closest('.w-0.flex-1')).toBeInTheDocument();
+    expect(usernameLink.parentElement).toHaveClass('min-w-0', 'flex-1');
     expect(usernameLink).toHaveClass('block', 'w-fit', 'min-w-0', 'max-w-full');
     expect(usernameLink).not.toHaveClass('w-full');
     expect(screen.getByText(longName)).toHaveClass('w-full', 'truncate', 'max-w-full');
