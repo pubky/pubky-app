@@ -245,8 +245,7 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const { requireAuth } = useRequireAuth();
   const [open, setOpen] = useState(false);
   const saveTargets = usePostSaveTargets(postId);
-  const isBusy = saveTargets.isBookmarkLoading || saveTargets.isBookmarkToggling;
-  const TriggerIcon = isBusy ? Loader2 : Bookmark;
+  const isBookmarkBusy = saveTargets.isBookmarkLoading || saveTargets.isBookmarkToggling;
   const trigger = (
     <Button
       variant="secondary"
@@ -254,13 +253,10 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
       // `w-10` keeps the icon-only trigger the same width as sibling action
       // buttons in `PostActionsBar` (which carry an icon + count and grow naturally).
       className={cn(buttonClassName, 'w-10')}
-      aria-label={isBusy ? t('loading') : t('open')}
+      aria-label={t('open')}
       data-cy="post-bookmark-btn"
     >
-      <TriggerIcon
-        fill={saveTargets.isBookmarked && !isBusy ? 'currentColor' : 'none'}
-        className={cn(isBusy && 'animate-spin')}
-      />
+      <Library />
     </Button>
   );
 
@@ -273,7 +269,7 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
     requireAuth(() => setOpen(true));
   };
 
-  const contentProps = { ...saveTargets, isBookmarkBusy: isBusy };
+  const contentProps = { ...saveTargets, isBookmarkBusy };
 
   if (isMobile) {
     return (
