@@ -8,7 +8,7 @@ import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
-import { createCanceledError, handleError, isRetryableRelayPollError } from './error.utils';
+import { createCanceledError, extractStatusCode, handleError } from './error.utils';
 import type {
   CancelableAuthApproval,
   PubPath,
@@ -192,11 +192,19 @@ export const createCancelableAuthApproval = (
         if (maybeSession) return maybeSession;
       } catch (error) {
         if (canceled) throw createCanceledError();
-        if (isRetryableRelayPollError(error)) {
-          await sleep(pollIntervalMs);
-          continue;
-        }
-        throw error;
+        // From the caller's view, tryPollOnce is one-shot: one call, one outcome
+        // (pubky SDK 0.8 — it doesn't loop or retry on our behalf). If it throws,
+        // we treat the flow as dead and fail fast — showing "session expired" now
+        // is better UX than letting the user wait minutes on a flow that may already be dead.
+        throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Auth flow polling failed', {
+          service: ErrorService.Homeserver,
+          operation: 'awaitApproval',
+          context: {
+            originalError: error instanceof Error ? error.message : String(error),
+            statusCode: extractStatusCode(error),
+          },
+          cause: error,
+        });
       }
 
       await sleep(pollIntervalMs);
