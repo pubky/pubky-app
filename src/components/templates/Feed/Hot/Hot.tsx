@@ -6,7 +6,6 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { cn } from '@/libs/utils/utils';
 import { HotMobileMenu } from '@/molecules/HotMobileMenu/HotMobileMenu';
 import { HotSection } from '@/molecules/HotMobileMenu/HotMobileMenu.types';
@@ -37,7 +36,6 @@ export function Hot() {
   const t = useTranslations('hot');
   const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState<HotSection>(HotSection.TAGS);
-  useLayoutReset();
 
   const hideTags = isMobile && activeSection !== HotSection.TAGS;
   const hideUsers = isMobile && activeSection !== HotSection.USERS;

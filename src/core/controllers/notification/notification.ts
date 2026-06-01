@@ -55,13 +55,16 @@ export class NotificationController {
     // Skip if user is not authenticated (e.g., during logout)
     if (!pubky) return;
 
+    // Skip if there are no unread notifications
+    const notificationStore = useNotificationStore.getState();
+    if (notificationStore.selectUnread() === 0) return;
+
     // Create new lastRead with current timestamp using normalizer
     const lastRead = LastReadNormalizer.to(pubky);
 
     NotificationApplication.markAllAsRead(lastRead);
 
     // Update local store
-    const notificationStore = useNotificationStore.getState();
     notificationStore.setLastRead(Number(lastRead.last_read.timestamp));
     notificationStore.setUnread(0);
   }
