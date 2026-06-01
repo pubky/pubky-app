@@ -1,15 +1,17 @@
-import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
+import type { TOgMetadataFallbackReason, TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { AppError } from '@/libs/error/error';
-import { NetworkErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
-import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
-import { readResponseBody, validateDns } from '../nextjs.utils';
+import { Logger } from '@/libs/logger/logger';
+import { checkDnsSafety, readResponseBody } from '../nextjs.utils';
 import { buildFallbackMetadata, detectMediaType, extractMetadata, validateRedirectUrl } from './og-metadata.utils';
 
 const MAX_REDIRECTS = 5;
 const FETCH_TIMEOUT_MS = 10_000;
+const OG_METADATA_OPERATION = 'fetchOgMetadata';
+const DNS_SAFETY_OPERATION = 'checkDnsSafety';
 
 const FETCH_HEADERS = {
   'User-Agent':
@@ -40,10 +42,20 @@ export class NextJsOgMetadataService {
 
     try {
       // 1. Resolve DNS and validate IP (prevents SSRF via DNS rebinding)
-      await validateDns(hostname);
+      const dnsResult = await checkDnsSafety(hostname);
+      if (!dnsResult.ok) {
+        if (dnsResult.reason === 'unsafe_ip') {
+          throwBlockedIpError(hostname, DNS_SAFETY_OPERATION);
+        }
+        return fallback(url, dnsResult.reason, { hostname });
+      }
 
       // 2. Fetch with redirect following and DNS validation on each hop
-      const response = await fetchWithRedirects(url);
+      const fetchResult = await fetchWithRedirectsForOgMetadata(url);
+      if (!fetchResult.ok) {
+        return fallback(fetchResult.url, fetchResult.reason, fetchResult.context);
+      }
+      const { response } = fetchResult;
 
       // 3. Handle non-OK responses
       if (!response.ok) {
@@ -59,13 +71,16 @@ export class NextJsOgMetadataService {
       }
 
       // 5. Validate HTML content type
-      validateHtmlContentType(response);
+      const contentTypeOutcome = resolveHtmlContentType(response, url);
+      if (contentTypeOutcome) {
+        return contentTypeOutcome;
+      }
 
       // 6. Read response body with size limit
       const html = await readResponseBody(response);
 
       // 7. Extract and normalize metadata
-      return extractMetadata(url, html);
+      return await extractMetadata(url, html);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -73,7 +88,7 @@ export class NextJsOgMetadataService {
 
       throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to fetch OG metadata', {
         service: ErrorService.NextJsServer,
-        operation: 'fetchOgMetadata',
+        operation: OG_METADATA_OPERATION,
         cause: error,
         context: { url, statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
       });
@@ -84,69 +99,67 @@ export class NextJsOgMetadataService {
 // --- Module-private helpers (not exported; used only by NextJsOgMetadataService.fetch) ---
 
 /**
- * Handles non-OK responses: returns fallback metadata for 403, throws for all others.
+ * Handles non-OK responses. Remote HTTP failures are expected enrichment outcomes,
+ * so they return fallback metadata instead of creating AppErrors/Sentry events.
  * Cancels the response body to release the TCP connection back to the pool.
  */
 function handleErrorResponse(response: Response, url: string): TOgMetadataResult {
   response.body?.cancel().catch(() => {});
-  if (response.status === HttpStatusCode.FORBIDDEN) {
-    return buildFallbackMetadata(url);
+
+  if (response.status === HttpStatusCode.TOO_MANY_REQUESTS) {
+    return fallback(url, 'rate_limit', { statusCode: response.status });
   }
-  throw httpResponseToError(response, ErrorService.NextJsServer, 'fetchOgMetadata', url);
+
+  if (response.status === HttpStatusCode.REQUEST_TIMEOUT || response.status === HttpStatusCode.GATEWAY_TIMEOUT) {
+    return fallback(url, 'timeout', { statusCode: response.status });
+  }
+
+  return fallback(url, 'http_error', { statusCode: response.status });
 }
 
 /**
  * Validates that the response has an HTML content type.
- * Cancels the response body and throws a validation error if not HTML.
+ * Cancels the response body and returns durable fallback metadata if not HTML.
  */
-function validateHtmlContentType(response: Response): void {
+function resolveHtmlContentType(response: Response, url: string): TOgMetadataResult | null {
   const contentType = response.headers.get('content-type');
   if (!contentType?.includes('text/html')) {
     response.body?.cancel().catch(() => {});
-    throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Not HTML content', {
-      service: ErrorService.NextJsServer,
-      operation: 'fetchOgMetadata',
-      context: { contentType, statusCode: HttpStatusCode.BAD_REQUEST },
-    });
+    return fallback(url, 'non_html', { contentType });
   }
+
+  return null;
 }
 
 /**
  * Follows redirects manually, validating DNS on each hop to prevent SSRF via open redirects.
- * Uses safeFetch for standardized network error handling.
  */
-async function fetchWithRedirects(url: string): Promise<Response> {
+async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgRedirectFetchResult> {
   let currentUrl = url;
 
   for (let i = 0; i < MAX_REDIRECTS; i++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const fetchResult = await fetchForOgMetadata(currentUrl, {
+      headers: FETCH_HEADERS,
+      redirect: 'manual', // Disable automatic redirects so we can validate each hop (DNS + protocol) ourselves
+    });
+    if (!fetchResult.ok) return fetchResult;
 
-    let response: Response;
-    try {
-      response = await safeFetch(
-        currentUrl,
-        {
-          signal: controller.signal,
-          headers: FETCH_HEADERS,
-          redirect: 'manual', // Disable automatic redirects so we can validate each hop (DNS + protocol) ourselves
-        },
-        ErrorService.NextJsServer,
-        'fetchOgMetadata',
-      );
-    } finally {
-      clearTimeout(timeoutId);
-    }
-
+    const { response } = fetchResult;
     const redirectUrl = validateRedirectUrl(response, currentUrl);
     if (!redirectUrl) {
-      return response;
+      return { ok: true, response };
     }
 
     // Release the redirect response body before following the next hop so the TCP connection can be reused promptly.
     response.body?.cancel().catch(() => {});
 
-    await validateDns(redirectUrl.hostname);
+    const redirectDnsResult = await checkDnsSafety(redirectUrl.hostname);
+    if (!redirectDnsResult.ok) {
+      if (redirectDnsResult.reason === 'unsafe_ip') {
+        throwBlockedIpError(redirectUrl.hostname, DNS_SAFETY_OPERATION);
+      }
+      return { ok: false, reason: redirectDnsResult.reason, url: redirectUrl.toString() };
+    }
 
     currentUrl = redirectUrl.toString();
   }
@@ -156,4 +169,94 @@ async function fetchWithRedirects(url: string): Promise<Response> {
     operation: 'fetchWithRedirects',
     context: { url, statusCode: HttpStatusCode.BAD_REQUEST },
   });
+}
+
+type OgFetchResult =
+  | { ok: true; response: Response }
+  | {
+      ok: false;
+      reason: Extract<TOgMetadataFallbackReason, 'network' | 'timeout'>;
+      url: string;
+      context?: Record<string, unknown>;
+    };
+
+type OgRedirectFetchResult =
+  | { ok: true; response: Response }
+  | {
+      ok: false;
+      reason: Extract<TOgMetadataFallbackReason, 'dns_failed' | 'network' | 'timeout'>;
+      url: string;
+      context?: Record<string, unknown>;
+    };
+
+function fallback(
+  url: string,
+  fallbackReason: TOgMetadataFallbackReason,
+  context: Record<string, unknown> = {},
+): TOgMetadataResult {
+  logFallback(url, fallbackReason, context);
+  return buildFallbackMetadata(url);
+}
+
+function logFallback(
+  url: string,
+  reason: TOgMetadataFallbackReason,
+  context: Record<string, unknown>,
+  hostname = getHostname(url),
+): void {
+  Logger.warn('[og-metadata:fetch]', {
+    outcome: 'fallback',
+    reason,
+    hostname,
+    ...context,
+  });
+}
+
+function throwBlockedIpError(hostname: string, operation: string): never {
+  throw Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
+    service: ErrorService.NextJsServer,
+    operation,
+    context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },
+  });
+}
+
+function getHostname(url: string): string | undefined {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+async function fetchForOgMetadata(url: string, options: RequestInit): Promise<OgFetchResult> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return { ok: true, response };
+  } catch (error) {
+    if (isAbortError(error)) {
+      return { ok: false, reason: 'timeout', url, context: { errorName: getErrorName(error) } };
+    }
+
+    return { ok: false, reason: 'network', url, context: { errorName: getErrorName(error) } };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
+}
+
+function getErrorName(error: unknown): string | undefined {
+  if (error instanceof Error) return error.name;
+  if (typeof error === 'object' && error !== null && 'name' in error && typeof error.name === 'string') {
+    return error.name;
+  }
+  return undefined;
 }
