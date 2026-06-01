@@ -196,7 +196,7 @@ jobs:
 
       - name: Run pubky-stack
         working-directory: pubky-stack/docker
-        run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis franky postgres
+        run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis pubky-app postgres
         env:
           REGISTRY: ${{ env.registry }}
 
