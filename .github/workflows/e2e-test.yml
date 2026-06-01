@@ -104,7 +104,7 @@ jobs:
     needs: [rebuild_images, rebuild_franky]
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
-      FRANKY_TAG: ${{ needs.rebuild_franky.outputs.image_tag }}
+      PUBKY_APP_TAG: ${{ needs.rebuild_franky.outputs.image_tag }}
       PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
     permissions:
       contents: read
@@ -123,8 +123,8 @@ jobs:
             exit 1
           fi
 
-          if [ -z "${{ env.FRANKY_TAG }}" ]; then
-            echo "Error: env FRANKY_TAG is empty!"
+          if [ -z "${{ env.PUBKY_APP_TAG }}" ]; then
+            echo "Error: env PUBKY_APP_TAG is empty!"
             exit 1
           fi
 
