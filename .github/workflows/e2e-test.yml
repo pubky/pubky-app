@@ -17,7 +17,7 @@ jobs:
     name: Getting images to rebuild
     runs-on: ubuntu-latest
     outputs:
-      homeserver_tag: ${{ steps.set_tag.outputs.homeserver_tag }}
+      homeserver-testnet_tag: ${{ steps.set_tag.outputs.homeserver-testnet_tag }}
       pubky-nexus_tag: ${{ steps.set_tag.outputs.pubky-nexus_tag }}
     strategy:
       matrix:
@@ -28,7 +28,7 @@ jobs:
 
           - app: "homeserver"
             submodule_dir: "pubky-stack/pubky-core/"
-            image: "homeserver"
+            image: "homeserver-testnet"
 
     steps:
       - name: Checkout pubky-stack
@@ -103,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [rebuild_images, rebuild_franky]
     env:
-      HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver_tag }}
+      HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
       FRANKY_TAG: ${{ needs.rebuild_franky.outputs.image_tag }}
       PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
     permissions:
