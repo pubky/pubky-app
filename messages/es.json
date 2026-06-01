@@ -1014,7 +1014,14 @@
     "generic": "Algo salio mal",
     "network": "Error de red. Por favor intenta de nuevo.",
     "notFound": "Página no encontrada",
-    "couldNotFind": "No se pudo encontrar el recurso solicitado"
+    "couldNotFind": "No se pudo encontrar el recurso solicitado",
+    "database": {
+      "title": "Almacenamiento no disponible",
+      "description": "No pudimos acceder al almacenamiento local de tu dispositivo. Algunos navegadores móviles, especialmente los integrados en apps, pueden interrumpirlo. Inténtalo de nuevo o recarga la página.",
+      "tryAgain": "Intentar de nuevo",
+      "reload": "Recargar página",
+      "retrying": "Reintentando…"
+    }
   },
   "password": {
     "veryWeak": "Contrasena muy debil",

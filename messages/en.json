@@ -1008,7 +1008,14 @@
     "generic": "Something went wrong",
     "network": "Network error. Please try again.",
     "notFound": "Page not found",
-    "couldNotFind": "Could not find requested resource"
+    "couldNotFind": "Could not find requested resource",
+    "database": {
+      "title": "Storage unavailable",
+      "description": "We couldn't access your device's local storage. Some mobile browsers, especially in-app browsers, can interrupt it. Please try again or reload the page.",
+      "tryAgain": "Try again",
+      "reload": "Reload page",
+      "retrying": "Retrying…"
+    }
   },
   "password": {
     "veryWeak": "Very weak",

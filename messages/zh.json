@@ -1014,7 +1014,14 @@
     "generic": "出现问题",
     "network": "网络错误。请重试。",
     "notFound": "页面未找到",
-    "couldNotFind": "无法找到请求的资源"
+    "couldNotFind": "无法找到请求的资源",
+    "database": {
+      "title": "存储不可用",
+      "description": "我们无法访问您设备的本地存储。某些移动浏览器（尤其是应用内浏览器）可能会中断它。请重试或重新加载页面。",
+      "tryAgain": "重试",
+      "reload": "重新加载页面",
+      "retrying": "正在重试…"
+    }
   },
   "password": {
     "veryWeak": "非常弱",

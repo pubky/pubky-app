@@ -1014,7 +1014,14 @@
     "generic": "Quelque chose s'est mal passe",
     "network": "Erreur réseau. Veuillez réessayer.",
     "notFound": "Page non trouvee",
-    "couldNotFind": "Impossible de trouver la ressource demandee"
+    "couldNotFind": "Impossible de trouver la ressource demandee",
+    "database": {
+      "title": "Stockage indisponible",
+      "description": "Nous n'avons pas pu accéder au stockage local de votre appareil. Certains navigateurs mobiles, en particulier les navigateurs intégrés aux applications, peuvent l'interrompre. Veuillez réessayer ou recharger la page.",
+      "tryAgain": "Réessayer",
+      "reload": "Recharger la page",
+      "retrying": "Nouvelle tentative…"
+    }
   },
   "password": {
     "veryWeak": "Mot de passe tres faible",

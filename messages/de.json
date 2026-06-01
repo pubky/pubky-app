@@ -1014,7 +1014,14 @@
     "generic": "Etwas ist schiefgelaufen",
     "network": "Netzwerkfehler. Bitte versuchen Sie es erneut.",
     "notFound": "Seite nicht gefunden",
-    "couldNotFind": "Angeforderte Ressource konnte nicht gefunden werden"
+    "couldNotFind": "Angeforderte Ressource konnte nicht gefunden werden",
+    "database": {
+      "title": "Speicher nicht verfügbar",
+      "description": "Wir konnten nicht auf den lokalen Speicher deines Geräts zugreifen. Einige mobile Browser, insbesondere In-App-Browser, können ihn unterbrechen. Bitte versuche es erneut oder lade die Seite neu.",
+      "tryAgain": "Erneut versuchen",
+      "reload": "Seite neu laden",
+      "retrying": "Wird wiederholt…"
+    }
   },
   "password": {
     "veryWeak": "Sehr schwaches Passwort",

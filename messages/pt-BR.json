@@ -1014,7 +1014,14 @@
     "generic": "Algo deu errado",
     "network": "Erro de rede. Por favor, tente novamente.",
     "notFound": "Página não encontrada",
-    "couldNotFind": "Nao foi possivel encontrar o recurso solicitado"
+    "couldNotFind": "Nao foi possivel encontrar o recurso solicitado",
+    "database": {
+      "title": "Armazenamento indisponível",
+      "description": "Não foi possível acessar o armazenamento local do seu dispositivo. Alguns navegadores móveis, especialmente navegadores integrados a aplicativos, podem interrompê-lo. Tente novamente ou recarregue a página.",
+      "tryAgain": "Tentar novamente",
+      "reload": "Recarregar página",
+      "retrying": "Tentando novamente…"
+    }
   },
   "password": {
     "veryWeak": "Senha muito fraca",

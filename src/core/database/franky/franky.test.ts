@@ -1,8 +1,11 @@
+import Dexie from 'dexie';
 import { indexedDB } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DB_NAME, DB_VERSION } from '@/config/database';
-import { AppDatabase } from '@/database/franky/franky';
+import { DB_INIT_MAX_ATTEMPTS, DB_NAME, DB_VERSION } from '@/config/database';
+import { AppDatabase, isTransientIndexedDbError } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
+
+const transientError = (name: string, message = '') => Object.assign(new Error(message), { name });
 
 const waitForDatabaseDeletion = async (name: string, onBlocked?: () => void) => {
   await new Promise<void>((resolve, reject) => {
@@ -283,5 +286,104 @@ describe('Database Initialization', () => {
       });
       loggerWarnSpy.mockRestore();
     }
+  });
+
+  it('retries and recovers from a transient IndexedDB error during initialization', async () => {
+    const testDbName = `${DB_NAME}-transient-recover`;
+    const testDb = new AppDatabase(testDbName);
+
+    await waitForDatabaseDeletion(testDbName, () => testDb.close());
+
+    const loggerWarnSpy = vi.spyOn(Logger, 'warn');
+    const existsSpy = vi.spyOn(Dexie, 'exists');
+    // First attempt: WebKit drops the connection. Subsequent attempts: behave as a new DB.
+    existsSpy.mockRejectedValueOnce(transientError('UnknownError', 'Connection to Indexed Database server lost'));
+    existsSpy.mockResolvedValue(false);
+
+    try {
+      const result = await testDb.initialize();
+
+      expect(result.wasDbReset).toBe(true);
+      expect(existsSpy).toHaveBeenCalledTimes(2);
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        'Transient IndexedDB error during initialization. Retrying...',
+        expect.objectContaining({ attempt: 1 }),
+      );
+      expect(testDb.isOpen()).toBe(true);
+    } finally {
+      existsSpy.mockRestore();
+      loggerWarnSpy.mockRestore();
+      await testDb.delete();
+    }
+  });
+
+  it('gives up after the maximum attempts when the transient error persists', async () => {
+    const testDbName = `${DB_NAME}-transient-persist`;
+    const testDb = new AppDatabase(testDbName);
+
+    const existsSpy = vi.spyOn(Dexie, 'exists');
+    existsSpy.mockRejectedValue(transientError('UnknownError', 'Database deleted by request of the user'));
+
+    try {
+      await expect(testDb.initialize()).rejects.toMatchObject({
+        name: 'AppError',
+        code: 'INIT_FAILED',
+      });
+      expect(existsSpy).toHaveBeenCalledTimes(DB_INIT_MAX_ATTEMPTS);
+    } finally {
+      existsSpy.mockRestore();
+    }
+  });
+
+  it('does not retry on a non-transient initialization error', async () => {
+    const testDbName = `${DB_NAME}-non-transient`;
+    const testDb = new AppDatabase(testDbName);
+
+    const existsSpy = vi.spyOn(Dexie, 'exists');
+    existsSpy.mockRejectedValue(new TypeError('boom'));
+
+    try {
+      await expect(testDb.initialize()).rejects.toMatchObject({
+        name: 'AppError',
+        code: 'INIT_FAILED',
+      });
+      // No retries for deterministic failures.
+      expect(existsSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      existsSpy.mockRestore();
+    }
+  });
+});
+
+describe('isTransientIndexedDbError', () => {
+  it('detects transient WebKit/IndexedDB error names', () => {
+    expect(isTransientIndexedDbError(transientError('UnknownError'))).toBe(true);
+    expect(isTransientIndexedDbError(transientError('AbortError'))).toBe(true);
+  });
+
+  it('detects transient errors by message', () => {
+    expect(isTransientIndexedDbError(new Error('Connection to Indexed Database server lost'))).toBe(true);
+    expect(isTransientIndexedDbError(new Error('Database deleted by request of the user'))).toBe(true);
+    expect(isTransientIndexedDbError(new Error('Transaction aborted'))).toBe(true);
+    expect(isTransientIndexedDbError(new Error('Attempt to delete range without an in-progress transaction'))).toBe(
+      true,
+    );
+  });
+
+  it('walks the cause chain (e.g. a wrapped AppError)', () => {
+    const wrapped = Object.assign(new Error('Failed to initialize database, indexedDB'), {
+      name: 'AppError',
+      cause: transientError('UnknownError', 'Connection to Indexed Database server lost'),
+    });
+
+    expect(isTransientIndexedDbError(wrapped)).toBe(true);
+  });
+
+  it('returns false for deterministic or non-error values', () => {
+    expect(isTransientIndexedDbError(new TypeError('boom'))).toBe(false);
+    expect(isTransientIndexedDbError(new Error('Schema mismatch'))).toBe(false);
+    expect(isTransientIndexedDbError(null)).toBe(false);
+    expect(isTransientIndexedDbError(undefined)).toBe(false);
+    expect(isTransientIndexedDbError('UnknownError')).toBe(false);
   });
 });

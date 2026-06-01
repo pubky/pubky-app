@@ -1014,7 +1014,14 @@
     "generic": "Qualcosa e andato storto",
     "network": "Errore di rete. Riprova.",
     "notFound": "Pagina non trovata",
-    "couldNotFind": "Impossibile trovare la risorsa richiesta"
+    "couldNotFind": "Impossibile trovare la risorsa richiesta",
+    "database": {
+      "title": "Archiviazione non disponibile",
+      "description": "Non è stato possibile accedere all'archiviazione locale del dispositivo. Alcuni browser mobili, in particolare quelli integrati nelle app, possono interromperla. Riprova o ricarica la pagina.",
+      "tryAgain": "Riprova",
+      "reload": "Ricarica la pagina",
+      "retrying": "Nuovo tentativo…"
+    }
   },
   "password": {
     "veryWeak": "Password molto debole",
