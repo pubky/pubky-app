@@ -13,7 +13,7 @@ import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
@@ -107,102 +107,36 @@ export function PostInput({
     onArticleModeChange,
   });
 
-  const { isAuthenticated, requireAuth } = useRequireAuth();
-
-  const openSignInDialog = () => {
-    requireAuth(() => undefined);
-  };
-
-  const handleExpandWithAuth = () => {
-    requireAuth(handleExpand);
-  };
-
-  const handleSubmitWithAuth = () => {
-    return requireAuth(handleSubmit);
-  };
-
-  const setTagsWithAuth: React.Dispatch<React.SetStateAction<string[]>> = (value) => {
-    if (!isAuthenticated) {
-      openSignInDialog();
-      return;
-    }
-    setTags(value);
-  };
-
-  const setAttachmentsWithAuth: React.Dispatch<React.SetStateAction<File[]>> = (value) => {
-    if (!isAuthenticated) {
-      openSignInDialog();
-      return;
-    }
-    setAttachments(value);
-  };
-
-  const handleChangeWithAuth = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (!isAuthenticated) {
-      openSignInDialog();
-      return;
-    }
-    handleChange(event);
-  };
-
-  const handleArticleTitleChangeWithAuth = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isAuthenticated) {
-      openSignInDialog();
-      return;
-    }
-    handleArticleTitleChange(event);
-  };
-
-  const handleArticleBodyChangeWithAuth = (markdown: string, initialMarkdownNormalize: boolean) => {
-    if (!isAuthenticated) {
-      openSignInDialog();
-      return;
-    }
-    handleArticleBodyChange(markdown, initialMarkdownNormalize);
-  };
-
-  const handleFilesAddedWithAuth = (files: File[]) => {
-    if (!isAuthenticated) {
-      openSignInDialog();
-      return;
-    }
-    handleFilesAdded(files);
-  };
-
-  const handleFileClickWithAuth = () => {
-    requireAuth(handleFileClick);
-  };
-
-  const handleArticleClickWithAuth = () => {
-    requireAuth(handleArticleClick);
-  };
-
-  const handleEmojiSelectWithAuth = (emoji: { native: string }) => {
-    if (!isAuthenticated) {
-      openSignInDialog();
-      return;
-    }
-    handleEmojiSelect(emoji);
-  };
-
-  const handlePasteWithAuth = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    if (!isAuthenticated) {
-      event.preventDefault();
-      openSignInDialog();
-      return;
-    }
-    handlePaste(event);
-  };
-
-  const handleDragEventWithAuth = (event: React.DragEvent, handler: (event: React.DragEvent) => void) => {
-    if (!isAuthenticated) {
-      event.preventDefault();
-      event.stopPropagation();
-      openSignInDialog();
-      return;
-    }
-    handler(event);
-  };
+  const {
+    isAuthenticated,
+    handleExpandWithAuth,
+    handleSubmitWithAuth,
+    setTagsWithAuth,
+    setAttachmentsWithAuth,
+    handleChangeWithAuth,
+    handleFilesAddedWithAuth,
+    handleFileClickWithAuth,
+    handleEmojiSelectWithAuth,
+    handlePasteWithAuth,
+    handleDragEventWithAuth,
+    createKeyDownHandler,
+    handleArticleTitleChangeWithAuth,
+    handleArticleBodyChangeWithAuth,
+    handleArticleClickWithAuth,
+  } = usePostInputAuthHandlers({
+    handleExpand,
+    handleSubmit,
+    setTags,
+    setAttachments,
+    handleChange,
+    handleFilesAdded,
+    handleFileClick,
+    handleEmojiSelect,
+    handlePaste,
+    handleArticleTitleChange,
+    handleArticleBodyChange,
+    handleArticleClick,
+  });
 
   const isValid = () => {
     return canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
@@ -213,15 +147,7 @@ export function PostInput({
   });
 
   // Combined keyboard handler: mention popover takes priority, then enter submit
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!isAuthenticated) {
-      e.preventDefault();
-      openSignInDialog();
-      return;
-    }
-    if (handleMentionKeyDown(e)) return;
-    enterSubmitHandler(e);
-  };
+  const handleKeyDown = createKeyDownHandler({ handleMentionKeyDown, enterSubmitHandler });
 
   const isEdit = variant === POST_INPUT_VARIANT.EDIT;
 
