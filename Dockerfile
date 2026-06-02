@@ -39,14 +39,11 @@ ARG NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS
 ARG NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE
 ARG NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE
 ARG NEXT_PUBLIC_TTL_RETRY_DELAY_MS
-ARG NEXT_PUBLIC_HOMESERVER
-ARG NEXT_PUBLIC_NEXUS_URL
-ARG NEXT_PUBLIC_CDN_URL
-ARG NEXT_PUBLIC_TESTNET
-ARG NEXT_PUBLIC_PKARR_RELAYS
-ARG NEXT_PUBLIC_DEFAULT_HTTP_RELAY
+# NOTE: NEXUS_URL, CDN_URL, HOMESERVER, HOMEGATE_URL, DEFAULT_HTTP_RELAY, PKARR_RELAYS and
+# TESTNET are intentionally NOT build args. They are runtime-configurable and must be supplied as
+# PUBKY_RUNTIME_* environment variables on the running container (see runner stage and
+# src/libs/runtime-config). This lets a single image be promoted across staging/prod/testnet.
 ARG NEXT_PUBLIC_EXCHANGE_RATE_API
-ARG NEXT_PUBLIC_HOMEGATE_URL
 ARG NEXT_PUBLIC_PRELUDE_SDK_KEY
 ARG NEXT_PUBLIC_MODERATION_ID
 ARG NEXT_PUBLIC_MODERATED_TAGS
@@ -106,6 +103,17 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+
+# Runtime configuration (PUBLIC values, NOT secrets) supplied per-environment at container
+# runtime (Ansible / docker compose / k8s). With NODE_ENV=production the app fails fast if any of
+# these are missing rather than silently falling back to staging defaults. See src/libs/runtime-config.
+#   PUBKY_RUNTIME_NEXUS_URL
+#   PUBKY_RUNTIME_CDN_URL
+#   PUBKY_RUNTIME_HOMESERVER
+#   PUBKY_RUNTIME_HOMEGATE_URL
+#   PUBKY_RUNTIME_DEFAULT_HTTP_RELAY
+#   PUBKY_RUNTIME_PKARR_RELAYS   (JSON array string, e.g. '["https://pkarr.pubky.app"]')
+#   PUBKY_RUNTIME_TESTNET        ("true" | "false")
 
 # Run the standalone server
 CMD ["node", "server.js"]

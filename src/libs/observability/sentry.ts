@@ -35,6 +35,9 @@ export function shouldEnableSentry(): boolean {
   if (!Env) return false;
   if (Env.NODE_ENV === 'test') return false;
   if (Env.VITEST) return false;
+  // Known limitation (see docs/adr): Sentry initializes across server/client/edge runtimes before
+  // the injected runtime config is available, so its testnet gate intentionally stays build-time.
+  // eslint-disable-next-line no-restricted-syntax
   if (Env.NEXT_PUBLIC_TESTNET) return false;
   if (!Env.NEXT_PUBLIC_SENTRY_DSN) return false;
   return true;

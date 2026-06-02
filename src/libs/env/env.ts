@@ -2,8 +2,14 @@ import { z } from 'zod';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
-const DEFAULT_PKARR_RELAYS = ['https://pkarr.pubky.app', 'https://pkarr.pubky.org'];
+import {
+  homeserverValue,
+  NETWORK_RUNTIME_DEFAULTS,
+  parsePkarrRelaysString,
+  pkarrRelaysValue,
+  testnetValue,
+  urlValue,
+} from '@/libs/runtime-config/network-config.schema';
 
 /**
  * Environment Variables Schema with Zod validation
@@ -37,10 +43,14 @@ const envSchema = z.object({
   // These variables have staging defaults for development and CI/CD.
   // For production, override these with your production URLs.
 
+  // NOTE: NEXUS_URL, CDN_URL, HOMESERVER, HOMEGATE_URL, DEFAULT_HTTP_RELAY, PKARR_RELAYS and
+  // TESTNET are runtime-configurable. These NEXT_PUBLIC_ entries are build/dev/test DEFAULTS only;
+  // deployed environments must supply PUBKY_RUNTIME_* (see @/libs/runtime-config). They reuse the
+  // shared field validators so the notion of "valid" cannot drift from the runtime config.
   /** Main API endpoint */
-  NEXT_PUBLIC_NEXUS_URL: z.string().url().default('https://nexus.staging.pubky.app'),
+  NEXT_PUBLIC_NEXUS_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.nexusUrl),
   /** CDN URL for static assets */
-  NEXT_PUBLIC_CDN_URL: z.string().url().default('https://nexus.staging.pubky.app/static'),
+  NEXT_PUBLIC_CDN_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.cdnUrl),
 
   NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS: z
     .string()
@@ -130,9 +140,9 @@ const envSchema = z.object({
 
   NEXT_PUBLIC_TESTNET: z
     .string()
-    .default('false')
+    .default(String(NETWORK_RUNTIME_DEFAULTS.testnet))
     .transform((val) => val === 'true')
-    .pipe(z.boolean()),
+    .pipe(testnetValue),
 
   NEXT_MAX_STREAM_TAGS: z
     .string()
@@ -144,12 +154,12 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((val) => (val && val.trim() !== '' ? val : undefined))
-    .default(JSON.stringify(DEFAULT_PKARR_RELAYS))
+    .default(JSON.stringify(NETWORK_RUNTIME_DEFAULTS.pkarrRelays))
     .transform(parsePkarrRelays)
-    .pipe(z.array(z.string().url()).min(1)),
+    .pipe(pkarrRelaysValue),
 
   /** Homeserver public key */
-  NEXT_PUBLIC_HOMESERVER: z.string().min(1).default('ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy'),
+  NEXT_PUBLIC_HOMESERVER: homeserverValue.default(NETWORK_RUNTIME_DEFAULTS.homeserver),
 
   // Server-side only admin credentials for signup token generation (dev/test only)
   // These are NOT exposed to the client bundle - only available on the server
@@ -157,7 +167,7 @@ const envSchema = z.object({
   HOMESERVER_ADMIN_PASSWORD: z.string().default('admin'),
 
   /** HTTP relay for pubky protocol (auth uses `/inbox` with Pubky SDK 0.7+) */
-  NEXT_PUBLIC_DEFAULT_HTTP_RELAY: z.url().default('https://httprelay.staging.pubky.app/inbox'),
+  NEXT_PUBLIC_DEFAULT_HTTP_RELAY: urlValue.default(NETWORK_RUNTIME_DEFAULTS.defaultHttpRelay),
   NEXT_PUBLIC_MODERATION_ID: z.string().default('euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro'),
   NEXT_PUBLIC_MODERATED_TAGS: z
     .string()
@@ -168,7 +178,7 @@ const envSchema = z.object({
     .pipe(z.array(z.string().min(1)).min(1)),
   NEXT_PUBLIC_EXCHANGE_RATE_API: z.url().default('https://api1.blocktank.to/api/fx/rates/btc'),
   /** Homegate authentication service URL */
-  NEXT_PUBLIC_HOMEGATE_URL: z.url().default('https://homegate.staging.pubky.app'),
+  NEXT_PUBLIC_HOMEGATE_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.homegateUrl),
 
   // Prelude SDK key for collecting client browser signals for SMS fraud prevention.
   // This is a public/publishable key (distinct from the secret Prelude API key used server-side).
@@ -447,23 +457,12 @@ function parseEnv(): z.infer<typeof envSchema> {
 
 function parsePkarrRelays(val: string): string[] {
   try {
-    const relays = JSON.parse(val) as unknown;
-    if (!Array.isArray(relays)) {
-      throw new Error('NEXT_PUBLIC_PKARR_RELAYS must be a JSON array');
-    }
-    // Validate each relay is a valid URL
-    for (const relay of relays) {
-      if (typeof relay !== 'string') {
-        throw new Error('Each relay must be a string');
-      }
-      new URL(relay);
-    }
-    return relays;
+    return parsePkarrRelaysString(val);
   } catch {
     // Using console.warn here instead of Logger.warn due to circular dependency:
     // env.ts must load before Logger is available (env -> libs -> logger)
     console.warn(`Invalid NEXT_PUBLIC_PKARR_RELAYS value: "${val}", using defaults`);
-    return DEFAULT_PKARR_RELAYS;
+    return NETWORK_RUNTIME_DEFAULTS.pkarrRelays;
   }
 }
 
