@@ -205,6 +205,7 @@ export function PostInput({
       className={cn(
         'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
         isWideLayout ? 'p-12' : 'p-4',
+        !isAuthenticated ? 'px-6' : '',
         isDragging ? 'border-brand' : 'border-input',
       )}
       onClick={handleExpandWithAuth}
