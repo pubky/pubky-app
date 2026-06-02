@@ -1,4 +1,6 @@
-import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import type { Pubky } from '@/models/models.types';
+import { StreamSorting } from '@/services/nexus/nexus.types';
+import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 
 // Post Stream ID Pattern: sorting:source:kind
 // - SORTING: timeline (recent), total_engagement (popularity)
@@ -105,12 +107,52 @@ export type ReplyStreamCompositeId = `${StreamSource.REPLIES}:${string}`;
 export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
 
+// Collections feature (see `.plans/2026/may/collections-feature-foundation.md`).
+//
+// Stream id shapes:
+// - Author's own collections (kind=collection filter on author endpoint):
+//     `<authorPubky>:author:collection`
+// - Bookmarked collections (current viewer's bookmarks filtered by kind):
+//     `timeline:bookmarks:collection`
+//   The bookmarks endpoint pulls observer_id from `viewer_id` at fetch time,
+//   so the stream id does not embed the observer pubky (matches existing
+//   `TIMELINE_BOOKMARKS_*` shapes).
+// - Discover collections (popularity, all sources, kind=collection):
+//     `total_engagement:all:collection`
+// - Single-collection items (posts inside one collection):
+//     `collection:<authorPubky>:<postId>` (source-first composite, mirrors REPLIES).
+export type AuthorCollectionsStreamId = `${string}:${StreamSource.AUTHOR}:${StreamKind.COLLECTION}`;
+export type FollowedCollectionsStreamId =
+  `${StreamSorting.TIMELINE}:${StreamSource.BOOKMARKS}:${StreamKind.COLLECTION}`;
+export type DiscoverCollectionsStreamId = `${StreamSorting.ENGAGEMENT}:${StreamSource.ALL}:${StreamKind.COLLECTION}`;
+export type CollectionItemsStreamCompositeId = `${StreamSource.COLLECTION}:${string}:${string}`;
+
 export function buildPostReplyStreamId(compositePostId: string): ReplyStreamCompositeId {
   return `${StreamSource.REPLIES}:${compositePostId}`;
+}
+
+export function buildAuthorCollectionsStreamId(authorPubky: Pubky): AuthorCollectionsStreamId {
+  return `${authorPubky}:${StreamSource.AUTHOR}:${StreamKind.COLLECTION}`;
+}
+
+export function buildFollowedCollectionsStreamId(): FollowedCollectionsStreamId {
+  return `${StreamSorting.TIMELINE}:${StreamSource.BOOKMARKS}:${StreamKind.COLLECTION}`;
+}
+
+export function buildDiscoverCollectionsStreamId(): DiscoverCollectionsStreamId {
+  return `${StreamSorting.ENGAGEMENT}:${StreamSource.ALL}:${StreamKind.COLLECTION}`;
+}
+
+export function buildCollectionItemsStreamId(authorPubky: Pubky, postId: string): CollectionItemsStreamCompositeId {
+  return `${StreamSource.COLLECTION}:${authorPubky}:${postId}`;
 }
 
 export type PostStreamId =
   | PostStreamTypes
   | ReplyStreamCompositeId
   | AuthorStreamCompositeId
-  | AuthorRepliesStreamCompositeId;
+  | AuthorRepliesStreamCompositeId
+  | AuthorCollectionsStreamId
+  | FollowedCollectionsStreamId
+  | DiscoverCollectionsStreamId
+  | CollectionItemsStreamCompositeId;

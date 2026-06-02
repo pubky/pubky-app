@@ -1233,11 +1233,33 @@
     "warningReached": "最大文字数制限に達しました。"
   },
   "collections": {
-    "title": "マイコレクション",
+    "showMore": "もっと見る",
+    "loadFailed": "コレクションの読み込みに失敗しました。もう一度お試しください。",
+    "my": {
+      "title": "マイコレクション"
+    },
+    "followed": {
+      "title": "フォロー中のコレクション",
+      "empty": "まだコレクションをフォローしていません。"
+    },
+    "discover": {
+      "title": "コレクションを見つける",
+      "empty": "現在見つけられるコレクションはありません。"
+    },
     "bookmarks": {
       "title": "ブックマーク",
       "description": "あとで見たいものをすべて保存できます。"
     },
-    "private": "非公開"
+    "card": {
+      "follow": "フォロー",
+      "unfollow": "フォロー解除",
+      "delete": "削除",
+      "toast": {
+        "followed": "コレクションをフォローしました",
+        "followedDesc": "「{name}」コレクションをフォローしました",
+        "unfollowed": "コレクションのフォローを解除しました",
+        "unfollowedDesc": "「{name}」コレクションのフォローを解除しました"
+      }
+    }
   }
 }

@@ -454,7 +454,7 @@ describe('posts', () => {
 
     cy.get('a[href="/collections"]').first().click();
     cy.location('pathname').should('eq', '/collections');
-    cy.get('[data-cy="collection-card"]').contains('Bookmarks').click();
+    cy.get('[data-cy="collection-bookmark-card"]').click();
     cy.location('pathname').should('eq', '/collections/bookmarks');
 
     cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent1);

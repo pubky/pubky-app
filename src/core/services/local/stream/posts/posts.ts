@@ -256,11 +256,24 @@ export class LocalStreamPostsService {
         });
       }
 
-      // Collect bookmarks from Nexus response (viewer's bookmark status)
+      // Collect bookmarks from Nexus response (viewer's bookmark status).
+      //
+      // Nexus returns `bookmark: { id, indexed_at }` (see
+      // `NexusBookmark`). We mirror that into our local `bookmarks` table
+      // using `indexed_at` as the `created_at` sort key.
+      //
+      // The `?? indexed_at ?? now` fallback chain exists because
+      // `created_at` is indexed on the table and IndexedDB silently drops
+      // rows with `undefined` indexed keys from index-cursor reads
+      // (e.g. `orderBy('created_at')`). A single bad write would make the
+      // row invisible to FollowedCollections — keep the chain defensive
+      // against any future Nexus shape drift.
       if (post.bookmark) {
+        const bookmarkCreatedAt =
+          typeof post.bookmark.indexed_at === 'number' ? post.bookmark.indexed_at : (post.details.indexed_at ?? now);
         postBookmarks.push({
           id: postId,
-          created_at: post.bookmark.created_at,
+          created_at: bookmarkCreatedAt,
         });
       }
 

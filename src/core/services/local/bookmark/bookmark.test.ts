@@ -1,4 +1,6 @@
+import { liveQuery } from 'dexie';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
 import { db } from '@/database/franky/franky';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -11,6 +13,7 @@ import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { asInvalid } from '@/test-utils/type-assertions';
 
 // Test data
 const testData = {
@@ -322,6 +325,155 @@ describe('LocalBookmarkService', () => {
     it('should return empty array when no bookmarks exist', async () => {
       const bookmarks = await LocalBookmarkService.getAllBookmarks();
       expect(bookmarks).toEqual([]);
+    });
+  });
+
+  describe('getAllBookmarksSorted', () => {
+    it('returns bookmark IDs sorted by created_at descending (newest first)', async () => {
+      const olderId = 'author1:p-older';
+      const middleId = 'author2:p-middle';
+      const newerId = 'author3:p-newer';
+
+      await BookmarkModel.upsert({ id: olderId, created_at: 1000 });
+      await BookmarkModel.upsert({ id: middleId, created_at: 2000 });
+      await BookmarkModel.upsert({ id: newerId, created_at: 3000 });
+
+      const sorted = await LocalBookmarkService.getAllBookmarksSorted();
+
+      expect(sorted).toEqual([newerId, middleId, olderId]);
+    });
+
+    it('returns an empty array when no bookmarks exist', async () => {
+      const sorted = await LocalBookmarkService.getAllBookmarksSorted();
+      expect(sorted).toEqual([]);
+    });
+
+    it('includes rows missing a numeric created_at (treated as oldest)', async () => {
+      // Regression guard for the "FollowedCollections empty while Discover shows
+      // Unfollow" bug: an index-based reverse-cursor silently drops rows whose
+      // indexed key is undefined. The full-table-scan implementation must keep
+      // them visible (sorted to the tail).
+      const withTime = 'authorA:p-with-time';
+      const noTimeA = 'authorB:p-no-time-a';
+      const noTimeB = 'authorC:p-no-time-b';
+
+      await BookmarkModel.upsert({ id: withTime, created_at: 5000 });
+      // Force `created_at` to undefined to simulate historically-bad writes.
+      await BookmarkModel.table.put({ id: noTimeA, created_at: asInvalid<number>(undefined) });
+      await BookmarkModel.table.put({ id: noTimeB, created_at: asInvalid<number>(undefined) });
+
+      const sorted = await LocalBookmarkService.getAllBookmarksSorted();
+
+      expect(sorted).toHaveLength(3);
+      expect(sorted[0]).toBe(withTime);
+      expect(sorted.slice(1).sort()).toEqual([noTimeA, noTimeB].sort());
+    });
+  });
+
+  describe('BookmarkController.getAll — liveQuery reactivity', () => {
+    // Regression guard for the FollowedCollections / DiscoverCollections live
+    // queries: those sections wrap `BookmarkController.getAll()` in
+    // `useLiveQuery(...)`, which only re-runs when Dexie's table-observation
+    // proxy is hit on the same Dexie instance the query subscribes to.
+    //
+    // The call path goes Controller → Application → Service → Model.table.toArray().
+    // If any future refactor adds an `await` that breaks out of the Dexie
+    // async-context (e.g. a `fetch` round-trip in the middle), the live query
+    // would silently stop reacting to bookmark writes — cards would stop
+    // appearing in Followed / disappearing from Discover until a manual
+    // reload. These tests fail loudly in that scenario.
+
+    const waitForEmission = <T>(promise: Promise<T>, timeoutMs = 1000): Promise<T> =>
+      Promise.race<T>([
+        promise,
+        new Promise<T>((_resolve, reject) =>
+          setTimeout(() => reject(new Error(`liveQuery emission timed out after ${timeoutMs}ms`)), timeoutMs),
+        ),
+      ]);
+
+    it('emits initial value on subscription', async () => {
+      const observable = liveQuery(() => BookmarkController.getAll());
+
+      const first = await waitForEmission(
+        new Promise<string[]>((resolve, reject) => {
+          const sub = observable.subscribe({
+            next: (value) => {
+              sub.unsubscribe();
+              resolve(value);
+            },
+            error: reject,
+          });
+        }),
+      );
+
+      expect(first).toEqual([]);
+    });
+
+    it('re-emits when a bookmark is added', async () => {
+      const observable = liveQuery(() => BookmarkController.getAll());
+      const emissions: string[][] = [];
+
+      // Capture the first emission, then write, then capture the second.
+      const secondEmission = new Promise<string[]>((resolve, reject) => {
+        const sub = observable.subscribe({
+          next: (value) => {
+            emissions.push(value);
+            if (emissions.length === 2) {
+              sub.unsubscribe();
+              resolve(value);
+            }
+          },
+          error: reject,
+        });
+      });
+
+      // Wait for the initial emission before writing so the observer is
+      // primed and any subsequent table mutation triggers a re-run.
+      await waitForEmission(
+        new Promise<void>((resolve) => {
+          const check = () => (emissions.length >= 1 ? resolve() : setTimeout(check, 5));
+          check();
+        }),
+      );
+
+      const newId = 'authorA:p-live-1';
+      await BookmarkModel.upsert({ id: newId, created_at: 1000 });
+
+      const next = await waitForEmission(secondEmission);
+      expect(next).toContain(newId);
+    });
+
+    it('re-emits when a bookmark is deleted', async () => {
+      const seedId = 'authorB:p-live-2';
+      await BookmarkModel.upsert({ id: seedId, created_at: 2000 });
+
+      const observable = liveQuery(() => BookmarkController.getAll());
+      const emissions: string[][] = [];
+
+      const secondEmission = new Promise<string[]>((resolve, reject) => {
+        const sub = observable.subscribe({
+          next: (value) => {
+            emissions.push(value);
+            if (emissions.length === 2) {
+              sub.unsubscribe();
+              resolve(value);
+            }
+          },
+          error: reject,
+        });
+      });
+
+      await waitForEmission(
+        new Promise<void>((resolve) => {
+          const check = () => (emissions.length >= 1 ? resolve() : setTimeout(check, 5));
+          check();
+        }),
+      );
+
+      await BookmarkModel.table.delete(seedId);
+
+      const next = await waitForEmission(secondEmission);
+      expect(next).not.toContain(seedId);
     });
   });
 });

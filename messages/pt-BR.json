@@ -1233,11 +1233,33 @@
     "warningReached": "Você atingiu o limite máximo de caracteres."
   },
   "collections": {
-    "title": "Minhas coleções",
+    "showMore": "Mostrar mais",
+    "loadFailed": "Falha ao carregar as coleções. Tente novamente.",
+    "my": {
+      "title": "Minhas coleções"
+    },
+    "followed": {
+      "title": "Coleções seguidas",
+      "empty": "Você ainda não segue nenhuma coleção."
+    },
+    "discover": {
+      "title": "Descobrir coleções",
+      "empty": "Sem coleções para descobrir no momento."
+    },
     "bookmarks": {
       "title": "Favoritos",
       "description": "Tudo o que você quer salvar para mais tarde."
     },
-    "private": "PRIVADO"
+    "card": {
+      "follow": "Seguir",
+      "unfollow": "Deixar de seguir",
+      "delete": "Excluir",
+      "toast": {
+        "followed": "Coleção seguida",
+        "followedDesc": "Você agora segue a coleção {name}",
+        "unfollowed": "Coleção deixada de seguir",
+        "unfollowedDesc": "Você deixou de seguir a coleção {name}"
+      }
+    }
   }
 }

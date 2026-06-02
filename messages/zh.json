@@ -1227,11 +1227,33 @@
     "warningReached": "您已达到最大字符数限制。"
   },
   "collections": {
-    "title": "我的收藏集",
+    "showMore": "显示更多",
+    "loadFailed": "加载收藏集失败，请重试。",
+    "my": {
+      "title": "我的收藏集"
+    },
+    "followed": {
+      "title": "已关注的收藏集",
+      "empty": "你还没有关注任何收藏集。"
+    },
+    "discover": {
+      "title": "发现收藏集",
+      "empty": "目前没有可发现的收藏集。"
+    },
     "bookmarks": {
       "title": "书签",
       "description": "保存你想稍后查看的所有内容。"
     },
-    "private": "私密"
+    "card": {
+      "follow": "关注",
+      "unfollow": "取消关注",
+      "delete": "删除",
+      "toast": {
+        "followed": "已关注收藏",
+        "followedDesc": "你已关注 {name} 收藏",
+        "unfollowed": "已取消关注收藏",
+        "unfollowedDesc": "你已取消关注 {name} 收藏"
+      }
+    }
   }
 }

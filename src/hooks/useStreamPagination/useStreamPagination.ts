@@ -21,6 +21,7 @@ export function useStreamPagination({
   streamId,
   limit = NEXUS_POSTS_PER_PAGE,
   resetOnStreamChange = true,
+  onError,
 }: UseStreamPaginationOptions): UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
   const [lastPostId, setLastPostId] = useState<string | undefined>(undefined);
@@ -135,11 +136,12 @@ export function useStreamPagination({
         setError(errorMessage);
         setHasMore(false);
         Logger.error('Failed to fetch stream slice:', err);
+        onError?.(err);
       } finally {
         setLoadingState(isInitialLoad, false);
       }
     },
-    [streamId, lastPostId, streamTail, limit, setLoadingState],
+    [streamId, lastPostId, streamTail, limit, setLoadingState, onError],
   );
 
   /**

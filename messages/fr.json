@@ -1233,11 +1233,33 @@
     "warningReached": "Vous avez atteint la limite maximale de caractères."
   },
   "collections": {
-    "title": "Mes collections",
+    "showMore": "Afficher plus",
+    "loadFailed": "Échec du chargement des collections. Veuillez réessayer.",
+    "my": {
+      "title": "Mes collections"
+    },
+    "followed": {
+      "title": "Collections suivies",
+      "empty": "Vous ne suivez aucune collection pour le moment."
+    },
+    "discover": {
+      "title": "Découvrir des collections",
+      "empty": "Aucune collection à découvrir pour le moment."
+    },
     "bookmarks": {
       "title": "Signets",
       "description": "Tout ce que vous souhaitez enregistrer pour plus tard."
     },
-    "private": "PRIVÉ"
+    "card": {
+      "follow": "Suivre",
+      "unfollow": "Ne plus suivre",
+      "delete": "Supprimer",
+      "toast": {
+        "followed": "Collection suivie",
+        "followedDesc": "Vous suivez désormais la collection {name}",
+        "unfollowed": "Collection non suivie",
+        "unfollowedDesc": "Vous ne suivez plus la collection {name}"
+      }
+    }
   }
 }

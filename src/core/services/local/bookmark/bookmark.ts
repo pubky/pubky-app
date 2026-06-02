@@ -98,12 +98,23 @@ export class LocalBookmarkService {
   }
 
   /**
-   * Get all bookmarked post IDs
+   * Get all bookmarked post IDs (unordered).
    *
    * @returns Array of bookmarked post IDs
    */
   static async getAllBookmarks(): Promise<string[]> {
     return await BookmarkModel.findAll();
+  }
+
+  /**
+   * Get all bookmarked post IDs sorted by `created_at` descending
+   * (most recently bookmarked first).
+   *
+   * @returns Array of bookmarked post IDs, newest first.
+   */
+  static async getAllBookmarksSorted(): Promise<string[]> {
+    const sorted = await BookmarkModel.findAllSorted();
+    return sorted.map((b) => b.id);
   }
 
   /**

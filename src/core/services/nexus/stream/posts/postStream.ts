@@ -6,6 +6,7 @@ import {
   StreamSource,
   type TPostStreamFetchParams,
   type TStreamAuthorParams,
+  type TStreamCollectionParams,
   type TStreamPostRepliesParams,
   type TStreamPostsByIdsParams,
 } from '@/services/nexus/stream/posts/postStream.types';
@@ -61,6 +62,9 @@ export class NexusPostStreamService {
       case StreamSource.AUTHOR:
       case StreamSource.AUTHOR_REPLIES:
         nexusEndpoint = postStreamApi[invokeEndpoint]({ ...params, ...extraParams } as TStreamAuthorParams);
+        break;
+      case StreamSource.COLLECTION:
+        nexusEndpoint = postStreamApi.collection({ ...params, ...extraParams } as TStreamCollectionParams);
         break;
       default:
         throw new Error(`Invalid stream type: ${invokeEndpoint}`);

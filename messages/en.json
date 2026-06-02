@@ -1233,11 +1233,33 @@
     "warningReached": "You've reached the maximum character limit."
   },
   "collections": {
-    "title": "My Collections",
+    "showMore": "Show more",
+    "loadFailed": "Failed to load collections. Please try again.",
+    "my": {
+      "title": "My Collections"
+    },
+    "followed": {
+      "title": "Followed Collections",
+      "empty": "You haven't followed any collections yet."
+    },
+    "discover": {
+      "title": "Discover Collections",
+      "empty": "No collections to discover right now."
+    },
     "bookmarks": {
       "title": "Bookmarks",
       "description": "Everything you want to save for later."
     },
-    "private": "PRIVATE"
+    "card": {
+      "follow": "Follow",
+      "unfollow": "Unfollow",
+      "delete": "Delete",
+      "toast": {
+        "followed": "Collection followed",
+        "followedDesc": "You've followed the {name} collection",
+        "unfollowed": "Collection unfollowed",
+        "unfollowedDesc": "You've unfollowed the {name} collection"
+      }
+    }
   }
 }
