@@ -12,8 +12,7 @@ We need these values to be configurable at **runtime** while:
 
 - preserving native (Zod) validation,
 - failing loudly in deployed environments instead of silently shipping staging defaults,
-- not regressing local dev/test, and
-- not rewriting build artifacts (the earlier draft, PR #1644, used an `entrypoint.sh` `sed` over compiled `.next` files).
+- not regressing local dev/test
 
 Key codebase facts that shaped the design:
 
@@ -55,12 +54,6 @@ Read the runtime values from **non-`NEXT_PUBLIC_` env names** (`PUBKY_RUNTIME_*`
 - `shouldEnableSentry()` keeps reading build-time `Env.NEXT_PUBLIC_TESTNET`, because Sentry initializes (server/client/edge) before the injected config exists. A testnet deploy of a prod-built image would still enable Sentry. If runtime divergence of Sentry's testnet gate becomes necessary, it will need its own runtime treatment, separate from and earlier than the app-config injection path.
 
 ## Alternatives Considered
-
-### Placeholder + `entrypoint.sh` find/replace (PR #1644)
-
-**Description**: Build with placeholder values, then `sed` the compiled `.next/static` JS at container start.
-
-**Why not chosen**: Rewrites compiled artifacts (fragile), and forced dropping native URL validation.
 
 ### Runtime config JSON fetched on app load ("on demand")
 
