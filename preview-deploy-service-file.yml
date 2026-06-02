@@ -43,6 +43,21 @@ spec:
               port: 8080
         - name: pubky-app-preview-1
           image: SHOULD_BE_UPDATED
+          env:
+            - name: PUBKY_RUNTIME_TESTNET
+              value: "false"
+            - name: PUBKY_RUNTIME_HOMESERVER
+              value: "ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy"
+            - name: PUBKY_RUNTIME_NEXUS_URL
+              value: "https://nexus.staging.pubky.app"
+            - name: PUBKY_RUNTIME_CDN_URL
+              value: "https://nexus.staging.pubky.app/static"
+            - name: PUBKY_RUNTIME_HOMEGATE_URL
+              value: "https://homegate.staging.pubky.app"
+            - name: PUBKY_RUNTIME_PKARR_RELAYS
+              value: '["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
+            - name: PUBKY_RUNTIME_DEFAULT_HTTP_RELAY
+              value: "https://httprelay.staging.pubky.app/inbox"
           resources:
             limits:
               cpu: '1'
