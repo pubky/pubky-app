@@ -113,10 +113,11 @@ export function FollowedCollections() {
     initialFetchRef.current = true;
     setSeedLoading(true);
     void fetchNextSeedSlice({ isInitial: true }).finally(() => setSeedLoading(false));
-
-    // is intentionally excluded: it is recreated on every render, so including
-    // it would re-fire this once-per-mount seed effect and re-trigger the seed
-    // fetch on every state update. `hasHydrated` is the only intended trigger.
+    // `fetchNextSeedSlice` is intentionally excluded: it is recreated on every
+    // render, so including it would re-fire this once-per-mount seed effect and
+    // re-trigger the seed fetch on every state update. `hasHydrated` is the only
+    // intended trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated]);
 
   // Visible-count cap; live query slices its result to this many rows.

@@ -269,6 +269,11 @@ export function DiscoverCollections() {
     return () => {
       token.cancelled = true;
     };
+    // `runUserAction` is intentionally excluded: it closes over refs
+    // (`inFlightInitialRef`, `cursorRef`) and is recreated on every render, so
+    // including it would re-fire this initial-load effect on every state update
+    // and restart the fetch mid-stream. The auth/stream identity deps below are
+    // the only triggers we want.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, currentUserPubky, streamId]);
 
