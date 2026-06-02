@@ -87,6 +87,8 @@ const url = getNexusUrl(); // resolved at call time
 - **Deployed (`NODE_ENV=production`, including staging), or `PUBKY_RUNTIME_CONFIG_REQUIRED=true`**: `PUBKY_RUNTIME_*` are **required**. Missing/invalid config throws (no silent fallback to staging). If any one `PUBKY_RUNTIME_*` is set, **all** are required (catches partial deploy config).
 - **Local dev / tests**: falls back to the `NEXT_PUBLIC_*` defaults (honoring `.env.local` and `src/config/test.ts`).
 
+> Running a production build locally (`npm run build && npm run start`) runs as `NODE_ENV=production`, so it **requires** all seven `PUBKY_RUNTIME_*` to be set (a partial set throws). `npm run dev` does not — it uses the `NEXT_PUBLIC_*` fallback. See the `PUBKY_RUNTIME_*` block in `.env.example`.
+
 > Contract shift: staging runs `NODE_ENV=production`, so staging must now set `PUBKY_RUNTIME_*`. The `NEXT_PUBLIC_*` network values are now **local dev/test defaults only** — no deployed environment may rely on them.
 
 ### These are PUBLIC values
