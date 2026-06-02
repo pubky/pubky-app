@@ -18,7 +18,14 @@ export function ActionButtons({ className, onCreateAccount, onExplore, ...props 
   return (
     <Container className={cn('gap-3 sm:flex-row sm:items-center', className)} {...props}>
       {onExplore && (
-        <Button id="explore-btn" variant="secondary" className="sm:w-auto" size="lg" onClick={onExplore}>
+        <Button
+          id="explore-btn"
+          data-cy="explore-btn"
+          variant="secondary"
+          className="sm:w-auto"
+          size="lg"
+          onClick={onExplore}
+        >
           <Eye className="h-4 w-4" />
           {t('explore')}
         </Button>

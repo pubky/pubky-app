@@ -17,6 +17,7 @@ export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButton
     <Button
       id="header-sign-in-btn"
       data-testid="header-sign-in-btn"
+      data-cy="header-sign-in-btn"
       variant="secondary"
       onClick={handleSignIn}
       className="gap-2"
