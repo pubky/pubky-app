@@ -8,6 +8,9 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/application/feed/feed.types';
 import { db } from '@/database/franky/franky';
+import { AppError } from '@/libs/error/error';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { FeedModel } from '@/models/feed/feed';
@@ -596,6 +599,28 @@ describe('FeedApplication', () => {
       const result = await FeedApplication.fetchFeeds(testUserId);
 
       expect(result).toEqual([]);
+    });
+
+    it('should propagate non-404 AppError from HomeserverService.list', async () => {
+      const { listSpy } = setupFetchMocks();
+      const serverError = new AppError({
+        category: ErrorCategory.Server,
+        code: ServerErrorCode.INTERNAL_ERROR,
+        message: 'Server error',
+        service: ErrorService.Homeserver,
+        operation: 'list',
+        context: { statusCode: 500 },
+      });
+      listSpy.mockRejectedValue(serverError);
+
+      await expect(FeedApplication.fetchFeeds(testUserId)).rejects.toThrow('Server error');
+    });
+
+    it('should propagate non-AppError exceptions', async () => {
+      const { listSpy } = setupFetchMocks();
+      listSpy.mockRejectedValue(new Error('network-fail'));
+
+      await expect(FeedApplication.fetchFeeds(testUserId)).rejects.toThrow('network-fail');
     });
   });
 });
