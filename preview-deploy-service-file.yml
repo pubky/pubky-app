@@ -17,7 +17,7 @@ spec:
         run.googleapis.com/startupProbeType: Default
       annotations:
         autoscaling.knative.dev/maxScale: '2'
-        run.googleapis.com/container-dependencies: '{"nginx":["franky-preview-1"]}'
+        run.googleapis.com/container-dependencies: '{"nginx":["pubky-app-preview-1"]}'
         run.googleapis.com/cpu-throttling: 'true'
         run.googleapis.com/startup-cpu-boost: 'true'
         run.googleapis.com/sessionAffinity: 'true'
@@ -41,7 +41,7 @@ spec:
             failureThreshold: 1
             tcpSocket:
               port: 8080
-        - name: franky-preview-1
+        - name: pubky-app-preview-1
           image: SHOULD_BE_UPDATED
           resources:
             limits:

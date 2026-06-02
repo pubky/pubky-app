@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { PostNotFound } from '@/molecules/PostNotFound/PostNotFound';
 import { HotDiscoveryContentLayout } from '@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
@@ -18,7 +17,6 @@ interface PostNotFoundDiscoveryViewProps {
  * with a trending posts timeline under the empty state (see #1769 / Figma).
  */
 export function PostNotFoundDiscoveryView({ postId }: PostNotFoundDiscoveryViewProps) {
-  useLayoutReset();
   const tHot = useTranslations('hot');
 
   return (

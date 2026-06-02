@@ -23,7 +23,7 @@ env:
   REGISTRY: europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo
   REGION: europe-west6
   PROJECT_ID: infra-464608
-  SERVICE_BASE_NAME: franky-preview
+  SERVICE_BASE_NAME: pubky-app-preview
 
 concurrency:
   group: preview-${{ github.event.pull_request.number || github.event.inputs.pr_number || '0' }}

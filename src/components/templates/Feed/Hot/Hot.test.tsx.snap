@@ -4,6 +4,7 @@ exports[`Hot - Snapshots > matches snapshot 1`] = `
 <div>
   <div
     class="pb-24 lg:pb-12"
+    data-disable-wide-shell-layout="true"
     data-has-gradient-background="false"
     data-testid="content-layout"
   >
