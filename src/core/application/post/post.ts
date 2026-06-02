@@ -28,7 +28,7 @@ import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import { buildAuthorCollectionStreamId } from '@/models/stream/post/postStream.types';
+import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostService } from '@/services/local/post/post';
@@ -166,12 +166,12 @@ export class PostApplication {
   }
 
   static async getAuthoredCollections({ authorId }: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
-    const streamId = buildAuthorCollectionStreamId(authorId);
+    const streamId = buildAuthorCollectionsStreamId(authorId);
     const stream = await LocalStreamPostsService.read({ streamId });
 
     if (!stream) return null;
 
-    const details = await LocalPostService.readDetailsByIdsPreserveOrder(stream.stream);
+    const details = await LocalPostService.readDetailsByIds(stream.stream);
 
     return details
       .filter((post): post is PostDetailsModelSchema => post !== undefined && post.kind === 'collection')
@@ -186,7 +186,7 @@ export class PostApplication {
     authorId,
     viewerId,
   }: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
-    const streamId = buildAuthorCollectionStreamId(authorId);
+    const streamId = buildAuthorCollectionsStreamId(authorId);
     const { cacheMissPostIds } = await PostStreamApplication.fetchStreamSlice({
       streamId,
       streamHead: SKIP_FETCH_NEW_POSTS,

@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, test, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
-import {
-  buildAuthorCollectionStreamId,
-  type PostStreamId,
-  PostStreamTypes,
-} from '@/models/stream/post/postStream.types';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { type NexusPost, type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import {

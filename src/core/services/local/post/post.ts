@@ -20,7 +20,7 @@ import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import {
-  buildAuthorCollectionStreamId,
+  buildAuthorCollectionsStreamId,
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
@@ -429,8 +429,8 @@ export class LocalPostService {
       ops.push(updateStream(`author_replies:${authorId}`, [compositePostId]));
       ops.push(updateStream(`post_replies:${parentCompositeId}`, [compositePostId]));
     } else if (kind === 'collection') {
-      ops.push(updateStream(buildAuthorCollectionStreamId(authorId), [compositePostId]));
-      ops.push(removeFromUnreadStream(buildAuthorCollectionStreamId(authorId), [compositePostId]));
+      ops.push(updateStream(buildAuthorCollectionsStreamId(authorId), [compositePostId]));
+      ops.push(removeFromUnreadStream(buildAuthorCollectionsStreamId(authorId), [compositePostId]));
     } else {
       ops.push(updateStream(PostStreamTypes.TIMELINE_ALL_ALL, [compositePostId]));
       ops.push(updateStream(`timeline:all:${kind}` as PostStreamId, [compositePostId]));
