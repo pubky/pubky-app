@@ -3,10 +3,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
+import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
-import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { buildFollowedCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -43,9 +43,9 @@ vi.mock('@/controllers/bookmark/bookmark', () => ({
   },
 }));
 
-vi.mock('@/models/post/details/postDetails', () => ({
-  PostDetailsModel: {
-    findByIdsPreserveOrder: vi.fn(),
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    getDetailsByIds: vi.fn(),
   },
 }));
 
@@ -102,7 +102,7 @@ const mockGetOrFetchStreamSlice = vi.mocked(StreamPostsController.getOrFetchStre
 const mockPrepareStreamForInitialLoad = vi.mocked(StreamPostsController.prepareStreamForInitialLoad);
 const mockGetCachedLastPostTimestamp = vi.mocked(StreamPostsController.getCachedLastPostTimestamp);
 const mockBookmarkGetAll = vi.mocked(BookmarkController.getAll);
-const mockFindByIdsPreserveOrder = vi.mocked(PostDetailsModel.findByIdsPreserveOrder);
+const mockGetDetailsByIds = vi.mocked(PostController.getDetailsByIds);
 
 function makeSlice({
   nextPageIds = [],
@@ -124,7 +124,7 @@ beforeEach(() => {
   mockGetCachedLastPostTimestamp.mockResolvedValue(0);
   mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ reachedEnd: true }));
   mockBookmarkGetAll.mockResolvedValue([]);
-  mockFindByIdsPreserveOrder.mockResolvedValue([]);
+  mockGetDetailsByIds.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -208,7 +208,7 @@ describe('FollowedCollections', () => {
 
     const bookmarkIds = ['a:p1', 'a:p2', 'b:p3'];
     mockBookmarkGetAll.mockResolvedValue(bookmarkIds);
-    mockFindByIdsPreserveOrder.mockResolvedValue([
+    mockGetDetailsByIds.mockResolvedValue([
       asOpaque<PostDetailsModelSchema>({ id: 'a:p1', kind: 'collection' }),
       asOpaque<PostDetailsModelSchema>({ id: 'a:p2', kind: 'collection' }),
       asOpaque<PostDetailsModelSchema>({ id: 'b:p3', kind: 'short' }),
@@ -229,7 +229,7 @@ describe('FollowedCollections', () => {
     const result = await capturedFn!();
     expect(result).toEqual(['a:p1', 'a:p2']);
     expect(mockBookmarkGetAll).toHaveBeenCalled();
-    expect(mockFindByIdsPreserveOrder).toHaveBeenCalledWith(bookmarkIds);
+    expect(mockGetDetailsByIds).toHaveBeenCalledWith({ compositeIds: bookmarkIds });
   });
 
   it('renders the empty state when seed finished and live query yields no ids', async () => {

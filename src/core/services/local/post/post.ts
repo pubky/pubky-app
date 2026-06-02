@@ -39,6 +39,30 @@ export class LocalPostService {
   }
 
   /**
+   * Bulk reads multiple post details from the local database, preserving input
+   * order (undefined entries for posts not found). Mirrors `readRelationshipsByIds`.
+   * @param postIds - Array of composite post IDs (author:postId)
+   * @returns Array of post details aligned to `postIds` (undefined for missing posts)
+   *
+   * @throws {DatabaseError} When database operations fail
+   */
+  static async readDetailsByIds(postIds: string[]): Promise<(PostDetailsModelSchema | undefined)[]> {
+    if (postIds.length === 0) return [];
+
+    try {
+      return await PostDetailsModel.findByIdsPreserveOrder(postIds);
+    } catch (error) {
+      Logger.error('Failed to read post details by ids', { postIds, error });
+      throw Err.database(DatabaseErrorCode.QUERY_FAILED, 'Failed to read post details by ids', {
+        service: ErrorService.Local,
+        operation: 'readDetailsByIds',
+        context: { postIds },
+        cause: error,
+      });
+    }
+  }
+
+  /**
    * Filter out deleted posts from a list of post IDs.
    * Posts without details in cache are kept (fail-open semantics).
    *

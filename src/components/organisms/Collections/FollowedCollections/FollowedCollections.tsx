@@ -10,10 +10,10 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
 import { COLLECTIONS_SECTION_PAGE_SIZE, COLLECTIONS_SECTION_SKELETON_COUNT } from '@/config/collections';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
+import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { Logger } from '@/libs/logger/logger';
 import { parseCompositeId } from '@/models/models.utils';
-import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { buildFollowedCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { AvatarStack } from '@/molecules/AvatarStack/AvatarStack';
 import { AvatarStackSkeleton } from '@/molecules/AvatarStack/AvatarStack.skeleton';
@@ -113,23 +113,28 @@ export function FollowedCollections() {
     initialFetchRef.current = true;
     setSeedLoading(true);
     void fetchNextSeedSlice({ isInitial: true }).finally(() => setSeedLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    // is intentionally excluded: it is recreated on every render, so including
+    // it would re-fire this once-per-mount seed effect and re-trigger the seed
+    // fetch on every state update. `hasHydrated` is the only intended trigger.
   }, [hasHydrated]);
 
   // Visible-count cap; live query slices its result to this many rows.
   const visibleLimit = pagesShown * COLLECTIONS_SECTION_PAGE_SIZE;
 
   // Live query: bookmarks table ∩ collection-kind post details, newest first.
-  // Uses `BookmarkController.getAll()` (which delegates through the
-  // Application/Service layers) so all data access stays inside the layered
-  // architecture per AGENTS.md. Dexie's live-query observer still picks up
-  // changes because the underlying read goes through the same Dexie instance.
+  // Both reads go through controllers (`BookmarkController.getAll()` /
+  // `PostController.getDetailsByIds()`) which delegate down the
+  // Application/Service/Model chain, so all data access stays inside the
+  // layered architecture per AGENTS.md. Dexie's live-query observer still picks
+  // up changes because the underlying reads go through the same Dexie instance.
+  // `getDetailsByIds` preserves bookmark order, so the result aligns to `ids` by index.
   const visibleIds =
     useLiveQuery(async () => {
       try {
         const ids = await BookmarkController.getAll();
         if (ids.length === 0) return EMPTY_IDS;
-        const details = await PostDetailsModel.findByIdsPreserveOrder(ids);
+        const details = await PostController.getDetailsByIds({ compositeIds: ids });
         const collectionIds: string[] = [];
         for (let i = 0; i < ids.length; i += 1) {
           const detail = details[i];

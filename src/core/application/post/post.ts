@@ -1,7 +1,12 @@
 import { postUriBuilder } from 'pubky-app-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import type { TCreatePostInput, TEditPostInput, TGetOrFetchPostParams } from '@/application/post/post.types';
+import type {
+  TCreatePostInput,
+  TEditPostInput,
+  TGetDetailsByIdsParams,
+  TGetOrFetchPostParams,
+} from '@/application/post/post.types';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { TagApplication } from '@/application/tag/tag';
 import { ModerationController } from '@/controllers/moderation/moderation';
@@ -39,6 +44,17 @@ export class PostApplication {
     if (!post) return null;
     const [enriched] = await ModerationController.enrichPosts([post]);
     return enriched;
+  }
+
+  /**
+   * Bulk reads multiple post details from the local database, preserving input order.
+   * @param compositeIds - Array of composite post IDs in format "authorId:postId"
+   * @returns Array of post details aligned to `compositeIds` (undefined for missing posts)
+   */
+  static async getDetailsByIds({
+    compositeIds,
+  }: TGetDetailsByIdsParams): Promise<(PostDetailsModelSchema | undefined)[]> {
+    return await LocalPostService.readDetailsByIds(compositeIds);
   }
 
   /**
