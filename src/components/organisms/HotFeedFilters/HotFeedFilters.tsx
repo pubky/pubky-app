@@ -13,7 +13,7 @@ import {
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { REACH } from '@/stores/home/home.types';
+import { REACH, type ReachType } from '@/stores/home/home.types';
 import { useHotStore } from '@/stores/hot/hot.store';
 import { TIMEFRAME, type TimeframeType } from '@/stores/hot/hot.types';
 
@@ -86,6 +86,23 @@ export function FilterTimeframe({ selectedTab = TIMEFRAME.THIS_MONTH, onTabChang
 // ============================================================================
 
 /**
+ * useGatedReachChange
+ *
+ * "All" reach is public; "Following"/"Friends" require an account, so prompt
+ * Join Pubky in Explore mode (logged out) instead of changing the reach.
+ */
+function useGatedReachChange(setReach: (reach: ReachType) => void) {
+  const { requireAuth } = useRequireAuth();
+  return (value: ReachType) => {
+    if (value === REACH.ALL) {
+      setReach(value);
+      return;
+    }
+    requireAuth(() => setReach(value));
+  };
+}
+
+/**
  * HotFeedSidebar
  *
  * Left sidebar for Hot feed - displays reach and timeframe filters.
@@ -95,14 +112,16 @@ export function FilterTimeframe({ selectedTab = TIMEFRAME.THIS_MONTH, onTabChang
 export function HotFeedSidebar() {
   const { reach, setReach, timeframe, setTimeframe } = useHotStore();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const { requireAuth } = useRequireAuth();
   const isAuthenticated = Boolean(currentUserPubky);
   const effectiveReach = isAuthenticated ? reach : REACH.ALL;
+
+  const handleReachChange = useGatedReachChange(setReach);
+
   return (
     <>
       <FilterReach
         selectedTab={effectiveReach}
-        onTabChange={(tab) => requireAuth(() => setReach(tab))}
+        onTabChange={handleReachChange}
         hideAccountScopedOptions={!isAuthenticated}
       />
       <div className="sticky top-[100px] w-full self-start">
@@ -121,14 +140,16 @@ export function HotFeedSidebar() {
 export function HotFeedDrawer() {
   const { reach, setReach, timeframe, setTimeframe } = useHotStore();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const { requireAuth } = useRequireAuth();
   const isAuthenticated = Boolean(currentUserPubky);
   const effectiveReach = isAuthenticated ? reach : REACH.ALL;
+
+  const handleReachChange = useGatedReachChange(setReach);
+
   return (
     <div className="flex flex-col gap-6">
       <FilterReach
         selectedTab={effectiveReach}
-        onTabChange={(tab) => requireAuth(() => setReach(tab))}
+        onTabChange={handleReachChange}
         hideAccountScopedOptions={!isAuthenticated}
       />
       <FilterTimeframe selectedTab={timeframe} onTabChange={setTimeframe} />

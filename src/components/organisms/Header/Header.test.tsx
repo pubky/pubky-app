@@ -113,8 +113,16 @@ vi.mock('@/database/franky/franky', () => ({
 // Mock molecules
 vi.mock('@/molecules/Header/Header', () => {
   return {
-    HeaderContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="header-container" data-class-name={className}>
+    HeaderContainer: ({
+      children,
+      className,
+      classNameNav,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      classNameNav?: string;
+    }) => (
+      <div data-testid="header-container" data-class-name={className} data-class-name-nav={classNameNav}>
         {children}
       </div>
     ),
@@ -638,6 +646,17 @@ describe('Header', () => {
       expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
+    });
+
+    it('uses app-shell gutter alignment when unauthenticated on a core explore route', () => {
+      mockCurrentUserPubky = null;
+      mockIsPublicRoute.mockReturnValue(false);
+      mockIsCoreExploreRoute.mockReturnValue(true);
+      mockUsePathname.mockReturnValue(HOME_ROUTES.HOME);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-container')).toHaveAttribute('data-class-name-nav', ' xl:px-0');
     });
 
     it('renders HeaderSignIn when authenticated regardless of public route', () => {

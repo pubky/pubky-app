@@ -36,7 +36,7 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
         data-slot="dialog-description"
         id="radix-normalized"
       >
-        Sign in or create an account to interact with posts and profiles.
+        Like what you see? Join the freedom web now.
       </p>
     </div>
     <div

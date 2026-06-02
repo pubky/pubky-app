@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { UsersRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import {
   WHO_TO_FOLLOW_BUFFER_SIZE,
@@ -33,6 +34,7 @@ export function WhoToFollowSidebar() {
   const pathname = usePathname();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isAuthenticated = Boolean(currentUserPubky);
+  const { requireAuth } = useRequireAuth();
   const { preservedFollowedUserIds, handleFollowClick, isUserLoading } = useWhoToFollowFollowPreservation({
     resetKey: pathname,
   });
@@ -50,8 +52,9 @@ export function WhoToFollowSidebar() {
   const handleUserClick = (pubky: Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
   };
+  // In Explore mode there are no real recommendations, so prompt Join Pubky instead of routing.
   const handleSeeAll = () => {
-    router.push(APP_ROUTES.WHO_TO_FOLLOW);
+    requireAuth(() => router.push(APP_ROUTES.WHO_TO_FOLLOW));
   };
   return (
     <SidebarSection

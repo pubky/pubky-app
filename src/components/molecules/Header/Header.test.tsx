@@ -435,16 +435,25 @@ describe('Header Components', () => {
   });
 
   describe('HeaderExploreNavigationButtons', () => {
-    it('renders public explore navigation without account links', () => {
+    it('renders full navigation with account routes gated behind the Join dialog', () => {
       render(<HeaderExploreNavigationButtons />);
 
+      // Home and Hot are public explore routes → real navigation links.
       const links = screen.getAllByRole('link');
       expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot']);
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
+
+      // All four nav icons are shown.
       expect(document.querySelector('.lucide-house')).toBeInTheDocument();
       expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
-      expect(document.querySelector('.lucide-bookmark')).not.toBeInTheDocument();
-      expect(document.querySelector('.lucide-settings')).not.toBeInTheDocument();
+      expect(document.querySelector('.lucide-bookmark')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
+
+      // Bookmarks/Settings require an account, so they render as auth-gated buttons, not links.
+      expect(document.querySelector('.lucide-bookmark')?.closest('a')).toBeNull();
+      expect(document.querySelector('.lucide-settings')?.closest('a')).toBeNull();
+      expect(document.querySelector('[data-cy="header-bookmarks-btn"]')?.tagName).toBe('BUTTON');
+      expect(document.querySelector('[data-cy="header-settings-btn"]')?.tagName).toBe('BUTTON');
     });
 
     it('opens sign-in dialog from the Join button', () => {

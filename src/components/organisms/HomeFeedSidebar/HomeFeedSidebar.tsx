@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -11,7 +10,7 @@ import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { REACH } from '@/stores/home/home.types';
+import { REACH, type ReachType } from '@/stores/home/home.types';
 import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
@@ -40,6 +39,15 @@ function HomeFeedFilters({
   const isAuthenticated = Boolean(currentUserPubky);
   const effectiveReach = isAuthenticated ? reach : REACH.ALL;
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
+
+  // "All" reach is public; "Following"/"Friends" require an account, so prompt Join Pubky in Explore mode.
+  const handleReachChange = (value: ReachType) => {
+    if (value === REACH.ALL) {
+      setReach(value);
+      return;
+    }
+    requireAuth(() => setReach(value));
+  };
   const resolvedContent = resolveVisualFeedContent({
     content,
     variant: feedVariant,
@@ -54,7 +62,7 @@ function HomeFeedFilters({
       {!hideReachFilter && (
         <FilterReach
           selectedTab={effectiveReach}
-          onTabChange={(tab) => requireAuth(() => setReach(tab))}
+          onTabChange={handleReachChange}
           hideAccountScopedOptions={!isAuthenticated}
         />
       )}

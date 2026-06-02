@@ -37,10 +37,12 @@ export function Header() {
   // or during profile setup (step 5)
   const shouldShowTitle = currentTitle && (!isAuthenticated || currentStep === 5);
 
-  // Onboarding or non-authenticated route
-  const isOnboardingOrNonAuthenticatedRoute = isOnboarding || !isAuthenticated;
-  // Add padding to the header container only on onboarding or non-authenticated routes
-  const classNameNav = isOnboardingOrNonAuthenticatedRoute ? '' : ' xl:px-0';
+  // App-shell layout: authenticated app pages and Explore mode (unauthenticated on a
+  // public route, e.g. feed/post/profile) both render the feed + sidebars, so the header
+  // must align with the content gutter. Onboarding and the landing page keep the default
+  // centered padding instead.
+  const isAppShellLayout = !isOnboarding && (isAuthenticated || isPublicRoute || isCoreExploreRoute);
+  const classNameNav = isAppShellLayout ? ' xl:px-0' : '';
   // Determine which header content to show:
   // - Onboarding: HeaderOnboarding
   // - Authenticated: HeaderSignIn (navigation + avatar)

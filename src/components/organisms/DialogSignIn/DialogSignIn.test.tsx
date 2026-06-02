@@ -42,7 +42,7 @@ describe('DialogSignIn', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
       // Title appears in dialog header
       expect(screen.getByRole('heading', { name: 'Join Pubky' })).toBeInTheDocument();
-      expect(screen.getByText('Sign in or create an account to interact with posts and profiles.')).toBeInTheDocument();
+      expect(screen.getByText('Like what you see? Join the freedom web now.')).toBeInTheDocument();
     });
 
     it('renders two cards for join and sign in options', () => {
