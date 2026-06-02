@@ -87,16 +87,14 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
         characterLimit,
         size,
         timeAgo,
-        className,
       }: {
         userId: string;
         userName: string;
         characterLimit?: { count: number; max: number };
         size?: 'normal' | 'large';
         timeAgo?: string | null;
-        className?: string;
       }) => (
-        <div data-testid="post-header-user-info" data-size={size} data-class-name={className}>
+        <div data-testid="post-header-user-info" data-size={size}>
           <div data-testid="avatar" />
           <div>{userName}</div>
           <div>@{userId.substring(0, 8)}</div>

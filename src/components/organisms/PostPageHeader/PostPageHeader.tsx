@@ -77,13 +77,13 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
         <Typography
           as="h1"
           overrideDefaults
-          className="flex w-full min-w-0 items-baseline text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
+          className="flex w-full min-w-0 items-baseline md:w-0 md:flex-1"
           data-testid="post-page-title"
         >
-          <Typography as="span" className="shrink-0 pr-1">
+          <Typography as="span" className="text-shrink-0 pr-1 text-2xl leading-8 font-light text-muted-foreground">
             {titlePrefix}{' '}
           </Typography>
-          <Typography as="span" className="min-w-0 flex-1 truncate">
+          <Typography as="span" className="min-w-0 flex-1 truncate text-2xl leading-8 font-light text-muted-foreground">
             {authorName}
           </Typography>
         </Typography>
