@@ -38,13 +38,13 @@ jobs:
           SERVER_LOG="$(mktemp)"
 
           #PUBKY runtime variables
-          PUBKY_RUNTIME_TESTNET=false
-          PUBKY_RUNTIME_HOMESERVER="ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy"
-          PUBKY_RUNTIME_NEXUS_URL="https://nexus.staging.pubky.app"
-          PUBKY_RUNTIME_CDN_URL="https://nexus.staging.pubky.app/static"
-          PUBKY_RUNTIME_HOMEGATE_URL="https://homegate.staging.pubky.app"
-          PUBKY_RUNTIME_PKARR_RELAYS='["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
-          PUBKY_RUNTIME_DEFAULT_HTTP_RELAY="https://httprelay.staging.pubky.app/inbox"
+          export PUBKY_RUNTIME_TESTNET="false"
+          export PUBKY_RUNTIME_HOMESERVER="ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy"
+          export PUBKY_RUNTIME_NEXUS_URL="https://nexus.staging.pubky.app"
+          export PUBKY_RUNTIME_CDN_URL="https://nexus.staging.pubky.app/static"
+          export PUBKY_RUNTIME_HOMEGATE_URL="https://homegate.staging.pubky.app"
+          export PUBKY_RUNTIME_PKARR_RELAYS='["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
+          export PUBKY_RUNTIME_DEFAULT_HTTP_RELAY="https://httprelay.staging.pubky.app/inbox"
 
           npm run start > "$SERVER_LOG" 2>&1 &
           SERVER_PID=$!
