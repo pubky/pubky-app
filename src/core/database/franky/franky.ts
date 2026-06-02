@@ -53,6 +53,9 @@ const TRANSIENT_INDEXED_DB_ERROR_PATTERNS = [
 /**
  * Walks the `cause` chain of a thrown value and reports whether any link looks like a
  * transient IndexedDB failure (as opposed to a deterministic schema/logic error).
+ *
+ * Used by `initialize()` below; exported (not module-private) for direct unit testing and
+ * for reuse on the post-init write path (see PUBKY-APP-34).
  */
 export function isTransientIndexedDbError(error: unknown): boolean {
   const seen = new Set<unknown>();
