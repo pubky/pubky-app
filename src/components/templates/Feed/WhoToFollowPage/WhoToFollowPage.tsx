@@ -1,7 +1,6 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
-import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { FilterSortWhoToFollow } from '@/molecules/Filters/FilterSortWhoToFollow/FilterSortWhoToFollow';
 import { ActiveUsers } from '@/organisms/ActiveUsers/ActiveUsers';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
@@ -20,9 +19,6 @@ import { WhoToFollow } from '@/organisms/WhoToFollow/WhoToFollow';
  * - Right sidebar: ActiveUsers and FeedbackCard
  */
 export function WhoToFollowPage() {
-  // Reset to column layout on mount (this page doesn't support wide)
-  useLayoutReset();
-
   return (
     <ContentLayout
       leftSidebarContent={<FilterSortWhoToFollow />}
@@ -45,6 +41,7 @@ export function WhoToFollowPage() {
           <FeedbackCard />
         </Container>
       }
+      disableWideShellLayout
     >
       <WhoToFollow />
     </ContentLayout>

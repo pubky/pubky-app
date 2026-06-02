@@ -20,18 +20,6 @@ const PUBKY_ERROR_NAMES = {
   AUTHENTICATION_ERROR: 'AuthenticationError',
 } as const;
 
-const RETRYABLE_STATUS_CODES = [
-  HttpStatusCode.NOT_FOUND,
-  HttpStatusCode.REQUEST_TIMEOUT,
-  HttpStatusCode.TOO_MANY_REQUESTS,
-  HttpStatusCode.INTERNAL_SERVER_ERROR,
-  HttpStatusCode.BAD_GATEWAY,
-  HttpStatusCode.SERVICE_UNAVAILABLE,
-  HttpStatusCode.GATEWAY_TIMEOUT,
-] as const;
-
-type RetryableStatusCode = (typeof RETRYABLE_STATUS_CODES)[number];
-
 /**
  * Extracts status code from error objects (checks error directly first, then nested data)
  * @param error - The error to extract status code from
@@ -50,34 +38,6 @@ export const extractStatusCode = (error: unknown): number | undefined => {
   if (!('statusCode' in data)) return undefined;
   const statusCode = (data as { statusCode?: unknown }).statusCode;
   return typeof statusCode === 'number' ? statusCode : undefined;
-};
-
-/**
- * Checks if a relay poll error is retryable based on status code or error message
- * @param error - The error to check
- * @returns True if the error is retryable, false otherwise
- */
-export const isRetryableRelayPollError = (error: unknown): boolean => {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'name' in error &&
-    (error as { name?: unknown }).name === 'RequestError'
-  ) {
-    const statusCode = extractStatusCode(error);
-    // No status code typically means a network-level failure (DNS, connection refused, etc.)
-    // These are transient issues worth retrying during auth polling
-    if (!statusCode) return true;
-    return RETRYABLE_STATUS_CODES.includes(statusCode as RetryableStatusCode);
-  }
-
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase();
-    if (message.includes('timed out') || message.includes('timeout')) return true;
-    if (message.includes(HttpStatusCode.GATEWAY_TIMEOUT.toString()) || message.includes('gateway')) return true;
-  }
-
-  return false;
 };
 
 /**

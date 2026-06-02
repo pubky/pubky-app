@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: 💬 Discussions
-    url: https://github.com/pubky/franky/discussions
+    url: https://github.com/pubky/pubky-app/discussions
     about: Ask questions or share ideas in our discussions
   - name: 📚 Documentation
-    url: https://github.com/pubky/franky/tree/master/.cursor
+    url: https://github.com/pubky/pubky-app/tree/master/.cursor
     about: Check our documentation for architecture and guidelines

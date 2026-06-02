@@ -3,6 +3,7 @@
 exports[`HotDiscoveryContentLayout - Snapshots > matches snapshot with child content 1`] = `
 <div
   class="pb-24 lg:pb-12"
+  data-disable-wide-shell-layout="true"
   data-has-gradient-background="false"
   data-show-right-mobile-button="false"
   data-testid="content-layout"
