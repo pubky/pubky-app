@@ -150,10 +150,12 @@ describe('resolveCollectionCoverImage', () => {
     });
   });
 
-  describe('CSS-injection hardening', () => {
-    // Regression coverage: the consumer interpolates the return value into a
-    // `background-image: url(${value})` CSS declaration. Any value that the
-    // browser can't parse as a single http(s) URL must be rejected here.
+  describe('absolute URL validation', () => {
+    // The consumer sets the return value on a React inline-style object
+    // (`style={{ backgroundImage: url(...) }}`), so we hand it only values the
+    // browser can actually load: well-formed http(s) URLs. Unsupported schemes
+    // and malformed strings are rejected here so the call site can fall back to
+    // a default background.
 
     it('rejects URLs with non-http(s) schemes (javascript:)', () => {
       expect(resolveCollectionCoverImage('javascript:alert(1)')).toBeNull();
@@ -171,17 +173,15 @@ describe('resolveCollectionCoverImage', () => {
       expect(resolveCollectionCoverImage('not a url')).toBeNull();
     });
 
-    it('does NOT reject http(s) URLs that contain CSS-significant characters', () => {
-      // The scheme allow-list is only the first defensive layer. `new URL()`
-      // does NOT percent-encode `)` or `;` inside the path, so this string
-      // survives validation. The second layer lives at the CSS call site
-      // (`CollectionCard.tsx`), which wraps the value in double quotes and
-      // escapes `"` / `\` before interpolating into `background-image: url(...)`.
-      //
-      // This test documents the contract: the resolver returns a normalized URL,
-      // *not* a CSS-safe one. Consumers MUST quote-and-escape on their own.
-      const malicious = 'https://x/a.png); background: red; /*';
-      const result = resolveCollectionCoverImage(malicious);
+    it('normalizes http(s) URLs without percent-encoding parens/semicolons', () => {
+      // `new URL()` normalizes (e.g. encodes spaces) but leaves `)` and `;`
+      // untouched in the path. That's fine for the only consumer: a React
+      // inline-style object assigns through the CSSOM property setter, which
+      // parses the string solely as a value for `background-image` — it cannot
+      // inject sibling declarations. Worst case a literal `)` makes the value
+      // unparseable and the background silently doesn't render (cosmetic).
+      const url = 'https://x/a.png); background: red; /*';
+      const result = resolveCollectionCoverImage(url);
       expect(result).not.toBeNull();
       // Whitespace is percent-encoded by URL normalization.
       expect(result).not.toContain(' ');

@@ -77,8 +77,8 @@ export function parseCollectionContent(raw: string | null | undefined): PubkyApp
  * extracting a generic `pubkyUriToCdnUrl(uri, variant)` into
  * `src/libs/file/`.
  *
- * @param raw      Envelope `cover_image` value, untrusted (may be null /
- *                 undefined / non-URL string).
+ * @param raw      Envelope `cover_image` value from Nexus (may be null /
+ *                 undefined / non-URL string if the backend shape drifts).
  * @param variant  CDN file variant to request when resolving a `pubky://`
  *                 URI. Has no effect on absolute URLs.
  */
@@ -90,14 +90,13 @@ export function resolveCollectionCoverImage(
   if (!trimmed) return null;
 
   if (!trimmed.startsWith('pubky://')) {
-    // Absolute URL path. The envelope is user-supplied and gets interpolated
-    // into a CSS `background-image: url(...)` declaration at the call site,
-    // so a raw return is a CSS-injection vector (a malformed value like
-    // `https://x/a.png); background: red; /*` would break out of the rule).
-    // Validate via WHATWG URL + scheme allow-list so only well-formed
-    // http(s) URLs reach the consumer. Backend validation should already
-    // enforce this, but a defensive check here is cheap and keeps the
-    // CSS-injection surface closed even if Nexus shape drifts.
+    // Absolute URL path. Values come from Nexus, but we still normalize via
+    // WHATWG URL + scheme allow-list so the consumer only ever receives a
+    // well-formed http(s) URL it can actually load — a cheap guard against
+    // backend shape drift. Non-http(s) schemes (`data:`, `file:`, stray
+    // `pubky://`, etc.) and malformed strings are rejected here so the call
+    // site falls back to a default background instead of firing a broken
+    // image request.
     try {
       const parsed = new URL(trimmed);
       if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
