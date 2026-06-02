@@ -149,5 +149,3 @@ export const NEXT_PUBLIC_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   pkarrRelays: 'NEXT_PUBLIC_PKARR_RELAYS',
   testnet: 'NEXT_PUBLIC_TESTNET',
 };
-
-export const RUNTIME_CONFIG_KEYS = Object.keys(PUBKY_RUNTIME_ENV_NAMES) as (keyof RuntimeConfig)[];
