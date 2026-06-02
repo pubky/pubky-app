@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   APP_ROUTES,
+  getCollectionRoute,
   getProfileRoute,
   isDynamicPublicRoute,
   isNavItemActive,
@@ -152,6 +153,19 @@ describe('getProfileRoute', () => {
 
   it('preserves sub-paths other than posts', () => {
     expect(getProfileRoute(PROFILE_ROUTES.FOLLOWERS, pubky)).toBe(`/profile/${pubky}/followers`);
+  });
+});
+
+describe('getCollectionRoute', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const postId = '0034BBBDFK83G';
+
+  it('joins the collections base route, author pubky, and post id', () => {
+    expect(getCollectionRoute(pubky, postId)).toBe(`/collections/${pubky}/${postId}`);
+  });
+
+  it('is anchored on APP_ROUTES.COLLECTIONS', () => {
+    expect(getCollectionRoute(pubky, postId).startsWith(`${APP_ROUTES.COLLECTIONS}/`)).toBe(true);
   });
 });
 

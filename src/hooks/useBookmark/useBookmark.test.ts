@@ -154,6 +154,143 @@ describe('useBookmark', () => {
     expect(BookmarkController.commitCreate).not.toHaveBeenCalled();
   });
 
+  describe('initialIsBookmarked option', () => {
+    it('seeds isBookmarked to true before the async existence check resolves', async () => {
+      let resolveExists!: (value: boolean) => void;
+      vi.mocked(BookmarkController.exists).mockReturnValue(
+        new Promise<boolean>((resolve) => {
+          resolveExists = resolve;
+        }),
+      );
+
+      const { result } = renderHook(() => useBookmark(mockPostId, { initialIsBookmarked: true }));
+
+      // No `false` flash before the async check resolves.
+      expect(result.current.isBookmarked).toBe(true);
+      expect(result.current.isLoading).toBe(true);
+
+      // Drain the pending promise inside `act` so React state updates from
+      // the resolved effect are flushed cleanly (no "not wrapped in act" warning).
+      await act(async () => {
+        resolveExists(true);
+      });
+    });
+
+    it('still runs the async existence check and reconciles with the resolved value', async () => {
+      // Seed `true` but the real local state says `false` — verify reconciliation.
+      vi.mocked(BookmarkController.exists).mockResolvedValue(false);
+
+      const { result } = renderHook(() => useBookmark(mockPostId, { initialIsBookmarked: true }));
+
+      expect(result.current.isBookmarked).toBe(true);
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(BookmarkController.exists).toHaveBeenCalledWith(mockPostId);
+      expect(result.current.isBookmarked).toBe(false);
+    });
+
+    it('defaults to false when initialIsBookmarked is omitted', () => {
+      vi.mocked(BookmarkController.exists).mockReturnValue(new Promise(() => {}));
+
+      const { result } = renderHook(() => useBookmark(mockPostId));
+
+      expect(result.current.isBookmarked).toBe(false);
+    });
+  });
+
+  describe('toastMessages option', () => {
+    it('uses custom add-success toast copy when the bookmark is created', async () => {
+      vi.mocked(BookmarkController.exists).mockResolvedValue(false);
+      vi.mocked(BookmarkController.commitCreate).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() =>
+        useBookmark(mockPostId, {
+          toastMessages: {
+            added: 'Collection followed',
+            addedDesc: 'You will see updates in Followed',
+            removed: 'Collection unfollowed',
+            removedDesc: 'It will no longer appear in Followed',
+          },
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.toggle();
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Collection followed',
+        description: 'You will see updates in Followed',
+      });
+    });
+
+    it('uses custom remove-success toast copy when the bookmark is deleted', async () => {
+      vi.mocked(BookmarkController.exists).mockResolvedValue(true);
+      vi.mocked(BookmarkController.commitDelete).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() =>
+        useBookmark(mockPostId, {
+          toastMessages: {
+            added: 'Collection followed',
+            addedDesc: 'You will see updates in Followed',
+            removed: 'Collection unfollowed',
+            removedDesc: 'It will no longer appear in Followed',
+          },
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.toggle();
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Collection unfollowed',
+        description: 'It will no longer appear in Followed',
+      });
+    });
+
+    it('keeps the generic error toast even when toastMessages overrides are provided', async () => {
+      // Failure-path copy intentionally stays with the i18n defaults — verify.
+      vi.mocked(BookmarkController.exists).mockResolvedValue(false);
+      vi.mocked(BookmarkController.commitCreate).mockRejectedValue(new Error('boom'));
+
+      const { result } = renderHook(() =>
+        useBookmark(mockPostId, {
+          toastMessages: {
+            added: 'Collection followed',
+            addedDesc: 'desc',
+            removed: 'Collection unfollowed',
+            removedDesc: 'desc',
+          },
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.toggle();
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Error',
+        description: 'Failed to add bookmark',
+      });
+    });
+  });
+
   it('shows error toast when bookmark operation fails', async () => {
     vi.mocked(BookmarkController.exists).mockResolvedValue(false);
     vi.mocked(BookmarkController.commitCreate).mockRejectedValue(new Error('Network error'));

@@ -13,6 +13,19 @@ export interface UseStreamPaginationOptions {
    * Whether to reset state when streamId changes
    */
   resetOnStreamChange?: boolean;
+  /**
+   * Optional callback invoked when a stream slice fetch fails. Fires after
+   * the internal `error` state is set but before the `loading` / `loadingMore`
+   * flags clear. Intended for surface-level UX (e.g. firing a toast in the
+   * caller component) without forcing every consumer to subscribe to the
+   * `error` field via `useEffect`.
+   *
+   * Defaults to a no-op, so existing callers are unaffected.
+   *
+   * @param error  The original thrown value from `getOrFetchStreamSlice`
+   *               (not coerced to `Error` — may be an `AppError` or unknown).
+   */
+  onError?: (error: unknown) => void;
 }
 
 export interface UseStreamPaginationResult {

@@ -1229,7 +1229,6 @@
     "warningReached": "Has alcanzado el límite máximo de caracteres."
   },
   "collections": {
-    "title": "Mis colecciones",
     "new": {
       "cta": "Nueva colección",
       "title": "Nueva colección",
@@ -1249,11 +1248,34 @@
       "created": "Colección {name} creada",
       "createFailed": "No se pudo crear la colección."
     },
+    "showMore": "Mostrar más",
+    "loadFailed": "Error al cargar las colecciones. Inténtalo de nuevo.",
+    "my": {
+      "title": "Mis colecciones"
+    },
+    "followed": {
+      "title": "Colecciones seguidas",
+      "empty": "Aún no sigues ninguna colección."
+    },
+    "discover": {
+      "title": "Descubrir colecciones",
+      "empty": "No hay colecciones para descubrir en este momento."
+    },
     "bookmarks": {
       "title": "Marcadores",
       "description": "Todo lo que quieres guardar para más tarde."
     },
-    "private": "PRIVADO"
+    "card": {
+      "follow": "Seguir",
+      "unfollow": "Dejar de seguir",
+      "delete": "Eliminar",
+      "toast": {
+        "followed": "Colección seguida",
+        "followedDesc": "Ahora sigues la colección {name}",
+        "unfollowed": "Colección no seguida",
+        "unfollowedDesc": "Has dejado de seguir la colección {name}"
+      }
+    }
   },
   "postSave": {
     "title": "Guardar publicación",

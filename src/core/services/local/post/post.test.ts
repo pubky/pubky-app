@@ -1090,4 +1090,46 @@ describe('LocalPostService', () => {
       bulkGetSpy.mockRestore();
     });
   });
+
+  describe('readDetailsByIds', () => {
+    it('should return post details aligned to input order', async () => {
+      const postId1 = testData.fullPostId1;
+      const postId2 = buildCompositeId({ pubky: testData.authorPubky, id: 'post-2' });
+      await setupExistingPost(postId1, 'Test post 1');
+      await setupExistingPost(postId2, 'Test post 2');
+
+      const details = await LocalPostService.readDetailsByIds([postId1, postId2]);
+
+      expect(details).toHaveLength(2);
+      expect(details[0]?.content).toBe('Test post 1');
+      expect(details[1]?.content).toBe('Test post 2');
+    });
+
+    it('should return undefined for posts that do not exist, preserving order', async () => {
+      const postId1 = testData.fullPostId1;
+      await setupExistingPost(postId1, 'Test post 1');
+
+      const details = await LocalPostService.readDetailsByIds(['nonexistent:post123', postId1]);
+
+      expect(details).toHaveLength(2);
+      expect(details[0]).toBeUndefined();
+      expect(details[1]?.id).toBe(postId1);
+    });
+
+    it('should return an empty array for empty input', async () => {
+      const details = await LocalPostService.readDetailsByIds([]);
+
+      expect(details).toEqual([]);
+    });
+
+    it('should handle database errors gracefully', async () => {
+      const bulkGetSpy = vi.spyOn(PostDetailsModel.table, 'bulkGet').mockRejectedValue(new Error('DB error'));
+
+      await expect(LocalPostService.readDetailsByIds([testData.fullPostId1])).rejects.toThrow(
+        'Failed to read post details by ids',
+      );
+
+      bulkGetSpy.mockRestore();
+    });
+  });
 });

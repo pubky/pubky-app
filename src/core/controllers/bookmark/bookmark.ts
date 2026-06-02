@@ -18,6 +18,23 @@ export class BookmarkController {
   }
 
   /**
+   * Get all locally-known bookmarked composite post IDs for the current user.
+   *
+   * Local-only read — the bookmarks table is hydrated opportunistically by
+   * stream fetches. Surfaces that need a complete view should seed via the
+   * relevant stream id first (e.g. `timeline:bookmarks:collection` for the
+   * Followed Collections section).
+   *
+   * Designed for use inside `useLiveQuery` so callers can react to follow /
+   * unfollow events anywhere in the app.
+   *
+   * @returns Array of composite post IDs (`authorId:postId`).
+   */
+  static async getAll(): Promise<string[]> {
+    return BookmarkApplication.getAll();
+  }
+
+  /**
    * Create a bookmark
    * @param params - Parameters object
    * @param params.userId - ID of the user creating the bookmark (current user)

@@ -1229,7 +1229,6 @@
     "warningReached": "Du hast das maximale Zeichenlimit erreicht."
   },
   "collections": {
-    "title": "Meine Sammlungen",
     "new": {
       "cta": "Neue Sammlung",
       "title": "Neue Sammlung",
@@ -1249,11 +1248,34 @@
       "created": "Sammlung {name} erstellt",
       "createFailed": "Sammlung konnte nicht erstellt werden."
     },
+    "showMore": "Mehr anzeigen",
+    "loadFailed": "Sammlungen konnten nicht geladen werden. Bitte erneut versuchen.",
+    "my": {
+      "title": "Meine Sammlungen"
+    },
+    "followed": {
+      "title": "Gefolgte Sammlungen",
+      "empty": "Du folgst noch keinen Sammlungen."
+    },
+    "discover": {
+      "title": "Sammlungen entdecken",
+      "empty": "Im Moment gibt es keine Sammlungen zu entdecken."
+    },
     "bookmarks": {
       "title": "Lesezeichen",
       "description": "Alles, was du für später speichern möchtest."
     },
-    "private": "PRIVAT"
+    "card": {
+      "follow": "Folgen",
+      "unfollow": "Entfolgen",
+      "delete": "Löschen",
+      "toast": {
+        "followed": "Sammlung gefolgt",
+        "followedDesc": "Du folgst jetzt der Sammlung {name}",
+        "unfollowed": "Sammlung entfolgt",
+        "unfollowedDesc": "Du folgst der Sammlung {name} nicht mehr"
+      }
+    }
   },
   "postSave": {
     "title": "Beitrag speichern",

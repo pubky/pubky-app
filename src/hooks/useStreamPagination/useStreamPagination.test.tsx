@@ -506,6 +506,74 @@ describe('useStreamPagination', () => {
     });
   });
 
+  describe('onError option', () => {
+    it('invokes onError with the thrown value when initial fetch fails', async () => {
+      const failure = new Error('network down');
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockRejectedValueOnce(failure);
+      const onError = vi.fn();
+
+      const { result } = renderHook(() =>
+        useStreamPagination({
+          streamId: mockStreamId,
+          onError,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith(failure);
+      // Internal state still reflects the failure.
+      expect(result.current.error).toBeTruthy();
+      expect(result.current.hasMore).toBe(false);
+    });
+
+    it('invokes onError on loadMore failures too', async () => {
+      // First (initial) call succeeds, second (loadMore) call throws.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce({ nextPageIds: mockPostIds, timestamp: Date.now() })
+        .mockRejectedValueOnce(new Error('boom'));
+      const onError = vi.fn();
+
+      const { result } = renderHook(() =>
+        useStreamPagination({
+          streamId: mockStreamId,
+          onError,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+      expect(onError).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+    });
+
+    it('is not invoked on success', async () => {
+      const onError = vi.fn();
+      const { result } = renderHook(() =>
+        useStreamPagination({
+          streamId: mockStreamId,
+          onError,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(onError).not.toHaveBeenCalled();
+    });
+  });
+
   describe('prependPosts', () => {
     it('should add single post to the beginning of the list', async () => {
       const { result } = renderHook(() =>

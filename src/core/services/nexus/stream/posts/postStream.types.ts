@@ -16,6 +16,7 @@ export enum StreamSource {
   REPLIES = 'post_replies',
   AUTHOR = 'author',
   AUTHOR_REPLIES = 'author_replies',
+  COLLECTION = 'collection',
 }
 
 export enum StreamKind {
@@ -67,6 +68,11 @@ export type TStreamAuthorParams = TStreamBase & TStreamAuthorId;
 
 export type TStreamAuthorRepliesParams = TStreamBase & TStreamAuthorId;
 
+export type TStreamCollectionParams = TStreamBase &
+  TStreamAuthorId & {
+    post_id: string;
+  };
+
 export type TStreamAllParams = TStreamBase;
 
 // Posts by IDs endpoint
@@ -81,6 +87,7 @@ export type TStreamQueryParams =
   | TStreamPostRepliesParams
   | TStreamAuthorParams
   | TStreamAuthorRepliesParams
+  | TStreamCollectionParams
   | TStreamAllParams
   | TStreamPostsByIdsParams;
 

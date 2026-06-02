@@ -186,6 +186,21 @@ export function getProfileRoute(route: PROFILE_ROUTES, pubky?: string): string {
 }
 
 // ============================================================================
+// Collection Route Helpers
+// ============================================================================
+
+/**
+ * Builds the route to a single collection's detail page.
+ *
+ * @param authorPubky - The collection owner's pubky
+ * @param postId - The collection post id (raw, not composite)
+ * @returns The full route path (e.g. `/collections/<pubky>/<postId>`)
+ */
+export function getCollectionRoute(authorPubky: string, postId: string): string {
+  return `${APP_ROUTES.COLLECTIONS}/${authorPubky}/${postId}`;
+}
+
+// ============================================================================
 // Navigation Active State
 // ============================================================================
 

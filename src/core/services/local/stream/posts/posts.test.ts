@@ -3,6 +3,7 @@ import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/strea
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { BookmarkModel } from '@/models/bookmark/bookmark';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -23,7 +24,7 @@ import type {
   NexusPostWithAttachmentMetadata,
   NexusTag,
 } from '@/services/nexus/nexus.types';
-import { asOpaque } from '@/test-utils/type-assertions';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 
 describe('LocalStreamPostsService', () => {
   const streamId: PostStreamId = PostStreamTypes.TIMELINE_ALL_ALL;
@@ -135,6 +136,7 @@ describe('LocalStreamPostsService', () => {
     await PostRelationshipsModel.table.clear();
     await PostTagsModel.table.clear();
     await PostTtlModel.table.clear();
+    await BookmarkModel.table.clear();
   });
 
   describe('upsert', () => {
@@ -428,6 +430,78 @@ describe('LocalStreamPostsService', () => {
       const result = await LocalStreamPostsService.persistPosts({ posts: mockPosts });
 
       expect(result).toEqual({ attachmentMetadata: [] });
+    });
+
+    describe('bookmark persistence', () => {
+      // Regression coverage for the bug where Nexus's `bookmark: { id,
+      // indexed_at }` payload was being mirrored locally with
+      // `created_at: post.bookmark.created_at` (a field that doesn't exist
+      // on the upstream DTO). That landed `created_at: undefined` rows in
+      // the bookmarks table, which IndexedDB index cursors silently drop
+      // — breaking the FollowedCollections live query.
+
+      it('does not write a bookmark row when post.bookmark is null', async () => {
+        const post = createMockNexusPost('post-no-bookmark', 'author-1', BASE_TIMESTAMP);
+
+        await LocalStreamPostsService.persistPosts({ posts: [post] });
+
+        const all = await BookmarkModel.table.toArray();
+        expect(all).toHaveLength(0);
+      });
+
+      it('writes a bookmark row using post.bookmark.indexed_at as created_at', async () => {
+        const bookmarkIndexedAt = 1_700_000_000_000;
+        const post = createMockNexusPost('post-with-bookmark', 'author-1', BASE_TIMESTAMP, {
+          bookmark: { id: 'bm-1', indexed_at: bookmarkIndexedAt },
+        });
+        const compositeId = buildCompositeId({ pubky: 'author-1', id: 'post-with-bookmark' });
+
+        await LocalStreamPostsService.persistPosts({ posts: [post] });
+
+        const saved = await BookmarkModel.table.get(compositeId);
+        expect(saved).toBeTruthy();
+        expect(saved!.id).toBe(compositeId);
+        expect(saved!.created_at).toBe(bookmarkIndexedAt);
+      });
+
+      it('falls back to post.details.indexed_at when bookmark.indexed_at is missing', async () => {
+        // Simulate Nexus shape drift: bookmark present but indexed_at absent.
+        // The defensive fallback must keep created_at numeric so the row
+        // stays visible to IndexedDB index cursors.
+        const detailsIndexedAt = 1_650_000_000_000;
+        const post = createMockNexusPost('post-no-bookmark-ts', 'author-1', detailsIndexedAt, {
+          bookmark: { id: 'bm-2', indexed_at: asInvalid<number>(undefined) },
+        });
+        const compositeId = buildCompositeId({ pubky: 'author-1', id: 'post-no-bookmark-ts' });
+
+        await LocalStreamPostsService.persistPosts({ posts: [post] });
+
+        const saved = await BookmarkModel.table.get(compositeId);
+        expect(saved).toBeTruthy();
+        expect(typeof saved!.created_at).toBe('number');
+        expect(saved!.created_at).toBe(detailsIndexedAt);
+      });
+
+      it('writes bookmark rows for every bookmarked post in a batch', async () => {
+        const posts = [
+          createMockNexusPost('p1', 'a1', BASE_TIMESTAMP, {
+            bookmark: { id: 'bm-1', indexed_at: 1_000 },
+          }),
+          createMockNexusPost('p2', 'a2', BASE_TIMESTAMP, {
+            bookmark: { id: 'bm-2', indexed_at: 2_000 },
+          }),
+          // Not bookmarked — should NOT produce a row.
+          createMockNexusPost('p3', 'a3', BASE_TIMESTAMP),
+        ];
+
+        await LocalStreamPostsService.persistPosts({ posts });
+
+        const all = await BookmarkModel.table.toArray();
+        const ids = all.map((row) => row.id).sort();
+        expect(ids).toEqual([buildCompositeId({ pubky: 'a1', id: 'p1' }), buildCompositeId({ pubky: 'a2', id: 'p2' })]);
+        // All rows must have a numeric created_at — the bug guard.
+        expect(all.every((row) => typeof row.created_at === 'number')).toBe(true);
+      });
     });
   });
 
