@@ -11,18 +11,18 @@ exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = 
       data-testid="container"
     >
       <h1
-        class="flex w-full min-w-0 items-baseline text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
+        class="flex w-full min-w-0 items-baseline md:w-0 md:flex-1"
         data-testid="post-page-title"
       >
         <span
-          class="text-base font-medium text-foreground shrink-0 pr-1"
+          class="shrink-0 pr-1 text-2xl leading-8 font-light text-muted-foreground"
           data-testid="typography"
         >
           Reply by
            
         </span>
         <span
-          class="text-base font-medium text-foreground min-w-0 flex-1 truncate"
+          class="min-w-0 flex-1 truncate text-2xl leading-8 font-light text-muted-foreground"
           data-testid="typography"
         >
           Anna
@@ -145,18 +145,18 @@ exports[`PostPageHeader > matches snapshot for root post 1`] = `
       data-testid="container"
     >
       <h1
-        class="flex w-full min-w-0 items-baseline text-2xl leading-8 font-light text-muted-foreground md:w-0 md:flex-1"
+        class="flex w-full min-w-0 items-baseline md:w-0 md:flex-1"
         data-testid="post-page-title"
       >
         <span
-          class="text-base font-medium text-foreground shrink-0 pr-1"
+          class="shrink-0 pr-1 text-2xl leading-8 font-light text-muted-foreground"
           data-testid="typography"
         >
           Post by
            
         </span>
         <span
-          class="text-base font-medium text-foreground min-w-0 flex-1 truncate"
+          class="min-w-0 flex-1 truncate text-2xl leading-8 font-light text-muted-foreground"
           data-testid="typography"
         >
           John
