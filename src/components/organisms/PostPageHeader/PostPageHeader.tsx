@@ -80,7 +80,7 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
           className="flex w-full min-w-0 items-baseline md:w-0 md:flex-1"
           data-testid="post-page-title"
         >
-          <Typography as="span" className="shrink-0 pr-1 text-2xl leading-8 font-light text-muted-foreground">
+          <Typography as="span" className="shrink-0 pr-1.5 text-2xl leading-8 font-light text-muted-foreground">
             {titlePrefix}{' '}
           </Typography>
           <Typography as="span" className="min-w-0 flex-1 truncate text-2xl leading-8 font-light text-muted-foreground">

@@ -15,7 +15,7 @@ exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = 
         data-testid="post-page-title"
       >
         <span
-          class="shrink-0 pr-1 text-2xl leading-8 font-light text-muted-foreground"
+          class="shrink-0 pr-1.5 text-2xl leading-8 font-light text-muted-foreground"
           data-testid="typography"
         >
           Reply by
@@ -149,7 +149,7 @@ exports[`PostPageHeader > matches snapshot for root post 1`] = `
         data-testid="post-page-title"
       >
         <span
-          class="shrink-0 pr-1 text-2xl leading-8 font-light text-muted-foreground"
+          class="shrink-0 pr-1.5 text-2xl leading-8 font-light text-muted-foreground"
           data-testid="typography"
         >
           Post by
