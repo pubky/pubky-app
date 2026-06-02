@@ -6,26 +6,6 @@ import { asOpaque } from '@/test-utils/type-assertions';
 import messages from '../../../../messages/en.json';
 import { SignInContent, SignInFooter } from './SignIn';
 
-vi.mock('@/atoms/Dialog/Dialog', () => {
-  return {
-    Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
-      open ? (
-        <div data-testid="dialog" role="dialog">
-          {children}
-        </div>
-      ) : null,
-    DialogContent: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-content">{children}</div>,
-    DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <p data-testid="dialog-description" className={className}>
-        {children}
-      </p>
-    ),
-    DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
-  };
-});
-
 // Mock Next.js router
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -112,7 +92,7 @@ vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
   })),
 }));
 
-// Mock molecules - use real DialogAuthExpired (Radix) per component-testing rules
+// Mock molecules used by SignInContent
 vi.mock('@/molecules/Content/Content', () => {
   return {
     ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
@@ -441,7 +421,7 @@ describe('SignInContent', () => {
     });
   });
 
-  it('opens expired dialog and disables authorize action when auth flow is expired', async () => {
+  it('shows the reload affordance when auth flow is expired', async () => {
     vi.mocked(useMobileAuth).mockReturnValue({
       url: '',
       isLoading: false,
@@ -456,11 +436,12 @@ describe('SignInContent', () => {
       render(<SignInContent />);
     });
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Refresh/i })).toBeInTheDocument();
+    const reloadQr = screen.getByLabelText('Reload sign-in QR code');
+    expect(reloadQr).toBeEnabled();
+    expect(screen.getAllByText('Click to reload').length).toBeGreaterThan(0);
   });
 
-  it('calls fetchUrl when expired dialog refresh button is clicked', async () => {
+  it('calls fetchUrl when the blurred QR reload is clicked', async () => {
     vi.mocked(useMobileAuth).mockReturnValue({
       url: '',
       isLoading: false,
@@ -476,7 +457,7 @@ describe('SignInContent', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Refresh/i }));
+      fireEvent.click(screen.getByLabelText('Reload sign-in QR code'));
     });
 
     expect(mockFetchUrl).toHaveBeenCalledTimes(1);
