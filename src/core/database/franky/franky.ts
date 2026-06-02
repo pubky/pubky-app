@@ -305,6 +305,11 @@ export class AppDatabase extends Dexie {
       rawVersion = await this.getExistingDbVersion();
       currentVersion = this.normalizeStoredVersion(rawVersion);
     } catch (error) {
+      // A transient WebKit/iOS abort during the native version probe must NOT fall through to a
+      // destructive recreateDatabase(). Re-throw so initialize()'s retry loop can recover the
+      // connection; only genuinely unreadable versions (corruption) self-heal via recreate.
+      if (isTransientIndexedDbError(error)) throw error;
+
       Logger.warn('Failed to determine current database version. Recreating database...', {
         error,
       });

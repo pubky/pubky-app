@@ -4,8 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DB_INIT_MAX_ATTEMPTS, DB_NAME, DB_VERSION } from '@/config/database';
 import { AppDatabase, isTransientIndexedDbError } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 const transientError = (name: string, message = '') => Object.assign(new Error(message), { name });
+
+// Test-only view onto the private members exercised by the version-probe regression tests.
+type InternalAppDatabase = {
+  getExistingDbVersion: () => Promise<number | null>;
+  recreateDatabase: (currentVersion: number | null, rawVersion?: number | null) => Promise<void>;
+};
 
 const waitForDatabaseDeletion = async (name: string, onBlocked?: () => void) => {
   await new Promise<void>((resolve, reject) => {
@@ -351,6 +358,80 @@ describe('Database Initialization', () => {
       expect(existsSpy).toHaveBeenCalledTimes(1);
     } finally {
       existsSpy.mockRestore();
+    }
+  });
+
+  it('retries instead of recreating when the version probe fails transiently', async () => {
+    const testDb = new AppDatabase(`${DB_NAME}-probe-transient-recover`);
+    const internal = asOpaque<InternalAppDatabase>(testDb);
+
+    const existsSpy = vi.spyOn(Dexie, 'exists').mockResolvedValue(true);
+    const recreateSpy = vi.spyOn(internal, 'recreateDatabase');
+    const versionSpy = vi.spyOn(internal, 'getExistingDbVersion');
+    // First probe is dropped by WebKit, second probe reports the current version.
+    versionSpy
+      .mockRejectedValueOnce(transientError('UnknownError', 'Connection to Indexed Database server lost'))
+      .mockResolvedValueOnce(DB_VERSION * 10);
+
+    try {
+      const result = await testDb.initialize();
+
+      expect(result.wasDbReset).toBe(false);
+      expect(versionSpy).toHaveBeenCalledTimes(2);
+      expect(recreateSpy).not.toHaveBeenCalled();
+    } finally {
+      existsSpy.mockRestore();
+      recreateSpy.mockRestore();
+      versionSpy.mockRestore();
+    }
+  });
+
+  it('does not delete the database when the version probe keeps failing transiently', async () => {
+    const testDb = new AppDatabase(`${DB_NAME}-probe-transient-persist`);
+    const internal = asOpaque<InternalAppDatabase>(testDb);
+
+    const existsSpy = vi.spyOn(Dexie, 'exists').mockResolvedValue(true);
+    const recreateSpy = vi.spyOn(internal, 'recreateDatabase');
+    const versionSpy = vi
+      .spyOn(internal, 'getExistingDbVersion')
+      .mockRejectedValue(transientError('UnknownError', 'Connection to Indexed Database server lost'));
+
+    try {
+      await expect(testDb.initialize()).rejects.toMatchObject({
+        name: 'AppError',
+        code: 'INIT_FAILED',
+      });
+      // The transient probe failure must surface as an error, never a destructive recreate.
+      expect(versionSpy).toHaveBeenCalledTimes(DB_INIT_MAX_ATTEMPTS);
+      expect(recreateSpy).not.toHaveBeenCalled();
+    } finally {
+      existsSpy.mockRestore();
+      recreateSpy.mockRestore();
+      versionSpy.mockRestore();
+    }
+  });
+
+  it('still recreates the database when the version probe fails non-transiently', async () => {
+    const testDb = new AppDatabase(`${DB_NAME}-probe-nontransient-recreate`);
+    const internal = asOpaque<InternalAppDatabase>(testDb);
+
+    const existsSpy = vi.spyOn(Dexie, 'exists').mockResolvedValue(true);
+    const recreateSpy = vi.spyOn(internal, 'recreateDatabase').mockResolvedValue();
+    const versionSpy = vi
+      .spyOn(internal, 'getExistingDbVersion')
+      .mockRejectedValue(new Error('corrupt version metadata'));
+
+    try {
+      const result = await testDb.initialize();
+
+      // Genuinely unreadable versions still self-heal via recreate, with no retry.
+      expect(result.wasDbReset).toBe(true);
+      expect(recreateSpy).toHaveBeenCalledTimes(1);
+      expect(versionSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      existsSpy.mockRestore();
+      recreateSpy.mockRestore();
+      versionSpy.mockRestore();
     }
   });
 });
