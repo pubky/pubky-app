@@ -258,7 +258,7 @@
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
 
-      "expired": "Abgelaufen",
+      "clickToReload": "Zum Neuladen klicken",
 
       "openingRing": "Pubky Ring wird geöffnet...",
 
@@ -266,13 +266,6 @@
       "authorizeSub": "Verwenden Sie <pubkyRing>Pubky Ring</pubkyRing> oder einen anderen von <pubkyCore>Pubky Core</pubkyCore> betriebenen Schlüsselbund.",
       "linkFailed": "Verbindung zur Signer-Anwendung Pubky Ring nicht möglich",
       "tryAgain": "Bitte versuchen Sie es erneut."
-    },
-    "authExpired": {
-      "titleDesktop": "QR-Code abgelaufen",
-      "descriptionDesktop": "Dieser QR-Code ist nicht mehr aktiv. Aktualisieren Sie, um einen neuen zu erhalten.",
-      "titleMobile": "Autorisierungssitzung abgelaufen",
-      "descriptionMobile": "Ihre Autorisierungssitzung ist nicht mehr aktiv. Aktualisieren Sie, um eine neue Sitzung zu erzeugen und fortzufahren.",
-      "refresh": "Aktualisieren"
     },
     "signIn": {
       "title": "Bei <highlight>Pubky</highlight> anmelden.",
@@ -282,7 +275,7 @@
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
 
-      "expired": "Abgelaufen",
+      "clickToReload": "Zum Neuladen klicken",
 
       "openingRing": "Pubky Ring wird geöffnet...",
 

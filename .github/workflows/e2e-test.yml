@@ -3,7 +3,7 @@ env:
   pubky_stack_ref: 'staging'
   platforms: 'linux/amd64'
   registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
-  franky_env: 'testnet'
+  pubky-app_env: 'testnet'
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ jobs:
     name: Getting images to rebuild
     runs-on: ubuntu-latest
     outputs:
-      homeserver_tag: ${{ steps.set_tag.outputs.homeserver_tag }}
+      homeserver-testnet_tag: ${{ steps.set_tag.outputs.homeserver-testnet_tag }}
       pubky-nexus_tag: ${{ steps.set_tag.outputs.pubky-nexus_tag }}
     strategy:
       matrix:
@@ -28,7 +28,7 @@ jobs:
 
           - app: "homeserver"
             submodule_dir: "pubky-stack/pubky-core/"
-            image: "homeserver"
+            image: "homeserver-testnet"
 
     steps:
       - name: Checkout pubky-stack
@@ -77,8 +77,8 @@ jobs:
           platforms: ${{ env.platforms }}
         if: ${{ steps.check_image.outputs.exists != 'true' }}
 
-  set_vars_franky:
-    name: Set vars for Franky
+  set_vars_pubky_app:
+    name: Set vars for Pubky App
     runs-on: ubuntu-latest
     outputs:
       env: ${{ steps.set_vars.outputs.env }}
@@ -87,24 +87,24 @@ jobs:
       - name: Set Vars
         id: set_vars
         run: |
-          echo env=${{ env.franky_env }} >> $GITHUB_OUTPUT
+          echo env=${{ env.pubky-app_env }} >> $GITHUB_OUTPUT
           echo platforms=${{ env.platforms }} >> $GITHUB_OUTPUT
 
-  rebuild_franky:
-    needs: [ set_vars_franky ]
+  rebuild_pubky_app:
+    needs: [ set_vars_pubky_app ]
     uses: ./.github/workflows/build-docker-image.yml
     with:
-      platforms: ${{ needs.set_vars_franky.outputs.platforms }}
-      env: ${{ needs.set_vars_franky.outputs.env }}
+      platforms: ${{ needs.set_vars_pubky_app.outputs.platforms }}
+      env: ${{ needs.set_vars_pubky_app.outputs.env }}
     secrets: inherit
 
   e2e-test:
     name: End-to-End Tests
     runs-on: ubuntu-latest
-    needs: [rebuild_images, rebuild_franky]
+    needs: [rebuild_images, rebuild_pubky_app]
     env:
-      HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver_tag }}
-      FRANKY_TAG: ${{ needs.rebuild_franky.outputs.image_tag }}
+      HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
+      PUBKY_APP_TAG: ${{ needs.rebuild_pubky_app.outputs.image_tag }}
       PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
     permissions:
       contents: read
@@ -123,8 +123,8 @@ jobs:
             exit 1
           fi
 
-          if [ -z "${{ env.FRANKY_TAG }}" ]; then
-            echo "Error: env FRANKY_TAG is empty!"
+          if [ -z "${{ env.PUBKY_APP_TAG }}" ]; then
+            echo "Error: env PUBKY_APP_TAG is empty!"
             exit 1
           fi
 
@@ -148,27 +148,27 @@ jobs:
       - name: Checkout this repository
         uses: actions/checkout@v4
         with:
-          path: franky
+          path: pubky-app
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: 'franky/.nvmrc'
+          node-version-file: 'pubky-app/.nvmrc'
           cache: 'npm'
-          cache-dependency-path: 'franky/package-lock.json'
+          cache-dependency-path: 'pubky-app/package-lock.json'
 
       - name: Cache node modules
         uses: actions/cache@v4
         with:
           path: |
-            franky/node_modules
-            franky/.next/cache
-          key: ${{ runner.os }}-node-${{ hashFiles('franky/package-lock.json') }}
+            pubky-app/node_modules
+            pubky-app/.next/cache
+          key: ${{ runner.os }}-node-${{ hashFiles('pubky-app/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
       - name: Install Cypress dependencies
-        working-directory: franky
+        working-directory: pubky-app
         run: npm ci
 
       - name: Login to registry
@@ -196,7 +196,7 @@ jobs:
 
       - name: Run pubky-stack
         working-directory: pubky-stack/docker
-        run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis franky postgres
+        run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis pubky-app postgres
         env:
           REGISTRY: ${{ env.registry }}
 
@@ -225,7 +225,7 @@ jobs:
         env:
           DEBUG: '@cypress/github-action'
         with:
-          working-directory: franky/cypress
+          working-directory: pubky-app/cypress
           config-file: cypress.config.ts
           spec: e2e/${{ matrix.spec }}
           browser: ${{ matrix.browser }}
@@ -240,7 +240,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: screenshots-${{ matrix.browser }}-${{ matrix.spec }}-desktop
-          path: franky/cypress/screenshots
+          path: pubky-app/cypress/screenshots
           if-no-files-found: ignore
 
       - name: Upload video for ${{ matrix.spec }} test - ${{ matrix.browser }} - Desktop
@@ -249,17 +249,17 @@ jobs:
         continue-on-error: true
         with:
           name: video-${{ matrix.browser }}-${{ matrix.spec }}-desktop-onboarding
-          path: franky/cypress/videos/${{ matrix.spec }}.mp4
+          path: pubky-app/cypress/videos/${{ matrix.spec }}.mp4
           if-no-files-found: ignore
 
-      # TODO: Skipped due to bug https://github.com/pubky/franky/issues/372
+      # TODO: Skipped due to bug https://github.com/pubky/pubky-app/issues/372
       # - name: Run e2e tests - Mobile (${{ matrix.browser }})
       #   id: test-mobile
       #   uses: cypress-io/github-action@v6
       #   env:
       #     DEBUG: '@cypress/github-action'
       #   with:
-      #     working-directory: franky/cypress
+      #     working-directory: pubky-app/cypress
       #     config-file: cypress.config.mobile.ts
       #     spec: e2e/**/*.cy.ts
       #     browser: ${{ matrix.browser }}
@@ -275,7 +275,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: screenshots-${{ matrix.browser }}-${{ matrix.spec }}-mobile
-          path: franky/cypress/screenshots/mobile
+          path: pubky-app/cypress/screenshots/mobile
           if-no-files-found: ignore
 
       - name: Upload video for ${{ matrix.spec }} test - ${{ matrix.browser }} - Mobile
@@ -284,7 +284,7 @@ jobs:
         continue-on-error: true
         with:
           name: video-${{ matrix.browser }}-${{ matrix.spec }}-mobile-onboarding
-          path: franky/cypress/videos/mobile/${{ matrix.spec }}.mp4
+          path: pubky-app/cypress/videos/mobile/${{ matrix.spec }}.mp4
           if-no-files-found: ignore
 
       - name: Upload cypress.log
@@ -293,7 +293,7 @@ jobs:
         continue-on-error: true
         with:
           name: cypress-log-${{ matrix.browser }}-${{ matrix.spec }}
-          path: franky/cypress/cypress.log
+          path: pubky-app/cypress/cypress.log
           if-no-files-found: ignore
 
       - name: Dump docker logs on failure

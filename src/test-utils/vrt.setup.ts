@@ -28,11 +28,26 @@ import { vi } from 'vitest';
 
 // 1. Disable animations, transitions, and caret blinking — these are the
 //    most common causes of flaky pixel diffs.
+// 2. Hide the and document scrollbars (OS-dependent gutter)
 const stabilizerCss = `
   *, *::before, *::after {
     transition: none !important;
     animation: none !important;
     caret-color: transparent !important;
+  }
+
+  html,
+  body {
+    overflow: hidden !important;
+    scrollbar-gutter: auto !important;
+    scrollbar-width: none !important;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 `;
 const styleEl = document.createElement('style');
