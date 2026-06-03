@@ -5,6 +5,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
+import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
@@ -418,7 +419,7 @@ function HomeWithLayout() {
 
 describe('Home (global feed) — visual regression', () => {
   it('renders the global feed at desktop viewport', async () => {
-    const screen = await renderForVRT(<HomeWithLayout />, { viewport: { width: 1440, height: 900 } });
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
     // The VRT root is the viewport-clamped wrapper added by `renderForVRT`,
     // so the screenshot is exactly the viewport size. Without it, the body
     // locator captures the full scrollable document height.
@@ -426,7 +427,7 @@ describe('Home (global feed) — visual regression', () => {
   });
 
   it('renders the global feed at mobile viewport', async () => {
-    const screen = await renderForVRT(<HomeWithLayout />, { viewport: { width: 390, height: 844 } });
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-mobile');
   });
 });

@@ -7,16 +7,17 @@ import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import enMessages from '../../messages/en.json';
 import { freezeNow } from './vrt.clock';
+import type { VrtViewport } from './vrt.viewports';
 
 export interface RenderForVRTOptions {
-  viewport: { width: number; height: number };
+  viewport: VrtViewport;
 }
 
 export const VRT_ROOT_TESTID = 'vrt-root';
 
 interface VRTProvidersProps {
   children: ReactNode;
-  viewport: { width: number; height: number };
+  viewport: VrtViewport;
   queryClient: QueryClient;
 }
 
