@@ -659,7 +659,6 @@ describe('PostAttachmentsImagesAndVideos', () => {
       await vi.waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           variant: 'error',
-          title: 'Error attempting to enable fullscreen',
           description: mockError.message,
         });
       });

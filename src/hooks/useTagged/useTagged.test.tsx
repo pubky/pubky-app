@@ -204,7 +204,9 @@ describe('useTagged', () => {
       taggerId: 'mock-current-user',
       taggedKind: TagKind.USER,
     });
-    expect(mockMocks.mockToast).not.toHaveBeenCalled();
+    expect(mockMocks.mockToast).toHaveBeenCalledWith({
+      title: 'Tag added: ethereum',
+    });
   });
 
   it('shows an error toast when adding a tag fails', async () => {
@@ -229,7 +231,7 @@ describe('useTagged', () => {
     });
   });
 
-  it('does not show a success toast when removing a tag', async () => {
+  it('shows a success toast when removing a tag', async () => {
     mockLocalTags = [
       {
         label: 'bitcoin',
@@ -255,7 +257,9 @@ describe('useTagged', () => {
       taggerId: 'mock-current-user',
       taggedKind: TagKind.USER,
     });
-    expect(mockMocks.mockToast).not.toHaveBeenCalled();
+    expect(mockMocks.mockToast).toHaveBeenCalledWith({
+      title: 'Tag removed: bitcoin',
+    });
   });
 
   it('shows an error toast when removing a tag fails', async () => {
@@ -280,7 +284,8 @@ describe('useTagged', () => {
     });
 
     expect(mockMocks.mockToast).toHaveBeenCalledWith({
-      title: 'Tag removed: bitcoin',
+      variant: 'error',
+      description: 'Could not remove tag: bitcoin',
     });
   });
 
