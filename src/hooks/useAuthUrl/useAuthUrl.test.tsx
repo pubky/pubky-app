@@ -17,7 +17,7 @@ const mockInitializeAuthenticatedSession = vi.fn();
 const mockCancelActiveAuthFlow = vi.fn();
 const mockTranslations = vi.fn((key: string) => {
   const t: Record<string, string> = {
-    authInitFailedTitle: 'Sign in failed. Please try again.',
+    authInitFailedTitle: 'Sign in failed. Try again.',
     authInitFailedDescription: 'Sign in failed. Try again.',
     authNotCompletedTitle: 'Authorization was not completed',
     authNotCompletedDescription: 'Authorization failed. Try again.',
@@ -180,7 +180,6 @@ describe('useAuthUrl', () => {
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'error',
-        title: 'Authorization was not completed',
         description: 'Authorization failed. Try again.',
       });
     });

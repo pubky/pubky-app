@@ -290,7 +290,7 @@
       "linkCopied": "تم نسخ الرابط",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
       "tryAgain": "يرجى المحاولة مرة اخرى.",
-      "authInitFailedTitle": "فشل تسجيل الدخول. يرجى المحاولة مرة اخرى.",
+      "authInitFailedTitle": "فشل تسجيل الدخول. حاول مرة أخرى.",
       "authInitFailedDescription": "فشل تسجيل الدخول. حاول مرة أخرى.",
       "authNotCompletedTitle": "لم يكتمل التفويض",
       "authNotCompletedDescription": "فشل التفويض. حاول مرة أخرى.",
@@ -326,7 +326,7 @@
         "invalidPassword": "كلمة مرور غير صالحة او ملف تالف. يرجى التحقق من كلمة المرور والمحاولة مرة اخرى.",
         "nexusError": "حدث خطا مع nexus. يرجى المحاولة مرة اخرى.",
         "restoreError": "فشلت الاستعادة من الملف. يرجى التحقق من الملف والمحاولة مرة اخرى.",
-        "unexpectedError": "حدث خطا غير متوقع",
+        "unexpectedError": "حدث خطأ غير متوقع.",
         "cancel": "الغاء",
         "restore": "استعادة",
         "restoring": "جاري الاستعادة..."
@@ -922,7 +922,7 @@
       "linkCopied": "تم نسخ الرابط الى الحافظة",
       "textCopied": "تم نسخ النص الى الحافظة",
       "profileLinkCopied": "تم نسخ رابط الملف الشخصي الى الحافظة",
-      "copyFailed": "فشل النسخ",
+      "copyFailed": "تعذر النسخ إلى الحافظة",
       "copyFailedDesc": "تعذر النسخ إلى الحافظة"
     },
     "follow": {
@@ -931,8 +931,8 @@
       "unfollowed": "ألغيت متابعة {username}"
     },
     "mute": {
-      "muted": "تم كتم المستخدم",
-      "unmuted": "تم الغاء كتم المستخدم",
+      "muted": "تم كتم {username}",
+      "unmuted": "تم إلغاء كتم {username}",
       "failed": "تعذر تحديث حالة الكتم"
     },
     "profile": {
@@ -963,13 +963,13 @@
       "userIdRequired": "معرف المستخدم مطلوب",
       "loginRequired": "يجب تسجيل الدخول لاضافة وسوم",
       "alreadyAdded": "لقد اضفت هذا الوسم بالفعل",
-      "added": "تمت اضافة الوسم",
-      "removed": "تمت ازالة الوسم",
+      "added": "تمت إضافة الوسم: {label}",
+      "removed": "تمت إزالة الوسم: {label}",
       "addFailed": "تعذر إضافة الوسم: {label}",
       "removeFailed": "تعذر إزالة الوسم: {label}"
     },
     "auth": {
-      "signInFailed": "فشل تسجيل الدخول. يرجى المحاولة مرة اخرى.",
+      "signInFailed": "فشل تسجيل الدخول. حاول مرة أخرى.",
       "signInFailedDesc": "فشل تسجيل الدخول. حاول مرة أخرى.",
       "authNotCompleted": "لم يكتمل التفويض",
       "authNotCompletedDesc": "فشل التفويض. حاول مرة أخرى.",

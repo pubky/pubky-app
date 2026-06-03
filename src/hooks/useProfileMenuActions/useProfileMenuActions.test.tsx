@@ -115,7 +115,7 @@ describe('useProfileMenuActions', () => {
         toast: {
           'copy.pubkyCopied': 'Pubky copied to clipboard',
           'copy.profileLinkCopied': 'Profile link copied to clipboard',
-          'copy.copyFailed': 'Copy failed',
+          'copy.copyFailedDesc': 'Could not copy to clipboard',
           'follow.followed': 'Following {username}',
           'follow.unfollowed': 'Unfollowed {username}',
           'follow.failed': 'Could not update follow status',
@@ -208,7 +208,7 @@ describe('useProfileMenuActions', () => {
       expect(followItem?.disabled).toBe(true);
     });
 
-    it('shows success toast when follow succeeds', async () => {
+    it('calls toggleFollow with full profile name on follow action click', async () => {
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
 
       const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
@@ -218,13 +218,10 @@ describe('useProfileMenuActions', () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, false);
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Following Test User',
-      });
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, false, 'Test User');
     });
 
-    it('shows success toast when unfollow succeeds', async () => {
+    it('calls toggleFollow with full profile name on unfollow action click', async () => {
       mockUseIsFollowing.mockReturnValue({
         isFollowing: true,
         isLoading: false,
@@ -239,43 +236,7 @@ describe('useProfileMenuActions', () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, true);
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Unfollowed Test User',
-      });
-    });
-
-    it('calls toggleFollow on follow action click', async () => {
-      const { result } = renderHook(() => useProfileMenuActions(mockUserId));
-
-      const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
-
-      await act(async () => {
-        await followItem?.onClick();
-      });
-
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, false);
-    });
-
-    it('shows error toast when follow fails', async () => {
-      const error = new Error('Follow failed');
-      vi.mocked(isAppError).mockReturnValue(false);
-      defaultMocks.toggleFollow.mockRejectedValue(error);
-
-      const { result } = renderHook(() => useProfileMenuActions(mockUserId));
-
-      const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
-
-      await act(async () => {
-        await followItem?.onClick();
-      });
-
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          variant: 'error',
-          description: 'Could not update follow status',
-        });
-      });
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, true, 'Test User');
     });
   });
 
@@ -423,7 +384,7 @@ describe('useProfileMenuActions', () => {
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           variant: 'error',
-          description: 'Copy failed',
+          description: 'Could not copy to clipboard',
         });
       });
     });
@@ -444,7 +405,7 @@ describe('useProfileMenuActions', () => {
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           variant: 'error',
-          description: 'Copy failed',
+          description: 'Could not copy to clipboard',
         });
       });
     });

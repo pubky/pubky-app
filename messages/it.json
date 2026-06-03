@@ -326,7 +326,7 @@
         "invalidPassword": "Password non valida o file corrotto. Verifica la password e riprova.",
         "nexusError": "Qualcosa è andato storto con nexus. Riprova.",
         "restoreError": "Ripristino dal file fallito. Verifica il file e riprova.",
-        "unexpectedError": "Si è verificato un errore imprevisto",
+        "unexpectedError": "Errore imprevisto.",
         "cancel": "Annulla",
         "restore": "Ripristina",
         "restoring": "Ripristino in corso..."
@@ -922,7 +922,7 @@
       "linkCopied": "Link copiato negli appunti",
       "textCopied": "Testo copiato negli appunti",
       "profileLinkCopied": "Link profilo copiato negli appunti",
-      "copyFailed": "Copia fallita",
+      "copyFailed": "Impossibile copiare negli appunti",
       "copyFailedDesc": "Impossibile copiare negli appunti"
     },
     "follow": {
@@ -931,8 +931,8 @@
       "unfollowed": "Hai smesso di seguire {username}"
     },
     "mute": {
-      "muted": "Utente silenziato",
-      "unmuted": "Utente riattivato",
+      "muted": "{username} silenziato",
+      "unmuted": "{username} non più silenziato",
       "failed": "Impossibile aggiornare lo stato di silenziamento"
     },
     "profile": {
@@ -963,8 +963,8 @@
       "userIdRequired": "ID utente obbligatorio",
       "loginRequired": "Devi accedere per aggiungere tag",
       "alreadyAdded": "Hai già aggiunto questo tag",
-      "added": "Tag aggiunto",
-      "removed": "Tag rimosso",
+      "added": "Tag aggiunto: {label}",
+      "removed": "Tag rimosso: {label}",
       "addFailed": "Impossibile aggiungere il tag: {label}",
       "removeFailed": "Impossibile rimuovere il tag: {label}"
     },

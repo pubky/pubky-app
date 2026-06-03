@@ -290,7 +290,7 @@
       "linkCopied": "Link copiado",
       "linkFailed": "Nao foi possivel conectar ao aplicativo Pubky Ring",
       "tryAgain": "Por favor, tente novamente.",
-      "authInitFailedTitle": "Falha ao entrar. Por favor, tente novamente.",
+      "authInitFailedTitle": "Falha ao entrar. Tente novamente.",
       "authInitFailedDescription": "Falha ao entrar. Tente novamente.",
       "authNotCompletedTitle": "A autorização não foi concluída",
       "authNotCompletedDescription": "Autorização falhou. Tente novamente.",
@@ -326,7 +326,7 @@
         "invalidPassword": "Senha inválida ou arquivo corrompido. Por favor, verifique sua senha e tente novamente.",
         "nexusError": "Algo deu errado com o nexus. Por favor, tente novamente.",
         "restoreError": "Falha ao restaurar do arquivo. Por favor, verifique seu arquivo e tente novamente.",
-        "unexpectedError": "Ocorreu um erro inesperado",
+        "unexpectedError": "Erro inesperado.",
         "cancel": "Cancelar",
         "restore": "Restaurar",
         "restoring": "Restaurando..."
@@ -922,7 +922,7 @@
       "linkCopied": "Link copiado para área de transferência",
       "textCopied": "Texto copiado para área de transferência",
       "profileLinkCopied": "Link do perfil copiado para área de transferência",
-      "copyFailed": "Falha ao copiar",
+      "copyFailed": "Não foi possível copiar para a área de transferência",
       "copyFailedDesc": "Não foi possível copiar para a área de transferência"
     },
     "follow": {
@@ -931,8 +931,8 @@
       "unfollowed": "Deixou de seguir {username}"
     },
     "mute": {
-      "muted": "Usuário silenciado",
-      "unmuted": "Usuário reativado",
+      "muted": "{username} silenciado",
+      "unmuted": "{username} não está mais silenciado",
       "failed": "Não foi possível atualizar o status de silenciamento"
     },
     "profile": {
@@ -963,13 +963,13 @@
       "userIdRequired": "ID do usuario e obrigatório",
       "loginRequired": "Voce precisa estar logado para adicionar tags",
       "alreadyAdded": "Voce ja adicionou esta tag",
-      "added": "Tag adicionada",
-      "removed": "Tag removida",
+      "added": "Tag adicionada: {label}",
+      "removed": "Tag removida: {label}",
       "addFailed": "Não foi possível adicionar a tag: {label}",
       "removeFailed": "Não foi possível remover a tag: {label}"
     },
     "auth": {
-      "signInFailed": "Falha ao entrar. Por favor, tente novamente.",
+      "signInFailed": "Falha ao entrar. Tente novamente.",
       "signInFailedDesc": "Falha ao entrar. Tente novamente.",
       "authNotCompleted": "Autorizacao não foi completada",
       "authNotCompletedDesc": "Autorização falhou. Tente novamente.",

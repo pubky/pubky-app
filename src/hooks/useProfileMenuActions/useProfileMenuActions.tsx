@@ -58,17 +58,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
         }),
     icon: isFollowing ? UserRoundMinus : UserRoundPlus,
     onClick: async () => {
-      try {
-        await toggleFollow(userId, isFollowing);
-        toast({
-          title: isFollowing ? tToast('follow.unfollowed', { username }) : tToast('follow.followed', { username }),
-        });
-      } catch (error) {
-        toast({
-          variant: 'error',
-          description: isAppError(error) ? error.message : tToast('follow.failed'),
-        });
-      }
+      await toggleFollow(userId, isFollowing, profile?.name);
     },
     disabled: isFollowLoading || isUserLoading(userId),
   });
@@ -84,7 +74,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       } catch (error) {
         toast({
           variant: 'error',
-          description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
+          description: isAppError(error) ? error.message : tToast('copy.copyFailedDesc'),
         });
       }
     },
@@ -101,7 +91,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       } catch (error) {
         toast({
           variant: 'error',
-          description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
+          description: isAppError(error) ? error.message : tToast('copy.copyFailedDesc'),
         });
       }
     },

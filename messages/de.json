@@ -290,7 +290,7 @@
       "linkCopied": "Link kopiert",
       "linkFailed": "Verbindung zur Signer-Anwendung Pubky Ring nicht möglich",
       "tryAgain": "Bitte versuchen Sie es erneut.",
-      "authInitFailedTitle": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "authInitFailedTitle": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
       "authInitFailedDescription": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
       "authNotCompletedTitle": "Autorisierung wurde nicht abgeschlossen",
       "authNotCompletedDescription": "Autorisierung fehlgeschlagen. Versuchen Sie es erneut.",
@@ -326,7 +326,7 @@
         "invalidPassword": "Ungültiges Passwort oder beschädigte Datei. Bitte überprüfen Sie Ihr Passwort und versuchen Sie es erneut.",
         "nexusError": "Bei Nexus ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
         "restoreError": "Wiederherstellung aus Datei fehlgeschlagen. Bitte überprüfen Sie Ihre Datei und versuchen Sie es erneut.",
-        "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten",
+        "unexpectedError": "Unerwarteter Fehler aufgetreten.",
         "cancel": "Abbrechen",
         "restore": "Wiederherstellen",
         "restoring": "Wird wiederhergestellt..."
@@ -922,7 +922,7 @@
       "linkCopied": "Link in Zwischenablage kopiert",
       "textCopied": "Text in Zwischenablage kopiert",
       "profileLinkCopied": "Profillink in Zwischenablage kopiert",
-      "copyFailed": "Kopieren fehlgeschlagen",
+      "copyFailed": "Kopieren in Zwischenablage nicht möglich",
       "copyFailedDesc": "Kopieren in Zwischenablage nicht möglich"
     },
     "follow": {
@@ -931,8 +931,8 @@
       "unfollowed": "{username} entfolgt"
     },
     "mute": {
-      "muted": "Benutzer stummgeschaltet",
-      "unmuted": "Stummschaltung aufgehoben",
+      "muted": "{username} stummgeschaltet",
+      "unmuted": "{username} nicht mehr stummgeschaltet",
       "failed": "Stummschaltungsstatus konnte nicht aktualisiert werden"
     },
     "profile": {
@@ -963,13 +963,13 @@
       "userIdRequired": "Benutzer-ID ist erforderlich",
       "loginRequired": "Sie müssen angemeldet sein, um Tags hinzuzufuegen",
       "alreadyAdded": "Sie haben diesen Tag bereits hinzugefügt",
-      "added": "Tag hinzugefuegt",
-      "removed": "Tag entfernt",
+      "added": "Tag hinzugefügt: {label}",
+      "removed": "Tag entfernt: {label}",
       "addFailed": "Tag konnte nicht hinzugefügt werden: {label}",
       "removeFailed": "Tag konnte nicht entfernt werden: {label}"
     },
     "auth": {
-      "signInFailed": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "signInFailed": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
       "signInFailedDesc": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
       "authNotCompleted": "Autorisierung wurde nicht abgeschlossen",
       "authNotCompletedDesc": "Autorisierung fehlgeschlagen. Versuchen Sie es erneut.",

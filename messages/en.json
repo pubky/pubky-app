@@ -290,7 +290,7 @@
       "linkCopied": "Authentication link copied",
       "linkFailed": "Unable to link to signer application Pubky Ring",
       "tryAgain": "Please try again.",
-      "authInitFailedTitle": "Sign in failed. Please try again.",
+      "authInitFailedTitle": "Sign in failed. Try again.",
       "authInitFailedDescription": "Sign in failed. Try again.",
       "authNotCompletedTitle": "Authorization was not completed",
       "authNotCompletedDescription": "Authorization failed. Try again.",
@@ -326,7 +326,7 @@
         "invalidPassword": "Invalid password or corrupted file. Please check your password and try again.",
         "nexusError": "Something went wrong with nexus. Please try again.",
         "restoreError": "Failed to restore from file. Please check your file and try again.",
-        "unexpectedError": "An unexpected error occurred",
+        "unexpectedError": "Unexpected error occurred.",
         "cancel": "Cancel",
         "restore": "Restore",
         "restoring": "Restoring..."
@@ -922,7 +922,7 @@
       "linkCopied": "Link copied to clipboard",
       "textCopied": "Text copied to clipboard",
       "profileLinkCopied": "Profile link copied to clipboard",
-      "copyFailed": "Copy failed",
+      "copyFailed": "Could not copy to clipboard",
       "copyFailedDesc": "Could not copy to clipboard"
     },
     "follow": {
@@ -969,7 +969,7 @@
       "removeFailed": "Could not remove tag: {label}"
     },
     "auth": {
-      "signInFailed": "Sign in failed. Please try again.",
+      "signInFailed": "Sign in failed. Try again.",
       "signInFailedDesc": "Sign in failed. Try again.",
       "authNotCompleted": "Authorization was not completed",
       "authNotCompletedDesc": "Authorization failed. Try again.",

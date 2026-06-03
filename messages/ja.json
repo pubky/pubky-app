@@ -290,7 +290,7 @@
       "linkCopied": "リンクをコピーしました",
       "linkFailed": "Pubky Ring署名アプリへの接続に失敗しました",
       "tryAgain": "再試行してください。",
-      "authInitFailedTitle": "ログインに失敗しました。もう一度お試しください。",
+      "authInitFailedTitle": "サインインに失敗しました。もう一度お試しください。",
       "authInitFailedDescription": "サインインに失敗しました。もう一度お試しください。",
       "authNotCompletedTitle": "認証が完了しませんでした",
       "authNotCompletedDescription": "認可に失敗しました。もう一度お試しください。",
@@ -326,7 +326,7 @@
         "invalidPassword": "パスワードが無効かファイルが破損しています。パスワードを確認して再試行してください。",
         "nexusError": "nexusでエラーが発生しました。再試行してください。",
         "restoreError": "ファイルからの復元に失敗しました。ファイルを確認して再試行してください。",
-        "unexpectedError": "予期しないエラーが発生しました",
+        "unexpectedError": "予期しないエラーが発生しました。",
         "cancel": "キャンセル",
         "restore": "復元",
         "restoring": "復元中..."
@@ -922,7 +922,7 @@
       "linkCopied": "リンクをクリップボードにコピーしました",
       "textCopied": "テキストをクリップボードにコピーしました",
       "profileLinkCopied": "プロフィールリンクをクリップボードにコピーしました",
-      "copyFailed": "コピーに失敗しました",
+      "copyFailed": "クリップボードにコピーできませんでした",
       "copyFailedDesc": "クリップボードにコピーできませんでした"
     },
     "follow": {
@@ -931,8 +931,8 @@
       "unfollowed": "{username}のフォローを解除しました"
     },
     "mute": {
-      "muted": "ユーザーをミュートしました",
-      "unmuted": "ユーザーのミュートを解除しました",
+      "muted": "{username}をミュートしました",
+      "unmuted": "{username}のミュートを解除しました",
       "failed": "ミュート状態を更新できませんでした"
     },
     "profile": {
@@ -963,13 +963,13 @@
       "userIdRequired": "ユーザーIDは必須です",
       "loginRequired": "タグを追加するにはログインが必要です",
       "alreadyAdded": "このタグは既に追加済みです",
-      "added": "タグを追加しました",
-      "removed": "タグを削除しました",
+      "added": "タグを追加しました: {label}",
+      "removed": "タグを削除しました: {label}",
       "addFailed": "タグを追加できませんでした: {label}",
       "removeFailed": "タグを削除できませんでした: {label}"
     },
     "auth": {
-      "signInFailed": "ログインに失敗しました。再試行してください。",
+      "signInFailed": "サインインに失敗しました。もう一度お試しください。",
       "signInFailedDesc": "サインインに失敗しました。もう一度お試しください。",
       "authNotCompleted": "認証が完了しませんでした",
       "authNotCompletedDesc": "認可に失敗しました。もう一度お試しください。",

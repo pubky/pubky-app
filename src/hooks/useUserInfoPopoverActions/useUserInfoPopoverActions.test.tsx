@@ -31,6 +31,7 @@ describe('useUserInfoPopoverActions', () => {
     const { result } = renderHook(() =>
       useUserInfoPopoverActions({
         userId: 'me',
+        userName: 'Me',
         isCurrentUser: true,
         isFollowing: false,
         isFollowingStatusLoading: false,
@@ -55,6 +56,7 @@ describe('useUserInfoPopoverActions', () => {
     const { result } = renderHook(() =>
       useUserInfoPopoverActions({
         userId: 'other',
+        userName: 'Other User',
         isCurrentUser: false,
         isFollowing: true,
         isFollowingStatusLoading: false,
@@ -66,7 +68,7 @@ describe('useUserInfoPopoverActions', () => {
       await result.current.onFollowClick(event);
     });
 
-    expect(toggleFollow).toHaveBeenCalledWith('other', true);
+    expect(toggleFollow).toHaveBeenCalledWith('other', true, 'Other User');
   });
 
   it('computes loading state from isUserLoading + following status', () => {
@@ -78,6 +80,7 @@ describe('useUserInfoPopoverActions', () => {
     const { result } = renderHook(() =>
       useUserInfoPopoverActions({
         userId: 'other',
+        userName: 'Other User',
         isCurrentUser: false,
         isFollowing: false,
         isFollowingStatusLoading: false,

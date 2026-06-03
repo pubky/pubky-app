@@ -1,8 +1,6 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import { isAppError } from '@/libs/error/error.utils';
-import { asOpaque } from '@/test-utils/type-assertions';
 import { usePostMenuActions } from './usePostMenuActions';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
 
@@ -218,7 +216,7 @@ describe('usePostMenuActions', () => {
       expect(followItem?.disabled).toBe(true);
     });
 
-    it('shows success toast when follow succeeds', async () => {
+    it('calls toggleFollow with full author name on follow action click', async () => {
       const { result } = renderHook(() =>
         usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
       );
@@ -230,13 +228,10 @@ describe('usePostMenuActions', () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, false);
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Following Test Author',
-      });
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, false, 'Test Author');
     });
 
-    it('shows success toast when unfollow succeeds', async () => {
+    it('calls toggleFollow with full author name on unfollow action click', async () => {
       mockUseIsFollowing.mockReturnValue({
         isFollowing: true,
         isLoading: false,
@@ -253,71 +248,7 @@ describe('usePostMenuActions', () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, true);
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Unfollowed Test Author',
-      });
-    });
-
-    it('calls toggleFollow on follow action click', async () => {
-      const { result } = renderHook(() =>
-        usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
-      );
-
-      const followItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.FOLLOW);
-      expect(followItem).toBeDefined();
-
-      await act(async () => {
-        await followItem?.onClick();
-      });
-
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, false);
-    });
-
-    it('shows error toast when follow fails with AppError', async () => {
-      const error = asOpaque<Error>({ type: 'AppError', message: 'Follow failed' });
-      vi.mocked(isAppError).mockReturnValue(true);
-      defaultMocks.toggleFollow.mockRejectedValue(error);
-
-      const { result } = renderHook(() =>
-        usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
-      );
-
-      const followItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.FOLLOW);
-
-      await act(async () => {
-        await followItem?.onClick();
-      });
-
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          variant: 'error',
-          description: 'Follow failed',
-        });
-      });
-    });
-
-    it('shows generic error toast when follow fails with non-AppError', async () => {
-      const error = new Error('Follow failed');
-      vi.mocked(isAppError).mockReturnValue(false);
-      defaultMocks.toggleFollow.mockRejectedValue(error);
-
-      const { result } = renderHook(() =>
-        usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
-      );
-
-      const followItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.FOLLOW);
-
-      await act(async () => {
-        await followItem?.onClick();
-      });
-
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          variant: 'error',
-          description: 'Could not update follow status',
-        });
-      });
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, true, 'Test Author');
     });
 
     it('includes mute action', () => {

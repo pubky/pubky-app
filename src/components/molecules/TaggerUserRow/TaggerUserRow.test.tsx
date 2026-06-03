@@ -29,7 +29,7 @@ vi.mock('@/organisms/UserListItem/UserListItem', () => {
       isStatusLoading?: boolean;
       isCurrentUser?: boolean;
       onUserClick?: (id: string) => void;
-      onFollowClick?: (id: string, isFollowing: boolean) => void;
+      onFollowClick?: (id: string, isFollowing: boolean, displayName: string) => void;
     }) => (
       <div
         data-testid="user-list-item"
@@ -45,7 +45,10 @@ vi.mock('@/organisms/UserListItem/UserListItem', () => {
         <button data-testid="user-click" onClick={() => onUserClick?.(user.id)}>
           View Profile
         </button>
-        <button data-testid="follow-click" onClick={() => onFollowClick?.(user.id, isFollowing ?? false)}>
+        <button
+          data-testid="follow-click"
+          onClick={() => onFollowClick?.(user.id, isFollowing ?? false, user.name ?? user.id)}
+        >
           Follow
         </button>
       </div>
@@ -148,7 +151,7 @@ describe('TaggerUserRow', () => {
     });
     render(<TaggerUserRow {...defaultProps} onFollowClick={onFollowClick} />);
     screen.getByTestId('follow-click').click();
-    expect(onFollowClick).toHaveBeenCalledWith('user-123', true);
+    expect(onFollowClick).toHaveBeenCalledWith('user-123', true, 'Test User');
   });
 });
 

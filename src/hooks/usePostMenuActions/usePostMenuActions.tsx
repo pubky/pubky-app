@@ -50,7 +50,6 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
 
   const tMute = useTranslations('toast.mute');
   const tCopy = useTranslations('toast.copy');
-  const tFollow = useTranslations('toast.follow');
   const { onReportClick, onEditClick, onDeleteClick, isDeleting = false } = options;
   const parsedId = parseCompositeId(postId);
   // Normalize author ID to ensure consistent format (strip pubky: or pk: prefix)
@@ -92,17 +91,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
           }),
       icon: isFollowing ? UserRoundMinus : UserRoundPlus,
       onClick: async () => {
-        try {
-          await toggleFollow(postAuthorId, isFollowing);
-          toast({
-            title: isFollowing ? tFollow('unfollowed', { username }) : tFollow('followed', { username }),
-          });
-        } catch (error) {
-          toast({
-            variant: 'error',
-            description: isAppError(error) ? error.message : tFollow('failed'),
-          });
-        }
+        await toggleFollow(postAuthorId, isFollowing, authorProfile?.name);
       },
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
       disabled: isFollowLoading || isUserLoading(postAuthorId),

@@ -290,7 +290,7 @@
       "linkCopied": "Lien copie",
       "linkFailed": "Impossible de se connecter a l'application Pubky Ring",
       "tryAgain": "Veuillez réessayer.",
-      "authInitFailedTitle": "Échec de la connexion. Veuillez réessayer.",
+      "authInitFailedTitle": "Échec de la connexion. Réessayez.",
       "authInitFailedDescription": "Échec de la connexion. Réessayez.",
       "authNotCompletedTitle": "L'autorisation n'a pas été terminée",
       "authNotCompletedDescription": "Autorisation échouée. Réessayez.",
@@ -326,7 +326,7 @@
         "invalidPassword": "Mot de passe invalide ou fichier corrompu. Veuillez vérifier votre mot de passe et réessayer.",
         "nexusError": "Quelque chose s'est mal passé avec nexus. Veuillez réessayer.",
         "restoreError": "Échec de la restauration depuis le fichier. Veuillez vérifier votre fichier et réessayer.",
-        "unexpectedError": "Une erreur inattendue s'est produite",
+        "unexpectedError": "Erreur inattendue.",
         "cancel": "Annuler",
         "restore": "Restaurer",
         "restoring": "Restauration..."
@@ -922,7 +922,7 @@
       "linkCopied": "Lien copie dans le presse-papiers",
       "textCopied": "Texte copie dans le presse-papiers",
       "profileLinkCopied": "Lien du profil copie dans le presse-papiers",
-      "copyFailed": "Échec de la copie",
+      "copyFailed": "Impossible de copier dans le presse-papiers",
       "copyFailedDesc": "Impossible de copier dans le presse-papiers"
     },
     "follow": {
@@ -931,8 +931,8 @@
       "unfollowed": "Vous ne suivez plus {username}"
     },
     "mute": {
-      "muted": "Utilisateur masque",
-      "unmuted": "Utilisateur affiche",
+      "muted": "{username} masqué",
+      "unmuted": "{username} n'est plus masqué",
       "failed": "Impossible de mettre à jour le statut de silence"
     },
     "profile": {
@@ -963,13 +963,13 @@
       "userIdRequired": "L'ID utilisateur est obligatoire",
       "loginRequired": "Vous devez etre connecte pour ajouter des tags",
       "alreadyAdded": "Vous avez déjà ajoute ce tag",
-      "added": "Tag ajouté",
-      "removed": "Tag supprimé",
+      "added": "Tag ajouté : {label}",
+      "removed": "Tag supprimé : {label}",
       "addFailed": "Impossible d'ajouter le tag : {label}",
       "removeFailed": "Impossible de retirer le tag : {label}"
     },
     "auth": {
-      "signInFailed": "Échec de la connexion. Veuillez réessayer.",
+      "signInFailed": "Échec de la connexion. Réessayez.",
       "signInFailedDesc": "Échec de la connexion. Réessayez.",
       "authNotCompleted": "L'autorisation n'a pas ete completee",
       "authNotCompletedDesc": "Autorisation échouée. Réessayez.",

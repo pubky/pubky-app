@@ -326,7 +326,7 @@
         "invalidPassword": "密码无效或文件损坏。请检查密码后重试。",
         "nexusError": "nexus 出现问题。请重试。",
         "restoreError": "从文件恢复失败。请检查您的文件后重试。",
-        "unexpectedError": "发生意外错误",
+        "unexpectedError": "发生意外错误。",
         "cancel": "取消",
         "restore": "恢复",
         "restoring": "恢复中..."
@@ -922,7 +922,7 @@
       "linkCopied": "链接已复制到剪贴板",
       "textCopied": "文本已复制到剪贴板",
       "profileLinkCopied": "个人资料链接已复制到剪贴板",
-      "copyFailed": "复制失败",
+      "copyFailed": "无法复制到剪贴板",
       "copyFailedDesc": "无法复制到剪贴板"
     },
     "follow": {
@@ -931,8 +931,8 @@
       "unfollowed": "已取消关注 {username}"
     },
     "mute": {
-      "muted": "用户已静音",
-      "unmuted": "用户已取消静音",
+      "muted": "已静音 {username}",
+      "unmuted": "已取消静音 {username}",
       "failed": "无法更新静音状态"
     },
     "profile": {
@@ -963,8 +963,8 @@
       "userIdRequired": "用户 ID 为必填项",
       "loginRequired": "您必须登录才能添加标签",
       "alreadyAdded": "您已添加此标签",
-      "added": "标签已添加",
-      "removed": "标签已移除",
+      "added": "已添加标签：{label}",
+      "removed": "已移除标签：{label}",
       "addFailed": "无法添加标签：{label}",
       "removeFailed": "无法移除标签：{label}"
     },
