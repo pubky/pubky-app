@@ -2,7 +2,7 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePathname, useSelectedLayoutSegments } from 'next/navigation';
 import { Container } from '@/atoms/Container/Container';
-import { FORCE_HOME_SCROLL_TOP_KEY } from '@/config/feed';
+import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { type FeedsShellConfig, tryResolveFeedsShellConfig } from './_shell/configs';
 
@@ -137,12 +137,20 @@ export default function FeedsLayout({ children, post }: { children: React.ReactN
     if (returnedToSameFeed) {
       window.scrollTo({ top: savedScrollRef.current, behavior: 'auto' });
       // We restored this feed's position, so cancel any lingering top-scroll
-      // intent set by logo/footer while the pathname was `/post/...` (Home stays
-      // mounted and never consumes it). Only safe to clear on a same-route restore.
-      window.sessionStorage.removeItem(FORCE_HOME_SCROLL_TOP_KEY);
+      // intent set by logo/footer while the pathname was `/post/...` (the feed
+      // stays mounted and never consumes it). Only safe to clear on a same-route restore.
+      window.sessionStorage.removeItem(FORCE_FEED_SCROLL_TOP_KEY);
+    } else if (window.sessionStorage.getItem(FORCE_FEED_SCROLL_TOP_KEY) === '1') {
+      // Explicit forward navigation to a feed the user wasn't on (flag set by a
+      // nav entry point). The persistent layout doesn't reset window scroll on
+      // intra-cluster navigation, so scroll to the top here. Browser back never
+      // sets the flag, so its native scroll restoration is preserved.
+      window.sessionStorage.removeItem(FORCE_FEED_SCROLL_TOP_KEY);
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      savedScrollRef.current = 0;
     } else {
-      // Fresh feed view (mount, feed -> feed nav, or post closed onto a
-      // DIFFERENT feed): adopt the current scroll as the new baseline.
+      // Fresh feed view without explicit intent (mount, browser back): adopt the
+      // current scroll as the new baseline without forcing a position.
       savedScrollRef.current = window.scrollY;
     }
     lastFeedPathnameRef.current = pathname;

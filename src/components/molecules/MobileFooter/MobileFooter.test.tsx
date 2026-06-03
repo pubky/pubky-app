@@ -1,7 +1,7 @@
 import { usePathname } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { FORCE_HOME_SCROLL_TOP_KEY } from '@/config/feed';
+import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
 import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
@@ -349,7 +349,20 @@ describe('MobileFooter', () => {
 
     fireEvent.click(homeLink!);
     expect(window.scrollTo).not.toHaveBeenCalled();
-    expect(setItemSpy).toHaveBeenCalledWith(FORCE_HOME_SCROLL_TOP_KEY, '1');
+    expect(setItemSpy).toHaveBeenCalledWith(FORCE_FEED_SCROLL_TOP_KEY, '1');
+  });
+
+  it('sets the top-scroll flag when navigating to Bookmarks from another feed', () => {
+    vi.mocked(usePathname).mockReturnValue('/home');
+    Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
+    const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
+
+    render(<MobileFooter />);
+    const bookmarksLink = document.querySelector('.lucide-bookmark')?.closest('a');
+    expect(bookmarksLink).toBeTruthy();
+
+    fireEvent.click(bookmarksLink!);
+    expect(setItemSpy).toHaveBeenCalledWith(FORCE_FEED_SCROLL_TOP_KEY, '1');
   });
 
   it('applies transform when keyboard is visible', async () => {

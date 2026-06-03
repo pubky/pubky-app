@@ -1,7 +1,7 @@
 import { usePathname } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FORCE_HOME_SCROLL_TOP_KEY } from '@/config/feed';
+import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
 import { Logo } from './Logo';
 
 // Mock Next.js Image component
@@ -80,7 +80,7 @@ describe('Logo', () => {
 
     fireEvent.click(link!);
     expect(window.scrollTo).not.toHaveBeenCalled();
-    expect(setItemSpy).toHaveBeenCalledWith(FORCE_HOME_SCROLL_TOP_KEY, '1');
+    expect(setItemSpy).toHaveBeenCalledWith(FORCE_FEED_SCROLL_TOP_KEY, '1');
   });
 });
 

@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Link } from '@/atoms/Link/Link';
-import { FORCE_HOME_SCROLL_TOP_KEY } from '@/config/feed';
+import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 
 interface LogoProps {
@@ -28,22 +28,7 @@ export function Logo({
       onClick={(event) => {
         props.onClick?.(event);
         if (event.defaultPrevented) return;
-
-        // Don't hijack modified clicks (new tab/window, etc.)
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
-
-        if (isHome) {
-          event.preventDefault();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
-        }
-
-        // Home feed is kept mounted to preserve scroll; mark explicit intent to reset to top on enter.
-        try {
-          window.sessionStorage.setItem(FORCE_HOME_SCROLL_TOP_KEY, '1');
-        } catch {
-          // Ignore storage errors and keep default navigation behavior.
-        }
+        handleFeedNavClick(event, { isActive: isHome, smoothScrollWhenActive: true });
       }}
       className={cn(`flex items-center min-w-[${width}px] min-h-[${height}px]`, props.className)}
     >

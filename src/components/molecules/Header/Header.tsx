@@ -13,6 +13,7 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { GITHUB_URL, TELEGRAM_URL, TWITTER_GETPUBKY_URL } from '@/config/externalLinks';
 import { Github2, Telegram, XTwitter } from '@/icons';
+import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { ProgressSteps } from '../ProgressSteps/ProgressSteps';
@@ -83,6 +84,7 @@ type NavigationItemConfig = {
   }>;
   labelKey: string;
   dataCy?: string;
+  isFeedRoute?: boolean;
 };
 type HeaderNavigationButtonsProps = {
   counter?: number;
@@ -96,6 +98,7 @@ const NAVIGATION_ITEMS: NavigationItemConfig[] = [
     icon: Home,
     labelKey: 'home',
     dataCy: 'header-home-btn',
+    isFeedRoute: true,
   },
   {
     href: APP_ROUTES.HOT,
@@ -108,6 +111,7 @@ const NAVIGATION_ITEMS: NavigationItemConfig[] = [
     icon: Bookmark,
     labelKey: 'bookmarks',
     dataCy: 'header-bookmarks-btn',
+    isFeedRoute: true,
   },
   {
     href: SETTINGS_ROUTES.ACCOUNT,
@@ -124,9 +128,14 @@ type NavigationButtonProps = {
   label: string;
   isActive: boolean;
   dataCy?: string;
+  isFeedRoute?: boolean;
 };
-const NavigationButton = ({ href, icon: Icon, label, isActive, dataCy }: NavigationButtonProps) => (
-  <Link href={href} data-cy={dataCy}>
+const NavigationButton = ({ href, icon: Icon, label, isActive, dataCy, isFeedRoute }: NavigationButtonProps) => (
+  <Link
+    href={href}
+    data-cy={dataCy}
+    onClick={isFeedRoute ? (event) => handleFeedNavClick(event, { isActive, smoothScrollWhenActive: true }) : undefined}
+  >
     <Button
       className={cn('h-12 w-12 backdrop-blur-md', isActive ? '' : 'border bg-white/5')}
       variant="secondary"
@@ -157,6 +166,7 @@ export function HeaderNavigationButtons({
           label={t(item.labelKey)}
           isActive={pathname === item.href}
           dataCy={item.dataCy}
+          isFeedRoute={item.isFeedRoute}
         />
       ))}
 

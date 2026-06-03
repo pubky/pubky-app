@@ -1,7 +1,7 @@
 import { usePathname, useSelectedLayoutSegments } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FORCE_HOME_SCROLL_TOP_KEY } from '@/config/feed';
+import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
 import { tryResolveFeedsShellConfig } from './_shell/configs';
 import FeedsLayout from './layout';
 
@@ -348,15 +348,15 @@ describe('FeedsLayout - feed scroll restoration (#1348)', () => {
     goTo('/post/alice/123', { postActive: true, isFeed: false });
     rerender(makeTree());
 
-    window.sessionStorage.setItem(FORCE_HOME_SCROLL_TOP_KEY, '1');
+    window.sessionStorage.setItem(FORCE_FEED_SCROLL_TOP_KEY, '1');
 
     goTo('/home');
     rerender(makeTree());
 
-    expect(window.sessionStorage.getItem(FORCE_HOME_SCROLL_TOP_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(FORCE_FEED_SCROLL_TOP_KEY)).toBeNull();
   });
 
-  it('does NOT restore a source feed offset onto a different feed, and preserves the flag (cross-route)', () => {
+  it('does NOT restore a source feed offset onto a different feed; honors the forward-nav flag (cross-route)', () => {
     // Start on /bookmarks and scroll it.
     goTo('/bookmarks');
     const { rerender } = render(makeTree());
@@ -368,17 +368,45 @@ describe('FeedsLayout - feed scroll restoration (#1348)', () => {
     rerender(makeTree());
 
     // Logo sets the top-scroll intent while on /post/...
-    window.sessionStorage.setItem(FORCE_HOME_SCROLL_TOP_KEY, '1');
+    window.sessionStorage.setItem(FORCE_FEED_SCROLL_TOP_KEY, '1');
 
     // Close onto /home (a DIFFERENT feed than the source).
     setScrollY(0);
     goTo('/home');
     rerender(makeTree());
 
-    // Bookmarks offset must not be splashed onto Home, and the legitimate
-    // top-scroll intent for /home must survive for Home's mount to consume.
+    // The bookmarks offset (800) must NOT be splashed onto Home. Because the
+    // user explicitly navigated (flag set), Home scrolls to the top instead,
+    // and the one-shot flag is consumed.
+    expect(scrollToSpy).not.toHaveBeenCalledWith({ top: 800, behavior: 'auto' });
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+    expect(window.sessionStorage.getItem(FORCE_FEED_SCROLL_TOP_KEY)).toBeNull();
+  });
+
+  it('scrolls a newly navigated feed to the top when the forward-nav flag is set, then clears it', () => {
+    const { rerender } = render(makeTree());
+    setScrollY(2000);
+    fireEvent.scroll(window);
+
+    // User clicks a feed nav entry point: it sets the flag, then the route changes.
+    window.sessionStorage.setItem(FORCE_FEED_SCROLL_TOP_KEY, '1');
+    goTo('/bookmarks');
+    rerender(makeTree());
+
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+    expect(window.sessionStorage.getItem(FORCE_FEED_SCROLL_TOP_KEY)).toBeNull();
+  });
+
+  it('does NOT force-scroll a feed navigated to without the flag (browser back between feeds)', () => {
+    const { rerender } = render(makeTree());
+    setScrollY(2000);
+    fireEvent.scroll(window);
+
+    // No flag set (e.g. browser back) -> native scroll restoration is preserved.
+    goTo('/bookmarks');
+    rerender(makeTree());
+
     expect(scrollToSpy).not.toHaveBeenCalled();
-    expect(window.sessionStorage.getItem(FORCE_HOME_SCROLL_TOP_KEY)).toBe('1');
   });
 
   it('never tracks a non-feed pathname as a feed, nor lets its scroll contaminate the saved offset', () => {
