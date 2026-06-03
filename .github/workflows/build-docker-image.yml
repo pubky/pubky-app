@@ -85,7 +85,7 @@ jobs:
         id: set_tag
         run: |
           echo image_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
-          echo image_name=${{ format('pubky-app-{0}', inputs.env) }} >> $GITHUB_OUTPUT
+          echo image_name=${{ format('pubky-app', inputs.env) }} >> $GITHUB_OUTPUT
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
