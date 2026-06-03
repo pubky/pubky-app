@@ -100,7 +100,6 @@ export {
   ToastViewport,
 };
 export type { ToastVariant } from './Toast.variants';
-export { TOAST_ICONS, toastActionVariants, toastIconVariants, toastVariants } from './Toast.variants';
 
 type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>;
 type ToastActionElement = React.ReactElement<typeof ToastAction>;

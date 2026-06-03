@@ -24,6 +24,22 @@ The two route-segment error boundaries (`app/error.tsx`, `app/global-error.tsx`)
 
 For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('actionName', { headers: await headers() }, async () => { ... })` so server-action errors are captured and traces stitch with the client.
 
+### OG metadata enrichment
+
+`/api/og-metadata` is best-effort link-preview enrichment. Expected external outcomes should normally be handled before
+`Err.*` creation so they do not create Sentry issues:
+
+- Expected remote failures such as forbidden/not-found/gone pages, non-HTML content, DNS failure, network failure,
+  timeout, rate limiting, or remote 5xx return fallback metadata.
+- Invalid user URLs return a normal `400` response from the controller/route without `Err.validation`.
+- `og:image` normalization uses non-throwing DNS safety checks, so invalid image URLs, DNS failures, and private image
+  IPs simply remove the image from otherwise valid page metadata.
+- Security/anomaly cases on the main page fetch path, such as private IPs, non-HTTP redirects, redirect loops, oversized
+  bodies, and parser/runtime surprises remain reportable through `Err.*`.
+
+Fallback paths use `Logger.warn`, which is currently platform/server logging. Sentry Logs are disabled in this app, so
+these warnings are not Sentry aggregate events unless logging infrastructure is enabled separately.
+
 ### Known quirk: render-time errors emit 2 events in React 19
 
 When an `AppError` is thrown synchronously during React render (as opposed to event handlers, effects, or application-layer code), React 19 attempts to re-render the failing component once before handing off to the error boundary. Each render invocation runs the `throw Err.*(...)` expression afresh, constructing a new `AppError` and routing through `captureAppError` — producing **2 Sentry events** within ~30 ms.

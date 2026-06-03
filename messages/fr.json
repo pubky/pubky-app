@@ -263,19 +263,12 @@
       "subtitle": "Ouvrez Pubky Ring, crééz un pubky et scannez le QR.",
       "generating": "Génération du code QR...",
       "generatingShort": "Génération...",
-      "expired": "Expiré",
+      "clickToReload": "Cliquez pour recharger",
       "openingRing": "Ouverture de Pubky Ring...",
       "authorize": "Autoriser avec Pubky Ring",
       "authorizeSub": "Utilisez <pubkyRing>Pubky Ring</pubkyRing> ou tout autre trousseau alimente par <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "Impossible de se connecter a l'application Pubky Ring",
       "tryAgain": "Veuillez réessayer."
-    },
-    "authExpired": {
-      "titleDesktop": "Code QR expiré",
-      "descriptionDesktop": "Ce code QR n'est plus actif. Actualisez pour en obtenir un nouveau.",
-      "titleMobile": "Session d'autorisation expirée",
-      "descriptionMobile": "Votre session d'autorisation n'est plus active. Actualisez pour en générer une nouvelle et continuer.",
-      "refresh": "Actualiser"
     },
     "signIn": {
       "title": "Connectez-vous a <highlight>Pubky.</highlight>",
@@ -284,7 +277,7 @@
       "progressSubtitle": "Veuillez patienter pendant le chargement de votre expérience Pubky.",
       "generating": "Génération du code QR...",
       "generatingShort": "Génération...",
-      "expired": "Expiré",
+      "clickToReload": "Cliquez pour recharger",
       "openingRing": "Ouverture de Pubky Ring...",
       "authorize": "Autoriser avec Pubky Ring",
       "linkCopied": "Lien copie",

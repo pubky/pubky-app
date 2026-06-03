@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TITLE_TRUNCATE_LENGTH, URL_TRUNCATE_LENGTH } from '@/config/urls';
-import { AuthErrorCode, NetworkErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 
@@ -9,19 +9,32 @@ import { asOpaque } from '@/test-utils/type-assertions';
 // Mocks
 // ---------------------------------------------------------------------------
 
-const { mockValidateDns, mockReadResponseBody, mockNormalizeImageUrl } = vi.hoisted(() => ({
-  mockValidateDns: vi.fn(),
+const { mockReadResponseBody, mockResolve4, mockIsIP, mockIsIpSafe } = vi.hoisted(() => ({
   mockReadResponseBody: vi.fn(),
-  mockNormalizeImageUrl: vi.fn(),
+  mockResolve4: vi.fn<(hostname: string) => Promise<string[]>>(),
+  mockIsIP: vi.fn<(input: string) => number>(),
+  mockIsIpSafe: vi.fn<(ip: string) => boolean>(),
+}));
+
+vi.mock('dns/promises', () => ({
+  default: { resolve4: mockResolve4 },
+  resolve4: mockResolve4,
+}));
+
+vi.mock('net', () => ({
+  default: { isIP: mockIsIP },
+  isIP: mockIsIP,
+}));
+
+vi.mock('@/libs/network/network', () => ({
+  isIpSafe: mockIsIpSafe,
 }));
 
 vi.mock('../nextjs.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../nextjs.utils')>();
   return {
     ...actual,
-    validateDns: mockValidateDns,
     readResponseBody: mockReadResponseBody,
-    normalizeImageUrl: mockNormalizeImageUrl,
   };
 });
 
@@ -45,6 +58,25 @@ const createErrorResponse = (status: number) => {
   return response;
 };
 
+const createDnsError = (code = 'ENOTFOUND') => Object.assign(new Error(code), { code });
+const EXPECTED_DNS_ERROR_CODES = [
+  'ENOTFOUND',
+  'ESERVFAIL',
+  'ETIMEDOUT',
+  'ETIMEOUT',
+  'EAI_AGAIN',
+  'ENODATA',
+  'EREFUSED',
+  'ECONNREFUSED',
+  'ECANCELLED',
+  'EDESTRUCTION',
+];
+
+const spyOnLoggerWarn = async () => {
+  const { Logger } = await import('@/libs/logger/logger');
+  return vi.spyOn(Logger, 'warn');
+};
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -57,24 +89,24 @@ describe('NextJsOgMetadataService', () => {
     vi.clearAllMocks();
 
     global.fetch = mockFetch;
-    mockValidateDns.mockResolvedValue(undefined);
-    mockNormalizeImageUrl.mockResolvedValue(null);
-
+    mockResolve4.mockResolvedValue(['1.1.1.1']);
+    mockIsIP.mockReturnValue(0);
+    mockIsIpSafe.mockReturnValue(true);
     const mod = await import('./og-metadata');
     NextJsOgMetadataService = mod.NextJsOgMetadataService;
   });
 
   // -------------------------------------------------------------------------
-  // Orchestration: calls validateDns → fetch → readResponseBody
+  // Orchestration: calls DNS validation → fetch → readResponseBody
   // -------------------------------------------------------------------------
 
-  it('should call validateDns with the hostname from the validated URL', async () => {
+  it('should resolve DNS for the hostname from the validated URL', async () => {
     mockFetch.mockResolvedValue(createOkResponse('text/html'));
     mockReadResponseBody.mockResolvedValue(simpleHtml('Test'));
 
     await NextJsOgMetadataService.fetch(new URL('https://example.com/'));
 
-    expect(mockValidateDns).toHaveBeenCalledWith('example.com');
+    expect(mockResolve4).toHaveBeenCalledWith('example.com');
   });
 
   it('should call fetch with the URL string', async () => {
@@ -114,14 +146,27 @@ describe('NextJsOgMetadataService', () => {
     expect(result).toEqual({ url: 'https://example.com/song.mp3', type: 'audio' });
   });
 
-  it('should throw for non-HTML, non-media content type', async () => {
+  it('should return durable fallback for non-HTML, non-media content type', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     mockFetch.mockResolvedValue(createOkResponse('application/json'));
 
-    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/api'))).rejects.toMatchObject({
-      category: ErrorCategory.Validation,
-      code: ValidationErrorCode.INVALID_INPUT,
-      message: 'Not HTML content',
+    const result = await NextJsOgMetadataService.fetch(new URL('https://example.com/api'));
+
+    expect(result).toEqual({
+      url: 'https://example.com/api',
+      title: null,
+      image: null,
+      type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'non_html',
+        hostname: 'example.com',
+        contentType: 'application/json',
+      }),
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -141,10 +186,89 @@ describe('NextJsOgMetadataService', () => {
     });
   });
 
-  it('should throw for non-403 error responses', async () => {
+  it('should return durable fallback metadata for 404 responses', async () => {
+    mockFetch.mockResolvedValue(createErrorResponse(404));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/missing'))).resolves.toMatchObject({
+      url: 'https://example.com/missing',
+      title: null,
+      image: null,
+      type: 'website',
+    });
+  });
+
+  it('should return durable fallback metadata for 410 responses', async () => {
+    mockFetch.mockResolvedValue(createErrorResponse(410));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/gone'))).resolves.toMatchObject({
+      url: 'https://example.com/gone',
+      title: null,
+      image: null,
+      type: 'website',
+    });
+  });
+
+  it('should return fallback metadata for 429 responses', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    mockFetch.mockResolvedValue(createErrorResponse(429));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/rate-limited'))).resolves.toMatchObject({
+      url: 'https://example.com/rate-limited',
+      title: null,
+      image: null,
+      type: 'website',
+    });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'rate_limit',
+        hostname: 'example.com',
+        statusCode: 429,
+      }),
+    );
+  });
+
+  it('should return fallback metadata for remote 500 responses', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     mockFetch.mockResolvedValue(createErrorResponse(500));
 
-    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/fail'))).rejects.toThrow();
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/fail'))).resolves.toMatchObject({
+      url: 'https://example.com/fail',
+      title: null,
+      image: null,
+      type: 'website',
+    });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'http_error',
+        hostname: 'example.com',
+        statusCode: 500,
+      }),
+    );
+  });
+
+  it('should return fallback metadata for remote 504 responses', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    mockFetch.mockResolvedValue(createErrorResponse(504));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/gateway-timeout'))).resolves.toMatchObject({
+      url: 'https://example.com/gateway-timeout',
+      title: null,
+      image: null,
+      type: 'website',
+    });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'timeout',
+        hostname: 'example.com',
+        statusCode: 504,
+      }),
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -196,24 +320,68 @@ describe('NextJsOgMetadataService', () => {
   // Image normalization
   // -------------------------------------------------------------------------
 
-  it('should call normalizeImageUrl when og:image is found', async () => {
+  it('should normalize og:image when image URL is safe', async () => {
     mockFetch.mockResolvedValue(createOkResponse('text/html'));
     mockReadResponseBody.mockResolvedValue(simpleHtml('Test', '/img.png'));
-    mockNormalizeImageUrl.mockResolvedValue('https://example.com/img.png');
 
     const result = await NextJsOgMetadataService.fetch(new URL('https://example.com/'));
 
-    expect(mockNormalizeImageUrl).toHaveBeenCalledWith('/img.png', 'https://example.com/');
     expect(result.image).toBe('https://example.com/img.png');
   });
 
-  it('should not call normalizeImageUrl when og:image is missing', async () => {
+  it('should return null image when og:image is missing', async () => {
     mockFetch.mockResolvedValue(createOkResponse('text/html'));
     mockReadResponseBody.mockResolvedValue(simpleHtml('Test'));
 
     const result = await NextJsOgMetadataService.fetch(new URL('https://example.com/'));
 
-    expect(mockNormalizeImageUrl).not.toHaveBeenCalled();
+    expect(result.image).toBeNull();
+  });
+
+  it('should drop og:image when image DNS fails without failing page metadata', async () => {
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValue(simpleHtml('Test', 'https://cdn.example.test/img.png'));
+    mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockRejectedValueOnce(createDnsError());
+
+    const result = await NextJsOgMetadataService.fetch(new URL('https://example.com/'));
+
+    expect(result.title).toBe('Test');
+    expect(result.image).toBeNull();
+  });
+
+  it('should drop data og:image URLs without DNS lookup', async () => {
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValue(simpleHtml('Test', 'data:image/png;base64,abc123'));
+
+    const result = await NextJsOgMetadataService.fetch(new URL('https://example.com/'));
+
+    expect(result.title).toBe('Test');
+    expect(result.image).toBeNull();
+    expect(mockResolve4).toHaveBeenCalledTimes(1);
+    expect(mockResolve4).toHaveBeenCalledWith('example.com');
+  });
+
+  it('should drop malformed og:image URLs without DNS lookup', async () => {
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValue(simpleHtml('Test', 'http://[::1'));
+
+    const result = await NextJsOgMetadataService.fetch(new URL('https://example.com/'));
+
+    expect(result.title).toBe('Test');
+    expect(result.image).toBeNull();
+    expect(mockResolve4).toHaveBeenCalledTimes(1);
+    expect(mockResolve4).toHaveBeenCalledWith('example.com');
+  });
+
+  it('should drop private og:image IPs without failing page metadata', async () => {
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValue(simpleHtml('Test', 'http://169.254.169.254/img.png'));
+    mockIsIP.mockReturnValueOnce(0).mockReturnValueOnce(4);
+    mockIsIpSafe.mockReturnValueOnce(true).mockReturnValueOnce(false);
+
+    const result = await NextJsOgMetadataService.fetch(new URL('https://example.com/'));
+
+    expect(result.title).toBe('Test');
     expect(result.image).toBeNull();
   });
 
@@ -248,6 +416,7 @@ describe('NextJsOgMetadataService', () => {
   // -------------------------------------------------------------------------
 
   it('should abort fetch when request exceeds timeout', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     // Mock setTimeout to invoke the callback immediately to trigger abort.
     vi.spyOn(globalThis, 'setTimeout').mockImplementation((fn: TimerHandler) => {
       if (typeof fn === 'function') fn();
@@ -258,9 +427,21 @@ describe('NextJsOgMetadataService', () => {
       return Promise.reject(new DOMException('The operation was aborted', 'AbortError'));
     });
 
-    await expect(NextJsOgMetadataService.fetch(new URL('https://slow.test/page'))).rejects.toMatchObject({
-      category: ErrorCategory.Timeout,
+    await expect(NextJsOgMetadataService.fetch(new URL('https://slow.test/page'))).resolves.toMatchObject({
+      url: 'https://slow.test/page',
+      title: null,
+      image: null,
+      type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'timeout',
+        hostname: 'slow.test',
+        errorName: 'AbortError',
+      }),
+    );
 
     vi.mocked(globalThis.setTimeout).mockRestore();
   });
@@ -274,6 +455,28 @@ describe('NextJsOgMetadataService', () => {
 
     expect(clearTimeoutSpy).toHaveBeenCalled();
     clearTimeoutSpy.mockRestore();
+  });
+
+  it('should return fallback metadata for raw fetch failures', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    const rawError = new TypeError('ECONNRESET');
+    mockFetch.mockRejectedValueOnce(rawError);
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toMatchObject({
+      url: 'https://example.com/',
+      title: null,
+      image: null,
+      type: 'website',
+    });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'network',
+        hostname: 'example.com',
+        errorName: 'TypeError',
+      }),
+    );
   });
 
   it('should block redirects to non-HTTP protocols', async () => {
@@ -302,35 +505,69 @@ describe('NextJsOgMetadataService', () => {
     });
   });
 
-  it('should return response when redirect has no Location header', async () => {
+  it('should return fallback metadata when redirect has no Location header', async () => {
     mockFetch.mockResolvedValue(new Response(null, { status: 301 }));
-    // 301 without location is treated as final response; it's not ok → non-403 error
-    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toThrow();
+    // 301 without location is treated as final response; it's not ok -> fallback metadata.
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toMatchObject({
+      url: 'https://example.com/',
+      title: null,
+      image: null,
+      type: 'website',
+    });
   });
 
   // -------------------------------------------------------------------------
   // Error wrapping
   // -------------------------------------------------------------------------
 
-  it('should re-throw AppError as-is', async () => {
-    const { AppError: FreshAppError } = await import('@/libs/error/error');
-    const appError = new FreshAppError({
-      category: ErrorCategory.Network,
-      code: NetworkErrorCode.DNS_FAILED,
-      message: 'DNS failed',
-      service: ErrorService.NextJsServer,
-      operation: 'validateDns',
+  it.each(EXPECTED_DNS_ERROR_CODES)('should return fallback metadata for expected DNS failure %s', async (code) => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    mockResolve4.mockRejectedValue(createDnsError(code));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toMatchObject({
+      url: 'https://example.com/',
+      title: null,
+      image: null,
+      type: 'website',
     });
-    mockValidateDns.mockRejectedValue(appError);
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'dns_failed',
+        hostname: 'example.com',
+      }),
+    );
+  });
 
-    const error = await NextJsOgMetadataService.fetch(new URL('https://example.com/')).catch((e: unknown) => e);
+  it('should reject private main URL IPs before fetching', async () => {
+    mockIsIP.mockReturnValue(4);
+    mockIsIpSafe.mockReturnValue(false);
 
-    expect(error).toBe(appError); // exact same reference
+    await expect(NextJsOgMetadataService.fetch(new URL('http://169.254.169.254/'))).rejects.toMatchObject({
+      category: ErrorCategory.Auth,
+      code: AuthErrorCode.FORBIDDEN,
+      context: { hostname: '169.254.169.254', statusCode: HttpStatusCode.FORBIDDEN },
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('should keep unexpected DNS safety errors reportable', async () => {
+    const rawError = new Error('resolver bug');
+    mockResolve4.mockRejectedValue(rawError);
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
+      category: ErrorCategory.Server,
+      code: ServerErrorCode.UNKNOWN_ERROR,
+      cause: rawError,
+      context: { url: 'https://example.com/', statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
+    });
   });
 
   it('should wrap raw errors into server AppError with cause', async () => {
     const rawError = new TypeError('unexpected');
-    mockValidateDns.mockRejectedValue(rawError);
+    mockReadResponseBody.mockRejectedValue(rawError);
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
       category: ErrorCategory.Server,

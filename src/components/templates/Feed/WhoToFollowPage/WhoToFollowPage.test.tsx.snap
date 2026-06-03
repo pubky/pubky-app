@@ -3,6 +3,7 @@
 exports[`WhoToFollowPage - Snapshots > matches snapshot 1`] = `
 <div>
   <div
+    data-disable-wide-shell-layout="true"
     data-testid="content-layout"
   >
     <div

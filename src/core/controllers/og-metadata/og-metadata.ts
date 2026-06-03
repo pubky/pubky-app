@@ -1,6 +1,7 @@
 import { OgMetadataApplication } from '@/application/og-metadata/og-metadata';
-import type { TOgMetadataParams, TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
+import type { TOgMetadataParams } from '@/application/og-metadata/og-metadata.types';
 import { OgMetadataValidators } from '@/pipes/og-metadata/og-metadata.validators';
+import type { TOgMetadataControllerResult } from './og-metadata.types';
 
 /**
  * Controller for OG metadata fetching.
@@ -16,14 +17,18 @@ export class OgMetadataController {
    * for DNS resolution, fetching, parsing, and SSRF protection.
    *
    * @param params.url - Raw URL string from the request (may be null)
-   * @returns Normalized OG metadata result
-   * @throws AppError if validation fails or fetching fails
+   * @returns Controller result with validation failure or normalized OG metadata
+   * @throws AppError when the application layer surfaces a security/anomaly outcome
+   * (blocked private IP, non-HTTP redirect, oversized body, redirect loop, or unexpected server error).
    */
-  static async fetch(params: TOgMetadataParams): Promise<TOgMetadataResult> {
+  static async fetch(params: TOgMetadataParams): Promise<TOgMetadataControllerResult> {
     // Validate and parse URL using pipes layer
-    const validatedUrl = await OgMetadataValidators.validate(params.url);
+    const validation = await OgMetadataValidators.validateSafe(params.url);
+    if (!validation.ok) {
+      return { ok: false, message: validation.message, statusCode: validation.statusCode };
+    }
 
     // Delegate to application layer
-    return OgMetadataApplication.fetch(validatedUrl);
+    return { ok: true, metadata: await OgMetadataApplication.fetch(validation.url) };
   }
 }
