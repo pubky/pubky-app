@@ -2,7 +2,7 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePathname, useSelectedLayoutSegments } from 'next/navigation';
 import { Container } from '@/atoms/Container/Container';
-import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
+import { clearFeedScrollTop, consumeFeedScrollTop } from '@/libs/utils/feedScrollTop';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { type FeedsShellConfig, tryResolveFeedsShellConfig } from './_shell/configs';
 
@@ -92,17 +92,16 @@ export default function FeedsLayout({ children, post }: { children: React.ReactN
   const isFeedsRoute = resolved !== null;
   const savedScrollRef = useRef(0);
   const lastFeedPathnameRef = useRef<string | null>(null);
-  const isPostActiveRef = useRef(isPostActive);
-  const isFeedsRouteRef = useRef(isFeedsRoute);
+  // Whether the scroll listener should record the offset: only while an actual
+  // feed is visible (not the post overlay, not a non-feed pathname).
+  const shouldTrackFeedScrollRef = useRef(!isPostActive && isFeedsRoute);
   const prevPostActiveRef = useRef(isPostActive);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     savedScrollRef.current = window.scrollY;
     const onScroll = () => {
-      // Only record while an actual feed is visible: not the post overlay, and
-      // not a non-feed pathname (which never updates `lastFeedPathnameRef`).
-      if (!isPostActiveRef.current && isFeedsRouteRef.current) {
+      if (shouldTrackFeedScrollRef.current) {
         savedScrollRef.current = window.scrollY;
       }
     };
@@ -113,12 +112,11 @@ export default function FeedsLayout({ children, post }: { children: React.ReactN
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Refresh the scroll-listener guards first. A layout effect runs
+    // Refresh the scroll-listener guard first. A layout effect runs
     // synchronously after the DOM mutation (the `display:none` commit) and
-    // before the browser dispatches the clamp scroll event, so the guards are
+    // before the browser dispatches the clamp scroll event, so the guard is
     // current before any such event can overwrite `savedScrollRef`.
-    isPostActiveRef.current = isPostActive;
-    isFeedsRouteRef.current = isFeedsRoute;
+    shouldTrackFeedScrollRef.current = !isPostActive && isFeedsRoute;
 
     const wasActive = prevPostActiveRef.current;
     prevPostActiveRef.current = isPostActive;
@@ -139,13 +137,12 @@ export default function FeedsLayout({ children, post }: { children: React.ReactN
       // We restored this feed's position, so cancel any lingering top-scroll
       // intent set by logo/footer while the pathname was `/post/...` (the feed
       // stays mounted and never consumes it). Only safe to clear on a same-route restore.
-      window.sessionStorage.removeItem(FORCE_FEED_SCROLL_TOP_KEY);
-    } else if (window.sessionStorage.getItem(FORCE_FEED_SCROLL_TOP_KEY) === '1') {
+      clearFeedScrollTop();
+    } else if (consumeFeedScrollTop()) {
       // Explicit forward navigation to a feed the user wasn't on (flag set by a
       // nav entry point). The persistent layout doesn't reset window scroll on
       // intra-cluster navigation, so scroll to the top here. Browser back never
       // sets the flag, so its native scroll restoration is preserved.
-      window.sessionStorage.removeItem(FORCE_FEED_SCROLL_TOP_KEY);
       window.scrollTo({ top: 0, behavior: 'auto' });
       savedScrollRef.current = 0;
     } else {

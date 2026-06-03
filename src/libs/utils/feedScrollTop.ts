@@ -1,6 +1,39 @@
 import type React from 'react';
 import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
 
+// Accessing `window.sessionStorage` can throw (e.g. sandboxed iframes, storage
+// blocked by privacy settings) — even on the property read, not just on
+// set/get. These helpers keep every access safe so scroll handling never breaks.
+
+/** Set the one-shot "scroll the next feed to the top" intent flag. */
+export function markFeedScrollTop(): void {
+  try {
+    window.sessionStorage.setItem(FORCE_FEED_SCROLL_TOP_KEY, '1');
+  } catch {
+    // Ignore storage errors and keep default navigation behavior.
+  }
+}
+
+/** Read and clear the flag in one step; returns whether it was set. */
+export function consumeFeedScrollTop(): boolean {
+  try {
+    if (window.sessionStorage.getItem(FORCE_FEED_SCROLL_TOP_KEY) !== '1') return false;
+    window.sessionStorage.removeItem(FORCE_FEED_SCROLL_TOP_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Clear the flag (used when a same-route restore supersedes the top-scroll intent). */
+export function clearFeedScrollTop(): void {
+  try {
+    window.sessionStorage.removeItem(FORCE_FEED_SCROLL_TOP_KEY);
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
 interface HandleFeedNavClickOptions {
   /** Whether the clicked nav target is the route the user is already on. */
   isActive: boolean;
@@ -40,9 +73,5 @@ export function handleFeedNavClick(
     return;
   }
 
-  try {
-    window.sessionStorage.setItem(FORCE_FEED_SCROLL_TOP_KEY, '1');
-  } catch {
-    // Ignore storage errors and keep default navigation behavior.
-  }
+  markFeedScrollTop();
 }
