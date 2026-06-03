@@ -1,6 +1,7 @@
 import { usePathname } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FORCE_HOME_SCROLL_TOP_KEY } from '@/config/feed';
 import { Logo } from './Logo';
 
 // Mock Next.js Image component
@@ -24,7 +25,6 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
-const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 const createSessionStorageMock = () => ({
   getItem: vi.fn(),
   setItem: vi.fn(),

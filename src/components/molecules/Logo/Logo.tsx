@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Link } from '@/atoms/Link/Link';
+import { FORCE_HOME_SCROLL_TOP_KEY } from '@/config/feed';
 import { cn } from '@/libs/utils/utils';
 
 interface LogoProps {
@@ -10,8 +11,6 @@ interface LogoProps {
   height?: number;
   noLink?: boolean;
 }
-
-const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
 export function Logo({
   width = 109,

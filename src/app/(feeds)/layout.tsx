@@ -1,7 +1,8 @@
 'use client';
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePathname, useSelectedLayoutSegments } from 'next/navigation';
 import { Container } from '@/atoms/Container/Container';
+import { FORCE_HOME_SCROLL_TOP_KEY } from '@/config/feed';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { type FeedsShellConfig, tryResolveFeedsShellConfig } from './_shell/configs';
 
@@ -16,7 +17,10 @@ import { type FeedsShellConfig, tryResolveFeedsShellConfig } from './_shell/conf
  * The hoisted `@post` parallel slot renders the intercepted post modal as a
  * sibling of `<ContentLayout>` (full-width, not nested inside the main column).
  * When the intercepted route is active, the feed children stay mounted but are
- * hidden via `class="hidden"` so scroll position is preserved on back-nav.
+ * hidden via `class="hidden"`. Because the feed scrolls the window (shared with
+ * the post view), the hidden feed's offset is captured and explicitly restored
+ * when the overlay closes back to the same feed route — see the scroll
+ * save/restore block below (#1348).
  *
  * ## Intercepted-modal pathname handling
  *
@@ -75,6 +79,74 @@ export default function FeedsLayout({ children, post }: { children: React.ReactN
   //      header comment). `<ContentLayout>` accepts all shell slots as
   //      optional, so spreading `undefined`s is safe.
   const shellConfig = resolved ?? (isPostActive ? lastFeedsConfig : null);
+
+  // Feed scroll preservation across the intercepted post overlay (#1348).
+  //
+  // The feed scrolls the window and stays mounted-but-hidden while a post is
+  // open, so `window.scrollY` is clobbered by the post view. We track the last
+  // visible feed's offset + route and, when the overlay closes back to the SAME
+  // feed route, restore it — making logo/home/feed-nav returns behave like
+  // browser back. A cross-route close (e.g. post opened from /bookmarks, then
+  // logo -> /home) is left to normal navigation so we never splash one feed's
+  // offset onto another.
+  const isFeedsRoute = resolved !== null;
+  const savedScrollRef = useRef(0);
+  const lastFeedPathnameRef = useRef<string | null>(null);
+  const isPostActiveRef = useRef(isPostActive);
+  const isFeedsRouteRef = useRef(isFeedsRoute);
+  const prevPostActiveRef = useRef(isPostActive);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    savedScrollRef.current = window.scrollY;
+    const onScroll = () => {
+      // Only record while an actual feed is visible: not the post overlay, and
+      // not a non-feed pathname (which never updates `lastFeedPathnameRef`).
+      if (!isPostActiveRef.current && isFeedsRouteRef.current) {
+        savedScrollRef.current = window.scrollY;
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Refresh the scroll-listener guards first. A layout effect runs
+    // synchronously after the DOM mutation (the `display:none` commit) and
+    // before the browser dispatches the clamp scroll event, so the guards are
+    // current before any such event can overwrite `savedScrollRef`.
+    isPostActiveRef.current = isPostActive;
+    isFeedsRouteRef.current = isFeedsRoute;
+
+    const wasActive = prevPostActiveRef.current;
+    prevPostActiveRef.current = isPostActive;
+
+    // While the post overlay is active (pathname is `/post/...`) tracking is
+    // frozen: `savedScrollRef` + `lastFeedPathnameRef` hold the source feed.
+    if (isPostActive) return;
+
+    // Only genuine feeds routes are trackable source/destination feeds. This
+    // branch returns WITHOUT touching `lastFeedPathnameRef` or `savedScrollRef`,
+    // so a non-feed pathname can neither become the tracked source feed nor
+    // overwrite the saved offset.
+    if (!isFeedsRoute) return;
+
+    const returnedToSameFeed = wasActive && pathname === lastFeedPathnameRef.current;
+    if (returnedToSameFeed) {
+      window.scrollTo({ top: savedScrollRef.current, behavior: 'auto' });
+      // We restored this feed's position, so cancel any lingering top-scroll
+      // intent set by logo/footer while the pathname was `/post/...` (Home stays
+      // mounted and never consumes it). Only safe to clear on a same-route restore.
+      window.sessionStorage.removeItem(FORCE_HOME_SCROLL_TOP_KEY);
+    } else {
+      // Fresh feed view (mount, feed -> feed nav, or post closed onto a
+      // DIFFERENT feed): adopt the current scroll as the new baseline.
+      savedScrollRef.current = window.scrollY;
+    }
+    lastFeedPathnameRef.current = pathname;
+  }, [isPostActive, pathname, isFeedsRoute]);
 
   return (
     <>

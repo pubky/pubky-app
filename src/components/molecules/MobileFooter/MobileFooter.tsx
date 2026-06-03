@@ -8,6 +8,7 @@ import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { FORCE_HOME_SCROLL_TOP_KEY } from '@/config/feed';
 import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
@@ -21,7 +22,6 @@ import { useNotificationStore } from '@/stores/notification/notification.store';
 export interface MobileFooterProps {
   className?: string;
 }
-const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
 /**
  * MobileFooter - Bottom navigation for mobile devices

@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FORCE_HOME_SCROLL_TOP_KEY } from '@/config/feed';
 import { Home } from './Home';
-
-const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
 // Mock Organisms
 vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
