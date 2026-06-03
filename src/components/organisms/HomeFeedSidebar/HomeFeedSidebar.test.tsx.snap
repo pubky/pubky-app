@@ -7,7 +7,6 @@ exports[`HomeFeedDrawer > matches snapshot 1`] = `
     data-testid="container"
   >
     <div
-      data-hide-account-scoped="false"
       data-selected-tab="following"
       data-testid="filter-reach"
     >
@@ -40,7 +39,6 @@ exports[`HomeFeedDrawerMobile > matches snapshot 1`] = `
     data-testid="container"
   >
     <div
-      data-hide-account-scoped="false"
       data-selected-tab="following"
       data-testid="filter-reach"
     >
@@ -68,7 +66,6 @@ exports[`HomeFeedSidebar > matches snapshot 1`] = `
     data-testid="container"
   >
     <div
-      data-hide-account-scoped="false"
       data-selected-tab="following"
       data-testid="filter-reach"
     >

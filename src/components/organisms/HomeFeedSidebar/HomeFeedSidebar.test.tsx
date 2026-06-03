@@ -84,18 +84,8 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
 
 vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
-    FilterReach: ({
-      selectedTab,
-      hideAccountScopedOptions,
-    }: {
-      selectedTab?: string;
-      hideAccountScopedOptions?: boolean;
-    }) => (
-      <div
-        data-testid="filter-reach"
-        data-selected-tab={selectedTab}
-        data-hide-account-scoped={String(hideAccountScopedOptions)}
-      >
+    FilterReach: ({ selectedTab }: { selectedTab?: string }) => (
+      <div data-testid="filter-reach" data-selected-tab={selectedTab}>
         FilterReach
       </div>
     ),
@@ -191,13 +181,12 @@ describe('HomeFeedSidebar', () => {
     expect(mockSetContent).not.toHaveBeenCalled();
   });
 
-  it('forces all reach and hides account-scoped reach controls when logged out', () => {
+  it('forces all reach when logged out', () => {
     mockCurrentUserPubky = null;
 
     render(<HomeFeedSidebar />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
-    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-hide-account-scoped', 'true');
   });
 });
 

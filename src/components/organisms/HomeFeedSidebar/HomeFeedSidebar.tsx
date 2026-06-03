@@ -59,13 +59,7 @@ function HomeFeedFilters({
 
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
-      {!hideReachFilter && (
-        <FilterReach
-          selectedTab={effectiveReach}
-          onTabChange={handleReachChange}
-          hideAccountScopedOptions={!isAuthenticated}
-        />
-      )}
+      {!hideReachFilter && <FilterReach selectedTab={effectiveReach} onTabChange={handleReachChange} />}
       <FilterSort selectedTab={sort} onTabChange={setSort} />
       {variant === 'sidebar' ? (
         <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">

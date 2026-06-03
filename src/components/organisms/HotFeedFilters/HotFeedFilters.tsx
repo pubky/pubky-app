@@ -119,11 +119,7 @@ export function HotFeedSidebar() {
 
   return (
     <>
-      <FilterReach
-        selectedTab={effectiveReach}
-        onTabChange={handleReachChange}
-        hideAccountScopedOptions={!isAuthenticated}
-      />
+      <FilterReach selectedTab={effectiveReach} onTabChange={handleReachChange} />
       <div className="sticky top-[100px] w-full self-start">
         <FilterTimeframe selectedTab={timeframe} onTabChange={setTimeframe} />
       </div>
@@ -147,11 +143,7 @@ export function HotFeedDrawer() {
 
   return (
     <div className="flex flex-col gap-6">
-      <FilterReach
-        selectedTab={effectiveReach}
-        onTabChange={handleReachChange}
-        hideAccountScopedOptions={!isAuthenticated}
-      />
+      <FilterReach selectedTab={effectiveReach} onTabChange={handleReachChange} />
       <FilterTimeframe selectedTab={timeframe} onTabChange={setTimeframe} />
     </div>
   );
