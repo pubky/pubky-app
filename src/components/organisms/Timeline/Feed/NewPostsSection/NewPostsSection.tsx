@@ -69,8 +69,7 @@ export function NewPostsSection({
       Logger.error('Failed to load new posts:', error);
       toast({
         variant: 'error',
-        title: t('failedToLoadPosts'),
-        description: t('failedToLoadPostsDesc'),
+        description: t('failedToLoadPosts'),
       });
     }
   };

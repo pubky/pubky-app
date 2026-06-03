@@ -380,7 +380,7 @@ describe('useReportPost', () => {
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
           variant: 'error',
-          description: 'User profile not loaded. Please try again.',
+          description: 'Could not load profile',
         }),
       );
       expect(global.fetch).not.toHaveBeenCalled();
@@ -414,7 +414,7 @@ describe('useReportPost', () => {
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
           variant: 'error',
-          description: 'User profile not loaded. Please try again.',
+          description: 'Could not load profile',
         }),
       );
       expect(global.fetch).not.toHaveBeenCalled();

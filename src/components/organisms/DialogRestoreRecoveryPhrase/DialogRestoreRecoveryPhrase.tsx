@@ -57,7 +57,6 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
       // show error toast
       toast({
         variant: 'error',
-        title: t('restoreRecoveryPhrase.errorTitle'),
         description: t('restoreRecoveryPhrase.errorDescription'),
       });
       setIsRestoring(false);

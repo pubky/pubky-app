@@ -27,13 +27,13 @@ export enum ErrorMessages {
   FETCH_FAILED = 'Failed to communicate with homeserver. Please try again.',
 
   // Logout Failed
-  LOGOUT_FAILED = 'Failed to logout. Please try again.',
+  LOGOUT_FAILED = 'Could not log out. Try again.',
 
   // Create Post Failed
-  CREATE_POST_FAILED = 'Failed to create post. Please try again.',
+  CREATE_POST_FAILED = 'Could not create post. Try again.',
 
   // Network Error
-  NETWORK_ERROR = 'Network error. Please check your connection and try again.',
+  NETWORK_ERROR = 'Network error',
 
   // Timeout
   TIMEOUT = 'Request timed out. Please try again.',
@@ -45,8 +45,8 @@ export enum ErrorMessages {
   INVALID_INPUT = 'Invalid input. Please check your information and try again.',
 
   // Unexpected Error
-  UNEXPECTED_ERROR = 'An unexpected error occurred. Please try again.',
+  UNEXPECTED_ERROR = 'Unexpected error occurred.',
 
   // Default/Generic Error
-  GENERIC_ERROR = 'Something went wrong. Please try again.',
+  GENERIC_ERROR = 'Something went wrong',
 }

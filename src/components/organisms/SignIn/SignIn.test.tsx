@@ -467,7 +467,6 @@ describe('SignInContent', () => {
     expect(mockCopyAuthUrl).toHaveBeenCalled();
     expect(toast).toHaveBeenCalledWith({
       variant: 'error',
-      title: messages.toast.copy.copyFailed,
       description: messages.toast.copy.copyFailedDesc,
     });
   });

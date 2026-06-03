@@ -173,7 +173,7 @@ describe('useDeletePost', () => {
 
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Failed to delete post. Please try again.',
+      description: 'Could not delete post. Try again.',
     });
   });
 

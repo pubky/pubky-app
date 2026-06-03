@@ -94,6 +94,9 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       onClick: async () => {
         try {
           await toggleFollow(postAuthorId, isFollowing);
+          toast({
+            title: isFollowing ? tFollow('unfollowed', { username }) : tFollow('followed', { username }),
+          });
         } catch (error) {
           toast({
             variant: 'error',

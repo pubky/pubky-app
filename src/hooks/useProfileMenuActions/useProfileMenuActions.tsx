@@ -60,6 +60,9 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     onClick: async () => {
       try {
         await toggleFollow(userId, isFollowing);
+        toast({
+          title: isFollowing ? tToast('follow.unfollowed', { username }) : tToast('follow.followed', { username }),
+        });
       } catch (error) {
         toast({
           variant: 'error',

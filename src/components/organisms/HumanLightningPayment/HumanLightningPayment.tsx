@@ -43,7 +43,6 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
       }
       const onVerificationError = (error: unknown) => {
         toast({
-          title: tCommon('error'),
           variant: 'error',
           description: isAppError(error) ? error.message : t('requestFailedDescription'),
         });
@@ -72,7 +71,6 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
     } catch {
       toast({
         variant: 'error',
-        title: t('requestFailed'),
         description: t('requestFailedDescription'),
       });
     } finally {
@@ -113,7 +111,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
     } catch {
       toast({
         variant: 'error',
-        title: t('copyFailed'),
+        description: t('copyFailed'),
       });
     }
   }

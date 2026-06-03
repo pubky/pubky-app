@@ -218,6 +218,47 @@ describe('usePostMenuActions', () => {
       expect(followItem?.disabled).toBe(true);
     });
 
+    it('shows success toast when follow succeeds', async () => {
+      const { result } = renderHook(() =>
+        usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
+      );
+
+      const followItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.FOLLOW);
+      expect(followItem).toBeDefined();
+
+      await act(async () => {
+        await followItem?.onClick();
+      });
+
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, false);
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Following Test Author',
+      });
+    });
+
+    it('shows success toast when unfollow succeeds', async () => {
+      mockUseIsFollowing.mockReturnValue({
+        isFollowing: true,
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() =>
+        usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
+      );
+
+      const followItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.FOLLOW);
+      expect(followItem).toBeDefined();
+
+      await act(async () => {
+        await followItem?.onClick();
+      });
+
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, true);
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Unfollowed Test Author',
+      });
+    });
+
     it('calls toggleFollow on follow action click', async () => {
       const { result } = renderHook(() =>
         usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
@@ -274,7 +315,7 @@ describe('usePostMenuActions', () => {
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           variant: 'error',
-          description: 'Failed to update follow status',
+          description: 'Could not update follow status',
         });
       });
     });

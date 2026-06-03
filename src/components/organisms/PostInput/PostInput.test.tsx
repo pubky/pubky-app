@@ -635,7 +635,7 @@ describe('PostInput', () => {
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({
         variant: 'error',
-        description: 'Failed to parse article content',
+        description: 'Could not parse article content',
       }),
     );
   });

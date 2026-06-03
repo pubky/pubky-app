@@ -222,8 +222,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     } catch {
       toast({
         variant: 'error',
-        title: tTags('loadFailed'),
-        description: tTags('loadFailedDesc'),
+        description: tTags('loadFailed'),
       });
     } finally {
       setIsLoadingMore(false);
@@ -267,8 +266,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       } catch {
         toast({
           variant: 'error',
-          title: tTags('addFailed'),
-          description: tTags('addFailedDesc', { label }),
+          description: tTags('addFailed', { label }),
         });
         return { success: false, error: 'Failed to add tag' };
       }
@@ -346,10 +344,9 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         }
         toast({
           variant: 'error',
-          title: userIsTagger ? tTags('removeFailed') : tTags('addFailed'),
           description: userIsTagger
-            ? tTags('removeFailedDesc', { label: tag.label })
-            : tTags('addFailedDesc', { label: tag.label }),
+            ? tTags('removeFailed', { label: tag.label })
+            : tTags('addFailed', { label: tag.label }),
         });
       }
     },

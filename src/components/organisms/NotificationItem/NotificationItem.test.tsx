@@ -354,7 +354,7 @@ describe('NotificationItem', () => {
     await vi.waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'error',
-        description: 'Failed to parse article content',
+        description: 'Could not parse article content',
       });
     });
   });

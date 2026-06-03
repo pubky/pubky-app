@@ -69,13 +69,9 @@ vi.mock('next-intl', () => ({
       case 'removed':
         return values?.label ? `Tag removed: ${values.label}` : 'Tag removed';
       case 'addFailed':
-        return 'Failed to add tag';
-      case 'addFailedDesc':
-        return `Could not add "${values?.label}". Please try again.`;
+        return `Could not add tag: ${values?.label}`;
       case 'removeFailed':
-        return 'Failed to remove tag';
-      case 'removeFailedDesc':
-        return `Could not remove "${values?.label}". Please try again.`;
+        return `Could not remove tag: ${values?.label}`;
       default:
         return key;
     }
@@ -231,8 +227,7 @@ describe('useTagged', () => {
     expect(addResult!).toEqual({ success: false, error: 'Failed to add tag' });
     expect(mockMocks.mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      title: 'Failed to add tag',
-      description: 'Could not add "ethereum". Please try again.',
+      description: 'Could not add tag: ethereum',
     });
   });
 

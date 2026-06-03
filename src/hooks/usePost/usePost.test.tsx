@@ -417,7 +417,7 @@ describe('usePost', () => {
       // Toast should be called directly in catch block
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'error',
-        description: 'Failed to post reply. Please try again.',
+        description: 'Could not post reply. Try again.',
       });
 
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to submit reply:', mockError);
@@ -661,7 +661,7 @@ describe('usePost', () => {
       // Toast should be called directly in catch block
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'error',
-        description: 'Failed to create post. Please try again.',
+        description: 'Could not create post. Try again.',
       });
 
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to create post:', mockError);
@@ -1135,7 +1135,7 @@ describe('usePost', () => {
       // Toast should be called directly in catch block
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'error',
-        description: 'Failed to repost. Please try again.',
+        description: 'Could not repost. Try again.',
       });
 
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to repost:', mockError);
@@ -1375,7 +1375,7 @@ describe('usePost', () => {
 
         expect(mockToast).toHaveBeenCalledWith({
           variant: 'error',
-          description: 'Failed to edit post. Please try again.',
+          description: 'Could not update post. Try again.',
         });
         expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to edit post:', mockError);
       });

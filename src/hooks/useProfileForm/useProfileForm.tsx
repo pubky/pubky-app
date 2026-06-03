@@ -355,7 +355,6 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           setSubmitTextKey('tryAgain');
           toast({
             variant: 'error',
-            title: tProfile('sessionExpired'),
             description: tProfile('sessionExpiredDesc'),
           });
           return;
@@ -367,8 +366,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           setSubmitTextKey('tryAgain');
           toast({
             variant: 'error',
-            title: tProfile('saveFailed'),
-            description: tProfile('saveFailedDesc'),
+            description: tProfile('saveFailed'),
           });
           return;
         }
@@ -377,7 +375,6 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       setSubmitTextKey('tryAgain');
       toast({
         variant: 'error',
-        title: tProfile('fetchFailed'),
         description: mode === 'create' ? tProfile('fetchFailedDesc') : tProfile('updateFailed'),
       });
     } finally {

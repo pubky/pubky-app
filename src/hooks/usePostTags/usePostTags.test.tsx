@@ -55,21 +55,15 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, values?: { label?: string }) => {
     switch (key) {
       case 'loadFailed':
-        return 'Failed to load more tags';
-      case 'loadFailedDesc':
-        return 'Could not load more tags. Please try again.';
+        return 'Could not load more tags';
       case 'added':
         return values?.label ? `Tag added: ${values.label}` : 'Tag added';
       case 'removed':
         return values?.label ? `Tag removed: ${values.label}` : 'Tag removed';
       case 'addFailed':
-        return 'Failed to add tag';
-      case 'addFailedDesc':
-        return `Could not add "${values?.label}". Please try again.`;
+        return `Could not add tag: ${values?.label}`;
       case 'removeFailed':
-        return 'Failed to remove tag';
-      case 'removeFailedDesc':
-        return `Could not remove "${values?.label}". Please try again.`;
+        return `Could not remove tag: ${values?.label}`;
       default:
         return key;
     }
@@ -220,8 +214,7 @@ describe('usePostTags', () => {
       expect(response!).toEqual({ success: false, error: 'Failed to add tag' });
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'error',
-        title: 'Failed to add tag',
-        description: 'Could not add "broken-tag". Please try again.',
+        description: 'Could not add tag: broken-tag',
       });
     });
   });

@@ -59,7 +59,6 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
     } catch {
       toast({
         variant: 'error',
-        title: t('verifyFailed'),
         description: t('verifyFailedDescription'),
       });
       setIsVerifyingCode(false);

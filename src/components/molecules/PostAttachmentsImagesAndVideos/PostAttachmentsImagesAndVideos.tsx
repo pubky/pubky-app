@@ -38,8 +38,7 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
       currentMedia.requestFullscreen().catch((error: unknown) => {
         toast({
           variant: 'error',
-          title: tFullscreen('error'),
-          description: error instanceof Error ? error.message : String(error),
+          description: error instanceof Error ? error.message : tFullscreen('error'),
         });
       });
     }

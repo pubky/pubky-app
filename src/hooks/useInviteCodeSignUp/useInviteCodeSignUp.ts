@@ -82,7 +82,6 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
 
         toast({
           variant: 'error',
-          title: t('signUpFailed'),
           description,
         });
         throw error;

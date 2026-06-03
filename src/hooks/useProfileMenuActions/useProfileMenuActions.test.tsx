@@ -116,10 +116,12 @@ describe('useProfileMenuActions', () => {
           'copy.pubkyCopied': 'Pubky copied to clipboard',
           'copy.profileLinkCopied': 'Profile link copied to clipboard',
           'copy.copyFailed': 'Copy failed',
-          'follow.failed': 'Failed to update follow status',
+          'follow.followed': 'Following {username}',
+          'follow.unfollowed': 'Unfollowed {username}',
+          'follow.failed': 'Could not update follow status',
           'mute.muted': '{username} muted',
           'mute.unmuted': '{username} unmuted',
-          'mute.failed': 'Failed to update mute status',
+          'mute.failed': 'Could not update mute status',
         },
         errors: {
           title: 'Error',
@@ -206,6 +208,43 @@ describe('useProfileMenuActions', () => {
       expect(followItem?.disabled).toBe(true);
     });
 
+    it('shows success toast when follow succeeds', async () => {
+      const { result } = renderHook(() => useProfileMenuActions(mockUserId));
+
+      const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
+      expect(followItem).toBeDefined();
+
+      await act(async () => {
+        await followItem?.onClick();
+      });
+
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, false);
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Following Test User',
+      });
+    });
+
+    it('shows success toast when unfollow succeeds', async () => {
+      mockUseIsFollowing.mockReturnValue({
+        isFollowing: true,
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() => useProfileMenuActions(mockUserId));
+
+      const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
+      expect(followItem).toBeDefined();
+
+      await act(async () => {
+        await followItem?.onClick();
+      });
+
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, true);
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Unfollowed Test User',
+      });
+    });
+
     it('calls toggleFollow on follow action click', async () => {
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
 
@@ -234,7 +273,7 @@ describe('useProfileMenuActions', () => {
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           variant: 'error',
-          description: 'Failed to update follow status',
+          description: 'Could not update follow status',
         });
       });
     });
@@ -321,7 +360,7 @@ describe('useProfileMenuActions', () => {
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
           variant: 'error',
-          description: 'Failed to update mute status',
+          description: 'Could not update mute status',
         });
       });
     });

@@ -113,7 +113,6 @@ export const SignInContent = () => {
       Logger.error('Failed to copy auth URL to clipboard:', error);
       toast({
         variant: 'error',
-        title: tCopy('copyFailed'),
         description: tCopy('copyFailedDesc'),
       });
     }

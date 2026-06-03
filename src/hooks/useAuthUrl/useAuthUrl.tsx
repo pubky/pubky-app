@@ -57,7 +57,6 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             if (!isMountedRef.current) return;
             toast({
               variant: 'error',
-              title: t('authInitFailedTitle'),
               description: t('authInitFailedDescription'),
             });
           }
@@ -83,7 +82,6 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
 
           toast({
             variant: 'error',
-            title: t('authNotCompletedTitle'),
             description: t('authNotCompletedDescription'),
           });
         });
@@ -95,7 +93,6 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
       if (!isMountedRef.current) return;
       toast({
         variant: 'error',
-        title: t('qrGenerationFailedTitle'),
         description: t('qrGenerationFailedDescription'),
       });
     } finally {

@@ -68,7 +68,6 @@ export function usePostInput({
 
   // Hooks
   const t = useTranslations('post.placeholder');
-  const tToast = useTranslations('toast');
   const tFile = useTranslations('toast.file');
   const { currentUserPubky } = useCurrentUserProfile();
   const {
@@ -348,7 +347,6 @@ export function usePostInput({
       if (errors.length > 0) {
         toast({
           variant: 'error',
-          ...(errors.length > 1 ? { title: tToast('errors') } : {}),
           description: errors.join('\n'),
         });
       }
@@ -357,7 +355,7 @@ export function usePostInput({
         setAttachments((prev) => [...prev, ...validFiles]);
       }
     },
-    [isArticle, isSubmitting, attachments.length, setAttachments, toast, tToast, tFile],
+    [isArticle, isSubmitting, attachments.length, setAttachments, toast, tFile],
   );
 
   // Drag and drop handlers
