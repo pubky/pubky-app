@@ -30,10 +30,10 @@ export function UserInfoPopoverHeader({ userId, userName, formattedPublicKey, av
       <Link href={profileUrl} onClick={handleProfileNavigation} className="shrink-0" overrideDefaults>
         <AvatarWithFallback avatarUrl={avatarUrl} name={userName} fallbackSeed={userId} size="md" />
       </Link>
-      <Container className="min-w-0 flex-1 items-start overflow-hidden">
-        <Link href={profileUrl} onClick={handleProfileNavigation} overrideDefaults>
+      <Container className="w-0 min-w-0 flex-1 items-start overflow-hidden">
+        <Link href={profileUrl} onClick={handleProfileNavigation} className="block w-full min-w-0" overrideDefaults>
           <Typography
-            className="max-w-full cursor-pointer truncate text-sm leading-5 font-bold text-foreground"
+            className="block w-full max-w-full cursor-pointer truncate text-sm leading-5 font-bold text-foreground"
             overrideDefaults
           >
             {userName}
