@@ -29,7 +29,7 @@ import type {
   THomeserverSignUpParams,
 } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { handleError } from './error.utils';
+import { extractStatusCode, handleError } from './error.utils';
 import type {
   PubPath,
   TGenerateSignupAuthUrlParams,
@@ -396,6 +396,11 @@ export class HomeserverService {
       Logger.debug('List successful', { baseDirectory, filesCount: files.length });
       return files;
     } catch (error) {
+      // 404 here is not an error: missing directory means empty list. Bypass handleError to avoid Sentry capture.
+      if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) {
+        Logger.warn('[homeserver:list]', { outcome: 'fallback', reason: 'not_found', baseDirectory });
+        return [];
+      }
       return handleError({ error, additionalContext: { url: baseDirectory, baseDirectory } });
     }
   }

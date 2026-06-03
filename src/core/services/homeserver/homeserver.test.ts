@@ -736,6 +736,14 @@ describe('HomeserverService', () => {
           code: ServerErrorCode.INTERNAL_ERROR,
         });
       });
+
+      it('should return empty array when directory returns 404', async () => {
+        mockState.publicStorageList.mockRejectedValue({ data: { statusCode: 404 } });
+
+        const result = await HomeserverService.list({ baseDirectory: 'pubky://user/pub/missing/' });
+
+        expect(result).toEqual([]);
+      });
     });
 
     describe('delete', () => {
