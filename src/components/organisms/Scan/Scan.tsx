@@ -143,7 +143,7 @@ export const ScanHeader = ({ isMobile }: { isMobile: boolean }) => {
               highlight: (chunks) => <span className="text-brand">{chunks}</span>,
             })}
       </PageTitle>
-      <PageSubtitle>{t('subtitle')}</PageSubtitle>
+      <PageSubtitle>{isMobile ? t('subtitleMobile') : t('subtitleDesktop')}</PageSubtitle>
     </PageHeader>
   );
 };

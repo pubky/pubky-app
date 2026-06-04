@@ -8,6 +8,7 @@ import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { DatabaseErrorScreen } from '@/molecules/DatabaseErrorScreen/DatabaseErrorScreen';
 import { type DatabaseContextType } from '@/providers/DatabaseProvider/DatabaseProvider.types';
 import { useMigrationStore } from '@/stores/migration/migration.store';
 
@@ -75,14 +76,21 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Block rendering until database is ready
-  // This prevents components from querying before initialization
-  if (!isReady && !error) {
-    return (
+  // Gate what renders on the database state:
+  // - error: block the (broken) app and show a recovery screen wired to retry()
+  // - not ready: block rendering until initialization completes to avoid query race conditions
+  // - ready: render the app
+  let content: ReactNode;
+  if (error) {
+    content = <DatabaseErrorScreen onRetry={initDatabase} />;
+  } else if (!isReady) {
+    content = (
       <Container overrideDefaults className="flex min-h-screen items-center justify-center">
         <Spinner />
       </Container>
     );
+  } else {
+    content = children;
   }
 
   return (
@@ -93,7 +101,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
         retry: initDatabase,
       }}
     >
-      {children}
+      {content}
     </DatabaseContext.Provider>
   );
 }

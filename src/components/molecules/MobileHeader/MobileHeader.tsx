@@ -3,6 +3,7 @@ import { Activity, SlidersHorizontal, UserRound } from 'lucide-react';
 import type React from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { Logo } from '../Logo/Logo';
@@ -33,7 +34,8 @@ export function MobileHeader({
 }: MobileHeaderProps) {
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
-  const showLeftIcon = showLeftButton && isAuthenticated;
+  const { isCoreExploreRoute } = usePublicRoute();
+  const showLeftIcon = showLeftButton && (isAuthenticated || isCoreExploreRoute);
   return (
     <Container
       overrideDefaults
@@ -60,13 +62,19 @@ export function MobileHeader({
 
         <Logo />
 
-        {/* Right icon - Join for unauthenticated, Activity for authenticated */}
-        {!isAuthenticated ? (
+        {/* Right icon - always Activity; action depends on auth */}
+        {showRightButton ? (
           <Button
-            variant="secondary"
+            variant="ghost"
             size="icon"
             className="size-12 shrink-0"
-            onClick={() => setShowSignInDialog(true)}
+            onClick={() => {
+              if (!isAuthenticated) {
+                setShowSignInDialog(true);
+                return;
+              }
+              onRightIconClick?.();
+            }}
             aria-label="Join Pubky"
           >
             <UserRound className="size-6" />

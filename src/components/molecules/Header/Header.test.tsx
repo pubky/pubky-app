@@ -1,4 +1,4 @@
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { describe, expect, it, vi } from 'vitest';
@@ -7,7 +7,14 @@ import { useNotificationStore } from '@/stores/notification/notification.store';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 import { HeaderHome } from '../HeaderHome/HeaderHome';
 import { HeaderSignIn } from '../HeaderSignIn/HeaderSignIn';
-import { HeaderContainer, HeaderNavigationButtons, HeaderOnboarding, HeaderSocialLinks, HeaderTitle } from './Header';
+import {
+  HeaderContainer,
+  HeaderExploreNavigationButtons,
+  HeaderNavigationButtons,
+  HeaderOnboarding,
+  HeaderSocialLinks,
+  HeaderTitle,
+} from './Header';
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -140,6 +147,7 @@ vi.mock('@/app/routes', async (importOriginal) => {
 
 describe('Header Components', () => {
   const mockPush = vi.fn();
+  const mockSetShowSignInDialog = vi.fn();
   const mockRouter = {
     push: mockPush,
     back: vi.fn(),
@@ -151,7 +159,14 @@ describe('Header Components', () => {
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
-    vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
+    vi.mocked(usePathname).mockReturnValue('/home');
+    vi.mocked(useAuthStore).mockImplementation((selector) => {
+      const state = {
+        currentUserPubky: 'test-pubky',
+        setShowSignInDialog: mockSetShowSignInDialog,
+      };
+      return selector(state as never);
+    });
     vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
     vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
   });
@@ -288,33 +303,33 @@ describe('Header Components', () => {
   });
 
   describe('HeaderButtonSignIn', () => {
-    it('renders new here button', () => {
+    it('renders sign in button', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('New here?');
+      const button = screen.getByText('Sign in');
       expect(button).toBeInTheDocument();
     });
 
     it('handles click events', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('New here?');
+      const button = screen.getByText('Sign in');
       fireEvent.click(button);
 
-      expect(mockPush).toHaveBeenCalledWith('/onboarding/human');
+      expect(mockPush).toHaveBeenCalledWith('/sign-in');
     });
 
     it('applies correct classes', () => {
       render(<HeaderButtonSignIn />);
 
-      const button = screen.getByText('New here?');
+      const button = screen.getByText('Sign in');
       expect(button).toHaveAttribute('data-variant', 'secondary');
     });
 
     it('renders with login icon', () => {
       render(<HeaderButtonSignIn />);
 
-      expect(document.querySelector('.lucide-user-round-plus')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-log-in')).toBeInTheDocument();
     });
   });
 
@@ -324,7 +339,7 @@ describe('Header Components', () => {
 
       expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
       // The component now renders the actual button instead of a mock
-      expect(screen.getByText('New here?')).toBeInTheDocument();
+      expect(screen.getByText('Sign in')).toBeInTheDocument();
     });
 
     it('applies correct classes', () => {
@@ -416,6 +431,37 @@ describe('Header Components', () => {
       buttons.forEach((button) => {
         expect(button).toHaveClass('w-12', 'h-12');
       });
+    });
+  });
+
+  describe('HeaderExploreNavigationButtons', () => {
+    it('renders full navigation with account routes gated behind the Join dialog', () => {
+      render(<HeaderExploreNavigationButtons />);
+
+      // Home and Hot are public explore routes → real navigation links.
+      const links = screen.getAllByRole('link');
+      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot']);
+      expect(screen.getByTestId('search-input')).toBeInTheDocument();
+
+      // All four nav icons are shown.
+      expect(document.querySelector('.lucide-house')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-bookmark')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
+
+      // Bookmarks/Settings require an account, so they render as auth-gated buttons, not links.
+      expect(document.querySelector('.lucide-bookmark')?.closest('a')).toBeNull();
+      expect(document.querySelector('.lucide-settings')?.closest('a')).toBeNull();
+      expect(document.querySelector('[data-cy="header-bookmarks-btn"]')?.tagName).toBe('BUTTON');
+      expect(document.querySelector('[data-cy="header-settings-btn"]')?.tagName).toBe('BUTTON');
+    });
+
+    it('opens sign-in dialog from the Join button', () => {
+      render(<HeaderExploreNavigationButtons />);
+
+      fireEvent.click(screen.getByTestId('header-explore-join-button'));
+
+      expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
     });
   });
 

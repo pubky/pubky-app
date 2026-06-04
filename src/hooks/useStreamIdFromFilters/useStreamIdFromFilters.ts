@@ -1,6 +1,7 @@
 import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import type { ContentType } from '@/stores/home/home.types';
+import { type ContentType, REACH } from '@/stores/home/home.types';
 import { getStreamId } from '@/stores/home/home.utils';
 
 /**
@@ -31,7 +32,9 @@ export function useStreamIdFromFilters(contentOverride?: ContentType): PostStrea
   const sort = useHomeStore((state) => state.sort);
   const reach = useHomeStore((state) => state.reach);
   const content = useHomeStore((state) => state.content);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const effectiveReach = currentUserPubky ? reach : REACH.ALL;
   const effectiveContent = contentOverride ?? content;
 
-  return getStreamId(sort, reach, effectiveContent);
+  return getStreamId(sort, effectiveReach, effectiveContent);
 }

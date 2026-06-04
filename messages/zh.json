@@ -7,7 +7,7 @@
   "landing": {
     "title": "<highlight>解锁</highlight>网络。",
     "subtitle": "你的密钥，你的内容，你的规则。",
-    "signIn": "登录",
+    "explore": "探索",
     "joinNow": "立即加入",
     "aTetherCompany": "<tether>tether.</tether> 旗下公司",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026。保留所有权利。"
@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "创建账户",
       "joinNow": "立即加入",
       "identityKeys": "身份密钥",
       "usePubkyRing": "使用 Pubky Ring",
@@ -254,7 +255,8 @@
     "scan": {
       "titleMobile": "点击<highlight>授权。</highlight>",
       "titleDesktop": "扫描<highlight>二维码。</highlight>",
-      "subtitle": "打开 Pubky Ring，创建一个 pubky，然后扫描二维码。",
+      "subtitleMobile": "点击按钮打开 Pubky Ring，并使用您的 pubky 进行授权。",
+      "subtitleDesktop": "打开 Pubky Ring，点击'添加 pubky'，并扫描此二维码。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
 
@@ -573,7 +575,7 @@
     },
     "signIn": {
       "title": "加入 Pubky",
-      "description": "登录或创建账户以与帖子和个人资料互动。",
+      "description": "喜欢你所看到的吗？立即加入自由网络。",
       "newHere": "新用户？",
       "newHereDescription": "创建您的账户并开始探索 Pubky。",
       "joinButton": "加入 Pubky",
@@ -1014,7 +1016,14 @@
     "generic": "出现问题",
     "network": "网络错误。请重试。",
     "notFound": "页面未找到",
-    "couldNotFind": "无法找到请求的资源"
+    "couldNotFind": "无法找到请求的资源",
+    "database": {
+      "title": "存储不可用",
+      "description": "我们无法访问您设备的本地存储。某些移动浏览器（尤其是应用内浏览器）可能会中断它。请重试或重新加载页面。",
+      "tryAgain": "重试",
+      "reload": "重新加载页面",
+      "retrying": "正在重试…"
+    }
   },
   "password": {
     "veryWeak": "非常弱",

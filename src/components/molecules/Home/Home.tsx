@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { APP_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Heading } from '@/atoms/Heading/Heading';
@@ -23,11 +23,11 @@ export const HomeActions = () => {
     router.push(ONBOARDING_ROUTES.HUMAN);
   };
 
-  const handleSignIn = () => {
-    router.push(AUTH_ROUTES.SIGN_IN);
+  const handleExplore = () => {
+    router.push(APP_ROUTES.HOME);
   };
 
-  return <ActionButtons onSignIn={handleSignIn} onCreateAccount={handleCreateAccount} />;
+  return <ActionButtons onCreateAccount={handleCreateAccount} onExplore={handleExplore} className="gap-4" />;
 };
 
 export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {

@@ -373,18 +373,24 @@ describe('ScanFooter', () => {
 });
 
 describe('ScanHeader', () => {
-  it('renders mobile header correctly', () => {
+  it('renders mobile header with mobile subtitle', () => {
     render(<ScanHeader isMobile={true} />);
 
     expect(screen.getByTestId('page-title')).toBeInTheDocument();
     expect(screen.getByRole('heading')).toBeInTheDocument();
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
+      'Tap the button to open Pubky Ring, and authorize with your pubky.',
+    );
   });
 
-  it('renders desktop header correctly', () => {
+  it('renders desktop header with desktop subtitle', () => {
     render(<ScanHeader isMobile={false} />);
 
     expect(screen.getByTestId('page-title')).toBeInTheDocument();
     expect(screen.getByRole('heading')).toBeInTheDocument();
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
+      "Open Pubky Ring, tap 'add pubky', and scan this QR.",
+    );
   });
 });
 

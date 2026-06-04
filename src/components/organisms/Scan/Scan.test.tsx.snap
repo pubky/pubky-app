@@ -22,7 +22,7 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
     <div
       data-testid="page-subtitle"
     >
-      Open Pubky Ring, create a pubky, and scan the QR.
+      Open Pubky Ring, tap 'add pubky', and scan this QR.
     </div>
   </div>
   <div
@@ -96,7 +96,7 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
   <div
     data-testid="page-subtitle"
   >
-    Open Pubky Ring, create a pubky, and scan the QR.
+    Open Pubky Ring, tap 'add pubky', and scan this QR.
   </div>
 </div>
 `;
@@ -119,7 +119,7 @@ exports[`Scan Components - Snapshots > ScanHeader - Snapshots > matches snapshot
   <div
     data-testid="page-subtitle"
   >
-    Open Pubky Ring, create a pubky, and scan the QR.
+    Tap the button to open Pubky Ring, and authorize with your pubky.
   </div>
 </div>
 `;

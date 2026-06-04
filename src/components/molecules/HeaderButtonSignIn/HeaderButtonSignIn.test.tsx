@@ -35,8 +35,8 @@ vi.mock('@/atoms/Button/Button', () => {
 
 // Mock app
 vi.mock('@/app/routes', () => ({
-  ONBOARDING_ROUTES: {
-    HUMAN: '/onboarding/human',
+  AUTH_ROUTES: {
+    SIGN_IN: '/sign-in',
   },
 }));
 
@@ -48,20 +48,20 @@ describe('HeaderButtonSignIn', () => {
   it('renders sign in button with icon and text', () => {
     render(<HeaderButtonSignIn />);
 
-    const button = screen.getByRole('button', { name: /New here?/i });
+    const button = screen.getByRole('button', { name: /Sign in/i });
     expect(button).toBeInTheDocument();
     expect(button).toHaveAttribute('id', 'header-sign-in-btn');
     expect(button).toHaveAttribute('data-variant', 'secondary');
     expect(screen.getByTestId('header-sign-in-btn')).toBeInTheDocument();
   });
 
-  it('navigates to onboarding when clicked', () => {
+  it('navigates to sign-in when clicked', () => {
     render(<HeaderButtonSignIn />);
 
-    const button = screen.getByRole('button', { name: /New here?/i });
+    const button = screen.getByRole('button', { name: /Sign in/i });
     button.click();
 
-    expect(mockPush).toHaveBeenCalledWith('/onboarding/human');
+    expect(mockPush).toHaveBeenCalledWith('/sign-in');
   });
 
   it('passes through additional props', () => {

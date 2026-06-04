@@ -1,16 +1,50 @@
 import { renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { REACH } from '@/stores/home/home.types';
 import { useHotStore } from '@/stores/hot/hot.store';
 import { TIMEFRAME } from '@/stores/hot/hot.types';
 import { useHotStreamId } from './useHotStreamId';
 
+let mockCurrentUserPubky: string | null = 'viewer-pubky';
+const mockHotStore = vi.hoisted(() => {
+  const initialState = {
+    reach: 'all',
+    timeframe: 'today',
+  };
+  const state = {
+    ...initialState,
+    setReach: (reach: string) => {
+      state.reach = reach;
+    },
+    setTimeframe: (timeframe: string) => {
+      state.timeframe = timeframe;
+    },
+    reset: () => {
+      state.reach = initialState.reach;
+      state.timeframe = initialState.timeframe;
+    },
+  };
+
+  return { state };
+});
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
+    selector({ currentUserPubky: mockCurrentUserPubky }),
+}));
+
+vi.mock('@/stores/hot/hot.store', () => ({
+  useHotStore: (selector?: (state: typeof mockHotStore.state) => unknown) =>
+    typeof selector === 'function' ? selector(mockHotStore.state) : mockHotStore.state,
+}));
+
 describe('useHotStreamId', () => {
   // Reset hot store before each test
   beforeEach(() => {
     const { result } = renderHook(() => useHotStore((state) => state.reset));
     result.current();
+    mockCurrentUserPubky = 'viewer-pubky';
   });
 
   it('should return engagement stream for all reach (default)', () => {
@@ -40,6 +74,17 @@ describe('useHotStreamId', () => {
     const { result } = renderHook(() => useHotStreamId());
     expect(result.current).toBe(PostStreamTypes.POPULARITY_FRIENDS_ALL);
     expect(result.current).toBe('total_engagement:friends:all');
+  });
+
+  it('should force all reach when no user is authenticated', () => {
+    mockCurrentUserPubky = null;
+    const { result: setReach } = renderHook(() => useHotStore((state) => state.setReach));
+    setReach.current(REACH.FRIENDS);
+
+    const { result } = renderHook(() => useHotStreamId());
+
+    expect(result.current).toBe(PostStreamTypes.POPULARITY_ALL_ALL);
+    expect(result.current).toBe('total_engagement:all:all');
   });
 
   it('should handle all reach options', () => {

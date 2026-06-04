@@ -7,7 +7,7 @@
   "landing": {
     "title": "<highlight>Sblocca</highlight> il web.",
     "subtitle": "Le tue chiavi, i tuoi contenuti, le tue regole.",
-    "signIn": "Accedi",
+    "explore": "Esplora",
     "joinNow": "Unisciti ora",
     "aTetherCompany": "un'azienda <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tutti i diritti riservati."
@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "Crea account",
       "joinNow": "Unisciti ora",
       "identityKeys": "Chiavi di identità",
       "usePubkyRing": "Usa Pubky Ring",
@@ -254,7 +255,8 @@
     "scan": {
       "titleMobile": "Tocca per <highlight>autorizzare.</highlight>",
       "titleDesktop": "Scansiona il <highlight>codice QR.</highlight>",
-      "subtitle": "Apri Pubky Ring, crea un pubky e scansiona il QR.",
+      "subtitleMobile": "Tocca il pulsante per aprire Pubky Ring e autorizza con il tuo pubky.",
+      "subtitleDesktop": "Apri Pubky Ring, tocca 'Aggiungi pubky', e scansiona questo QR.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
 
@@ -573,7 +575,7 @@
     },
     "signIn": {
       "title": "Unisciti a Pubky",
-      "description": "Accedi o crea un account per interagire con post e profili.",
+      "description": "Ti piace quello che vedi? Unisciti al web della libertà ora.",
       "newHere": "Nuovo qui?",
       "newHereDescription": "Crea il tuo account e inizia a esplorare Pubky.",
       "joinButton": "Unisciti a Pubky",
@@ -1014,7 +1016,14 @@
     "generic": "Qualcosa e andato storto",
     "network": "Errore di rete. Riprova.",
     "notFound": "Pagina non trovata",
-    "couldNotFind": "Impossibile trovare la risorsa richiesta"
+    "couldNotFind": "Impossibile trovare la risorsa richiesta",
+    "database": {
+      "title": "Archiviazione non disponibile",
+      "description": "Non è stato possibile accedere all'archiviazione locale del dispositivo. Alcuni browser mobili, in particolare quelli integrati nelle app, possono interromperla. Riprova o ricarica la pagina.",
+      "tryAgain": "Riprova",
+      "reload": "Ricarica la pagina",
+      "retrying": "Nuovo tentativo…"
+    }
   },
   "password": {
     "veryWeak": "Password molto debole",
