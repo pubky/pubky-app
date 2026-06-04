@@ -18,11 +18,9 @@ export const HOT_MOBILE_MENU_ITEMS: HotMobileMenuItem[] = [
  * Only visible on mobile (< lg breakpoint).
  * Delegates rendering to the shared `MobileTabBar` molecule.
  *
- * Negative margin overrides (passed via className):
+ * Negative margin override (passed via className):
  * - `-mx-6` cancels the parent ContentLayout container's `px-6` padding
  *   so the menu stretches full-width edge-to-edge.
- * - `-mt-6` cancels the parent flex container's `gap-6` above so the menu sits
- *   flush against the header, preventing a layout shift when sticky activates.
  */
 export function HotMobileMenu({ activeSection, onSectionChange }: HotMobileMenuProps) {
   const t = useTranslations('hot');
