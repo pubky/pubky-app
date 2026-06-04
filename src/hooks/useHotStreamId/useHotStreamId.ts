@@ -1,5 +1,6 @@
 import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
-import { CONTENT, SORT } from '@/stores/home/home.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
 import { getStreamId } from '@/stores/home/home.utils';
 import { useHotStore } from '@/stores/hot/hot.store';
 
@@ -21,8 +22,10 @@ import { useHotStore } from '@/stores/hot/hot.store';
  */
 export function useHotStreamId(): PostStreamTypes {
   const reach = useHotStore((state) => state.reach);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const effectiveReach = currentUserPubky ? reach : REACH.ALL;
 
   // Hot/Trending posts use engagement sorting (POPULARITY)
   // Content is always 'all' for hot posts
-  return getStreamId(SORT.ENGAGEMENT, reach, CONTENT.ALL);
+  return getStreamId(SORT.ENGAGEMENT, effectiveReach, CONTENT.ALL);
 }

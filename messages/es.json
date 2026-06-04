@@ -7,7 +7,7 @@
   "landing": {
     "title": "<highlight>Desbloquea</highlight> la web.",
     "subtitle": "Tus claves, tu contenido, tus reglas.",
-    "signIn": "Iniciar sesión",
+    "explore": "Explorar",
     "joinNow": "Únete ahora",
     "aTetherCompany": "una empresa de <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Todos los derechos reservados."
@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "Crear cuenta",
       "joinNow": "Únete ahora",
       "identityKeys": "Claves de identidad",
       "usePubkyRing": "Usar Pubky Ring",
@@ -254,7 +255,8 @@
     "scan": {
       "titleMobile": "Toca para <highlight>autorizar.</highlight>",
       "titleDesktop": "Escanea el <highlight>código QR.</highlight>",
-      "subtitle": "Abre Pubky Ring, crea un pubky y escanea el QR.",
+      "subtitleMobile": "Toca el botón para abrir Pubky Ring y autoriza con tu pubky.",
+      "subtitleDesktop": "Abre Pubky Ring, toca 'Agregar pubky', y escanea este QR.",
       "generating": "Generando código QR...",
       "generatingShort": "Generando...",
 
@@ -573,7 +575,7 @@
     },
     "signIn": {
       "title": "Unete a Pubky",
-      "description": "Inicia sesión o crea una cuenta para interactuar con publicaciónes y perfiles.",
+      "description": "¿Te gusta lo que ves? Únete a la web de la libertad ahora.",
       "newHere": "Nuevo aqui?",
       "newHereDescription": "Crea tu cuenta y comienza a explorar Pubky.",
       "joinButton": "Unirse a Pubky",

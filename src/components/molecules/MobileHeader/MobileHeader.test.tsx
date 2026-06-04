@@ -1,6 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MobileHeader } from './MobileHeader';
+
+let mockCurrentUserPubky: string | null = 'pk:test-user-pubky';
+let mockIsCoreExploreRoute = false;
+const mockSetShowSignInDialog = vi.fn();
 
 // Mock the molecules
 vi.mock('@/molecules/Logo/Logo', () => {
@@ -17,14 +21,29 @@ vi.mock('@/molecules/Logo/Logo', () => {
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector) => {
     const state = {
-      currentUserPubky: 'pk:test-user-pubky',
-      setShowSignInDialog: vi.fn(),
+      currentUserPubky: mockCurrentUserPubky,
+      setShowSignInDialog: mockSetShowSignInDialog,
     };
     return selector(state);
   }),
 }));
 
+vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
+  usePublicRoute: vi.fn(() => ({
+    isPublicRoute: false,
+    isDynamicPublicRoute: false,
+    isCoreExploreRoute: mockIsCoreExploreRoute,
+    isPublicExploreRoute: mockIsCoreExploreRoute,
+  })),
+}));
+
 describe('MobileHeader', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCurrentUserPubky = 'pk:test-user-pubky';
+    mockIsCoreExploreRoute = false;
+  });
+
   it('renders with default props', () => {
     render(<MobileHeader />);
 
@@ -147,9 +166,36 @@ describe('MobileHeader', () => {
     expect(leftButton).toHaveClass('hover:bg-accent/50', 'transition-all');
     expect(rightButton).toHaveClass('hover:bg-accent/50', 'transition-all');
   });
+
+  it('shows filter and activity buttons when unauthenticated on a core explore route', () => {
+    mockCurrentUserPubky = null;
+    mockIsCoreExploreRoute = true;
+
+    render(<MobileHeader />);
+
+    expect(document.querySelector('.lucide-sliders-horizontal')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-activity')).toBeInTheDocument();
+  });
+
+  it('opens sign-in dialog from activity button when unauthenticated', () => {
+    mockCurrentUserPubky = null;
+
+    render(<MobileHeader />);
+
+    const activityButton = document.querySelector('.lucide-activity')?.closest('button');
+    fireEvent.click(activityButton!);
+
+    expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
+  });
 });
 
 describe('MobileHeader - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCurrentUserPubky = 'pk:test-user-pubky';
+    mockIsCoreExploreRoute = false;
+  });
+
   it('matches snapshot with default props', () => {
     const { container } = render(<MobileHeader />);
     expect(container.firstChild).toMatchSnapshot();

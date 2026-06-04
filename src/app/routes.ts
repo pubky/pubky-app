@@ -58,10 +58,14 @@ export enum COPYRIGHT_ROUTES {
   COPYRIGHT = '/copyright',
 }
 
+export const EXPLORE_ROUTES: string[] = [APP_ROUTES.HOME, APP_ROUTES.HOT, APP_ROUTES.SEARCH];
+
 // Public routes are accessible regardless of authentication status.
 // This includes routes that need to be accessible during auth transitions (like logout).
 // Note: Dynamic public routes like /profile/[pubky] and /post/[userId]/[postId]
 // are handled by isDynamicPublicRoute() in RouteGuardProvider.
+// Core explore routes are intentionally not listed here so auth hydration can
+// still finish before app shell routes render for logged-in users.
 export const PUBLIC_ROUTES: string[] = [
   AUTH_ROUTES.LOGOUT,
   // Profile is public to prevent RouteGuard redirect during logout.
@@ -98,6 +102,7 @@ export const UNAUTHENTICATED_ROUTES = {
     ONBOARDING_ROUTES.PUBKY,
     ONBOARDING_ROUTES.BACKUP,
     ONBOARDING_ROUTES.HUMAN,
+    ...EXPLORE_ROUTES,
     AUTH_ROUTES.LOGOUT,
     COPYRIGHT_ROUTES.COPYRIGHT,
   ],
@@ -141,6 +146,14 @@ export function isDynamicPublicRoute(pathname: string): boolean {
     default:
       return false;
   }
+}
+
+export function isCoreExploreRoute(pathname: string): boolean {
+  return EXPLORE_ROUTES.includes(pathname);
+}
+
+export function isPublicExploreRoute(pathname: string): boolean {
+  return isCoreExploreRoute(pathname) || isDynamicPublicRoute(pathname);
 }
 
 // ============================================================================

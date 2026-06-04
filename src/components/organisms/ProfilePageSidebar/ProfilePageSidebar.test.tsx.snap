@@ -206,7 +206,7 @@ exports[`ProfilePageSidebar - Snapshots > matches snapshot with default state 1`
         </div>
       </div>
       <button
-        class="w-full cursor-pointer text-left text-base leading-normal font-medium break-words text-muted-foreground"
+        class="w-full cursor-pointer text-left text-base leading-normal font-medium wrap-break-word text-muted-foreground"
         data-slot="button"
       >
         What do you think about Pubky?

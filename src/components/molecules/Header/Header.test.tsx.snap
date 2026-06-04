@@ -3,6 +3,7 @@
 exports[`Header Components - Snapshots > matches snapshot for HeaderButtonSignIn 1`] = `
 <button
   class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 px-4 py-2 has-[>svg]:px-4 gap-2"
+  data-cy="header-sign-in-btn"
   data-slot="button"
   data-testid="header-sign-in-btn"
   data-variant="secondary"
@@ -10,7 +11,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderButtonSignIn
 >
   <svg
     aria-hidden="true"
-    class="lucide lucide-user-round-plus size-4"
+    class="lucide lucide-log-in size-4"
     fill="none"
     height="24"
     stroke="currentColor"
@@ -22,21 +23,16 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderButtonSignIn
     xmlns="http://www.w3.org/2000/svg"
   >
     <path
-      d="M2 21a8 8 0 0 1 13.292-6"
-    />
-    <circle
-      cx="10"
-      cy="8"
-      r="5"
+      d="m10 17 5-5-5-5"
     />
     <path
-      d="M19 16v6"
+      d="M15 12H3"
     />
     <path
-      d="M22 19h-6"
+      d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
     />
   </svg>
-  New here?
+  Sign in
 </button>
 `;
 
@@ -150,6 +146,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderHome 1`] = `
   </div>
   <button
     class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 px-4 py-2 has-[>svg]:px-4 gap-2"
+    data-cy="header-sign-in-btn"
     data-slot="button"
     data-testid="header-sign-in-btn"
     data-variant="secondary"
@@ -157,7 +154,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderHome 1`] = `
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-user-round-plus size-4"
+      class="lucide lucide-log-in size-4"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -169,21 +166,16 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderHome 1`] = `
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M2 21a8 8 0 0 1 13.292-6"
-      />
-      <circle
-        cx="10"
-        cy="8"
-        r="5"
+        d="m10 17 5-5-5-5"
       />
       <path
-        d="M19 16v6"
+        d="M15 12H3"
       />
       <path
-        d="M22 19h-6"
+        d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
       />
     </svg>
-    New here?
+    Sign in
   </button>
 </div>
 `;
@@ -200,7 +192,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   >
     <button
       aria-label="Home"
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full shadow-xs text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md border bg-white/5"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md"
       data-size="icon"
       data-slot="button"
       data-variant="secondary"
@@ -354,7 +346,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   >
     <button
       aria-label="Home"
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full shadow-xs text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md border bg-white/5"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md"
       data-size="icon"
       data-slot="button"
       data-variant="secondary"
@@ -540,7 +532,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] =
     >
       <button
         aria-label="Home"
-        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full shadow-xs text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md border bg-white/5"
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md"
         data-size="icon"
         data-slot="button"
         data-variant="secondary"

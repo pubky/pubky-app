@@ -7,6 +7,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { DialogFeedback } from '../DialogFeedback/DialogFeedback';
 import { FeedbackCardSkeleton } from './FeedbackCard.skeleton';
@@ -14,6 +15,7 @@ import { FeedbackCardSkeleton } from './FeedbackCard.skeleton';
 export function FeedbackCard() {
   const t = useTranslations('feedback');
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
+  const { requireAuth } = useRequireAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const avatarUrl = useAvatarUrl(userDetails);
 
@@ -37,7 +39,7 @@ export function FeedbackCard() {
         <Container
           overrideDefaults={true}
           className="flex w-full min-w-0 cursor-pointer flex-col gap-4 rounded-lg border border-dashed border-input p-6"
-          onClick={() => setIsDialogOpen(true)}
+          onClick={() => requireAuth(() => setIsDialogOpen(true))}
         >
           <Container overrideDefaults={true} className="flex w-full min-w-0 items-center gap-2">
             <Container
@@ -56,7 +58,7 @@ export function FeedbackCard() {
 
           <Button
             overrideDefaults
-            className="w-full cursor-pointer text-left text-base leading-normal font-medium break-words text-muted-foreground"
+            className="w-full cursor-pointer text-left text-base leading-normal font-medium wrap-break-word text-muted-foreground"
           >
             {t('cardButton')}
           </Button>

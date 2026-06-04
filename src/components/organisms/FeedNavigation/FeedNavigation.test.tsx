@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -12,12 +12,16 @@ vi.mock('next/navigation', () => ({
 
 // Mock dexie-react-hooks — allow controlling useLiveQuery return value per test
 let mockCustomFeeds: FeedModelSchema[];
+let mockIsAuthenticated = true;
+const mockRequireAuth = vi.fn((action: () => unknown) => action());
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: vi.fn((queryFn: () => Promise<FeedModelSchema[]>) => {
-    // Execute the query function so error-path tests can verify Logger calls
-    void queryFn().catch(() => {});
-    return mockCustomFeeds;
-  }),
+  useLiveQuery: vi.fn(
+    (queryFn: () => Promise<FeedModelSchema[]>, _deps?: unknown[], defaultResult?: FeedModelSchema[]) => {
+      // Execute the query function so error-path tests can verify Logger calls
+      void queryFn().catch(() => {});
+      return mockIsAuthenticated ? mockCustomFeeds : (defaultResult ?? []);
+    },
+  ),
 }));
 
 // Mock feed controller
@@ -37,12 +41,14 @@ vi.mock('@/atoms/Button/Button', () => {
       size,
       className,
       overrideDefaults,
+      onClick,
     }: {
       children: React.ReactNode;
       variant?: string;
       size?: string;
       className?: string;
       overrideDefaults?: boolean;
+      onClick?: () => void;
     }) => (
       <button
         data-testid="button"
@@ -50,6 +56,7 @@ vi.mock('@/atoms/Button/Button', () => {
         data-size={size}
         className={className}
         data-override-defaults={overrideDefaults}
+        onClick={onClick}
       >
         {children}
       </button>
@@ -142,6 +149,13 @@ vi.mock('@/app/routes', () => ({
   },
 }));
 
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    isAuthenticated: mockIsAuthenticated,
+    requireAuth: mockRequireAuth,
+  }),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -167,6 +181,8 @@ describe('FeedNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCustomFeeds = [];
+    mockIsAuthenticated = true;
+    mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePathname.mockReturnValue('/home');
     mockGetList.mockResolvedValue([]);
   });
@@ -336,6 +352,29 @@ describe('FeedNavigation', () => {
     expect(svg).toBeInTheDocument();
   });
 
+  it('does not expose custom feeds when unauthenticated', () => {
+    mockIsAuthenticated = false;
+    mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Private Feed' })];
+
+    render(<FeedNavigation />);
+
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.queryByText('Private Feed')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('custom-feed-dialog-create')).not.toBeInTheDocument();
+    expect(mockGetList).not.toHaveBeenCalled();
+  });
+
+  it('opens sign-in dialog when unauthenticated user clicks Create Feed', () => {
+    mockIsAuthenticated = false;
+    mockRequireAuth.mockReturnValue(undefined);
+
+    render(<FeedNavigation />);
+
+    fireEvent.click(screen.getByText('Create Feed'));
+
+    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+  });
+
   // ── Error handling ──────────────────────────────────────────────────────
 
   it('renders empty feed list when getList rejects (error handled in useLiveQuery callback)', async () => {
@@ -379,6 +418,8 @@ describe('FeedNavigation - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCustomFeeds = [];
+    mockIsAuthenticated = true;
+    mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePathname.mockReturnValue('/home');
     mockGetList.mockResolvedValue([]);
   });

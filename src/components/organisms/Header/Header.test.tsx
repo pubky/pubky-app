@@ -113,8 +113,16 @@ vi.mock('@/database/franky/franky', () => ({
 // Mock molecules
 vi.mock('@/molecules/Header/Header', () => {
   return {
-    HeaderContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="header-container" data-class-name={className}>
+    HeaderContainer: ({
+      children,
+      className,
+      classNameNav,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      classNameNav?: string;
+    }) => (
+      <div data-testid="header-container" data-class-name={className} data-class-name-nav={classNameNav}>
         {children}
       </div>
     ),
@@ -130,6 +138,7 @@ vi.mock('@/molecules/Header/Header', () => {
         Navigation Buttons
       </div>
     ),
+    HeaderExploreNavigationButtons: () => <div data-testid="header-explore-navigation-buttons">Explore Navigation</div>,
   };
 });
 
@@ -183,6 +192,7 @@ vi.mock('@/organisms/SearchInput/SearchInput', () => {
 
 // Mock hooks
 const mockIsPublicRoute = vi.fn();
+const mockIsCoreExploreRoute = vi.fn();
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(() => ({
     userDetails: { name: 'Test User', image: 'test-image.jpg' },
@@ -191,7 +201,12 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
-  usePublicRoute: () => ({ isPublicRoute: mockIsPublicRoute() }),
+  usePublicRoute: () => ({
+    isPublicRoute: mockIsPublicRoute(),
+    isDynamicPublicRoute: mockIsPublicRoute(),
+    isCoreExploreRoute: mockIsCoreExploreRoute(),
+    isPublicExploreRoute: mockIsPublicRoute() || mockIsCoreExploreRoute(),
+  }),
 }));
 
 describe('Header', () => {
@@ -202,6 +217,7 @@ describe('Header', () => {
     mockUsePathname.mockReturnValue(ROOT_ROUTES);
     mockUseRouter.mockReturnValue({ push: vi.fn() });
     mockIsPublicRoute.mockReturnValue(false);
+    mockIsCoreExploreRoute.mockReturnValue(false);
   });
 
   it('renders header container with logo and home header', () => {
@@ -520,7 +536,7 @@ describe('Header', () => {
 
     it('renders HeaderTitle with correct title for each onboarding step', () => {
       const testCases = [
-        { path: ONBOARDING_ROUTES.HUMAN, expectedTitle: 'Join now' },
+        { path: ONBOARDING_ROUTES.HUMAN, expectedTitle: 'Create account' },
         { path: ONBOARDING_ROUTES.INSTALL, expectedTitle: 'Identity keys' },
         { path: ONBOARDING_ROUTES.SCAN, expectedTitle: 'Use Pubky Ring' },
         { path: ONBOARDING_ROUTES.PUBKY, expectedTitle: 'Your pubky' },
@@ -609,6 +625,7 @@ describe('Header', () => {
     it('renders HeaderHome when unauthenticated on non-public route', () => {
       mockCurrentUserPubky = null;
       mockIsPublicRoute.mockReturnValue(false);
+      mockIsCoreExploreRoute.mockReturnValue(false);
       mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
       render(<Header />);
@@ -617,9 +634,35 @@ describe('Header', () => {
       expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
     });
 
+    it('renders explore navigation when unauthenticated on a core explore route', () => {
+      mockCurrentUserPubky = null;
+      mockIsPublicRoute.mockReturnValue(false);
+      mockIsCoreExploreRoute.mockReturnValue(true);
+      mockUsePathname.mockReturnValue(HOME_ROUTES.HOME);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
+      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
+    });
+
+    it('uses app-shell gutter alignment when unauthenticated on a core explore route', () => {
+      mockCurrentUserPubky = null;
+      mockIsPublicRoute.mockReturnValue(false);
+      mockIsCoreExploreRoute.mockReturnValue(true);
+      mockUsePathname.mockReturnValue(HOME_ROUTES.HOME);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-container')).toHaveAttribute('data-class-name-nav', ' xl:px-0');
+    });
+
     it('renders HeaderSignIn when authenticated regardless of public route', () => {
       mockCurrentUserPubky = 'test-pubky-123';
       mockIsPublicRoute.mockReturnValue(true);
+      mockIsCoreExploreRoute.mockReturnValue(true);
 
       render(<Header />);
 

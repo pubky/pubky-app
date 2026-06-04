@@ -74,7 +74,7 @@ export function PostActionsBar({
       id: 'tag',
       icon: Tag,
       count: tagCount,
-      onClick: () => requireAuth(() => onTagClick?.()),
+      onClick: () => onTagClick?.(),
       ariaLabel: `Tag post (${tagCount})`,
     },
     {

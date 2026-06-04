@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { getProfileRoute, isDynamicPublicRoute, PROFILE_ROUTES } from './routes';
+import {
+  getProfileRoute,
+  isCoreExploreRoute,
+  isDynamicPublicRoute,
+  isPublicExploreRoute,
+  PROFILE_ROUTES,
+} from './routes';
 
 describe('isDynamicPublicRoute', () => {
   describe('invite routes', () => {
@@ -145,5 +151,44 @@ describe('getProfileRoute', () => {
 
   it('preserves sub-paths other than posts', () => {
     expect(getProfileRoute(PROFILE_ROUTES.FOLLOWERS, pubky)).toBe(`/profile/${pubky}/followers`);
+  });
+});
+
+describe('isCoreExploreRoute', () => {
+  it('returns true for core logged-out explore routes', () => {
+    expect(isCoreExploreRoute('/home')).toBe(true);
+    expect(isCoreExploreRoute('/hot')).toBe(true);
+    expect(isCoreExploreRoute('/search')).toBe(true);
+  });
+
+  it('returns false for dynamic public and protected routes', () => {
+    const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+
+    expect(isCoreExploreRoute(`/post/${pubky}/0034BBBDFK83G`)).toBe(false);
+    expect(isCoreExploreRoute(`/profile/${pubky}`)).toBe(false);
+    expect(isCoreExploreRoute('/bookmarks')).toBe(false);
+    expect(isCoreExploreRoute('/feed/custom-feed')).toBe(false);
+    expect(isCoreExploreRoute('/settings/account')).toBe(false);
+  });
+});
+
+describe('isPublicExploreRoute', () => {
+  it('returns true for core explore routes and dynamic post/profile pages', () => {
+    const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+
+    expect(isPublicExploreRoute('/home')).toBe(true);
+    expect(isPublicExploreRoute('/hot')).toBe(true);
+    expect(isPublicExploreRoute('/search')).toBe(true);
+    expect(isPublicExploreRoute(`/post/${pubky}/0034BBBDFK83G`)).toBe(true);
+    expect(isPublicExploreRoute(`/profile/${pubky}`)).toBe(true);
+  });
+
+  it('returns false for protected routes', () => {
+    expect(isPublicExploreRoute('/bookmarks')).toBe(false);
+    expect(isPublicExploreRoute('/feed/custom-feed')).toBe(false);
+    expect(isPublicExploreRoute('/settings/account')).toBe(false);
+    expect(isPublicExploreRoute('/profile/posts')).toBe(false);
+    expect(isPublicExploreRoute('/share')).toBe(false);
+    expect(isPublicExploreRoute('/who-to-follow')).toBe(false);
   });
 });

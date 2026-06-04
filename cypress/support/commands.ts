@@ -192,7 +192,7 @@ Cypress.Commands.add('signInWithEncryptedFile', (backupFilepath: string, passcod
   });
   cy.location('pathname').should('eq', '/');
 
-  cy.get('#sign-in-btn').click();
+  cy.get('[data-cy="header-sign-in-btn"]').click();
   cy.location('pathname').should('eq', '/sign-in');
 
   cy.get('#restore-encrypted-file-btn').click();
@@ -215,7 +215,7 @@ Cypress.Commands.add('signInWithRecoveryPhrase', (recoveryPhrase: string) => {
   });
   cy.location('pathname').should('eq', '/');
 
-  cy.get('#sign-in-btn').click();
+  cy.get('[data-cy="header-sign-in-btn"]').click();
   cy.location('pathname').should('eq', '/sign-in');
 
   cy.get('#restore-recovery-phrase-btn').click();
