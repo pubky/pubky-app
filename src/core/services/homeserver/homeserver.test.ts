@@ -406,14 +406,11 @@ describe('HomeserverService', () => {
         }
       });
 
-      it('should retry polling on retryable relay errors (e.g. 504) and eventually resolve', async () => {
+      it('should reject with SESSION_EXPIRED when tryPollOnce throws (SDK exhausted its retry budget)', async () => {
         vi.useFakeTimers();
         try {
-          const session = createMockSession();
-          const tryPollOnce = vi
-            .fn()
-            .mockRejectedValueOnce({ name: 'RequestError', message: 'Gateway Timeout', data: { statusCode: 504 } })
-            .mockResolvedValueOnce(session);
+          const relayError = { name: 'RequestError', message: 'Gateway Timeout', data: { statusCode: 504 } };
+          const tryPollOnce = vi.fn().mockRejectedValue(relayError);
           const free = vi.fn();
           mockState.startAuthFlow.mockReturnValue({
             authorizationUrl: 'https://auth.example.com/authorize',
@@ -423,40 +420,15 @@ describe('HomeserverService', () => {
 
           const result = await HomeserverService.generateAuthUrl();
           const approvalPromise = result.awaitApproval;
-
-          await vi.advanceTimersByTimeAsync(0);
-          await vi.advanceTimersByTimeAsync(2_000);
-
-          await expect(approvalPromise).resolves.toBe(session);
-          expect(tryPollOnce).toHaveBeenCalledTimes(2);
-        } finally {
-          vi.useRealTimers();
-        }
-      });
-
-      it('should retry polling on 404 Not Found (relay may not have registered flow yet)', async () => {
-        vi.useFakeTimers();
-        try {
-          const session = createMockSession();
-          const tryPollOnce = vi
-            .fn()
-            .mockRejectedValueOnce({ name: 'RequestError', message: '404 Not Found', data: { statusCode: 404 } })
-            .mockResolvedValueOnce(session);
-          const free = vi.fn();
-          mockState.startAuthFlow.mockReturnValue({
-            authorizationUrl: 'https://auth.example.com/authorize',
-            tryPollOnce,
-            free,
+          const rejection = expect(approvalPromise).rejects.toMatchObject({
+            code: AuthErrorCode.SESSION_EXPIRED,
           });
 
-          const result = await HomeserverService.generateAuthUrl();
-          const approvalPromise = result.awaitApproval;
-
           await vi.advanceTimersByTimeAsync(0);
-          await vi.advanceTimersByTimeAsync(2_000);
+          await rejection;
 
-          await expect(approvalPromise).resolves.toBe(session);
-          expect(tryPollOnce).toHaveBeenCalledTimes(2);
+          // Loop must not retry on a dead flow; one throw is terminal.
+          expect(tryPollOnce).toHaveBeenCalledTimes(1);
         } finally {
           vi.useRealTimers();
         }
@@ -763,6 +735,14 @@ describe('HomeserverService', () => {
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
         });
+      });
+
+      it('should return empty array when directory returns 404', async () => {
+        mockState.publicStorageList.mockRejectedValue({ data: { statusCode: 404 } });
+
+        const result = await HomeserverService.list({ baseDirectory: 'pubky://user/pub/missing/' });
+
+        expect(result).toEqual([]);
       });
     });
 

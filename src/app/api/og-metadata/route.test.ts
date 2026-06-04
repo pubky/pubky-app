@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { OgMetadataController } from '@/controllers/og-metadata/og-metadata';
-import { AuthErrorCode, ClientErrorCode, TimeoutErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -29,7 +29,10 @@ const mockMetadata: TOgMetadataResult = {
 describe('API Route: /api/og-metadata', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(OgMetadataController, 'fetch').mockResolvedValue(mockMetadata);
+    vi.spyOn(OgMetadataController, 'fetch').mockResolvedValue({
+      ok: true,
+      metadata: mockMetadata,
+    });
   });
 
   describe('GET', () => {
@@ -73,13 +76,12 @@ describe('API Route: /api/og-metadata', () => {
       expect(fetchSpy).toHaveBeenCalledWith({ url: null });
     });
 
-    it('should return 400 for AppError with statusCode 400', async () => {
-      const appError = Err.validation(ValidationErrorCode.MISSING_FIELD, 'Invalid URL', {
-        service: ErrorService.NextJsServer,
-        operation: 'validate',
-        context: { field: 'url', statusCode: HttpStatusCode.BAD_REQUEST },
+    it('should return 400 for validation failures', async () => {
+      vi.spyOn(OgMetadataController, 'fetch').mockResolvedValue({
+        ok: false,
+        message: 'Invalid URL',
+        statusCode: HttpStatusCode.BAD_REQUEST,
       });
-      vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(appError);
 
       const request = createRequest('');
       const response = await GET(request);
@@ -87,13 +89,12 @@ describe('API Route: /api/og-metadata', () => {
 
       expect(response.status).toBe(400);
       expect(data.error).toBe('Invalid URL');
-      expect(response.headers.get('Cache-Control')).toBeNull();
     });
 
     it('should return 403 for AppError with statusCode 403', async () => {
       const appError = Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range', {
         service: ErrorService.NextJsServer,
-        operation: 'validateDns',
+        operation: 'checkDnsSafety',
         context: { statusCode: HttpStatusCode.FORBIDDEN },
       });
       vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(appError);
@@ -104,22 +105,6 @@ describe('API Route: /api/og-metadata', () => {
 
       expect(response.status).toBe(403);
       expect(data.error).toBe('Blocked IP range');
-    });
-
-    it('should return 408 for AppError with statusCode 408', async () => {
-      const appError = Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Request timeout', {
-        service: ErrorService.NextJsServer,
-        operation: 'fetchOgMetadata',
-        context: { statusCode: HttpStatusCode.REQUEST_TIMEOUT },
-      });
-      vi.spyOn(OgMetadataController, 'fetch').mockRejectedValue(appError);
-
-      const request = createRequest('https://slow-site.com');
-      const response = await GET(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(408);
-      expect(data.error).toBe('Request timeout');
     });
 
     it('should return 413 for AppError with statusCode 413', async () => {

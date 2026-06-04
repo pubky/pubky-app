@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import { SETTINGS_ROUTES } from '@/app/routes';
-import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
 import { SettingsInfo } from '@/molecules/Settings/SettingsInfo/SettingsInfo';
 import { SettingsMenu } from '@/molecules/Settings/SettingsMenu/SettingsMenu';
@@ -18,9 +17,6 @@ import type { SettingsProps } from './Settings.types';
 export function Settings({ children }: SettingsProps) {
   const pathname = usePathname();
   const isOnHelpPage = pathname === SETTINGS_ROUTES.HELP;
-
-  // Reset to column layout on mount (settings doesn't support wide layout)
-  useLayoutReset();
 
   return (
     <>
@@ -45,6 +41,7 @@ export function Settings({ children }: SettingsProps) {
         leftDrawerContent={<SettingsMenu />}
         rightDrawerContent={<SettingsInfo hideFAQ={isOnHelpPage} />}
         className="pt-(--settings-mobile-chrome-height) lg:pt-0"
+        disableWideShellLayout
       >
         {children}
       </ContentLayout>

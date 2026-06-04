@@ -2,9 +2,8 @@
 
 import { useEffect } from 'react';
 import Image from 'next/image';
-import { CheckCircle, Circle, Key, Loader2, QrCode } from 'lucide-react';
+import { CheckCircle, Circle, Key, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
@@ -16,9 +15,9 @@ import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
 import { ContentCard } from '@/molecules/Content/Content';
-import { DialogAuthExpired } from '@/molecules/DialogAuthExpired/DialogAuthExpired';
 import { Logo } from '@/molecules/Logo/Logo';
 import { PageTitle } from '@/molecules/Page/Page';
+import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { toast } from '@/molecules/Toaster/use-toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
@@ -122,8 +121,8 @@ export const SignInContent = () => {
     </>
   ) : isExpired ? (
     <>
-      <QrCode className="mr-2 size-4" />
-      {t('expired')}
+      <RefreshCw className="mr-2 size-4" />
+      {t('clickToReload')}
     </>
   ) : (
     <>
@@ -152,37 +151,19 @@ export const SignInContent = () => {
           <Container className="items-center justify-center gap-3">
             <button
               type="button"
-              className="relative flex h-[220px] w-[220px] cursor-pointer items-center justify-center rounded-lg bg-foreground p-4 transition-opacity hover:opacity-90 active:opacity-80"
-              onClick={handleQRClick}
-              disabled={isLoading || isExpired || !url}
-              aria-label="Copy authentication link"
+              className="group relative flex h-[220px] w-[220px] cursor-pointer items-center justify-center rounded-lg bg-foreground p-4"
+              onClick={isExpired ? fetchUrl : handleQRClick}
+              disabled={isLoading || (!url && !isExpired)}
+              aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
             >
-              {isLoading || (!url && !isExpired) ? (
-                <Container className="items-center gap-2">
-                  <Loader2 className="size-8 animate-spin text-background" />
-                  <Typography as="small" size="sm" className="text-background">
-                    {t('generating')}
-                  </Typography>
-                </Container>
-              ) : isExpired ? (
-                <Container className="items-center gap-2">
-                  <QrCode className="size-8 text-muted-foreground" />
-                  <Typography as="small" size="sm" className="text-muted-foreground">
-                    {t('expired')}
-                  </Typography>
-                </Container>
-              ) : (
-                <>
-                  <QRCodeSVG value={url} size={220} />
-                  <Image
-                    src="/images/ring-logo.svg"
-                    alt="Pubky Ring"
-                    width={48}
-                    height={48}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                  />
-                </>
-              )}
+              <QrCodeSlot
+                isLoading={isLoading}
+                isExpired={isExpired}
+                url={url}
+                generatingLabel={t('generating')}
+                clickToReloadLabel={t('clickToReload')}
+                activeQrHasHoverEffect
+              />
             </button>
             <Container className="w-56 flex-row items-center justify-between gap-5">
               <Link href="https://apps.apple.com/us/app/pubky-ring/id6739356756">
@@ -206,7 +187,7 @@ export const SignInContent = () => {
               className="w-full"
               size="lg"
               onClick={onAuthorizeClick}
-              disabled={isMobileLaunching || isExpired || !url}
+              disabled={isMobileLaunching || (!url && !isExpired)}
               aria-busy={isMobileLaunching}
               data-testid="button"
             >
@@ -215,8 +196,6 @@ export const SignInContent = () => {
           </Container>
         </ContentCard>
       </Container>
-
-      <DialogAuthExpired open={isExpired} onRefresh={fetchUrl} isLoading={isLoading} />
     </>
   );
 };

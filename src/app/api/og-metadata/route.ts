@@ -29,9 +29,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const url = searchParams.get('url');
 
-    const metadata = await OgMetadataController.fetch({ url });
+    const result = await OgMetadataController.fetch({ url });
 
-    return NextResponse.json(metadata, CACHE_HEADERS);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.message }, { status: result.statusCode });
+    }
+
+    return NextResponse.json(result.metadata, CACHE_HEADERS);
   } catch (error) {
     return handleApiError(error, 'api.og-metadata.GET', {
       unknownErrorMessage: 'Internal server error',
