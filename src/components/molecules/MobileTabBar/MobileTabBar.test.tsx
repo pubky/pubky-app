@@ -140,9 +140,9 @@ describe('MobileTabBar', () => {
   });
 
   it('merges className onto the root', () => {
-    const { container } = render(<MobileTabBar items={makeItems()} className="-mx-6 -mt-6 mb-6" />);
+    const { container } = render(<MobileTabBar items={makeItems()} className="-mx-6 mb-6" />);
     const root = container.firstChild as HTMLElement;
-    expect(root).toHaveClass('-mx-6', '-mt-6', 'mb-6');
+    expect(root).toHaveClass('-mx-6', 'mb-6');
   });
 
   it('passes through data-testid', () => {
