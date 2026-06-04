@@ -265,7 +265,18 @@ export class AppDatabase extends Dexie {
 
     for (let attempt = 1; ; attempt++) {
       try {
-        return await this.runInitialize();
+        const result = await this.runInitialize();
+
+        // A prior retry may have called this.close(), which disables Dexie's auto-open.
+        // runInitialize()'s version-match path returns without opening, so guarantee the
+        // connection is open before reporting success — otherwise queries would throw
+        // DatabaseClosedError even though initialization "succeeded". A transient failure
+        // here is caught below and retried like any other.
+        if (!this.isOpen()) {
+          await this.open();
+        }
+
+        return result;
       } catch (error) {
         const isLastAttempt = attempt >= DB_INIT_MAX_ATTEMPTS;
 

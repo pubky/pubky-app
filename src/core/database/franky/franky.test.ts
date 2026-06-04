@@ -386,6 +386,36 @@ describe('Database Initialization', () => {
     }
   });
 
+  it('leaves the database open after a transient retry on the version-match path', async () => {
+    // Regression: the retry loop's this.close() disables Dexie auto-open. For an existing
+    // user whose version matches, runInitialize() returns without opening, so initialize()
+    // must re-open — otherwise it reports success while every query throws DatabaseClosedError.
+    const testDb = new AppDatabase(`${DB_NAME}-transient-version-match-open`);
+    const internal = asOpaque<InternalAppDatabase>(testDb);
+
+    const existsSpy = vi.spyOn(Dexie, 'exists').mockResolvedValue(true);
+    const recreateSpy = vi.spyOn(internal, 'recreateDatabase');
+    const versionSpy = vi.spyOn(internal, 'getExistingDbVersion');
+    // First probe is dropped by WebKit; retry reports the current (matching) version.
+    versionSpy
+      .mockRejectedValueOnce(transientError('UnknownError', 'Connection to Indexed Database server lost'))
+      .mockResolvedValue(DB_VERSION * 10);
+
+    try {
+      const result = await testDb.initialize();
+
+      expect(result.wasDbReset).toBe(false);
+      expect(recreateSpy).not.toHaveBeenCalled();
+      // The connection must be usable, not left in an explicitly-closed state.
+      expect(testDb.isOpen()).toBe(true);
+    } finally {
+      existsSpy.mockRestore();
+      recreateSpy.mockRestore();
+      versionSpy.mockRestore();
+      await testDb.delete();
+    }
+  });
+
   it('does not delete the database when the version probe keeps failing transiently', async () => {
     const testDb = new AppDatabase(`${DB_NAME}-probe-transient-persist`);
     const internal = asOpaque<InternalAppDatabase>(testDb);
