@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AUTH_ROUTES,
   getProfileRoute,
   isCoreExploreRoute,
   isDynamicPublicRoute,
+  isLogoLandingRoute,
   isPublicExploreRoute,
+  LOGO_LANDING_ROUTES,
+  ONBOARDING_ROUTES,
   PROFILE_ROUTES,
 } from './routes';
 
@@ -190,5 +194,32 @@ describe('isPublicExploreRoute', () => {
     expect(isPublicExploreRoute('/profile/posts')).toBe(false);
     expect(isPublicExploreRoute('/share')).toBe(false);
     expect(isPublicExploreRoute('/who-to-follow')).toBe(false);
+  });
+});
+
+describe('isLogoLandingRoute', () => {
+  it('returns true for all logo landing routes', () => {
+    for (const route of LOGO_LANDING_ROUTES) {
+      expect(isLogoLandingRoute(route)).toBe(true);
+    }
+  });
+
+  it('returns true for every onboarding route', () => {
+    for (const route of Object.values(ONBOARDING_ROUTES)) {
+      expect(isLogoLandingRoute(route)).toBe(true);
+    }
+  });
+
+  it('returns true for every auth route', () => {
+    for (const route of Object.values(AUTH_ROUTES)) {
+      expect(isLogoLandingRoute(route)).toBe(true);
+    }
+  });
+
+  it('returns false for app and explore routes', () => {
+    expect(isLogoLandingRoute('/home')).toBe(false);
+    expect(isLogoLandingRoute('/hot')).toBe(false);
+    expect(isLogoLandingRoute('/bookmarks')).toBe(false);
+    expect(isLogoLandingRoute(null)).toBe(false);
   });
 });

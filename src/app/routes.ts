@@ -156,6 +156,18 @@ export function isPublicExploreRoute(pathname: string): boolean {
   return isCoreExploreRoute(pathname) || isDynamicPublicRoute(pathname);
 }
 
+/** Routes where the header logo links back to the landing page (`/`). */
+export const LOGO_LANDING_ROUTES: readonly string[] = [
+  ROOT_ROUTES,
+  ...Object.values(AUTH_ROUTES),
+  COPYRIGHT_ROUTES.COPYRIGHT,
+  ...Object.values(ONBOARDING_ROUTES),
+];
+
+export function isLogoLandingRoute(pathname: string | null): boolean {
+  return pathname != null && LOGO_LANDING_ROUTES.includes(pathname);
+}
+
 // ============================================================================
 // Profile Route Helpers
 // ============================================================================

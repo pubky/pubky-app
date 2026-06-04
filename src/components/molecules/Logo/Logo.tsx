@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { APP_ROUTES, isLogoLandingRoute, ROOT_ROUTES } from '@/app/routes';
 import { Link } from '@/atoms/Link/Link';
 import { cn } from '@/libs/utils/utils';
 
@@ -20,15 +21,17 @@ export function Logo({
   ...props
 }: LogoProps & React.HTMLAttributes<HTMLAnchorElement>) {
   const pathname = usePathname();
-  const isHome = pathname === '/home';
+  const isLandingRoute = isLogoLandingRoute(pathname);
+  const isHome = pathname === APP_ROUTES.HOME;
+  const href = isLandingRoute ? ROOT_ROUTES : APP_ROUTES.HOME;
 
   return !noLink ? (
     <Link
-      href="/home"
+      href={href}
       data-cy="header-logo"
       onClick={(event) => {
         props.onClick?.(event);
-        if (event.defaultPrevented) return;
+        if (isLandingRoute || event.defaultPrevented) return;
 
         // Don't hijack modified clicks (new tab/window, etc.)
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
