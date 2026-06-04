@@ -41,7 +41,7 @@ export function HotMobileMenu({ activeSection, onSectionChange }: HotMobileMenuP
       showLabels
       position="sticky"
       headerTop="compact"
-      className="-mx-6 -mt-6"
+      className="-mx-6"
       data-testid="hot-mobile-menu"
     />
   );

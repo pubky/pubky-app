@@ -17,23 +17,19 @@ const DEFAULT_LOGO_HEIGHT = 36;
 
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
+const isDefaultSize = (width: number, height: number) => width === DEFAULT_LOGO_WIDTH && height === DEFAULT_LOGO_HEIGHT;
+
 const logoLinkClassName = (width: number, height: number, className?: string) =>
-  cn(
-    'flex items-center',
-    width === DEFAULT_LOGO_WIDTH && height === DEFAULT_LOGO_HEIGHT && 'min-h-[36px] min-w-[109px]',
-    className,
-  );
+  cn('flex items-center', isDefaultSize(width, height) && 'min-h-[36px] min-w-[109px]', className);
 
 const logoImageClassName = (width: number, height: number, className?: string) =>
-  cn('-mt-1', width === DEFAULT_LOGO_WIDTH && height === DEFAULT_LOGO_HEIGHT && 'h-[36px] w-[109px]', className);
+  cn('-mt-1', isDefaultSize(width, height) && 'h-[36px] w-[109px]', className);
 
 const logoSizeStyle = (width: number, height: number) =>
-  width === DEFAULT_LOGO_WIDTH && height === DEFAULT_LOGO_HEIGHT
-    ? undefined
-    : ({ minWidth: width, minHeight: height } as const);
+  isDefaultSize(width, height) ? undefined : ({ minWidth: width, minHeight: height } as const);
 
 const logoImageStyle = (width: number, height: number) =>
-  width === DEFAULT_LOGO_WIDTH && height === DEFAULT_LOGO_HEIGHT ? undefined : ({ width, height } as const);
+  isDefaultSize(width, height) ? undefined : ({ width, height } as const);
 
 export function Logo({
   width = DEFAULT_LOGO_WIDTH,

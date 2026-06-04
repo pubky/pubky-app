@@ -65,6 +65,7 @@ export function ContentLayout({
   hasGradientBackground,
   className,
   classNameWrapperContent,
+  classNameMobileHeader,
   feedVariant,
   disableWideShellLayout,
 }: ContentLayoutProps) {
@@ -112,6 +113,7 @@ export function ContentLayout({
           showLeftButton={showLeftMobileButton}
           showRightButton={showRightMobileButton}
           hasGradientBackground={hasGradientBackground}
+          containerClassName={classNameMobileHeader}
         />
       )}
 
