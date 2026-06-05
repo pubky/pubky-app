@@ -1272,6 +1272,23 @@
         "unfollowed": "コレクションのフォローを解除しました",
         "unfollowedDesc": "「{name}」コレクションのフォローを解除しました"
       }
+    },
+    "single": {
+      "share": "共有",
+      "edit": "編集",
+      "delete": "削除",
+      "follow": "フォロー",
+      "unfollow": "フォロー解除",
+      "addContent": "コンテンツを追加",
+      "empty": "このコレクションは空です。",
+      "notFound": {
+        "title": "コレクションが見つかりません",
+        "subtitle1": "このコレクションは表示できません。",
+        "subtitle2": "削除されたか、リンクが無効になっている可能性があります。",
+        "imageAlt": "コレクションが見つかりません",
+        "backToCollections": "コレクションに戻る",
+        "viewProfile": "プロフィールを見る"
+      }
     }
   },
   "postSave": {

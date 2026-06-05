@@ -79,12 +79,12 @@ describe('useCreateCollection', () => {
   it('rejects an empty title via zod and does not call the controller', async () => {
     const { result } = renderHook(() => useCreateCollection());
 
-    let saved: boolean | null = null;
+    let saved: string | null = null;
     await act(async () => {
       saved = await result.current.submit();
     });
 
-    expect(saved).toBe(false);
+    expect(saved).toBeNull();
     expect(mocks.commitCreateCollection).not.toHaveBeenCalled();
     // Whitespace-only also rejected
     act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, '   '));
@@ -93,7 +93,7 @@ describe('useCreateCollection', () => {
       saved = await result.current.submit();
     });
 
-    expect(saved).toBe(false);
+    expect(saved).toBeNull();
     expect(mocks.commitCreateCollection).not.toHaveBeenCalled();
   });
 
@@ -107,12 +107,12 @@ describe('useCreateCollection', () => {
     act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, '  Proof of Work  '));
     act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION, 'Bitcoin writing'));
 
-    let saved: boolean | null = null;
+    let saved: string | null = null;
     await act(async () => {
       saved = await result.current.submit();
     });
 
-    expect(saved).toBe(true);
+    expect(saved).toBe('current-user:c1');
     expect(mocks.commitCreateCollection).toHaveBeenCalledWith({
       authorId: 'current-user',
       name: '  Proof of Work  ',
@@ -125,36 +125,36 @@ describe('useCreateCollection', () => {
     });
   });
 
-  it('returns false and toasts an error when the controller throws', async () => {
+  it('returns null and toasts an error when the controller throws', async () => {
     mocks.commitCreateCollection.mockRejectedValue(new Error('boom'));
     const { result } = renderHook(() => useCreateCollection());
 
     act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, 'Reading list'));
 
-    let saved: boolean | null = null;
+    let saved: string | null = null;
     await act(async () => {
       saved = await result.current.submit();
     });
 
-    expect(saved).toBe(false);
+    expect(saved).toBeNull();
     expect(mocks.toast).toHaveBeenCalledWith({
       title: 'Error',
       description: 'Failed to create collection.',
     });
   });
 
-  it('returns false without calling the controller when the user is unauthenticated', async () => {
+  it('returns null without calling the controller when the user is unauthenticated', async () => {
     mocks.currentUserPubky = null;
     const { result } = renderHook(() => useCreateCollection());
 
     act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, 'Reading list'));
 
-    let saved: boolean | null = null;
+    let saved: string | null = null;
     await act(async () => {
       saved = await result.current.submit();
     });
 
-    expect(saved).toBe(false);
+    expect(saved).toBeNull();
     expect(mocks.commitCreateCollection).not.toHaveBeenCalled();
   });
 

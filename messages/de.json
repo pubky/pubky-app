@@ -1272,6 +1272,23 @@
         "unfollowed": "Sammlung entfolgt",
         "unfollowedDesc": "Du folgst der Sammlung {name} nicht mehr"
       }
+    },
+    "single": {
+      "share": "Teilen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "follow": "Folgen",
+      "unfollow": "Entfolgen",
+      "addContent": "Inhalt hinzufügen",
+      "empty": "Diese Sammlung ist leer.",
+      "notFound": {
+        "title": "Sammlung nicht gefunden",
+        "subtitle1": "Diese Sammlung ist nicht verfügbar.",
+        "subtitle2": "Sie wurde möglicherweise entfernt oder der Link ist nicht mehr gültig.",
+        "imageAlt": "Sammlung nicht gefunden",
+        "backToCollections": "Zurück zu Sammlungen",
+        "viewProfile": "Profil ansehen"
+      }
     }
   },
   "postSave": {

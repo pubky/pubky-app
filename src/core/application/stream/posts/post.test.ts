@@ -566,6 +566,35 @@ describe('PostStreamApplication', () => {
       expectPostIds(result.nextPageIds, 1, 5);
     });
 
+    it('should skip cache check AND local persistence for collection item streams (skip-paginated)', async () => {
+      // collection:<author>:<postId> pages by offset and Nexus returns no timestamp cursor, so the
+      // timestamp-keyed local stream cache must be bypassed on both read and write. Regression guard
+      // for the infinite-scroll flicker (a stuck null cursor re-served page 1 from cache forever).
+      const collectionStreamId = 'collection:author-pubky:collection-post-1' as PostStreamId;
+      const cachedPostIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      await PostStreamModel.create(collectionStreamId, cachedPostIds);
+      await createPostDetails(cachedPostIds);
+
+      const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      const persistSpy = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk');
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: collectionStreamId,
+        limit: 10,
+        streamHead: SKIP_FETCH_NEW_POSTS,
+        streamTail: 0,
+        viewerId: DEFAULT_AUTHOR,
+      });
+
+      // Reads from Nexus despite the seeded cache, returning the fetched posts (not the cached ones)...
+      expect(nexusFetchSpy).toHaveBeenCalled();
+      expect(result.nextPageIds).toHaveLength(5);
+      expectPostIds(result.nextPageIds, 1, 5);
+      // ...and never writes the offset-paginated stream into the timestamp-keyed local cache.
+      expect(persistSpy).not.toHaveBeenCalled();
+    });
+
     it('should fallback to Nexus when cachedStream exists but getStreamFromCache returns empty', async () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);

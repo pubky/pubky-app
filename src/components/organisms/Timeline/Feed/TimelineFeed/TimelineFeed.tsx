@@ -1,5 +1,6 @@
 'use client';
 
+import { useParams } from 'next/navigation';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
@@ -8,7 +9,7 @@ import { useHotStreamId } from '@/hooks/useHotStreamId/useHotStreamId';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
-import type { AuthorStreamCompositeId } from '@/models/stream/post/postStream.types';
+import { type AuthorStreamCompositeId, buildCollectionItemsStreamId } from '@/models/stream/post/postStream.types';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
@@ -40,6 +41,8 @@ export function TimelineFeed({ variant, children }: TimelineFeedProps) {
       return <HotTimelineFeed>{children}</HotTimelineFeed>;
     case TIMELINE_FEED_VARIANT.SEARCH:
       return <SearchTimelineFeed>{children}</SearchTimelineFeed>;
+    case TIMELINE_FEED_VARIANT.COLLECTION:
+      return <CollectionTimelineFeed>{children}</CollectionTimelineFeed>;
     default:
       return <TimelineLoading />;
   }
@@ -121,6 +124,27 @@ function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['child
       streamId={streamId}
       variant={TIMELINE_FEED_VARIANT.PROFILE}
       tagsLayout={tagsLayout}
+      layoutResolution={layoutResolution}
+    >
+      {children}
+    </TimelineFeedWithStream>
+  );
+}
+
+function CollectionTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
+  // The single-collection route owns these params (`/collections/[userId]/[postId]`).
+  // Reading them here mirrors how `ProfileTimelineFeed` resolves its stream from context.
+  const params = useParams<{ userId: string; postId: string }>();
+  const userId = params?.userId;
+  const postId = params?.postId;
+  const streamId = userId && postId ? buildCollectionItemsStreamId(userId, postId) : undefined;
+  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.COLLECTION);
+
+  return (
+    <TimelineFeedWithStream
+      streamId={streamId}
+      variant={TIMELINE_FEED_VARIANT.COLLECTION}
+      tagsLayout="inline"
       layoutResolution={layoutResolution}
     >
       {children}

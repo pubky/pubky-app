@@ -1272,6 +1272,23 @@
         "unfollowed": "Colección no seguida",
         "unfollowedDesc": "Has dejado de seguir la colección {name}"
       }
+    },
+    "single": {
+      "share": "Compartir",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "follow": "Seguir",
+      "unfollow": "Dejar de seguir",
+      "addContent": "Añadir contenido",
+      "empty": "Esta colección está vacía.",
+      "notFound": {
+        "title": "Colección no encontrada",
+        "subtitle1": "Esta colección no está disponible.",
+        "subtitle2": "Es posible que se haya eliminado o que el enlace ya no sea válido.",
+        "imageAlt": "Colección no encontrada",
+        "backToCollections": "Volver a colecciones",
+        "viewProfile": "Ver perfil"
+      }
     }
   },
   "postSave": {

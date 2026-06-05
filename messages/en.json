@@ -1268,6 +1268,23 @@
         "unfollowed": "Collection unfollowed",
         "unfollowedDesc": "You've unfollowed the {name} collection"
       }
+    },
+    "single": {
+      "share": "Share",
+      "edit": "Edit",
+      "delete": "Delete",
+      "follow": "Follow",
+      "unfollow": "Unfollow",
+      "addContent": "Add Content",
+      "empty": "This collection is empty.",
+      "notFound": {
+        "title": "Collection Not Found",
+        "subtitle1": "This collection isn't available.",
+        "subtitle2": "It may have been removed or the link is no longer valid.",
+        "imageAlt": "Collection Not Found",
+        "backToCollections": "Back to Collections",
+        "viewProfile": "View profile"
+      }
     }
   },
   "postSave": {

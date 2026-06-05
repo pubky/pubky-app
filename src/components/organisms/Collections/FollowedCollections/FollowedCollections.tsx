@@ -180,7 +180,7 @@ export function FollowedCollections() {
           {t('followed.empty')}
         </Typography>
       ) : (
-        <Container overrideDefaults className="grid w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+        <Container overrideDefaults className="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6">
           {showSkeletons
             ? Array.from({ length: COLLECTIONS_SECTION_SKELETON_COUNT }).map((_, index) => (
                 <CollectionCardSkeleton key={`followed-collections-skeleton-${index}`} />

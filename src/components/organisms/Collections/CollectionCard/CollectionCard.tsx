@@ -175,7 +175,7 @@ function CollectionCardContent({
           />
         )}
 
-        <CardContent className="flex h-full flex-col justify-between gap-3 p-6">
+        <CardContent className="flex h-full flex-col gap-3 p-6">
           {/* Header row: icon + title (left, grows) | item-count + avatar (right) */}
           <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
             <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">

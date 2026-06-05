@@ -13,6 +13,7 @@ import { PullToRefreshIndicator } from '@/molecules/PullToRefreshIndicator/PullT
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import { TimelineGridPosts } from '../../Posts/GridPosts/GridPosts';
 import { TimelinePosts } from '../../Posts/Posts';
 import { NewPostsSection } from '../NewPostsSection/NewPostsSection';
 import type { TimelineFeedContextValue, TimelineFeedProps } from '../TimelineFeed/TimelineFeed.types';
@@ -81,6 +82,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
   const previousMutedUserIdSetRef = useRef<Set<string> | null>(null);
 
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
+  const isGridActive = layoutResolution?.isGridActive ?? false;
   const {
     postIds: rawPostIds,
     loading,
@@ -102,7 +104,8 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
   const enablePullToRefresh =
     variant === TIMELINE_FEED_VARIANT.HOME ||
     variant === TIMELINE_FEED_VARIANT.CUSTOM ||
-    variant === TIMELINE_FEED_VARIANT.HOT;
+    variant === TIMELINE_FEED_VARIANT.HOT ||
+    variant === TIMELINE_FEED_VARIANT.COLLECTION;
   const { state: pullState, pullDistance } = usePullToRefresh({
     containerRef,
     onRefresh: refresh,
@@ -156,7 +159,17 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
             loading={loading}
             prependPosts={prependPosts}
           />
-          {isVisualActive ? (
+          {isGridActive ? (
+            <TimelineGridPosts
+              postIds={postIds}
+              loading={loading}
+              loadingMore={loadingMore}
+              error={error}
+              hasMore={hasMore}
+              loadMore={loadMore}
+              showEndMessage={variant !== TIMELINE_FEED_VARIANT.COLLECTION}
+            />
+          ) : isVisualActive ? (
             <VisualTimelinePosts
               postIds={postIds}
               loading={loading}

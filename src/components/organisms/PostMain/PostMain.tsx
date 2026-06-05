@@ -133,7 +133,7 @@ export function PostMain({
                       postId={postId}
                       onReplyClick={openReplyDialog}
                       onRepostClick={openRepostDialog}
-                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
                     />
                   </>
                 )}

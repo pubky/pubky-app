@@ -156,3 +156,17 @@ export type PostStreamId =
   | FollowedCollectionsStreamId
   | DiscoverCollectionsStreamId
   | CollectionItemsStreamCompositeId;
+
+/**
+ * Streams that paginate by offset (`skip`) rather than a timestamp/score cursor.
+ *
+ * Nexus returns `last_post_score: null` for these, so a timestamp cursor never advances —
+ * they must page by `skip` and bypass the timestamp-based local stream cache:
+ * - Engagement streams (`total_engagement:…`) — popularity-ranked, no stable score cursor.
+ * - Single-collection item streams (`collection:…`) — returned in the collection's own
+ *   item order, paginated by index.
+ */
+export function isSkipPaginatedStream(streamId: string): boolean {
+  const head = streamId.split(':')[0];
+  return head === StreamSorting.ENGAGEMENT || head === StreamSource.COLLECTION;
+}

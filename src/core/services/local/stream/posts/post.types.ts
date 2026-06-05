@@ -49,4 +49,5 @@ export interface TSetStreamPaginationParams {
   params: TStreamBase;
   streamTail: number;
   streamHead?: number;
+  invokeEndpoint: StreamSource;
 }

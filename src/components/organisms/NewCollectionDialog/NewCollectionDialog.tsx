@@ -1,9 +1,11 @@
 'use client';
 
 import { type ReactNode, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Image as ImageIcon, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useWatch } from 'react-hook-form';
+import { getCollectionRoute } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/atoms/Dialog/Dialog';
@@ -13,6 +15,7 @@ import { FORM_LABEL_CLASSES } from '@/config/forms';
 import { COLLECTION_DESCRIPTION_MAX_CHARACTER_LENGTH, COLLECTION_NAME_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useCreateCollection } from '@/hooks/useCreateCollection/useCreateCollection';
 import { CREATE_COLLECTION_FORM_FIELDS } from '@/hooks/useCreateCollection/useCreateCollection.types';
+import { parseCompositeId } from '@/models/models.utils';
 import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
 
 type NewCollectionDialogProps = {
@@ -21,6 +24,7 @@ type NewCollectionDialogProps = {
 
 export function NewCollectionDialog({ children }: NewCollectionDialogProps) {
   const t = useTranslations('collections.new');
+  const router = useRouter();
   const [open, setOpen] = useState(false);
 
   const { form, cover, submit, reset } = useCreateCollection();
@@ -50,8 +54,11 @@ export function NewCollectionDialog({ children }: NewCollectionDialogProps) {
   };
 
   const handleSave = async () => {
-    const ok = await submit();
-    if (ok) handleOpenChange(false);
+    const compositeId = await submit();
+    if (!compositeId) return;
+    handleOpenChange(false);
+    const { pubky, id } = parseCompositeId(compositeId);
+    router.push(getCollectionRoute(pubky, id));
   };
 
   return (

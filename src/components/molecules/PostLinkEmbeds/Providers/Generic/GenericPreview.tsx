@@ -37,7 +37,7 @@ export function GenericPreview({ url }: GenericPreviewProps) {
   if (type === 'audio') return <Audio src={url} className="cursor-auto" />;
   return (
     <Link data-testid="generic-website-preview" href={url}>
-      <Container className="justify-between gap-6 rounded-md bg-muted p-6 lg:flex-row">
+      <Container className="justify-between gap-6 rounded-md bg-muted p-6 lg:flex-row @max-xl/grid:flex-col!">
         <Container className="gap-y-2">
           {title && (
             <Typography size="lg" className="wrap-break-word">

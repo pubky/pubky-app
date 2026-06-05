@@ -6,6 +6,7 @@ import { NewCollectionDialog } from './NewCollectionDialog';
 const mocks = vi.hoisted(() => ({
   commitCreateCollection: vi.fn(),
   toast: vi.fn(),
+  push: vi.fn(),
 }));
 
 const translations: Record<string, string> = {
@@ -28,6 +29,10 @@ const translations: Record<string, string> = {
   'toast.success': 'Success',
   'toast.error': 'Error',
 };
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mocks.push }),
+}));
 
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -168,6 +173,9 @@ describe('NewCollectionDialog', () => {
     expect(mocks.toast).toHaveBeenCalledWith({
       title: 'Success',
       description: 'Collection Proof of Work created',
+    });
+    await waitFor(() => {
+      expect(mocks.push).toHaveBeenCalledWith('/collections/current-user/collection1');
     });
   });
 

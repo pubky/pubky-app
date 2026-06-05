@@ -495,6 +495,44 @@ describe('createPostStreamParams', () => {
         // Rationale: Offset-based pagination naturally avoids duplicates
       });
     });
+
+    describe('Collection items stream - Uses offset-based pagination', () => {
+      // collection:<authorPubky>:<postId> — Nexus serves these in the collection's own item
+      // order and returns no score/timestamp cursor, so they must page by `skip` (regression
+      // guard for the infinite-scroll flicker caused by a stuck null timestamp cursor).
+      const collectionStreamId = 'collection:author-pubky:post-id-123' as PostStreamId;
+
+      it('should use skip (NOT start) for collection item pagination', () => {
+        const streamTail = 10; // Number of items already loaded
+        const result = createPostStreamParams({
+          streamId: collectionStreamId,
+          streamTail,
+          streamHead: 0,
+          limit: 10,
+          viewerId: mockViewerId,
+        });
+
+        expect(result.params.skip).toBe(streamTail);
+        expect(result.params.start).toBeUndefined();
+        expect(result.params.end).toBeUndefined();
+      });
+
+      it('should set skip=0 for the initial load and forward author_id + post_id', () => {
+        const result = createPostStreamParams({
+          streamId: collectionStreamId,
+          streamTail: 0,
+          streamHead: 0,
+          limit: 10,
+          viewerId: mockViewerId,
+        });
+
+        expect(result.params.skip).toBe(0);
+        expect(result.params.start).toBeUndefined();
+        expect(result.invokeEndpoint).toBe(StreamSource.COLLECTION);
+        expect(result.extraParams.author_id).toBe('author-pubky');
+        expect(result.extraParams.post_id).toBe('post-id-123');
+      });
+    });
   });
 
   describe('Tags handling in stream IDs', () => {

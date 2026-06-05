@@ -22,7 +22,7 @@ interface CollectionsSectionsProps {
  */
 export function CollectionsSections({ className }: CollectionsSectionsProps) {
   return (
-    <Container overrideDefaults className={cn('flex w-full flex-col gap-10', className)}>
+    <Container overrideDefaults className={cn('flex w-full flex-col gap-12', className)}>
       <MyCollections />
       <FollowedCollections />
       <DiscoverCollections />

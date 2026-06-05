@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -18,6 +18,7 @@ import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFal
 import { CollectionBookmarkCard } from '@/organisms/Collections/CollectionBookmarkCard/CollectionBookmarkCard';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
+import { NewCollectionDialog } from '@/organisms/NewCollectionDialog/NewCollectionDialog';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 /**
@@ -49,7 +50,7 @@ export function MyCollections() {
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-4">
       {/* Header */}
-      <Container overrideDefaults className="flex items-center gap-3">
+      <Container overrideDefaults className="flex flex-wrap items-center gap-3">
         <Heading level={2} size="lg" className="font-light text-muted-foreground">
           {t('my.title')}
         </Heading>
@@ -64,13 +65,19 @@ export function MyCollections() {
         ) : (
           <AvatarStackSkeleton count={1} size="md" />
         )}
+        <NewCollectionDialog>
+          <Button variant="secondary" size="sm">
+            <Plus />
+            {t('new.cta')}
+          </Button>
+        </NewCollectionDialog>
       </Container>
 
       {/* Body */}
       {currentUserPubky ? (
         <MyCollectionsStream currentUserPubky={currentUserPubky as Pubky} />
       ) : (
-        <Container overrideDefaults className="grid w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+        <Container overrideDefaults className="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6">
           <CollectionBookmarkCard />
         </Container>
       )}
@@ -114,7 +121,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
 
   return (
     <>
-      <Container overrideDefaults className="grid w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+      <Container overrideDefaults className="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6">
         <CollectionBookmarkCard />
         {showSkeletons
           ? Array.from({ length: COLLECTIONS_MY_SECTION_SKELETON_COUNT }).map((_, index) => (

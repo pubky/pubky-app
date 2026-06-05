@@ -1266,6 +1266,23 @@
         "unfollowed": "已取消关注收藏",
         "unfollowedDesc": "你已取消关注 {name} 收藏"
       }
+    },
+    "single": {
+      "share": "分享",
+      "edit": "编辑",
+      "delete": "删除",
+      "follow": "关注",
+      "unfollow": "取消关注",
+      "addContent": "添加内容",
+      "empty": "此收藏为空。",
+      "notFound": {
+        "title": "未找到收藏",
+        "subtitle1": "此收藏不可用。",
+        "subtitle2": "可能已被删除，或链接已失效。",
+        "imageAlt": "未找到收藏",
+        "backToCollections": "返回收藏",
+        "viewProfile": "查看个人资料"
+      }
     }
   },
   "postSave": {

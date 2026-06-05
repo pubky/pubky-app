@@ -68,10 +68,10 @@ export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProp
       href={COLLECTION_ROUTES.BOOKMARKS}
       aria-label={title}
       data-cy="collection-bookmark-card"
-      className={cn('block w-full lg:max-w-187', className)}
+      className={cn('block h-full w-full lg:max-w-187', className)}
     >
-      <Card className="gap-3 rounded-md py-0">
-        <CardContent className="flex flex-col gap-3 p-6">
+      <Card className="h-full gap-3 rounded-md py-0">
+        <CardContent className="flex h-full flex-col gap-3 p-6">
           <Container overrideDefaults className="flex w-full flex-wrap items-center gap-2 sm:flex-nowrap">
             <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">
               <Bookmark className="size-6 shrink-0" />

@@ -46,7 +46,7 @@ export function createPostStreamParams({
   params.limit = limit;
   params.order = order;
   let extraParams = handleNotCommonStreamParams({ authorId: sorting, postId: content, invokeEndpoint });
-  setStreamPagination({ params, streamTail, streamHead });
+  setStreamPagination({ params, streamTail, streamHead, invokeEndpoint });
   return { params, invokeEndpoint, extraParams };
 }
 
@@ -79,8 +79,10 @@ function handleNotCommonStreamParams({
  * @param params - The base stream parameters object to modify
  * @param streamTail - The pagination tail value (timestamp of last post in current page)
  */
-function setStreamPagination({ params, streamTail, streamHead }: TSetStreamPaginationParams) {
-  if (params.sorting === StreamSorting.ENGAGEMENT) {
+function setStreamPagination({ params, streamTail, streamHead, invokeEndpoint }: TSetStreamPaginationParams) {
+  // Engagement and single-collection item streams paginate by offset (`skip`): Nexus returns
+  // no score/timestamp cursor for them, so `streamTail` carries the number of items already loaded.
+  if (params.sorting === StreamSorting.ENGAGEMENT || invokeEndpoint === StreamSource.COLLECTION) {
     params.skip = streamTail; // post amount of the stream, page number * limit
   } else {
     // For ASCENDING order, streamTail is the timestamp of the newest post we have

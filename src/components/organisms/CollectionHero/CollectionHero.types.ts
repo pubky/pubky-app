@@ -1,0 +1,17 @@
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import type { Pubky } from '@/models/models.types';
+
+export interface CollectionHeroProps {
+  /** Collection owner pubky. */
+  authorPubky: Pubky;
+  /** Collection post id (raw, not composite). */
+  postId: string;
+  className?: string;
+}
+
+export interface CollectionHeroContentProps extends CollectionHeroProps {
+  /** `author:postId` composite id, derived once by the shell. */
+  compositeId: string;
+  /** Loaded post envelope — non-null by construction (shell renders the skeleton otherwise). */
+  postDetails: EnrichedPostDetails;
+}

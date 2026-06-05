@@ -2,7 +2,7 @@
 
 exports[`CollectionsSections > matches the snapshot 1`] = `
 <div
-  class="flex w-full flex-col gap-10"
+  class="flex w-full flex-col gap-12"
   data-testid="container"
 >
   <div

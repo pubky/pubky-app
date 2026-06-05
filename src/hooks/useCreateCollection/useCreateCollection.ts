@@ -21,11 +21,13 @@ type UseCreateCollectionResult = {
   /** Cover image picker — file/preview/error state plus handlers. */
   cover: UseCoverImagePickerResult;
   /**
-   * Validate + commit the collection. Returns `true` on success, `false`
-   * otherwise (validation rejected the form, or the controller threw). Uses
-   * RHF's `handleSubmit` so field-level errors surface in the UI.
+   * Validate + commit the collection. Returns the new collection's composite
+   * id (`author:postId`) on success, or `null` otherwise (validation rejected
+   * the form, or the controller threw). Uses RHF's `handleSubmit` so field-level
+   * errors surface in the UI. The id lets the caller navigate to the created
+   * collection's route.
    */
-  submit: () => Promise<boolean>;
+  submit: () => Promise<string | null>;
   /** Clear the form fields and the cover picker. */
   reset: () => void;
 };
@@ -39,8 +41,9 @@ type UseCreateCollectionResult = {
  *   blob URL lifecycle and image-specific validation)
  * - Validation mode is `all`: required feedback appears after blur and clears
  *   as the user edits a valid value.
- * - `submit()` returns `Promise<boolean>` so the caller can decide what to do
- *   on success (close dialog, navigate, etc.)
+ * - `submit()` returns the new collection's composite id (`Promise<string |
+ *   null>`) so the caller can decide what to do on success (close dialog,
+ *   navigate to the collection, etc.)
  */
 export function useCreateCollection(): UseCreateCollectionResult {
   const t = useTranslations('collections.new');
@@ -55,15 +58,15 @@ export function useCreateCollection(): UseCreateCollectionResult {
     mode: 'all',
   });
 
-  const submit = async (): Promise<boolean> => {
-    if (!currentUserPubky) return false;
+  const submit = async (): Promise<string | null> => {
+    if (!currentUserPubky) return null;
 
-    let succeeded = false;
+    let createdCollectionId: string | null = null;
     await form.handleSubmit(async (data) => {
       const name = data[CREATE_COLLECTION_FORM_FIELDS.NAME];
       const description = data[CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION];
       try {
-        await PostController.commitCreateCollection({
+        const compositeId = await PostController.commitCreateCollection({
           authorId: currentUserPubky,
           name,
           description,
@@ -73,7 +76,7 @@ export function useCreateCollection(): UseCreateCollectionResult {
           title: tToast('success'),
           description: t('created', { name: name.trim() }),
         });
-        succeeded = true;
+        createdCollectionId = compositeId;
       } catch (error) {
         Logger.error('[useCreateCollection] Failed to create collection', { error });
         toast({
@@ -82,7 +85,7 @@ export function useCreateCollection(): UseCreateCollectionResult {
         });
       }
     })();
-    return succeeded;
+    return createdCollectionId;
   };
 
   const reset = () => {

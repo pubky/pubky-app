@@ -7,7 +7,7 @@ import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
-import { SORT } from '@/stores/home/home.types';
+import { isSkipPaginatedStream } from '@/models/stream/post/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
 
@@ -53,6 +53,10 @@ export function useStreamPagination({
       setLoadingState(isInitialLoad, true);
       setError(null);
 
+      // Offset-paginated streams (engagement + single-collection items) carry the count of
+      // already-loaded posts as their cursor; Nexus returns no timestamp/score cursor for them.
+      const isSkipStream = isSkipPaginatedStream(streamId);
+
       try {
         let result: TReadPostStreamChunkResponse;
 
@@ -66,12 +70,12 @@ export function useStreamPagination({
           result = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId: undefined,
-            streamTail: cachedLastPostTimestamp,
+            // Skip-paginated streams start at offset 0; timestamp streams seed from the cached tail.
+            streamTail: isSkipStream ? 0 : cachedLastPostTimestamp,
             limit,
           });
         } else {
-          const isEngagementStream = streamId.startsWith(SORT.ENGAGEMENT);
-          const cursorValue = isEngagementStream ? postIdsRef.current.length : streamTail;
+          const cursorValue = isSkipStream ? postIdsRef.current.length : streamTail;
 
           result = await StreamPostsController.getOrFetchStreamSlice({
             streamId,

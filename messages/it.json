@@ -1272,6 +1272,23 @@
         "unfollowed": "Raccolta non più seguita",
         "unfollowedDesc": "Hai smesso di seguire la raccolta {name}"
       }
+    },
+    "single": {
+      "share": "Condividi",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "follow": "Segui",
+      "unfollow": "Smetti di seguire",
+      "addContent": "Aggiungi contenuto",
+      "empty": "Questa raccolta è vuota.",
+      "notFound": {
+        "title": "Raccolta non trovata",
+        "subtitle1": "Questa raccolta non è disponibile.",
+        "subtitle2": "Potrebbe essere stata rimossa oppure il link non è più valido.",
+        "imageAlt": "Raccolta non trovata",
+        "backToCollections": "Torna alle raccolte",
+        "viewProfile": "Vedi profilo"
+      }
     }
   },
   "postSave": {

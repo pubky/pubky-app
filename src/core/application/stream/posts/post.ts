@@ -20,6 +20,7 @@ import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
+import { isSkipPaginatedStream } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
@@ -30,7 +31,6 @@ import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
-import { StreamSorting } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { breakDownStreamId, createPostStreamParams } from '@/services/nexus/stream/posts/postStream.utils';
@@ -324,8 +324,9 @@ export class PostStreamApplication {
     viewerId,
     order,
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
-    // Avoid the indexdb query for engagement streams even we do not persist
-    if (streamId.split(':')[0] !== StreamSorting.ENGAGEMENT && !streamHead) {
+    // Avoid the indexdb query for skip-paginated streams (engagement + single-collection items):
+    // their local cache is timestamp-keyed and incompatible with offset pagination.
+    if (!isSkipPaginatedStream(streamId) && !streamHead) {
       const cachedStream = await LocalStreamPostsService.read({ streamId });
 
       if (cachedStream) {
@@ -513,8 +514,9 @@ export class PostStreamApplication {
     const postStreamChunk = await NexusPostStreamService.fetch({ invokeEndpoint, params, extraParams });
     const { last_post_score: timestamp, post_keys: compositePostIds } = postStreamChunk;
 
-    // Do not persist any stream related with engagement sorting
-    if (streamId.split(':')[0] !== StreamSorting.ENGAGEMENT && streamHead === SKIP_FETCH_NEW_POSTS) {
+    // Do not persist skip-paginated streams (engagement + single-collection items) to the
+    // timestamp-keyed local stream cache; they always page from Nexus by offset.
+    if (!isSkipPaginatedStream(streamId) && streamHead === SKIP_FETCH_NEW_POSTS) {
       await LocalStreamPostsService.persistNewStreamChunk({ stream: compositePostIds, streamId });
     }
 

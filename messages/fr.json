@@ -1272,6 +1272,23 @@
         "unfollowed": "Collection non suivie",
         "unfollowedDesc": "Vous ne suivez plus la collection {name}"
       }
+    },
+    "single": {
+      "share": "Partager",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "follow": "Suivre",
+      "unfollow": "Ne plus suivre",
+      "addContent": "Ajouter du contenu",
+      "empty": "Cette collection est vide.",
+      "notFound": {
+        "title": "Collection introuvable",
+        "subtitle1": "Cette collection n'est pas disponible.",
+        "subtitle2": "Elle a peut-être été supprimée ou le lien n'est plus valide.",
+        "imageAlt": "Collection introuvable",
+        "backToCollections": "Retour aux collections",
+        "viewProfile": "Voir le profil"
+      }
     }
   },
   "postSave": {

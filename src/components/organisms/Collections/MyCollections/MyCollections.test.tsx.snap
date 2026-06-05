@@ -6,7 +6,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
   data-testid="container"
 >
   <div
-    class="flex items-center gap-3"
+    class="flex flex-wrap items-center gap-3"
     data-testid="container"
   >
     <h2
@@ -25,9 +25,44 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
     >
       Alice
     </div>
+    <button
+      aria-controls="radix-normalized"
+      aria-expanded="false"
+      aria-haspopup="dialog"
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+      data-as-child="true"
+      data-size="sm"
+      data-slot="dialog-trigger"
+      data-state="closed"
+      data-testid="dialog-trigger"
+      data-variant="secondary"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-plus"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M5 12h14"
+        />
+        <path
+          d="M12 5v14"
+        />
+      </svg>
+      collections.new.cta
+    </button>
   </div>
   <div
-    class="grid w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6"
+    class="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6"
     data-testid="container"
   >
     <div
@@ -66,7 +101,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
   data-testid="container"
 >
   <div
-    class="flex items-center gap-3"
+    class="flex flex-wrap items-center gap-3"
     data-testid="container"
   >
     <h2
@@ -80,9 +115,44 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
       data-size="md"
       data-testid="avatar-stack-skeleton"
     />
+    <button
+      aria-controls="radix-normalized"
+      aria-expanded="false"
+      aria-haspopup="dialog"
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+      data-as-child="true"
+      data-size="sm"
+      data-slot="dialog-trigger"
+      data-state="closed"
+      data-testid="dialog-trigger"
+      data-variant="secondary"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-plus"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M5 12h14"
+        />
+        <path
+          d="M12 5v14"
+        />
+      </svg>
+      collections.new.cta
+    </button>
   </div>
   <div
-    class="grid w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6"
+    class="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6"
     data-testid="container"
   >
     <div

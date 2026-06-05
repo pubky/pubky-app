@@ -380,6 +380,67 @@ describe('useStreamPagination', () => {
     });
   });
 
+  describe('Skip-paginated streams (collection items)', () => {
+    // collection:<author>:<postId> pages by offset (`skip`); Nexus returns no timestamp/score
+    // cursor, so the cursor is the count of already-loaded items. Regression guard for the
+    // infinite-scroll flicker where a stuck null timestamp cursor re-served page 1 forever.
+    const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
+
+    it('starts the initial load at offset 0, ignoring any cached timestamp cursor', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(9999);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        timestamp: undefined, // skip-paginated streams carry no timestamp cursor
+      });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 0,
+          lastPostId: undefined,
+        }),
+      );
+    });
+
+    it('paginates by the number of already-loaded items on loadMore (offset cursor)', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        timestamp: undefined,
+      });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3']);
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5'],
+        timestamp: undefined,
+      });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 3, // count of already-loaded items, not a timestamp
+        }),
+      );
+    });
+  });
+
   describe('Stream Preparation on Initial Load', () => {
     it('should call prepareStreamForInitialLoad on initial load', async () => {
       const { result } = renderHook(() =>

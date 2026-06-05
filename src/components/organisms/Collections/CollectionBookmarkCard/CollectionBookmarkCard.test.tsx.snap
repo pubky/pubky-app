@@ -3,17 +3,17 @@
 exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-in user with full state 1`] = `
 <a
   aria-label="collections.bookmarks.title"
-  class="block w-full lg:max-w-187"
+  class="block h-full w-full lg:max-w-187"
   data-cy="collection-bookmark-card"
   href="/collections/bookmarks"
 >
   <div
-    class="flex flex-col bg-card text-card-foreground shadow-sm gap-3 rounded-md py-0"
+    class="flex flex-col bg-card text-card-foreground shadow-sm h-full gap-3 rounded-md py-0"
     data-slot="card"
     data-testid="card"
   >
     <div
-      class="flex flex-col gap-3 p-6"
+      class="flex h-full flex-col gap-3 p-6"
       data-slot="card-content"
     >
       <div
@@ -109,17 +109,17 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
 exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for the signed-out / no-data fallback state 1`] = `
 <a
   aria-label="collections.bookmarks.title"
-  class="block w-full lg:max-w-187"
+  class="block h-full w-full lg:max-w-187"
   data-cy="collection-bookmark-card"
   href="/collections/bookmarks"
 >
   <div
-    class="flex flex-col bg-card text-card-foreground shadow-sm gap-3 rounded-md py-0"
+    class="flex flex-col bg-card text-card-foreground shadow-sm h-full gap-3 rounded-md py-0"
     data-slot="card"
     data-testid="card"
   >
     <div
-      class="flex flex-col gap-3 p-6"
+      class="flex h-full flex-col gap-3 p-6"
       data-slot="card-content"
     >
       <div

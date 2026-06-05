@@ -50,7 +50,7 @@ exports[`DiscoverCollections > DiscoverCollections - Snapshots > matches the sna
     />
   </div>
   <div
-    class="grid w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6"
+    class="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6"
     data-testid="container"
   >
     <div
@@ -103,7 +103,7 @@ exports[`DiscoverCollections > DiscoverCollections - Snapshots > matches the sna
     />
   </div>
   <div
-    class="grid w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6"
+    class="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6"
     data-testid="container"
   >
     <div

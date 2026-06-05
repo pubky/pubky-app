@@ -6,6 +6,7 @@ import {
   buildDiscoverCollectionsStreamId,
   buildFollowedCollectionsStreamId,
   buildPostReplyStreamId,
+  isSkipPaginatedStream,
 } from '@/models/stream/post/postStream.types';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { breakDownStreamId } from '@/services/nexus/stream/posts/postStream.utils';
@@ -66,5 +67,23 @@ describe('post-stream id builders', () => {
       const streamId = buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID);
       expect(breakDownStreamId(streamId)).toEqual([TEST_PUBKY, StreamSource.COLLECTION, TEST_POST_ID, undefined]);
     });
+  });
+});
+
+describe('isSkipPaginatedStream', () => {
+  it('returns true for engagement streams (no stable score cursor)', () => {
+    expect(isSkipPaginatedStream(buildDiscoverCollectionsStreamId())).toBe(true);
+    expect(isSkipPaginatedStream('total_engagement:all:all')).toBe(true);
+  });
+
+  it('returns true for single-collection item streams (index-ordered)', () => {
+    expect(isSkipPaginatedStream(buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(true);
+  });
+
+  it('returns false for timeline / author / bookmarks streams (timestamp-paginated)', () => {
+    expect(isSkipPaginatedStream('timeline:all:all')).toBe(false);
+    expect(isSkipPaginatedStream('timeline:bookmarks:collection')).toBe(false);
+    expect(isSkipPaginatedStream(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(false);
+    expect(isSkipPaginatedStream(`${TEST_PUBKY}:author`)).toBe(false);
   });
 });

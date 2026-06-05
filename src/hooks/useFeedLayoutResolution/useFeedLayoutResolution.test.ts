@@ -91,4 +91,47 @@ describe('resolveFeedLayout', () => {
     expect(result.isVisualRequested).toBe(false);
     expect(result.isVisualActive).toBe(false);
   });
+
+  describe('isGridActive (grid-layout variants, decision D5)', () => {
+    it('marks the collection variant as grid-active', () => {
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.COLUMNS,
+        variant: TIMELINE_FEED_VARIANT.COLLECTION,
+        isPhoneViewport: false,
+      });
+
+      expect(result.isGridActive).toBe(true);
+    });
+
+    it.each([
+      TIMELINE_FEED_VARIANT.HOME,
+      TIMELINE_FEED_VARIANT.CUSTOM,
+      TIMELINE_FEED_VARIANT.BOOKMARKS,
+      TIMELINE_FEED_VARIANT.PROFILE,
+      TIMELINE_FEED_VARIANT.HOT,
+      TIMELINE_FEED_VARIANT.SEARCH,
+    ])('does not mark the %s variant as grid-active', (variant) => {
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.COLUMNS,
+        variant,
+        isPhoneViewport: false,
+      });
+
+      expect(result.isGridActive).toBe(false);
+    });
+
+    it('keeps grid active independently of effectiveLayout (orthogonal to wide/visual)', () => {
+      // The collection variant is not in the rich-layout set, so a VISUAL request
+      // falls back to COLUMNS; grid membership must still be derived from the variant.
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.VISUAL,
+        variant: TIMELINE_FEED_VARIANT.COLLECTION,
+        isPhoneViewport: false,
+      });
+
+      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+      expect(result.isVisualActive).toBe(false);
+      expect(result.isGridActive).toBe(true);
+    });
+  });
 });

@@ -1,10 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import {
+  buildCollectionItemsStreamId,
+  type PostStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
+import { LAYOUT } from '@/stores/home/home.types';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
@@ -94,6 +100,27 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
     ),
   };
 });
+
+vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
+  return {
+    TimelineGridPosts: ({ postIds, showEndMessage }: { postIds: string[]; showEndMessage?: boolean }) => (
+      <div data-testid="timeline-grid-posts" data-show-end-message={String(showEndMessage)}>
+        <span data-testid="grid-post-count">{postIds.length}</span>
+      </div>
+    ),
+  };
+});
+
+const COLLECTION_STREAM_ID = buildCollectionItemsStreamId('author-pubky', 'collection-post');
+
+const gridLayoutResolution: FeedLayoutResolution = {
+  requestedLayout: LAYOUT.COLUMNS,
+  effectiveLayout: LAYOUT.COLUMNS,
+  isVisualRequested: false,
+  isVisualActive: false,
+  isGridActive: true,
+  isPhoneViewport: false,
+};
 
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();
@@ -432,6 +459,100 @@ describe('TimelineFeedContent', () => {
       expect(mockRefresh).not.toHaveBeenCalled();
       expect(mockRemovePosts).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('Grid layout (COLLECTION variant, decisions D5/D7)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
+    mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
+    mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
+  });
+
+  it('renders the grid renderer (not the vertical list) when isGridActive', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
+    expect(screen.getByTestId('grid-post-count')).toHaveTextContent('3');
+  });
+
+  it('suppresses the end-of-feed message for the collection grid', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+  });
+
+  it('falls back to the vertical list when no grid layout resolution is provided', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+      />,
+    );
+    expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-grid-posts')).not.toBeInTheDocument();
+  });
+
+  it('enables pull-to-refresh for the collection variant (D7)', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+    expect(mockUsePullToRefresh).toHaveBeenCalledWith(expect.objectContaining({ disabled: false }));
+  });
+
+  it('applies muting for the collection variant (not in the mute skip list, D7)', () => {
+    let mutedUserIds: string[] = [];
+    mockUseStreamPagination.mockReturnValue({
+      ...defaultPaginationResult,
+      postIds: ['muted-user:post-1', 'other-user:post-2'],
+    });
+    mockUseMutedUsers.mockImplementation(() => ({
+      ...defaultMutedUsersResult,
+      mutedUserIds,
+      mutedUserIdSet: new Set(mutedUserIds),
+    }));
+
+    const { rerender } = render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+    expect(mockRemovePosts).not.toHaveBeenCalled();
+
+    mutedUserIds = ['muted-user'];
+    rerender(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+
+    expect(mockRemovePosts).toHaveBeenCalledWith(['muted-user:post-1']);
   });
 });
 

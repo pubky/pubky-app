@@ -65,6 +65,7 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
     effectiveLayout: 'columns',
     isVisualRequested: false,
     isVisualActive: false,
+    isGridActive: false,
     isPhoneViewport: false,
   })),
 }));
@@ -228,6 +229,7 @@ describe('TimelineFeed', () => {
       effectiveLayout: 'columns',
       isVisualRequested: false,
       isVisualActive: false,
+      isGridActive: false,
       isPhoneViewport: false,
     });
     // Reset pull-to-refresh mock to idle state
@@ -274,6 +276,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -293,6 +296,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -311,6 +315,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -327,6 +332,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -392,6 +398,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -432,6 +439,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -662,6 +670,7 @@ describe('TimelineFeed - Snapshots', () => {
       effectiveLayout: 'columns',
       isVisualRequested: false,
       isVisualActive: false,
+      isGridActive: false,
       isPhoneViewport: false,
     });
     // Reset pull-to-refresh mock to idle state for snapshots

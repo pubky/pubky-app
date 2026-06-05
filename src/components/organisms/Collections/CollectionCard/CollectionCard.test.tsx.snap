@@ -19,7 +19,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
       style="background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.35)), url(\\"https://example.com/cover.png\\");"
     />
     <div
-      class="flex h-full flex-col justify-between gap-3 p-6"
+      class="flex h-full flex-col gap-3 p-6"
       data-slot="card-content"
     >
       <div
@@ -190,7 +190,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
       style="background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.35)), url(\\"https://example.com/cover.png\\");"
     />
     <div
-      class="flex h-full flex-col justify-between gap-3 p-6"
+      class="flex h-full flex-col gap-3 p-6"
       data-slot="card-content"
     >
       <div
@@ -364,7 +364,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
     data-testid="card"
   >
     <div
-      class="flex h-full flex-col justify-between gap-3 p-6"
+      class="flex h-full flex-col gap-3 p-6"
       data-slot="card-content"
     >
       <div
