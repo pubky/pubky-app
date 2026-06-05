@@ -14,6 +14,7 @@ import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
+import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
@@ -80,23 +81,43 @@ export function QuickReply({
     onSuccess: onReplySubmitted,
   });
 
+  const {
+    isAuthenticated,
+    handleExpandWithAuth,
+    handleSubmitWithAuth,
+    setTagsWithAuth,
+    setAttachmentsWithAuth,
+    handleChangeWithAuth,
+    handleFilesAddedWithAuth,
+    handleFileClickWithAuth,
+    handleEmojiSelectWithAuth,
+    handlePasteWithAuth,
+    handleDragEventWithAuth,
+    createKeyDownHandler,
+  } = usePostInputAuthHandlers({
+    handleExpand,
+    handleSubmit,
+    setTags,
+    setAttachments,
+    handleChange,
+    handleFilesAdded,
+    handleFileClick,
+    handleEmojiSelect,
+    handlePaste,
+  });
+
   const { ref: cardRef, height: cardHeight } = useElementHeight();
 
-  const isValid = React.useCallback(() => {
-    return canSubmitPost(POST_INPUT_VARIANT.REPLY, content, attachments, isSubmitting);
-  }, [content, attachments, isSubmitting]);
+  const isValid = () => canSubmitPost(POST_INPUT_VARIANT.REPLY, content, attachments, isSubmitting);
 
   const characterLimit = { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
-  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmit, {
+  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitWithAuth, {
     requireModifier: true,
   });
 
   // Combined keyboard handler: mention popover takes priority, then enter submit
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (handleMentionKeyDown(e)) return;
-    enterSubmitHandler(e);
-  };
+  const handleKeyDown = createKeyDownHandler({ handleMentionKeyDown, enterSubmitHandler });
 
   // Account for spacing between main post and QuickReply in connector calculation
   const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_SPACER_HEIGHT : undefined;
@@ -118,11 +139,11 @@ export function QuickReply({
           isWideLayout ? 'p-12' : 'p-4',
           isDragging ? 'border-brand' : 'border-input',
         )}
-        onClick={handleExpand}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
+        onClick={handleExpandWithAuth}
+        onDragEnter={(event) => handleDragEventWithAuth(event, handleDragEnter)}
+        onDragLeave={(event) => handleDragEventWithAuth(event, handleDragLeave)}
+        onDragOver={(event) => handleDragEventWithAuth(event, handleDragOver)}
+        onDrop={(event) => handleDragEventWithAuth(event, handleDrop)}
         overrideDefaults
       >
         {/* Drag overlay */}
@@ -153,12 +174,13 @@ export function QuickReply({
                 variant="inline"
                 className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
                 value={content}
-                onChange={handleChange}
-                onFocus={handleExpand}
+                onChange={handleChangeWithAuth}
+                onFocus={handleExpandWithAuth}
                 onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
+                onPaste={handlePasteWithAuth}
                 rows={1}
                 disabled={isSubmitting}
+                readOnly={!isAuthenticated}
                 data-testid="quick-reply-textarea"
                 aria-haspopup="listbox"
               />
@@ -178,8 +200,8 @@ export function QuickReply({
           <PostInputAttachments
             ref={fileInputRef}
             attachments={attachments}
-            setAttachments={setAttachments}
-            handleFilesAdded={handleFilesAdded}
+            setAttachments={setAttachmentsWithAuth}
+            handleFilesAdded={handleFilesAddedWithAuth}
             isSubmitting={isSubmitting}
           />
 
@@ -189,13 +211,14 @@ export function QuickReply({
             content={content}
             tags={tags}
             isSubmitting={isSubmitting}
-            setTags={setTags}
-            onSubmit={handleSubmit}
+            isDisabled={!isAuthenticated}
+            setTags={setTagsWithAuth}
+            onSubmit={handleSubmitWithAuth}
             showEmojiPicker={showEmojiPicker}
             setShowEmojiPicker={setShowEmojiPicker}
-            onEmojiSelect={handleEmojiSelect}
-            onImageClick={handleFileClick}
-            isPostDisabled={!isValid()}
+            onEmojiSelect={handleEmojiSelectWithAuth}
+            onImageClick={handleFileClickWithAuth}
+            isPostDisabled={isAuthenticated ? !isValid() : false}
             submitMode={POST_INPUT_VARIANT.REPLY}
             className={isExpanded ? 'mt-4' : ''}
             characterLimit={characterLimit}

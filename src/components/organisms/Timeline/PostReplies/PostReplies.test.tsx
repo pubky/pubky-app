@@ -120,15 +120,17 @@ describe('TimelinePostReplies', () => {
     expect(tree).toHaveAttribute('data-show-quick-reply', 'false');
   });
 
-  it('renders nothing when not authenticated', () => {
+  it('renders ThreadTree when not authenticated', () => {
     vi.mocked(useRequireAuth).mockReturnValue({
       isAuthenticated: false,
       requireAuth: <T,>(_action: () => T) => undefined,
     });
 
-    const { container } = render(<TimelinePostReplies postId={mockPostId} />);
+    render(<TimelinePostReplies postId={mockPostId} />);
 
-    expect(container.firstChild).toBeNull();
+    const tree = screen.getByTestId('thread-tree');
+    expect(tree).toBeInTheDocument();
+    expect(tree).toHaveAttribute('data-post-id', mockPostId);
   });
 
   it('renders nothing when post has no replies', () => {

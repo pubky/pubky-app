@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostPageHeader } from './PostPageHeader';
 
@@ -84,7 +84,7 @@ describe('PostPageHeader', () => {
 
     render(<PostPageHeader postId="user1:post1" />);
 
-    expect(screen.getByText('Post by John')).toBeInTheDocument();
+    expect(screen.getByTestId('post-page-title')).toHaveTextContent('Post by John');
     // No breadcrumb for root post
     expect(screen.queryByTestId('post-breadcrumb')).not.toBeInTheDocument();
   });
@@ -111,13 +111,14 @@ describe('PostPageHeader', () => {
     render(<PostPageHeader postId={mockPostId} />);
 
     // Title should show "Reply by" with current author
-    expect(screen.getByText('Reply by Anna')).toBeInTheDocument();
+    expect(screen.getByTestId('post-page-title')).toHaveTextContent('Reply by Anna');
 
     // Breadcrumb should show all ancestors
-    expect(screen.getByTestId('post-breadcrumb')).toBeInTheDocument();
-    expect(screen.getByText('John')).toBeInTheDocument();
-    expect(screen.getByText('Satoshi')).toBeInTheDocument();
-    expect(screen.getByText('Anna')).toBeInTheDocument();
+    const breadcrumb = screen.getByTestId('post-breadcrumb');
+    expect(breadcrumb).toBeInTheDocument();
+    expect(within(breadcrumb).getByText('John')).toBeInTheDocument();
+    expect(within(breadcrumb).getByText('Satoshi')).toBeInTheDocument();
+    expect(within(breadcrumb).getByText('Anna')).toBeInTheDocument();
   });
 
   // Note: Breadcrumb click navigation and "Unknown" fallback tests
@@ -138,6 +139,27 @@ describe('PostPageHeader', () => {
 
     expect(screen.getByTestId('post-page-header')).toBeInTheDocument();
     expect(screen.getByTestId('post-page-title')).toBeInTheDocument();
+  });
+
+  it('truncates long author names in the page title', () => {
+    const longName = 'This is an extremely long profile name that should truncate on the post page title';
+
+    mockAncestors.mockReturnValue({
+      ancestors: [{ postId: 'user1:post1', userId: 'user1' }],
+      isLoading: false,
+      hasError: false,
+    });
+    mockUsers.mockReturnValue({
+      users: [{ id: 'user1', name: longName, avatarUrl: undefined }],
+      isLoading: false,
+    });
+
+    render(<PostPageHeader postId="user1:post1" />);
+
+    const title = screen.getByTestId('post-page-title');
+    expect(title).toHaveClass('flex', 'w-full', 'min-w-0', 'md:w-0', 'md:flex-1');
+    expect(within(title).getByText('Post by')).toHaveClass('shrink-0');
+    expect(within(title).getByText(longName)).toHaveClass('min-w-0', 'flex-1', 'truncate');
   });
 
   it('matches snapshot for root post', () => {

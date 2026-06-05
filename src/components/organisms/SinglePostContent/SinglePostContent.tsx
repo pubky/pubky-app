@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
 import { PostArticleDetail } from '@/organisms/PostArticleDetail/PostArticleDetail';
@@ -23,18 +22,11 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  *
  * - Main post card (FULL WIDTH) with tags panel in two-column layout
  * - Below: two columns with Replies timeline (larger) and Participants sidebar (smaller)
- *
- * For unauthenticated users (following pubky-app pattern):
- * - Only the main post card with tags is shown
- * - QuickReply, Replies, and Participants are hidden
  */
 export function SinglePostContent({ postId, postDetails }: SinglePostContentProps) {
   const t = useTranslations('post');
   const layout = useHomeStore((state) => state.layout);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
-
-  // Check authentication status - unauthenticated users see limited view
-  const { isAuthenticated } = useRequireAuth();
 
   // Check if parent post is deleted to determine replyability
   const isDeleted = isPostDeleted(postDetails.content);
@@ -64,18 +56,16 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
         </Container>
       )}
 
-      {/* Replies section - only visible for authenticated users */}
-      {isAuthenticated && (
-        <Container overrideDefaults className="mb-6 flex">
-          {/* Left column - Replies thread with QuickReply at the end (larger) */}
-          <Container className="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0">
-            {isArticle && <Typography className="text-2xl font-light text-muted-foreground">{t('replies')}</Typography>}
-            <Container overrideDefaults className="ml-3">
-              <ThreadTree key={postId} postId={postId} showQuickReply={!isDeleted} />
-            </Container>
+      {/* Replies section */}
+      <Container overrideDefaults className="mb-6 flex">
+        {/* Left column - Replies thread with QuickReply at the end (larger) */}
+        <Container className="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0">
+          {isArticle && <Typography className="text-2xl font-light text-muted-foreground">{t('replies')}</Typography>}
+          <Container overrideDefaults className="ml-3">
+            <ThreadTree key={postId} postId={postId} showQuickReply={!isDeleted} />
           </Container>
         </Container>
-      )}
+      </Container>
     </PostMainLayoutProvider>
   );
 }

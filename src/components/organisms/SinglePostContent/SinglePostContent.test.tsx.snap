@@ -1,31 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`SinglePostContent > SinglePostContent - Snapshots > matches snapshot when not authenticated 1`] = `
-<div>
-  <div
-    data-post-id="author:post123"
-    data-testid="post-page-header"
-  >
-    PostPageHeader
-  </div>
-  <div
-    data-cy="single-post-card"
-    data-override-defaults="true"
-    data-testid="container"
-  >
-    <div
-      data-is-navigable="false"
-      data-pin-actions-to-bottom="true"
-      data-post-id="author:post123"
-      data-tags-layout="inline"
-      data-testid="post-main"
-    >
-      PostMain
-    </div>
-  </div>
-</div>
-`;
-
 exports[`SinglePostContent > SinglePostContent - Snapshots > matches snapshot with deleted parent post 1`] = `
 <div>
   <div

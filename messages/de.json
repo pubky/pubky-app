@@ -7,7 +7,7 @@
   "landing": {
     "title": "<highlight>Entsperre</highlight> das Web.",
     "subtitle": "Deine Schlüssel, deine Inhalte, deine Regeln.",
-    "signIn": "Anmelden",
+    "explore": "Entdecken",
     "joinNow": "Jetzt beitreten",
     "aTetherCompany": "ein <tether>tether.</tether> Unternehmen",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Alle Rechte vorbehalten."
@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "Konto erstellen",
       "joinNow": "Jetzt beitreten",
       "identityKeys": "Identitätsschlüssel",
       "usePubkyRing": "Pubky Ring verwenden",
@@ -167,7 +168,7 @@
     },
     "human": {
       "title": "Beweisen Sie, <highlight>dass Sie kein Roboter sind.</highlight>",
-      "subtitle": "Keine E-Mail erforderlich. Verifizieren Sie schnell per SMS oder einer kleinen Zahlung. Oder verwenden Sie einen",
+      "subtitle": "Verifizieren Sie schnell mit Ihrer Telefonnummer oder einer kleinen Zahlung. Oder verwenden Sie einen",
       "inviteCode": "Einladungscode.",
       "devMode": "Entwicklermodus",
       "skip": "Überspringen",
@@ -237,7 +238,7 @@
       "unavailable": "Service vorübergehend nicht verfügbar"
     },
     "sms": {
-      "title": "SMS-Verifizierung",
+      "title": "Telefonnummer",
       "free": "Kostenlos",
       "lessPrivate": "WENIGER PRIVAT, ABER EINFACH",
       "storage": "1GB Speicher",
@@ -254,7 +255,8 @@
     "scan": {
       "titleMobile": "Zum <highlight>Autorisieren</highlight> tippen.",
       "titleDesktop": "<highlight>QR-Code</highlight> scannen.",
-      "subtitle": "Oeffnen Sie Pubky Ring, erstellen Sie einen Pubky und scannen Sie den QR.",
+      "subtitleMobile": "Tippen Sie auf die Schaltfläche, um Pubky Ring zu öffnen, und autorisieren Sie mit Ihrem pubky.",
+      "subtitleDesktop": "Oeffnen Sie Pubky Ring, tippen Sie auf 'Pubky hinzufügen', und scannen Sie diesen QR.",
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
 
@@ -573,7 +575,7 @@
     },
     "signIn": {
       "title": "Pubky beitreten",
-      "description": "Melden Sie sich an oder erstellen Sie ein Konto, um mit Beiträgen und Profilen zu interagieren.",
+      "description": "Gefällt dir, was du siehst? Tritt jetzt dem freien Web bei.",
       "newHere": "Neu hier?",
       "newHereDescription": "Erstellen Sie Ihr Konto und beginnen Sie, Pubky zu erkunden.",
       "joinButton": "Pubky beitreten",
@@ -1014,7 +1016,14 @@
     "generic": "Etwas ist schiefgelaufen",
     "network": "Netzwerkfehler. Bitte versuchen Sie es erneut.",
     "notFound": "Seite nicht gefunden",
-    "couldNotFind": "Angeforderte Ressource konnte nicht gefunden werden"
+    "couldNotFind": "Angeforderte Ressource konnte nicht gefunden werden",
+    "database": {
+      "title": "Speicher nicht verfügbar",
+      "description": "Wir konnten nicht auf den lokalen Speicher deines Geräts zugreifen. Einige mobile Browser, insbesondere In-App-Browser, können ihn unterbrechen. Bitte versuche es erneut oder lade die Seite neu.",
+      "tryAgain": "Erneut versuchen",
+      "reload": "Seite neu laden",
+      "retrying": "Wird wiederholt…"
+    }
   },
   "password": {
     "veryWeak": "Sehr schwaches Passwort",

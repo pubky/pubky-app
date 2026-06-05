@@ -7,7 +7,7 @@
   "landing": {
     "title": "<highlight>Desbloquea</highlight> la web.",
     "subtitle": "Tus claves, tu contenido, tus reglas.",
-    "signIn": "Iniciar sesión",
+    "explore": "Explorar",
     "joinNow": "Únete ahora",
     "aTetherCompany": "una empresa de <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Todos los derechos reservados."
@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "Crear cuenta",
       "joinNow": "Únete ahora",
       "identityKeys": "Claves de identidad",
       "usePubkyRing": "Usar Pubky Ring",
@@ -167,7 +168,7 @@
     },
     "human": {
       "title": "Demuestra <highlight>que no eres un robot.</highlight>",
-      "subtitle": "No se necesita email. Verifica rapidamente usando SMS o un pequeno pago. O usa un",
+      "subtitle": "Verifica rapidamente usando tu número de teléfono o un pequeño pago. O usa un",
       "inviteCode": "código de invitacion.",
       "devMode": "Modo desarrollador",
       "skip": "Omitir",
@@ -237,7 +238,7 @@
       "unavailable": "Servicio temporalmente no disponible"
     },
     "sms": {
-      "title": "Verificacion SMS",
+      "title": "Número de teléfono",
       "free": "Gratis",
       "lessPrivate": "MENOS PRIVADO, PERO FACIL",
       "storage": "1GB de almacenamiento",
@@ -254,7 +255,8 @@
     "scan": {
       "titleMobile": "Toca para <highlight>autorizar.</highlight>",
       "titleDesktop": "Escanea el <highlight>código QR.</highlight>",
-      "subtitle": "Abre Pubky Ring, crea un pubky y escanea el QR.",
+      "subtitleMobile": "Toca el botón para abrir Pubky Ring y autoriza con tu pubky.",
+      "subtitleDesktop": "Abre Pubky Ring, toca 'Agregar pubky', y escanea este QR.",
       "generating": "Generando código QR...",
       "generatingShort": "Generando...",
 
@@ -573,7 +575,7 @@
     },
     "signIn": {
       "title": "Unete a Pubky",
-      "description": "Inicia sesión o crea una cuenta para interactuar con publicaciónes y perfiles.",
+      "description": "¿Te gusta lo que ves? Únete a la web de la libertad ahora.",
       "newHere": "Nuevo aqui?",
       "newHereDescription": "Crea tu cuenta y comienza a explorar Pubky.",
       "joinButton": "Unirse a Pubky",
@@ -1014,7 +1016,14 @@
     "generic": "Algo salio mal",
     "network": "Error de red. Por favor intenta de nuevo.",
     "notFound": "Página no encontrada",
-    "couldNotFind": "No se pudo encontrar el recurso solicitado"
+    "couldNotFind": "No se pudo encontrar el recurso solicitado",
+    "database": {
+      "title": "Almacenamiento no disponible",
+      "description": "No pudimos acceder al almacenamiento local de tu dispositivo. Algunos navegadores móviles, especialmente los integrados en apps, pueden interrumpirlo. Inténtalo de nuevo o recarga la página.",
+      "tryAgain": "Intentar de nuevo",
+      "reload": "Recargar página",
+      "retrying": "Reintentando…"
+    }
   },
   "password": {
     "veryWeak": "Contrasena muy debil",
