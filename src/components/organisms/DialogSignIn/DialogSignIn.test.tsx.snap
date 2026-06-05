@@ -36,7 +36,7 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
         data-slot="dialog-description"
         id="radix-normalized"
       >
-        Sign in or create an account to interact with posts and profiles.
+        Like what you see? Join the freedom web now.
       </p>
     </div>
     <div
@@ -58,55 +58,26 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           >
             New here?
           </h3>
-          <p
-            class="text-sm font-medium text-muted-foreground"
-            data-testid="typography"
-          >
-            Create your account and start exploring Pubky.
-          </p>
         </div>
         <div
           class="mx-auto w-full flex-col flex flex-1 items-center justify-center py-4"
           data-testid="container"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-user-plus size-16 text-muted-foreground/50"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
-            />
-            <circle
-              cx="9"
-              cy="7"
-              r="4"
-            />
-            <line
-              x1="19"
-              x2="19"
-              y1="8"
-              y2="14"
-            />
-            <line
-              x1="22"
-              x2="16"
-              y1="11"
-              y2="11"
-            />
-          </svg>
+          <img
+            alt="New here?"
+            class="h-[87px] w-auto max-w-[220px] sm:h-auto sm:w-full"
+            data-nimg="1"
+            decoding="async"
+            height="220"
+            loading="lazy"
+            src="/images/new-here.svg"
+            style="color: transparent;"
+            width="220"
+          />
         </div>
         <a
-          data-testid="link--"
-          href="/"
+          data-testid="link--onboarding-human"
+          href="/onboarding/human"
         >
           <svg
             aria-hidden="true"
@@ -160,40 +131,22 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           >
             Already have an account?
           </h3>
-          <p
-            class="text-sm font-medium text-muted-foreground"
-            data-testid="typography"
-          >
-            Sign in to interact with posts and profiles.
-          </p>
         </div>
         <div
           class="mx-auto w-full flex-col flex flex-1 items-center justify-center py-4"
           data-testid="container"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-key-round size-16 text-muted-foreground/50"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
-            />
-            <circle
-              cx="16.5"
-              cy="7.5"
-              fill="currentColor"
-              r=".5"
-            />
-          </svg>
+          <img
+            alt="Already have an account?"
+            class="h-[87px] w-auto max-w-[220px] sm:h-auto sm:w-full"
+            data-nimg="1"
+            decoding="async"
+            height="220"
+            loading="lazy"
+            src="/images/sign-in.svg"
+            style="color: transparent;"
+            width="220"
+          />
         </div>
         <a
           data-testid="link--sign-in"
@@ -201,7 +154,7 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
         >
           <svg
             aria-hidden="true"
-            class="lucide lucide-key-round mr-2 size-4"
+            class="lucide lucide-arrow-right mr-2 size-4"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -213,13 +166,10 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
             xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
+              d="M5 12h14"
             />
-            <circle
-              cx="16.5"
-              cy="7.5"
-              fill="currentColor"
-              r=".5"
+            <path
+              d="m12 5 7 7-7 7"
             />
           </svg>
           Sign In

@@ -7,6 +7,10 @@ import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentU
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { MobileFooter } from './MobileFooter';
 
+let mockCurrentUserPubky: string | null = 'pk:test-user-pubky';
+let mockIsPublicRoute = false;
+let mockIsCoreExploreRoute = false;
+
 const createSessionStorageMock = () => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -90,7 +94,10 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   usePublicRoute: vi.fn(() => ({
-    isPublicRoute: false,
+    isPublicRoute: mockIsPublicRoute,
+    isDynamicPublicRoute: mockIsPublicRoute,
+    isCoreExploreRoute: mockIsCoreExploreRoute,
+    isPublicExploreRoute: mockIsPublicRoute || mockIsCoreExploreRoute,
   })),
 }));
 
@@ -109,7 +116,7 @@ vi.mock('@/controllers/file/file', () => ({
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector: (state: { currentUserPubky: string | null }) => unknown) =>
-    selector({ currentUserPubky: 'pk:test-user-pubky' }),
+    selector({ currentUserPubky: mockCurrentUserPubky }),
   ),
 }));
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
@@ -126,6 +133,9 @@ describe('MobileFooter', () => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
+    mockCurrentUserPubky = 'pk:test-user-pubky';
+    mockIsPublicRoute = false;
+    mockIsCoreExploreRoute = false;
     Object.defineProperty(window, 'sessionStorage', {
       configurable: true,
       value: createSessionStorageMock(),
@@ -398,6 +408,47 @@ describe('MobileFooter', () => {
     footerContainer = container.querySelector('.fixed');
     expect(footerContainer).toHaveClass('transition-transform', 'duration-75');
   });
+
+  it('renders public explore navigation with gated account actions when unauthenticated on a core explore route', () => {
+    mockCurrentUserPubky = null;
+    mockIsCoreExploreRoute = true;
+
+    render(<MobileFooter />);
+
+    const links = screen.getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/home',
+      '/search',
+      '/hot',
+      '/bookmarks',
+      '/settings/account',
+    ]);
+    expect(document.querySelector('.lucide-bookmark')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
+    expect(screen.queryByTestId('avatar-with-fallback')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join Pubky' })).toBeInTheDocument();
+  });
+
+  it('renders explore footer for guests on dynamic public routes', () => {
+    mockCurrentUserPubky = null;
+    mockIsPublicRoute = true;
+    mockIsCoreExploreRoute = false;
+
+    render(<MobileFooter />);
+
+    expect(screen.getByRole('button', { name: 'Join Pubky' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+  });
+
+  it('does not render for guests on non-explore routes', () => {
+    mockCurrentUserPubky = null;
+    mockIsPublicRoute = false;
+    mockIsCoreExploreRoute = false;
+
+    const { container } = render(<MobileFooter />);
+
+    expect(container.firstChild).toBeNull();
+  });
 });
 
 describe('MobileFooter - Snapshots', () => {
@@ -405,6 +456,9 @@ describe('MobileFooter - Snapshots', () => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
+    mockCurrentUserPubky = 'pk:test-user-pubky';
+    mockIsPublicRoute = false;
+    mockIsCoreExploreRoute = false;
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
   });
 

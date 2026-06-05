@@ -1,26 +1,46 @@
 'use client';
 
-import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
-import { isDynamicPublicRoute } from '@/app/routes';
+import {
+  isCoreExploreRoute as matchCoreExploreRoute,
+  isDynamicPublicRoute as matchDynamicPublicRoute,
+} from '@/app/routes';
 import type { UsePublicRouteResult } from './usePublicRoute.types';
 
 export type { UsePublicRouteResult } from './usePublicRoute.types';
 
 /**
- * Hook for checking if the current route is a dynamic public route.
+ * Pathname-based route classification for explore mode and public chrome.
  *
- * Dynamic public routes are routes that should be accessible without authentication:
- * - /post/[userId]/[postId] - viewing a single post
- * - /profile/[pubky] - viewing another user's profile
+ * Unauthenticated users may browse **core explore routes** (`/home`, `/hot`, `/search`)
+ * and **dynamic public routes** (single post, another user's profile, invite links).
+ * `RouteGuardProvider` allows those paths via `EXPLORE_ROUTES` and `isDynamicPublicRoute()`
+ * in `@/app/routes`; this hook mirrors that split for UI (header, footer, CTAs).
  *
- * This hook only handles route awareness. It does NOT check authentication status.
- * Use this in combination with `useRequireAuth` when you need both.
+ * Return flags (see `UsePublicRouteResult`):
+ * - `isCoreExploreRoute` — app-shell feeds/search without signing in
+ * - `isDynamicPublicRoute` — post/profile/invite pages with minimal chrome
+ * - `isPublicExploreRoute` — either of the above (broad “guest can view” check)
+ * - `isPublicRoute` — **legacy alias** for `isDynamicPublicRoute` only (not `/home` et al.)
+ *
+ * Does **not** read auth state. Pair with `useRequireAuth` when an action needs a session.
+ *
+ * @example
+ * ```tsx
+ * const { isCoreExploreRoute, isPublicExploreRoute } = usePublicRoute();
+ * if (!isAuthenticated && !isCoreExploreRoute) return null;
+ * ```
  */
 export function usePublicRoute(): UsePublicRouteResult {
   const pathname = usePathname();
+  const isCoreExploreRoute = matchCoreExploreRoute(pathname);
+  const isDynamicPublicRoute = matchDynamicPublicRoute(pathname);
 
-  const isPublicRoute = useMemo(() => isDynamicPublicRoute(pathname), [pathname]);
-
-  return { isPublicRoute };
+  return {
+    // Backwards-compatible name used by existing post/profile minimal chrome.
+    isPublicRoute: isDynamicPublicRoute,
+    isCoreExploreRoute,
+    isDynamicPublicRoute,
+    isPublicExploreRoute: isCoreExploreRoute || isDynamicPublicRoute,
+  };
 }

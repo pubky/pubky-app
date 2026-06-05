@@ -3,28 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { ActionButtons } from './ActionButtons';
 
 describe('ActionButtons', () => {
-  it('renders both buttons with default text', () => {
+  it('renders create account button with default text', () => {
     render(<ActionButtons />);
 
-    const signInButton = screen.getByRole('button', { name: /sign in/i });
     const createAccountButton = screen.getByRole('button', { name: /join now/i });
 
-    expect(signInButton).toBeInTheDocument();
     expect(createAccountButton).toBeInTheDocument();
 
-    // Check icons are present
-    expect(document.querySelector('.lucide-log-in')).toBeInTheDocument();
     expect(document.querySelector('.lucide-user-round-plus')).toBeInTheDocument();
-  });
-
-  it('calls onSignIn when sign in button is clicked', () => {
-    const mockOnSignIn = vi.fn();
-    render(<ActionButtons onSignIn={mockOnSignIn} />);
-
-    const signInButton = screen.getByRole('button', { name: /sign in/i });
-    fireEvent.click(signInButton);
-
-    expect(mockOnSignIn).toHaveBeenCalledTimes(1);
   });
 
   it('calls onCreateAccount when create account button is clicked', () => {
@@ -37,20 +23,32 @@ describe('ActionButtons', () => {
     expect(mockOnCreateAccount).toHaveBeenCalledTimes(1);
   });
 
-  it('handles both callbacks simultaneously', () => {
-    const mockOnSignIn = vi.fn();
+  it('handles create account and explore callbacks', () => {
     const mockOnCreateAccount = vi.fn();
+    const mockOnExplore = vi.fn();
 
-    render(<ActionButtons onSignIn={mockOnSignIn} onCreateAccount={mockOnCreateAccount} />);
+    render(<ActionButtons onCreateAccount={mockOnCreateAccount} onExplore={mockOnExplore} />);
 
-    const signInButton = screen.getByRole('button', { name: /sign in/i });
     const createAccountButton = screen.getByRole('button', { name: /join now/i });
+    const exploreButton = screen.getByRole('button', { name: /explore/i });
 
-    fireEvent.click(signInButton);
+    fireEvent.click(exploreButton);
     fireEvent.click(createAccountButton);
 
-    expect(mockOnSignIn).toHaveBeenCalledTimes(1);
+    expect(mockOnExplore).toHaveBeenCalledTimes(1);
     expect(mockOnCreateAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders and calls Explore when onExplore is provided', () => {
+    const mockOnExplore = vi.fn();
+    render(<ActionButtons onExplore={mockOnExplore} />);
+
+    const exploreButton = screen.getByRole('button', { name: /explore/i });
+    fireEvent.click(exploreButton);
+
+    expect(exploreButton).toBeInTheDocument();
+    expect(document.querySelector('.lucide-eye')).toBeInTheDocument();
+    expect(mockOnExplore).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -65,18 +63,11 @@ describe('ActionButtons - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with both callbacks', () => {
-    const mockOnSignIn = vi.fn();
+  it('matches snapshot with create account and explore callbacks', () => {
     const mockOnCreateAccount = vi.fn();
+    const mockOnExplore = vi.fn();
 
-    const { container } = render(<ActionButtons onSignIn={mockOnSignIn} onCreateAccount={mockOnCreateAccount} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with sign in callback only', () => {
-    const mockOnSignIn = vi.fn();
-
-    const { container } = render(<ActionButtons onSignIn={mockOnSignIn} />);
+    const { container } = render(<ActionButtons onCreateAccount={mockOnCreateAccount} onExplore={mockOnExplore} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 

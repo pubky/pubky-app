@@ -7,7 +7,7 @@
   "landing": {
     "title": "<highlight>Sblocca</highlight> il web.",
     "subtitle": "Le tue chiavi, i tuoi contenuti, le tue regole.",
-    "signIn": "Accedi",
+    "explore": "Esplora",
     "joinNow": "Unisciti ora",
     "aTetherCompany": "un'azienda <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tutti i diritti riservati."
@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "Crea account",
       "joinNow": "Unisciti ora",
       "identityKeys": "Chiavi di identità",
       "usePubkyRing": "Usa Pubky Ring",
@@ -167,7 +168,7 @@
     },
     "human": {
       "title": "Dimostra <highlight>di non essere un robot.</highlight>",
-      "subtitle": "Non serve email. Verifica rapidamente tramite SMS o un piccolo pagamento. Oppure usa un",
+      "subtitle": "Verifica rapidamente con il tuo numero di telefono o un piccolo pagamento. Oppure usa un",
       "inviteCode": "codice invito.",
       "devMode": "Modalita sviluppatore",
       "skip": "Salta",
@@ -237,7 +238,7 @@
       "unavailable": "Servizio temporaneamente non disponibile"
     },
     "sms": {
-      "title": "Verifica SMS",
+      "title": "Numero di telefono",
       "free": "Gratis",
       "lessPrivate": "MENO PRIVATO, MA FACILE",
       "storage": "1GB di spazio",
@@ -254,7 +255,8 @@
     "scan": {
       "titleMobile": "Tocca per <highlight>autorizzare.</highlight>",
       "titleDesktop": "Scansiona il <highlight>codice QR.</highlight>",
-      "subtitle": "Apri Pubky Ring, crea un pubky e scansiona il QR.",
+      "subtitleMobile": "Tocca il pulsante per aprire Pubky Ring e autorizza con il tuo pubky.",
+      "subtitleDesktop": "Apri Pubky Ring, tocca 'Aggiungi pubky', e scansiona questo QR.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
 
@@ -573,7 +575,7 @@
     },
     "signIn": {
       "title": "Unisciti a Pubky",
-      "description": "Accedi o crea un account per interagire con post e profili.",
+      "description": "Ti piace quello che vedi? Unisciti al web della libertà ora.",
       "newHere": "Nuovo qui?",
       "newHereDescription": "Crea il tuo account e inizia a esplorare Pubky.",
       "joinButton": "Unisciti a Pubky",
@@ -1014,7 +1016,14 @@
     "generic": "Qualcosa e andato storto",
     "network": "Errore di rete. Riprova.",
     "notFound": "Pagina non trovata",
-    "couldNotFind": "Impossibile trovare la risorsa richiesta"
+    "couldNotFind": "Impossibile trovare la risorsa richiesta",
+    "database": {
+      "title": "Archiviazione non disponibile",
+      "description": "Non è stato possibile accedere all'archiviazione locale del dispositivo. Alcuni browser mobili, in particolare quelli integrati nelle app, possono interromperla. Riprova o ricarica la pagina.",
+      "tryAgain": "Riprova",
+      "reload": "Ricarica la pagina",
+      "retrying": "Nuovo tentativo…"
+    }
   },
   "password": {
     "veryWeak": "Password molto debole",
@@ -1178,34 +1187,32 @@
       "pubky": "4. Come funziona l'app Pubky"
     },
     "questions": {
-      "q1": "Perché Pubky richiede codici invito?",
-      "a1": "Pubky usa i codici invito come misura temporanea per prevenire spam e sovraccarico del server. Gli utenti hanno bisogno di un codice invito per creare un utente sul nostro Homeserver. Non creiamo un utente per l'app Pubky, ma sul nostro Homeserver. Man mano che l'infrastruttura migliora e più homeserver vanno online, i codici invito potrebbero non essere più necessari.",
-      "q2": "Come uso Pubky Ring con l'app web?",
-      "a2": "Prima, crea la tua coppia di chiavi nell'app Pubky Ring. Poi visita l'app web Pubky e accedi usando la stessa coppia di chiavi. Le app sono connesse tramite la tua identità crittografica.",
-      "q3": "Perché il login a volte fallisce usando la PWA su Android?",
-      "a3": "Alcuni browser focalizzati su sicurezza e privacy, come Vanadium o Tor, disabilitano la compilazione Just-In-Time (JIT) per JavaScript di default, impedendo il corretto funzionamento dell'app Pubky.\n\nPer abilitarla, vai su: Impostazioni > Impostazioni sito > JavaScript JIT > Consentito.",
-      "q4": "Come posso ripristinare il mio account?",
-      "a4": "Durante la registrazione, ti e stato chiesto di fare il backup della tua identità usando una delle seguenti opzioni:\n\n- File di recupero (.pkarr)\n- Frase di recupero (mnemonica)\n- Codice QR\n\nPer ripristinare con un file .pkarr:\n\n1. Seleziona il file che hai salvato.\n2. Inserisci la tua password.\n3. Clicca su \"Accedi\".",
-      "q5": "Posso ripristinare il mio account Pubky su un altro dispositivo?",
-      "a5": "Si, se hai il tuo file .pkarr o la frase seed. (Il supporto per la frase seed sarà aggiunto nelle future versioni di Pubky Ring.)",
-      "q6": "Posso convertire una frase seed in un file .pkarr dopo?",
-      "a6": "Non ancora. Questa funzionalità e pianificata per un futuro aggiornamento.",
-      "q7": "Ho fatto il backup del mio account ma non riesco ad accedere al file. Cosa e successo?",
-      "a7": "Alcuni sistemi operativi potrebbero rinominare il file .pkarr o etichettarlo erroneamente. Prova a rinominare l'estensione del file in .pkarr e reimportare.",
-      "q8": "Ho scaricato un file .txt invece di un backup .pkarr. Cosa faccio?",
-      "a8": "Questo succede se hai scelto l'opzione di backup mnemonica (frase seed). Pubky Ring non supporta ancora l'importazione seed. Attendi futuri aggiornamenti o ricrea il tuo account con un backup .pkarr.",
-      "q9": "Ho perso il download del file di recupero. Posso fare di nuovo il backup?",
-      "a9": "Attualmente, i backup possono essere creati solo una volta tramite l'app web. Questo potrebbe cambiare in futuri aggiornamenti.",
-      "q10": "Come posso aggiornare le informazioni del mio profilo?",
-      "a10": "Clicca sul tuo avatar (angolo in alto a destra), poi clicca su \"Modifica\" per aggiornare le informazioni del tuo profilo.",
-      "q11": "Come posso eliminare il mio post?",
-      "a11": "Passa il mouse sui tre puntini del post che vuoi eliminare e seleziona \"Elimina post\".",
-      "q12": "Come silenziare qualcuno?",
-      "a12": "Vai sul loro profilo, clicca sui tre puntini e scegli \"Silenzia utente\".",
-      "q13": "In cosa Pubky e diverso dalle altre piattaforme social?",
-      "a13": "Pubky e costruito per un'interazione sociale sovrana e decentralizzata. Differenze principali:\n\n- Tu sei l'algoritmo: personalizza cio che vedi con tag semantici e curatela.\n- Nessuna email o telefono richiesto: la tua identità e la tua chiave pubblica.\n- Pieno controllo del tuo grafo sociale tramite tagging e modelli di fiducia.\n- PWA basata su browser che rispetta la privacy.",
-      "q14": "In cosa Pubky differisce da Nostr?",
-      "a14": "Pubky usa chiavi Ed25519 per compatibilita e evita relay centralizzati. Invece, usa una Distributed Hash Table (DHT) per ricerca decentralizzata e risoluzione identità."
+      "q1": "Come uso Pubky Ring con l'app web?",
+      "a1": "Prima, crea la tua coppia di chiavi nell'app Pubky Ring. Poi visita l'app web Pubky e accedi usando la stessa coppia di chiavi. Le app sono connesse tramite la tua identità crittografica.",
+      "q2": "Perché il login a volte fallisce usando la PWA su Android?",
+      "a2": "Alcuni browser focalizzati su sicurezza e privacy, come Vanadium o Tor, disabilitano la compilazione Just-In-Time (JIT) per JavaScript di default, impedendo il corretto funzionamento dell'app Pubky.\n\nPer abilitarla, vai su: Impostazioni > Impostazioni sito > JavaScript JIT > Consentito.",
+      "q3": "Come posso ripristinare il mio account?",
+      "a3": "Durante la registrazione, ti e stato chiesto di fare il backup della tua identità usando una delle seguenti opzioni:\n\n- File di recupero (.pkarr)\n- Frase di recupero (mnemonica)\n- Codice QR\n\nPer ripristinare con un file .pkarr:\n\n1. Seleziona il file che hai salvato.\n2. Inserisci la tua password.\n3. Clicca su \"Accedi\".",
+      "q4": "Posso ripristinare il mio account Pubky su un altro dispositivo?",
+      "a4": "Si, se hai il tuo file .pkarr o la frase seed.",
+      "q5": "Posso convertire una frase seed in un file .pkarr dopo?",
+      "a5": "Non ancora. Questa funzionalità e pianificata per un futuro aggiornamento.",
+      "q6": "Ho fatto il backup del mio account ma non riesco ad accedere al file. Cosa e successo?",
+      "a6": "Alcuni sistemi operativi potrebbero rinominare il file .pkarr o etichettarlo erroneamente. Prova a rinominare l'estensione del file in .pkarr e reimportare.",
+      "q7": "Ho scaricato un file .txt invece di un backup .pkarr. Cosa faccio?",
+      "a7": "Questo succede se hai scelto l'opzione di backup mnemonica (frase seed). Attendi futuri aggiornamenti o ricrea il tuo account con un backup .pkarr.",
+      "q8": "Ho perso il download del file di recupero. Posso fare di nuovo il backup?",
+      "a8": "Attualmente, i backup possono essere creati solo una volta tramite l'app web. Questo potrebbe cambiare in futuri aggiornamenti.",
+      "q9": "Come posso aggiornare le informazioni del mio profilo?",
+      "a9": "Clicca sul tuo avatar (angolo in alto a destra), poi clicca su \"Modifica\" per aggiornare le informazioni del tuo profilo.",
+      "q10": "Come posso eliminare il mio post?",
+      "a10": "Passa il mouse sui tre puntini del post che vuoi eliminare e seleziona \"Elimina post\".",
+      "q11": "Come silenziare qualcuno?",
+      "a11": "Vai sul loro profilo, clicca sui tre puntini e scegli \"Silenzia utente\".",
+      "q12": "In cosa Pubky e diverso dalle altre piattaforme social?",
+      "a12": "Pubky e costruito per un'interazione sociale sovrana e decentralizzata. Differenze principali:\n\n- Tu sei l'algoritmo: personalizza cio che vedi con tag semantici e curatela.\n- Nessuna email o telefono richiesto: la tua identità e la tua chiave pubblica.\n- Pieno controllo del tuo grafo sociale tramite tagging e modelli di fiducia.\n- PWA basata su browser che rispetta la privacy.",
+      "q13": "In cosa Pubky differisce da Nostr?",
+      "a13": "Pubky usa chiavi Ed25519 per compatibilita e evita relay centralizzati. Invece, usa una Distributed Hash Table (DHT) per ricerca decentralizzata e risoluzione identità."
     }
   },
   "share": {

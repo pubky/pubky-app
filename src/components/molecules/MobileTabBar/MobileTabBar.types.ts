@@ -17,12 +17,17 @@ export interface MobileTabBarItem {
 
 export type MobileTabBarPosition = 'sticky' | 'fixed';
 
+/** Which mobile header height the tab bar sits below. */
+export type MobileTabBarHeaderTop = 'mobile' | 'compact';
+
 export interface MobileTabBarProps {
   items: MobileTabBarItem[];
   /** When true, renders the label next to the icon. Defaults to false (icon-only). */
   showLabels?: boolean;
   /** Positioning strategy. Defaults to 'sticky'. */
   position?: MobileTabBarPosition;
+  /** Sticky/fixed top offset for the bar below its header. Defaults to 'mobile'. */
+  headerTop?: MobileTabBarHeaderTop;
   /** Extra classes merged onto the root (e.g. negative margin overrides). */
   className?: string;
   /** Optional data-testid for the root element. */

@@ -191,6 +191,7 @@ exports[`HotFeedDrawer > matches snapshot 1`] = `
     class="flex flex-col gap-6"
   >
     <div
+      data-selected-tab="following"
       data-testid="filter-reach"
     >
       FilterReach
@@ -382,6 +383,7 @@ exports[`HotFeedDrawer > matches snapshot 1`] = `
 exports[`HotFeedSidebar > matches snapshot 1`] = `
 <div>
   <div
+    data-selected-tab="following"
     data-testid="filter-reach"
   >
     FilterReach

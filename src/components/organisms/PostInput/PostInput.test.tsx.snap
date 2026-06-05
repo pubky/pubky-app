@@ -25,7 +25,13 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
       data-is-article="true"
       data-submitting="false"
       data-testid="post-input-attachments"
-    />
+    >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
+    </div>
     <div
       contenteditable="true"
       data-readonly="false"
@@ -50,6 +56,7 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
             data-testid="post-input-tags"
           />
           <div
+            data-post-disabled="false"
             data-testid="post-input-action-bar"
           >
             <button
@@ -63,6 +70,12 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
@@ -126,6 +139,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
           <div
             data-character-count="21"
             data-character-max="2000"
+            data-post-disabled="false"
             data-testid="post-input-action-bar"
           >
             <button
@@ -139,6 +153,12 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
@@ -199,6 +219,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
             data-testid="post-input-tags"
           />
           <div
+            data-post-disabled="false"
             data-testid="post-input-action-bar"
           >
             <button
@@ -212,6 +233,12 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
@@ -270,7 +297,13 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
       data-is-article="false"
       data-submitting="false"
       data-testid="post-input-attachments"
-    />
+    >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
+    </div>
     <div
       class="overflow-hidden "
       style="height: auto; opacity: 1;"
@@ -290,6 +323,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
           <div
             data-character-count="0"
             data-character-max="2000"
+            data-post-disabled="true"
             data-testid="post-input-action-bar"
           >
             <button
@@ -303,6 +337,12 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
@@ -351,7 +391,13 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
       data-is-article="false"
       data-submitting="true"
       data-testid="post-input-attachments"
-    />
+    >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
+    </div>
     <div
       class="overflow-hidden "
       style="height: auto; opacity: 1;"
@@ -371,6 +417,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
           <div
             data-character-count="0"
             data-character-max="2000"
+            data-post-disabled="true"
             data-testid="post-input-action-bar"
           >
             <button
@@ -384,6 +431,12 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Posting..."
@@ -432,6 +485,11 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
       data-submitting="false"
       data-testid="post-input-attachments"
     >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
       <div
         data-testid="attachment-test-image.png"
       >
@@ -457,6 +515,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
           <div
             data-character-count="0"
             data-character-max="2000"
+            data-post-disabled="false"
             data-testid="post-input-action-bar"
           >
             <button
@@ -470,6 +529,12 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
@@ -518,7 +583,13 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
       data-is-article="false"
       data-submitting="false"
       data-testid="post-input-attachments"
-    />
+    >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
+    </div>
     <div
       class="overflow-hidden "
       style="height: auto; opacity: 1;"
@@ -538,6 +609,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
           <div
             data-character-count="12"
             data-character-max="2000"
+            data-post-disabled="false"
             data-testid="post-input-action-bar"
           >
             <button
@@ -551,6 +623,12 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
@@ -597,7 +675,13 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
       data-is-article="false"
       data-submitting="false"
       data-testid="post-input-attachments"
-    />
+    >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
+    </div>
     <div
       class="overflow-hidden "
       style="height: auto; opacity: 1;"
@@ -617,6 +701,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
           <div
             data-character-count="0"
             data-character-max="2000"
+            data-post-disabled="true"
             data-testid="post-input-action-bar"
           >
             <button
@@ -630,6 +715,12 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
@@ -677,7 +768,13 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
       data-is-article="false"
       data-submitting="false"
       data-testid="post-input-attachments"
-    />
+    >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
+    </div>
     <div
       class="overflow-hidden "
       style="height: auto; opacity: 1;"
@@ -697,6 +794,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
           <div
             data-character-count="0"
             data-character-max="2000"
+            data-post-disabled="true"
             data-testid="post-input-action-bar"
           >
             <button
@@ -710,6 +808,12 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
@@ -757,7 +861,13 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
       data-is-article="false"
       data-submitting="false"
       data-testid="post-input-attachments"
-    />
+    >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
+    </div>
     <div
       class="overflow-hidden "
       style="height: auto; opacity: 1;"
@@ -777,6 +887,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
           <div
             data-character-count="0"
             data-character-max="2000"
+            data-post-disabled="true"
             data-testid="post-input-action-bar"
           >
             <button
@@ -790,6 +901,12 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
@@ -841,7 +958,13 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
       data-is-article="false"
       data-submitting="false"
       data-testid="post-input-attachments"
-    />
+    >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
+    </div>
     <div
       class="overflow-hidden "
       style="height: auto; opacity: 1;"
@@ -861,6 +984,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
           <div
             data-character-count="0"
             data-character-max="2000"
+            data-post-disabled="true"
             data-testid="post-input-action-bar"
           >
             <button
@@ -874,6 +998,12 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
@@ -921,7 +1051,13 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
       data-is-article="false"
       data-submitting="false"
       data-testid="post-input-attachments"
-    />
+    >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
+    </div>
     <div
       class="bg-card"
       data-post-id="test-post-123"
@@ -949,6 +1085,7 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
           <div
             data-character-count="0"
             data-character-max="2000"
+            data-post-disabled="false"
             data-testid="post-input-action-bar"
           >
             <button
@@ -962,6 +1099,12 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
               data-testid="image-button"
             >
               Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
             </button>
             <button
               aria-label="Post"
