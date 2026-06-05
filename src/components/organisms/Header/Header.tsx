@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { isPostRoute } from '@/app/routes';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import {
   HeaderContainer,
@@ -11,7 +10,6 @@ import {
   HeaderTitle,
 } from '@/molecules/Header/Header';
 import { HeaderHome } from '@/molecules/HeaderHome/HeaderHome';
-import { HeaderJoin } from '@/molecules/HeaderJoin/HeaderJoin';
 import { HeaderSignIn } from '@/molecules/HeaderSignIn/HeaderSignIn';
 import { Logo } from '@/molecules/Logo/Logo';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -22,10 +20,8 @@ export function Header() {
   const t = useTranslations('onboarding.steps');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
-  const isGuestOnDynamicPublicRoute = isDynamicPublicRoute && !isAuthenticated;
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
-  const isOnPostRoute = pathname ? isPostRoute(pathname) : false;
   const isCopyrightPage = pathname === '/copyright';
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
@@ -33,14 +29,10 @@ export function Header() {
 
   // Hide header on mobile when:
   // - User is on a core explore route (/home, /hot, /search) — MobileHeader + MobileFooter
-  // - Guest on dynamic public routes (post/profile) — minimal MobileHeader
-  // - Any user on /post — PostPageShell renders MobileHeader with drawer icons
-  // - Authenticated on standard app routes (not post/profile) — MobileHeader + MobileFooter
+  // - Any user on a dynamic public route (/post/..., /profile/[pubky]) — page shell owns mobile chrome
+  // - Authenticated on standard app routes — MobileHeader + MobileFooter
   const shouldHideHeaderOnMobile =
-    isCoreExploreRoute ||
-    isGuestOnDynamicPublicRoute ||
-    isOnPostRoute ||
-    (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
+    isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
   // Show title only for onboarding/logout pages (when stepConfig exists) and user is not authenticated,
   // or during profile setup (step 5)
   const shouldShowTitle = currentTitle && (!isAuthenticated || currentStep === 5);
@@ -54,9 +46,7 @@ export function Header() {
   // Determine which header content to show:
   // - Onboarding: HeaderOnboarding
   // - Authenticated: HeaderSignIn (navigation + avatar)
-  // - Unauthenticated on core explore route (home/hot/search): public explore navigation + join
-  // - Unauthenticated on /post: explore navigation + join (same as /home at lg+)
-  // - Unauthenticated on other dynamic public (e.g. profile): HeaderJoin
+  // - Unauthenticated on core explore or dynamic public routes (home/hot/search/post/profile): explore navigation + join
   // - Unauthenticated on landing/other: HeaderHome (social links + sign in)
   const renderHeaderContent = () => {
     if (isOnboarding) {
@@ -65,11 +55,8 @@ export function Header() {
     if (isAuthenticated) {
       return <HeaderSignIn />;
     }
-    if (isCoreExploreRoute || (pathname && isPostRoute(pathname))) {
+    if (isCoreExploreRoute || isDynamicPublicRoute) {
       return <HeaderExploreNavigationButtons />;
-    }
-    if (isDynamicPublicRoute) {
-      return <HeaderJoin />;
     }
     return <HeaderHome />;
   };
