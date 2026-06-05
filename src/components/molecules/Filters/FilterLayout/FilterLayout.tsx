@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Columns3, LayoutGrid, Menu } from 'lucide-react';
+import { Columns3, LayoutGrid, Menu, Rows4 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
@@ -35,6 +35,13 @@ export function FilterLayout({
           icon: Menu,
           disabled,
           dataCy: 'wide-layout-toggle',
+        },
+        {
+          key: LAYOUT.LIST,
+          label: t('list'),
+          icon: Rows4,
+          disabled,
+          dataCy: 'list-layout-toggle',
         },
         showVisual
           ? {
