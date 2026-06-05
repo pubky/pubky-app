@@ -168,7 +168,7 @@
     },
     "human": {
       "title": "Beweisen Sie, <highlight>dass Sie kein Roboter sind.</highlight>",
-      "subtitle": "Keine E-Mail erforderlich. Verifizieren Sie schnell per SMS oder einer kleinen Zahlung. Oder verwenden Sie einen",
+      "subtitle": "Verifizieren Sie schnell mit Ihrer Telefonnummer oder einer kleinen Zahlung. Oder verwenden Sie einen",
       "inviteCode": "Einladungscode.",
       "devMode": "Entwicklermodus",
       "skip": "Überspringen",
@@ -238,7 +238,7 @@
       "unavailable": "Service vorübergehend nicht verfügbar"
     },
     "sms": {
-      "title": "SMS-Verifizierung",
+      "title": "Telefonnummer",
       "free": "Kostenlos",
       "lessPrivate": "WENIGER PRIVAT, ABER EINFACH",
       "storage": "1GB Speicher",

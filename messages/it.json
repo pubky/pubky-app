@@ -168,7 +168,7 @@
     },
     "human": {
       "title": "Dimostra <highlight>di non essere un robot.</highlight>",
-      "subtitle": "Non serve email. Verifica rapidamente tramite SMS o un piccolo pagamento. Oppure usa un",
+      "subtitle": "Verifica rapidamente con il tuo numero di telefono o un piccolo pagamento. Oppure usa un",
       "inviteCode": "codice invito.",
       "devMode": "Modalita sviluppatore",
       "skip": "Salta",
@@ -238,7 +238,7 @@
       "unavailable": "Servizio temporaneamente non disponibile"
     },
     "sms": {
-      "title": "Verifica SMS",
+      "title": "Numero di telefono",
       "free": "Gratis",
       "lessPrivate": "MENO PRIVATO, MA FACILE",
       "storage": "1GB di spazio",

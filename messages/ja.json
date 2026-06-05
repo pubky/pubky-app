@@ -168,7 +168,7 @@
     },
     "human": {
       "title": "ロボットではないことを<highlight>証明してください。</highlight>",
-      "subtitle": "メールは不要です。SMSまたは少額の支払いで素早く確認できます。または",
+      "subtitle": "電話番号または少額の支払いで素早く確認できます。または",
       "inviteCode": "招待コード。",
       "devMode": "開発者モード",
       "skip": "スキップ",
@@ -238,7 +238,7 @@
       "unavailable": "サービスは一時的に利用できません"
     },
     "sms": {
-      "title": "SMS確認",
+      "title": "電話番号",
       "free": "無料",
       "lessPrivate": "プライバシーは低いが簡単",
       "storage": "1GBストレージ",

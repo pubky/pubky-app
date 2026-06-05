@@ -168,7 +168,7 @@
     },
     "human": {
       "title": "证明<highlight>您不是机器人。</highlight>",
-      "subtitle": "无需邮箱。通过短信或小额支付快速验证。或使用",
+      "subtitle": "使用您的手机号码或小额支付快速验证。或使用",
       "inviteCode": "邀请码。",
       "devMode": "开发者模式",
       "skip": "跳过",
@@ -238,7 +238,7 @@
       "unavailable": "服务暂时不可用"
     },
     "sms": {
-      "title": "短信验证",
+      "title": "手机号码",
       "free": "免费",
       "lessPrivate": "隐私性较低，但简单",
       "storage": "1GB 存储空间",
