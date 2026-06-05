@@ -4,6 +4,7 @@ import { MobileHeader } from './MobileHeader';
 
 let mockCurrentUserPubky: string | null = 'pk:test-user-pubky';
 let mockIsCoreExploreRoute = false;
+let mockIsPublicExploreRoute = false;
 const mockSetShowSignInDialog = vi.fn();
 
 // Mock the molecules
@@ -33,7 +34,7 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
     isPublicRoute: false,
     isDynamicPublicRoute: false,
     isCoreExploreRoute: mockIsCoreExploreRoute,
-    isPublicExploreRoute: mockIsCoreExploreRoute,
+    isPublicExploreRoute: mockIsPublicExploreRoute,
   })),
 }));
 
@@ -42,6 +43,7 @@ describe('MobileHeader', () => {
     vi.clearAllMocks();
     mockCurrentUserPubky = 'pk:test-user-pubky';
     mockIsCoreExploreRoute = false;
+    mockIsPublicExploreRoute = false;
   });
 
   it('renders with default props', () => {
@@ -170,11 +172,31 @@ describe('MobileHeader', () => {
   it('shows filter and activity buttons when unauthenticated on a core explore route', () => {
     mockCurrentUserPubky = null;
     mockIsCoreExploreRoute = true;
+    mockIsPublicExploreRoute = true;
 
     render(<MobileHeader />);
 
     expect(document.querySelector('.lucide-sliders-horizontal')).toBeInTheDocument();
     expect(document.querySelector('.lucide-activity')).toBeInTheDocument();
+  });
+
+  it('shows filter button when unauthenticated on a post page (public explore)', () => {
+    mockCurrentUserPubky = null;
+    mockIsCoreExploreRoute = false;
+    mockIsPublicExploreRoute = true;
+
+    render(<MobileHeader onLeftIconClick={vi.fn()} />);
+
+    expect(document.querySelector('.lucide-sliders-horizontal')).toBeInTheDocument();
+  });
+
+  it('hides filter button when unauthenticated off explore routes', () => {
+    mockCurrentUserPubky = null;
+    mockIsPublicExploreRoute = false;
+
+    render(<MobileHeader />);
+
+    expect(document.querySelector('.lucide-sliders-horizontal')).not.toBeInTheDocument();
   });
 
   it('opens sign-in dialog from activity button when unauthenticated', () => {
@@ -194,6 +216,7 @@ describe('MobileHeader - Snapshots', () => {
     vi.clearAllMocks();
     mockCurrentUserPubky = 'pk:test-user-pubky';
     mockIsCoreExploreRoute = false;
+    mockIsPublicExploreRoute = false;
   });
 
   it('matches snapshot with default props', () => {

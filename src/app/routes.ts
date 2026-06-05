@@ -148,6 +148,12 @@ export function isDynamicPublicRoute(pathname: string): boolean {
   }
 }
 
+/** `/post/[userId]/[postId]` — browsable without auth; uses explore header chrome for guests. */
+export function isPostRoute(pathname: string): boolean {
+  const segments = pathname.split('/').filter(Boolean);
+  return segments[0] === 'post' && segments.length === 3;
+}
+
 export function isCoreExploreRoute(pathname: string): boolean {
   return EXPLORE_ROUTES.includes(pathname);
 }

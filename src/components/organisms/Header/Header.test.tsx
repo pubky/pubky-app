@@ -71,19 +71,23 @@ vi.mock('@/config/externalLinks', () => ({
   TELEGRAM_URL: 'https://telegram.com',
 }));
 
-vi.mock('@/app/routes', () => ({
-  AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout' },
-  HOME_ROUTES: { HOME: '/home' },
-  ROOT_ROUTES: '/',
-  ONBOARDING_ROUTES: {
-    HUMAN: '/onboarding/human',
-    INSTALL: '/onboarding/install',
-    SCAN: '/onboarding/scan',
-    PUBKY: '/onboarding/pubky',
-    BACKUP: '/onboarding/backup',
-    PROFILE: '/onboarding/profile',
-  },
-}));
+vi.mock('@/app/routes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/routes')>();
+  return {
+    ...actual,
+    AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout' },
+    HOME_ROUTES: { HOME: '/home' },
+    ROOT_ROUTES: '/',
+    ONBOARDING_ROUTES: {
+      HUMAN: '/onboarding/human',
+      INSTALL: '/onboarding/install',
+      SCAN: '/onboarding/scan',
+      PUBKY: '/onboarding/pubky',
+      BACKUP: '/onboarding/backup',
+      PROFILE: '/onboarding/profile',
+    },
+  };
+});
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
@@ -611,15 +615,29 @@ describe('Header', () => {
   });
 
   describe('Public Route Behavior', () => {
-    it('renders HeaderJoin when unauthenticated on public route', () => {
+    it('renders HeaderJoin when unauthenticated on another user profile', () => {
       mockCurrentUserPubky = null;
       mockIsPublicRoute.mockReturnValue(true);
+      mockIsCoreExploreRoute.mockReturnValue(false);
+      mockUsePathname.mockReturnValue('/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
 
       render(<Header />);
 
       expect(screen.getByTestId('header-join')).toBeInTheDocument();
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
+    });
+
+    it('renders explore navigation when unauthenticated on a post page', () => {
+      mockCurrentUserPubky = null;
+      mockIsPublicRoute.mockReturnValue(true);
+      mockIsCoreExploreRoute.mockReturnValue(false);
+      mockUsePathname.mockReturnValue('/post/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G');
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
+      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
     });
 
     it('renders HeaderHome when unauthenticated on non-public route', () => {
@@ -669,6 +687,20 @@ describe('Header', () => {
       expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
       expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
+    });
+
+    it('keeps header visible on mobile when signed in on a post page', () => {
+      mockCurrentUserPubky = 'test-pubky-123';
+      mockIsPublicRoute.mockReturnValue(true);
+      mockIsCoreExploreRoute.mockReturnValue(false);
+      mockUsePathname.mockReturnValue('/post/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G');
+
+      render(<Header />);
+
+      const headerContainer = screen.getByTestId('header-container');
+      expect(headerContainer).not.toHaveAttribute('data-class-name', 'hidden lg:block');
+      expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
+      expect(screen.getByTestId('search-input')).toBeInTheDocument();
     });
 
     it('prioritizes onboarding header over public route state', () => {

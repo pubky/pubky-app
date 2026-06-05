@@ -416,9 +416,21 @@ describe('MobileFooter', () => {
     expect(screen.getByRole('button', { name: 'Join Pubky' })).toBeInTheDocument();
   });
 
-  it('does not render on unauthenticated dynamic public routes', () => {
+  it('renders explore footer for guests on dynamic public routes', () => {
     mockCurrentUserPubky = null;
     mockIsPublicRoute = true;
+    mockIsCoreExploreRoute = false;
+
+    render(<MobileFooter />);
+
+    expect(screen.getByRole('button', { name: 'Join Pubky' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+  });
+
+  it('does not render for guests on non-explore routes', () => {
+    mockCurrentUserPubky = null;
+    mockIsPublicRoute = false;
+    mockIsCoreExploreRoute = false;
 
     const { container } = render(<MobileFooter />);
 

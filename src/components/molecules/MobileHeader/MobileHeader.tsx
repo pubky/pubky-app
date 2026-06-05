@@ -26,8 +26,9 @@ export function MobileHeader({
 }: MobileHeaderProps) {
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
-  const { isCoreExploreRoute } = usePublicRoute();
-  const showLeftIcon = showLeftButton && (isAuthenticated || isCoreExploreRoute);
+  const { isPublicExploreRoute } = usePublicRoute();
+  // Layout filters drawer: signed-in users and guests on explore/public routes (/home, /post/..., etc.)
+  const showLeftIcon = showLeftButton && (isAuthenticated || isPublicExploreRoute);
   return (
     <Container
       overrideDefaults
@@ -40,7 +41,7 @@ export function MobileHeader({
       )}
     >
       <Container overrideDefaults className="flex w-full items-center justify-between p-6">
-        {/* Left icon - filters (authenticated only) */}
+        {/* Left icon - opens layout/filter drawer when the shell provides one */}
         {showLeftIcon ? (
           <Button variant="ghost" size="icon" onClick={onLeftIconClick}>
             <SlidersHorizontal className="size-6" />
