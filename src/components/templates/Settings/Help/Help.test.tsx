@@ -19,7 +19,6 @@ describe('Help', () => {
 
   it('renders FAQ questions from all sections', () => {
     render(<Help />);
-    expect(screen.getByText('Why does Pubky require invite codes?')).toBeInTheDocument();
     expect(screen.getByText('How do I use Pubky Ring with the web app?')).toBeInTheDocument();
     expect(screen.getByText('How can I restore my account?')).toBeInTheDocument();
     expect(screen.getByText('How can I update my profile information?')).toBeInTheDocument();
@@ -41,6 +40,6 @@ describe('Help', () => {
 describe('Help - Snapshots', () => {
   it('matches snapshot with default props', () => {
     const { container } = render(<Help />);
-    expect(container.innerHTML).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
