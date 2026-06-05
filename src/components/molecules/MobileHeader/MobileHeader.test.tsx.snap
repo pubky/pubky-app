@@ -69,7 +69,7 @@ exports[`MobileHeader - Snapshots > matches snapshot for right button 1`] = `
 >
   <svg
     aria-hidden="true"
-    class="lucide lucide-user-round size-6"
+    class="lucide lucide-activity size-6"
     fill="none"
     height="24"
     stroke="currentColor"
@@ -80,13 +80,8 @@ exports[`MobileHeader - Snapshots > matches snapshot for right button 1`] = `
     width="24"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <circle
-      cx="12"
-      cy="8"
-      r="5"
-    />
     <path
-      d="M20 21a8 8 0 0 0-16 0"
+      d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
     />
   </svg>
 </button>
@@ -168,7 +163,7 @@ exports[`MobileHeader - Snapshots > matches snapshot with custom onLeftIconClick
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-user-round size-6"
+        class="lucide lucide-activity size-6"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -179,13 +174,8 @@ exports[`MobileHeader - Snapshots > matches snapshot with custom onLeftIconClick
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <circle
-          cx="12"
-          cy="8"
-          r="5"
-        />
         <path
-          d="M20 21a8 8 0 0 0-16 0"
+          d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
         />
       </svg>
     </button>
@@ -269,7 +259,7 @@ exports[`MobileHeader - Snapshots > matches snapshot with default props 1`] = `
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-user-round size-6"
+        class="lucide lucide-activity size-6"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -280,13 +270,8 @@ exports[`MobileHeader - Snapshots > matches snapshot with default props 1`] = `
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <circle
-          cx="12"
-          cy="8"
-          r="5"
-        />
         <path
-          d="M20 21a8 8 0 0 0-16 0"
+          d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
         />
       </svg>
     </button>
@@ -370,7 +355,7 @@ exports[`MobileHeader - Snapshots > matches snapshot with fixed positioning 1`] 
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-user-round size-6"
+        class="lucide lucide-activity size-6"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -381,13 +366,8 @@ exports[`MobileHeader - Snapshots > matches snapshot with fixed positioning 1`] 
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <circle
-          cx="12"
-          cy="8"
-          r="5"
-        />
         <path
-          d="M20 21a8 8 0 0 0-16 0"
+          d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
         />
       </svg>
     </button>
@@ -471,7 +451,7 @@ exports[`MobileHeader - Snapshots > matches snapshot with solid background (hasG
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-user-round size-6"
+        class="lucide lucide-activity size-6"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -482,13 +462,8 @@ exports[`MobileHeader - Snapshots > matches snapshot with solid background (hasG
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <circle
-          cx="12"
-          cy="8"
-          r="5"
-        />
         <path
-          d="M20 21a8 8 0 0 0-16 0"
+          d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
         />
       </svg>
     </button>
