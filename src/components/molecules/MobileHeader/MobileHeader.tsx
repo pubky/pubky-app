@@ -1,5 +1,5 @@
 'use client';
-import { Activity, SlidersHorizontal, UserRound } from 'lucide-react';
+import { Activity, SlidersHorizontal } from 'lucide-react';
 import type React from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -77,7 +77,7 @@ export function MobileHeader({
             }}
             aria-label="Join Pubky"
           >
-            <UserRound className="size-6" />
+            <Activity className="size-6" />
           </Button>
         ) : (
           <SideSlot>

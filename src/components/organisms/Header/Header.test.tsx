@@ -689,7 +689,7 @@ describe('Header', () => {
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
     });
 
-    it('keeps header visible on mobile when signed in on a post page', () => {
+    it('hides header on mobile when signed in on a post page', () => {
       mockCurrentUserPubky = 'test-pubky-123';
       mockIsPublicRoute.mockReturnValue(true);
       mockIsCoreExploreRoute.mockReturnValue(false);
@@ -698,7 +698,7 @@ describe('Header', () => {
       render(<Header />);
 
       const headerContainer = screen.getByTestId('header-container');
-      expect(headerContainer).not.toHaveAttribute('data-class-name', 'hidden lg:block');
+      expect(headerContainer).toHaveAttribute('data-class-name', 'hidden lg:block');
       expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
     });

@@ -51,7 +51,7 @@ describe('MobileHeader', () => {
 
     expect(screen.getByTestId('logo')).toBeInTheDocument();
     expect(document.querySelector('.lucide-sliders-horizontal')).toBeInTheDocument();
-    expect(document.querySelector('.lucide-user-round')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-activity')).toBeInTheDocument();
   });
 
   it('renders with outer container classes', () => {
@@ -125,7 +125,7 @@ describe('MobileHeader', () => {
   it('applies correct classes to right button', () => {
     render(<MobileHeader />);
 
-    const rightButton = document.querySelector('.lucide-user-round')?.closest('button');
+    const rightButton = document.querySelector('.lucide-activity')?.closest('button');
     expect(rightButton).toHaveClass('rounded-full', 'border-none', 'size-12', 'shrink-0');
     expect(rightButton).toHaveAttribute('data-variant', 'ghost');
     expect(rightButton).toHaveAttribute('data-size', 'icon');
@@ -142,7 +142,7 @@ describe('MobileHeader', () => {
     const onRightIconClick = vi.fn();
     render(<MobileHeader onRightIconClick={onRightIconClick} />);
 
-    const rightButton = document.querySelector('.lucide-user-round')?.closest('button');
+    const rightButton = document.querySelector('.lucide-activity')?.closest('button');
     fireEvent.click(rightButton!);
 
     expect(onRightIconClick).toHaveBeenCalledTimes(1);
@@ -152,7 +152,7 @@ describe('MobileHeader', () => {
     render(<MobileHeader />);
 
     const leftIcon = document.querySelector('.lucide-sliders-horizontal');
-    const rightIcon = document.querySelector('.lucide-user-round');
+    const rightIcon = document.querySelector('.lucide-activity');
 
     expect(leftIcon).toHaveClass('size-6');
     expect(rightIcon).toHaveClass('size-6');
@@ -162,7 +162,7 @@ describe('MobileHeader', () => {
     render(<MobileHeader />);
 
     const leftButton = document.querySelector('.lucide-sliders-horizontal')?.closest('button');
-    const rightButton = document.querySelector('.lucide-user-round')?.closest('button');
+    const rightButton = document.querySelector('.lucide-activity')?.closest('button');
 
     // Ghost variant has hover:bg-accent/50
     expect(leftButton).toHaveClass('hover:bg-accent/50', 'transition-all');
@@ -177,7 +177,7 @@ describe('MobileHeader', () => {
     render(<MobileHeader />);
 
     expect(document.querySelector('.lucide-sliders-horizontal')).toBeInTheDocument();
-    expect(document.querySelector('.lucide-user-round')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-activity')).toBeInTheDocument();
   });
 
   it('shows filter button when unauthenticated on a post page (public explore)', () => {
@@ -204,7 +204,7 @@ describe('MobileHeader', () => {
 
     render(<MobileHeader />);
 
-    const joinButton = document.querySelector('.lucide-user-round')?.closest('button');
+    const joinButton = document.querySelector('.lucide-activity')?.closest('button');
     fireEvent.click(joinButton!);
 
     expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);

@@ -12,9 +12,8 @@ export interface PostPageShellProps extends PropsWithChildren {
 /**
  * App-shell chrome for `/post/[userId]/[postId]`.
  *
- * Sidebars and drawers only — search and navigation come from the root `Header`
- * (signed-in users keep it visible on post pages, including phone) and
- * {@link MobileFooter} on smaller viewports, matching the `/home` app shell.
+ * Sidebars, drawers, and {@link MobileHeader} on phone — search and desktop nav
+ * come from the root `Header` at `lg+` only; {@link MobileFooter} on smaller viewports.
  *
  * Used by `app/post/[userId]/[postId]/layout.tsx` for direct navigation and by
  * {@link SinglePost} for the intercepted `(.)post` modal (which does not inherit
