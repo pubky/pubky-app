@@ -157,16 +157,6 @@ vi.mock('@/molecules/HeaderHome/HeaderHome', () => {
   };
 });
 
-vi.mock('@/molecules/HeaderJoin/HeaderJoin', () => {
-  return {
-    HeaderJoin: () => (
-      <div data-testid="header-join">
-        <button aria-label="Join Pubky">Join</button>
-      </div>
-    ),
-  };
-});
-
 vi.mock('@/molecules/HeaderSignIn/HeaderSignIn', () => {
   return {
     HeaderSignIn: () => (
@@ -624,7 +614,6 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
-      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
     });
@@ -638,7 +627,6 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
-      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
     });
 
     it('renders HeaderHome when unauthenticated on non-public route', () => {
@@ -650,7 +638,6 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-home')).toBeInTheDocument();
-      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
     });
 
     it('renders explore navigation when unauthenticated on a core explore route', () => {
@@ -662,7 +649,6 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
-      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
     });
@@ -686,7 +672,6 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
-      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
     });
 
@@ -726,7 +711,6 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('onboarding-header')).toBeInTheDocument();
-      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
     });
   });
 
