@@ -92,6 +92,7 @@ type HeaderNavigationButtonsProps = {
   avatarImage?: string;
   avatarName?: string;
   avatarSeed?: string;
+  className?: string;
 };
 const NAVIGATION_ITEMS: NavigationItemConfig[] = [
   {
@@ -156,13 +157,14 @@ export function HeaderNavigationButtons({
   avatarImage,
   avatarName = 'U',
   avatarSeed,
+  className,
 }: HeaderNavigationButtonsProps) {
   const pathname = usePathname();
   const t = useTranslations('header');
   const tCommon = useTranslations('common');
   const counterString = counter > 21 ? '21+' : counter.toString();
   return (
-    <Container className="hidden w-auto flex-row items-center justify-start gap-3 lg:flex">
+    <Container className={cn('hidden w-auto flex-row items-center justify-start gap-3 lg:flex', className)}>
       {NAVIGATION_ITEMS.map((item) => (
         <NavigationButton
           key={item.href}
@@ -199,7 +201,15 @@ export function HeaderNavigationButtons({
   );
 }
 
-export function HeaderExploreNavigationButtons() {
+type HeaderExploreNavigationButtonsProps = {
+  className?: string;
+  showSearch?: boolean;
+};
+
+export function HeaderExploreNavigationButtons({
+  className,
+  showSearch = true,
+}: HeaderExploreNavigationButtonsProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const tHeader = useTranslations('header');
@@ -207,8 +217,8 @@ export function HeaderExploreNavigationButtons() {
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
 
   return (
-    <Container className="hidden min-w-0 flex-1 flex-row items-center justify-end gap-3 lg:flex">
-      <SearchInput />
+    <Container className={cn('hidden min-w-0 flex-1 flex-row items-center justify-end gap-3 lg:flex', className)}>
+      {showSearch && <SearchInput />}
       {NAVIGATION_ITEMS.map((item) => {
         // Home/Hot are public explore routes and navigate freely. Bookmarks/Settings (and any
         // other non-explore route) require an account, so they prompt Join Pubky via requireAuth.
