@@ -22,10 +22,8 @@ export function Header() {
   const t = useTranslations('onboarding.steps');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
-  const isGuestOnDynamicPublicRoute = isDynamicPublicRoute && !isAuthenticated;
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
-  const isOnPostRoute = pathname ? isPostRoute(pathname) : false;
   const isCopyrightPage = pathname === '/copyright';
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
@@ -33,14 +31,10 @@ export function Header() {
 
   // Hide header on mobile when:
   // - User is on a core explore route (/home, /hot, /search) — MobileHeader + MobileFooter
-  // - Guest on dynamic public routes (post/profile) — minimal MobileHeader
-  // - Any user on /post — PostPageShell renders MobileHeader with drawer icons
-  // - Authenticated on standard app routes (not post/profile) — MobileHeader + MobileFooter
+  // - Any user on a dynamic public route (/post/..., /profile/[pubky]) — page shell owns mobile chrome
+  // - Authenticated on standard app routes — MobileHeader + MobileFooter
   const shouldHideHeaderOnMobile =
-    isCoreExploreRoute ||
-    isGuestOnDynamicPublicRoute ||
-    isOnPostRoute ||
-    (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
+    isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
   // Show title only for onboarding/logout pages (when stepConfig exists) and user is not authenticated,
   // or during profile setup (step 5)
   const shouldShowTitle = currentTitle && (!isAuthenticated || currentStep === 5);

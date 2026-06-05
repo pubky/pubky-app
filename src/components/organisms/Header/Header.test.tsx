@@ -703,6 +703,20 @@ describe('Header', () => {
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
     });
 
+    it('hides header on mobile when signed in on another user profile page', () => {
+      mockCurrentUserPubky = 'test-pubky-123';
+      mockIsPublicRoute.mockReturnValue(true);
+      mockIsCoreExploreRoute.mockReturnValue(false);
+      mockUsePathname.mockReturnValue('/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
+
+      render(<Header />);
+
+      const headerContainer = screen.getByTestId('header-container');
+      expect(headerContainer).toHaveAttribute('data-class-name', 'hidden lg:block');
+      expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
+      expect(screen.getByTestId('search-input')).toBeInTheDocument();
+    });
+
     it('prioritizes onboarding header over public route state', () => {
       mockCurrentUserPubky = null;
       mockIsPublicRoute.mockReturnValue(true);
