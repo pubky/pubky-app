@@ -20,6 +20,10 @@ vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(),
 }));
