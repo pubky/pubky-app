@@ -105,4 +105,9 @@ describe('SinglePost', () => {
     expect(el).toHaveAttribute('data-post-id', VALID_COMPOSITE_POST_ID);
     expect(el).toHaveAttribute('data-has-post-details', 'true');
   });
+
+  it('matches snapshot when post is loaded', () => {
+    const { container } = render(<SinglePost postId={VALID_COMPOSITE_POST_ID} />);
+    expect(container).toMatchSnapshot();
+  });
 });

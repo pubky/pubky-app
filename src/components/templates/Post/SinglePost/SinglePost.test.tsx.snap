@@ -1,0 +1,18 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SinglePost > matches snapshot when post is loaded 1`] = `
+<div>
+  <div
+    data-post-id="68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y:00353GZ1H40WG"
+    data-testid="post-page-shell"
+  >
+    <div
+      data-has-post-details="true"
+      data-post-id="68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y:00353GZ1H40WG"
+      data-testid="single-post-content"
+    >
+      SinglePostContent
+    </div>
+  </div>
+</div>
+`;
