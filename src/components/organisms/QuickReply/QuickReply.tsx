@@ -20,7 +20,7 @@ import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
-import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { LIST_POST_BODY_TEXT_CLASS, WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
@@ -125,6 +125,7 @@ export function QuickReply({
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
+  const isListLayout = !isMobile && inheritedTagsLayout === 'list';
 
   return (
     <Container overrideDefaults className="relative flex" data-testid="quick-reply" aria-busy={isSubmitting}>
@@ -163,7 +164,7 @@ export function QuickReply({
               avatarUrl={avatarUrl}
               name={userDetails?.name || ''}
               fallbackSeed={currentUserPubky || userDetails?.name || 'user'}
-              size={isWideLayout ? 'xl' : 'default'}
+              size={isWideLayout ? 'xl' : isListLayout ? 'md' : 'default'}
             />
 
             <Container overrideDefaults className="relative flex-1">
@@ -172,7 +173,9 @@ export function QuickReply({
                 aria-label="Reply"
                 placeholder={displayPlaceholder}
                 variant="inline"
-                className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
+                className={
+                  isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : isListLayout ? LIST_POST_BODY_TEXT_CLASS : undefined
+                }
                 value={content}
                 onChange={handleChangeWithAuth}
                 onFocus={handleExpandWithAuth}

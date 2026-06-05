@@ -36,9 +36,10 @@ export function resolveFeedLayout({
   const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
   const isVisualSupported = !isPhoneViewport && RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
   const isWideRequested = requestedLayout === LAYOUT.WIDE;
-  const isWideSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
+  const isListRequested = requestedLayout === LAYOUT.LIST;
+  const isRichLayoutSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
   const effectiveLayout =
-    (isVisualRequested && !isVisualSupported) || (isWideRequested && !isWideSupported)
+    (isVisualRequested && !isVisualSupported) || ((isWideRequested || isListRequested) && !isRichLayoutSupported)
       ? LAYOUT.COLUMNS
       : requestedLayout;
 

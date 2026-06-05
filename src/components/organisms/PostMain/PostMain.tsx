@@ -23,6 +23,8 @@ import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import type { PostMainProps } from './PostMain.types';
 import { usePostMainLayout } from './PostMainLayoutContext';
+import { getEffectiveTagsLayout } from './PostMainLayoutRules';
+import { PostMainListRow } from './PostMainListRow';
 import { WIDE_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 
 // Stops click and middle-click from bubbling to the outer post-card navigation
@@ -39,8 +41,9 @@ export function PostMain({
 }: PostMainProps) {
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
-  const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
+  const effectiveTagsLayout = getEffectiveTagsLayout(inheritedTagsLayout, isMobile);
   const isWideLayout = effectiveTagsLayout === 'side';
+  const isListLayout = effectiveTagsLayout === 'list';
   const { postDetails } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
 
@@ -84,8 +87,15 @@ export function PostMain({
           ) : (
             <>
               {showRepostHeader && <RepostHeader />}
-              <CardContent className={cn('flex min-w-0 flex-col', isWideLayout ? 'p-0' : 'gap-4 p-6')}>
-                {isWideLayout ? (
+              <CardContent className={cn('flex min-w-0 flex-col', isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6')}>
+                {isListLayout ? (
+                  <PostMainListRow
+                    postId={postId}
+                    shouldShowPostHeader={shouldShowPostHeader}
+                    onReplyClick={openReplyDialog}
+                    onRepostClick={openRepostDialog}
+                  />
+                ) : isWideLayout ? (
                   <Container className="flex min-w-0 flex-col lg:flex-row">
                     <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
                       {shouldShowPostHeader && (

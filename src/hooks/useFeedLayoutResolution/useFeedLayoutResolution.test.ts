@@ -91,4 +91,30 @@ describe('resolveFeedLayout', () => {
     expect(result.isVisualRequested).toBe(false);
     expect(result.isVisualActive).toBe(false);
   });
+
+  it('keeps list layout active for supported feeds', () => {
+    const result = resolveFeedLayout({
+      requestedLayout: LAYOUT.LIST,
+      variant: TIMELINE_FEED_VARIANT.HOME,
+      isPhoneViewport: false,
+    });
+
+    expect(result.requestedLayout).toBe(LAYOUT.LIST);
+    expect(result.effectiveLayout).toBe(LAYOUT.LIST);
+    expect(result.isVisualRequested).toBe(false);
+    expect(result.isVisualActive).toBe(false);
+  });
+
+  it('falls back to columns for list layout on unsupported feeds without mutating the requested value', () => {
+    const result = resolveFeedLayout({
+      requestedLayout: LAYOUT.LIST,
+      variant: TIMELINE_FEED_VARIANT.HOT,
+      isPhoneViewport: false,
+    });
+
+    expect(result.requestedLayout).toBe(LAYOUT.LIST);
+    expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+    expect(result.isVisualRequested).toBe(false);
+    expect(result.isVisualActive).toBe(false);
+  });
 });

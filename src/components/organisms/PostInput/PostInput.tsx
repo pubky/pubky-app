@@ -22,6 +22,7 @@ import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInput
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
+import { usesWidePostInput } from '@/organisms/PostMain/PostMainLayoutRules';
 import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
@@ -195,7 +196,7 @@ export function PostInput({
 
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
-  const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
+  const isWideLayout = !isMobile && usesWidePostInput(inheritedTagsLayout);
 
   return (
     <Container

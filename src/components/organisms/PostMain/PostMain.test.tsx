@@ -176,6 +176,12 @@ vi.mock('@/organisms/PostContent/PostContent', () => {
   };
 });
 
+vi.mock('./PostMainListRow', () => {
+  return {
+    PostMainListRow: ({ postId }: { postId: string }) => <div data-testid="post-main-list-row">{postId}</div>,
+  };
+});
+
 vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: ({
@@ -613,6 +619,24 @@ describe('PostMain', () => {
     });
   });
 
+  it('falls back to inline layout on mobile when the inherited layout is list', () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-mobile-list-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-main-list-row')).not.toBeInTheDocument();
+    expect(mockPostHeader).toHaveBeenCalledWith({
+      postId: 'post-mobile-list-1',
+      size: undefined,
+      timeAgoPlacement: undefined,
+    });
+  });
+
   it('inherits side tags layout from the thread context', () => {
     render(
       <PostMainLayoutProvider tagsLayout="side">
@@ -626,6 +650,18 @@ describe('PostMain', () => {
       timeAgoPlacement: 'bottom-left',
     });
     expect(screen.getByTestId('post-content')).toHaveAttribute('data-text-class-name', 'text-xl leading-7');
+  });
+
+  it('renders the compact list row for list tags layout', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-list-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-main-list-row')).toHaveTextContent('post-list-1');
+    expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
+    expect(mockPostHeader).not.toHaveBeenCalled();
   });
 });
 
