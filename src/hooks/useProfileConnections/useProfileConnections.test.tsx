@@ -422,7 +422,7 @@ describe('useProfileConnections', () => {
       expect(result.current.hasMore).toBe(false);
     });
 
-    it('syncs own FOLLOWING list when cached stream shrinks after unfollow', async () => {
+    it('preserves own FOLLOWING list when cached stream shrinks after unfollow', async () => {
       const initialFollowing = ['user-1', 'user-2', 'user-3'] as Pubky[];
       const afterUnfollow = ['user-1', 'user-2'] as Pubky[];
 
@@ -446,7 +446,63 @@ describe('useProfileConnections', () => {
       rerender();
 
       await waitFor(() => {
-        expect(result.current.connections.map((connection) => connection.id)).toEqual(afterUnfollow);
+        expect(result.current.connections.map((connection) => connection.id)).toEqual(initialFollowing);
+      });
+    });
+
+    it('preserves own FRIENDS list when cached stream shrinks after unfollow', async () => {
+      const initialFriends = ['user-1', 'user-2', 'user-3'] as Pubky[];
+      const afterUnfollow = ['user-1', 'user-2'] as Pubky[];
+
+      mockCachedStream = initialFriends;
+      mockMocks.mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: initialFriends,
+        skip: 3,
+      });
+
+      const { result, rerender } = renderHook(() => useProfileConnections(CONNECTION_TYPE.FRIENDS));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await waitFor(() => {
+        expect(result.current.connections.map((connection) => connection.id)).toEqual(initialFriends);
+      });
+
+      mockCachedStream = afterUnfollow;
+      rerender();
+
+      await waitFor(() => {
+        expect(result.current.connections.map((connection) => connection.id)).toEqual(initialFriends);
+      });
+    });
+
+    it('syncs own FOLLOWING list when cached stream grows after follow', async () => {
+      const initialFollowing = ['user-1', 'user-2'] as Pubky[];
+      const afterFollow = ['user-3', 'user-1', 'user-2'] as Pubky[];
+
+      mockCachedStream = initialFollowing;
+      mockMocks.mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: initialFollowing,
+        skip: 2,
+      });
+
+      const { result, rerender } = renderHook(() => useProfileConnections(CONNECTION_TYPE.FOLLOWING));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await waitFor(() => {
+        expect(result.current.connections.map((connection) => connection.id)).toEqual(initialFollowing);
+      });
+
+      mockCachedStream = afterFollow;
+      rerender();
+
+      await waitFor(() => {
+        expect(result.current.connections.map((connection) => connection.id)).toEqual(afterFollow);
       });
     });
   });

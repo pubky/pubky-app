@@ -14,7 +14,12 @@ import type { UserRelationshipsModelSchema } from '@/models/user/relationships/u
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { NexusTag, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import type { ConnectionType, UseProfileConnectionsResult, UserConnectionData } from './useProfileConnections.types';
+import {
+  CONNECTION_TYPE,
+  type ConnectionType,
+  type UseProfileConnectionsResult,
+  type UserConnectionData,
+} from './useProfileConnections.types';
 
 export type { ConnectionType, UseProfileConnectionsResult, UserConnectionData };
 export { CONNECTION_TYPE } from './useProfileConnections.types';
@@ -80,10 +85,18 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
       const hasPaginated = skip > NEXUS_USERS_PER_PAGE;
       if (hasPaginated) return;
 
+      // For own following/friends lists: only sync when cache has MORE users (new follows)
+      // Block sync when cache has fewer users (unfollows) to preserve UI state
+      // This allows new follows to appear reactively while keeping unfollowed users visible
+      const isOwnProfile = targetUserId === currentUserPubky;
+      const preserveOnUnfollow =
+        isOwnProfile && (type === CONNECTION_TYPE.FOLLOWING || type === CONNECTION_TYPE.FRIENDS);
+      if (preserveOnUnfollow && cachedStream.length <= userIdsRef.current.length) return;
+
       userIdsRef.current = cachedStream;
       setUserIds(cachedStream);
     }
-  }, [cachedStream, isLoading, skip]);
+  }, [cachedStream, isLoading, skip, targetUserId, currentUserPubky, type]);
 
   // Subscribe to user details from local database (reactive via Controller)
   const userDetailsMap = useLiveQuery(
