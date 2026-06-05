@@ -378,7 +378,7 @@ describe('QuickReply', () => {
       expect(inputContainer?.className).not.toContain('p-12');
 
       expect(screen.getByTestId('avatar')).toHaveAttribute('data-size', 'md');
-      expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('class', 'text-base leading-5');
+      expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('class', 'text-base font-medium leading-5');
     });
   });
 });
