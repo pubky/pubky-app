@@ -10,7 +10,7 @@ import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import { formatPublicKey } from '@/libs/utils/utils';
+import { cn, formatPublicKey } from '@/libs/utils/utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostListMediaThumbnail } from '@/molecules/PostListMediaThumbnail/PostListMediaThumbnail';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
@@ -20,6 +20,7 @@ import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import { PostMainListRowSkeleton } from './PostMainListRow.skeleton';
+import { LIST_POST_BODY_TEXT_CLASS, LIST_POST_MEDIA_THUMBNAIL_CLASS } from './PostMainTypography';
 
 const LIST_SNIPPET_MAX_CHARS = 120;
 
@@ -78,7 +79,7 @@ export function PostMainListRow({ postId, shouldShowPostHeader, onReplyClick, on
   };
 
   return (
-    <CardContent className="flex min-w-0 items-center gap-4 p-6">
+    <CardContent className="flex min-w-0 items-center gap-6 p-6">
       {shouldShowPostHeader ? (
         <Link href={profileUrl} onClick={stopCardPropagation} className="shrink-0">
           <AvatarWithFallback avatarUrl={avatarUrl} name={userDetails.name || ''} fallbackSeed={userId} size="md" />
@@ -89,20 +90,23 @@ export function PostMainListRow({ postId, shouldShowPostHeader, onReplyClick, on
         <Container overrideDefaults className="flex min-w-0 items-center gap-2">
           {shouldShowPostHeader ? (
             <Link href={profileUrl} onClick={stopCardPropagation} className="max-w-[40%] shrink-0">
-              <Typography className="truncate text-sm font-bold text-foreground" overrideDefaults>
+              <Typography className="truncate text-base font-bold text-foreground" overrideDefaults>
                 {userDetails.name}
               </Typography>
             </Link>
           ) : null}
           {snippet ? (
-            <Typography className="min-w-0 flex-1 truncate text-sm text-foreground" overrideDefaults>
+            <Typography
+              className={cn('min-w-0 flex-1 truncate text-foreground', LIST_POST_BODY_TEXT_CLASS)}
+              overrideDefaults
+            >
               {snippet}
             </Typography>
           ) : null}
         </Container>
 
         {shouldShowPostHeader ? (
-          <Container overrideDefaults className="mt-1 flex min-w-0 items-center gap-2">
+          <Container overrideDefaults className="flex min-w-0 items-center gap-2">
             <Typography
               className="truncate text-xs font-medium tracking-[0.075rem] text-muted-foreground uppercase"
               overrideDefaults
@@ -154,7 +158,7 @@ export function PostMainListRow({ postId, shouldShowPostHeader, onReplyClick, on
 
       <PostListMediaThumbnail
         postId={postId}
-        className="relative hidden h-12 w-20 shrink-0 overflow-hidden rounded-sm md:block"
+        className={cn('hidden rounded-sm md:block', LIST_POST_MEDIA_THUMBNAIL_CLASS)}
         onClick={stopCardPropagation}
       />
     </CardContent>

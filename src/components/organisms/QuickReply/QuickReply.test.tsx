@@ -366,7 +366,7 @@ describe('QuickReply', () => {
       mockUseIsMobile.mockReturnValue(false);
     });
 
-    it('applies compact padding, md avatar, and text-sm body when inheriting list layout', () => {
+    it('applies compact padding, md avatar, and text-base body when inheriting list layout', () => {
       render(
         <PostMainLayoutProvider tagsLayout="list">
           <QuickReply parentPostId="author:post1" />
@@ -378,7 +378,7 @@ describe('QuickReply', () => {
       expect(inputContainer?.className).not.toContain('p-12');
 
       expect(screen.getByTestId('avatar')).toHaveAttribute('data-size', 'md');
-      expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('class', 'text-sm leading-5');
+      expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('class', 'text-base leading-5');
     });
   });
 });

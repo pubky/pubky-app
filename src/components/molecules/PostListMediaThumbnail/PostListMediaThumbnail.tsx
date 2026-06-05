@@ -60,8 +60,8 @@ export function PostListMediaThumbnail({ postId, className, onClick }: PostListM
   }
 
   return (
-    <div className={cn('relative shrink-0', className)} onClick={onClick}>
-      <Image src={previewSrc} alt="" fill className="object-cover" sizes="80px" />
+    <div className={cn('relative shrink-0 overflow-hidden', className)} onClick={onClick}>
+      <Image src={previewSrc} alt="" fill className="object-cover" sizes="71px" />
     </div>
   );
 }
