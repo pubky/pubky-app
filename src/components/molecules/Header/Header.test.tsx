@@ -304,6 +304,7 @@ describe('Header Components', () => {
 
   describe('HeaderButtonSignIn', () => {
     it('renders sign in button', () => {
+      vi.mocked(usePathname).mockReturnValue('/');
       render(<HeaderButtonSignIn />);
 
       const button = screen.getByText('Sign in');
@@ -311,6 +312,7 @@ describe('Header Components', () => {
     });
 
     it('handles click events', () => {
+      vi.mocked(usePathname).mockReturnValue('/');
       render(<HeaderButtonSignIn />);
 
       const button = screen.getByText('Sign in');
@@ -319,7 +321,40 @@ describe('Header Components', () => {
       expect(mockPush).toHaveBeenCalledWith('/sign-in');
     });
 
+    it('renders new here button on the sign-in page', () => {
+      vi.mocked(usePathname).mockReturnValue('/sign-in');
+      render(<HeaderButtonSignIn />);
+
+      expect(screen.getByText('New here?')).toBeInTheDocument();
+    });
+
+    it('navigates to onboarding when clicked on the sign-in page', () => {
+      vi.mocked(usePathname).mockReturnValue('/sign-in');
+      render(<HeaderButtonSignIn />);
+
+      fireEvent.click(screen.getByText('New here?'));
+
+      expect(mockPush).toHaveBeenCalledWith('/onboarding/human');
+    });
+
+    it('renders sign in button on the onboarding page', () => {
+      vi.mocked(usePathname).mockReturnValue('/onboarding/human');
+      render(<HeaderButtonSignIn />);
+
+      expect(screen.getByText('Sign in')).toBeInTheDocument();
+    });
+
+    it('navigates to sign-in when clicked on the onboarding page', () => {
+      vi.mocked(usePathname).mockReturnValue('/onboarding/human');
+      render(<HeaderButtonSignIn />);
+
+      fireEvent.click(screen.getByText('Sign in'));
+
+      expect(mockPush).toHaveBeenCalledWith('/sign-in');
+    });
+
     it('applies correct classes', () => {
+      vi.mocked(usePathname).mockReturnValue('/');
       render(<HeaderButtonSignIn />);
 
       const button = screen.getByText('Sign in');
@@ -327,6 +362,7 @@ describe('Header Components', () => {
     });
 
     it('renders with login icon', () => {
+      vi.mocked(usePathname).mockReturnValue('/');
       render(<HeaderButtonSignIn />);
 
       expect(document.querySelector('.lucide-log-in')).toBeInTheDocument();
