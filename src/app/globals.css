@@ -126,10 +126,13 @@ body {
   --header-height: 146px;
 
   /**
-   * Mobile header height (full chrome)
-   * - Matches MobileHeader with default padding (p-6, side buttons)
-   * - Applied: MobileTabBar `headerTop="mobile"` (e.g. Hot feed via ContentLayout)
-   * - Responsive: Mobile only (hidden on desktop via lg:hidden)
+   * Mobile header height (full chrome) — KNOWN STALE VALUE, do not trust without audit.
+   * - Actual full-chrome MobileHeader (p-6, side buttons) is 96px; this is still 80px.
+   * - MobileTabBar `headerTop="mobile"` default is unused: Hot, Profile, and Settings all
+   *   pass `headerTop="compact"` (see --header-height-settings).
+   * - ProfilePageLayout also reads this for min-height calc, but that page's header is 72px.
+   * - Intentionally left as-is until a broader mobile layout refactor; changing it now
+   *   would ripple through tab-bar positioning and profile feed height across the PR.
    */
   --header-height-mobile: 80px;
 
