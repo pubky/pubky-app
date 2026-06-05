@@ -615,7 +615,7 @@ describe('Header', () => {
   });
 
   describe('Public Route Behavior', () => {
-    it('renders HeaderJoin when unauthenticated on another user profile', () => {
+    it('renders explore navigation when unauthenticated on another user profile', () => {
       mockCurrentUserPubky = null;
       mockIsPublicRoute.mockReturnValue(true);
       mockIsCoreExploreRoute.mockReturnValue(false);
@@ -623,7 +623,8 @@ describe('Header', () => {
 
       render(<Header />);
 
-      expect(screen.getByTestId('header-join')).toBeInTheDocument();
+      expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
+      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
     });

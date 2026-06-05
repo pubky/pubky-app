@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { isPostRoute } from '@/app/routes';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import {
   HeaderContainer,
@@ -11,7 +10,6 @@ import {
   HeaderTitle,
 } from '@/molecules/Header/Header';
 import { HeaderHome } from '@/molecules/HeaderHome/HeaderHome';
-import { HeaderJoin } from '@/molecules/HeaderJoin/HeaderJoin';
 import { HeaderSignIn } from '@/molecules/HeaderSignIn/HeaderSignIn';
 import { Logo } from '@/molecules/Logo/Logo';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -48,9 +46,7 @@ export function Header() {
   // Determine which header content to show:
   // - Onboarding: HeaderOnboarding
   // - Authenticated: HeaderSignIn (navigation + avatar)
-  // - Unauthenticated on core explore route (home/hot/search): public explore navigation + join
-  // - Unauthenticated on /post: explore navigation + join (same as /home at lg+)
-  // - Unauthenticated on other dynamic public (e.g. profile): HeaderJoin
+  // - Unauthenticated on core explore or dynamic public routes (home/hot/search/post/profile): explore navigation + join
   // - Unauthenticated on landing/other: HeaderHome (social links + sign in)
   const renderHeaderContent = () => {
     if (isOnboarding) {
@@ -59,11 +55,8 @@ export function Header() {
     if (isAuthenticated) {
       return <HeaderSignIn />;
     }
-    if (isCoreExploreRoute || (pathname && isPostRoute(pathname))) {
+    if (isCoreExploreRoute || isDynamicPublicRoute) {
       return <HeaderExploreNavigationButtons />;
-    }
-    if (isDynamicPublicRoute) {
-      return <HeaderJoin />;
     }
     return <HeaderHome />;
   };
