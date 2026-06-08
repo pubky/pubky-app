@@ -97,13 +97,14 @@ describe('Onboarding', () => {
   it('cannot proceed with a reused invite code', () => {
     const profileName = 'Reused Invite User';
     const signupTokensPath = '/signup_tokens/';
+    let capturedInviteCode = '';
 
     // Pass verification through to the homeserver and capture the invite code from the request URL.
     cy.intercept('GET', '**/signup_tokens/*', (req) => {
       const tokenStart = req.url.indexOf(signupTokensPath);
       if (tokenStart !== -1) {
         const encodedToken = req.url.slice(tokenStart + signupTokensPath.length).split('?')[0];
-        cy.wrap(decodeURIComponent(encodedToken)).as('reusedInviteCode');
+        capturedInviteCode = decodeURIComponent(encodedToken);
       }
       req.continue();
     }).as('verifyInviteCode');
@@ -117,8 +118,9 @@ describe('Onboarding', () => {
     cy.location('pathname').should('eq', '/onboarding/human');
     cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
 
-    cy.get<string>('@reusedInviteCode').then((inviteCode) => {
-      cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
+    cy.then(() => {
+      expect(capturedInviteCode, 'invite code captured from first verification').to.be.a('string').and.not.be.empty;
+      cy.get('[data-cy="human-invite-code-input"]').type(capturedInviteCode);
       cy.wait('@verifyInviteCode');
       cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code already used');
       cy.get('[data-cy="human-invite-code-continue-btn"]').should('be.disabled');
