@@ -114,7 +114,7 @@ describe('Install template', () => {
     expect(mockSetInviteCode).not.toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Invalid invite code',
-      description: 'This invite code is invalid or has expired. Please use a valid invite code.',
+      description: 'This invite code is not recognized. Please use a different invite code.',
     });
     expect(mockShowErrorToast).not.toHaveBeenCalled();
   });

@@ -8,6 +8,27 @@ const mockToast = vi.fn();
 const mockShowErrorToast = vi.fn();
 const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<'valid' | 'used' | 'invalid'>>();
 
+const INVITE_CODE = 'YVB2-YFRN-GDY0';
+
+const INVITE_CODE_TOASTS = {
+  valid: {
+    title: 'Invite code applied',
+    description: `Your invite code ${INVITE_CODE} has been applied.`,
+  },
+  invalid: {
+    title: 'Invalid invite code',
+    description: 'This invite code is not recognized. Please use a different invite code.',
+  },
+  used: {
+    title: 'Invite code already used',
+    description: 'This invite code has already been used. Please use a different invite code.',
+  },
+  verificationFailed: {
+    title: "Couldn't verify invite code",
+    description: "We couldn't verify your invite code right now. Please check your connection and try again.",
+  },
+} as const;
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
@@ -43,9 +64,9 @@ vi.mock('@/organisms/HumanInviteCode/HumanInviteCode', () => {
       <button
         data-testid="human-invite-code"
         onClick={() => {
-          void onVerify('YVB2-YFRN-GDY0').then((isVerified) => {
+          void onVerify(INVITE_CODE).then((isVerified) => {
             if (isVerified) {
-              onSuccess('YVB2-YFRN-GDY0');
+              onSuccess(INVITE_CODE);
             }
           });
         }}
@@ -84,6 +105,11 @@ vi.mock('@/organisms/HumanSelection/HumanSelection', () => {
   };
 });
 
+function goToInviteCodeAndVerify() {
+  fireEvent.click(screen.getByTestId('human-selection'));
+  fireEvent.click(screen.getByTestId('human-invite-code'));
+}
+
 describe('Human template', () => {
   beforeEach(() => {
     mockPush.mockClear();
@@ -99,80 +125,65 @@ describe('Human template', () => {
     expect(screen.getByTestId('human-selection')).toBeInTheDocument();
   });
 
-  it('verifies a manually entered invite code, shows success toast and navigates to install', async () => {
-    mockVerifySignupToken.mockResolvedValue('valid');
-    render(<Human />);
+  describe('invite code verification', () => {
+    it('shows a success toast and navigates to install when the homeserver returns 200 with status valid', async () => {
+      mockVerifySignupToken.mockResolvedValue('valid');
+      render(<Human />);
 
-    fireEvent.click(screen.getByTestId('human-selection'));
-    fireEvent.click(screen.getByTestId('human-invite-code'));
+      goToInviteCodeAndVerify();
 
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.INSTALL);
-    });
-    expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
-    expect(mockToast).toHaveBeenCalledWith({
-      title: 'Invite code applied',
-      description: 'Your invite code YVB2-YFRN-GDY0 has been applied.',
-    });
-  });
-
-  it('shows a warning toast and stays on the invite step when the code is invalid', async () => {
-    mockVerifySignupToken.mockResolvedValue('invalid');
-    render(<Human />);
-
-    fireEvent.click(screen.getByTestId('human-selection'));
-    fireEvent.click(screen.getByTestId('human-invite-code'));
-
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Invalid invite code',
-        description: 'This invite code is invalid or has expired. Please use a valid invite code.',
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.INSTALL);
       });
+      expect(mockVerifySignupToken).toHaveBeenCalledWith(INVITE_CODE);
+      expect(mockToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.valid);
+      expect(mockShowErrorToast).not.toHaveBeenCalled();
     });
-    expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
-    expect(mockShowErrorToast).not.toHaveBeenCalled();
-    expect(mockPush).not.toHaveBeenCalled();
-    // Still on the invite code step so the user can try again
-    expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
-  });
 
-  it('shows a warning toast and stays on the invite step when the code has already been used', async () => {
-    mockVerifySignupToken.mockResolvedValue('used');
-    render(<Human />);
+    it('shows a warning toast and stays on the invite step when the homeserver returns 404', async () => {
+      mockVerifySignupToken.mockResolvedValue('invalid');
+      render(<Human />);
 
-    fireEvent.click(screen.getByTestId('human-selection'));
-    fireEvent.click(screen.getByTestId('human-invite-code'));
+      goToInviteCodeAndVerify();
 
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Invite code already used',
-        description: 'This invite code has already been used. Please use a different invite code.',
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.invalid);
       });
+      expect(mockVerifySignupToken).toHaveBeenCalledWith(INVITE_CODE);
+      expect(mockShowErrorToast).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
     });
-    expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
-    expect(mockShowErrorToast).not.toHaveBeenCalled();
-    expect(mockPush).not.toHaveBeenCalled();
-    expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
-  });
 
-  it('shows an error toast and stays on the invite step when verification cannot reach the homeserver', async () => {
-    mockVerifySignupToken.mockRejectedValue(new Error('network error'));
-    render(<Human />);
+    it('shows a warning toast and stays on the invite step when the homeserver returns 200 with status used', async () => {
+      mockVerifySignupToken.mockResolvedValue('used');
+      render(<Human />);
 
-    fireEvent.click(screen.getByTestId('human-selection'));
-    fireEvent.click(screen.getByTestId('human-invite-code'));
+      goToInviteCodeAndVerify();
 
-    await waitFor(() => {
-      expect(mockShowErrorToast).toHaveBeenCalledWith({
-        title: "Couldn't verify invite code",
-        description: "We couldn't verify your invite code right now. Please check your connection and try again.",
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.used);
       });
+      expect(mockVerifySignupToken).toHaveBeenCalledWith(INVITE_CODE);
+      expect(mockShowErrorToast).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
     });
-    expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
-    // No invalid-code warning toast for transient errors, and no navigation
-    expect(mockToast).not.toHaveBeenCalled();
-    expect(mockPush).not.toHaveBeenCalled();
-    expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
+
+    it('shows an error toast and stays on the invite step when verification cannot reach the homeserver', async () => {
+      mockVerifySignupToken.mockRejectedValue(new Error('network error'));
+      render(<Human />);
+
+      goToInviteCodeAndVerify();
+
+      await waitFor(() => {
+        expect(mockShowErrorToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.verificationFailed);
+      });
+      expect(mockVerifySignupToken).toHaveBeenCalledWith(INVITE_CODE);
+      expect(mockToast).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
+    });
   });
 });
 
