@@ -140,4 +140,40 @@ describe('Onboarding', () => {
       cy.location('pathname').should('eq', '/onboarding/human');
     });
   });
+
+  it('can sign up via /invite/<code> URL', () => {
+    const profileName = 'Invite URL User';
+
+    cy.env(['homeserverAdminUrl', 'homeserverAdminPassword']).then(
+      ({ homeserverAdminUrl, homeserverAdminPassword }) => {
+        cy.request({
+          method: 'GET',
+          url: homeserverAdminUrl,
+          headers: {
+            'X-Admin-Password': homeserverAdminPassword,
+          },
+        }).then((response) => {
+          const inviteCode = response.body as string;
+
+          cy.visit(`/invite/${inviteCode}`);
+          cy.location('pathname').should('eq', '/onboarding/install');
+          cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code applied');
+          cy.get('#create-keys-in-browser-btn').should('be.visible');
+
+          cy.completeOnboardingFromInstall(profileName);
+        });
+      },
+    );
+  });
+
+  it('redirects home when /invite/<code> verification returns 404', () => {
+    cy.intercept('GET', '**/signup_tokens/*', { statusCode: 404 }).as('verifyInviteCode');
+
+    cy.visit('/invite/abcd-efgh-ijkl');
+
+    cy.wait('@verifyInviteCode');
+    cy.location('pathname').should('eq', '/');
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invalid invite code');
+    checkHeaderIsVisible();
+  });
 });
