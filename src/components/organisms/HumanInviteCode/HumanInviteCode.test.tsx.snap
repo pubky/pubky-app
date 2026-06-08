@@ -180,7 +180,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
       >
         <div
           class="mx-auto w-full flex flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs border-brand"
-          data-testid="container"
+          data-testid="human-invite-code-input-field"
         >
           <input
             class="flex w-full min-w-0 rounded-md border border-input shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent p-0 text-base placeholder:text-muted-foreground focus:ring-0 focus:outline-none font-bold text-brand"
@@ -531,7 +531,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
       >
         <div
           class="mx-auto w-full flex flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs border-input"
-          data-testid="container"
+          data-testid="human-invite-code-input-field"
         >
           <input
             class="flex w-full min-w-0 rounded-md border border-input shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none text-foreground"

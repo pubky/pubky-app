@@ -33,11 +33,21 @@ vi.mock('@/controllers/auth/auth', () => ({
 
 vi.mock('@/organisms/HumanInviteCode/HumanInviteCode', () => {
   return {
-    HumanInviteCode: ({ onSuccess }: { onSuccess: (code: string) => Promise<void> | void }) => (
+    HumanInviteCode: ({
+      onVerify,
+      onSuccess,
+    }: {
+      onVerify: (code: string) => Promise<boolean>;
+      onSuccess: (code: string) => void;
+    }) => (
       <button
         data-testid="human-invite-code"
         onClick={() => {
-          void Promise.resolve(onSuccess('YVB2-YFRN-GDY0')).catch(() => {});
+          void onVerify('YVB2-YFRN-GDY0').then((isValid) => {
+            if (isValid) {
+              onSuccess('YVB2-YFRN-GDY0');
+            }
+          });
         }}
       >
         Human Invite Code

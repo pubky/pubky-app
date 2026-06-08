@@ -43,12 +43,11 @@ export function Human() {
     router.push(ONBOARDING_ROUTES.INSTALL);
   }
 
-  // Manually entered invite codes are verified with the homeserver before being applied.
-  // On any failure we surface a toast and rethrow so HumanInviteCode resets and the user can
-  // try again (no navigation away from this step). A homeserver that reports the code as invalid
-  // shows a warning toast; a homeserver we couldn't reach shows an error toast so the two are
-  // not conflated.
-  async function onInviteCodeSuccess(inviteCode: string) {
+  // Manually entered invite codes are verified with the homeserver as soon as the full code is
+  // entered. On failure we surface a toast and keep the user on this step so they can try again.
+  // A homeserver that reports the code as invalid shows a warning toast; a homeserver we couldn't
+  // reach shows an error toast so the two are not conflated.
+  async function onInviteCodeVerify(inviteCode: string): Promise<boolean> {
     let isValid: boolean;
     try {
       isValid = await AuthController.verifySignupToken(inviteCode);
@@ -57,7 +56,7 @@ export function Human() {
         title: t('verificationFailed'),
         description: t('verificationFailedDescription'),
       });
-      throw new Error('Invite code verification failed');
+      return false;
     }
 
     if (!isValid) {
@@ -65,14 +64,14 @@ export function Human() {
         title: t('invalidInviteCode'),
         description: t('invalidInviteCodeDescription'),
       });
-      throw new Error('Invalid invite code');
+      return false;
     }
 
     toast({
       title: t('inviteCodeApplied'),
       description: t('inviteCodeAppliedDescription', { inviteCode }),
     });
-    onSuccess(inviteCode);
+    return true;
   }
   return (
     <OnboardingLayout testId="human-content">
@@ -117,7 +116,11 @@ export function Human() {
         <HumanLightningPayment onBack={() => setState(States.Selection)} onSuccess={onSuccess} />
       )}
       {state === States.InviteCode && (
-        <HumanInviteCode onBack={() => setState(States.Selection)} onSuccess={onInviteCodeSuccess} />
+        <HumanInviteCode
+          onBack={() => setState(States.Selection)}
+          onVerify={onInviteCodeVerify}
+          onSuccess={onSuccess}
+        />
       )}
     </OnboardingLayout>
   );

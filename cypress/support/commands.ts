@@ -47,7 +47,7 @@ Cypress.Commands.add(
           const inviteCode = response.body;
           console.log('inviteCode', inviteCode);
           cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
-          cy.get('[data-cy="human-invite-code-continue-btn"]').click();
+          cy.get('[data-cy="human-invite-code-continue-btn"]').should('not.be.disabled').click();
         });
       },
     );
