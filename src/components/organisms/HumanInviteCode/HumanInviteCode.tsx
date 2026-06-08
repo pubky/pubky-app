@@ -27,7 +27,7 @@ import { cn } from '@/libs/utils/utils';
 import { HumanFooter } from '@/molecules/HumanFooter/HumanFooter';
 import { PageTitle } from '@/molecules/Page/Page';
 import { PopoverInviteHomeserver } from '@/molecules/PopoverInviteHomeserver/PopoverInviteHomeserver';
-import type { HumanInviteCodeProps } from './HumanInviteCode.types';
+import type { HumanInviteCodeProps, InviteCodeVerificationResult } from './HumanInviteCode.types';
 import { formatInviteCode } from './HumanInviteCode.utils';
 
 export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCodeProps) => {
@@ -36,8 +36,9 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
   const [inviteCode, setInviteCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
-  const [isVerificationFailed, setIsVerificationFailed] = useState(false);
+  const [verificationOutcome, setVerificationOutcome] = useState<InviteCodeVerificationResult | null>(null);
   const [verifiedInviteCode, setVerifiedInviteCode] = useState<string | null>(null);
+  const showDestructiveBorder = !isVerifying && (verificationOutcome === 'invalid' || verificationOutcome === 'used');
   const trimmedInviteCode = inviteCode.trim();
   const isInviteCodeEntered = trimmedInviteCode.length === 14;
   const onVerifyRef = useRef(onVerify);
@@ -46,7 +47,7 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
   useEffect(() => {
     if (!isInviteCodeEntered) {
       setIsVerified(false);
-      setIsVerificationFailed(false);
+      setVerificationOutcome(null);
       setVerifiedInviteCode(null);
       return;
     }
@@ -60,18 +61,19 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
     async function verifyInviteCode() {
       setIsVerifying(true);
       setIsVerified(false);
-      setIsVerificationFailed(false);
+      setVerificationOutcome(null);
       try {
-        const isValid = await onVerifyRef.current(trimmedInviteCode);
+        const result = await onVerifyRef.current(trimmedInviteCode);
         if (cancelled) {
           return;
         }
-        if (isValid) {
+        if (result === 'valid') {
           setIsVerified(true);
-          setIsVerificationFailed(false);
+          setVerificationOutcome(null);
           setVerifiedInviteCode(trimmedInviteCode);
         } else {
-          setIsVerificationFailed(true);
+          setIsVerified(false);
+          setVerificationOutcome(result);
           setVerifiedInviteCode(null);
         }
       } finally {
@@ -158,7 +160,7 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
                 'flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs',
                 isVerified && !isVerifying
                   ? 'border-brand'
-                  : isVerificationFailed && !isVerifying
+                  : showDestructiveBorder
                     ? 'border-destructive'
                     : 'border-input',
               )}

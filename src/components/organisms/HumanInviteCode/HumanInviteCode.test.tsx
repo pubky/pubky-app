@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { HumanInviteCode } from './HumanInviteCode';
+import type { InviteCodeVerificationResult } from './HumanInviteCode.types';
 
 vi.mock('@/molecules/HumanFooter/HumanFooter', () => {
   return {
@@ -13,11 +14,11 @@ const FORMATTED_INVITE_CODE = 'N76Q-G32N-C0RG';
 
 function renderHumanInviteCode({
   onBack = () => {},
-  onVerify = vi.fn().mockResolvedValue(true),
+  onVerify = vi.fn().mockResolvedValue('valid' satisfies InviteCodeVerificationResult),
   onSuccess = () => {},
 }: {
   onBack?: () => void;
-  onVerify?: (inviteCode: string) => Promise<boolean>;
+  onVerify?: (inviteCode: string) => Promise<InviteCodeVerificationResult>;
   onSuccess?: (inviteCode: string) => void;
 } = {}) {
   return render(<HumanInviteCode onBack={onBack} onVerify={onVerify} onSuccess={onSuccess} />);
@@ -113,7 +114,7 @@ describe('HumanInviteCode', () => {
   });
 
   it('verifies automatically when the full code is entered', async () => {
-    const handleVerify = vi.fn().mockResolvedValue(true);
+    const handleVerify = vi.fn().mockResolvedValue('valid');
     renderHumanInviteCode({ onVerify: handleVerify });
 
     await enterCompleteInviteCode();
@@ -124,7 +125,7 @@ describe('HumanInviteCode', () => {
   });
 
   it('verifies when the 12th alphanumeric character is typed one character at a time', async () => {
-    const handleVerify = vi.fn().mockResolvedValue(true);
+    const handleVerify = vi.fn().mockResolvedValue('valid');
     renderHumanInviteCode({ onVerify: handleVerify });
 
     const input = screen.getByPlaceholderText('XXXX-XXXX-XXXX');
@@ -143,7 +144,7 @@ describe('HumanInviteCode', () => {
   });
 
   it('enables continue button only after verification succeeds', async () => {
-    const handleVerify = vi.fn().mockResolvedValue(true);
+    const handleVerify = vi.fn().mockResolvedValue('valid');
     renderHumanInviteCode({ onVerify: handleVerify });
 
     await enterCompleteInviteCode();
@@ -157,7 +158,7 @@ describe('HumanInviteCode', () => {
   });
 
   it('keeps continue button disabled when verification fails', async () => {
-    const handleVerify = vi.fn().mockResolvedValue(false);
+    const handleVerify = vi.fn().mockResolvedValue('invalid');
     renderHumanInviteCode({ onVerify: handleVerify });
 
     await enterCompleteInviteCode();
@@ -170,8 +171,8 @@ describe('HumanInviteCode', () => {
     expect(continueButton).toBeDisabled();
   });
 
-  it('applies destructive border styling when verification fails', async () => {
-    const handleVerify = vi.fn().mockResolvedValue(false);
+  it('applies destructive border styling when the invite code is not recognised', async () => {
+    const handleVerify = vi.fn().mockResolvedValue('invalid');
     renderHumanInviteCode({ onVerify: handleVerify });
 
     await enterCompleteInviteCode();
@@ -180,6 +181,34 @@ describe('HumanInviteCode', () => {
       expect(screen.getByTestId('human-invite-code-input-field')).toHaveClass('border-destructive');
     });
     expect(screen.getByTestId('human-invite-code-input-field')).not.toHaveClass('border-brand');
+  });
+
+  it('applies destructive border styling when the invite code has already been used', async () => {
+    const handleVerify = vi.fn().mockResolvedValue('used');
+    renderHumanInviteCode({ onVerify: handleVerify });
+
+    await enterCompleteInviteCode();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('human-invite-code-input-field')).toHaveClass('border-destructive');
+    });
+    expect(screen.getByTestId('human-invite-code-input-field')).not.toHaveClass('border-brand');
+  });
+
+  it('keeps neutral border styling when verification cannot reach the homeserver', async () => {
+    const handleVerify = vi.fn().mockResolvedValue('error');
+    renderHumanInviteCode({ onVerify: handleVerify });
+
+    await enterCompleteInviteCode();
+
+    await waitFor(() => {
+      expect(handleVerify).toHaveBeenCalledWith(FORMATTED_INVITE_CODE);
+    });
+
+    const inputField = screen.getByTestId('human-invite-code-input-field');
+    expect(inputField).toHaveClass('border-input');
+    expect(inputField).not.toHaveClass('border-destructive');
+    expect(inputField).not.toHaveClass('border-brand');
   });
 
   it('calls onSuccess with trimmed code when continue is clicked after verification', async () => {
@@ -223,10 +252,10 @@ describe('HumanInviteCode', () => {
   });
 
   it('does not submit on Enter key before verification completes', async () => {
-    let resolveVerify: (value: boolean) => void = () => {};
+    let resolveVerify: (value: InviteCodeVerificationResult) => void = () => {};
     const handleVerify = vi.fn(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<InviteCodeVerificationResult>((resolve) => {
           resolveVerify = resolve;
         }),
     );
@@ -238,7 +267,7 @@ describe('HumanInviteCode', () => {
 
     expect(handleSuccess).not.toHaveBeenCalled();
 
-    resolveVerify(true);
+    resolveVerify('valid');
 
     await waitFor(() => {
       expect(screen.getByText('Continue').closest('button')).not.toBeDisabled();
@@ -261,10 +290,10 @@ describe('HumanInviteCode', () => {
   });
 
   it('shows a spinner while verification is in progress', async () => {
-    let resolveVerify: (value: boolean) => void = () => {};
+    let resolveVerify: (value: InviteCodeVerificationResult) => void = () => {};
     const handleVerify = vi.fn(
       () =>
-        new Promise<boolean>((resolve) => {
+        new Promise<InviteCodeVerificationResult>((resolve) => {
           resolveVerify = resolve;
         }),
     );
@@ -277,7 +306,7 @@ describe('HumanInviteCode', () => {
     expect(inputField).toHaveClass('border-input');
     expect(inputField).not.toHaveClass('border-brand');
 
-    resolveVerify(true);
+    resolveVerify('valid');
 
     await waitFor(() => {
       expect(
@@ -288,7 +317,7 @@ describe('HumanInviteCode', () => {
   });
 
   it('re-verifies when the invite code is edited after a failed verification', async () => {
-    const handleVerify = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const handleVerify = vi.fn().mockResolvedValueOnce('invalid').mockResolvedValueOnce('valid');
     renderHumanInviteCode({ onVerify: handleVerify });
 
     const input = screen.getByPlaceholderText('XXXX-XXXX-XXXX');

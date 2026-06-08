@@ -58,14 +58,14 @@ vi.mock('@/organisms/HumanInviteCode/HumanInviteCode', () => {
       onVerify,
       onSuccess,
     }: {
-      onVerify: (code: string) => Promise<boolean>;
+      onVerify: (code: string) => Promise<'valid' | 'invalid' | 'used' | 'error'>;
       onSuccess: (code: string) => void;
     }) => (
       <button
         data-testid="human-invite-code"
         onClick={() => {
-          void onVerify(INVITE_CODE).then((isVerified) => {
-            if (isVerified) {
+          void onVerify(INVITE_CODE).then((result) => {
+            if (result === 'valid') {
               onSuccess(INVITE_CODE);
             }
           });
