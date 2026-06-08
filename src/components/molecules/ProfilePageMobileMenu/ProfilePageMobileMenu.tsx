@@ -91,6 +91,14 @@ export const ProfilePageMobileMenu = forwardRef<HTMLDivElement, ProfilePageMobil
       onSelect: () => requireAuth(() => onPageChangeAction(item.pageType)),
     }));
 
-    return <MobileTabBar ref={ref} items={items} position="sticky" data-testid="profile-page-mobile-menu" />;
+    return (
+      <MobileTabBar
+        ref={ref}
+        items={items}
+        position="sticky"
+        headerTop="compact"
+        data-testid="profile-page-mobile-menu"
+      />
+    );
   },
 );

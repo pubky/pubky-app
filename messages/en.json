@@ -7,7 +7,7 @@
   "landing": {
     "title": "<highlight>Unlock</highlight> the web.",
     "subtitle": "Your keys, your content, your rules.",
-    "signIn": "Sign in",
+    "explore": "Explore",
     "joinNow": "Join now",
     "aTetherCompany": "a <tether>tether.</tether> company",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. All rights reserved."
@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "Create account",
       "joinNow": "Join now",
       "identityKeys": "Identity keys",
       "usePubkyRing": "Use Pubky Ring",
@@ -167,7 +168,7 @@
     },
     "human": {
       "title": "Prove <highlight>you're not a Robot.</highlight>",
-      "subtitle": "No email needed. Verify quickly using SMS or a small payment. Or use an",
+      "subtitle": "Verify quickly using your phone number or a small payment. Or use an",
       "inviteCode": "invite code.",
       "devMode": "Dev Mode",
       "skip": "Skip",
@@ -237,7 +238,7 @@
       "unavailable": "Service temporarily unavailable"
     },
     "sms": {
-      "title": "SMS Verification",
+      "title": "Phone Number",
       "free": "Free",
       "lessPrivate": "LESS PRIVATE, BUT EASY",
       "storage": "1GB storage",
@@ -254,7 +255,8 @@
     "scan": {
       "titleMobile": "Tap to <highlight>Authorize.</highlight>",
       "titleDesktop": "Scan <highlight>QR Code.</highlight>",
-      "subtitle": "Open Pubky Ring, create a pubky, and scan the QR.",
+      "subtitleMobile": "Tap the button to open Pubky Ring, and authorize with your pubky.",
+      "subtitleDesktop": "Open Pubky Ring, tap 'add pubky', and scan this QR.",
       "generating": "Generating QR Code...",
       "generatingShort": "Generating...",
       "clickToReload": "Click to reload",
@@ -567,7 +569,7 @@
     },
     "signIn": {
       "title": "Join Pubky",
-      "description": "Sign in or create an account to interact with posts and profiles.",
+      "description": "Like what you see? Join the freedom web now.",
       "newHere": "New here?",
       "newHereDescription": "Create your account and start exploring Pubky.",
       "joinButton": "Join Pubky",
@@ -1008,7 +1010,14 @@
     "generic": "Something went wrong",
     "network": "Network error. Please try again.",
     "notFound": "Page not found",
-    "couldNotFind": "Could not find requested resource"
+    "couldNotFind": "Could not find requested resource",
+    "database": {
+      "title": "Storage unavailable",
+      "description": "We couldn't access your device's local storage. Some mobile browsers, especially in-app browsers, can interrupt it. Please try again or reload the page.",
+      "tryAgain": "Try again",
+      "reload": "Reload page",
+      "retrying": "Retrying…"
+    }
   },
   "password": {
     "veryWeak": "Very weak",
@@ -1172,34 +1181,32 @@
       "pubky": "4. How Pubky App Works"
     },
     "questions": {
-      "q1": "Why does Pubky require invite codes?",
-      "a1": "Pubky uses invite codes as a temporary measure to prevent spam and server overload. Users need an invite code to create a user on our Homeserver. We don't create a user for the Pubky App, but on our Homeserver. As the infrastructure improves and more homeservers come online, invite codes may no longer be necessary.",
-      "q2": "How do I use Pubky Ring with the web app?",
-      "a2": "First, create your keypair in the Pubky Ring app. Then visit the Pubky web app and log in using the same keypair. The apps are connected through your cryptographic identity.",
-      "q3": "Why does login sometimes fail when using the PWA on Android?",
-      "a3": "Some browsers focused on security and privacy, like Vanadium or Tor, disable Just-In-Time (JIT) compilation for JavaScript by default, which prevents Pubky App from functioning properly.\n\nTo enable it, go to: Settings > Site settings > JavaScript JIT > Allowed.",
-      "q4": "How can I restore my account?",
-      "a4": "When you signed up, you were prompted to back up your identity using one of the following:\n\n- Recovery file (.pkarr)\n- Recovery phrase (mnemonic)\n- QR code\n\nTo restore with a .pkarr file:\n\n1. Select the file you saved.\n2. Enter your password.\n3. Click \"Sign In\".",
-      "q5": "Can I restore my Pubky account on another device?",
-      "a5": "Yes, if you have your .pkarr file or seed phrase. (Seed phrase support will be added in future versions of Pubky Ring.)",
-      "q6": "Can I convert a seed phrase into a .pkarr file later?",
-      "a6": "Not yet. This functionality is planned for a future update.",
-      "q7": "I backed up my account but can't access the file. What happened?",
-      "a7": "Some operating systems may rename the .pkarr file or mislabel it. Try renaming the file extension to .pkarr and reimporting.",
-      "q8": "I downloaded a .txt file instead of a .pkarr backup. What do I do?",
-      "a8": "This happens if you chose the mnemonic (seed phrase) backup option. Pubky Ring does not yet support seed import. Wait for future updates or recreate your account with a .pkarr backup.",
-      "q9": "I missed downloading the recovery file. Can I back up again?",
-      "a9": "Currently, backups can only be created once via the web app. This may change in future updates.",
-      "q10": "How can I update my profile information?",
-      "a10": "Click your avatar (top-right corner), then click \"Edit\" to update your profile info.",
-      "q11": "How can I delete my post?",
-      "a11": "Hover over the three dots on the post you wish to delete and select \"Delete Post\".",
-      "q12": "How do I mute someone?",
-      "a12": "Go to their profile, click the three dots, and choose \"Mute User\".",
-      "q13": "How is Pubky different from other social media platforms?",
-      "a13": "Pubky is built for self-sovereign, decentralized social interaction. Key differences:\n\n- You are the algorithm: customize what you see with semantic tags and curation.\n- No email or phone required: your identity is your public key.\n- Full control over your social graph via tagging and trust models.\n- Browser-based PWA that respects privacy.",
-      "q14": "How does Pubky differ from Nostr?",
-      "a14": "Pubky uses Ed25519 keys for compatibility and avoids centralized relays. Instead, it uses a Distributed Hash Table (DHT) for decentralized lookup and identity resolution."
+      "q1": "How do I use Pubky Ring with the web app?",
+      "a1": "First, create your keypair in the Pubky Ring app. Then visit the Pubky web app and log in using the same keypair. The apps are connected through your cryptographic identity.",
+      "q2": "Why does login sometimes fail when using the PWA on Android?",
+      "a2": "Some browsers focused on security and privacy, like Vanadium or Tor, disable Just-In-Time (JIT) compilation for JavaScript by default, which prevents Pubky App from functioning properly.\n\nTo enable it, go to: Settings > Site settings > JavaScript JIT > Allowed.",
+      "q3": "How can I restore my account?",
+      "a3": "When you signed up, you were prompted to back up your identity using one of the following:\n\n- Recovery file (.pkarr)\n- Recovery phrase (mnemonic)\n- QR code\n\nTo restore with a .pkarr file:\n\n1. Select the file you saved.\n2. Enter your password.\n3. Click \"Sign In\".",
+      "q4": "Can I restore my Pubky account on another device?",
+      "a4": "Yes, if you have your .pkarr file or seed phrase.",
+      "q5": "Can I convert a seed phrase into a .pkarr file later?",
+      "a5": "Not yet. This functionality is planned for a future update.",
+      "q6": "I backed up my account but can't access the file. What happened?",
+      "a6": "Some operating systems may rename the .pkarr file or mislabel it. Try renaming the file extension to .pkarr and reimporting.",
+      "q7": "I downloaded a .txt file instead of a .pkarr backup. What do I do?",
+      "a7": "This happens if you chose the mnemonic (seed phrase) backup option. Wait for future updates or recreate your account with a .pkarr backup.",
+      "q8": "I missed downloading the recovery file. Can I back up again?",
+      "a8": "Currently, backups can only be created once via the web app. This may change in future updates.",
+      "q9": "How can I update my profile information?",
+      "a9": "Click your avatar (top-right corner), then click \"Edit\" to update your profile info.",
+      "q10": "How can I delete my post?",
+      "a10": "Hover over the three dots on the post you wish to delete and select \"Delete Post\".",
+      "q11": "How do I mute someone?",
+      "a11": "Go to their profile, click the three dots, and choose \"Mute User\".",
+      "q12": "How is Pubky different from other social media platforms?",
+      "a12": "Pubky is built for self-sovereign, decentralized social interaction. Key differences:\n\n- You are the algorithm: customize what you see with semantic tags and curation.\n- No email or phone required: your identity is your public key.\n- Full control over your social graph via tagging and trust models.\n- Browser-based PWA that respects privacy.",
+      "q13": "How does Pubky differ from Nostr?",
+      "a13": "Pubky uses Ed25519 keys for compatibility and avoids centralized relays. Instead, it uses a Distributed Hash Table (DHT) for decentralized lookup and identity resolution."
     }
   },
   "share": {

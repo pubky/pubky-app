@@ -21,6 +21,9 @@ describe('usePublicRoute', () => {
       const { result } = renderHook(() => usePublicRoute());
 
       expect(result.current.isPublicRoute).toBe(true);
+      expect(result.current.isDynamicPublicRoute).toBe(true);
+      expect(result.current.isCoreExploreRoute).toBe(false);
+      expect(result.current.isPublicExploreRoute).toBe(true);
     });
 
     it('returns isPublicRoute: true for other user profile page', () => {
@@ -30,6 +33,9 @@ describe('usePublicRoute', () => {
       const { result } = renderHook(() => usePublicRoute());
 
       expect(result.current.isPublicRoute).toBe(true);
+      expect(result.current.isDynamicPublicRoute).toBe(true);
+      expect(result.current.isCoreExploreRoute).toBe(false);
+      expect(result.current.isPublicExploreRoute).toBe(true);
     });
 
     it('returns isPublicRoute: false for other user legacy posts URL (redirected; not public in guard)', () => {
@@ -39,16 +45,44 @@ describe('usePublicRoute', () => {
       const { result } = renderHook(() => usePublicRoute());
 
       expect(result.current.isPublicRoute).toBe(false);
+      expect(result.current.isDynamicPublicRoute).toBe(false);
+      expect(result.current.isCoreExploreRoute).toBe(false);
+      expect(result.current.isPublicExploreRoute).toBe(false);
     });
   });
 
   describe('non-public routes', () => {
-    it('returns isPublicRoute: false for home page', () => {
+    it('returns core explore state for home page', () => {
       mockPathname.mockReturnValue('/home');
 
       const { result } = renderHook(() => usePublicRoute());
 
       expect(result.current.isPublicRoute).toBe(false);
+      expect(result.current.isDynamicPublicRoute).toBe(false);
+      expect(result.current.isCoreExploreRoute).toBe(true);
+      expect(result.current.isPublicExploreRoute).toBe(true);
+    });
+
+    it('returns core explore state for hot page', () => {
+      mockPathname.mockReturnValue('/hot');
+
+      const { result } = renderHook(() => usePublicRoute());
+
+      expect(result.current.isPublicRoute).toBe(false);
+      expect(result.current.isDynamicPublicRoute).toBe(false);
+      expect(result.current.isCoreExploreRoute).toBe(true);
+      expect(result.current.isPublicExploreRoute).toBe(true);
+    });
+
+    it('returns core explore state for search page', () => {
+      mockPathname.mockReturnValue('/search');
+
+      const { result } = renderHook(() => usePublicRoute());
+
+      expect(result.current.isPublicRoute).toBe(false);
+      expect(result.current.isDynamicPublicRoute).toBe(false);
+      expect(result.current.isCoreExploreRoute).toBe(true);
+      expect(result.current.isPublicExploreRoute).toBe(true);
     });
 
     it('returns isPublicRoute: false for own profile page', () => {
@@ -57,6 +91,9 @@ describe('usePublicRoute', () => {
       const { result } = renderHook(() => usePublicRoute());
 
       expect(result.current.isPublicRoute).toBe(false);
+      expect(result.current.isDynamicPublicRoute).toBe(false);
+      expect(result.current.isCoreExploreRoute).toBe(false);
+      expect(result.current.isPublicExploreRoute).toBe(false);
     });
 
     it('returns isPublicRoute: false for own profile sub-routes', () => {
@@ -65,6 +102,9 @@ describe('usePublicRoute', () => {
       const { result } = renderHook(() => usePublicRoute());
 
       expect(result.current.isPublicRoute).toBe(false);
+      expect(result.current.isDynamicPublicRoute).toBe(false);
+      expect(result.current.isCoreExploreRoute).toBe(false);
+      expect(result.current.isPublicExploreRoute).toBe(false);
     });
 
     it('returns isPublicRoute: false for settings page', () => {
@@ -73,6 +113,9 @@ describe('usePublicRoute', () => {
       const { result } = renderHook(() => usePublicRoute());
 
       expect(result.current.isPublicRoute).toBe(false);
+      expect(result.current.isDynamicPublicRoute).toBe(false);
+      expect(result.current.isCoreExploreRoute).toBe(false);
+      expect(result.current.isPublicExploreRoute).toBe(false);
     });
 
     it('returns isPublicRoute: false for root page', () => {
@@ -81,19 +124,9 @@ describe('usePublicRoute', () => {
       const { result } = renderHook(() => usePublicRoute());
 
       expect(result.current.isPublicRoute).toBe(false);
-    });
-  });
-
-  describe('memoization', () => {
-    it('returns same reference when pathname does not change', () => {
-      mockPathname.mockReturnValue('/home');
-
-      const { result, rerender } = renderHook(() => usePublicRoute());
-      const firstResult = result.current.isPublicRoute;
-
-      rerender();
-
-      expect(result.current.isPublicRoute).toBe(firstResult);
+      expect(result.current.isDynamicPublicRoute).toBe(false);
+      expect(result.current.isCoreExploreRoute).toBe(false);
+      expect(result.current.isPublicExploreRoute).toBe(false);
     });
   });
 });

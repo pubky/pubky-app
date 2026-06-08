@@ -21,6 +21,8 @@ const mockSetIsArticle = vi.fn();
 const mockSetArticleTitle = vi.fn();
 const mockSetMentionSelectedIndex = vi.fn();
 const mockHandleMentionSelect = vi.fn();
+const mockRequireAuth = vi.fn((action: () => unknown) => action());
+let mockIsAuthenticated = true;
 
 vi.mock('@/atoms/Button/Button', () => {
   return {
@@ -102,20 +104,36 @@ vi.mock('@/atoms/PostThreadConnector/PostThreadConnector', () => {
 
 vi.mock('@/atoms/Textarea/Textarea', () => {
   return {
-    Textarea: vi.fn(({ value, onChange, placeholder, disabled, ref, onFocus, onKeyDown, autoFocus, className }) => (
-      <textarea
-        ref={ref}
-        data-testid="textarea"
-        data-class-name={className}
-        value={value}
-        onChange={onChange}
-        onFocus={onFocus}
-        onKeyDown={onKeyDown}
-        placeholder={placeholder}
-        disabled={disabled}
-        autoFocus={autoFocus}
-      />
-    )),
+    Textarea: vi.fn(
+      ({
+        value,
+        onChange,
+        placeholder,
+        disabled,
+        readOnly,
+        ref,
+        onFocus,
+        onKeyDown,
+        onPaste,
+        autoFocus,
+        className,
+      }) => (
+        <textarea
+          ref={ref}
+          data-testid="textarea"
+          data-class-name={className}
+          value={value}
+          onChange={onChange}
+          onFocus={onFocus}
+          onKeyDown={onKeyDown}
+          onPaste={onPaste}
+          placeholder={placeholder}
+          disabled={disabled}
+          readOnly={readOnly}
+          autoFocus={autoFocus}
+        />
+      ),
+    ),
   };
 });
 
@@ -165,17 +183,21 @@ vi.mock('../PostInputTags/PostInputTags', () => ({
 
 vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
   PostInputActionBar: vi.fn(
-    ({ onPostClick, onEmojiClick, onImageClick, isPostDisabled, isSubmitting, characterLimit }) => (
+    ({ onPostClick, onEmojiClick, onImageClick, onArticleClick, isPostDisabled, isSubmitting, characterLimit }) => (
       <div
         data-testid="post-input-action-bar"
         data-character-count={characterLimit?.count}
         data-character-max={characterLimit?.max}
+        data-post-disabled={String(isPostDisabled)}
       >
         <button data-testid="emoji-button" onClick={onEmojiClick} aria-label="Add emoji">
           Emoji
         </button>
         <button data-testid="image-button" onClick={onImageClick} aria-label="Add image">
           Image
+        </button>
+        <button data-testid="article-button" onClick={onArticleClick} aria-label="Add article">
+          Article
         </button>
         <button
           data-testid="post-button"
@@ -256,6 +278,7 @@ vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => {
         attachments,
         isSubmitting,
         isArticle,
+        handleFilesAdded,
       }: {
         ref: React.RefObject<HTMLInputElement>;
         attachments: File[];
@@ -266,6 +289,12 @@ vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => {
         handleFileClick?: () => void;
       }) => (
         <div data-testid="post-input-attachments" data-submitting={isSubmitting} data-is-article={isArticle}>
+          <button
+            data-testid="attachment-button"
+            onClick={() => handleFilesAdded([new File(['avatar'], 'avatar.png', { type: 'image/png' })])}
+          >
+            Attach
+          </button>
           {attachments.map((file: File, index: number) => (
             <div key={index} data-testid={`attachment-${file.name}`}>
               {file.name}
@@ -439,6 +468,13 @@ vi.mock('@/hooks/usePostInput/usePostInput', () => ({
   usePostInput: vi.fn((options: UsePostInputOptions) => createUsePostInputReturn(options)),
 }));
 
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    isAuthenticated: mockIsAuthenticated,
+    requireAuth: mockRequireAuth,
+  }),
+}));
+
 describe('PostInput', () => {
   const mockOnSuccess = vi.fn();
   const mockSetContent = vi.fn();
@@ -453,6 +489,8 @@ describe('PostInput', () => {
     vi.clearAllMocks();
     mockReply.mockReturnValue(async () => {});
     mockPost.mockReturnValue(async () => {});
+    mockIsAuthenticated = true;
+    mockRequireAuth.mockImplementation((action: () => unknown) => action());
 
     // Update the shared mock state
     mockUsePostReturn.content = '';
@@ -554,6 +592,62 @@ describe('PostInput', () => {
     fireEvent.change(textarea, { target: { value: 'Test content' } });
 
     expect(mockSetContent).toHaveBeenCalledWith('Test content');
+  });
+
+  it('opens sign-in and does not mutate content when an anonymous user types', () => {
+    mockIsAuthenticated = false;
+    mockRequireAuth.mockReturnValue(undefined);
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const textarea = screen.getByTestId('textarea');
+    fireEvent.change(textarea, { target: { value: 'Anonymous post' } });
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+    expect(mockSetContent).not.toHaveBeenCalled();
+    expect(textarea).toHaveAttribute('readonly');
+  });
+
+  it('opens sign-in and does not submit when an anonymous user clicks Post', async () => {
+    mockIsAuthenticated = false;
+    mockRequireAuth.mockReturnValue(undefined);
+    mockUsePostReturn.content = 'Anonymous post';
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} onSuccess={mockOnSuccess} />);
+
+    fireEvent.click(screen.getByTestId('post-button'));
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+    expect(mockPost).not.toHaveBeenCalled();
+    expect(screen.getByTestId('post-input-action-bar')).toHaveAttribute('data-post-disabled', 'false');
+  });
+
+  it('opens sign-in and does not attach files when an anonymous user chooses a file', () => {
+    mockIsAuthenticated = false;
+    mockRequireAuth.mockReturnValue(undefined);
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    fireEvent.click(screen.getByTestId('attachment-button'));
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+    expect(mockHandleFilesAdded).not.toHaveBeenCalled();
+  });
+
+  it('opens sign-in and does not enter article mode when an anonymous user clicks article', () => {
+    mockIsAuthenticated = false;
+    mockRequireAuth.mockReturnValue(undefined);
+    const handleArticleClick = vi.fn();
+    mockUsePostInput.mockImplementationOnce((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { handleArticleClick }),
+    );
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    fireEvent.click(screen.getByTestId('article-button'));
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+    expect(handleArticleClick).not.toHaveBeenCalled();
   });
 
   it('calls enter submit handler when mention keydown does not handle the key event', () => {
@@ -857,6 +951,8 @@ describe('PostInput', () => {
 describe('PostInput - autoFocusTextarea', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsAuthenticated = true;
+    mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePostReturn.content = '';
     mockUsePostReturn.tags = [];
     mockUsePostReturn.attachments = [];
@@ -893,6 +989,8 @@ describe('PostInput - autoFocusTextarea', () => {
 describe('PostInput - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsAuthenticated = true;
+    mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePostReturn.content = '';
     mockUsePostReturn.tags = [];
     mockUsePostReturn.attachments = [];

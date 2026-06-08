@@ -7,7 +7,7 @@
   "landing": {
     "title": "<highlight>Entsperre</highlight> das Web.",
     "subtitle": "Deine Schlüssel, deine Inhalte, deine Regeln.",
-    "signIn": "Anmelden",
+    "explore": "Entdecken",
     "joinNow": "Jetzt beitreten",
     "aTetherCompany": "ein <tether>tether.</tether> Unternehmen",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Alle Rechte vorbehalten."
@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "Konto erstellen",
       "joinNow": "Jetzt beitreten",
       "identityKeys": "Identitätsschlüssel",
       "usePubkyRing": "Pubky Ring verwenden",
@@ -167,7 +168,7 @@
     },
     "human": {
       "title": "Beweisen Sie, <highlight>dass Sie kein Roboter sind.</highlight>",
-      "subtitle": "Keine E-Mail erforderlich. Verifizieren Sie schnell per SMS oder einer kleinen Zahlung. Oder verwenden Sie einen",
+      "subtitle": "Verifizieren Sie schnell mit Ihrer Telefonnummer oder einer kleinen Zahlung. Oder verwenden Sie einen",
       "inviteCode": "Einladungscode.",
       "devMode": "Entwicklermodus",
       "skip": "Überspringen",
@@ -237,7 +238,7 @@
       "unavailable": "Service vorübergehend nicht verfügbar"
     },
     "sms": {
-      "title": "SMS-Verifizierung",
+      "title": "Telefonnummer",
       "free": "Kostenlos",
       "lessPrivate": "WENIGER PRIVAT, ABER EINFACH",
       "storage": "1GB Speicher",
@@ -254,7 +255,8 @@
     "scan": {
       "titleMobile": "Zum <highlight>Autorisieren</highlight> tippen.",
       "titleDesktop": "<highlight>QR-Code</highlight> scannen.",
-      "subtitle": "Oeffnen Sie Pubky Ring, erstellen Sie einen Pubky und scannen Sie den QR.",
+      "subtitleMobile": "Tippen Sie auf die Schaltfläche, um Pubky Ring zu öffnen, und autorisieren Sie mit Ihrem pubky.",
+      "subtitleDesktop": "Oeffnen Sie Pubky Ring, tippen Sie auf 'Pubky hinzufügen', und scannen Sie diesen QR.",
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
 
@@ -573,7 +575,7 @@
     },
     "signIn": {
       "title": "Pubky beitreten",
-      "description": "Melden Sie sich an oder erstellen Sie ein Konto, um mit Beiträgen und Profilen zu interagieren.",
+      "description": "Gefällt dir, was du siehst? Tritt jetzt dem freien Web bei.",
       "newHere": "Neu hier?",
       "newHereDescription": "Erstellen Sie Ihr Konto und beginnen Sie, Pubky zu erkunden.",
       "joinButton": "Pubky beitreten",
@@ -1014,7 +1016,14 @@
     "generic": "Etwas ist schiefgelaufen",
     "network": "Netzwerkfehler. Bitte versuchen Sie es erneut.",
     "notFound": "Seite nicht gefunden",
-    "couldNotFind": "Angeforderte Ressource konnte nicht gefunden werden"
+    "couldNotFind": "Angeforderte Ressource konnte nicht gefunden werden",
+    "database": {
+      "title": "Speicher nicht verfügbar",
+      "description": "Wir konnten nicht auf den lokalen Speicher deines Geräts zugreifen. Einige mobile Browser, insbesondere In-App-Browser, können ihn unterbrechen. Bitte versuche es erneut oder lade die Seite neu.",
+      "tryAgain": "Erneut versuchen",
+      "reload": "Seite neu laden",
+      "retrying": "Wird wiederholt…"
+    }
   },
   "password": {
     "veryWeak": "Sehr schwaches Passwort",
@@ -1178,34 +1187,32 @@
       "pubky": "4. Wie die Pubky-App funktioniert"
     },
     "questions": {
-      "q1": "Warum benötigt Pubky Einladungscodes?",
-      "a1": "Pubky verwendet Einladungscodes als temporaere Maßnahme zur Spam-Verhinderung und Serverlastkontrolle. Benutzer benötigen einen Einladungscode, um einen Benutzer auf unserem Homeserver zu erstellen. Wir erstellen keinen Benutzer für die Pubky-App, sondern auf unserem Homeserver. Mit der Verbesserung der Infrastruktur und dem Onlinekommen weiterer Homeserver werden Einladungscodes möglicherweise nicht mehr benötigt.",
-      "q2": "Wie verwende ich Pubky Ring mit der Web-App?",
-      "a2": "Erstellen Sie zunächst Ihr Schlüsselpaar in der Pubky Ring-App. Besuchen Sie dann die Pubky-Web-App und melden Sie sich mit demselben Schlüsselpaar an. Die Apps sind über Ihre kryptografische Identität verbunden.",
-      "q3": "Warum schlaegt die Anmeldung manchmal fehl, wenn ich die PWA auf Android verwende?",
-      "a3": "Einige auf Sicherheit und Datenschutz fokussierte Browser wie Vanadium oder Tor deaktivieren standardmaessig die Just-In-Time (JIT)-Kompilierung für JavaScript, was die ordnungsgemaesse Funktion der Pubky-App verhindert.\n\nUm sie zu aktivieren, gehen Sie zu: Einstellungen > Website-Einstellungen > JavaScript JIT > Erlaubt.",
-      "q4": "Wie kann ich mein Konto wiederherstellen?",
-      "a4": "Bei der Anmeldung wurden Sie aufgefordert, Ihre Identität mit einer der folgenden Optionen zu sichern:\n\n- Wiederherstellungsdatei (.pkarr)\n- Wiederherstellungsphrase (Mnemonic)\n- QR-Code\n\nZur Wiederherstellung mit einer .pkarr-Datei:\n\n1. Wählen Sie die gespeicherte Datei aus.\n2. Geben Sie Ihr Passwort ein.\n3. Klicken Sie auf \"Anmelden\".",
-      "q5": "Kann ich mein Pubky-Konto auf einem anderen Geraet wiederherstellen?",
-      "a5": "Ja, wenn Sie Ihre .pkarr-Datei oder Seed-Phrase haben. (Seed-Phrase-Unterstützung wird in zukuenftigen Versionen von Pubky Ring hinzugefügt.)",
-      "q6": "Kann ich eine Seed-Phrase später in eine .pkarr-Datei umwandeln?",
-      "a6": "Noch nicht. Diese Funktionalitaet ist für ein zukuenftiges Update geplant.",
-      "q7": "Ich habe mein Konto gesichert, kann aber nicht auf die Datei zugreifen. Was ist passiert?",
-      "a7": "Einige Betriebssysteme können die .pkarr-Datei umbenennen oder falsch kennzeichnen. Versuchen Sie, die Dateiendung in .pkarr umzubenennen und erneut zu importieren.",
-      "q8": "Ich habe eine .txt-Datei anstelle eines .pkarr-Backups heruntergeladen. Was soll ich tun?",
-      "a8": "Das passiert, wenn Sie die Mnemonic (Seed-Phrase) Backup-Option gewählt haben. Pubky Ring unterstützt noch keinen Seed-Import. Warten Sie auf zukuenftige Updates oder erstellen Sie Ihr Konto mit einem .pkarr-Backup neu.",
-      "q9": "Ich habe das Herunterladen der Wiederherstellungsdatei verpasst. Kann ich erneut sichern?",
-      "a9": "Derzeit können Backups nur einmal über die Web-App erstellt werden. Dies kann sich in zukuenftigen Updates ändern.",
-      "q10": "Wie kann ich meine Profilinformationen aktualisieren?",
-      "a10": "Klicken Sie auf Ihren Avatar (obere rechte Ecke), dann klicken Sie auf \"Bearbeiten\", um Ihre Profilinformationen zu aktualisieren.",
-      "q11": "Wie kann ich meinen Beitrag löschen?",
-      "a11": "Fahren Sie mit der Maus über die drei Punkte des Beitrags, den Sie löschen möchten, und wählen Sie \"Beitrag löschen\".",
-      "q12": "Wie schalte ich jemanden stumm?",
-      "a12": "Gehen Sie zu deren Profil, klicken Sie auf die drei Punkte und wählen Sie \"Benutzer stummschalten\".",
-      "q13": "Wie unterscheidet sich Pubky von anderen sozialen Medienplattformen?",
-      "a13": "Pubky ist für souveraene, dezentralisierte soziale Interaktion konzipiert. Hauptunterschiede:\n\n- Sie sind der Algorithmus: Passen Sie an, was Sie mit semantischen Tags und Kuration sehen.\n- Keine E-Mail oder Telefon erforderlich: Ihre Identität ist Ihr öffentlicher Schlüssel.\n- Volle Kontrolle über Ihren sozialen Graphen durch Tagging und Vertrauensmodelle.\n- Browserbasierte PWA, die die Privatsphäre respektiert.",
-      "q14": "Wie unterscheidet sich Pubky von Nostr?",
-      "a14": "Pubky verwendet Ed25519-Schlüssel für Kompatibilitaet und vermeidet zentralisierte Relays. Stattdessen wird eine Distributed Hash Table (DHT) für dezentralisierte Suche und Identitätsaufloesung verwendet."
+      "q1": "Wie verwende ich Pubky Ring mit der Web-App?",
+      "a1": "Erstellen Sie zunächst Ihr Schlüsselpaar in der Pubky Ring-App. Besuchen Sie dann die Pubky-Web-App und melden Sie sich mit demselben Schlüsselpaar an. Die Apps sind über Ihre kryptografische Identität verbunden.",
+      "q2": "Warum schlaegt die Anmeldung manchmal fehl, wenn ich die PWA auf Android verwende?",
+      "a2": "Einige auf Sicherheit und Datenschutz fokussierte Browser wie Vanadium oder Tor deaktivieren standardmaessig die Just-In-Time (JIT)-Kompilierung für JavaScript, was die ordnungsgemaesse Funktion der Pubky-App verhindert.\n\nUm sie zu aktivieren, gehen Sie zu: Einstellungen > Website-Einstellungen > JavaScript JIT > Erlaubt.",
+      "q3": "Wie kann ich mein Konto wiederherstellen?",
+      "a3": "Bei der Anmeldung wurden Sie aufgefordert, Ihre Identität mit einer der folgenden Optionen zu sichern:\n\n- Wiederherstellungsdatei (.pkarr)\n- Wiederherstellungsphrase (Mnemonic)\n- QR-Code\n\nZur Wiederherstellung mit einer .pkarr-Datei:\n\n1. Wählen Sie die gespeicherte Datei aus.\n2. Geben Sie Ihr Passwort ein.\n3. Klicken Sie auf \"Anmelden\".",
+      "q4": "Kann ich mein Pubky-Konto auf einem anderen Geraet wiederherstellen?",
+      "a4": "Ja, wenn Sie Ihre .pkarr-Datei oder Seed-Phrase haben.",
+      "q5": "Kann ich eine Seed-Phrase später in eine .pkarr-Datei umwandeln?",
+      "a5": "Noch nicht. Diese Funktionalitaet ist für ein zukuenftiges Update geplant.",
+      "q6": "Ich habe mein Konto gesichert, kann aber nicht auf die Datei zugreifen. Was ist passiert?",
+      "a6": "Einige Betriebssysteme können die .pkarr-Datei umbenennen oder falsch kennzeichnen. Versuchen Sie, die Dateiendung in .pkarr umzubenennen und erneut zu importieren.",
+      "q7": "Ich habe eine .txt-Datei anstelle eines .pkarr-Backups heruntergeladen. Was soll ich tun?",
+      "a7": "Das passiert, wenn Sie die Mnemonic (Seed-Phrase) Backup-Option gewählt haben. Warten Sie auf zukuenftige Updates oder erstellen Sie Ihr Konto mit einem .pkarr-Backup neu.",
+      "q8": "Ich habe das Herunterladen der Wiederherstellungsdatei verpasst. Kann ich erneut sichern?",
+      "a8": "Derzeit können Backups nur einmal über die Web-App erstellt werden. Dies kann sich in zukuenftigen Updates ändern.",
+      "q9": "Wie kann ich meine Profilinformationen aktualisieren?",
+      "a9": "Klicken Sie auf Ihren Avatar (obere rechte Ecke), dann klicken Sie auf \"Bearbeiten\", um Ihre Profilinformationen zu aktualisieren.",
+      "q10": "Wie kann ich meinen Beitrag löschen?",
+      "a10": "Fahren Sie mit der Maus über die drei Punkte des Beitrags, den Sie löschen möchten, und wählen Sie \"Beitrag löschen\".",
+      "q11": "Wie schalte ich jemanden stumm?",
+      "a11": "Gehen Sie zu deren Profil, klicken Sie auf die drei Punkte und wählen Sie \"Benutzer stummschalten\".",
+      "q12": "Wie unterscheidet sich Pubky von anderen sozialen Medienplattformen?",
+      "a12": "Pubky ist für souveraene, dezentralisierte soziale Interaktion konzipiert. Hauptunterschiede:\n\n- Sie sind der Algorithmus: Passen Sie an, was Sie mit semantischen Tags und Kuration sehen.\n- Keine E-Mail oder Telefon erforderlich: Ihre Identität ist Ihr öffentlicher Schlüssel.\n- Volle Kontrolle über Ihren sozialen Graphen durch Tagging und Vertrauensmodelle.\n- Browserbasierte PWA, die die Privatsphäre respektiert.",
+      "q13": "Wie unterscheidet sich Pubky von Nostr?",
+      "a13": "Pubky verwendet Ed25519-Schlüssel für Kompatibilitaet und vermeidet zentralisierte Relays. Stattdessen wird eine Distributed Hash Table (DHT) für dezentralisierte Suche und Identitätsaufloesung verwendet."
     }
   },
   "share": {

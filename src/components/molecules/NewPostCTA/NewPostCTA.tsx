@@ -26,11 +26,11 @@ import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
 export function NewPostCTA() {
   const [open, setOpen] = useState(false);
   const { isFullyAuthenticated, isLoading } = useAuthStatus();
-  const { isPublicRoute } = usePublicRoute();
+  const { isPublicExploreRoute } = usePublicRoute();
   const { requireAuth } = useRequireAuth();
 
-  // Show FAB for authenticated users OR unauthenticated users on public routes
-  const shouldShow = isFullyAuthenticated || isPublicRoute;
+  // Show FAB for authenticated users OR unauthenticated users on public explore routes
+  const shouldShow = isFullyAuthenticated || isPublicExploreRoute;
   if (isLoading || !shouldShow) {
     return null;
   }

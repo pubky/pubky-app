@@ -81,6 +81,13 @@ describe('MobileTabBar', () => {
     expect(root).not.toHaveClass('sticky');
   });
 
+  it('uses compact header top offset when headerTop is compact', () => {
+    const { container } = render(<MobileTabBar items={makeItems()} position="fixed" headerTop="compact" />);
+    const root = container.firstChild as HTMLElement;
+    expect(root).toHaveClass('top-(--header-height-settings)');
+    expect(root).not.toHaveClass('top-(--header-height-mobile)');
+  });
+
   it('always applies shared root classes', () => {
     const { container } = render(<MobileTabBar items={makeItems()} />);
     const root = container.firstChild as HTMLElement;
@@ -133,9 +140,9 @@ describe('MobileTabBar', () => {
   });
 
   it('merges className onto the root', () => {
-    const { container } = render(<MobileTabBar items={makeItems()} className="-mx-6 -mt-6 mb-6" />);
+    const { container } = render(<MobileTabBar items={makeItems()} className="-mx-6 mb-6" />);
     const root = container.firstChild as HTMLElement;
-    expect(root).toHaveClass('-mx-6', '-mt-6', 'mb-6');
+    expect(root).toHaveClass('-mx-6', 'mb-6');
   });
 
   it('passes through data-testid', () => {

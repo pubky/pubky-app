@@ -34,5 +34,5 @@ export function SettingsMobileMenu() {
     onSelect: () => router.push(item.path),
   }));
 
-  return <MobileTabBar items={items} position="fixed" data-testid="settings-mobile-menu" />;
+  return <MobileTabBar items={items} position="fixed" headerTop="compact" data-testid="settings-mobile-menu" />;
 }

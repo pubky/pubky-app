@@ -5,8 +5,7 @@ import { db } from '@/database/franky/franky';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { hasHttpStatus } from '@/libs/error/error.utils';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { FeedModel } from '@/models/feed/feed';
 import { buildFeedStreamId } from '@/models/feed/feed.helpers';
@@ -134,17 +133,7 @@ export class FeedApplication {
    */
   static async fetchFeeds(userId: Pubky): Promise<FeedModelSchema[]> {
     const feedsDirectory = `${baseUriBuilder(userId)}feeds/`;
-
-    let feedUris: string[];
-    try {
-      feedUris = await HomeserverService.list({ baseDirectory: feedsDirectory });
-    } catch (error) {
-      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-        Logger.info('Feeds directory not found, defaulting to empty list', { userId });
-        return [];
-      }
-      throw error;
-    }
+    const feedUris = await HomeserverService.list({ baseDirectory: feedsDirectory });
 
     const validFeeds: FeedModelSchema[] = [];
 

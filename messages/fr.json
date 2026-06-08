@@ -7,7 +7,7 @@
   "landing": {
     "title": "<highlight>Libérez</highlight> le web.",
     "subtitle": "Vos clés, votre contenu, vos règles.",
-    "signIn": "Se connecter",
+    "explore": "Explorer",
     "joinNow": "Rejoignez-nous maintenant",
     "aTetherCompany": "une entreprise <tether>tether.</tether>",
     "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tous droits réservés."
@@ -157,6 +157,7 @@
   },
   "onboarding": {
     "steps": {
+      "createAccount": "Créer un compte",
       "joinNow": "Rejoignez-nous",
       "identityKeys": "Cles d'identite",
       "usePubkyRing": "Utiliser Pubky Ring",
@@ -167,7 +168,7 @@
     },
     "human": {
       "title": "Prouvez <highlight>que vous n'etes pas un robot.</highlight>",
-      "subtitle": "Pas besoin d'email. Vérifiez rapidement par SMS ou un petit paiement. Ou utilisez un",
+      "subtitle": "Vérifiez rapidement avec votre numéro de téléphone ou un petit paiement. Ou utilisez un",
       "inviteCode": "code d'invitation.",
       "devMode": "Mode développeur",
       "skip": "Passer",
@@ -237,7 +238,7 @@
       "unavailable": "Service temporairement indisponible"
     },
     "sms": {
-      "title": "Vérification par SMS",
+      "title": "Numéro de téléphone",
       "free": "Gratuit",
       "lessPrivate": "MOINS PRIVE, MAIS FACILE",
       "storage": "1 Go de stockage",
@@ -254,7 +255,8 @@
     "scan": {
       "titleMobile": "Appuyez pour <highlight>autoriser.</highlight>",
       "titleDesktop": "Scannez le <highlight>code QR.</highlight>",
-      "subtitle": "Ouvrez Pubky Ring, crééz un pubky et scannez le QR.",
+      "subtitleMobile": "Appuyez sur le bouton pour ouvrir Pubky Ring, puis autorisez avec votre pubky.",
+      "subtitleDesktop": "Ouvrez Pubky Ring, appuyez sur 'Ajouter un pubky', et scannez ce QR.",
       "generating": "Génération du code QR...",
       "generatingShort": "Génération...",
 
@@ -573,7 +575,7 @@
     },
     "signIn": {
       "title": "Rejoindre Pubky",
-      "description": "Connectez-vous ou crééz un compte pour interagir avec les publications et les profils.",
+      "description": "Vous aimez ce que vous voyez ? Rejoignez le web de la liberté dès maintenant.",
       "newHere": "Nouveau ici ?",
       "newHereDescription": "Crééz votre compte et commencez a explorer Pubky.",
       "joinButton": "Rejoindre Pubky",
@@ -1014,7 +1016,14 @@
     "generic": "Quelque chose s'est mal passe",
     "network": "Erreur réseau. Veuillez réessayer.",
     "notFound": "Page non trouvee",
-    "couldNotFind": "Impossible de trouver la ressource demandee"
+    "couldNotFind": "Impossible de trouver la ressource demandee",
+    "database": {
+      "title": "Stockage indisponible",
+      "description": "Nous n'avons pas pu accéder au stockage local de votre appareil. Certains navigateurs mobiles, en particulier les navigateurs intégrés aux applications, peuvent l'interrompre. Veuillez réessayer ou recharger la page.",
+      "tryAgain": "Réessayer",
+      "reload": "Recharger la page",
+      "retrying": "Nouvelle tentative…"
+    }
   },
   "password": {
     "veryWeak": "Mot de passe tres faible",
@@ -1178,34 +1187,32 @@
       "pubky": "4. Comment fonctionne l'application Pubky"
     },
     "questions": {
-      "q1": "Pourquoi Pubky necessite-t-il des codes d'invitation ?",
-      "a1": "Pubky utilise des codes d'invitation comme mesure temporaire pour prevenir le spam et la surcharge du serveur. Les utilisateurs ont besoin d'un code d'invitation pour créér un utilisateur sur notre Homeserver. Nous ne creons pas un utilisateur pour l'application Pubky, mais sur notre Homeserver. A mesure que l'infrastructure s'ameliore et que davantage de homeservers sont mis en ligne, les codes d'invitation pourraient ne plus etre necessaires.",
-      "q2": "Comment utiliser Pubky Ring avec l'application web ?",
-      "a2": "Tout d'abord, crééz votre paire de cles dans l'application Pubky Ring. Ensuite, visitez l'application web Pubky et connectez-vous avec la meme paire de cles. Les applications sont connectees via votre identite cryptographique.",
-      "q3": "Pourquoi la connexion echoue-t-elle parfois lors de l'utilisation de la PWA sur Android ?",
-      "a3": "Certains navigateurs axes sur la sécurité et la confidentialite, comme Vanadium ou Tor, desactivent par defaut la compilation Just-In-Time (JIT) pour JavaScript, ce qui empeche l'application Pubky de fonctionner correctement.\n\nPour l'activer, allez dans : Paramètres > Paramètres du site > JavaScript JIT > Autorise.",
-      "q4": "Comment puis-je restaurer mon compte ?",
-      "a4": "Lors de votre inscription, vous avez ete invite a sauvegarder votre identite en utilisant l'une des options suivantes :\n\n- Fichier de récupération (.pkarr)\n- Phrase de récupération (mnemonique)\n- Code QR\n\nPour restaurer avec un fichier .pkarr :\n\n1. Selectionnez le fichier que vous avez enregistre.\n2. Entrez votre mot de passe.\n3. Cliquez sur \"Connexion\".",
-      "q5": "Puis-je restaurer mon compte Pubky sur un autre appareil ?",
-      "a5": "Oui, si vous avez votre fichier .pkarr ou votre phrase de récupération. (Le support de la phrase de récupération sera ajoute dans les futures versions de Pubky Ring.)",
-      "q6": "Puis-je convertir une phrase de récupération en fichier .pkarr plus tard ?",
-      "a6": "Pas encore. Cette fonctionnalite est prevue pour une future mise a jour.",
-      "q7": "J'ai sauvegarde mon compte mais je ne peux pas acceder au fichier. Que s'est-il passe ?",
-      "a7": "Certains systemes d'exploitation peuvent renommer le fichier .pkarr ou le mal etiqueter. Essayez de renommer l'extension du fichier en .pkarr et de le reimporter.",
-      "q8": "J'ai telecharge un fichier .txt au lieu d'une sauvegarde .pkarr. Que dois-je faire ?",
-      "a8": "Cela se produit si vous avez choisi l'option de sauvegarde mnemonique (phrase de récupération). Pubky Ring ne prend pas encore en charge l'importation de phrase. Attendez les mises a jour futures ou recrééz votre compte avec une sauvegarde .pkarr.",
-      "q9": "J'ai rate le téléchargement du fichier de récupération. Puis-je faire une nouvelle sauvegarde ?",
-      "a9": "Actuellement, les sauvegardes ne peuvent etre créées qu'une seule fois via l'application web. Cela pourrait changer dans les futures mises a jour.",
-      "q10": "Comment puis-je mettre a jour les informations de mon profil ?",
-      "a10": "Cliquez sur votre avatar (coin superieur droit), puis cliquez sur \"Modifiér\" pour mettre a jour les informations de votre profil.",
-      "q11": "Comment puis-je supprimér ma publication ?",
-      "a11": "Survolez les trois points sur la publication que vous souhaitez supprimér et selectionnez \"Supprimér la publication\".",
-      "q12": "Comment masquer quelqu'un ?",
-      "a12": "Allez sur son profil, cliquez sur les trois points et choisissez \"Masquer l'utilisateur\".",
-      "q13": "En quoi Pubky est-il different des autres plateformes de medias sociaux ?",
-      "a13": "Pubky est concu pour une interaction sociale souveraine et decentralisee. Principales differences :\n\n- Vous etes l'algorithme : personnalisez ce que vous voyez avec des tags semantiques et de la curation.\n- Pas besoin d'email ou de téléphone : votre identite est votre cle publique.\n- Controle total de votre graphe social via le tagging et les modeles de confiance.\n- PWA base sur navigateur qui respecte la vie privee.",
-      "q14": "En quoi Pubky differe-t-il de Nostr ?",
-      "a14": "Pubky utilise des cles Ed25519 pour la compatibilite et evite les relais centralises. Au lieu de cela, il utilise une Table de Hachage Distribuee (DHT) pour la recherche decentralisee et la resolution d'identite."
+      "q1": "Comment utiliser Pubky Ring avec l'application web ?",
+      "a1": "Tout d'abord, crééz votre paire de cles dans l'application Pubky Ring. Ensuite, visitez l'application web Pubky et connectez-vous avec la meme paire de cles. Les applications sont connectees via votre identite cryptographique.",
+      "q2": "Pourquoi la connexion echoue-t-elle parfois lors de l'utilisation de la PWA sur Android ?",
+      "a2": "Certains navigateurs axes sur la sécurité et la confidentialite, comme Vanadium ou Tor, desactivent par defaut la compilation Just-In-Time (JIT) pour JavaScript, ce qui empeche l'application Pubky de fonctionner correctement.\n\nPour l'activer, allez dans : Paramètres > Paramètres du site > JavaScript JIT > Autorise.",
+      "q3": "Comment puis-je restaurer mon compte ?",
+      "a3": "Lors de votre inscription, vous avez ete invite a sauvegarder votre identite en utilisant l'une des options suivantes :\n\n- Fichier de récupération (.pkarr)\n- Phrase de récupération (mnemonique)\n- Code QR\n\nPour restaurer avec un fichier .pkarr :\n\n1. Selectionnez le fichier que vous avez enregistre.\n2. Entrez votre mot de passe.\n3. Cliquez sur \"Connexion\".",
+      "q4": "Puis-je restaurer mon compte Pubky sur un autre appareil ?",
+      "a4": "Oui, si vous avez votre fichier .pkarr ou votre phrase de récupération.",
+      "q5": "Puis-je convertir une phrase de récupération en fichier .pkarr plus tard ?",
+      "a5": "Pas encore. Cette fonctionnalite est prevue pour une future mise a jour.",
+      "q6": "J'ai sauvegarde mon compte mais je ne peux pas acceder au fichier. Que s'est-il passe ?",
+      "a6": "Certains systemes d'exploitation peuvent renommer le fichier .pkarr ou le mal etiqueter. Essayez de renommer l'extension du fichier en .pkarr et de le reimporter.",
+      "q7": "J'ai telecharge un fichier .txt au lieu d'une sauvegarde .pkarr. Que dois-je faire ?",
+      "a7": "Cela se produit si vous avez choisi l'option de sauvegarde mnemonique (phrase de récupération). Attendez les mises a jour futures ou recrééz votre compte avec une sauvegarde .pkarr.",
+      "q8": "J'ai rate le téléchargement du fichier de récupération. Puis-je faire une nouvelle sauvegarde ?",
+      "a8": "Actuellement, les sauvegardes ne peuvent etre créées qu'une seule fois via l'application web. Cela pourrait changer dans les futures mises a jour.",
+      "q9": "Comment puis-je mettre a jour les informations de mon profil ?",
+      "a9": "Cliquez sur votre avatar (coin superieur droit), puis cliquez sur \"Modifiér\" pour mettre a jour les informations de votre profil.",
+      "q10": "Comment puis-je supprimér ma publication ?",
+      "a10": "Survolez les trois points sur la publication que vous souhaitez supprimér et selectionnez \"Supprimér la publication\".",
+      "q11": "Comment masquer quelqu'un ?",
+      "a11": "Allez sur son profil, cliquez sur les trois points et choisissez \"Masquer l'utilisateur\".",
+      "q12": "En quoi Pubky est-il different des autres plateformes de medias sociaux ?",
+      "a12": "Pubky est concu pour une interaction sociale souveraine et decentralisee. Principales differences :\n\n- Vous etes l'algorithme : personnalisez ce que vous voyez avec des tags semantiques et de la curation.\n- Pas besoin d'email ou de téléphone : votre identite est votre cle publique.\n- Controle total de votre graphe social via le tagging et les modeles de confiance.\n- PWA base sur navigateur qui respecte la vie privee.",
+      "q13": "En quoi Pubky differe-t-il de Nostr ?",
+      "a13": "Pubky utilise des cles Ed25519 pour la compatibilite et evite les relais centralises. Au lieu de cela, il utilise une Table de Hachage Distribuee (DHT) pour la recherche decentralisee et la resolution d'identite."
     }
   },
   "share": {

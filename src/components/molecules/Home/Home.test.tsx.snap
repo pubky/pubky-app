@@ -5,14 +5,14 @@ exports[`Home - Snapshots > matches snapshot for HomeActions with default props 
   data-testid="action-buttons"
 >
   <button
-    data-testid="sign-in-button"
-  >
-    Sign In
-  </button>
-  <button
     data-testid="create-account-button"
   >
     Create Account
+  </button>
+  <button
+    data-testid="explore-button"
+  >
+    Explore
   </button>
 </div>
 `;

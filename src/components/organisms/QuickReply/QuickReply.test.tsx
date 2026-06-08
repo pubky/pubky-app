@@ -20,6 +20,8 @@ const REAL_PROMPTS = [
 
 const mockUsePostInput = vi.fn();
 const mockUseEnterSubmit = vi.fn();
+const mockRequireAuth = vi.fn(<T,>(action: () => T) => action());
+let mockIsAuthenticated = true;
 
 function createUsePostInputReturn(options: unknown, overrides: Record<string, unknown> = {}) {
   return {
@@ -127,17 +129,34 @@ vi.mock('@/organisms/PostInputTags/PostInputTags', () => ({
 vi.mock('@/organisms/PostInputExpandableSection/PostInputExpandableSection', () => ({
   PostInputExpandableSection: ({
     characterLimit,
+    isDisabled,
+    isPostDisabled,
+    onSubmit,
+    onImageClick,
   }: {
     characterLimit?: {
       count: number;
       max: number;
     };
+    isDisabled?: boolean;
+    isPostDisabled?: boolean;
+    onSubmit?: () => void | Promise<void>;
+    onImageClick?: () => void;
   }) => (
     <div
       data-testid="post-input-expandable-section"
       data-character-count={characterLimit?.count}
       data-character-max={characterLimit?.max}
-    />
+      data-disabled={String(isDisabled)}
+      data-post-disabled={String(isPostDisabled)}
+    >
+      <button data-testid="quick-reply-submit" onClick={() => onSubmit?.()}>
+        Submit
+      </button>
+      <button data-testid="quick-reply-image" onClick={() => onImageClick?.()}>
+        Image
+      </button>
+    </div>
   ),
 }));
 
@@ -165,6 +184,13 @@ vi.mock('@/hooks/usePostInput/usePostInput', () => ({
   usePostInput: (options: unknown) => mockUsePostInput(options),
 }));
 
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    isAuthenticated: mockIsAuthenticated,
+    requireAuth: mockRequireAuth,
+  }),
+}));
+
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
 }));
@@ -173,6 +199,8 @@ describe('QuickReply', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    mockIsAuthenticated = true;
+    mockRequireAuth.mockImplementation(<T,>(action: () => T) => action());
     mockUseEnterSubmit.mockReturnValue(() => undefined);
     mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options));
   });
@@ -199,6 +227,58 @@ describe('QuickReply', () => {
     fireEvent.paste(screen.getByTestId('quick-reply-textarea'));
 
     expect(handlePaste).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens sign-in and does not mutate content when an anonymous user types', () => {
+    mockIsAuthenticated = false;
+    mockRequireAuth.mockReturnValue(undefined);
+    const handleChange = vi.fn();
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { handleChange }));
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    const textarea = screen.getByTestId('quick-reply-textarea');
+    fireEvent.change(textarea, { target: { value: 'anonymous reply' } });
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+    expect(handleChange).not.toHaveBeenCalled();
+  });
+
+  it('opens sign-in and does not submit when an anonymous user clicks submit', () => {
+    mockIsAuthenticated = false;
+    mockRequireAuth.mockReturnValue(undefined);
+    const handleSubmit = vi.fn();
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { handleSubmit }));
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    fireEvent.click(screen.getByTestId('quick-reply-submit'));
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+    expect(handleSubmit).not.toHaveBeenCalled();
+    expect(screen.getByTestId('post-input-expandable-section')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByTestId('post-input-expandable-section')).toHaveAttribute('data-post-disabled', 'false');
+  });
+
+  it('opens sign-in and does not attach files when an anonymous user drops files', () => {
+    mockIsAuthenticated = false;
+    mockRequireAuth.mockReturnValue(undefined);
+    const handleDrop = vi.fn();
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { handleDrop }));
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    const inputContainer = screen.getAllByTestId('container').find((c) => c.className?.includes('rounded-md'));
+    fireEvent.drop(inputContainer!, {
+      dataTransfer: {
+        files: [new File(['avatar'], 'avatar.png', { type: 'image/png' })],
+        items: [],
+        types: ['Files'],
+      },
+    });
+
+    expect(mockRequireAuth).toHaveBeenCalled();
+    expect(handleDrop).not.toHaveBeenCalled();
   });
 
   it('changes the placeholder across mounts (random per mount)', () => {

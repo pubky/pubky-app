@@ -61,7 +61,8 @@ exports[`MobileHeader - Snapshots > matches snapshot for logo 1`] = `
 
 exports[`MobileHeader - Snapshots > matches snapshot for right button 1`] = `
 <button
-  class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+  aria-label="Join Pubky"
+  class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-12 shrink-0"
   data-size="icon"
   data-slot="button"
   data-variant="ghost"
@@ -92,64 +93,70 @@ exports[`MobileHeader - Snapshots > matches snapshot with custom onLeftIconClick
   data-testid="container"
 >
   <div
-    class="flex w-full items-center justify-between p-6"
+    class="relative flex min-h-12 w-full items-center justify-between p-6"
     data-testid="container"
   >
-    <button
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
-      data-size="icon"
-      data-slot="button"
-      data-variant="ghost"
+    <div
+      class="flex size-12 shrink-0 items-center justify-center"
+      data-testid="container"
     >
-      <svg
-        aria-hidden="true"
-        class="lucide lucide-sliders-horizontal size-6"
-        fill="none"
-        height="24"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="24"
-        xmlns="http://www.w3.org/2000/svg"
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+        data-size="icon"
+        data-slot="button"
+        data-variant="ghost"
       >
-        <path
-          d="M10 5H3"
-        />
-        <path
-          d="M12 19H3"
-        />
-        <path
-          d="M14 3v4"
-        />
-        <path
-          d="M16 17v4"
-        />
-        <path
-          d="M21 12h-9"
-        />
-        <path
-          d="M21 19h-5"
-        />
-        <path
-          d="M21 5h-7"
-        />
-        <path
-          d="M8 10v4"
-        />
-        <path
-          d="M8 12H3"
-        />
-      </svg>
-    </button>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sliders-horizontal size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 5H3"
+          />
+          <path
+            d="M12 19H3"
+          />
+          <path
+            d="M14 3v4"
+          />
+          <path
+            d="M16 17v4"
+          />
+          <path
+            d="M21 12h-9"
+          />
+          <path
+            d="M21 19h-5"
+          />
+          <path
+            d="M21 5h-7"
+          />
+          <path
+            d="M8 10v4"
+          />
+          <path
+            d="M8 12H3"
+          />
+        </svg>
+      </button>
+    </div>
     <div
       data-testid="logo"
     >
       Logo
     </div>
     <button
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+      aria-label="Join Pubky"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-12 shrink-0"
       data-size="icon"
       data-slot="button"
       data-variant="ghost"
@@ -182,64 +189,70 @@ exports[`MobileHeader - Snapshots > matches snapshot with default props 1`] = `
   data-testid="container"
 >
   <div
-    class="flex w-full items-center justify-between p-6"
+    class="relative flex min-h-12 w-full items-center justify-between p-6"
     data-testid="container"
   >
-    <button
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
-      data-size="icon"
-      data-slot="button"
-      data-variant="ghost"
+    <div
+      class="flex size-12 shrink-0 items-center justify-center"
+      data-testid="container"
     >
-      <svg
-        aria-hidden="true"
-        class="lucide lucide-sliders-horizontal size-6"
-        fill="none"
-        height="24"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="24"
-        xmlns="http://www.w3.org/2000/svg"
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+        data-size="icon"
+        data-slot="button"
+        data-variant="ghost"
       >
-        <path
-          d="M10 5H3"
-        />
-        <path
-          d="M12 19H3"
-        />
-        <path
-          d="M14 3v4"
-        />
-        <path
-          d="M16 17v4"
-        />
-        <path
-          d="M21 12h-9"
-        />
-        <path
-          d="M21 19h-5"
-        />
-        <path
-          d="M21 5h-7"
-        />
-        <path
-          d="M8 10v4"
-        />
-        <path
-          d="M8 12H3"
-        />
-      </svg>
-    </button>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sliders-horizontal size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 5H3"
+          />
+          <path
+            d="M12 19H3"
+          />
+          <path
+            d="M14 3v4"
+          />
+          <path
+            d="M16 17v4"
+          />
+          <path
+            d="M21 12h-9"
+          />
+          <path
+            d="M21 19h-5"
+          />
+          <path
+            d="M21 5h-7"
+          />
+          <path
+            d="M8 10v4"
+          />
+          <path
+            d="M8 12H3"
+          />
+        </svg>
+      </button>
+    </div>
     <div
       data-testid="logo"
     >
       Logo
     </div>
     <button
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+      aria-label="Join Pubky"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-12 shrink-0"
       data-size="icon"
       data-slot="button"
       data-variant="ghost"
@@ -272,64 +285,70 @@ exports[`MobileHeader - Snapshots > matches snapshot with fixed positioning 1`] 
   data-testid="container"
 >
   <div
-    class="flex w-full items-center justify-between p-6"
+    class="relative flex min-h-12 w-full items-center justify-between p-6"
     data-testid="container"
   >
-    <button
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
-      data-size="icon"
-      data-slot="button"
-      data-variant="ghost"
+    <div
+      class="flex size-12 shrink-0 items-center justify-center"
+      data-testid="container"
     >
-      <svg
-        aria-hidden="true"
-        class="lucide lucide-sliders-horizontal size-6"
-        fill="none"
-        height="24"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="24"
-        xmlns="http://www.w3.org/2000/svg"
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+        data-size="icon"
+        data-slot="button"
+        data-variant="ghost"
       >
-        <path
-          d="M10 5H3"
-        />
-        <path
-          d="M12 19H3"
-        />
-        <path
-          d="M14 3v4"
-        />
-        <path
-          d="M16 17v4"
-        />
-        <path
-          d="M21 12h-9"
-        />
-        <path
-          d="M21 19h-5"
-        />
-        <path
-          d="M21 5h-7"
-        />
-        <path
-          d="M8 10v4"
-        />
-        <path
-          d="M8 12H3"
-        />
-      </svg>
-    </button>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sliders-horizontal size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 5H3"
+          />
+          <path
+            d="M12 19H3"
+          />
+          <path
+            d="M14 3v4"
+          />
+          <path
+            d="M16 17v4"
+          />
+          <path
+            d="M21 12h-9"
+          />
+          <path
+            d="M21 19h-5"
+          />
+          <path
+            d="M21 5h-7"
+          />
+          <path
+            d="M8 10v4"
+          />
+          <path
+            d="M8 12H3"
+          />
+        </svg>
+      </button>
+    </div>
     <div
       data-testid="logo"
     >
       Logo
     </div>
     <button
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+      aria-label="Join Pubky"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-12 shrink-0"
       data-size="icon"
       data-slot="button"
       data-variant="ghost"
@@ -362,64 +381,70 @@ exports[`MobileHeader - Snapshots > matches snapshot with solid background (hasG
   data-testid="container"
 >
   <div
-    class="flex w-full items-center justify-between p-6"
+    class="relative flex min-h-12 w-full items-center justify-between p-6"
     data-testid="container"
   >
-    <button
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
-      data-size="icon"
-      data-slot="button"
-      data-variant="ghost"
+    <div
+      class="flex size-12 shrink-0 items-center justify-center"
+      data-testid="container"
     >
-      <svg
-        aria-hidden="true"
-        class="lucide lucide-sliders-horizontal size-6"
-        fill="none"
-        height="24"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="24"
-        xmlns="http://www.w3.org/2000/svg"
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+        data-size="icon"
+        data-slot="button"
+        data-variant="ghost"
       >
-        <path
-          d="M10 5H3"
-        />
-        <path
-          d="M12 19H3"
-        />
-        <path
-          d="M14 3v4"
-        />
-        <path
-          d="M16 17v4"
-        />
-        <path
-          d="M21 12h-9"
-        />
-        <path
-          d="M21 19h-5"
-        />
-        <path
-          d="M21 5h-7"
-        />
-        <path
-          d="M8 10v4"
-        />
-        <path
-          d="M8 12H3"
-        />
-      </svg>
-    </button>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sliders-horizontal size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 5H3"
+          />
+          <path
+            d="M12 19H3"
+          />
+          <path
+            d="M14 3v4"
+          />
+          <path
+            d="M16 17v4"
+          />
+          <path
+            d="M21 12h-9"
+          />
+          <path
+            d="M21 19h-5"
+          />
+          <path
+            d="M21 5h-7"
+          />
+          <path
+            d="M8 10v4"
+          />
+          <path
+            d="M8 12H3"
+          />
+        </svg>
+      </button>
+    </div>
     <div
       data-testid="logo"
     >
       Logo
     </div>
     <button
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9"
+      aria-label="Join Pubky"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-12 shrink-0"
       data-size="icon"
       data-slot="button"
       data-variant="ghost"
