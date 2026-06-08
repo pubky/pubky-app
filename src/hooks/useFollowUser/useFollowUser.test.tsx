@@ -3,19 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod } from '@/libs/http/http.types';
 import { useFollowUser } from './useFollowUser';
 
-const { mockUseAuthStore, mockCommitFollow, mockGetDetails, mockIsAppError, mockLogger, mockToast } = vi.hoisted(
-  () => ({
-    mockUseAuthStore: vi.fn(),
-    mockCommitFollow: vi.fn(),
-    mockGetDetails: vi.fn(),
-    mockIsAppError: vi.fn(),
-    mockLogger: {
-      debug: vi.fn(),
-      error: vi.fn(),
-    },
-    mockToast: vi.fn(),
-  }),
-);
+const { mockUseAuthStore, mockCommitFollow, mockGetDetails, mockLogger, mockToast } = vi.hoisted(() => ({
+  mockUseAuthStore: vi.fn(),
+  mockCommitFollow: vi.fn(),
+  mockGetDetails: vi.fn(),
+  mockLogger: {
+    debug: vi.fn(),
+    error: vi.fn(),
+  },
+  mockToast: vi.fn(),
+}));
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: () => mockUseAuthStore(),
@@ -30,10 +27,6 @@ vi.mock('@/controllers/user/user', () => ({
 
 vi.mock('@/libs/logger/logger', () => ({
   Logger: mockLogger,
-}));
-
-vi.mock('@/libs/error/error.utils', () => ({
-  isAppError: (...args: unknown[]) => mockIsAppError(...args),
 }));
 
 vi.mock('@/molecules/Toaster/use-toast', () => ({
@@ -52,7 +45,6 @@ vi.mock('next-intl', () => ({
 describe('useFollowUser', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsAppError.mockReturnValue(false);
     mockUseAuthStore.mockReturnValue({ currentUserPubky: 'current-user' });
     mockCommitFollow.mockResolvedValue(undefined);
     mockGetDetails.mockResolvedValue(null);
@@ -134,7 +126,6 @@ describe('useFollowUser', () => {
   it('shows error toast and rethrows on failure', async () => {
     const error = new Error('Follow failed');
     mockCommitFollow.mockRejectedValue(error);
-    mockIsAppError.mockReturnValue(true);
 
     const { result } = renderHook(() => useFollowUser());
 
@@ -147,11 +138,12 @@ describe('useFollowUser', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.error).toBe('Follow failed');
+      expect(result.current.error).toBe('Could not update follow status');
     });
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Follow failed',
+      description: 'Could not update follow status',
     });
+    expect(mockLogger.error).toHaveBeenCalledWith('[useFollowUser] Failed to toggle follow:', error);
   });
 });

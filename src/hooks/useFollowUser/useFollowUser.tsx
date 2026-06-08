@@ -3,13 +3,13 @@
 import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { UserController } from '@/controllers/user/user';
-import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import { toast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseFollowUserResult } from './useFollowUser.types';
-import { resolveFollowToastDisplayName, showFollowErrorToast, showFollowSuccessToast } from './useFollowUser.utils';
+import { resolveFollowToastDisplayName } from './useFollowUser.utils';
 
 /**
  * useFollowUser
@@ -66,15 +66,20 @@ export function useFollowUser(): UseFollowUserResult {
         });
 
         const username = await resolveFollowToastDisplayName(userId, displayName);
-        showFollowSuccessToast(isCurrentlyFollowing, username, t);
+        toast({
+          title: isCurrentlyFollowing ? t('unfollowed', { username }) : t('followed', { username }),
+        });
 
         Logger.debug(`[useFollowUser] Successfully ${isCurrentlyFollowing ? 'unfollowed' : 'followed'} user`, {
           userId,
         });
       } catch (err) {
-        const errorMessage = isAppError(err) ? err.message : t('failed');
-        setError(errorMessage);
-        showFollowErrorToast(errorMessage);
+        const friendlyMessage = t('failed');
+        setError(friendlyMessage);
+        toast({
+          variant: 'error',
+          description: friendlyMessage,
+        });
         Logger.error('[useFollowUser] Failed to toggle follow:', err);
         throw err;
       } finally {
