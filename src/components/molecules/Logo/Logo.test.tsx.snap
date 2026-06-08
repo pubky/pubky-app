@@ -2,13 +2,13 @@
 
 exports[`Logo - Snapshots > matches snapshot for Logo with custom className 1`] = `
 <a
-  class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm flex items-center min-w-[109px] min-h-[36px] custom-logo-style"
+  class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm flex items-center min-h-[36px] min-w-[109px] custom-logo-style"
   data-cy="header-logo"
   href="/home"
 >
   <img
     alt="Pubky"
-    class="w-[109px] h-[36px] -mt-1"
+    class="-mt-1 h-[36px] w-[109px]"
     data-testid="logo-image"
     height="36"
     src="/pubky-logo.svg"
@@ -19,13 +19,14 @@ exports[`Logo - Snapshots > matches snapshot for Logo with custom className 1`] 
 
 exports[`Logo - Snapshots > matches snapshot for Logo with custom dimensions 1`] = `
 <a
-  class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm flex items-center min-w-[200px] min-h-[80px]"
+  class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm flex items-center"
   data-cy="header-logo"
   href="/home"
+  style="min-width: 200px; min-height: 80px;"
 >
   <img
     alt="Pubky"
-    class="w-[200px] h-[80px] -mt-1"
+    class="-mt-1"
     data-testid="logo-image"
     height="80"
     src="/pubky-logo.svg"
@@ -36,13 +37,13 @@ exports[`Logo - Snapshots > matches snapshot for Logo with custom dimensions 1`]
 
 exports[`Logo - Snapshots > matches snapshot for default Logo 1`] = `
 <a
-  class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm flex items-center min-w-[109px] min-h-[36px]"
+  class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm flex items-center min-h-[36px] min-w-[109px]"
   data-cy="header-logo"
   href="/home"
 >
   <img
     alt="Pubky"
-    class="w-[109px] h-[36px] -mt-1"
+    class="-mt-1 h-[36px] w-[109px]"
     data-testid="logo-image"
     height="36"
     src="/pubky-logo.svg"

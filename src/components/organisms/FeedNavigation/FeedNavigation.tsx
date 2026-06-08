@@ -13,6 +13,7 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FeedController } from '@/controllers/feed/feed';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -26,9 +27,14 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const pathname = usePathname();
   const tHeader = useTranslations('header');
   const tDialog = useTranslations('dialogs.customFeed');
+  const { isAuthenticated, requireAuth } = useRequireAuth();
   const customFeeds = useLiveQuery(
     async () => {
       try {
+        if (!isAuthenticated) {
+          cachedFeeds = [];
+          return [] as FeedModelSchema[];
+        }
         const result = await FeedController.getList();
         cachedFeeds = result;
         return result;
@@ -39,8 +45,8 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
         return [] as FeedModelSchema[];
       }
     },
-    [],
-    cachedFeeds,
+    [isAuthenticated],
+    isAuthenticated ? cachedFeeds : [],
   );
   const customFeedsMapped = customFeeds.map((f) => ({
     name: f.name,
@@ -87,10 +93,24 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
         </Link>
       ))}
 
-      <CustomFeedDialog mode="create">
+      {isAuthenticated ? (
+        <CustomFeedDialog mode="create">
+          <Button
+            overrideDefaults
+            className="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
+          >
+            <PlusCircle className="size-5 shrink-0" />
+
+            <Typography overrideDefaults className="font-medium lg:text-sm">
+              {tDialog('createTitle')}
+            </Typography>
+          </Button>
+        </CustomFeedDialog>
+      ) : (
         <Button
           overrideDefaults
           className="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
+          onClick={() => requireAuth(() => undefined)}
         >
           <PlusCircle className="size-5 shrink-0" />
 
@@ -98,7 +118,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
             {tDialog('createTitle')}
           </Typography>
         </Button>
-      </CustomFeedDialog>
+      )}
     </Container>
   );
 };

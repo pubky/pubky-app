@@ -3,12 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProfileUserNotFoundDiscoveryView } from './ProfileUserNotFoundDiscoveryView';
 
-const mockUseLayoutReset = vi.fn();
-
-vi.mock('@/hooks/useLayoutReset/useLayoutReset', () => ({
-  useLayoutReset: () => mockUseLayoutReset(),
-}));
-
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
   ContentLayout: ({
     children,
@@ -19,6 +13,7 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
     showRightMobileButton,
     hasGradientBackground,
     className,
+    disableWideShellLayout,
   }: {
     children: React.ReactNode;
     leftSidebarContent?: React.ReactNode;
@@ -28,11 +23,13 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
     showRightMobileButton?: boolean;
     hasGradientBackground?: boolean;
     className?: string;
+    disableWideShellLayout?: boolean;
   }) => (
     <div
       data-testid="content-layout"
       data-show-right-mobile-button={String(showRightMobileButton)}
       data-has-gradient-background={String(hasGradientBackground)}
+      data-disable-wide-shell-layout={String(disableWideShellLayout)}
       className={className}
     >
       <div data-testid="content-layout-left-slot">{leftSidebarContent}</div>
@@ -83,17 +80,13 @@ describe('ProfileUserNotFoundDiscoveryView', () => {
     vi.clearAllMocks();
   });
 
-  it('calls useLayoutReset on mount', () => {
-    render(<ProfileUserNotFoundDiscoveryView />);
-    expect(mockUseLayoutReset).toHaveBeenCalledTimes(1);
-  });
-
   it('renders ContentLayout with Hot shell props and sidebar slots', () => {
     render(<ProfileUserNotFoundDiscoveryView />);
 
     const layout = screen.getByTestId('content-layout');
     expect(layout).toHaveAttribute('data-show-right-mobile-button', 'false');
     expect(layout).toHaveAttribute('data-has-gradient-background', 'false');
+    expect(layout).toHaveAttribute('data-disable-wide-shell-layout', 'true');
     expect(layout).toHaveClass('pb-24 lg:pb-12');
 
     expect(screen.getByTestId('content-layout-left-slot')).toContainElement(screen.getByTestId('hot-feed-sidebar'));

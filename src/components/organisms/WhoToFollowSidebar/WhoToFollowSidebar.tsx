@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { UsersRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import {
   WHO_TO_FOLLOW_BUFFER_SIZE,
@@ -16,6 +17,7 @@ import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
 import { CompactUserListItemSkeleton } from '@/organisms/CompactUserListItemSkeleton/CompactUserListItemSkeleton';
 import { UserListItem } from '@/organisms/UserListItem/UserListItem';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 /**
  * WhoToFollowSidebar
@@ -30,24 +32,29 @@ export function WhoToFollowSidebar() {
   const tCommon = useTranslations('common');
   const router = useRouter();
   const pathname = usePathname();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const isAuthenticated = Boolean(currentUserPubky);
+  const { requireAuth } = useRequireAuth();
   const { preservedFollowedUserIds, handleFollowClick, isUserLoading } = useWhoToFollowFollowPreservation({
     resetKey: pathname,
   });
   const { users, isLoading: isStreamLoading } = useUserStream({
-    streamId: UserStreamTypes.RECOMMENDED,
+    streamId: isAuthenticated ? UserStreamTypes.RECOMMENDED : UserStreamTypes.MOST_FOLLOWED,
     limit: WHO_TO_FOLLOW_USER_LIMIT,
     bufferSize: WHO_TO_FOLLOW_BUFFER_SIZE,
     refillThreshold: WHO_TO_FOLLOW_REFILL_THRESHOLD,
-    includeRelationships: true,
-    excludeFollowing: true,
+    includeRelationships: isAuthenticated,
+    excludeFollowing: isAuthenticated,
     preserveFollowedUserIds: preservedFollowedUserIds,
   });
+  const visibleUsers = isAuthenticated ? users : users.slice(0, WHO_TO_FOLLOW_USER_LIMIT);
 
   const handleUserClick = (pubky: Pubky) => {
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
   };
+  // In Explore mode there are no real recommendations, so prompt Join Pubky instead of routing.
   const handleSeeAll = () => {
-    router.push(APP_ROUTES.WHO_TO_FOLLOW);
+    requireAuth(() => router.push(APP_ROUTES.WHO_TO_FOLLOW));
   };
   return (
     <SidebarSection
@@ -63,7 +70,7 @@ export function WhoToFollowSidebar() {
         ? Array.from({
             length: WHO_TO_FOLLOW_USER_LIMIT,
           }).map((_, index) => <CompactUserListItemSkeleton key={`who-to-follow-skeleton-${index}`} />)
-        : users.map((user) => (
+        : visibleUsers.map((user) => (
             <UserListItem
               key={user.id}
               user={user}

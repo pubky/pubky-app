@@ -2,7 +2,7 @@
 
 exports[`SettingsMobileMenu - Snapshots > matches snapshot 1`] = `
 <div
-  class="mobile-menu-gradient-fade z-(--z-mobile-menu) bg-background lg:hidden fixed top-(--header-height-mobile) right-0 left-0"
+  class="mobile-menu-gradient-fade z-(--z-mobile-menu) bg-background lg:hidden fixed right-0 left-0 top-(--header-height-settings)"
   data-testid="settings-mobile-menu"
 >
   <div

@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import { SETTINGS_ROUTES } from '@/app/routes';
-import { useLayoutReset } from '@/hooks/useLayoutReset/useLayoutReset';
 import { MobileHeader } from '@/molecules/MobileHeader/MobileHeader';
 import { SettingsInfo } from '@/molecules/Settings/SettingsInfo/SettingsInfo';
 import { SettingsMenu } from '@/molecules/Settings/SettingsMenu/SettingsMenu';
@@ -19,13 +18,16 @@ export function Settings({ children }: SettingsProps) {
   const pathname = usePathname();
   const isOnHelpPage = pathname === SETTINGS_ROUTES.HELP;
 
-  // Reset to column layout on mount (settings doesn't support wide layout)
-  useLayoutReset();
-
   return (
     <>
       {/* Mobile header - rendered here for control over hasGradientBackground */}
-      <MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} fixed />
+      <MobileHeader
+        containerClassName="pb-0"
+        hasGradientBackground={false}
+        showLeftButton={false}
+        showRightButton={false}
+        fixed
+      />
 
       {/* Mobile tab navigation - visible only on mobile (< lg) */}
       <SettingsMobileMenu />
@@ -38,7 +40,8 @@ export function Settings({ children }: SettingsProps) {
         rightSidebarContent={<SettingsInfo hideFAQ={isOnHelpPage} />}
         leftDrawerContent={<SettingsMenu />}
         rightDrawerContent={<SettingsInfo hideFAQ={isOnHelpPage} />}
-        className="pt-[calc(var(--header-height-mobile)+5rem)] lg:pt-0"
+        className="pt-(--settings-mobile-chrome-height) lg:pt-0"
+        disableWideShellLayout
       >
         {children}
       </ContentLayout>

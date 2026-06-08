@@ -35,6 +35,7 @@ const mockUseAuthStatus = vi.fn(() => ({
 }));
 
 const mockIsPublicRoute = vi.fn(() => false);
+const mockIsPublicExploreRoute = vi.fn(() => false);
 const mockRequireAuth = vi.fn((action: () => void) => action());
 
 vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
@@ -42,7 +43,12 @@ vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
-  usePublicRoute: () => ({ isPublicRoute: mockIsPublicRoute() }),
+  usePublicRoute: () => ({
+    isPublicRoute: mockIsPublicRoute(),
+    isDynamicPublicRoute: mockIsPublicRoute(),
+    isCoreExploreRoute: mockIsPublicExploreRoute() && !mockIsPublicRoute(),
+    isPublicExploreRoute: mockIsPublicExploreRoute(),
+  }),
 }));
 
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
@@ -104,6 +110,7 @@ describe('NewPostCTA', () => {
       hasProfile: true,
     });
     mockIsPublicRoute.mockReturnValue(false);
+    mockIsPublicExploreRoute.mockReturnValue(false);
     mockRequireAuth.mockImplementation((action: () => void) => action());
   });
 
@@ -121,6 +128,7 @@ describe('NewPostCTA', () => {
       hasProfile: false,
     });
     mockIsPublicRoute.mockReturnValue(false);
+    mockIsPublicExploreRoute.mockReturnValue(false);
 
     const { container } = render(<NewPostCTA />);
     expect(container.firstChild).toBeNull();
@@ -161,6 +169,7 @@ describe('NewPostCTA', () => {
         hasProfile: false,
       });
       mockIsPublicRoute.mockReturnValue(true);
+      mockIsPublicExploreRoute.mockReturnValue(true);
 
       render(<NewPostCTA />);
 
@@ -176,6 +185,7 @@ describe('NewPostCTA', () => {
         hasProfile: false,
       });
       mockIsPublicRoute.mockReturnValue(true);
+      mockIsPublicExploreRoute.mockReturnValue(true);
       mockRequireAuth.mockImplementation(() => undefined); // Simulates showing sign-in dialog
 
       render(<NewPostCTA />);
@@ -195,6 +205,7 @@ describe('NewPostCTA', () => {
         hasProfile: false,
       });
       mockIsPublicRoute.mockReturnValue(true);
+      mockIsPublicExploreRoute.mockReturnValue(true);
 
       render(<NewPostCTA />);
 
@@ -216,6 +227,7 @@ describe('NewPostCTA - Snapshots', () => {
       hasProfile: true,
     });
     mockIsPublicRoute.mockReturnValue(false);
+    mockIsPublicExploreRoute.mockReturnValue(false);
     mockRequireAuth.mockImplementation((action: () => void) => action());
   });
 

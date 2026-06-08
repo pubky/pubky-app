@@ -13,6 +13,7 @@ import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
+import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
@@ -106,19 +107,47 @@ export function PostInput({
     onArticleModeChange,
   });
 
-  const isValid = React.useCallback(() => {
-    return canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
-  }, [variant, content, attachments, isSubmitting, isArticle, articleTitle]);
+  const {
+    isAuthenticated,
+    handleExpandWithAuth,
+    handleSubmitWithAuth,
+    setTagsWithAuth,
+    setAttachmentsWithAuth,
+    handleChangeWithAuth,
+    handleFilesAddedWithAuth,
+    handleFileClickWithAuth,
+    handleEmojiSelectWithAuth,
+    handlePasteWithAuth,
+    handleDragEventWithAuth,
+    createKeyDownHandler,
+    handleArticleTitleChangeWithAuth,
+    handleArticleBodyChangeWithAuth,
+    handleArticleClickWithAuth,
+  } = usePostInputAuthHandlers({
+    handleExpand,
+    handleSubmit,
+    setTags,
+    setAttachments,
+    handleChange,
+    handleFilesAdded,
+    handleFileClick,
+    handleEmojiSelect,
+    handlePaste,
+    handleArticleTitleChange,
+    handleArticleBodyChange,
+    handleArticleClick,
+  });
 
-  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmit, {
+  const isValid = () => {
+    return canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
+  };
+
+  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitWithAuth, {
     requireModifier: true,
   });
 
   // Combined keyboard handler: mention popover takes priority, then enter submit
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (handleMentionKeyDown(e)) return;
-    enterSubmitHandler(e);
-  };
+  const handleKeyDown = createKeyDownHandler({ handleMentionKeyDown, enterSubmitHandler });
 
   const isEdit = variant === POST_INPUT_VARIANT.EDIT;
 
@@ -176,13 +205,14 @@ export function PostInput({
       className={cn(
         'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
         isWideLayout ? 'p-12' : 'p-4',
+        !isAuthenticated ? 'px-6' : '',
         isDragging ? 'border-brand' : 'border-input',
       )}
-      onClick={handleExpand}
-      onDragEnter={isEdit ? undefined : handleDragEnter}
-      onDragLeave={isEdit ? undefined : handleDragLeave}
-      onDragOver={isEdit ? undefined : handleDragOver}
-      onDrop={isEdit ? undefined : handleDrop}
+      onClick={handleExpandWithAuth}
+      onDragEnter={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragEnter)}
+      onDragLeave={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragLeave)}
+      onDragOver={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragOver)}
+      onDrop={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDrop)}
     >
       {/* Drag overlay */}
       {isDragging && (
@@ -200,9 +230,9 @@ export function PostInput({
           <Input
             placeholder={t('articleTitle')}
             defaultValue={articleTitle}
-            onChange={handleArticleTitleChange}
+            onChange={handleArticleTitleChangeWithAuth}
             maxLength={ARTICLE_TITLE_MAX_CHARACTER_LENGTH}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !isAuthenticated}
             className="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
           />
         )}
@@ -225,13 +255,14 @@ export function PostInput({
               variant="inline"
               className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
               value={content}
-              onChange={handleChange}
-              onFocus={handleExpand}
+              onChange={handleChangeWithAuth}
+              onFocus={handleExpandWithAuth}
               onKeyDown={handleKeyDown}
-              onPaste={isEdit ? undefined : handlePaste}
+              onPaste={isEdit ? undefined : handlePasteWithAuth}
               maxLength={POST_MAX_CHARACTER_LENGTH}
               rows={1}
               disabled={isSubmitting}
+              readOnly={!isAuthenticated}
               aria-haspopup="listbox"
               autoFocus={autoFocusTextarea}
             />
@@ -252,11 +283,11 @@ export function PostInput({
           <PostInputAttachments
             ref={fileInputRef}
             attachments={attachments}
-            setAttachments={setAttachments}
-            handleFilesAdded={handleFilesAdded}
+            setAttachments={setAttachmentsWithAuth}
+            handleFilesAdded={handleFilesAddedWithAuth}
             isSubmitting={isSubmitting}
             isArticle={isArticle}
-            handleFileClick={handleFileClick}
+            handleFileClick={handleFileClickWithAuth}
           />
         )}
 
@@ -265,8 +296,8 @@ export function PostInput({
             ref={markdownEditorRef}
             autoFocus
             markdown={sanitizeCodeBlockLanguages(content)}
-            onChange={handleArticleBodyChange}
-            readOnly={isSubmitting}
+            onChange={handleArticleBodyChangeWithAuth}
+            readOnly={isSubmitting || !isAuthenticated}
           />
         )}
 
@@ -281,14 +312,15 @@ export function PostInput({
           tags={tags}
           isSubmitting={isSubmitting}
           isArticle={isArticle}
-          setTags={setTags}
-          onSubmit={handleSubmit}
+          isDisabled={!isAuthenticated}
+          setTags={setTagsWithAuth}
+          onSubmit={handleSubmitWithAuth}
           showEmojiPicker={showEmojiPicker}
           setShowEmojiPicker={setShowEmojiPicker}
-          onEmojiSelect={handleEmojiSelect}
-          onImageClick={handleFileClick}
-          onArticleClick={handleArticleClick}
-          isPostDisabled={!isValid()}
+          onEmojiSelect={handleEmojiSelectWithAuth}
+          onImageClick={handleFileClickWithAuth}
+          onArticleClick={handleArticleClickWithAuth}
+          isPostDisabled={isAuthenticated ? !isValid() : false}
           submitMode={variant}
           parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
           characterLimit={characterLimit}

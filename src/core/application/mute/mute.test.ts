@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { AppError } from '@/libs/error/error';
-import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamModel } from '@/models/stream/user/userStream';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
@@ -315,16 +315,8 @@ describe('MuteApplication.fetchMutedUsers', () => {
     expect(result).toEqual(['mutee_aaa']);
   });
 
-  it('should return empty array when homeserver returns 404', async () => {
-    const notFoundError = new AppError({
-      category: ErrorCategory.Client,
-      code: ClientErrorCode.NOT_FOUND,
-      message: 'Not found',
-      service: ErrorService.Homeserver,
-      operation: 'list',
-      context: { statusCode: HttpStatusCode.NOT_FOUND },
-    });
-    vi.spyOn(HomeserverService, 'list').mockRejectedValue(notFoundError);
+  it('should return empty array when homeserver list returns empty (404 absorbed at service layer)', async () => {
+    vi.spyOn(HomeserverService, 'list').mockResolvedValue([]);
 
     const result = await MuteApplication.fetchMutedUsers(pubky);
 

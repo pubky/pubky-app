@@ -10,7 +10,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot for current user (no 
     data-testid="popover-trigger"
   >
     <div
-      class="flex min-w-0 items-center gap-3"
+      class="flex w-fit min-w-0 items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -36,11 +36,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot for current user (no 
         data-testid="container"
       >
         <a
+          class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
             data-testid="typography"
           >
             Snapshot User
@@ -93,7 +94,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot when following 1`] = 
     data-testid="popover-trigger"
   >
     <div
-      class="flex min-w-0 items-center gap-3"
+      class="flex w-fit min-w-0 items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -119,11 +120,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot when following 1`] = 
         data-testid="container"
       >
         <a
+          class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
           href="/profile/otherUser123"
         >
           <p
-            class="block max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
             data-testid="typography"
           >
             Other User
@@ -176,7 +178,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all new props 1`
     data-testid="popover-trigger"
   >
     <div
-      class="flex min-w-0 items-center gap-4"
+      class="flex w-fit min-w-0 items-center gap-4"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -207,11 +209,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all new props 1`
         data-testid="container"
       >
         <a
+          class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate font-bold text-foreground text-2xl leading-8"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-2xl leading-8"
             data-testid="typography"
           >
             Snapshot User
@@ -269,7 +272,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all props 1`] = 
     data-testid="popover-trigger"
   >
     <div
-      class="flex min-w-0 items-center gap-3"
+      class="flex w-fit min-w-0 items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -300,11 +303,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all props 1`] = 
         data-testid="container"
       >
         <a
+          class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
             data-testid="typography"
           >
             Snapshot User
@@ -365,7 +369,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with bio 1`] = `
     data-testid="popover-trigger"
   >
     <div
-      class="flex min-w-0 items-center gap-3"
+      class="flex w-fit min-w-0 items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -391,11 +395,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with bio 1`] = `
         data-testid="container"
       >
         <a
+          class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
             data-testid="typography"
           >
             Snapshot User
@@ -448,7 +453,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with large size 1`] =
     data-testid="popover-trigger"
   >
     <div
-      class="flex min-w-0 items-center gap-4"
+      class="flex w-fit min-w-0 items-center gap-4"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -474,11 +479,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with large size 1`] =
         data-testid="container"
       >
         <a
+          class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate font-bold text-foreground text-2xl leading-8"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-2xl leading-8"
             data-testid="typography"
           >
             Snapshot User
@@ -531,7 +537,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with minimal props 1`
     data-testid="popover-trigger"
   >
     <div
-      class="flex min-w-0 items-center gap-3"
+      class="flex w-fit min-w-0 items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -557,11 +563,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with minimal props 1`
         data-testid="container"
       >
         <a
+          class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
           href="/profile/user123"
         >
           <p
-            class="block max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
             data-testid="typography"
           >
             Test User
@@ -614,7 +621,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with timeAgo 1`] = `
     data-testid="popover-trigger"
   >
     <div
-      class="flex min-w-0 items-center gap-3"
+      class="flex w-fit min-w-0 items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -640,11 +647,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with timeAgo 1`] = `
         data-testid="container"
       >
         <a
+          class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
             data-testid="typography"
           >
             Snapshot User
@@ -702,7 +710,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot without avatarUrl 1`]
     data-testid="popover-trigger"
   >
     <div
-      class="flex min-w-0 items-center gap-3"
+      class="flex w-fit min-w-0 items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -728,11 +736,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot without avatarUrl 1`]
         data-testid="container"
       >
         <a
+          class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
             data-testid="typography"
           >
             Snapshot User
@@ -793,7 +802,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot without character cou
     data-testid="popover-trigger"
   >
     <div
-      class="flex min-w-0 items-center gap-3"
+      class="flex w-fit min-w-0 items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -824,11 +833,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot without character cou
         data-testid="container"
       >
         <a
+          class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
             data-testid="typography"
           >
             Snapshot User
