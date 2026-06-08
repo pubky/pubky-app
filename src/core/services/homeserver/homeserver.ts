@@ -27,6 +27,7 @@ import type {
   THomeserverRestoreSessionParams,
   THomeserverSessionResult,
   THomeserverSignUpParams,
+  TSignupTokenVerificationStatus,
 } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { handleError } from './error.utils';
@@ -150,21 +151,40 @@ export class HomeserverService {
    * homeserver-root endpoint that cannot be reached via the homeserver pubkey (its PKARR
    * record has no resolvable HTTPS endpoint), so the explicit {@link HOMESERVER_URL} is used.
    *
-   * A definitive homeserver response distinguishes a valid token from an invalid one, whereas
+   * A definitive homeserver response distinguishes valid, used, and unknown tokens, whereas
    * a failure to reach the homeserver is surfaced as a thrown error so callers can tell
-   * "invalid token" apart from "couldn't verify right now".
+   * verification outcomes apart from "couldn't verify right now".
    *
    * @param signupToken - The signup token / invite code to verify
-   * @returns `true` if the token is valid (200 response), `false` if the homeserver reports it
-   *   as not valid (e.g. 404).
-   * @throws When the homeserver could not be reached (network error, timeout, DNS/PKARR failure).
+   * @returns `'valid'` when the token exists and is unused, `'used'` when already redeemed,
+   *   `'invalid'` when the homeserver does not recognise the token (404).
+   * @throws When the homeserver could not be reached (network error, timeout, DNS/PKARR failure)
+   *   or returns an unexpected status.
    */
-  static async verifySignupToken(signupToken: string): Promise<boolean> {
+  static async verifySignupToken(signupToken: string): Promise<TSignupTokenVerificationStatus> {
     const url = `${HOMESERVER_URL}/signup_tokens/${encodeURIComponent(signupToken)}`;
     try {
       const response = await this.getPubkySdk().client.fetch(url, { method: HttpMethod.GET });
       Logger.debug('Signup token verification response', { status: response.status });
-      return response.ok;
+
+      if (response.status === HttpStatusCode.NOT_FOUND) {
+        return 'invalid';
+      }
+
+      if (!response.ok) {
+        throw new Error(`Signup token verification failed with status ${response.status}`);
+      }
+
+      const data = (await response.json()) as { status?: string };
+      if (data.status === 'valid') {
+        return 'valid';
+      }
+      if (data.status === 'used') {
+        return 'used';
+      }
+
+      Logger.warn('Unexpected signup token verification payload', { status: data.status });
+      return 'invalid';
     } catch (error) {
       Logger.warn('Signup token verification could not reach the homeserver', { error });
       throw error;

@@ -6,7 +6,7 @@ import { Human } from './Human';
 const mockPush = vi.fn();
 const mockToast = vi.fn();
 const mockShowErrorToast = vi.fn();
-const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<boolean>>();
+const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<'valid' | 'used' | 'invalid'>>();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -43,8 +43,8 @@ vi.mock('@/organisms/HumanInviteCode/HumanInviteCode', () => {
       <button
         data-testid="human-invite-code"
         onClick={() => {
-          void onVerify('YVB2-YFRN-GDY0').then((isValid) => {
-            if (isValid) {
+          void onVerify('YVB2-YFRN-GDY0').then((isVerified) => {
+            if (isVerified) {
               onSuccess('YVB2-YFRN-GDY0');
             }
           });
@@ -90,7 +90,7 @@ describe('Human template', () => {
     mockToast.mockClear();
     mockShowErrorToast.mockClear();
     mockVerifySignupToken.mockReset();
-    mockVerifySignupToken.mockResolvedValue(true);
+    mockVerifySignupToken.mockResolvedValue('valid');
   });
 
   it('renders all main components', () => {
@@ -100,7 +100,7 @@ describe('Human template', () => {
   });
 
   it('verifies a manually entered invite code, shows success toast and navigates to install', async () => {
-    mockVerifySignupToken.mockResolvedValue(true);
+    mockVerifySignupToken.mockResolvedValue('valid');
     render(<Human />);
 
     fireEvent.click(screen.getByTestId('human-selection'));
@@ -117,7 +117,7 @@ describe('Human template', () => {
   });
 
   it('shows a warning toast and stays on the invite step when the code is invalid', async () => {
-    mockVerifySignupToken.mockResolvedValue(false);
+    mockVerifySignupToken.mockResolvedValue('invalid');
     render(<Human />);
 
     fireEvent.click(screen.getByTestId('human-selection'));
@@ -133,6 +133,25 @@ describe('Human template', () => {
     expect(mockShowErrorToast).not.toHaveBeenCalled();
     expect(mockPush).not.toHaveBeenCalled();
     // Still on the invite code step so the user can try again
+    expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
+  });
+
+  it('shows a warning toast and stays on the invite step when the code has already been used', async () => {
+    mockVerifySignupToken.mockResolvedValue('used');
+    render(<Human />);
+
+    fireEvent.click(screen.getByTestId('human-selection'));
+    fireEvent.click(screen.getByTestId('human-invite-code'));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Invite code already used',
+        description: 'This invite code has already been used. Please use a different invite code.',
+      });
+    });
+    expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+    expect(mockShowErrorToast).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
     expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
   });
 

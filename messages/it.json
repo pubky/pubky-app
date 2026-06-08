@@ -402,6 +402,8 @@
       "inviteCodeAppliedDescription": "Il tuo codice di invito {inviteCode} è stato applicato.",
       "invalidInviteCode": "Codice di invito non valido",
       "invalidInviteCodeDescription": "Questo codice di invito non è valido o è scaduto. Usa un codice di invito valido.",
+      "usedInviteCode": "Codice di invito già utilizzato",
+      "usedInviteCodeDescription": "Questo codice di invito è già stato utilizzato. Usa un codice di invito diverso.",
       "verificationFailed": "Impossibile verificare il codice di invito",
       "verificationFailedDescription": "Non è stato possibile verificare il tuo codice di invito in questo momento. Controlla la connessione e riprova."
     },

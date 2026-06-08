@@ -402,6 +402,8 @@
       "inviteCodeAppliedDescription": "تم تطبيق رمز الدعوة {inviteCode}.",
       "invalidInviteCode": "رمز دعوة غير صالح",
       "invalidInviteCodeDescription": "رمز الدعوة هذا غير صالح أو منتهي الصلاحية. يرجى استخدام رمز دعوة صالح.",
+      "usedInviteCode": "رمز الدعوة مستخدم بالفعل",
+      "usedInviteCodeDescription": "تم استخدام رمز الدعوة هذا بالفعل. يرجى استخدام رمز دعوة مختلف.",
       "verificationFailed": "تعذّر التحقق من رمز الدعوة",
       "verificationFailedDescription": "تعذّر علينا التحقق من رمز الدعوة الآن. يرجى التحقق من اتصالك والمحاولة مرة أخرى."
     },

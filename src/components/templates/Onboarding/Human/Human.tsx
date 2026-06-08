@@ -48,9 +48,30 @@ export function Human() {
   // A homeserver that reports the code as invalid shows a warning toast; a homeserver we couldn't
   // reach shows an error toast so the two are not conflated.
   async function onInviteCodeVerify(inviteCode: string): Promise<boolean> {
-    let isValid: boolean;
     try {
-      isValid = await AuthController.verifySignupToken(inviteCode);
+      const status = await AuthController.verifySignupToken(inviteCode);
+
+      if (status === 'valid') {
+        toast({
+          title: t('inviteCodeApplied'),
+          description: t('inviteCodeAppliedDescription', { inviteCode }),
+        });
+        return true;
+      }
+
+      if (status === 'used') {
+        toast({
+          title: t('usedInviteCode'),
+          description: t('usedInviteCodeDescription'),
+        });
+        return false;
+      }
+
+      toast({
+        title: t('invalidInviteCode'),
+        description: t('invalidInviteCodeDescription'),
+      });
+      return false;
     } catch {
       showErrorToast({
         title: t('verificationFailed'),
@@ -58,20 +79,6 @@ export function Human() {
       });
       return false;
     }
-
-    if (!isValid) {
-      toast({
-        title: t('invalidInviteCode'),
-        description: t('invalidInviteCodeDescription'),
-      });
-      return false;
-    }
-
-    toast({
-      title: t('inviteCodeApplied'),
-      description: t('inviteCodeAppliedDescription', { inviteCode }),
-    });
-    return true;
   }
   return (
     <OnboardingLayout testId="human-content">

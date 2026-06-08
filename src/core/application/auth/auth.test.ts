@@ -168,22 +168,31 @@ describe('AuthApplication', () => {
   });
 
   describe('verifySignupToken', () => {
-    it('should return true when the homeserver verifies the token', async () => {
-      const verifySpy = vi.spyOn(HomeserverService, 'verifySignupToken').mockResolvedValue(true);
+    it('should return valid when the homeserver reports the token is valid', async () => {
+      const verifySpy = vi.spyOn(HomeserverService, 'verifySignupToken').mockResolvedValue('valid');
 
       const result = await AuthApplication.verifySignupToken('YVB2-YFRN-GDY0');
 
       expect(verifySpy).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
-      expect(result).toBe(true);
+      expect(result).toBe('valid');
     });
 
-    it('should return false when the homeserver rejects the token', async () => {
-      const verifySpy = vi.spyOn(HomeserverService, 'verifySignupToken').mockResolvedValue(false);
+    it('should return used when the homeserver reports the token is used', async () => {
+      const verifySpy = vi.spyOn(HomeserverService, 'verifySignupToken').mockResolvedValue('used');
+
+      const result = await AuthApplication.verifySignupToken('YVB2-YFRN-GDY0');
+
+      expect(verifySpy).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+      expect(result).toBe('used');
+    });
+
+    it('should return invalid when the homeserver does not recognise the token', async () => {
+      const verifySpy = vi.spyOn(HomeserverService, 'verifySignupToken').mockResolvedValue('invalid');
 
       const result = await AuthApplication.verifySignupToken('BADC-0DE0-0000');
 
       expect(verifySpy).toHaveBeenCalledWith('BADC-0DE0-0000');
-      expect(result).toBe(false);
+      expect(result).toBe('invalid');
     });
   });
 

@@ -1491,22 +1491,31 @@ describe('AuthController', () => {
   });
 
   describe('verifySignupToken', () => {
-    it('should return true when the invite code is valid', async () => {
-      const verifySpy = vi.spyOn(AuthApplication, 'verifySignupToken').mockResolvedValue(true);
+    it('should return valid when the invite code is valid', async () => {
+      const verifySpy = vi.spyOn(AuthApplication, 'verifySignupToken').mockResolvedValue('valid');
 
       const result = await AuthController.verifySignupToken('YVB2-YFRN-GDY0');
 
       expect(verifySpy).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
-      expect(result).toBe(true);
+      expect(result).toBe('valid');
     });
 
-    it('should return false when the invite code is invalid', async () => {
-      const verifySpy = vi.spyOn(AuthApplication, 'verifySignupToken').mockResolvedValue(false);
+    it('should return used when the invite code has already been used', async () => {
+      const verifySpy = vi.spyOn(AuthApplication, 'verifySignupToken').mockResolvedValue('used');
+
+      const result = await AuthController.verifySignupToken('YVB2-YFRN-GDY0');
+
+      expect(verifySpy).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+      expect(result).toBe('used');
+    });
+
+    it('should return invalid when the invite code is not recognised', async () => {
+      const verifySpy = vi.spyOn(AuthApplication, 'verifySignupToken').mockResolvedValue('invalid');
 
       const result = await AuthController.verifySignupToken('BADC-0DE0-0000');
 
       expect(verifySpy).toHaveBeenCalledWith('BADC-0DE0-0000');
-      expect(result).toBe(false);
+      expect(result).toBe('invalid');
     });
   });
 });

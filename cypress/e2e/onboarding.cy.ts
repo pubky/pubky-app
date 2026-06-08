@@ -93,4 +93,36 @@ describe('Onboarding', () => {
     cy.get('[data-cy="human-invite-code-continue-btn"]').should('be.disabled');
     cy.location('pathname').should('eq', '/onboarding/human');
   });
+
+  it('cannot proceed with a reused invite code', () => {
+    const profileName = 'Reused Invite User';
+    const signupTokensPath = '/signup_tokens/';
+
+    // Pass verification through to the homeserver and capture the invite code from the request URL.
+    cy.intercept('GET', '**/signup_tokens/*', (req) => {
+      const tokenStart = req.url.indexOf(signupTokensPath);
+      if (tokenStart !== -1) {
+        const encodedToken = req.url.slice(tokenStart + signupTokensPath.length).split('?')[0];
+        cy.wrap(decodeURIComponent(encodedToken)).as('reusedInviteCode');
+      }
+      req.continue();
+    }).as('verifyInviteCode');
+
+    // First signup: homeserver verifies the fresh code as valid
+    cy.onboardAsNewUser(profileName);
+    cy.signOut(HasBackedUp.Yes);
+
+    // Second signup: reuse the captured invite code; homeserver should report it as used
+    cy.get('#create-account-btn').click();
+    cy.location('pathname').should('eq', '/onboarding/human');
+    cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
+
+    cy.get<string>('@reusedInviteCode').then((inviteCode) => {
+      cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
+      cy.wait('@verifyInviteCode');
+      cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code already used');
+      cy.get('[data-cy="human-invite-code-continue-btn"]').should('be.disabled');
+      cy.location('pathname').should('eq', '/onboarding/human');
+    });
+  });
 });

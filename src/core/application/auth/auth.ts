@@ -103,9 +103,9 @@ export class AuthApplication {
    * Verifies a signup token (invite code) against the homeserver.
    *
    * @param signupToken - The signup token / invite code to verify
-   * @returns `true` if the token is valid, `false` otherwise
+   * @returns `'valid'`, `'used'`, or `'invalid'` depending on the homeserver response
    */
-  static async verifySignupToken(signupToken: string): Promise<boolean> {
+  static async verifySignupToken(signupToken: string) {
     return await HomeserverService.verifySignupToken(signupToken);
   }
 

@@ -402,6 +402,8 @@
       "inviteCodeAppliedDescription": "招待コード {inviteCode} が適用されました。",
       "invalidInviteCode": "無効な招待コード",
       "invalidInviteCodeDescription": "この招待コードは無効か期限切れです。有効な招待コードを使用してください。",
+      "usedInviteCode": "招待コードは既に使用済みです",
+      "usedInviteCodeDescription": "この招待コードは既に使用されています。別の招待コードを使用してください。",
       "verificationFailed": "招待コードを確認できませんでした",
       "verificationFailedDescription": "現在、招待コードを確認できませんでした。接続を確認してもう一度お試しください。"
     },

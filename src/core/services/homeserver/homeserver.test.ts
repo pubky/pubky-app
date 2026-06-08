@@ -298,23 +298,39 @@ describe('HomeserverService', () => {
     });
 
     describe('verifySignupToken', () => {
-      it('should return true when the homeserver responds with 200', async () => {
-        mockState.clientFetch.mockResolvedValue(new Response(null, { status: 200 }));
+      it('should return valid when the homeserver responds with status valid', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response(JSON.stringify({ status: 'valid' }), { status: 200 }));
 
         const result = await HomeserverService.verifySignupToken('YVB2-YFRN-GDY0');
 
-        expect(result).toBe(true);
+        expect(result).toBe('valid');
         expect(mockState.clientFetch).toHaveBeenCalledWith(expect.stringContaining('/signup_tokens/YVB2-YFRN-GDY0'), {
           method: HttpMethod.GET,
         });
       });
 
-      it('should return false when the homeserver responds with 404', async () => {
+      it('should return used when the homeserver responds with status used', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response(JSON.stringify({ status: 'used' }), { status: 200 }));
+
+        const result = await HomeserverService.verifySignupToken('YVB2-YFRN-GDY0');
+
+        expect(result).toBe('used');
+      });
+
+      it('should return invalid when the homeserver responds with 404', async () => {
         mockState.clientFetch.mockResolvedValue(new Response(null, { status: 404 }));
 
         const result = await HomeserverService.verifySignupToken('BADC-0DE0-0000');
 
-        expect(result).toBe(false);
+        expect(result).toBe('invalid');
+      });
+
+      it('should return invalid when the homeserver responds with an unexpected payload', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response(JSON.stringify({ status: 'unknown' }), { status: 200 }));
+
+        const result = await HomeserverService.verifySignupToken('BADC-0DE0-0000');
+
+        expect(result).toBe('invalid');
       });
 
       it('should rethrow when the homeserver cannot be reached', async () => {
@@ -324,7 +340,7 @@ describe('HomeserverService', () => {
       });
 
       it('should URL-encode the signup token', async () => {
-        mockState.clientFetch.mockResolvedValue(new Response(null, { status: 200 }));
+        mockState.clientFetch.mockResolvedValue(new Response(JSON.stringify({ status: 'valid' }), { status: 200 }));
 
         await HomeserverService.verifySignupToken('AB CD/EF');
 

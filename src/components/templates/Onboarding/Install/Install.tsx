@@ -33,9 +33,9 @@ export function Install() {
     (async () => {
       try {
         // Verify the invite code with the homeserver before applying it.
-        const isValid = await AuthController.verifySignupToken(inviteCodeFromUrl);
+        const status = await AuthController.verifySignupToken(inviteCodeFromUrl);
 
-        if (isValid) {
+        if (status === 'valid') {
           useOnboardingStore.getState().setInviteCode(inviteCodeFromUrl);
           toast({
             title: t('inviteCodeApplied'),
@@ -45,11 +45,17 @@ export function Install() {
           return;
         }
 
-        // The homeserver responded that the code is not valid.
-        toast({
-          title: t('invalidInviteCode'),
-          description: t('invalidInviteCodeDescription'),
-        });
+        if (status === 'used') {
+          toast({
+            title: t('usedInviteCode'),
+            description: t('usedInviteCodeDescription'),
+          });
+        } else {
+          toast({
+            title: t('invalidInviteCode'),
+            description: t('invalidInviteCodeDescription'),
+          });
+        }
       } catch {
         // The homeserver could not be reached, so we couldn't confirm the code.
         showErrorToast({

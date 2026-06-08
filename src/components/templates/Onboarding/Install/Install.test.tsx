@@ -9,7 +9,7 @@ const mockToast = vi.fn();
 const mockShowErrorToast = vi.fn();
 const mockSetInviteCode = vi.fn();
 const mockReplace = vi.fn();
-const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<boolean>>();
+const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<'valid' | 'used' | 'invalid'>>();
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
@@ -72,7 +72,7 @@ describe('Install template', () => {
     mockSetInviteCode.mockClear();
     mockReplace.mockClear();
     mockVerifySignupToken.mockReset();
-    mockVerifySignupToken.mockResolvedValue(true);
+    mockVerifySignupToken.mockResolvedValue('valid');
   });
 
   it('renders install onboarding content', () => {
@@ -86,7 +86,7 @@ describe('Install template', () => {
 
   it('applies invite code from URL and shows toast when the code is valid', async () => {
     mockSearchParamsGet.mockReturnValueOnce('YVB2-YFRN-GDY0');
-    mockVerifySignupToken.mockResolvedValue(true);
+    mockVerifySignupToken.mockResolvedValue('valid');
     render(<Install />);
 
     await waitFor(() => {
@@ -104,7 +104,7 @@ describe('Install template', () => {
 
   it('does not apply the invite code and redirects home when the code is invalid', async () => {
     mockSearchParamsGet.mockReturnValueOnce('YVB2-YFRN-GDY0');
-    mockVerifySignupToken.mockResolvedValue(false);
+    mockVerifySignupToken.mockResolvedValue('invalid');
     render(<Install />);
 
     await waitFor(() => {
@@ -115,6 +115,23 @@ describe('Install template', () => {
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Invalid invite code',
       description: 'This invite code is invalid or has expired. Please use a valid invite code.',
+    });
+    expect(mockShowErrorToast).not.toHaveBeenCalled();
+  });
+
+  it('does not apply the invite code and redirects home when the code has already been used', async () => {
+    mockSearchParamsGet.mockReturnValueOnce('YVB2-YFRN-GDY0');
+    mockVerifySignupToken.mockResolvedValue('used');
+    render(<Install />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(ROOT_ROUTES);
+    });
+    expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+    expect(mockSetInviteCode).not.toHaveBeenCalled();
+    expect(mockToast).toHaveBeenCalledWith({
+      title: 'Invite code already used',
+      description: 'This invite code has already been used. Please use a different invite code.',
     });
     expect(mockShowErrorToast).not.toHaveBeenCalled();
   });
