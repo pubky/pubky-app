@@ -238,6 +238,25 @@ describe('useProfileMenuActions', () => {
 
       expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, true, 'Test User');
     });
+
+    it('swallows follow rejection after useFollowUser handles the error', async () => {
+      const followError = new Error('Follow failed');
+      mockUseFollowUser.mockReturnValue({
+        toggleFollow: vi.fn().mockRejectedValue(followError),
+        isLoading: false,
+        isUserLoading: defaultMocks.isUserLoading,
+      });
+
+      const { result } = renderHook(() => useProfileMenuActions(mockUserId));
+
+      const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
+
+      await expect(
+        act(async () => {
+          await followItem?.onClick();
+        }),
+      ).resolves.not.toThrow();
+    });
   });
 
   describe('Mute action', () => {

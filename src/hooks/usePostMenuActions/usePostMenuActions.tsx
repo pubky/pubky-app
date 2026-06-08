@@ -91,7 +91,11 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
           }),
       icon: isFollowing ? UserRoundMinus : UserRoundPlus,
       onClick: async () => {
-        await toggleFollow(postAuthorId, isFollowing, authorProfile?.name);
+        try {
+          await toggleFollow(postAuthorId, isFollowing, authorProfile?.name);
+        } catch {
+          // Error already handled by useFollowUser (toast + state)
+        }
       },
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
       disabled: isFollowLoading || isUserLoading(postAuthorId),

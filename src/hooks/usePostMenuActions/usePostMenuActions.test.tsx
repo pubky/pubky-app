@@ -251,6 +251,27 @@ describe('usePostMenuActions', () => {
       expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, true, 'Test Author');
     });
 
+    it('swallows follow rejection after useFollowUser handles the error', async () => {
+      const followError = new Error('Follow failed');
+      mockUseFollowUser.mockReturnValue({
+        toggleFollow: vi.fn().mockRejectedValue(followError),
+        isLoading: false,
+        isUserLoading: defaultMocks.isUserLoading,
+      });
+
+      const { result } = renderHook(() =>
+        usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
+      );
+
+      const followItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.FOLLOW);
+
+      await expect(
+        act(async () => {
+          await followItem?.onClick();
+        }),
+      ).resolves.not.toThrow();
+    });
+
     it('includes mute action', () => {
       const { result } = renderHook(() =>
         usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
