@@ -18,10 +18,7 @@ export function BookmarksHero({ avatarName, avatarSeed, avatarUrl, bookmarkCount
   const t = useTranslations('collections.bookmarks');
 
   return (
-    <Card
-      data-cy="bookmarks-hero"
-      className="relative overflow-hidden rounded-md border-transparent bg-card py-0 text-card-foreground"
-    >
+    <Card data-cy="bookmarks-hero" className="relative overflow-hidden rounded-md py-0">
       <Container
         overrideDefaults
         aria-hidden="true"
@@ -29,15 +26,13 @@ export function BookmarksHero({ avatarName, avatarSeed, avatarUrl, bookmarkCount
       />
 
       <CardContent className="relative flex flex-col items-start gap-4 p-6 md:p-12">
-        <Container overrideDefaults className="flex w-full min-w-0 items-center gap-3">
-          <Typography
-            as="h1"
-            overrideDefaults
-            className="min-w-0 text-5xl leading-none font-bold text-foreground md:text-6xl"
-          >
-            {t('title')}
-          </Typography>
-        </Container>
+        <Typography
+          as="h1"
+          overrideDefaults
+          className="min-w-0 text-5xl leading-none font-bold text-foreground md:text-6xl"
+        >
+          {t('title')}
+        </Typography>
 
         <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:gap-6">
           <Container overrideDefaults className="flex min-w-0 items-center gap-3">

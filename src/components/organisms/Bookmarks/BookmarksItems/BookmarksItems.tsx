@@ -33,7 +33,7 @@ function BookmarksItemsEmpty() {
       data-cy="bookmarks-items-empty"
       className={cn('grid', GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS)}
     >
-      <Card className="rounded-md border-dashed bg-muted/40 py-0 md:col-span-2 xl:col-span-3">
+      <Card className="rounded-md bg-muted/40 py-0 md:col-span-2 xl:col-span-3">
         <CardContent className="flex flex-col items-center justify-center gap-3 p-8 text-center md:p-12">
           <Container
             overrideDefaults
@@ -44,9 +44,7 @@ function BookmarksItemsEmpty() {
           <Typography as="h2" overrideDefaults className="text-xl leading-7 font-bold text-foreground">
             {t('emptyTitle')}
           </Typography>
-          <Typography overrideDefaults className="max-w-96 text-base leading-6 font-medium text-muted-foreground">
-            {t('emptyDescription')}
-          </Typography>
+          <Typography className="max-w-96 leading-6 text-muted-foreground">{t('emptyDescription')}</Typography>
         </CardContent>
       </Card>
     </Container>

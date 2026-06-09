@@ -59,7 +59,7 @@ export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProp
               </Typography>
             </Container>
 
-            <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
+            <Container overrideDefaults className="flex shrink-0 items-center gap-2 sm:gap-3">
               {bookmarkCount !== undefined && <BookmarkCountBadge count={bookmarkCount} />}
               <AvatarWithFallback
                 avatarUrl={avatarUrl}
@@ -73,7 +73,7 @@ export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProp
 
           <Typography
             overrideDefaults
-            className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+            className="line-clamp-2 min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
           >
             {description}
           </Typography>

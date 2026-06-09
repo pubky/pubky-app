@@ -86,7 +86,7 @@ function SavePickerRow({
           event.preventDefault();
           onActivate();
         }}
-        className="flex w-full items-center gap-2 p-0 text-base font-medium text-muted-foreground"
+        className="w-full gap-2 p-0 text-base font-medium text-muted-foreground"
         data-cy={dataCy}
       >
         {children}
@@ -126,7 +126,7 @@ function CollectionRow({
       <Typography
         as="span"
         overrideDefaults
-        className={cn('min-w-0 flex-1 truncate text-base font-medium', layout === 'sheet' && 'text-left')}
+        className={cn('min-w-0 flex-1 truncate', layout === 'sheet' && 'text-left')}
       >
         {collection.name}
       </Typography>
@@ -178,7 +178,7 @@ function SavePickerContent({
         <Typography
           as="span"
           overrideDefaults
-          className={cn('min-w-0 flex-1 truncate text-base font-medium', layout === 'sheet' && 'text-left')}
+          className={cn('min-w-0 flex-1 truncate', layout === 'sheet' && 'text-left')}
         >
           {t('bookmarks')}
         </Typography>
@@ -203,11 +203,7 @@ function SavePickerContent({
         ))
       )}
 
-      {layout === 'dropdown' ? (
-        <DropdownMenuSeparator className="my-1" />
-      ) : (
-        <Container overrideDefaults className="h-px bg-muted" />
-      )}
+      {layout === 'dropdown' ? <DropdownMenuSeparator /> : <Container overrideDefaults className="h-px bg-muted" />}
 
       <Container overrideDefaults className={cn('flex flex-col gap-2', layout === 'dropdown' && 'pt-1')}>
         <Label className="text-xs tracking-widest text-muted-foreground uppercase">{t('newCollection')}</Label>

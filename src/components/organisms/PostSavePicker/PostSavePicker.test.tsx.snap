@@ -83,7 +83,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
         data-testid="container"
       >
         <div
-          class="relative cursor-pointer rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 flex w-full items-center gap-2 p-0 text-base font-medium text-muted-foreground"
+          class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
           data-cy="post-save-bookmarks-option"
           data-orientation="vertical"
           data-radix-collection-item=""
@@ -108,7 +108,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
             />
           </svg>
           <span
-            class="min-w-0 flex-1 truncate text-base font-medium"
+            class="min-w-0 flex-1 truncate"
             data-testid="typography"
           >
             Bookmarks
@@ -132,7 +132,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
           </svg>
         </div>
         <div
-          class="relative cursor-pointer rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 flex w-full items-center gap-2 p-0 text-base font-medium text-muted-foreground"
+          class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
           data-orientation="vertical"
           data-radix-collection-item=""
           role="menuitem"
@@ -165,7 +165,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
             />
           </svg>
           <span
-            class="min-w-0 flex-1 truncate text-base font-medium"
+            class="min-w-0 flex-1 truncate"
             data-testid="typography"
           >
             Proof of Work
@@ -189,7 +189,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
           </svg>
         </div>
         <div
-          class="relative cursor-pointer rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 flex w-full items-center gap-2 p-0 text-base font-medium text-muted-foreground"
+          class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
           data-orientation="vertical"
           data-radix-collection-item=""
           role="menuitem"
@@ -222,7 +222,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
             />
           </svg>
           <span
-            class="min-w-0 flex-1 truncate text-base font-medium"
+            class="min-w-0 flex-1 truncate"
             data-testid="typography"
           >
             AI Papers
@@ -230,7 +230,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
         </div>
         <div
           aria-orientation="horizontal"
-          class="-mx-1 h-px bg-muted my-1"
+          class="-mx-1 my-1 h-px bg-muted"
           role="separator"
         />
         <div

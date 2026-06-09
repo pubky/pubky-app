@@ -7,7 +7,7 @@ exports[`BookmarksItems - Snapshots > matches the snapshot for the empty state 1
   data-testid="container"
 >
   <div
-    class="flex flex-col gap-6 text-card-foreground shadow-sm rounded-md border-dashed bg-muted/40 py-0 md:col-span-2 xl:col-span-3"
+    class="flex flex-col gap-6 text-card-foreground shadow-sm rounded-md bg-muted/40 py-0 md:col-span-2 xl:col-span-3"
     data-slot="card"
     data-testid="card"
   >
@@ -44,7 +44,7 @@ exports[`BookmarksItems - Snapshots > matches the snapshot for the empty state 1
         collections.bookmarks.emptyTitle
       </h2>
       <p
-        class="max-w-96 text-base leading-6 font-medium text-muted-foreground"
+        class="text-base font-medium max-w-96 leading-6 text-muted-foreground"
         data-testid="typography"
       >
         collections.bookmarks.emptyDescription

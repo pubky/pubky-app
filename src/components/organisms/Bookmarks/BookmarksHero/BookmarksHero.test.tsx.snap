@@ -2,7 +2,7 @@
 
 exports[`BookmarksHero - Snapshots > matches the snapshot with count and avatar state 1`] = `
 <div
-  class="flex flex-col gap-6 shadow-sm relative overflow-hidden rounded-md border-transparent bg-card py-0 text-card-foreground"
+  class="flex flex-col gap-6 bg-card text-card-foreground shadow-sm relative overflow-hidden rounded-md py-0"
   data-cy="bookmarks-hero"
   data-slot="card"
   data-testid="card"
@@ -16,17 +16,12 @@ exports[`BookmarksHero - Snapshots > matches the snapshot with count and avatar 
     class="relative flex flex-col items-start gap-4 p-6 md:p-12"
     data-slot="card-content"
   >
-    <div
-      class="flex w-full min-w-0 items-center gap-3"
-      data-testid="container"
+    <h1
+      class="min-w-0 text-5xl leading-none font-bold text-foreground md:text-6xl"
+      data-testid="typography"
     >
-      <h1
-        class="min-w-0 text-5xl leading-none font-bold text-foreground md:text-6xl"
-        data-testid="typography"
-      >
-        collections.bookmarks.title
-      </h1>
-    </div>
+      collections.bookmarks.title
+    </h1>
     <div
       class="flex w-full flex-wrap items-center gap-3 sm:gap-6"
       data-testid="container"

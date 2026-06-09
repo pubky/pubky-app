@@ -10,7 +10,7 @@ exports[`BookmarksCollection - Snapshots > matches the snapshot for the resolved
   data-testid="content-layout"
 >
   <div
-    class="flex w-full flex-col gap-12"
+    class="mx-auto w-full flex-col flex gap-12"
     data-testid="container"
   >
     <div

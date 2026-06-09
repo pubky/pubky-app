@@ -18,7 +18,7 @@ export function BookmarksCollection() {
       showRightMobileButton={false}
       className="pb-24 lg:pb-12 xl:px-0!"
     >
-      <Container overrideDefaults className="flex w-full flex-col gap-12">
+      <Container className="gap-12">
         <BookmarksHero
           avatarName={avatarName}
           avatarSeed={avatarSeed}
