@@ -392,7 +392,15 @@
       "instructions": "Baixe e instale o aplicativo movel. Em seguida, continue para a proxima etapa.",
       "alternative": "Use o <pubkyRing>Pubky Ring</pubkyRing> ou qualquer outro chaveiro alimentado pelo <pubkyCore>Pubky Core</pubkyCore>, ou crie suas chaves no navegador (menos seguro).",
       "createInBrowser": "Criar chaves no navegador",
-      "continueWithRing": "Continuar com Pubky Ring"
+      "continueWithRing": "Continuar com Pubky Ring",
+      "inviteCodeApplied": "Código de convite aplicado",
+      "inviteCodeAppliedDescription": "Seu código de convite {inviteCode} foi aplicado.",
+      "invalidInviteCode": "Código de convite inválido",
+      "invalidInviteCodeDescription": "Este código de convite é inválido ou expirou. Use um código de convite válido.",
+      "usedInviteCode": "Código de convite já utilizado",
+      "usedInviteCodeDescription": "Este código de convite já foi utilizado. Use um código de convite diferente.",
+      "verificationFailed": "Não foi possível verificar o código de convite",
+      "verificationFailedDescription": "Não conseguimos verificar seu código de convite agora. Verifique sua conexão e tente novamente."
     },
     "createProfile": {
       "title": "Crie seu <highlight>perfil.</highlight>",

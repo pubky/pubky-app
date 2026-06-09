@@ -392,7 +392,15 @@
       "instructions": "モバイルアプリをダウンロードしてインストールしてください。次に次のステップに進んでください。",
       "alternative": "<pubkyRing>Pubky Ring</pubkyRing>または<pubkyCore>Pubky Core</pubkyCore>搭載の他のキーチェーンを使用するか、ブラウザでキーを作成してください（安全性は低下）。",
       "createInBrowser": "ブラウザでキーを作成",
-      "continueWithRing": "Pubky Ringで続行"
+      "continueWithRing": "Pubky Ringで続行",
+      "inviteCodeApplied": "招待コードが適用されました",
+      "inviteCodeAppliedDescription": "招待コード {inviteCode} が適用されました。",
+      "invalidInviteCode": "無効な招待コード",
+      "invalidInviteCodeDescription": "この招待コードは無効か期限切れです。有効な招待コードを使用してください。",
+      "usedInviteCode": "招待コードは既に使用済みです",
+      "usedInviteCodeDescription": "この招待コードは既に使用されています。別の招待コードを使用してください。",
+      "verificationFailed": "招待コードを確認できませんでした",
+      "verificationFailedDescription": "現在、招待コードを確認できませんでした。接続を確認してもう一度お試しください。"
     },
     "createProfile": {
       "title": "<highlight>プロフィール</highlight>を作成。",
