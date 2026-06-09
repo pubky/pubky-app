@@ -1,10 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { FeedbackCard } from './FeedbackCard';
 
 // Mock dexie-react-hooks
@@ -533,6 +534,46 @@ describe('FeedbackCard - Snapshots', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('feedback-card-skeleton')).toBeInTheDocument();
+    });
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('FeedbackCard - Mobile Snapshots', () => {
+  const mockPubky = 'user123pubky';
+  const mockUseLiveQuery = vi.mocked(useLiveQuery);
+  const mockUseAuthStore = vi.mocked(useAuthStore);
+  const mockUseCurrentUserProfile = vi.mocked(useCurrentUserProfile);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseCurrentUserProfile.mockImplementation((): ReturnType<typeof useCurrentUserProfile> => {
+      const currentUserPubky = mockUseAuthStore(
+        (state: { currentUserPubky: string | null }) => state.currentUserPubky,
+      ) as string | null;
+      const userDetails = mockUseLiveQuery(() => null, [], null) as NexusUserDetails | null | undefined;
+      return { userDetails, currentUserPubky };
+    });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', async () => {
+    mockUseAuthStore.mockReturnValue({ currentUserPubky: mockPubky } as never);
+    mockUseLiveQuery.mockReturnValue({
+      id: mockPubky,
+      name: 'Miguel Medeiros',
+      image: 'avatar.jpg',
+    } as never);
+
+    const { container } = render(<FeedbackCard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
     });
 
     expect(container.firstChild).toMatchSnapshot();

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Human } from './Human';
 
 const mockPush = vi.fn();
@@ -189,6 +190,19 @@ describe('Human template', () => {
 
 describe('Human template - Snapshots', () => {
   it('matches snapshot', () => {
+    const { container } = render(<Human />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('Human template - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+  afterEach(() => {
+    resetViewport();
+  });
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<Human />);
     expect(container.firstChild).toMatchSnapshot();
   });

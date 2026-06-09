@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { WhoToFollowPage } from './WhoToFollowPage';
 
 // Mock Organisms - ContentLayout renders all props
@@ -112,6 +113,19 @@ describe('WhoToFollowPage', () => {
 
 describe('WhoToFollowPage - Snapshots', () => {
   it('matches snapshot', () => {
+    const { container } = render(<WhoToFollowPage />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('WhoToFollowPage - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+  afterEach(() => {
+    resetViewport();
+  });
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<WhoToFollowPage />);
     expect(container).toMatchSnapshot();
   });

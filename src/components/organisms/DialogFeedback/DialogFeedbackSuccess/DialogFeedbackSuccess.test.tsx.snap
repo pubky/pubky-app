@@ -1,5 +1,22 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`DialogFeedbackSuccess - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-testid="dialog-header"
+>
+  <h2
+    data-testid="dialog-title"
+  >
+    Feedback Received
+  </h2>
+  <p
+    data-testid="dialog-description"
+  >
+    Thank you for helping us improve Pubky.
+  </p>
+</div>
+`;
+
 exports[`DialogFeedbackSuccess - Snapshots > matches snapshot for success state 1`] = `
 <div
   data-testid="dialog-header"

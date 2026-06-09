@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { RightSidebar } from './RightSidebar';
 
 // Mock the organisms (WhoToFollow and ActiveUsers were moved from molecules to organisms)
@@ -117,6 +118,21 @@ describe('RightSidebar - Snapshots', () => {
 
   it('matches snapshot with different styling', () => {
     const { container } = render(<RightSidebar className="border-l border-border bg-secondary/10" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('RightSidebar - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<RightSidebar />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

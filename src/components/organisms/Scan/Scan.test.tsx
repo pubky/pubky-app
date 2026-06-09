@@ -1,10 +1,11 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { PUBKY_CORE_URL } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
 
 // Mock Next.js router
@@ -462,5 +463,30 @@ describe('Scan Components - Snapshots', () => {
       const { container } = render(<ScanNavigation />);
       expect(container.firstChild).toMatchSnapshot();
     });
+  });
+});
+
+describe('Scan Components - Mobile Snapshots', () => {
+  beforeEach(() => {
+    onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
+    vi.mocked(useMobileAuth).mockReturnValue({
+      url: 'mock-auth-url',
+      isLoading: false,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<ScanContent />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

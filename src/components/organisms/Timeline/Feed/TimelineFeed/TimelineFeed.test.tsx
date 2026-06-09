@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
@@ -14,6 +14,7 @@ import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, type ContentType, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
 import { asInvalid } from '@/test-utils/type-assertions';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
@@ -718,6 +719,49 @@ describe('TimelineFeed - Snapshots', () => {
       postIds: [],
     });
 
+    const { container } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('TimelineFeed - Mobile Snapshots', () => {
+  beforeEach(() => {
+    // Replicate the deterministic mock setup from the desktop snapshot describe.
+    vi.clearAllMocks();
+    mockUseStreamIdFromFilters.mockReturnValue(PostStreamTypes.TIMELINE_ALL_ALL);
+    mockUseCustomFeed.mockReturnValue({
+      id: 'test-feed',
+      name: 'Test Feed',
+      tags: ['all'],
+      reach: PubkyAppFeedReach.All,
+      sort: PubkyAppFeedSort.Recent,
+      content: null,
+      layout: PubkyAppFeedLayout.Columns,
+      created_at: 0,
+      updated_at: 0,
+    });
+    mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as PostStreamId);
+    mockUseBookmarksStreamId.mockReturnValue(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
+    mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
+    mockUseFeedLayoutResolution.mockReturnValue({
+      requestedLayout: 'columns',
+      effectiveLayout: 'columns',
+      isVisualRequested: false,
+      isVisualActive: false,
+      isPhoneViewport: false,
+    });
+    mockUsePullToRefresh.mockReturnValue({
+      state: 'idle' as const,
+      pullDistance: 0,
+    });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
     expect(container).toMatchSnapshot();
   });

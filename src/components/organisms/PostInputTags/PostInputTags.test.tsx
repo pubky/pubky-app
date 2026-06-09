@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_MAX_TAGS, TAG_MAX_LENGTH } from '@/config/posts';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInputTags } from './PostInputTags';
 
 // Mock state for TagInput simulation
@@ -315,6 +316,26 @@ describe('PostInputTags - Snapshots', () => {
     const { container } = render(<PostInputTags tags={[]} onTagsChange={mockOnTagsChange} />);
     const addButton = screen.getByTestId('add-tag-button');
     fireEvent.click(addButton);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostInputTags - Mobile Snapshots', () => {
+  const mockOnTagsChange = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTagInputValue = '';
+    mockShowEmojiPicker = false;
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<PostInputTags tags={[]} onTagsChange={mockOnTagsChange} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

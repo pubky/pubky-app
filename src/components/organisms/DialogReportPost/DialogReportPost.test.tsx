@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { REPORT_POST_STEPS } from '@/hooks/useReportPost/useReportPost.constants';
 import { REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { DialogReportPost } from './DialogReportPost';
 
 // Mock hooks
@@ -210,6 +211,47 @@ describe('DialogReportPost - Snapshots', () => {
       ...defaultUseReportPostReturn,
       isSuccess: true,
     });
+
+    render(<DialogReportPost open={true} onOpenChange={mockOnOpenChange} postId={TEST_POST_ID} />);
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog?.parentElement).toMatchSnapshot();
+  });
+});
+
+describe('DialogReportPost - Mobile Snapshots', () => {
+  const mockOnOpenChange = vi.fn();
+  const mockReset = vi.fn();
+  const mockSelectIssueType = vi.fn();
+  const mockHandleReasonChange = vi.fn();
+  const mockSubmit = vi.fn();
+
+  const defaultUseReportPostReturn = {
+    step: REPORT_POST_STEPS.ISSUE_SELECTION,
+    selectedIssueType: null,
+    reason: '',
+    isSubmitting: false,
+    isSuccess: false,
+    hasContent: false,
+    selectIssueType: mockSelectIssueType,
+    handleReasonChange: mockHandleReasonChange,
+    submit: mockSubmit,
+    reset: mockReset,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseCurrentUserProfile.mockReturnValue({
+      currentUserPubky: 'test-user-123',
+    });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    mockUseReportPost.mockReturnValue(defaultUseReportPostReturn);
 
     render(<DialogReportPost open={true} onOpenChange={mockOnOpenChange} postId={TEST_POST_ID} />);
     const dialog = document.querySelector('[role="dialog"]');

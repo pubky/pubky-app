@@ -1,5 +1,112 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`DialogCheckLink - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-on-open-change="true"
+  data-open="true"
+  data-testid="dialog"
+>
+  <div
+    class="w-2xl"
+    data-hidden-title="Double-check this link"
+    data-testid="dialog-content"
+  >
+    <h2
+      class="sr-only"
+      data-testid="dialog-hidden-title"
+    >
+      Double-check this link
+    </h2>
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Double-check this link
+      </h2>
+      <p
+        data-testid="dialog-description"
+      >
+        The link is taking you to another site:
+      </p>
+    </div>
+    <div
+      class="gap-3"
+      data-testid="container"
+    >
+      <p
+        class="text-sm font-bold break-all text-foreground"
+        data-testid="typography"
+      >
+        https://example.com/some/path
+      </p>
+      <p
+        class="text-sm text-muted-foreground"
+        data-testid="typography"
+      >
+        Are you sure you want to continue?
+      </p>
+      <div
+        data-testid="checkbox-wrapper"
+      >
+        <input
+          data-testid="checkbox"
+          id="dont-show-again"
+          type="checkbox"
+        />
+        <label
+          data-testid="checkbox-label"
+          for="dont-show-again"
+        >
+          Don't show this again
+        </label>
+      </div>
+    </div>
+    <div
+      data-testid="dialog-footer"
+    >
+      <button
+        data-size="lg"
+        data-testid="button-outline"
+        data-variant="outline"
+      >
+        Cancel
+      </button>
+      <button
+        data-size="lg"
+        data-testid="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-external-link h-4 w-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15 3h6v6"
+          />
+          <path
+            d="M10 14 21 3"
+          />
+          <path
+            d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+          />
+        </svg>
+        Continue
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`DialogCheckLink - Snapshots > matches snapshot for default DialogCheckLink 1`] = `
 <div
   data-on-open-change="true"

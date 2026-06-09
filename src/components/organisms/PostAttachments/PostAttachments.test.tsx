@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { asInvalid } from '@/test-utils/type-assertions';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostAttachments } from './PostAttachments';
 
 // Mock useToast
@@ -749,6 +750,34 @@ describe('PostAttachments - Snapshots', () => {
       expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
       expect(screen.getByTestId('post-attachments-audios')).toBeInTheDocument();
       expect(screen.getByTestId('post-attachments-generic-files')).toBeInTheDocument();
+    });
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostAttachments - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', async () => {
+    const attachments = ['pubky://user1/pub/pubky.app/files/image1', 'pubky://user1/pub/pubky.app/files/image2'];
+    mockGetMetadata.mockResolvedValue([
+      createMockImageMetadata('user1:image1'),
+      createMockImageMetadata('user1:image2'),
+    ]);
+
+    const { container } = render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
     });
 
     expect(container.firstChild).toMatchSnapshot();

@@ -1,5 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`NewPostsSection - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `<div />`;
+
 exports[`NewPostsSection - Snapshots > matches snapshot when hidden 1`] = `<div />`;
 
 exports[`NewPostsSection - Snapshots > matches snapshot with new posts visible 1`] = `

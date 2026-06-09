@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Help } from './Help';
 
 describe('Help', () => {
@@ -39,6 +40,19 @@ describe('Help', () => {
 
 describe('Help - Snapshots', () => {
   it('matches snapshot with default props', () => {
+    const { container } = render(<Help />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('Help - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+  afterEach(() => {
+    resetViewport();
+  });
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<Help />);
     expect(container.firstChild).toMatchSnapshot();
   });

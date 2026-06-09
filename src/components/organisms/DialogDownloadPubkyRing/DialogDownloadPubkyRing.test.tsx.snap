@@ -1,5 +1,122 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`DialogDownloadPubkyRing - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-testid="dialog"
+>
+  <a
+    class="block sm:hidden"
+    data-testid="link"
+    href="https://apps.apple.com/app/pubky-ring/id6739356756"
+    target="_blank"
+  >
+    <img
+      alt="App Store"
+      data-testid="next-image"
+      height="40"
+      src="/images/badge-apple.webp"
+      width="192"
+    />
+  </a>
+  <div
+    data-as-child="true"
+    data-testid="dialog-trigger"
+  >
+    <img
+      alt="App Store"
+      data-testid="next-image"
+      height="40"
+      src="/images/badge-apple.webp"
+      width="120"
+    />
+  </div>
+  <div
+    class="sm:max-w-[384px]"
+    data-testid="dialog-content"
+  >
+    <div
+      class="pr-6"
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Download Pubky Ring
+      </h2>
+      <p
+        class="text-sm font-medium"
+        data-testid="dialog-description"
+      >
+        Scan the QR with your mobile camera to download Pubky Ring from the App Store.
+      </p>
+    </div>
+    <div
+      class="mt-6"
+      data-testid="container"
+    >
+      <div
+        class="flex-row items-center gap-8"
+        data-testid="container"
+      >
+        <img
+          alt="App preview"
+          data-testid="next-image"
+          height="256"
+          src="/images/pubky-ring-phone.webp"
+          width="96"
+        />
+        <div
+          class="space-y-6"
+          data-testid="container"
+        >
+          <div
+            class="flex h-[192px] w-[192px] items-center justify-center rounded-lg bg-foreground p-4"
+            data-testid="container"
+          >
+            <svg
+              height="160"
+              role="img"
+              viewBox="0 0 29 29"
+              width="160"
+            >
+              <path
+                d="M0,0 h29v29H0z"
+                fill="#FFFFFF"
+                shape-rendering="crispEdges"
+              />
+              <path
+                d="M0 0h7v1H0zM9 0h2v1H9zM12 0h1v1H12zM14 0h2v1H14zM17 0h4v1H17zM22,0 h7v1H22zM0 1h1v1H0zM6 1h1v1H6zM8 1h1v1H8zM11 1h1v1H11zM13 1h4v1H13zM18 1h1v1H18zM20 1h1v1H20zM22 1h1v1H22zM28,1 h1v1H28zM0 2h1v1H0zM2 2h3v1H2zM6 2h1v1H6zM8 2h3v1H8zM14 2h2v1H14zM17 2h1v1H17zM20 2h1v1H20zM22 2h1v1H22zM24 2h3v1H24zM28,2 h1v1H28zM0 3h1v1H0zM2 3h3v1H2zM6 3h1v1H6zM9 3h4v1H9zM18 3h1v1H18zM22 3h1v1H22zM24 3h3v1H24zM28,3 h1v1H28zM0 4h1v1H0zM2 4h3v1H2zM6 4h1v1H6zM8 4h1v1H8zM11 4h2v1H11zM14 4h3v1H14zM18 4h1v1H18zM22 4h1v1H22zM24 4h3v1H24zM28,4 h1v1H28zM0 5h1v1H0zM6 5h1v1H6zM8 5h2v1H8zM12 5h1v1H12zM15 5h2v1H15zM19 5h1v1H19zM22 5h1v1H22zM28,5 h1v1H28zM0 6h7v1H0zM8 6h1v1H8zM10 6h1v1H10zM12 6h1v1H12zM14 6h1v1H14zM16 6h1v1H16zM18 6h1v1H18zM20 6h1v1H20zM22,6 h7v1H22zM8 7h2v1H8zM11 7h2v1H11zM14 7h7v1H14zM0 8h2v1H0zM3 8h1v1H3zM6 8h2v1H6zM10 8h2v1H10zM13 8h4v1H13zM19 8h1v1H19zM22 8h3v1H22zM26 8h2v1H26zM2 9h2v1H2zM5 9h1v1H5zM10 9h1v1H10zM16 9h3v1H16zM20 9h4v1H20zM25 9h1v1H25zM28,9 h1v1H28zM0 10h3v1H0zM4 10h4v1H4zM9 10h2v1H9zM13 10h2v1H13zM18 10h2v1H18zM21 10h3v1H21zM25 10h3v1H25zM2 11h1v1H2zM7 11h2v1H7zM11 11h3v1H11zM20 11h3v1H20zM26 11h2v1H26zM2 12h2v1H2zM6 12h1v1H6zM8 12h1v1H8zM13 12h1v1H13zM17 12h1v1H17zM20 12h4v1H20zM25 12h1v1H25zM27,12 h2v1H27zM1 13h3v1H1zM7 13h1v1H7zM10 13h1v1H10zM17 13h5v1H17zM1 14h1v1H1zM4 14h1v1H4zM6 14h2v1H6zM11 14h2v1H11zM14 14h1v1H14zM17 14h2v1H17zM22,14 h7v1H22zM3 15h1v1H3zM5 15h1v1H5zM7 15h2v1H7zM10 15h1v1H10zM12 15h2v1H12zM15 15h3v1H15zM20 15h1v1H20zM23 15h1v1H23zM25 15h1v1H25zM27 15h1v1H27zM1 16h2v1H1zM6 16h2v1H6zM9 16h2v1H9zM14 16h2v1H14zM17 16h2v1H17zM20 16h2v1H20zM23 16h1v1H23zM27 16h1v1H27zM2 17h2v1H2zM5 17h1v1H5zM7 17h3v1H7zM11 17h1v1H11zM13 17h1v1H13zM17 17h1v1H17zM20 17h1v1H20zM22 17h2v1H22zM25 17h1v1H25zM28,17 h1v1H28zM0 18h1v1H0zM2 18h6v1H2zM10 18h1v1H10zM13 18h1v1H13zM17 18h1v1H17zM22 18h1v1H22zM24 18h1v1H24zM27,18 h2v1H27zM2 19h1v1H2zM5 19h1v1H5zM8 19h1v1H8zM11 19h2v1H11zM15 19h4v1H15zM20 19h4v1H20zM27,19 h2v1H27zM0 20h1v1H0zM2 20h8v1H2zM11 20h1v1H11zM13 20h1v1H13zM15 20h1v1H15zM20 20h5v1H20zM26 20h1v1H26zM8 21h3v1H8zM13 21h2v1H13zM16 21h5v1H16zM24 21h1v1H24zM26,21 h3v1H26zM0 22h7v1H0zM8 22h1v1H8zM10 22h1v1H10zM16 22h1v1H16zM18 22h1v1H18zM20 22h1v1H20zM22 22h1v1H22zM24 22h1v1H24zM27 22h1v1H27zM0 23h1v1H0zM6 23h1v1H6zM9 23h1v1H9zM11 23h1v1H11zM13 23h1v1H13zM20 23h1v1H20zM24,23 h5v1H24zM0 24h1v1H0zM2 24h3v1H2zM6 24h1v1H6zM10 24h1v1H10zM13 24h5v1H13zM20 24h5v1H20zM28,24 h1v1H28zM0 25h1v1H0zM2 25h3v1H2zM6 25h1v1H6zM8 25h1v1H8zM10 25h1v1H10zM14 25h1v1H14zM17 25h2v1H17zM22 25h1v1H22zM24 25h3v1H24zM0 26h1v1H0zM2 26h3v1H2zM6 26h1v1H6zM10 26h2v1H10zM13 26h1v1H13zM16 26h2v1H16zM19 26h3v1H19zM24 26h3v1H24zM28,26 h1v1H28zM0 27h1v1H0zM6 27h1v1H6zM8 27h1v1H8zM11 27h1v1H11zM13 27h2v1H13zM17 27h5v1H17zM27 27h1v1H27zM0 28h7v1H0zM8 28h1v1H8zM10 28h2v1H10zM14 28h1v1H14zM17 28h1v1H17zM20 28h1v1H20zM24 28h2v1H24zM27 28h1v1H27z"
+                fill="#000000"
+                shape-rendering="crispEdges"
+              />
+            </svg>
+          </div>
+          <div
+            class="items-center justify-between"
+            data-testid="container"
+          >
+            <a
+              class="h-10 w-full"
+              data-testid="link"
+              href="https://apps.apple.com/app/pubky-ring/id6739356756"
+              target="_blank"
+            >
+              <img
+                alt="App Store"
+                data-testid="next-image"
+                height="40"
+                src="/images/badge-apple.webp"
+                width="120"
+              />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`DialogDownloadPubkyRing - Snapshots > matches snapshot for android store DialogDownloadPubkyRing 1`] = `
 <div
   data-testid="dialog"

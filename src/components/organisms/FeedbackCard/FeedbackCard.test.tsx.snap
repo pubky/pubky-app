@@ -1,5 +1,54 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`FeedbackCard - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="flex w-full max-w-(--filter-bar-width) flex-col gap-2"
+  data-testid="feedback-card"
+>
+  <div
+    class="font-light text-muted-foreground"
+    data-level="2"
+    data-size="lg"
+    data-testid="heading"
+  >
+    Feedback
+  </div>
+  <div
+    class="flex w-full min-w-0 cursor-pointer flex-col gap-4 rounded-lg border border-dashed border-input p-6"
+    data-testid="container"
+  >
+    <div
+      class="flex w-full min-w-0 items-center gap-2"
+      data-testid="container"
+    >
+      <div
+        class="flex size-12 shrink-0 items-center justify-center rounded-md p-2 shadow-xs"
+        data-testid="container"
+      >
+        <div
+          class="h-12 w-12"
+          data-avatar-url="https://cdn.example.com/avatar/user123pubky"
+          data-name="Miguel Medeiros"
+          data-testid="avatar-with-fallback"
+        >
+          <img
+            alt="Miguel Medeiros"
+            data-testid="avatar-image"
+            src="https://cdn.example.com/avatar/user123pubky"
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      class="w-full cursor-pointer text-left text-base leading-normal font-medium wrap-break-word text-muted-foreground"
+      data-testid="button"
+    >
+      What do you think about Pubky?
+    </button>
+  </div>
+</div>
+`;
+
 exports[`FeedbackCard - Snapshots > matches snapshot when loading 1`] = `
 <div
   class="flex w-full max-w-(--filter-bar-width) flex-col gap-2"

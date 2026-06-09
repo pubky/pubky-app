@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
 import { PostInputExpandableSection } from './PostInputExpandableSection';
 
@@ -515,6 +516,39 @@ describe('PostInputExpandableSection - Snapshots', () => {
   it('matches snapshot with EDIT submit mode', () => {
     const { container } = render(
       <PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} content="Editing content" />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostInputExpandableSection - Mobile Snapshots', () => {
+  const defaultProps = {
+    isExpanded: true,
+    content: 'Test content',
+    tags: [],
+    isSubmitting: false,
+    isArticle: false,
+    submitMode: POST_INPUT_VARIANT.POST,
+    setTags: vi.fn(),
+    onSubmit: vi.fn(),
+    showEmojiPicker: false,
+    setShowEmojiPicker: vi.fn(),
+    onEmojiSelect: vi.fn(),
+    onArticleClick: vi.fn(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <PostInputExpandableSection {...defaultProps} content="Test content with link https://example.com" />,
     );
     expect(container.firstChild).toMatchSnapshot();
   });

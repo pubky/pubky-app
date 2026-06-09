@@ -1,5 +1,30 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`PostInputTags - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="flex flex-col gap-1"
+  data-override-defaults="true"
+  data-testid="container"
+>
+  <div
+    class="flex flex-wrap items-center gap-2"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <div
+      data-testid="tag-input-toggle"
+    >
+      <button
+        data-testid="add-tag-button"
+        data-variant="plain"
+      >
+        +
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`PostInputTags - Snapshots > matches snapshot with empty tags 1`] = `
 <div
   class="flex flex-col gap-1"

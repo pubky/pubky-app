@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ProfileUserNotFoundDiscoveryView } from './ProfileUserNotFoundDiscoveryView';
 
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
@@ -118,6 +119,21 @@ describe('ProfileUserNotFoundDiscoveryView', () => {
 
 describe('ProfileUserNotFoundDiscoveryView - Snapshots', () => {
   it('matches snapshot', () => {
+    const { container } = render(<ProfileUserNotFoundDiscoveryView />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('ProfileUserNotFoundDiscoveryView - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<ProfileUserNotFoundDiscoveryView />);
     expect(container.firstChild).toMatchSnapshot();
   });

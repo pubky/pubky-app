@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Search } from './Search';
 
 const mockUseIsMobile = vi.fn(() => false);
@@ -107,6 +108,20 @@ describe('Search - Snapshots', () => {
 
   it('matches snapshot with no tags', () => {
     mockUseSearchTags.mockReturnValue([]);
+    const { container } = render(<Search />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('Search - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+  afterEach(() => {
+    resetViewport();
+  });
+  it('matches snapshot on mobile viewport', () => {
+    mockUseSearchTags.mockReturnValue(['pubky']);
     const { container } = render(<Search />);
     expect(container).toMatchSnapshot();
   });

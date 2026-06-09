@@ -1,5 +1,137 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`DialogWelcome - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-open="true"
+  data-testid="dialog"
+>
+  <div
+    class="sm:max-w-2xl"
+    data-hidden-title="Welcome to Pubky!"
+    data-testid="dialog-content"
+  >
+    <div
+      class="mb-3 gap-0 pr-6 text-left"
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+        id="welcome-title"
+      >
+        Welcome to Pubky!
+      </h2>
+      <div
+        class="font-medium"
+        data-testid="dialog-description"
+      >
+        Your keys, your content, your rules.
+      </div>
+    </div>
+    <div
+      class="max-h-[420px] overflow-y-auto"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-4"
+        data-testid="container"
+      >
+        <div
+          class="flex flex-col items-center justify-center gap-4 self-stretch overflow-hidden rounded-lg bg-card p-6 sm:flex-row sm:items-start sm:justify-start"
+          data-testid="card"
+        >
+          <div
+            class="h-24 w-24"
+            data-avatar-url="https://mocked.avatar/test-pubky-123"
+            data-fallback-class="text-4xl"
+            data-name="Test User"
+            data-testid="avatar-with-fallback"
+          />
+          <div
+            class="flex w-full min-w-0 flex-col items-center justify-center sm:items-start sm:justify-start"
+            data-testid="container"
+          >
+            <p
+              class="w-full truncate"
+              data-size="lg"
+              data-testid="typography"
+            >
+              Test User
+            </p>
+            <p
+              class="w-full truncate text-center font-medium text-muted-foreground sm:text-left"
+              data-size="sm"
+              data-testid="typography"
+            >
+              Test bio
+            </p>
+            <button
+              class="mt-2 h-8 w-fit gap-2 rounded-full uppercase"
+              data-testid="button-secondary"
+              data-variant="secondary"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-key h-4 w-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"
+                />
+                <path
+                  d="m21 2-9.6 9.6"
+                />
+                <circle
+                  cx="7.5"
+                  cy="15.5"
+                  r="5.5"
+                />
+              </svg>
+              test...-123
+            </button>
+          </div>
+        </div>
+        <button
+          class="w-auto"
+          data-size="lg"
+          data-testid="button-primary"
+          id="welcome-explore-pubky-btn"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-arrow-right mr-2 h-4 w-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 12h14"
+            />
+            <path
+              d="m12 5 7 7-7 7"
+            />
+          </svg>
+          Explore Pubky
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`DialogWelcome - Snapshots > matches snapshot for default DialogWelcome 1`] = `
 <div
   data-open="true"

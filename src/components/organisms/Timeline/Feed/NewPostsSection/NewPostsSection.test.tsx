@@ -1,11 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import type { Pubky } from '@/models/models.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NewPostsSection } from './NewPostsSection';
 
 vi.mock('next-intl', () => ({
@@ -171,6 +172,24 @@ describe('NewPostsSection - Snapshots', () => {
 
   it('matches snapshot with new posts visible', () => {
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1', 'new2', 'new3'], unreadCount: 3 });
+    const { container } = render(<NewPostsSection {...defaultProps} />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('NewPostsSection - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
+    vi.mocked(MuteFilter.filterPostsSafe).mockImplementation((ids: string[]) => ids);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<NewPostsSection {...defaultProps} />);
     expect(container).toMatchSnapshot();
   });

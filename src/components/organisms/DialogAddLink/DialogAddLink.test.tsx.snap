@@ -1,5 +1,175 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`DialogAddLink - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-testid="dialog"
+>
+  <div
+    data-as-child="true"
+    data-testid="dialog-trigger"
+  >
+    <button
+      class="w-fit rounded-full"
+      data-size="sm"
+      data-testid="button-secondary"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-link h-4 w-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+        />
+        <path
+          d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+        />
+      </svg>
+      <span>
+        Add link
+      </span>
+    </button>
+  </div>
+  <div
+    class="max-w-xl rounded-xl border bg-popover p-8 sm:rounded-lg sm:p-6"
+    data-testid="dialog-content"
+  >
+    <div
+      class="pr-6"
+      data-testid="dialog-header"
+    >
+      <h2
+        class="text-2xl font-bold text-foreground sm:text-xl"
+        data-testid="dialog-title"
+      >
+        Add link
+      </h2>
+    </div>
+    <div
+      class="gap-6"
+      data-testid="container"
+    >
+      <div
+        class="gap-2"
+        data-testid="container"
+      >
+        <label
+          class="text-xs font-medium tracking-wide text-muted-foreground"
+          data-testid="label"
+        >
+          LABEL
+        </label>
+        <div
+          data-testid="input-field"
+        >
+          <input
+            data-size="lg"
+            data-status="default"
+            data-testid="input"
+            data-variant="dashed"
+            maxlength="100"
+            placeholder="Twitter"
+            value=""
+          />
+        </div>
+      </div>
+      <div
+        class="gap-2"
+        data-testid="container"
+      >
+        <label
+          class="text-xs font-medium tracking-wide text-muted-foreground"
+          data-testid="label"
+        >
+          URL
+        </label>
+        <div
+          data-icon-position="right"
+          data-testid="input-field"
+        >
+          <input
+            data-size="lg"
+            data-status="default"
+            data-testid="input"
+            data-variant="dashed"
+            maxlength="300"
+            placeholder="https://twitter.com/satoshi"
+            value=""
+          />
+          <div
+            data-testid="input-icon"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-clipboard h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <rect
+                height="4"
+                rx="1"
+                ry="1"
+                width="8"
+                x="8"
+                y="2"
+              />
+              <path
+                d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="flex-row gap-4"
+      data-testid="dialog-footer"
+    >
+      <div
+        data-as-child="true"
+        data-testid="dialog-close"
+      >
+        <button
+          class="sm:size-default flex-1 rounded-full border border-border bg-background"
+          data-size="lg"
+          data-testid="button-outline"
+        >
+          Cancel
+        </button>
+      </div>
+      <div
+        data-as-child="true"
+        data-testid="dialog-close"
+      >
+        <button
+          class="sm:size-default flex-1 rounded-full border-brand text-brand"
+          data-size="lg"
+          data-testid="button-default"
+          disabled=""
+        >
+          Save link
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`DialogAddLink - Snapshots > matches snapshot for DialogAddLink with iconPosition variations 1`] = `
 <div>
   <div

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostAncestors } from '@/hooks/usePostAncestors/usePostAncestors';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
@@ -8,6 +8,7 @@ import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDeta
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { SinglePostContent } from './SinglePostContent';
 
 const mockHomeStore = vi.hoisted(() => {
@@ -390,5 +391,27 @@ describe('SinglePostContent', () => {
       const { container } = render(<SinglePostContent postId={mockPostId} postDetails={DELETED_SHORT_POST_DETAILS} />);
       expect(container).toMatchSnapshot();
     });
+  });
+});
+
+describe('SinglePostContent - Mobile Snapshots', () => {
+  const mockPostId = 'author:post123';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useHomeStore.getState().reset();
+    vi.mocked(usePostCounts).mockReturnValue(mockUsePostCounts());
+    vi.mocked(usePostAncestors).mockReturnValue(mockUsePostAncestors());
+    vi.mocked(useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<SinglePostContent postId={mockPostId} postDetails={SHORT_POST_DETAILS} />);
+    expect(container).toMatchSnapshot();
   });
 });

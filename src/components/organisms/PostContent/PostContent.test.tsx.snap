@@ -1,5 +1,15 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`PostContent - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-post-id="post-1"
+  data-testid="post-content-base"
+>
+  PostContentBase 
+  post-1
+</div>
+`;
+
 exports[`PostContent - Snapshots > matches snapshot as repost with content 1`] = `
 <div
   data-post-id="repost-1"

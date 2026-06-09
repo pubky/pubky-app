@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ContentLayout } from './ContentLayout';
 
 const mockUseCustomFeed = vi.fn();
@@ -589,6 +590,25 @@ describe('ContentLayout - Snapshots', () => {
   it('matches snapshot with renderMobileHeader false', () => {
     const { container } = render(
       <ContentLayout renderMobileHeader={false}>
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('ContentLayout - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <ContentLayout>
         <div>Test Content</div>
       </ContentLayout>,
     );

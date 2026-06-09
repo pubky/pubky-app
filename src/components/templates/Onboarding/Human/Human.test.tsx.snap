@@ -1,5 +1,23 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`Human template - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="mx-auto w-full flex-col flex container max-w-(--container-max-width) h-screen-without-page-header-onboarding items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
+  data-testid="container"
+>
+  <div
+    class="flex w-full flex-1 flex-col gap-0 lg:flex-none"
+    data-testid="human-content"
+  >
+    <button
+      data-testid="human-selection"
+    >
+      Human Selection
+    </button>
+  </div>
+</div>
+`;
+
 exports[`Human template - Snapshots > matches snapshot 1`] = `
 <div
   class="mx-auto w-full flex-col flex container max-w-(--container-max-width) h-screen-without-page-header-onboarding items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"

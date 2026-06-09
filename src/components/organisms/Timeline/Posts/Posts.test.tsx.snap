@@ -1,5 +1,15 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`TimelinePosts - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div>
+  <div
+    data-testid="timeline-loading"
+  >
+    Loading...
+  </div>
+</div>
+`;
+
 exports[`TimelinePosts - Snapshots > should match snapshot for empty state 1`] = `
 <div>
   <div

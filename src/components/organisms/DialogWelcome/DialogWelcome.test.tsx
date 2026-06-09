@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { DialogWelcome } from './DialogWelcome';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -294,6 +295,28 @@ describe('DialogWelcome - Snapshots', () => {
       indexed_at: 1234567890,
     });
 
+    const { container } = render(<DialogWelcome />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('DialogWelcome - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useLiveQuery).mockReturnValue({
+      name: 'Test User',
+      bio: 'Test bio',
+      image: 'test-image.jpg',
+      indexed_at: 1234567890,
+    });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<DialogWelcome />);
     expect(container.firstChild).toMatchSnapshot();
   });

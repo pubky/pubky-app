@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { within } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { CustomFeedDialog } from './CustomFeedDialog';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -1256,6 +1257,27 @@ describe('CustomFeedDialog - Snapshots', () => {
     const { container } = render(
       <CustomFeedDialog mode="create">
         <span className="custom-trigger">+ New Feed</span>
+      </CustomFeedDialog>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('CustomFeedDialog - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseCustomFeed.mockReturnValue(undefined);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
       </CustomFeedDialog>,
     );
     expect(container.firstChild).toMatchSnapshot();

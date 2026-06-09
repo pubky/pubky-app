@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostCardSkeleton } from './PostCardSkeleton';
 
 describe('PostCardSkeleton', () => {
@@ -13,6 +14,21 @@ describe('PostCardSkeleton', () => {
 
 describe('PostCardSkeleton - Snapshots', () => {
   it('matches snapshot', () => {
+    const { container } = render(<PostCardSkeleton />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostCardSkeleton - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<PostCardSkeleton />);
     expect(container.firstChild).toMatchSnapshot();
   });

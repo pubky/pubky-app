@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HOME_ROUTES } from '@/app/routes';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { SignInNavigation } from './SignInNavigation';
 
 // Mock Next.js router
@@ -105,6 +106,22 @@ describe('SignInNavigation - Snapshots', () => {
   });
 
   it('matches snapshot', () => {
+    const { container } = render(<SignInNavigation />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('SignInNavigation - Mobile Snapshots', () => {
+  beforeEach(() => {
+    mockSignInState = { authUrlResolved: false };
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<SignInNavigation />);
     expect(container.firstChild).toMatchSnapshot();
   });

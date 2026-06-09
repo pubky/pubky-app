@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { MutedUsersList } from './MutedUsersList';
 
 const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser } = vi.hoisted(() => ({
@@ -169,6 +170,38 @@ describe('MutedUsersList - Snapshots', () => {
       isLoading: false,
     });
 
+    const { container } = render(<MutedUsersList />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('MutedUsersList - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseMutedUsers.mockReturnValue({
+      mutedUserIds: [],
+      mutedUserIdSet: new Set(),
+      isMuted: vi.fn(() => false),
+      isLoading: false,
+    });
+    mockUseBulkUserAvatars.mockReturnValue({
+      usersMap: new Map(),
+      isLoading: false,
+    });
+    mockUseMuteUser.mockReturnValue({
+      toggleMute: vi.fn(),
+      isLoading: false,
+      isUserLoading: vi.fn(() => false),
+      error: null,
+    });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<MutedUsersList />);
     expect(container.firstChild).toMatchSnapshot();
   });

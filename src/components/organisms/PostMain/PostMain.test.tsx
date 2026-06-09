@@ -1,11 +1,12 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayoutContext';
 
@@ -771,6 +772,48 @@ describe('PostMain - Snapshots', () => {
     });
 
     const { container } = render(<PostMain postId="other-user:repost-1" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostMain - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Replicate the snapshot describe's mock-state setup so mobile snapshots stay stable.
+    vi.mocked(usePostNavigation).mockReturnValue({
+      getPostHref: vi.fn(() => '/post/author/post-abc'),
+      navigateToPost: vi.fn(),
+      handlePostClick: vi.fn(),
+      handlePostAuxClick: vi.fn(),
+      handlePostKeyDown: vi.fn(),
+    });
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: false,
+      shouldShowPostHeader: true,
+    });
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: {
+        id: 'post-123',
+        indexed_at: 0,
+        kind: 'short',
+        uri: 'pubky://test-user/pub/pubky.app/posts/post-123',
+        content: 'Some post content',
+        attachments: [],
+        is_moderated: false,
+        is_blurred: false,
+      },
+      isLoading: false,
+    });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<PostMain postId="post-123" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

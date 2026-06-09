@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { MouseEventHandler, ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInlineTagsActions } from './PostInlineTagsActions';
 
 vi.mock('@/atoms/Container/Container', () => ({
@@ -152,6 +153,24 @@ describe('PostInlineTagsActions', () => {
 
 describe('PostInlineTagsActions - Snapshots', () => {
   it('matches snapshot with default props', () => {
+    const { container } = render(
+      <PostInlineTagsActions postId="snapshot-author:post-1" onReplyClick={vi.fn()} onRepostClick={vi.fn()} />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostInlineTagsActions - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(
       <PostInlineTagsActions postId="snapshot-author:post-1" onReplyClick={vi.fn()} onRepostClick={vi.fn()} />,
     );

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NotificationsList } from './NotificationsList';
 
 // Mock NotificationItem
@@ -94,6 +95,37 @@ describe('NotificationsList - Snapshots', () => {
 
   it('matches snapshot with empty list', () => {
     const { container } = render(<NotificationsList notifications={[]} unreadNotifications={[]} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('NotificationsList - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const notifications: FlatNotification[] = [
+      {
+        id: 'follow:123:user1',
+        type: NotificationType.Follow,
+        timestamp: Date.now() - 1000 * 60 * 30,
+        followed_by: 'user1',
+      } as FlatNotification,
+      {
+        id: 'reply:123:user2',
+        type: NotificationType.Reply,
+        timestamp: Date.now() - 1000 * 60 * 60,
+        replied_by: 'user2',
+        parent_post_uri: 'user1:post123',
+        reply_uri: 'user2:reply456',
+      } as FlatNotification,
+    ];
+    const { container } = render(<NotificationsList notifications={notifications} unreadNotifications={[]} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

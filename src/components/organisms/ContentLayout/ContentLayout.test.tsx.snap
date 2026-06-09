@@ -128,6 +128,19 @@ exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when cus
 </div>
 `;
 
+exports[`ContentLayout - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-testid="mobile-header"
+>
+  <button>
+    Left
+  </button>
+  <button>
+    Right
+  </button>
+</div>
+`;
+
 exports[`ContentLayout - Snapshots > matches snapshot with both sidebars hidden 1`] = `
 <div
   data-testid="mobile-header"

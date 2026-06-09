@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { EditProfile } from './EditProfile';
 
 vi.mock('@/molecules/OnboardingLayout/OnboardingLayout', () => {
@@ -46,6 +47,19 @@ describe('EditProfile', () => {
 
 describe('EditProfile - Snapshots', () => {
   it('matches snapshot', () => {
+    const { container } = render(<EditProfile />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('EditProfile - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+  afterEach(() => {
+    resetViewport();
+  });
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<EditProfile />);
     expect(container.firstChild).toMatchSnapshot();
   });

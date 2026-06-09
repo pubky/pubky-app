@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { HotTagsOverview } from './HotTagsOverview';
 
 const mockPush = vi.fn();
@@ -68,6 +69,27 @@ describe('HotTagsOverview', () => {
 
 describe('HotTagsOverview - Snapshots', () => {
   it('matches snapshot while loading', () => {
+    mockUseHotTags.mockReturnValue({
+      rawTags: [],
+      isLoading: true,
+      error: null,
+    });
+
+    const { container } = render(<HotTagsOverview />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('HotTagsOverview - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     mockUseHotTags.mockReturnValue({
       rawTags: [],
       isLoading: true,

@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInput } from '../PostInput/PostInput';
 import { DialogEditPost } from './DialogEditPost';
 
@@ -344,6 +345,33 @@ describe('DialogEditPost - Snapshots', () => {
     const onOpenChangeAction = vi.fn();
     const { container } = render(
       <DialogEditPost postId="null-post-id" open={true} onOpenChangeAction={onOpenChangeAction} />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('DialogEditPost - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: {
+        id: 'snapshot-post-id',
+        content: 'Snapshot post content',
+        kind: 'short',
+      } as ReturnType<typeof usePostDetails>['postDetails'],
+      isLoading: false,
+    });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const onOpenChangeAction = vi.fn();
+    const { container } = render(
+      <DialogEditPost postId="snapshot-post-id" open={true} onOpenChangeAction={onOpenChangeAction} />,
     );
     expect(container.firstChild).toMatchSnapshot();
   });

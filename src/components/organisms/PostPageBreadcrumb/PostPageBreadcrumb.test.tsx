@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Ancestor } from '@/hooks/usePostAncestors/usePostAncestors.types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostPageBreadcrumb } from './PostPageBreadcrumb';
 
 describe('PostPageBreadcrumb', () => {
@@ -187,6 +188,45 @@ describe('PostPageBreadcrumb - Snapshots', () => {
   it('matches snapshot for truncated state (6 items)', () => {
     const ancestors = createAncestors(6);
     const userDetailsMap = createUserDetailsMap(6);
+
+    const { container } = render(
+      <PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={mockOnNavigate} />,
+    );
+
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('PostPageBreadcrumb - Mobile Snapshots', () => {
+  const mockOnNavigate = vi.fn();
+
+  const createAncestors = (count: number): Ancestor[] => {
+    return Array.from({ length: count }, (_, i) => ({
+      postId: `user${i + 1}:post${i + 1}`,
+      userId: `user${i + 1}`,
+    }));
+  };
+
+  const createUserDetailsMap = (count: number): Map<string, string> => {
+    const map = new Map<string, string>();
+    const names = ['John', 'Satoshi', 'Anna', 'Alice', 'Bob', 'Charlie'];
+    for (let i = 0; i < count; i++) {
+      map.set(`user${i + 1}`, names[i] || `User${i + 1}`);
+    }
+    return map;
+  };
+
+  beforeEach(() => {
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const ancestors = createAncestors(2);
+    const userDetailsMap = createUserDetailsMap(2);
 
     const { container } = render(
       <PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={mockOnNavigate} />,

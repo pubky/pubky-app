@@ -1,5 +1,54 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`DialogAge - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-testid="dialog"
+>
+  <div
+    data-as-child="true"
+    data-testid="dialog-trigger"
+  >
+    <span
+      class="cursor-pointer font-medium text-brand"
+      data-testid="typography"
+    >
+      over 18 years old.
+    </span>
+  </div>
+  <div
+    class="sm:max-w-xl"
+    data-testid="dialog-content"
+  >
+    <div
+      class="pr-6"
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Age minimum: 18
+      </h2>
+    </div>
+    <div
+      class="h-full overflow-y-auto pr-4"
+      data-testid="container"
+    >
+      <div
+        class="gap-4"
+        data-testid="container"
+      >
+        <p
+          class="font-normal text-muted-foreground"
+          data-testid="typography"
+        >
+          You can only use Pubky if you are over 18 years old.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`DialogAge - Snapshots > matches snapshot for default DialogAge 1`] = `
 <div
   data-testid="dialog"

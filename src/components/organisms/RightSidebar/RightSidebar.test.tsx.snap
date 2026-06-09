@@ -1,5 +1,33 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`RightSidebar - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="hidden w-(--filter-bar-width) flex-col items-start justify-start gap-6 lg:flex"
+  data-testid="right-sidebar"
+>
+  <div
+    data-testid="who-to-follow"
+  >
+    Who to Follow
+  </div>
+  <div
+    data-testid="active-users"
+  >
+    Active Users
+  </div>
+  <div
+    class="sticky top-[100px] self-start"
+    data-testid="container"
+  >
+    <div
+      data-testid="feedback-card"
+    >
+      Feedback Card
+    </div>
+  </div>
+</div>
+`;
+
 exports[`RightSidebar - Snapshots > matches snapshot with custom className 1`] = `
 <div
   class="hidden w-(--filter-bar-width) flex-col items-start justify-start gap-6 lg:flex custom-sidebar"

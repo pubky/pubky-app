@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Bookmarks } from './Bookmarks';
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
@@ -37,6 +38,19 @@ describe('Bookmarks', () => {
 
 describe('Bookmarks - Snapshots', () => {
   it('matches snapshot', () => {
+    const { container } = render(<Bookmarks />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('Bookmarks - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+  afterEach(() => {
+    resetViewport();
+  });
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<Bookmarks />);
     expect(container).toMatchSnapshot();
   });

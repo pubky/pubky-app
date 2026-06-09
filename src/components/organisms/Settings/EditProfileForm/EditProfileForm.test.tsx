@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { EditProfileForm } from './EditProfileForm';
 
 const mockHandlers = {
@@ -149,6 +150,47 @@ describe('EditProfileForm - Snapshots', () => {
   });
 
   it('matches snapshot', () => {
+    const { container } = render(<EditProfileForm />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('EditProfileForm - Mobile Snapshots', () => {
+  beforeEach(() => {
+    mockUseProfileForm.mockReturnValue({
+      state: {
+        isLoading: false,
+        name: 'Test User',
+        bio: 'Test bio',
+        links: [],
+        avatarPreview: null,
+        avatarFile: null,
+        isSaving: false,
+        submitTextKey: 'save',
+      },
+      errors: {
+        nameError: null,
+        bioError: null,
+        linkUrlErrors: [],
+        avatarError: null,
+      },
+      handlers: mockHandlers,
+      cropDialog: {
+        cropDialogOpen: false,
+        pendingAvatarPreview: null,
+        pendingAvatarFile: null,
+      },
+      fileInputRef: { current: null },
+      isSubmitDisabled: false,
+    });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<EditProfileForm />);
     expect(container.firstChild).toMatchSnapshot();
   });

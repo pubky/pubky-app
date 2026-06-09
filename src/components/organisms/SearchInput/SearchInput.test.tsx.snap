@@ -114,3 +114,27 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - with active 
   </div>
 </div>
 `;
+
+exports[`SearchInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="relative min-w-0"
+  data-testid="search-input"
+>
+  <div
+    class="rounded-full"
+    data-testid="search-input-bar"
+  >
+    <input
+      aria-autocomplete="list"
+      aria-expanded="false"
+      aria-label="Search input"
+      placeholder="Search"
+      type="text"
+      value=""
+    />
+    <svg
+      data-testid="search-icon"
+    />
+  </div>
+</div>
+`;

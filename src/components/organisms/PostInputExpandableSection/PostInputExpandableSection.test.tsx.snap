@@ -1,5 +1,56 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`PostInputExpandableSection - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="overflow-hidden "
+>
+  <div
+    class="gap-6"
+    data-testid="container"
+  >
+    <div
+      data-testid="post-link-embeds"
+    >
+      Test content with link https://example.com
+    </div>
+    <div
+      class="justify-between gap-4 md:flex-row md:gap-0"
+      data-testid="container"
+    >
+      <div
+        data-disabled="false"
+        data-testid="post-input-tags"
+      />
+      <div
+        data-has-post-button-icon="false"
+        data-hide-article-button="false"
+        data-is-article="false"
+        data-is-edit="false"
+        data-post-disabled="false"
+        data-submitting="false"
+        data-testid="post-input-action-bar"
+      >
+        <button
+          data-testid="action-bar-post"
+        >
+          Post
+        </button>
+        <button
+          data-testid="action-bar-emoji"
+        >
+          Emoji
+        </button>
+        <button
+          data-testid="action-bar-article"
+        >
+          Article
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`PostInputExpandableSection - Snapshots > matches snapshot when collapsed 1`] = `null`;
 
 exports[`PostInputExpandableSection - Snapshots > matches snapshot when disabled 1`] = `

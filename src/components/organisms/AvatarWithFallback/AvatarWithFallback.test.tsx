@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { AvatarWithFallback } from './AvatarWithFallback';
 
 vi.mock('facehash', () => ({
@@ -669,6 +670,31 @@ describe('AvatarWithFallback - Snapshots', () => {
         avatarUrl="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
         className="size-16"
         data-testid="custom-avatar"
+      />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('AvatarWithFallback - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseLiveQuery.mockReturnValue({ is_blurred: false });
+    mockUseAuthStore.mockImplementation((selector) => selector({ currentUserPubky: null }));
+    mockUseLocalFilesStore.mockImplementation((selector) => selector({ profile: null }));
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <AvatarWithFallback
+        name="John Doe"
+        avatarUrl="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
+        className="size-16"
       />,
     );
     expect(container.firstChild).toMatchSnapshot();

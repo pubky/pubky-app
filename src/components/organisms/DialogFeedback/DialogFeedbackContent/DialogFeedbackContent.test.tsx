@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { DialogFeedbackContent } from './DialogFeedbackContent';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -291,6 +292,33 @@ describe('DialogFeedbackContent - Snapshots', () => {
     const { container } = render(
       <DialogFeedbackContent {...defaultProps} feedback="Feedback text" hasContent={true} isSubmitting={false} />,
     );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('DialogFeedbackContent - Mobile Snapshots', () => {
+  const mockHandleChange = vi.fn();
+  const mockSubmit = vi.fn();
+  const defaultProps = {
+    feedback: '',
+    handleChange: mockHandleChange,
+    submit: mockSubmit,
+    isSubmitting: false,
+    hasContent: false,
+    currentUserPubky: 'test-user-123',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<DialogFeedbackContent {...defaultProps} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -1,5 +1,16 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`Bookmarks - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div>
+  <div
+    data-testid="timeline-feed"
+    data-variant="bookmarks"
+  >
+    TimelineFeed
+  </div>
+</div>
+`;
+
 exports[`Bookmarks - Snapshots > matches snapshot 1`] = `
 <div>
   <div

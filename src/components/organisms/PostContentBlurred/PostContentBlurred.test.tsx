@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostContentBlurred } from './PostContentBlurred';
 
 // Mock dependencies
@@ -182,6 +183,22 @@ describe('PostContentBlurred - Snapshots', () => {
 
   it('matches snapshot with custom className', () => {
     const { container } = render(<PostContentBlurred postId="snapshot-post-2" className="mt-4 rounded-lg" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostContentBlurred - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<PostContentBlurred postId="snapshot-post-1" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

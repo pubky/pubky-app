@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { DialogNewPost } from './DialogNewPost';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -300,6 +301,23 @@ describe('DialogNewPost - Snapshots', () => {
   it('matches snapshot with open prop', () => {
     const onOpenChangeAction = vi.fn();
     const { container } = render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('DialogNewPost - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const onOpenChangeAction = vi.fn();
+    const { container } = render(<DialogNewPost open={false} onOpenChangeAction={onOpenChangeAction} />);
     expect(container).toMatchSnapshot();
   });
 });

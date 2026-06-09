@@ -1,3 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`DialogReportPostSuccess - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `null`;
+
 exports[`DialogReportPostSuccess - Snapshots > matches snapshot 1`] = `null`;

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostMainLayoutProvider, usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ReplyWithNested } from './ReplyWithNested';
 
 const mocks = vi.hoisted(() => ({
@@ -293,6 +294,30 @@ describe('ReplyWithNested - Snapshots', () => {
       expandAll: vi.fn(async () => {}),
     });
 
+    const { container } = render(<ReplyWithNested replyId="author:reply-1" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('ReplyWithNested - Mobile Snapshots', () => {
+  beforeEach(() => {
+    mocks.mockUseNestedReplies.mockReturnValue({
+      nestedReplyIds: ['author:nested-1'],
+      hasMoreReplies: false,
+      hasNestedReplies: true,
+      replyCount: 1,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<ReplyWithNested replyId="author:reply-1" />);
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { DialogCheckLink } from './DialogCheckLink';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -291,6 +292,22 @@ describe('DialogCheckLink - Snapshots', () => {
   it('matches snapshot with short URL', () => {
     const shortUrl = 'https://x.com';
     const { container } = render(<DialogCheckLink {...defaultProps} linkUrl={shortUrl} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('DialogCheckLink - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<DialogCheckLink {...defaultProps} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

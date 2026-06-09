@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ProfilePageSidebar } from './ProfilePageSidebar';
 
 // Mock next/navigation
@@ -122,5 +123,21 @@ describe('ProfilePageSidebar - Snapshots', () => {
     const rootElement = container.firstChild as HTMLElement;
     expect(rootElement.tagName).toBe('DIV');
     expect(rootElement.children.length).toBe(3);
+  });
+});
+
+describe('ProfilePageSidebar - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<ProfilePageSidebar />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

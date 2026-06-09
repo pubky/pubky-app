@@ -1,5 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`DialogReportPostReasonStep - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `null`;
+
 exports[`DialogReportPostReasonStep - Snapshots > matches snapshot for default state 1`] = `null`;
 
 exports[`DialogReportPostReasonStep - Snapshots > matches snapshot when submitting 1`] = `null`;

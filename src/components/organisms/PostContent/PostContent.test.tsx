@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostContentBase } from '../PostContentBase/PostContentBase';
 import { PostContent } from './PostContent';
 
@@ -205,6 +206,40 @@ describe('PostContent - Snapshots', () => {
     });
 
     const { container } = render(<PostContent postId="repost-2" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostContent - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(PostContentBase).mockImplementation(({ postId, className }: { postId: string; className?: string }) => (
+      <div data-testid="post-content-base" data-post-id={postId} className={className}>
+        PostContentBase {postId}
+      </div>
+    ));
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({ content: 'One liner' }),
+      isLoading: false,
+    });
+    mockUseRepostInfo.mockReturnValue({
+      isRepost: false,
+      repostAuthorId: null,
+      isCurrentUserRepost: false,
+      originalPostId: null,
+      isLoading: false,
+      hasError: false,
+    });
+
+    const { container } = render(<PostContent postId="post-1" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

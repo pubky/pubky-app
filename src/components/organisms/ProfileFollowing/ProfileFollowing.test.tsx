@@ -1,10 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
 import type { Pubky } from '@/models/models.types';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ProfileFollowing } from './ProfileFollowing';
 
 // Mock Providers
@@ -224,6 +225,26 @@ describe('ProfileFollowing - Snapshots', () => {
   it('matches snapshot with connections', () => {
     vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
 
+    const { container } = render(<ProfileFollowing />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('ProfileFollowing - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.mocked(useProfileConnections).mockImplementation(mockUseProfileConnections);
+    vi.mocked(useInfiniteScroll).mockReturnValue(
+      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
+    );
+    vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<ProfileFollowing />);
     expect(container).toMatchSnapshot();
   });

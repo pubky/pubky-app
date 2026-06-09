@@ -1,5 +1,28 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`SignInNavigation - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-class-name="flex-col-reverse justify-start gap-3 md:flex-row lg:gap-6"
+  data-testid="container"
+>
+  <div
+    data-class-name="mx-0 w-auto flex-col items-start justify-start gap-3 sm:mx-auto sm:w-full sm:flex-row"
+    data-testid="container"
+  >
+    <button
+      data-testid="restore-phrase"
+    >
+      Restore Phrase
+    </button>
+    <button
+      data-testid="restore-file"
+    >
+      Restore File
+    </button>
+  </div>
+</div>
+`;
+
 exports[`SignInNavigation - Snapshots > matches snapshot 1`] = `
 <div
   data-class-name="flex-col-reverse justify-start gap-3 md:flex-row lg:gap-6"

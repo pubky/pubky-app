@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelinePosts } from './Posts';
 
 // Mock dependencies
@@ -621,6 +622,43 @@ describe('TimelinePosts - Snapshots', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('timeline-loading')).not.toBeInTheDocument();
     });
+
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('TimelinePosts - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Mock router
+    mockUseRouter.mockReturnValue({
+      push: mockPush,
+      back: vi.fn(),
+      forward: vi.fn(),
+      refresh: vi.fn(),
+      replace: vi.fn(),
+      prefetch: vi.fn(),
+    } as ReturnType<typeof useRouter>);
+
+    mockUseInfiniteScroll.mockReturnValue({
+      sentinelRef: vi.fn(),
+    });
+
+    // Mock useLiveQuery
+    mockUseLiveQuery.mockReturnValue({ id: 'test', replies: 0, tags: 0, unique_tags: 0, reposts: 0 });
+
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <TimelinePosts postIds={[]} loading={true} loadingMore={false} error={null} hasMore={true} loadMore={vi.fn()} />,
+    );
 
     expect(container).toMatchSnapshot();
   });

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { EditProfileHeader } from './EditProfileHeader';
 
 const mockCopyToClipboard = vi.fn();
@@ -66,6 +67,21 @@ describe('EditProfileHeader', () => {
 
 describe('EditProfileHeader - Snapshots', () => {
   it('matches snapshot', () => {
+    const { container } = render(<EditProfileHeader />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('EditProfileHeader - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<EditProfileHeader />);
     expect(container.firstChild).toMatchSnapshot();
   });
