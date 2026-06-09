@@ -1,7 +1,9 @@
 'use client';
-import { Activity, SlidersHorizontal, UserRound } from 'lucide-react';
+import { Activity, SlidersHorizontal } from 'lucide-react';
+import type React from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { Logo } from '../Logo/Logo';
@@ -13,8 +15,14 @@ export interface MobileHeaderProps {
   showRightButton?: boolean;
   hasGradientBackground?: boolean;
   fixed?: boolean;
+  containerClassName?: string;
 }
-const Placeholder = () => <Container overrideDefaults className="w-10" />;
+const SideSlot = ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+  <Container overrideDefaults className={cn('flex size-12 shrink-0 items-center justify-center', className)}>
+    {children}
+  </Container>
+);
+
 export function MobileHeader({
   onLeftIconClick,
   onRightIconClick,
@@ -22,10 +30,13 @@ export function MobileHeader({
   showRightButton = true,
   hasGradientBackground = true,
   fixed = false,
+  containerClassName,
 }: MobileHeaderProps) {
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
-  const showLeftIcon = showLeftButton && isAuthenticated;
+  const { isPublicExploreRoute } = usePublicRoute();
+  // Layout filters drawer: signed-in users and guests on explore/public routes (/home, /post/..., etc.)
+  const showLeftIcon = showLeftButton && (isAuthenticated || isPublicExploreRoute);
   return (
     <Container
       overrideDefaults
@@ -37,35 +48,45 @@ export function MobileHeader({
           : 'bg-background shadow-xs',
       )}
     >
-      <Container overrideDefaults className="flex w-full items-center justify-between p-6">
-        {/* Left icon - filters (authenticated only) */}
-        {showLeftIcon ? (
-          <Button variant="ghost" size="icon" onClick={onLeftIconClick}>
-            <SlidersHorizontal className="size-6" />
-          </Button>
-        ) : (
-          <Placeholder />
-        )}
+      <Container
+        overrideDefaults
+        className={cn('relative flex min-h-12 w-full items-center justify-between p-6', containerClassName)}
+      >
+        <SideSlot>
+          {showLeftIcon ? (
+            <Button variant="ghost" size="icon" onClick={onLeftIconClick}>
+              <SlidersHorizontal className="size-6" />
+            </Button>
+          ) : null}
+        </SideSlot>
 
         <Logo />
 
-        {/* Right icon - Join for unauthenticated, Activity for authenticated */}
-        {!isAuthenticated ? (
+        {/* Right icon - always Activity; action depends on auth */}
+        {showRightButton ? (
           <Button
-            variant="secondary"
+            variant="ghost"
             size="icon"
-            className="size-12"
-            onClick={() => setShowSignInDialog(true)}
+            className="size-12 shrink-0"
+            onClick={() => {
+              if (!isAuthenticated) {
+                setShowSignInDialog(true);
+                return;
+              }
+              onRightIconClick?.();
+            }}
             aria-label="Join Pubky"
           >
-            <UserRound className="size-6" />
-          </Button>
-        ) : showRightButton ? (
-          <Button variant="ghost" size="icon" onClick={onRightIconClick}>
             <Activity className="size-6" />
           </Button>
         ) : (
-          <Placeholder />
+          <SideSlot>
+            {showRightButton ? (
+              <Button variant="ghost" size="icon" onClick={onRightIconClick}>
+                <Activity className="size-6" />
+              </Button>
+            ) : null}
+          </SideSlot>
         )}
       </Container>
     </Container>

@@ -108,7 +108,7 @@ describe('ProfilePageMobileMenu', () => {
       <ProfilePageMobileMenu activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS} onPageChangeAction={() => {}} />,
     );
     const rootElement = container.firstChild as HTMLElement;
-    expect(rootElement).toHaveClass('sticky', 'top-(--header-height-mobile)');
+    expect(rootElement).toHaveClass('sticky', 'top-(--header-height-settings)');
   });
 
   it('calls onPageChangeAction (via requireAuth) with correct pageType when clicked', async () => {

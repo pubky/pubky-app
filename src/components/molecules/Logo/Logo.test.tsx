@@ -1,6 +1,7 @@
 import { usePathname } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { LOGO_LANDING_ROUTES } from '@/app/routes';
 import { Logo } from './Logo';
 
 // Mock Next.js Image component
@@ -81,6 +82,27 @@ describe('Logo', () => {
     fireEvent.click(link!);
     expect(window.scrollTo).not.toHaveBeenCalled();
     expect(setItemSpy).toHaveBeenCalledWith(FORCE_HOME_SCROLL_TOP_KEY, '1');
+  });
+
+  it.each(LOGO_LANDING_ROUTES)('links to the landing page on %s', (pathname) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+
+    render(<Logo />);
+
+    expect(screen.getByTestId('logo-image').closest('a')).toHaveAttribute('href', '/');
+  });
+
+  it.each(LOGO_LANDING_ROUTES)('does not set home scroll intent when clicking logo on %s', (pathname) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+
+    Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
+    const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
+
+    render(<Logo />);
+    fireEvent.click(screen.getByTestId('logo-image').closest('a')!);
+
+    expect(window.scrollTo).not.toHaveBeenCalled();
+    expect(setItemSpy).not.toHaveBeenCalled();
   });
 });
 

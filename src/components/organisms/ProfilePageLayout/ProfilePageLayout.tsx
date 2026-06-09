@@ -127,7 +127,12 @@ export function ProfilePageLayout({
 
   return (
     <>
-      <MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} />
+      <MobileHeader
+        containerClassName="pb-0"
+        hasGradientBackground={false}
+        showLeftButton={false}
+        showRightButton={false}
+      />
 
       <ProfilePageMobileMenu
         ref={mobileMenuRef}

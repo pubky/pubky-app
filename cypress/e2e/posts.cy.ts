@@ -329,7 +329,17 @@ describe('posts', () => {
         cy.wait('@putTag').its('response.statusCode').should('eq', 201);
       });
     });
-    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag added');
+
+    // newly typed tags appear most-recent-first (no success toast)
+    cy.get('[data-cy="single-post-card"]').within(() => {
+      cy.get('[data-cy="clickable-tags-list"]')
+        .filter(':visible')
+        .within(() => {
+          [tag3, tag2, tag1].forEach((tag, index) => {
+            cy.get('[data-cy="post-tag"]').eq(index).should('contain', tag);
+          });
+        });
+    });
 
     // check tags are added to post with count of 1
     cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
@@ -347,7 +357,6 @@ describe('posts', () => {
           cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '0');
         });
     });
-    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag removed');
 
     cy.reload();
 
@@ -366,7 +375,6 @@ describe('posts', () => {
       cy.contains('button', tag1).click();
       cy.wait('@deleteTag1').its('response.statusCode').should('eq', 204);
     });
-    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag removed');
   });
 
   it('can tag and remove tags from existing post on post page (wide layout)', () => {
@@ -394,7 +402,17 @@ describe('posts', () => {
         cy.wait('@putTag').its('response.statusCode').should('eq', 201);
       });
     });
-    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag added');
+
+    // newly typed tags appear most-recent-first (no success toast)
+    cy.get('[data-cy="single-post-card"]').within(() => {
+      cy.get('[data-cy="post-tags-panel"]')
+        .filter(':visible')
+        .find('[data-cy="tag-name"]')
+        .should(($names) => {
+          const labels = $names.map((_, el) => el.textContent?.trim()).get();
+          expect(labels.slice(0, 3)).to.deep.equal([tag3, tag2, tag1]);
+        });
+    });
 
     // check tags are added to post with count of 1
     cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
@@ -412,7 +430,6 @@ describe('posts', () => {
           cy.contains('p', tag2).should('be.visible').parent().find('[data-cy="tag-count"]').should('have.text', '0');
         });
     });
-    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag removed');
 
     cy.reload();
 
@@ -435,7 +452,6 @@ describe('posts', () => {
           cy.wait('@deleteTag1').its('response.statusCode').should('eq', 204);
         });
     });
-    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Tag removed');
   });
 
   it('can bookmark multiple posts then remove bookmarks', () => {

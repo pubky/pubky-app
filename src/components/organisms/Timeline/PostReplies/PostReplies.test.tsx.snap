@@ -15,7 +15,20 @@ exports[`TimelinePostReplies - Snapshots > matches snapshot when authenticated w
 </div>
 `;
 
-exports[`TimelinePostReplies - Snapshots > matches snapshot when not authenticated 1`] = `<div />`;
+exports[`TimelinePostReplies - Snapshots > matches snapshot when not authenticated 1`] = `
+<div>
+  <div
+    class="ml-3"
+    data-testid="container"
+  >
+    <div
+      data-post-id="author:post123"
+      data-show-quick-reply="true"
+      data-testid="thread-tree"
+    />
+  </div>
+</div>
+`;
 
 exports[`TimelinePostReplies - Snapshots > matches snapshot when parent post is deleted 1`] = `
 <div>

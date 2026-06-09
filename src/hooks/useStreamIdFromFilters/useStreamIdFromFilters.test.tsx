@@ -1,15 +1,54 @@
 import { renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
 import { useStreamIdFromFilters } from './useStreamIdFromFilters';
+
+let mockCurrentUserPubky: string | null = 'viewer-pubky';
+const mockHomeStore = vi.hoisted(() => {
+  const initialState = {
+    sort: 'timeline',
+    reach: 'all',
+    content: 'all',
+  };
+  const state = {
+    ...initialState,
+    setSort: (sort: string) => {
+      state.sort = sort;
+    },
+    setReach: (reach: string) => {
+      state.reach = reach;
+    },
+    setContent: (content: string) => {
+      state.content = content;
+    },
+    reset: () => {
+      state.sort = initialState.sort;
+      state.reach = initialState.reach;
+      state.content = initialState.content;
+    },
+  };
+
+  return { state };
+});
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
+    selector({ currentUserPubky: mockCurrentUserPubky }),
+}));
+
+vi.mock('@/stores/home/home.store', () => ({
+  useHomeStore: (selector?: (state: typeof mockHomeStore.state) => unknown) =>
+    typeof selector === 'function' ? selector(mockHomeStore.state) : mockHomeStore.state,
+}));
 
 describe('useStreamIdFromFilters', () => {
   // Reset filters before each test
   beforeEach(() => {
     const { result } = renderHook(() => useHomeStore((state) => state.reset));
     result.current();
+    mockCurrentUserPubky = 'viewer-pubky';
   });
 
   it('should return default streamId (timeline:all:all)', () => {
@@ -42,6 +81,17 @@ describe('useStreamIdFromFilters', () => {
     const { result } = renderHook(() => useStreamIdFromFilters());
     expect(result.current).toBe(PostStreamTypes.TIMELINE_FOLLOWING_ALL);
     expect(result.current).toBe('timeline:following:all');
+  });
+
+  it('should force all reach when no user is authenticated', () => {
+    mockCurrentUserPubky = null;
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    setReach.current(REACH.FOLLOWING);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+
+    expect(result.current).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
+    expect(result.current).toBe('timeline:all:all');
   });
 
   it('should update when content filter changes', () => {

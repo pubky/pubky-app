@@ -9,11 +9,11 @@ exports[`Human template - Snapshots > matches snapshot 1`] = `
     class="flex w-full flex-1 flex-col gap-0 lg:flex-none"
     data-testid="human-content"
   >
-    <div
+    <button
       data-testid="human-selection"
     >
       Human Selection
-    </div>
+    </button>
   </div>
 </div>
 `;
