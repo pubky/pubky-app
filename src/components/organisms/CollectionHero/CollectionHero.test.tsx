@@ -4,6 +4,7 @@ import type { EnrichedPostDetails } from '@/application/moderation/moderation.ty
 import { TagKind } from '@/application/tag/tag.types';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { CollectionHero } from './CollectionHero';
@@ -31,6 +32,10 @@ vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
 
 vi.mock('@/hooks/useBookmark/useBookmark', () => ({
   useBookmark: vi.fn(),
+}));
+
+vi.mock('@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs', () => ({
+  usePostReplyRepostDialogs: vi.fn(),
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -108,6 +113,7 @@ const COLLECTION_CONTENT_NO_COVER = JSON.stringify({
 const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseUserProfile = vi.mocked(useUserProfile);
 const mockUseBookmark = vi.mocked(useBookmark);
+const mockUsePostReplyRepostDialogs = vi.mocked(usePostReplyRepostDialogs);
 
 function setAuthStore(currentUserPubky: string | null) {
   mockUseAuthStore.mockImplementation((selector: (state: { currentUserPubky: string | null }) => unknown) =>
@@ -162,12 +168,24 @@ function setBookmark({ isBookmarked = false, isToggling = false } = {}) {
   return toggle;
 }
 
+function setRepostDialogs() {
+  const openRepostDialog = vi.fn();
+  const openReplyDialog = vi.fn();
+  mockUsePostReplyRepostDialogs.mockReturnValue({
+    openRepostDialog,
+    openReplyDialog,
+    dialogs: <div data-testid="repost-dialogs" />,
+  });
+  return { openRepostDialog, openReplyDialog };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   setAuthStore(null);
   setPostDetails(COLLECTION_CONTENT);
   setOwnerProfile('Bitcoin Wizard', 'https://example.com/avatar.png');
   setBookmark();
+  setRepostDialogs();
 });
 
 // ---------------------------------------------------------------------------
@@ -252,6 +270,19 @@ describe('CollectionHero', () => {
 
       expect(toggle).not.toHaveBeenCalled();
     });
+
+    it('opens the repost dialog when the owner clicks Share', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const { openRepostDialog } = setRepostDialogs();
+
+      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      fireEvent.click(screen.getByLabelText('collections.single.share'));
+
+      expect(openRepostDialog).toHaveBeenCalledTimes(1);
+      expect(mockUsePostReplyRepostDialogs).toHaveBeenCalledWith(COMPOSITE_ID);
+      expect(screen.getByTestId('repost-dialogs')).toBeInTheDocument();
+    });
   });
 
   describe('CTA — non-owner', () => {
@@ -295,6 +326,17 @@ describe('CollectionHero', () => {
       expect(button).toBeDisabled();
       fireEvent.click(button);
       expect(toggle).not.toHaveBeenCalled();
+    });
+
+    it('opens the repost dialog when a non-owner clicks Share', () => {
+      setAuthStore('some-other-user');
+      const { openRepostDialog } = setRepostDialogs();
+
+      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      fireEvent.click(screen.getByLabelText('collections.single.share'));
+
+      expect(openRepostDialog).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -177,6 +177,9 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       </button>
     </div>
   </div>
+  <div
+    data-testid="repost-dialogs"
+  />
 </div>
 `;
 
@@ -395,6 +398,9 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       </button>
     </div>
   </div>
+  <div
+    data-testid="repost-dialogs"
+  />
 </div>
 `;
 
@@ -563,5 +569,8 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
       </button>
     </div>
   </div>
+  <div
+    data-testid="repost-dialogs"
+  />
 </div>
 `;

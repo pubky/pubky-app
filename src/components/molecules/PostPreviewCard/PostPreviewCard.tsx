@@ -29,7 +29,7 @@ import type { PostPreviewCardProps } from './PostPreviewCard.types';
  * - Reply previews: Shows the post being replied to (in DialogReply)
  * - Any nested context where a compact post preview is needed
  */
-export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
+export function PostPreviewCard({ postId, className, contrast }: PostPreviewCardProps) {
   const { navigateToPost } = usePostNavigation();
   const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
@@ -62,7 +62,7 @@ export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
     >
       <CardContent className="flex min-w-0 flex-col gap-4 p-6">
         <PostHeader postId={postId} showPopover={false} />
-        <PostContentBase postId={postId} />
+        <PostContentBase postId={postId} contrast={contrast} />
       </CardContent>
     </Card>
   );

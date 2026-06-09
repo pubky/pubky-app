@@ -10,6 +10,7 @@ import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { cn } from '@/libs/utils/utils';
@@ -97,9 +98,12 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
     void toggle();
   };
 
+  // Sharing a collection = reposting the underlying post; reuse the standard dialog.
+  const { openRepostDialog, dialogs } = usePostReplyRepostDialogs(compositeId);
+  const handleShare = openRepostDialog;
+
   // Placeholder actions — the flows themselves are out of scope this slice.
-  // TODO: wire in collection share / edit / delete (#1866 follow-ups).
-  const handleShare = () => {};
+  // TODO: wire in collection edit / delete (#1866 follow-ups).
   const handleEdit = () => {};
   const handleDelete = () => {};
 
@@ -246,6 +250,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
           )}
         </Container>
       </CardContent>
+      {dialogs}
     </Card>
   );
 }

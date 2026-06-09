@@ -303,6 +303,49 @@ describe('CollectionCard', () => {
       expect(toggle).not.toHaveBeenCalled();
     });
   });
+
+  describe('variant="preview"', () => {
+    it('renders title, description, item count, and owner avatar', () => {
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} variant="preview" />);
+
+      expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
+      expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
+      expect(screen.getByText('2')).toBeInTheDocument();
+      expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-name', 'Bitcoin Wizard');
+    });
+
+    it('hides the inline tags row, Follow/Unfollow, and Delete actions for non-owners', () => {
+      setAuthStore('some-other-user');
+
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} variant="preview" />);
+
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('collections.card.unfollow')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
+    });
+
+    it('hides the inline tags row and Delete action for the owner', () => {
+      setAuthStore(AUTHOR_PUBKY);
+
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} variant="preview" />);
+
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('preview contrast', () => {
+    it('keeps the action row hidden regardless of contrast value', () => {
+      setAuthStore('some-other-user');
+
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} variant="preview" contrast="strong" />);
+
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
+    });
+  });
 });
 
 describe('CollectionCard - Snapshots', () => {

@@ -35,6 +35,21 @@ interface CollectionCardProps {
    * async existence check resolves to "Unfollow".
    */
   initialIsBookmarked?: boolean;
+  /**
+   * `'default'` (landing sections) renders the full card with inline tags and
+   * the Follow/Delete action. `'preview'` is the read-only embed used wherever
+   * a collection post is rendered as content (inline in a feed, or nested in
+   * another preview surface) — actions and tags row are dropped.
+   */
+  variant?: 'default' | 'preview';
+  /**
+   * Background contrast for the `preview` variant. `'subtle'` (default) uses
+   * `bg-muted` and is right when the parent is one `bg-card` step away.
+   * `'strong'` uses `bg-accent` for deeper nesting (e.g. timeline reposts,
+   * where the surrounding PostPreviewCard is itself already `bg-muted`).
+   * Ignored when there is a cover image (the cover overlay handles contrast).
+   */
+  contrast?: 'subtle' | 'strong';
 }
 
 /**
@@ -53,7 +68,14 @@ interface CollectionCardProps {
  * all the hooks that depend on the loaded envelope (`useBookmark` toast
  * copy reads from the parsed title, etc.).
  */
-export function CollectionCard({ authorPubky, postId, className, initialIsBookmarked }: CollectionCardProps) {
+export function CollectionCard({
+  authorPubky,
+  postId,
+  className,
+  initialIsBookmarked,
+  variant = 'default',
+  contrast = 'subtle',
+}: CollectionCardProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
   const { postDetails } = usePostDetails(compositeId);
 
@@ -69,6 +91,8 @@ export function CollectionCard({ authorPubky, postId, className, initialIsBookma
       postDetails={postDetails}
       className={className}
       initialIsBookmarked={initialIsBookmarked}
+      variant={variant}
+      contrast={contrast}
     />
   );
 }
@@ -80,6 +104,8 @@ interface CollectionCardContentProps {
   postDetails: EnrichedPostDetails;
   className?: string;
   initialIsBookmarked?: boolean;
+  variant: 'default' | 'preview';
+  contrast: 'subtle' | 'strong';
 }
 
 function CollectionCardContent({
@@ -89,7 +115,10 @@ function CollectionCardContent({
   postDetails,
   className,
   initialIsBookmarked,
+  variant,
+  contrast,
 }: CollectionCardContentProps) {
+  const isPreview = variant === 'preview';
   const t = useTranslations('collections.card');
   const tCardToast = useTranslations('collections.card.toast');
   const format = useFormatter();
@@ -162,6 +191,11 @@ function CollectionCardContent({
         className={cn(
           'relative h-full gap-0 overflow-hidden rounded-md py-0',
           coverImage && 'border-transparent bg-card/40',
+          // Preview contexts pick their bg based on how nested they are:
+          // one card-step deep (inline feed, dialog repost) reads fine on `bg-muted`,
+          // two steps deep (timeline repost — PostPreviewCard already uses `bg-muted`)
+          // needs `bg-accent` to stay distinct.
+          isPreview && !coverImage && (contrast === 'strong' ? 'bg-accent' : 'bg-muted'),
         )}
       >
         {coverImage && (
@@ -221,51 +255,56 @@ function CollectionCardContent({
             </Typography>
           )}
 
-          {/* Bottom row: tags (left, grows) | action button (right) */}
-          <Container
-            overrideDefaults
-            onClick={suppressCardNavigation}
-            onAuxClick={suppressCardNavigation}
-            className="flex w-full flex-wrap items-center justify-between gap-3 sm:flex-nowrap"
-          >
-            <Container overrideDefaults className="min-w-0 flex-1">
-              <ClickableTagsList
-                taggedId={compositeId}
-                taggedKind={TagKind.POST}
-                showCount={true}
-                showInput={false}
-                showAddButton={true}
-                addMode={true}
-              />
-            </Container>
+          {/* Bottom row: tags (left, grows) | action button (right).
+              Hidden in `preview` so embedded collections (repost dialog, repost
+              previews) match how normal reposts render — no inline tags, no
+              actions on the previewed post. */}
+          {!isPreview && (
+            <Container
+              overrideDefaults
+              onClick={suppressCardNavigation}
+              onAuxClick={suppressCardNavigation}
+              className="flex w-full flex-wrap items-center justify-between gap-3 sm:flex-nowrap"
+            >
+              <Container overrideDefaults className="min-w-0 flex-1">
+                <ClickableTagsList
+                  taggedId={compositeId}
+                  taggedKind={TagKind.POST}
+                  showCount={true}
+                  showInput={false}
+                  showAddButton={true}
+                  addMode={true}
+                />
+              </Container>
 
-            <Container overrideDefaults className="flex shrink-0 items-center gap-2">
-              {isOwn ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleDelete}
-                  aria-label={t('delete')}
-                  className="gap-2 text-xs"
-                >
-                  <Trash2 className="size-4" />
-                  {t('delete')}
-                </Button>
-              ) : (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleFollowToggle}
-                  disabled={isToggling}
-                  aria-label={isBookmarked ? t('unfollow') : t('follow')}
-                  className="gap-2 text-xs"
-                >
-                  {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}
-                  {isBookmarked ? t('unfollow') : t('follow')}
-                </Button>
-              )}
+              <Container overrideDefaults className="flex shrink-0 items-center gap-2">
+                {isOwn ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleDelete}
+                    aria-label={t('delete')}
+                    className="gap-2 text-xs"
+                  >
+                    <Trash2 className="size-4" />
+                    {t('delete')}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleFollowToggle}
+                    disabled={isToggling}
+                    aria-label={isBookmarked ? t('unfollow') : t('follow')}
+                    className="gap-2 text-xs"
+                  >
+                    {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}
+                    {isBookmarked ? t('unfollow') : t('follow')}
+                  </Button>
+                )}
+              </Container>
             </Container>
-          </Container>
+          )}
         </CardContent>
       </Card>
     </Link>
