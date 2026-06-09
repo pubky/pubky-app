@@ -84,7 +84,6 @@ const mockUseBookmarksCollectionSummary = vi.mocked(useBookmarksCollectionSummar
 describe('BookmarksCollection', () => {
   it('renders collection-style chrome with hero, items, and collections sections', () => {
     mockUseBookmarksCollectionSummary.mockReturnValue({
-      currentUserPubky: 'alice-pubky',
       avatarName: 'Alice',
       avatarSeed: 'alice-pubky',
       avatarUrl: 'https://example.com/avatar.png',
@@ -107,7 +106,6 @@ describe('BookmarksCollection', () => {
 describe('BookmarksCollection - Snapshots', () => {
   it('matches the snapshot for the resolved summary state', () => {
     mockUseBookmarksCollectionSummary.mockReturnValue({
-      currentUserPubky: 'alice-pubky',
       avatarName: 'Alice',
       avatarSeed: 'alice-pubky',
       avatarUrl: 'https://example.com/avatar.png',

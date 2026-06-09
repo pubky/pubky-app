@@ -8,7 +8,6 @@ import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 interface UseBookmarksCollectionSummaryResult {
-  currentUserPubky: string | null;
   avatarName: string;
   avatarSeed: string;
   avatarUrl?: string;
@@ -35,7 +34,6 @@ export function useBookmarksCollectionSummary(): UseBookmarksCollectionSummaryRe
   const avatarName = userDetails?.name || 'U';
 
   return {
-    currentUserPubky,
     avatarName,
     avatarSeed: currentUserPubky ?? avatarName,
     avatarUrl,

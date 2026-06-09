@@ -66,10 +66,9 @@ describe('useBookmarksCollectionSummary', () => {
     setup();
   });
 
-  it('returns local bookmark count, avatar metadata, and current user pubky', () => {
+  it('returns local bookmark count and avatar metadata', () => {
     const { result } = renderHook(() => useBookmarksCollectionSummary());
 
-    expect(result.current.currentUserPubky).toBe(CURRENT_USER_PUBKY);
     expect(result.current.bookmarkCount).toBe(3);
     expect(result.current.avatarName).toBe('Alice');
     expect(result.current.avatarSeed).toBe(CURRENT_USER_PUBKY);

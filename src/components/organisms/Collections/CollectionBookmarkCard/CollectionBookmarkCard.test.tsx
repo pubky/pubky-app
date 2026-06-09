@@ -55,7 +55,6 @@ const CURRENT_USER_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy
 const mockUseBookmarksCollectionSummary = vi.mocked(useBookmarksCollectionSummary);
 
 type SetupOptions = {
-  currentUserPubky?: string | null;
   avatarName?: string;
   avatarSeed?: string;
   avatarUrl?: string;
@@ -64,14 +63,12 @@ type SetupOptions = {
 
 function setup(options: SetupOptions = {}) {
   const {
-    currentUserPubky = CURRENT_USER_PUBKY,
     avatarName = 'Alice',
     avatarSeed = CURRENT_USER_PUBKY,
     avatarUrl = 'https://example.com/avatar.png',
   } = options;
 
   mockUseBookmarksCollectionSummary.mockReturnValue({
-    currentUserPubky,
     avatarName,
     avatarSeed,
     avatarUrl,
@@ -146,7 +143,6 @@ describe('CollectionBookmarkCard', () => {
 describe('CollectionBookmarkCard - Snapshots', () => {
   it('matches the snapshot for a signed-in user with full state', () => {
     setup({
-      currentUserPubky: CURRENT_USER_PUBKY,
       avatarName: 'Alice',
       avatarSeed: CURRENT_USER_PUBKY,
       avatarUrl: 'https://example.com/avatar.png',
@@ -158,7 +154,7 @@ describe('CollectionBookmarkCard - Snapshots', () => {
   });
 
   it('matches the snapshot for the signed-out / no-data fallback state', () => {
-    setup({ currentUserPubky: null, avatarName: 'U', avatarSeed: 'U', avatarUrl: undefined, bookmarkCount: undefined });
+    setup({ avatarName: 'U', avatarSeed: 'U', avatarUrl: undefined, bookmarkCount: undefined });
 
     const { container } = render(<CollectionBookmarkCard />);
     expect(container.firstChild).toMatchSnapshot();
