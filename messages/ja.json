@@ -1267,7 +1267,9 @@
     },
     "bookmarks": {
       "title": "ブックマーク",
-      "description": "あとで見たいものをすべて保存できます。"
+      "description": "あとで見たいものをすべて保存できます。",
+      "emptyTitle": "ブックマークはまだありません",
+      "emptyDescription": "投稿を保存すると、あとでここから見つけられます。"
     },
     "card": {
       "follow": "フォロー",

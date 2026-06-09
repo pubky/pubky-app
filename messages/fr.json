@@ -1267,7 +1267,9 @@
     },
     "bookmarks": {
       "title": "Signets",
-      "description": "Tout ce que vous souhaitez enregistrer pour plus tard."
+      "description": "Tout ce que vous souhaitez enregistrer pour plus tard.",
+      "emptyTitle": "Aucun signet pour le moment",
+      "emptyDescription": "Enregistrez des posts pour les retrouver ici plus tard."
     },
     "card": {
       "follow": "Suivre",

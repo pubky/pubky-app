@@ -16,11 +16,13 @@ import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
 import { Typography } from '@/atoms/Typography/Typography';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { COLLECTION_NAME_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { type PostSaveCollectionTarget, usePostSaveTargets } from '@/hooks/usePostSaveTargets/usePostSaveTargets';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn } from '@/libs/utils/utils';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 
 type PostSavePickerProps = {
   postId: string;
@@ -243,6 +245,7 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const t = useTranslations('postSave');
   const isMobile = useIsMobile();
   const { requireAuth } = useRequireAuth();
+  const feed = useTimelineFeedContext();
   const [open, setOpen] = useState(false);
   const saveTargets = usePostSaveTargets(postId);
   const isBookmarkBusy = saveTargets.isBookmarkLoading || saveTargets.isBookmarkToggling;
@@ -263,6 +266,18 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setOpen(false);
+      // Closing the picker commits the save session. On the bookmarks feed, a
+      // post that is no longer bookmarked should leave the grid so the visible
+      // list matches the (live) bookmark count. While the picker stays open the
+      // user can freely toggle targets without the card shifting under them.
+      //
+      // Only act once the bookmark state is resolved: `useBookmark` seeds
+      // `isBookmarked = false` and flips it after `exists()` resolves, so a fast
+      // open/close before that would otherwise drop a still-bookmarked card.
+      const isBookmarkResolved = !saveTargets.isBookmarkLoading && !saveTargets.isBookmarkToggling;
+      if (feed?.variant === TIMELINE_FEED_VARIANT.BOOKMARKS && isBookmarkResolved && !saveTargets.isBookmarked) {
+        feed.removePosts(postId);
+      }
       return;
     }
 

@@ -1,19 +1,16 @@
 'use client';
 
-import { Bookmark, StickyNote } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { Bookmark } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { COLLECTION_ROUTES } from '@/app/routes';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { FileController } from '@/controllers/file/file';
-import { UserController } from '@/controllers/user/user';
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import { useBookmarksCollectionSummary } from '@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary';
 import { cn } from '@/libs/utils/utils';
+import { BookmarkCountBadge } from '@/molecules/BookmarkCountBadge/BookmarkCountBadge';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 interface CollectionBookmarkCardProps {
   className?: string;
@@ -35,32 +32,10 @@ interface CollectionBookmarkCardProps {
  */
 export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProps) {
   const t = useTranslations('collections');
-  const format = useFormatter();
-
-  const { userDetails, currentUserPubky } = useCurrentUserProfile();
-  const localAvatarUrl = useLocalFilesStore((state) => state.profile);
-
-  const { data: userCounts } = useLocalFirstQuery({
-    queryFn: () => UserController.getCounts({ userId: currentUserPubky! }),
-    fetchFn: () => UserController.fetchCounts({ userId: currentUserPubky! }),
-    deps: [currentUserPubky],
-    enabled: !!currentUserPubky,
-  });
-
-  const avatarUrl =
-    localAvatarUrl ??
-    (currentUserPubky && userDetails?.image
-      ? FileController.getAvatarUrl(currentUserPubky, userDetails.indexed_at)
-      : undefined);
-  const avatarName = userDetails?.name || 'U';
-  const avatarSeed = currentUserPubky ?? avatarName;
+  const { avatarName, avatarSeed, avatarUrl, bookmarkCount } = useBookmarksCollectionSummary();
 
   const title = t('bookmarks.title');
   const description = t('bookmarks.description');
-  const count = userCounts?.bookmarks;
-  // Compact notation (e.g. 1.2K, 3M) keeps long counts from blowing out the
-  // header row — matches the CollectionCard count formatting.
-  const countLabel = count !== undefined ? format.number(count, { notation: 'compact' }) : null;
 
   return (
     <Link
@@ -85,18 +60,7 @@ export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProp
             </Container>
 
             <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
-              {countLabel !== null && (
-                <Container overrideDefaults className="flex items-center gap-1 text-muted-foreground">
-                  <StickyNote className="size-3" />
-                  <Typography
-                    as="span"
-                    overrideDefaults
-                    className="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
-                  >
-                    {countLabel}
-                  </Typography>
-                </Container>
-              )}
+              {bookmarkCount !== undefined && <BookmarkCountBadge count={bookmarkCount} />}
               <AvatarWithFallback
                 avatarUrl={avatarUrl}
                 name={avatarName}

@@ -1261,7 +1261,9 @@
     },
     "bookmarks": {
       "title": "书签",
-      "description": "保存你想稍后查看的所有内容。"
+      "description": "保存你想稍后查看的所有内容。",
+      "emptyTitle": "还没有书签",
+      "emptyDescription": "保存帖子后，可稍后在这里找到它们。"
     },
     "card": {
       "follow": "关注",

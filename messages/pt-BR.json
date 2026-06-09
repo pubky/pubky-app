@@ -1267,7 +1267,9 @@
     },
     "bookmarks": {
       "title": "Favoritos",
-      "description": "Tudo o que você quer salvar para mais tarde."
+      "description": "Tudo o que você quer salvar para mais tarde.",
+      "emptyTitle": "Ainda não há favoritos",
+      "emptyDescription": "Salve posts para encontrá-los aqui mais tarde."
     },
     "card": {
       "follow": "Seguir",

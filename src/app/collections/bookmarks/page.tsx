@@ -1,1 +1,1 @@
-export { Bookmarks as default } from '@/templates/Feed/Bookmarks/Bookmarks';
+export { BookmarksCollection as default } from '@/templates/BookmarksCollection/BookmarksCollection';

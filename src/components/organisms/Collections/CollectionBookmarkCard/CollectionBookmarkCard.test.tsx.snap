@@ -85,7 +85,7 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
           </div>
           <div
             data-alt="Alice"
-            data-avatar-url="mocked-avatar-url:o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:7"
+            data-avatar-url="https://example.com/avatar.png"
             data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
             data-name="Alice"
             data-size="sm"
@@ -160,7 +160,7 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for the signe
         >
           <div
             data-alt="U"
-            data-avatar-url=""
+            data-avatar-url="https://example.com/avatar.png"
             data-fallback-seed="U"
             data-name="U"
             data-size="sm"

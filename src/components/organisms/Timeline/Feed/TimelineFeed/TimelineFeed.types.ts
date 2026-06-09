@@ -21,6 +21,13 @@ export interface TimelineFeedProps {
 
 export interface TimelineFeedContextValue {
   /**
+   * The variant of the feed providing this context. Lets descendants (e.g. the
+   * save picker) tailor behavior to the feed they live in; for example,
+   * removing a no-longer-bookmarked post from the grid only on the bookmarks
+   * feed.
+   */
+  variant?: TimelineFeedVariant;
+  /**
    * Add post(s) to the timeline, sorted by timestamp
    * @param postIds - A single post ID or array of post IDs to add
    */

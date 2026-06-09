@@ -1267,7 +1267,9 @@
     },
     "bookmarks": {
       "title": "Marcadores",
-      "description": "Todo lo que quieres guardar para más tarde."
+      "description": "Todo lo que quieres guardar para más tarde.",
+      "emptyTitle": "Aún no hay marcadores",
+      "emptyDescription": "Guarda publicaciones para encontrarlas aquí más tarde."
     },
     "card": {
       "follow": "Seguir",

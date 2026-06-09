@@ -141,9 +141,12 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
   }, [mutedUserIdSet, rawPostIds, refresh, removePosts, variant]);
 
   const contextValue: TimelineFeedContextValue = {
+    variant,
     prependPosts,
     removePosts,
   };
+  const showGridEndMessage =
+    variant !== TIMELINE_FEED_VARIANT.COLLECTION && variant !== TIMELINE_FEED_VARIANT.BOOKMARKS;
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
@@ -167,7 +170,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
-              showEndMessage={variant !== TIMELINE_FEED_VARIANT.COLLECTION}
+              showEndMessage={showGridEndMessage}
             />
           ) : isVisualActive ? (
             <VisualTimelinePosts

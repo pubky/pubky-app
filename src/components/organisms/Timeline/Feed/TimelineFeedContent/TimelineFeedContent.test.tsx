@@ -462,7 +462,7 @@ describe('TimelineFeedContent', () => {
   });
 });
 
-describe('Grid layout (COLLECTION variant, decisions D5/D7)', () => {
+describe('Grid layout variants (decisions D5/D7)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
@@ -493,6 +493,21 @@ describe('Grid layout (COLLECTION variant, decisions D5/D7)', () => {
         layoutResolution={gridLayoutResolution}
       />,
     );
+    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+  });
+
+  it('renders the bookmarks variant in the grid and suppresses the end-of-feed message', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+        variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+
+    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
     expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
   });
 
