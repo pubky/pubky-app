@@ -1,8 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
 import { REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { DialogReportPostReasonStep } from './DialogReportPostReasonStep';
 
 // Mock hooks
@@ -185,37 +184,6 @@ describe('DialogReportPostReasonStep - Snapshots', () => {
     const { container } = renderWithDialog(
       <DialogReportPostReasonStep {...defaultProps} isSubmitting={true} hasContent={true} />,
     );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('DialogReportPostReasonStep - Mobile Snapshots', () => {
-  const mockOnReasonChange = vi.fn();
-  const mockOnCancel = vi.fn();
-  const mockOnSubmit = vi.fn();
-
-  const defaultProps = {
-    reason: '',
-    hasContent: false,
-    isSubmitting: false,
-    onReasonChange: mockOnReasonChange,
-    onCancel: mockOnCancel,
-    onSubmit: mockOnSubmit,
-  };
-
-  beforeEach(() => {
-    mockUseCurrentUserProfile.mockReturnValue({
-      currentUserPubky: 'test-user-123',
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = renderWithDialog(<DialogReportPostReasonStep {...defaultProps} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

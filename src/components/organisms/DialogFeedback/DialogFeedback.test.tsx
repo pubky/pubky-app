@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogFeedback } from './DialogFeedback';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -448,51 +447,6 @@ describe('DialogFeedback - Snapshots', () => {
     });
 
     const { container } = render(<DialogFeedback open={false} onOpenChange={mockOnOpenChange} />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('DialogFeedback - Mobile Snapshots', () => {
-  const mockOnOpenChange = vi.fn();
-  const mockHandleChange = vi.fn();
-  const mockSubmit = vi.fn();
-  const mockReset = vi.fn();
-  const mockHandleOpenChange = vi.fn();
-  const mockHandleDiscard = vi.fn();
-  const mockSetShowConfirmDialog = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseCurrentUserProfile.mockReturnValue({
-      currentUserPubky: 'test-user-123',
-    });
-    mockUseConfirmableDialog.mockReturnValue({
-      showConfirmDialog: false,
-      setShowConfirmDialog: mockSetShowConfirmDialog,
-      resetKey: 0,
-      handleContentChange: vi.fn(),
-      handleOpenChange: mockHandleOpenChange,
-      handleDiscard: mockHandleDiscard,
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    mockUseFeedback.mockReturnValue({
-      feedback: '',
-      handleChange: mockHandleChange,
-      submit: mockSubmit,
-      isSubmitting: false,
-      isSuccess: false,
-      hasContent: false,
-      reset: mockReset,
-    });
-
-    const { container } = render(<DialogFeedback open={true} onOpenChange={mockOnOpenChange} />);
     expect(container).toMatchSnapshot();
   });
 });

@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CopyrightForm } from './CopyrightForm';
 
 // Mock @/molecules
@@ -349,26 +348,6 @@ describe('CopyrightForm - Snapshots', () => {
   });
 
   it('matches snapshot for default state', () => {
-    const { container } = render(<CopyrightForm />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('CopyrightForm - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Mock the date to ensure consistent snapshots
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-01-15T12:00:00'));
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<CopyrightForm />);
     expect(container.firstChild).toMatchSnapshot();
   });

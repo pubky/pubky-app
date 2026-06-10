@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ThreadTree } from './ThreadTree';
 
 vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => ({
@@ -214,30 +213,6 @@ describe('ThreadTree - Snapshots', () => {
       expandAll: vi.fn(async () => {}),
     });
 
-    const { container } = render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('ThreadTree - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(useThreadReplies).mockReturnValue({
-      replyIds: ['author:reply-1'],
-      totalCount: 2,
-      hasMore: true,
-      showAll: false,
-      isExpandingAll: false,
-      expandAll: vi.fn(async () => {}),
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });

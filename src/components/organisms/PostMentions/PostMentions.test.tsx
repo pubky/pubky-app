@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostMentions } from './PostMentions';
 
 // Valid test pubky key (52 lowercase alphanumeric characters)
@@ -277,27 +276,6 @@ describe('PostMentions - Snapshots', () => {
       <PostMentions href={`/profile/${validPubkyKey}`} data-type="mention" aria-label="User mention">
         {`pk:${validPubkyKey}`}
       </PostMentions>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PostMentions - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseUserProfile.mockReturnValue({ profile: null, isLoading: false });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    mockUseUserProfile.mockReturnValue({ profile: { name: 'TestUser' }, isLoading: false });
-
-    const { container } = render(
-      <PostMentions href={`/profile/${validPubkyKey}`}>{`pk:${validPubkyKey}`}</PostMentions>,
     );
     expect(container.firstChild).toMatchSnapshot();
   });

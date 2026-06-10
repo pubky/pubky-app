@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ElementType } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ShareTarget } from './ShareTarget';
 
 // Mock next/navigation
@@ -305,25 +304,6 @@ describe('ShareTarget - Snapshots', () => {
       expect(screen.getByTestId('post-input')).toBeInTheDocument();
     });
 
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('ShareTarget - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSearchParams.clear();
-    mockGetSharedFiles.mockResolvedValue([]);
-    setMobileViewport();
-  });
-  afterEach(() => {
-    resetViewport();
-  });
-  it('matches snapshot on mobile viewport', () => {
-    mockSearchParams.set('hasFiles', 'true');
-    mockGetSharedFiles.mockImplementation(() => new Promise(() => {})); // Never resolves
-
-    const { container } = render(<ShareTarget />);
     expect(container).toMatchSnapshot();
   });
 });

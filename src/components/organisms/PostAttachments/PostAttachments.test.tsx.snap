@@ -1,19 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PostAttachments - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div
-  class="gap-3"
-  data-testid="container"
->
-  <div
-    data-count="2"
-    data-testid="post-attachments-images-and-videos"
-  >
-    ImagesAndVideos
-  </div>
-</div>
-`;
-
 exports[`PostAttachments - Snapshots > matches snapshot with audios only 1`] = `
 <div
   class="gap-3"

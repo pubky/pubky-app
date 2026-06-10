@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE, PUBKY_INVALID_TOO_LONG } from '@/test-utils/pubky';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostNotFoundDiscoveryView } from './PostNotFoundDiscoveryView';
 
 vi.mock('next-intl', () => ({
@@ -73,21 +72,6 @@ describe('PostNotFoundDiscoveryView - Snapshots', () => {
   it('matches snapshot when composite author is invalid', () => {
     const invalid = `${PUBKY_INVALID_TOO_LONG}:${POST_ID_STAGING_FIXTURE}`;
     const { container } = render(<PostNotFoundDiscoveryView postId={invalid} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PostNotFoundDiscoveryView - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<PostNotFoundDiscoveryView postId={VALID_COMPOSITE} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

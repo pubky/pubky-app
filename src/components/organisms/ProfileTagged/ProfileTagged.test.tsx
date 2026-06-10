@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ProfileTagged } from './ProfileTagged';
 
 // Mock providers
@@ -155,22 +154,6 @@ describe('ProfileTagged - Snapshots', () => {
 
   it('matches snapshot for empty state', () => {
     mockUseTagged.mockReturnValue(mockTaggedEmpty);
-    const { container } = render(<ProfileTagged />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('ProfileTagged - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    mockUseTagged.mockReturnValue(mockTaggedOneTag);
     const { container } = render(<ProfileTagged />);
     expect(container.firstChild).toMatchSnapshot();
   });

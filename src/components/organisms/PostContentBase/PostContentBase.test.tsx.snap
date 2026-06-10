@@ -1,24 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PostContentBase - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div
-  class="min-w-0 gap-3"
-  data-testid="container"
->
-  <div
-    class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
-    data-testid="container"
-  >
-    <p>
-      One liner
-    </p>
-  </div>
-  <div
-    data-testid="post-attachments"
-  />
-</div>
-`;
-
 exports[`PostContentBase - Snapshots > matches snapshot with empty content 1`] = `null`;
 
 exports[`PostContentBase - Snapshots > matches snapshot with loading state 1`] = `

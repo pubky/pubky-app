@@ -3,46 +3,57 @@
 exports[`PostMenuActions - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div
   data-open="false"
-  data-testid="dropdown-menu"
+  data-testid="sheet"
 >
-  <button
-    data-testid="dropdown-open-trigger"
-  />
   <div
-    data-testid="dropdown-trigger"
+    data-testid="sheet-trigger"
   >
     <button>
       Menu
     </button>
   </div>
   <div
-    class="flex w-56 flex-col gap-2.5"
-    data-align="end"
-    data-testid="dropdown-content"
+    data-side="bottom"
+    data-testid="sheet-content"
   >
     <div
-      data-post-id="pk:test123:post456"
-      data-testid="post-menu-actions-content"
-      data-variant="dropdown"
+      data-testid="sheet-header"
     >
-      <button>
-        Close
-      </button>
-      <button
-        data-testid="report-button"
+      <div
+        class="sr-only"
+        data-testid="sheet-title"
       >
-        Report
-      </button>
-      <button
-        data-testid="edit-button"
+        Post Actions
+      </div>
+    </div>
+    <div
+      class="flex flex-col gap-2"
+      data-testid="container"
+    >
+      <div
+        data-post-id="pk:test123:post456"
+        data-testid="post-menu-actions-content"
+        data-variant="sheet"
       >
-        Edit
-      </button>
-      <button
-        data-testid="delete-button"
-      >
-        Delete
-      </button>
+        <button>
+          Close
+        </button>
+        <button
+          data-testid="report-button"
+        >
+          Report
+        </button>
+        <button
+          data-testid="edit-button"
+        >
+          Edit
+        </button>
+        <button
+          data-testid="delete-button"
+        >
+          Delete
+        </button>
+      </div>
     </div>
   </div>
 </div>

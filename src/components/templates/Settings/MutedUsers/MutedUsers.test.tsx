@@ -244,7 +244,7 @@ describe('MutedUsers - Snapshots', () => {
 describe('MutedUsers - Mobile Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseIsMobile.mockReturnValue(false);
+    mockUseIsMobile.mockReturnValue(true);
     mockUseMuteUser.mockReturnValue({
       toggleMute: vi.fn(),
       isLoading: false,

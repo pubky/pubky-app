@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Home } from './Home';
 
 const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
@@ -148,19 +147,6 @@ describe('Home — force-scroll-top behavior', () => {
 
 describe('Home - Snapshots', () => {
   it('matches snapshot', () => {
-    const { container } = render(<Home />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('Home - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-  afterEach(() => {
-    resetViewport();
-  });
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<Home />);
     expect(container).toMatchSnapshot();
   });

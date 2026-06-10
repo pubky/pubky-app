@@ -1,35 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`AvatarWithFallback - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div
-  class="size-16"
-  data-testid="avatar"
->
-  <img
-    alt="John Doe"
-    class=""
-    data-testid="avatar-image"
-    src="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
-  />
-  <div
-    class="overflow-hidden border-none"
-    data-testid="avatar-fallback"
-  >
-    <div
-      class="h-full w-full rounded-full text-background"
-      data-name="6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
-      data-testid="facehash"
-    >
-      <span
-        data-testid="avatar-fallback-initial"
-      >
-        J
-      </span>
-    </div>
-  </div>
-</div>
-`;
-
 exports[`AvatarWithFallback - Snapshots > matches snapshot when avatarUrl is not provided 1`] = `
 <div
   class="size-16"

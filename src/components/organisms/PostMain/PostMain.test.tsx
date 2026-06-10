@@ -805,6 +805,7 @@ describe('PostMain - Mobile Snapshots', () => {
       },
       isLoading: false,
     });
+    vi.mocked(useIsMobile).mockReturnValue(true);
     setMobileViewport();
   });
 

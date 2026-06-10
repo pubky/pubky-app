@@ -57,21 +57,16 @@ exports[`MutedUsers - Mobile Snapshots > matches snapshot on mobile viewport 1`]
     </p>
   </div>
   <div
-    class="flex w-full flex-col items-start gap-8 rounded-md border border-border bg-card p-6 shadow-lg md:gap-6"
+    class="inline-flex w-full flex-col gap-6"
+    data-cy="muted-users-root"
     data-testid="container"
   >
-    <div
-      class="inline-flex w-full flex-col gap-6"
-      data-cy="muted-users-root"
-      data-testid="container"
+    <p
+      class="w-full py-4 text-center text-lg text-muted-foreground"
+      data-testid="typography"
     >
-      <p
-        class="w-full py-4 text-center text-lg text-muted-foreground"
-        data-testid="typography"
-      >
-        No muted users yet
-      </p>
-    </div>
+      No muted users yet
+    </p>
   </div>
 </div>
 `;

@@ -135,7 +135,7 @@ exports[`PostInputActionBar - Mobile Snapshots > matches snapshot on mobile view
     <button
       aria-label="Post"
       class="w-full flex-1 sm:flex-auto"
-      data-size="sm"
+      data-size="default"
       data-variant="default"
       disabled=""
     >

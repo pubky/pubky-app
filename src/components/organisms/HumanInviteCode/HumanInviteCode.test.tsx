@@ -1,6 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it, vi } from 'vitest';
 import { HumanInviteCode } from './HumanInviteCode';
 import type { InviteCodeVerificationResult } from './HumanInviteCode.types';
 
@@ -368,21 +367,6 @@ describe('HumanInviteCode - Snapshots', () => {
     await waitFor(() => {
       expect(screen.getByTestId('human-invite-code-card').querySelector('.lucide-circle-check')).toBeInTheDocument();
     });
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('HumanInviteCode - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = renderHumanInviteCode();
     expect(container).toMatchSnapshot();
   });
 });

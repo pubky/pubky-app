@@ -387,7 +387,7 @@ describe('PostMenuActions - Snapshots', () => {
 describe('PostMenuActions - Mobile Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseIsMobile.mockReturnValue(false);
+    mockUseIsMobile.mockReturnValue(true);
     setMobileViewport();
   });
 

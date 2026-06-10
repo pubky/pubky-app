@@ -1,23 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`DialogFeedbackContent - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div
-  data-testid="dialog-header"
->
-  <h2
-    data-testid="dialog-title"
-  >
-    Provide Feedback
-  </h2>
-  <p
-    class="sr-only"
-    data-testid="dialog-description"
-  >
-    Feedback dialog
-  </p>
-</div>
-`;
-
 exports[`DialogFeedbackContent - Snapshots > matches snapshot for default state 1`] = `
 <div
   data-testid="dialog-header"

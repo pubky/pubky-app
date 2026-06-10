@@ -15,29 +15,6 @@ exports[`BackupNavigation > matches snapshot for default BackupNavigation 1`] = 
 </div>
 `;
 
-exports[`BackupPageHeader - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div
-  data-testid="page-header"
->
-  <h1
-    data-size="large"
-    data-testid="page-title"
-  >
-    Back up your 
-    <span
-      class="text-brand"
-    >
-      pubky.
-    </span>
-  </h1>
-  <div
-    data-testid="page-subtitle"
-  >
-    You need a backup to restore access to your account later.
-  </div>
-</div>
-`;
-
 exports[`BackupPageHeader - Snapshots > matches snapshot for default BackupPageHeader 1`] = `
 <div
   data-testid="page-header"

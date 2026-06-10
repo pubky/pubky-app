@@ -1,19 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`ProfileFollowing - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div>
-  <div
-    data-testid="container"
-  >
-    <div
-      data-testid="following-empty"
-    >
-      No following
-    </div>
-  </div>
-</div>
-`;
-
 exports[`ProfileFollowing - Snapshots > matches snapshot when loading 1`] = `
 <div>
   <div

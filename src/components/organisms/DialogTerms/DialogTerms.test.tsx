@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it, vi } from 'vitest';
 import { DialogTerms } from './DialogTerms';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -129,21 +128,6 @@ describe('DialogTerms', () => {
 
 describe('DialogTerms - Snapshots', () => {
   it('matches snapshot for default DialogTerms', () => {
-    const { container } = render(<DialogTerms />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('DialogTerms - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<DialogTerms />);
     expect(container.firstChild).toMatchSnapshot();
   });

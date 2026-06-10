@@ -1,8 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROOT_ROUTES } from '@/app/routes';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Install } from './Install';
 
 const mockSearchParamsGet = vi.fn<(key: string) => string | null>(() => null);
@@ -166,19 +165,6 @@ describe('Install template', () => {
 
 describe('Install template - Snapshots', () => {
   it('matches snapshot', () => {
-    const { container } = render(<Install />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('Install template - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-  afterEach(() => {
-    resetViewport();
-  });
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<Install />);
     expect(container.firstChild).toMatchSnapshot();
   });

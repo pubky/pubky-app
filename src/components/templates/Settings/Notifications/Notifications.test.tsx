@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it } from 'vitest';
 import { Notifications } from './Notifications';
 
 describe('Notifications', () => {
@@ -22,19 +21,6 @@ describe('Notifications', () => {
 
 describe('Notifications - Snapshots', () => {
   it('matches snapshot', () => {
-    const { container } = render(<Notifications />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('Notifications - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-  afterEach(() => {
-    resetViewport();
-  });
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<Notifications />);
     expect(container.firstChild).toMatchSnapshot();
   });

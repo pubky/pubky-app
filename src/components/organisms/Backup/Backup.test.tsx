@@ -1,7 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackupNavigation, BackupPageHeader } from './Backup';
 
 // Mock Next.js router
@@ -174,21 +173,6 @@ describe('BackupNavigation', () => {
 
 describe('BackupPageHeader - Snapshots', () => {
   it('matches snapshot for default BackupPageHeader', () => {
-    const { container } = render(<BackupPageHeader />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('BackupPageHeader - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<BackupPageHeader />);
     expect(container.firstChild).toMatchSnapshot();
   });

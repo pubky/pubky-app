@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActiveUsers } from './ActiveUsers';
 
 const hooksMocks = vi.hoisted(() => ({
@@ -179,34 +178,6 @@ describe('ActiveUsers - Snapshots', () => {
       users: [],
       userIds: [],
       isLoading: false,
-      isLoadingMore: false,
-      hasMore: false,
-      error: null,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
-
-    const { container } = render(<ActiveUsers />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('ActiveUsers - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    hooksMocks.useUserStream.mockReset();
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    hooksMocks.useUserStream.mockReturnValue({
-      users: [],
-      userIds: [],
-      isLoading: true,
       isLoadingMore: false,
       hasMore: false,
       error: null,

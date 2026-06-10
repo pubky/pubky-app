@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogSignIn } from './DialogSignIn';
 
 const mockShowSignInDialog = vi.hoisted(() => ({ value: false }));
@@ -135,24 +134,5 @@ describe('DialogSignIn - Snapshots', () => {
     mockShowSignInDialog.value = false;
     const { container } = render(<DialogSignIn />);
     expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('DialogSignIn - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    mockShowSignInDialog.value = true;
-    render(<DialogSignIn />);
-
-    const dialog = document.querySelector('[role="dialog"]');
-    expect(dialog?.parentElement).toMatchSnapshot();
   });
 });

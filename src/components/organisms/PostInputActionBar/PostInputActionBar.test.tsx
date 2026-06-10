@@ -302,6 +302,7 @@ describe('PostInputActionBar - Snapshots', () => {
 describe('PostInputActionBar - Mobile Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useIsMobile).mockReturnValue(true);
     setMobileViewport();
   });
 

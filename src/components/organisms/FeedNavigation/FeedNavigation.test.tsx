@@ -1,8 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { FeedNavigation } from './FeedNavigation';
 
 // Mock next/navigation
@@ -456,27 +455,6 @@ describe('FeedNavigation - Snapshots', () => {
     ];
     mockUsePathname.mockReturnValue('/feed/feed-2');
 
-    const { container } = render(<FeedNavigation />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('FeedNavigation - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockCustomFeeds = [];
-    mockIsAuthenticated = true;
-    mockRequireAuth.mockImplementation((action: () => unknown) => action());
-    mockUsePathname.mockReturnValue('/home');
-    mockGetList.mockResolvedValue([]);
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<FeedNavigation />);
     expect(container.firstChild).toMatchSnapshot();
   });

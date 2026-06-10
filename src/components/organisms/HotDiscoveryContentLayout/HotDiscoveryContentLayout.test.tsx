@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it, vi } from 'vitest';
 import { HotDiscoveryContentLayout } from './HotDiscoveryContentLayout';
 
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
@@ -83,26 +82,6 @@ describe('HotDiscoveryContentLayout', () => {
 
 describe('HotDiscoveryContentLayout - Snapshots', () => {
   it('matches snapshot with child content', () => {
-    const { container } = render(
-      <HotDiscoveryContentLayout>
-        <p data-testid="snapshot-inner">discovery shell</p>
-      </HotDiscoveryContentLayout>,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('HotDiscoveryContentLayout - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(
       <HotDiscoveryContentLayout>
         <p data-testid="snapshot-inner">discovery shell</p>

@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it, vi } from 'vitest';
 import { LeftSidebar } from './LeftSidebar';
 
 // Mock the home store
@@ -161,21 +160,6 @@ describe('LeftSidebar - Snapshots', () => {
   });
 
   it('matches snapshot with all filters in different states', () => {
-    const { container } = render(<LeftSidebar />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('LeftSidebar - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<LeftSidebar />);
     expect(container.firstChild).toMatchSnapshot();
   });

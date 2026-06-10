@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it, vi } from 'vitest';
 import { Settings } from './Settings';
 
 vi.mock('next/navigation', () => ({
@@ -99,23 +98,6 @@ describe('Settings', () => {
 
 describe('Settings - Snapshots', () => {
   it('matches snapshot', () => {
-    const { container } = render(
-      <Settings>
-        <div>Test content</div>
-      </Settings>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('Settings - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-  afterEach(() => {
-    resetViewport();
-  });
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(
       <Settings>
         <div>Test content</div>

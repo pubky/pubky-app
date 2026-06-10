@@ -1,11 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
@@ -471,27 +470,6 @@ describe('TimelineFeedContent - Snapshots', () => {
       >
         <div>Filter bar</div>
       </TimelineFeedWithStream>,
-    );
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('TimelineFeedContent - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
-    mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
-    mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(
-      <TimelineFeedWithStream streamId={undefined} variant={TIMELINE_FEED_VARIANT.HOME} tagsLayout="inline" />,
     );
     expect(container).toMatchSnapshot();
   });

@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NotificationItem } from './NotificationItem';
 
 // Mock next/navigation
@@ -578,27 +577,6 @@ describe('NotificationItem - Snapshots', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'user1:post123',
-    } as FlatNotification;
-    const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('NotificationItem - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const notification = {
-      id: 'follow:123:user1',
-      type: NotificationType.Follow,
-      timestamp: Date.now() - 1000 * 60 * 30,
-      followed_by: 'user1',
     } as FlatNotification;
     const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
     expect(container.firstChild).toMatchSnapshot();

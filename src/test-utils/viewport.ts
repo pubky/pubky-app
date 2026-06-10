@@ -8,9 +8,7 @@
  */
 
 /**
- * Common mobile viewport used for mobile snapshot tests.
- * Matches the Cypress mobile config (iPhone 12 Pro) in
- * `cypress/cypress.config.mobile.ts`.
+ * Common mobile viewport used for mobile snapshot tests (iPhone 12 Pro).
  */
 export const MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
 
@@ -26,7 +24,7 @@ function setWindowSize(width: number, height: number): void {
 }
 
 /**
- * Resize the jsdom window to the common mobile viewport (iPhone 12 Pro, 390x844).
+ * Resize the jsdom window to the common mobile viewport.
  * Call before rendering so viewport-aware hooks pick up the mobile width on mount.
  */
 export function setMobileViewport(): void {

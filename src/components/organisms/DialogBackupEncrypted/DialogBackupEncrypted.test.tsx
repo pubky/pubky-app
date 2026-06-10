@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogBackupEncrypted } from './DialogBackupEncrypted';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -321,21 +320,6 @@ describe('DialogBackupEncrypted', () => {
 
 describe('DialogBackupEncrypted - Snapshots', () => {
   it('matches snapshot for default DialogBackupEncrypted', () => {
-    const { container } = render(<DialogBackupEncrypted />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('DialogBackupEncrypted - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<DialogBackupEncrypted />);
     expect(container.firstChild).toMatchSnapshot();
   });

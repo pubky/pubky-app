@@ -41,13 +41,13 @@ exports[`Hot - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
       HotTagsOverview
     </div>
     <div
-      class=""
+      class="hidden"
       data-testid="hot-active-users"
     >
       HotActiveUsers
     </div>
     <div
-      class="flex flex-col gap-2"
+      class="flex-col gap-2 hidden"
       data-testid="container"
     >
       <div

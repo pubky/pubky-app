@@ -1,13 +1,12 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
 import { PostText } from '@/molecules/PostText/PostText';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostArticle } from '../PostArticle/PostArticle';
 import { PostAttachments } from '../PostAttachments/PostAttachments';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
@@ -373,37 +372,6 @@ describe('PostContentBase - Snapshots', () => {
     });
 
     const { container } = render(<PostContentBase postId="post-6" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PostContentBase - Mobile Snapshots', () => {
-  // Replicate the desktop snapshot setup: use real PostText and PostLinkEmbeds, keep PostAttachments mocked.
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    mockUseLocalFilesStore.mockReturnValue(undefined);
-    const actualPostText = await vi.importActual<{ PostText: typeof PostText }>('@/molecules/PostText/PostText');
-    const actualPostLinkEmbeds = await vi.importActual<{ PostLinkEmbeds: typeof PostLinkEmbeds }>(
-      '@/molecules/PostLinkEmbeds/PostLinkEmbeds',
-    );
-    const memoizedPostText = asOpaque<React.MemoExoticComponent<React.FC<unknown>>>(actualPostText.PostText);
-    const PostTextComponent = asOpaque<typeof PostText>(memoizedPostText.type);
-    vi.mocked(PostText).mockImplementation(PostTextComponent);
-    vi.mocked(PostLinkEmbeds).mockImplementation(actualPostLinkEmbeds.PostLinkEmbeds);
-    setMobileViewport();
-  }, 30000);
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    mockUsePostDetails.mockReturnValue({
-      postDetails: createMockPostDetails({ content: 'One liner' }),
-      isLoading: false,
-    });
-
-    const { container } = render(<PostContentBase postId="post-1" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

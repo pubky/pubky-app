@@ -115,6 +115,7 @@ describe('Search - Snapshots', () => {
 
 describe('Search - Mobile Snapshots', () => {
   beforeEach(() => {
+    mockUseIsMobile.mockReturnValue(true);
     setMobileViewport();
   });
   afterEach(() => {

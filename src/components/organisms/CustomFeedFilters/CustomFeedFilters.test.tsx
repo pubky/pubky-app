@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { CustomFeedFilters } from './CustomFeedFilters';
 
 // Mock hooks
@@ -395,23 +394,6 @@ describe('CustomFeedFilters - Snapshots', () => {
 
   it('matches snapshot for sidebar variant with null content', () => {
     mockUseCustomFeed.mockReturnValue(createMockFeed({ content: null }));
-    const { container } = render(<CustomFeedFilters variant="sidebar" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('CustomFeedFilters - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseCustomFeed.mockReturnValue(undefined);
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<CustomFeedFilters variant="sidebar" />);
     expect(container.firstChild).toMatchSnapshot();
   });

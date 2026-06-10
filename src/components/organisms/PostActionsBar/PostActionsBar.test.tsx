@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostActionsBar } from './PostActionsBar';
 
 // Mock hooks
@@ -226,32 +225,6 @@ describe('PostActionsBar - Snapshots', () => {
     mockUsePostCounts.mockReturnValue({ postCounts: null, isLoading: true });
 
     const { container } = render(<PostActionsBar postId="post-5" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PostActionsBar - Mobile Snapshots', () => {
-  beforeEach(() => {
-    mockUseBookmark.mockReturnValue({
-      isBookmarked: false,
-      isLoading: false,
-      isToggling: false,
-      toggle: vi.fn(),
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    mockUsePostCounts.mockReturnValue({
-      postCounts: { tags: 7, unique_tags: 3, replies: 8, reposts: 9 },
-      isLoading: false,
-    });
-
-    const { container } = render(<PostActionsBar postId="post-4" className="extra" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

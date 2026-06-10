@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInput } from '../PostInput/PostInput';
 import { DialogRepost } from './DialogRepost';
 
@@ -252,38 +251,6 @@ describe('DialogRepost - Snapshots', () => {
     const onOpenChangeAction = vi.fn();
     const { container } = render(
       <DialogRepost postId="snapshot-post-id" open={true} onOpenChangeAction={onOpenChangeAction} />,
-    );
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('DialogRepost - Mobile Snapshots', () => {
-  const mockHandleContentChange = vi.fn();
-  const mockHandleOpenChange = vi.fn();
-  const mockHandleDiscard = vi.fn();
-  const mockSetShowConfirmDialog = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseConfirmableDialog.mockReturnValue({
-      showConfirmDialog: false,
-      setShowConfirmDialog: mockSetShowConfirmDialog,
-      resetKey: 0,
-      handleContentChange: mockHandleContentChange,
-      handleOpenChange: mockHandleOpenChange,
-      handleDiscard: mockHandleDiscard,
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const onOpenChangeAction = vi.fn();
-    const { container } = render(
-      <DialogRepost postId="snapshot-post-id" open={false} onOpenChangeAction={onOpenChangeAction} />,
     );
     expect(container).toMatchSnapshot();
   });

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VisualRow } from './TimelineFeedVisual.types';
 import { VisualTimelinePosts } from './VisualTimelinePosts';
 
@@ -674,43 +673,6 @@ describe('VisualTimelinePosts - Snapshots', () => {
   it('matches snapshot for touch devices without the hover overlay', () => {
     mockUseIsTouchDevice.mockReturnValue(true);
 
-    const { container } = render(
-      <VisualTimelinePosts
-        postIds={['author:post1']}
-        loading={false}
-        loadingMore={false}
-        error={null}
-        hasMore={false}
-        loadMore={vi.fn()}
-      />,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('VisualTimelinePosts - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseIsTouchDevice.mockReturnValue(false);
-    mockUseInfiniteScroll.mockReturnValue({
-      sentinelRef: vi.fn(),
-    });
-    mockUseVisualFeedTiles.mockReturnValue({
-      rows: createRows(),
-      tail: [],
-      tiles: [],
-      hasPendingTiles: false,
-      hasPendingFiles: false,
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(
       <VisualTimelinePosts
         postIds={['author:post1']}

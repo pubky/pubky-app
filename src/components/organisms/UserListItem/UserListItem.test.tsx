@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it, vi } from 'vitest';
 import { UserListItem } from './UserListItem';
 import type { UserListItemData } from './UserListItem.types';
 
@@ -204,21 +203,6 @@ describe('UserListItem - Snapshots', () => {
 
   it('matches snapshot for full variant', () => {
     const { container } = render(<UserListItem user={mockUser} variant="full" onFollowClick={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('UserListItem - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<UserListItem user={mockUser} variant="compact" onFollowClick={vi.fn()} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

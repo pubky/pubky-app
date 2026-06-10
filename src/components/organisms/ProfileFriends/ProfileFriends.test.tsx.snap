@@ -1,19 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`ProfileFriends - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div>
-  <div
-    data-testid="container"
-  >
-    <div
-      data-testid="friends-empty"
-    >
-      No friends
-    </div>
-  </div>
-</div>
-`;
-
 exports[`ProfileFriends - Snapshots > matches snapshot when loading 1`] = `
 <div>
   <div

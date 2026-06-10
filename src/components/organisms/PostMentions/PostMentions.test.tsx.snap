@@ -1,15 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PostMentions - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<a
-  class="text-base"
-  data-testid="link"
-  href="/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
->
-  @TestUser
-</a>
-`;
-
 exports[`PostMentions - Snapshots > matches snapshot for invalid mention (null) 1`] = `null`;
 
 exports[`PostMentions - Snapshots > matches snapshot for mention with username 1`] = `

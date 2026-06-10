@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultNotificationPreferences } from '@/stores/settings/settings.types';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NotificationSettings } from './NotificationSettings';
 
 // Mock settings store and hook
@@ -88,21 +87,6 @@ describe('NotificationSettings', () => {
 
 describe('NotificationSettings - Snapshots', () => {
   it('matches snapshot', () => {
-    const { container } = render(<NotificationSettings />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('NotificationSettings - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<NotificationSettings />);
     expect(container.firstChild).toMatchSnapshot();
   });

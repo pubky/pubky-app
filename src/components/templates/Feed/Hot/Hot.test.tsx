@@ -294,7 +294,7 @@ describe('Hot - Snapshots', () => {
 
 describe('Hot - Mobile Snapshots', () => {
   beforeEach(() => {
-    mockIsMobile = false;
+    mockIsMobile = true;
     setMobileViewport();
   });
   afterEach(() => {

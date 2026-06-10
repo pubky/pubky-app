@@ -5,6 +5,7 @@ import { ContentLayout } from './ContentLayout';
 
 const mockUseCustomFeed = vi.fn();
 const mockResolveFeedLayout = vi.fn();
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
 let mockHomeLayout = 'columns';
 
 // Mock the home store
@@ -37,7 +38,7 @@ vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
 }));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
-  useIsMobile: () => false,
+  useIsMobile: mockUseIsMobile,
 }));
 
 // Mock the molecules
@@ -599,6 +600,7 @@ describe('ContentLayout - Snapshots', () => {
 
 describe('ContentLayout - Mobile Snapshots', () => {
   beforeEach(() => {
+    mockUseIsMobile.mockReturnValue(true);
     setMobileViewport();
   });
 

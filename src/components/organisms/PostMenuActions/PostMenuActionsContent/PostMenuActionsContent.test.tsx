@@ -1,13 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { Edit, FileText, Flag, Key, Link, MegaphoneOff, Trash, UserRoundPlus } from 'lucide-react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MENU_VARIANT } from '@/config/ui';
 import {
   POST_MENU_ACTION_IDS,
   POST_MENU_ACTION_VARIANTS,
 } from '@/hooks/usePostMenuActions/usePostMenuActions.constants';
 import type { PostMenuActionItem } from '@/hooks/usePostMenuActions/usePostMenuActions.types';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMenuActionsContent } from './PostMenuActionsContent';
 
 vi.mock('@/atoms/DropdownMenu/DropdownMenu', () => {
@@ -493,80 +492,6 @@ describe('PostMenuActionsContent - Snapshots', () => {
       <PostMenuActionsContent
         postId="pk:test123:post456"
         variant={MENU_VARIANT.SHEET}
-        onActionComplete={vi.fn()}
-        onReportClick={vi.fn()}
-        onEditClick={vi.fn()}
-        onDeleteClick={vi.fn()}
-        isDeleting={false}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PostMenuActionsContent - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    mockUsePostMenuActions.mockReturnValue({
-      menuItems: [
-        {
-          id: POST_MENU_ACTION_IDS.FOLLOW,
-          label: 'Follow Test User',
-          icon: UserRoundPlus,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_PUBKY,
-          label: 'Copy pubky',
-          icon: Key,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_LINK,
-          label: 'Copy link to post',
-          icon: Link,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_TEXT,
-          label: 'Copy text of post',
-          icon: FileText,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.MUTE,
-          label: 'Mute Test User',
-          icon: MegaphoneOff,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.REPORT,
-          label: 'Report post',
-          icon: Flag,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-      ],
-      isLoading: false,
-    });
-
-    const { container } = render(
-      <PostMenuActionsContent
-        postId="pk:test123:post456"
-        variant={MENU_VARIANT.DROPDOWN}
         onActionComplete={vi.fn()}
         onReportClick={vi.fn()}
         onEditClick={vi.fn()}

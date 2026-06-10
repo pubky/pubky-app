@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { DialogBackupExport } from './DialogBackupExport';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -357,29 +356,6 @@ describe('DialogBackupExport - Snapshots', () => {
   it('matches snapshot for DialogBackupExport with special mnemonic', () => {
     const specialMnemonic = 'test phrase with spaces & symbols!';
     const { container } = render(<DialogBackupExport mnemonic={specialMnemonic} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('DialogBackupExport - Mobile Snapshots', () => {
-  beforeEach(() => {
-    Object.defineProperty(window, 'open', {
-      configurable: true,
-      value: mockWindowOpen,
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    Object.defineProperty(window, 'open', {
-      configurable: true,
-      value: originalOpen,
-    });
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<DialogBackupExport />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

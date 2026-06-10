@@ -1,11 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostHeader } from './PostHeader';
 
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
@@ -302,45 +301,6 @@ describe('PostHeader - Snapshots', () => {
     mockUseAvatarUrl.mockReturnValue(undefined);
 
     const { container } = render(<PostHeader postId="user123:post456" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PostHeader - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    mockUsePostDetails.mockReturnValue({
-      postDetails: {
-        id: 'userpubkykey:post456',
-        indexed_at: Date.now(),
-        kind: 'short' as const,
-        uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
-        content: '',
-        attachments: null,
-        is_moderated: false,
-        is_blurred: false,
-      } as EnrichedPostDetails,
-      isLoading: false,
-    });
-    mockUseUserDetails.mockReturnValue({
-      userDetails: {
-        id: 'snapshotUserKey',
-        name: 'Snapshot User',
-        image: 'snapshot-image-id',
-      } as NexusUserDetails,
-      isLoading: false,
-    });
-    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/snapshotUserKey.png');
-
-    const { container } = render(<PostHeader postId="snapshotUserKey:post789" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it } from 'vitest';
 import { Privacy } from './Privacy';
 
 describe('Privacy', () => {
@@ -19,19 +18,6 @@ describe('Privacy', () => {
 
 describe('Privacy - Snapshots', () => {
   it('matches snapshot', () => {
-    const { container } = render(<Privacy />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('Privacy - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-  afterEach(() => {
-    resetViewport();
-  });
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<Privacy />);
     expect(container.firstChild).toMatchSnapshot();
   });

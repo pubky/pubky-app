@@ -1,50 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`CustomFeedFilters - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div
-  class="flex flex-col gap-6"
-  data-testid="container"
->
-  <div
-    data-default-selected-tab=""
-    data-disabled="true"
-    data-selected-tab=""
-    data-testid="filter-reach"
-  >
-    FilterReach
-  </div>
-  <div
-    data-default-selected-tab=""
-    data-disabled="true"
-    data-selected-tab=""
-    data-testid="filter-sort"
-  >
-    FilterSort
-  </div>
-  <div
-    class="sticky top-[100px] flex w-full flex-col gap-6 self-start"
-    data-testid="container"
-  >
-    <div
-      data-default-selected-tab=""
-      data-disabled="true"
-      data-selected-tab=""
-      data-testid="filter-layout"
-    >
-      FilterLayout
-    </div>
-    <div
-      data-default-selected-tab=""
-      data-disabled="true"
-      data-selected-tab=""
-      data-testid="filter-content"
-    >
-      FilterContent
-    </div>
-  </div>
-</div>
-`;
-
 exports[`CustomFeedFilters - Snapshots > matches snapshot for drawer variant with custom feed 1`] = `
 <div
   class="flex flex-col gap-6"

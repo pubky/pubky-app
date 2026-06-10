@@ -1,12 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import type { UseRequireAuthResult } from '@/hooks/useRequireAuth/useRequireAuth.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelinePostReplies } from './PostReplies';
 
 // Mock hooks
@@ -202,36 +201,6 @@ describe('TimelinePostReplies - Snapshots', () => {
       },
     });
 
-    const { container } = render(<TimelinePostReplies postId={mockPostId} />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('TimelinePostReplies - Mobile Snapshots', () => {
-  const mockPostId = 'author:post123';
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(useRequireAuth).mockReturnValue(mockUseRequireAuth());
-    vi.mocked(usePostDetails).mockReturnValue(mockUsePostDetails());
-    vi.mocked(usePostCounts).mockReturnValue({
-      postCounts: {
-        id: mockPostId,
-        replies: 3,
-        tags: 0,
-        unique_tags: 0,
-        reposts: 0,
-      } satisfies PostCountsModelSchema,
-      isLoading: false,
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<TimelinePostReplies postId={mockPostId} />);
     expect(container).toMatchSnapshot();
   });

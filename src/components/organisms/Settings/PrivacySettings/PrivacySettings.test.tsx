@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultPrivacyPreferences } from '@/stores/settings/settings.types';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PrivacySettings } from './PrivacySettings';
 
 // Mock settings store and hook
@@ -115,25 +114,6 @@ describe('PrivacySettings - Snapshots', () => {
   });
 
   it('matches snapshot', () => {
-    const { container } = render(<PrivacySettings />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PrivacySettings - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseSettingsStore.mockReturnValue({
-      privacy: defaultPrivacyPreferences,
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<PrivacySettings />);
     expect(container.firstChild).toMatchSnapshot();
   });

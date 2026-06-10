@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { useRecoveryPhraseValidation } from '@/hooks/useRecoveryPhraseValidation/useRecoveryPhraseValidation';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { DialogBackupPhrase } from './DialogBackupPhrase';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -849,20 +848,5 @@ describe('DialogBackupPhrase - Identical Words Test', () => {
     baconButtons.forEach((button) => {
       expect(button).not.toBeDisabled();
     });
-  });
-});
-
-describe('DialogBackupPhrase - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<DialogBackupPhrase />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

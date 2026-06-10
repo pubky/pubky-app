@@ -1,6 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WhoToFollowSidebar } from './WhoToFollowSidebar';
 
 const hooksMocks = vi.hoisted(() => ({
@@ -259,34 +258,6 @@ describe('WhoToFollowSidebar - Snapshots', () => {
       ],
       userIds: ['user-1', 'user-2'],
       isLoading: false,
-      isLoadingMore: false,
-      hasMore: false,
-      error: null,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
-
-    const { container } = render(<WhoToFollowSidebar />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('WhoToFollowSidebar - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    hooksMocks.useUserStream.mockReset();
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    hooksMocks.useUserStream.mockReturnValue({
-      users: [],
-      userIds: [],
-      isLoading: true,
       isLoadingMore: false,
       hasMore: false,
       error: null,

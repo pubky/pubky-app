@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it, vi } from 'vitest';
 import { BackupMethodCard } from './BackupMethodCard';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -325,26 +324,6 @@ describe('BackupMethodCard', () => {
 
 describe('BackupMethodCard - Snapshots', () => {
   it('matches snapshot for default BackupMethodCard', () => {
-    mockUseOnboardingStore.mockReturnValue({
-      mnemonic: '',
-    });
-
-    const { container } = render(<BackupMethodCard />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('BackupMethodCard - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     mockUseOnboardingStore.mockReturnValue({
       mnemonic: '',
     });

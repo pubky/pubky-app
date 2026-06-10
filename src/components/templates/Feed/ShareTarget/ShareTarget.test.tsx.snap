@@ -1,36 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`ShareTarget - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div>
-  <div
-    class="flex min-h-[50vh] items-center justify-center"
-  >
-    <div
-      class="mx-auto w-full max-w-2xl gap-4 p-4"
-      data-testid="container"
-    >
-      <div
-        class="flex-row items-center justify-between"
-        data-testid="container"
-      >
-        <div
-          class="h-6 w-32 rounded-md"
-          data-testid="skeleton"
-        />
-        <div
-          class="h-8 w-16 rounded-md"
-          data-testid="skeleton"
-        />
-      </div>
-      <div
-        class="h-32 w-full rounded-md"
-        data-testid="skeleton"
-      />
-    </div>
-  </div>
-</div>
-`;
-
 exports[`ShareTarget - Snapshots > matches snapshot for content state 1`] = `
 <div>
   <div

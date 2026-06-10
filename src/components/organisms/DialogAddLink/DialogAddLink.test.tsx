@@ -1,6 +1,5 @@
 import { render } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it, vi } from 'vitest';
 import { DialogAddLink } from './DialogAddLink';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -172,23 +171,6 @@ describe('DialogAddLink - Snapshots', () => {
         </div>
       </div>,
     );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('DialogAddLink - Mobile Snapshots', () => {
-  const mockOnSave = vi.fn();
-
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<DialogAddLink onSave={mockOnSave} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

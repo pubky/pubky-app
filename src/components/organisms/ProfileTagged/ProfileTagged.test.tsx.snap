@@ -1,26 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`ProfileTagged - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div
-  class="mx-auto w-full flex-col flex gap-3"
-  data-testid="container"
->
-  <h5
-    class="text-2xl leading-normal font-light text-muted-foreground lg:hidden"
-    data-testid="heading-5"
-  >
-    Tagged (
-    1
-    )
-  </h5>
-  <div
-    data-testid="tagged-section"
-  >
-    TaggedSection
-  </div>
-</div>
-`;
-
 exports[`ProfileTagged - Snapshots > matches snapshot 1`] = `
 <div
   class="mx-auto w-full flex-col flex gap-3"

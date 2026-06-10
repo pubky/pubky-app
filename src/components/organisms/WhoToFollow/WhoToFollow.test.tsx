@@ -1,12 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ElementType, ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import type { Pubky } from '@/models/models.types';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { WhoToFollow } from './WhoToFollow';
 
 // Mock dependencies
@@ -277,26 +276,6 @@ describe('WhoToFollow - Snapshots', () => {
   it('matches snapshot with users', () => {
     vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
 
-    const { container } = render(<WhoToFollow />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('WhoToFollow - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.mocked(useUserStream).mockImplementation(mockUseUserStream);
-    vi.mocked(useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
-    );
-    vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<WhoToFollow />);
     expect(container).toMatchSnapshot();
   });

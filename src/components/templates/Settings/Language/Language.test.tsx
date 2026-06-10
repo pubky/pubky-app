@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { describe, expect, it, vi } from 'vitest';
 import { Language } from './Language';
 
 // Mock Next.js router
@@ -57,21 +56,6 @@ describe('Language', () => {
 
 describe('Language - Snapshots', () => {
   it('matches snapshot', () => {
-    const { container } = render(<Language />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('Language - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<Language />);
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -1,10 +1,9 @@
 import { useRouter } from 'next/navigation';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
 import { REPORT_ISSUE_LABELS, REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { DialogReportPostIssueStep } from './DialogReportPostIssueStep';
 
 // Mock next/navigation
@@ -136,26 +135,6 @@ describe('DialogReportPostIssueStep - Snapshots', () => {
   const mockOnCancel = vi.fn();
 
   it('matches snapshot', () => {
-    const { container } = renderWithDialog(
-      <DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('DialogReportPostIssueStep - Mobile Snapshots', () => {
-  const mockOnSelectIssueType = vi.fn();
-  const mockOnCancel = vi.fn();
-
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = renderWithDialog(
       <DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />,
     );

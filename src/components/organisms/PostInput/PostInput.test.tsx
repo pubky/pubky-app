@@ -1108,6 +1108,7 @@ describe('PostInput - Mobile Snapshots', () => {
     mockUsePostReturn.isSubmitting = false;
     mockUsePostReturn.isArticle = false;
     mockUsePostReturn.articleTitle = '';
+    vi.mocked(useIsMobile).mockReturnValue(true);
     setMobileViewport();
   });
 
