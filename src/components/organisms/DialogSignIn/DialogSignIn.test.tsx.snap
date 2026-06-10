@@ -44,7 +44,7 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
       data-testid="container"
     >
       <div
-        class="bg-card text-card-foreground shadow-sm flex flex-1 flex-col gap-4 rounded-md py-6"
+        class="bg-card text-card-foreground shadow-sm flex flex-1 flex-col gap-3 rounded-md py-6 sm:gap-6"
         data-slot="card"
         data-testid="card"
       >
@@ -60,12 +60,12 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           </h3>
         </div>
         <div
-          class="mx-auto w-full flex-col flex flex-1 items-center justify-center py-4"
+          class="mx-auto w-full flex-col flex flex-1 items-center justify-center"
           data-testid="container"
         >
           <img
             alt="New here?"
-            class="h-[80px] w-auto max-w-[202px] sm:h-auto sm:w-full"
+            class="h-[87px] w-auto max-w-[202px] sm:h-auto sm:w-full"
             data-nimg="1"
             decoding="async"
             height="202"
@@ -85,7 +85,7 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-user-round-plus mr-2 size-4"
+              class="lucide lucide-user-round-plus size-4"
               fill="none"
               height="24"
               stroke="currentColor"
@@ -116,7 +116,7 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
         </div>
       </div>
       <div
-        class="bg-card text-card-foreground shadow-sm flex flex-1 flex-col gap-4 rounded-md py-6"
+        class="bg-card text-card-foreground shadow-sm flex flex-1 flex-col gap-3 rounded-md py-6 sm:gap-6"
         data-slot="card"
         data-testid="card"
       >
@@ -132,12 +132,12 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           </h3>
         </div>
         <div
-          class="mx-auto w-full flex-col flex flex-1 items-center justify-center py-4"
+          class="mx-auto w-full flex-col flex flex-1 items-center justify-center"
           data-testid="container"
         >
           <img
             alt="Already have a pubky?"
-            class="h-[80px] w-auto max-w-[202px] sm:h-auto sm:w-full"
+            class="h-[87px] w-auto max-w-[202px] sm:h-auto sm:w-full"
             data-nimg="1"
             decoding="async"
             height="202"
@@ -157,7 +157,7 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-arrow-right mr-2 size-4"
+              class="lucide lucide-arrow-right size-4"
               fill="none"
               height="24"
               stroke="currentColor"

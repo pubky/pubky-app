@@ -39,27 +39,27 @@ export function DialogSignIn() {
 
         <Container className="flex flex-col gap-4 sm:flex-row">
           {/* New User Card */}
-          <Card className="flex flex-1 flex-col gap-4 rounded-md py-6">
+          <Card className="flex flex-1 flex-col gap-3 rounded-md py-6 sm:gap-6">
             <Container className="gap-2 px-6">
               <Typography as="h3" size="md" className="font-bold">
                 {t('newHere')}
               </Typography>
             </Container>
 
-            <Container className="flex flex-1 items-center justify-center py-4">
+            <Container className="flex flex-1 items-center justify-center">
               <Image
                 src="/images/new-here.svg"
                 alt={t('newHere')}
                 width={202}
                 height={202}
-                className="h-[80px] w-auto max-w-[202px] sm:h-auto sm:w-full"
+                className="h-[87px] w-auto max-w-[202px] sm:h-auto sm:w-full"
               />
             </Container>
 
             <Container className="px-6">
-              <Button asChild className="w-full font-bold">
+              <Button asChild className="w-full gap-2 font-bold">
                 <Link href={ONBOARDING_ROUTES.HUMAN} onClick={handleClose}>
-                  <UserRoundPlus className="mr-2 size-4" />
+                  <UserRoundPlus className="size-4" />
                   {t('joinButton')}
                 </Link>
               </Button>
@@ -67,27 +67,27 @@ export function DialogSignIn() {
           </Card>
 
           {/* Sign In Card */}
-          <Card className="flex flex-1 flex-col gap-4 rounded-md py-6">
+          <Card className="flex flex-1 flex-col gap-3 rounded-md py-6 sm:gap-6">
             <Container className="gap-2 px-6">
               <Typography as="h3" size="md" className="font-bold">
                 {t('alreadyHaveAccount')}
               </Typography>
             </Container>
 
-            <Container className="flex flex-1 items-center justify-center py-4">
+            <Container className="flex flex-1 items-center justify-center">
               <Image
                 src="/images/sign-in.svg"
                 alt={t('alreadyHaveAccount')}
                 width={202}
                 height={202}
-                className="h-[80px] w-auto max-w-[202px] sm:h-auto sm:w-full"
+                className="h-[87px] w-auto max-w-[202px] sm:h-auto sm:w-full"
               />
             </Container>
 
             <Container className="px-6">
-              <Button asChild variant="secondary" className="w-full font-bold">
+              <Button asChild variant="secondary" className="w-full gap-2 font-bold">
                 <Link href={AUTH_ROUTES.SIGN_IN} onClick={handleClose}>
-                  <ArrowRight className="mr-2 size-4" />
+                  <ArrowRight className="size-4" />
                   {t('signInButton')}
                 </Link>
               </Button>
