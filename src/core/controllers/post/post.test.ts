@@ -1058,6 +1058,35 @@ describe('PostController', () => {
         cleanupAuthUser();
       }
     });
+
+    it('rejects a non-author before any side effects (no file upload, no DB read)', async () => {
+      // Regression guard: a non-author passing a `File` cover must NOT trigger
+      // the homeserver upload (which could orphan a file under their pubky).
+      setupAuthUser('different_user_pubky' as Pubky);
+      const getDetailsSpy = vi.spyOn(PostApplication, 'getDetails');
+      const toFileAttachmentSpy = vi.spyOn(FileApplication, 'toFileAttachment');
+      const commitFileCreateSpy = vi.spyOn(FileApplication, 'commitCreate');
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit');
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: new File(['x'], 'cover.png', { type: 'image/png' }),
+          }),
+        ).rejects.toThrow('Current user is not the author of this post');
+
+        expect(getDetailsSpy).not.toHaveBeenCalled();
+        expect(toFileAttachmentSpy).not.toHaveBeenCalled();
+        expect(commitFileCreateSpy).not.toHaveBeenCalled();
+        expect(commitEditSpy).not.toHaveBeenCalled();
+      } finally {
+        cleanupAuthUser();
+      }
+    });
   });
 
   describe('getOrFetch', () => {

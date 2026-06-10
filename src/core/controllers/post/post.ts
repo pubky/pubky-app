@@ -292,7 +292,20 @@ export class PostController {
     description,
     coverImage,
   }: TEditCollectionParams): Promise<void> {
+    // Reject non-authors up front, before any side effects: the cover File
+    // upload below would otherwise hit the homeserver (and `PostNormalizer.toEdit`
+    // only enforces the author check later). Mirrors the explicit guard in
+    // `commitDelete`.
+    const { pubky: authorId } = parseCompositeId(compositeCollectionId);
     const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
+    if (authorId !== currentUserPubky) {
+      throw Err.client(ClientErrorCode.NOT_FOUND, 'Current user is not the author of this post', {
+        service: ErrorService.Local,
+        operation: 'commitEditCollection',
+        context: { compositeCollectionId, currentUserPubky },
+      });
+    }
+
     const collection = await PostApplication.getDetails({ compositeId: compositeCollectionId });
 
     if (!collection) {
@@ -311,8 +324,6 @@ export class PostController {
         context: { compositeCollectionId },
       });
     }
-
-    const { pubky: authorId } = parseCompositeId(compositeCollectionId);
 
     let coverImageUrl: string | null = null;
     if (coverImage instanceof File) {
