@@ -341,7 +341,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-menu"
+                class="lucide lucide-rows2 lucide-rows-2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -352,14 +352,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M4 5h16"
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
                 />
                 <path
-                  d="M4 12h16"
-                />
-                <path
-                  d="M4 19h16"
+                  d="M3 12h18"
                 />
               </svg>
                
@@ -1080,7 +1081,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-menu"
+                class="lucide lucide-rows2 lucide-rows-2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1091,14 +1092,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M4 5h16"
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
                 />
                 <path
-                  d="M4 12h16"
-                />
-                <path
-                  d="M4 19h16"
+                  d="M3 12h18"
                 />
               </svg>
                
@@ -1817,7 +1819,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-menu"
+                class="lucide lucide-rows2 lucide-rows-2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1828,14 +1830,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M4 5h16"
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
                 />
                 <path
-                  d="M4 12h16"
-                />
-                <path
-                  d="M4 19h16"
+                  d="M3 12h18"
                 />
               </svg>
                
@@ -2621,7 +2624,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-menu"
+                class="lucide lucide-rows2 lucide-rows-2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2632,14 +2635,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M4 5h16"
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
                 />
                 <path
-                  d="M4 12h16"
-                />
-                <path
-                  d="M4 19h16"
+                  d="M3 12h18"
                 />
               </svg>
                
@@ -3407,7 +3411,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-menu"
+                class="lucide lucide-rows2 lucide-rows-2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3418,14 +3422,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M4 5h16"
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
                 />
                 <path
-                  d="M4 12h16"
-                />
-                <path
-                  d="M4 19h16"
+                  d="M3 12h18"
                 />
               </svg>
                
