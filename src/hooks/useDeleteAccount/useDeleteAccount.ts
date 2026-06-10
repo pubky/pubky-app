@@ -38,8 +38,6 @@ export function useDeleteAccount(): UseDeleteAccountResult {
     try {
       const pubky = useAuthStore.getState().selectCurrentUserPubky();
       await ProfileController.commitDelete({ pubky, setProgress });
-      await AuthController.logout();
-      router.push(AUTH_ROUTES.LOGOUT);
     } catch (error) {
       Logger.error('Failed to delete account:', { error });
       toast({
@@ -49,7 +47,19 @@ export function useDeleteAccount(): UseDeleteAccountResult {
       });
       setIsDeleting(false);
       setProgress(0);
+      return;
     }
+
+    // Past this point the account data is permanently gone, so a logout failure
+    // must not surface as a retryable deletion error. Log it and redirect anyway;
+    // the next sign-in re-runs local cleanup.
+    try {
+      await AuthController.logout();
+    } catch (error) {
+      Logger.warn('[useDeleteAccount] Logout failed after account deletion, redirecting anyway', { error });
+    }
+
+    router.push(AUTH_ROUTES.LOGOUT);
   };
 
   return {

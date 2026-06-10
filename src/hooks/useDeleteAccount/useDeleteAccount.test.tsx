@@ -145,7 +145,7 @@ describe('useDeleteAccount', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('shows error toast when logout fails after deletion', async () => {
+  it('still redirects to logout when logout fails after successful deletion', async () => {
     vi.mocked(AuthController.logout).mockRejectedValue(new Error('Logout failed'));
 
     const { result } = renderHook(() => useDeleteAccount());
@@ -154,12 +154,11 @@ describe('useDeleteAccount', () => {
       await result.current.handleDeleteAccount();
     });
 
-    expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
-      description: 'Failed to delete account. Please try again.',
-      className: 'destructive border-destructive bg-destructive text-destructive-foreground',
-    });
-    expect(mockPush).not.toHaveBeenCalled();
+    // The account data is already gone, so no misleading "deletion failed" toast
+    // and no retryable state — the user is moved to the logout page regardless.
+    expect(mockToast).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith(AUTH_ROUTES.LOGOUT);
+    expect(result.current.isDeleting).toBe(true);
   });
 
   it('ignores concurrent calls while deletion is in progress', async () => {
