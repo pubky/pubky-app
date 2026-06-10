@@ -20,24 +20,34 @@ export function PostListMediaThumbnail({ postId, className, onClick }: PostListM
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const resolvePreview = async () => {
       const localImage = localAttachments?.find((file) => file.type.startsWith('image'));
       if (localImage) {
-        setPreviewSrc(localImage.urls.feed ?? localImage.urls.main);
+        if (!cancelled) {
+          setPreviewSrc(localImage.urls.feed ?? localImage.urls.main);
+        }
         return;
       }
 
       if (!postDetails?.attachments?.length) {
-        setPreviewSrc(null);
+        if (!cancelled) {
+          setPreviewSrc(null);
+        }
         return;
       }
 
       try {
         const metadata = await FileController.getMetadata({ fileAttachments: postDetails.attachments });
+        if (cancelled) return;
+
         const firstImage = metadata.find((attachment) => attachment.content_type.startsWith('image/'));
 
         if (!firstImage) {
-          setPreviewSrc(null);
+          if (!cancelled) {
+            setPreviewSrc(null);
+          }
           return;
         }
 
@@ -48,11 +58,17 @@ export function PostListMediaThumbnail({ postId, className, onClick }: PostListM
           }),
         );
       } catch {
-        setPreviewSrc(null);
+        if (!cancelled) {
+          setPreviewSrc(null);
+        }
       }
     };
 
     void resolvePreview();
+
+    return () => {
+      cancelled = true;
+    };
   }, [localAttachments, postDetails?.attachments]);
 
   if (!previewSrc) {
