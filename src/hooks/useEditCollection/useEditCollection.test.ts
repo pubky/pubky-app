@@ -254,4 +254,45 @@ describe('useEditCollection', () => {
     expect(ok).toBe(false);
     expect(mocks.commitEditCollection).not.toHaveBeenCalled();
   });
+
+  it('re-prefills the form from the latest envelope after reset() — even when the live query updates AFTER close', async () => {
+    // Regression: the dialog stays mounted across open/close cycles, so the
+    // hook's `hasPrefilledRef` persists. If reset() runs before the post-commit
+    // Dexie live query has propagated, `originalName` / `originalDescription`
+    // captured in reset's closure are stale and the form gets written back to
+    // the pre-save values. The fix has two parts:
+    //   1. `reset()` clears `hasPrefilledRef.current` so the next envelope-driven
+    //      re-render can prefill again.
+    //   2. The prefill effect's deps only watch `originalName` /
+    //      `originalDescription` (not `collection`, which is a fresh object on
+    //      every render and would otherwise re-arm the guard with stale closure
+    //      values via the RHF re-render that `form.reset()` itself schedules).
+    mocks.postDetails = { content: collectionContent({ name: 'Old name', description: 'Old description' }) };
+    const { result, rerender } = renderHook(() => useEditCollection({ compositeCollectionId: COMPOSITE_ID }));
+
+    await waitFor(() => {
+      expect(result.current.form.getValues()).toEqual({
+        [CREATE_COLLECTION_FORM_FIELDS.NAME]: 'Old name',
+        [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: 'Old description',
+      });
+    });
+
+    // User typed something, then the dialog closes — reset() runs while the
+    // envelope is still the stale (pre-commit) value.
+    act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, 'User in-progress edit'));
+    act(() => result.current.reset());
+
+    // Now the Dexie live query catches up with the post-commit envelope.
+    await act(async () => {
+      mocks.postDetails = { content: collectionContent({ name: 'New name', description: 'New description' }) };
+      rerender();
+    });
+
+    await waitFor(() => {
+      expect(result.current.form.getValues()).toEqual({
+        [CREATE_COLLECTION_FORM_FIELDS.NAME]: 'New name',
+        [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: 'New description',
+      });
+    });
+  });
 });

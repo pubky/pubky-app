@@ -78,19 +78,23 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
     mode: 'onChange',
   });
 
-  // Prefill the form once the collection envelope arrives. We only do this on
-  // the first successful load so the user's in-progress edits aren't clobbered
-  // if Dexie's live query re-fires while the dialog is open.
+  // Prefill the form once the collection envelope arrives. The guard uses
+  // `originalName` (not `collection`) so the deps array only contains the
+  // primitives the effect actually reads. `originalName` is non-empty iff the
+  // envelope parsed successfully — `CollectionPostContent.normalize` throws on
+  // empty names and `parse` catches that into `null` — so this guard matches
+  // the `collection !== null` check exactly while keeping the deps stable
+  // across the RHF-induced re-render that `form.reset()` itself schedules.
   const hasPrefilledRef = useRef(false);
   useEffect(() => {
     if (hasPrefilledRef.current) return;
-    if (!collection) return;
+    if (!originalName) return;
     form.reset({
       [CREATE_COLLECTION_FORM_FIELDS.NAME]: originalName,
       [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: originalDescription,
     });
     hasPrefilledRef.current = true;
-  }, [collection, form, originalName, originalDescription]);
+  }, [form, originalName, originalDescription]);
 
   const submit = async (): Promise<boolean> => {
     if (!collection) return false;
@@ -150,6 +154,12 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
       [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: originalDescription,
     });
     cover.reset();
+    // Allow the prefill effect to re-run on the next render. Right after a
+    // successful save, the Dexie live query may not have propagated yet, so
+    // `originalName` / `originalDescription` above can still be stale. Clearing
+    // the ref lets the effect catch up once the fresh envelope arrives — so a
+    // reopened dialog shows the committed values rather than the pre-save ones.
+    hasPrefilledRef.current = false;
   };
 
   return {
