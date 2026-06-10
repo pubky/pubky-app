@@ -5,6 +5,7 @@ import { CREATE_COLLECTION_FORM_FIELDS } from './useCreateCollection.types';
 
 const mocks = vi.hoisted(() => ({
   commitCreateCollection: vi.fn(),
+  setCollectionCover: vi.fn(),
   toast: vi.fn(),
   currentUserPubky: 'current-user' as string | null,
   cover: {
@@ -45,6 +46,12 @@ vi.mock('@/molecules/Toaster/use-toast', () => ({
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
     selector({ currentUserPubky: mocks.currentUserPubky }),
+}));
+
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: {
+    getState: () => ({ setCollectionCover: mocks.setCollectionCover }),
+  },
 }));
 
 vi.mock('next-intl', () => ({
@@ -123,6 +130,40 @@ describe('useCreateCollection', () => {
       title: 'Success',
       description: 'Collection Proof of Work created',
     });
+  });
+
+  it('seeds the local-files store with a blob URL of the picked cover File so the cover renders instantly', async () => {
+    mocks.commitCreateCollection.mockResolvedValue('current-user:c1');
+    const file = new File(['x'], 'cover.png', { type: 'image/png' });
+    mocks.cover.file = file;
+    const createObjectURL = vi.fn(() => 'blob:mock-cover');
+    vi.stubGlobal('URL', { ...URL, createObjectURL });
+
+    const { result } = renderHook(() => useCreateCollection());
+    act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, 'Reading list'));
+
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    expect(createObjectURL).toHaveBeenCalledWith(file);
+    expect(mocks.setCollectionCover).toHaveBeenCalledWith('current-user:c1', 'blob:mock-cover');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('does not touch the local-files store when no cover File is picked', async () => {
+    mocks.commitCreateCollection.mockResolvedValue('current-user:c1');
+    mocks.cover.file = null;
+
+    const { result } = renderHook(() => useCreateCollection());
+    act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, 'Reading list'));
+
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    expect(mocks.setCollectionCover).not.toHaveBeenCalled();
   });
 
   it('returns null and toasts an error when the controller throws', async () => {

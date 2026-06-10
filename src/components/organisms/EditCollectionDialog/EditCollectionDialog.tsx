@@ -1,42 +1,38 @@
 'use client';
 
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 import { flushSync } from 'react-dom';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { getCollectionRoute } from '@/app/routes';
-import { useCreateCollection } from '@/hooks/useCreateCollection/useCreateCollection';
-import { parseCompositeId } from '@/models/models.utils';
+import { useEditCollection } from '@/hooks/useEditCollection/useEditCollection';
 import { CollectionFormDialog } from '@/organisms/CollectionFormDialog/CollectionFormDialog';
 
-type NewCollectionDialogProps = {
-  children: ReactNode;
+type EditCollectionDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Composite collection id (`author:postId`) the dialog is editing. */
+  compositeCollectionId: string;
 };
 
-export function NewCollectionDialog({ children }: NewCollectionDialogProps) {
-  const t = useTranslations('collections.new');
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
+export function EditCollectionDialog({ open, onOpenChange, compositeCollectionId }: EditCollectionDialogProps) {
+  const t = useTranslations('collections.edit');
   // Local saving flag, flipped synchronously via `flushSync` so the "Saving..."
   // state paints before any heavy work (e.g. cover image canvas re-encoding)
   // begins. RHF's own `formState.isSubmitting` would otherwise be batched.
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
-  const { form, cover, submit, reset } = useCreateCollection();
+  const { form, cover, submit, reset } = useEditCollection({ compositeCollectionId });
 
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen);
+    onOpenChange(nextOpen);
     if (!nextOpen) reset();
   };
 
   const handleSave = async () => {
     flushSync(() => setIsSavingLocal(true));
     try {
-      const compositeId = await submit();
-      if (!compositeId) return;
+      const ok = await submit();
+      if (!ok) return;
       handleOpenChange(false);
-      const { pubky, id } = parseCompositeId(compositeId);
-      router.push(getCollectionRoute(pubky, id));
     } finally {
       setIsSavingLocal(false);
     }
@@ -54,9 +50,8 @@ export function NewCollectionDialog({ children }: NewCollectionDialogProps) {
       cover={cover}
       onSubmit={handleSave}
       isSaving={isSaving}
-      coverInputId="new-collection-cover-image"
-    >
-      {children}
-    </CollectionFormDialog>
+      coverInputId="edit-collection-cover-image"
+      disableOpenAutoFocus
+    />
   );
 }

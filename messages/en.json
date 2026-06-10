@@ -1256,6 +1256,12 @@
       "created": "Collection {name} created",
       "createFailed": "Failed to create collection."
     },
+    "edit": {
+      "title": "Edit Collection",
+      "save": "Save changes",
+      "updated": "Collection {name} updated",
+      "updateFailed": "Failed to update collection."
+    },
     "showMore": "Show more",
     "loadFailed": "Failed to load collections. Please try again.",
     "my": {

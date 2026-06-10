@@ -8,7 +8,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
   href="/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G"
 >
   <div
-    class="flex flex-col text-card-foreground shadow-sm relative h-full gap-0 overflow-hidden rounded-md py-0 border-transparent bg-card/40"
+    class="flex flex-col text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden rounded-md py-0 border-transparent bg-card/40"
     data-slot="card"
     data-testid="card"
   >
@@ -179,7 +179,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
   href="/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G"
 >
   <div
-    class="flex flex-col text-card-foreground shadow-sm relative h-full gap-0 overflow-hidden rounded-md py-0 border-transparent bg-card/40"
+    class="flex flex-col text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden rounded-md py-0 border-transparent bg-card/40"
     data-slot="card"
     data-testid="card"
   >
@@ -359,7 +359,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
   href="/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G"
 >
   <div
-    class="flex flex-col bg-card text-card-foreground shadow-sm relative h-full gap-0 overflow-hidden rounded-md py-0"
+    class="flex flex-col bg-card text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden rounded-md py-0"
     data-slot="card"
     data-testid="card"
   >

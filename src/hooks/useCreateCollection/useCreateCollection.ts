@@ -8,6 +8,7 @@ import { useCoverImagePicker, type UseCoverImagePickerResult } from '@/hooks/use
 import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import {
   CREATE_COLLECTION_FORM_FIELDS,
   type CreateCollectionFormData,
@@ -55,7 +56,12 @@ export function useCreateCollection(): UseCreateCollectionResult {
   const form = useForm<CreateCollectionFormData>({
     resolver: zodResolver(createCollectionFormSchema(t)),
     defaultValues: createCollectionFormDefaults,
-    mode: 'all',
+    // `onChange` (not `all`): we deliberately skip blur-triggered validation so
+    // clicking the dialog's X button on an untouched empty title doesn't fire
+    // the required-field error, grow the dialog, and shift the X button out
+    // from under the user's mouseup. The user still gets feedback as soon as
+    // they type and erase a value.
+    mode: 'onChange',
   });
 
   const submit = async (): Promise<string | null> => {
@@ -72,6 +78,12 @@ export function useCreateCollection(): UseCreateCollectionResult {
           description,
           coverImage: cover.file,
         });
+        // Mirror the post-attachment pattern: stash a blob URL so the cover
+        // renders instantly while the homeserver / CDN catch up.
+        if (cover.file) {
+          const blobUrl = URL.createObjectURL(cover.file);
+          useLocalFilesStore.getState().setCollectionCover(compositeId, blobUrl);
+        }
         toast({
           title: tToast('success'),
           description: t('created', { name: name.trim() }),

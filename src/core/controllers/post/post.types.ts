@@ -33,6 +33,19 @@ export interface TUpdateCollectionItemParams {
   shouldAdd: boolean;
 }
 
+export interface TEditCollectionParams {
+  compositeCollectionId: string;
+  name: string;
+  description?: string | null;
+  /**
+   * Cover image to set on the collection. Either:
+   * - a `File` (uploaded to the homeserver, the resulting `pubky://` URL replaces `cover_image`),
+   * - a string URL already accessible by Nexus (preserves the existing cover when its current URL is passed back unchanged),
+   * - `null` to clear the cover.
+   */
+  coverImage?: File | string | null;
+}
+
 export interface TDeletePostParams {
   compositePostId: string;
 }

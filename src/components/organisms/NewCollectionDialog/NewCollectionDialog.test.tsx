@@ -100,7 +100,11 @@ describe('NewCollectionDialog', () => {
     expect(screen.getByRole('button', { name: 'Save collection' })).toBeEnabled();
   });
 
-  it('shows required title feedback after blurring an empty title field', async () => {
+  it('does not show required title feedback when the user only focuses then blurs an untouched title field', async () => {
+    // The form is configured with `mode: 'onChange'` (not `'all'`) precisely so
+    // clicking the dialog's X close button — which blurs the autofocused title
+    // input — doesn't fire the required-field error, grow the dialog, and shift
+    // the X button out from under the user's mouseup.
     render(
       <NewCollectionDialog>
         <Button>Open dialog</Button>
@@ -111,6 +115,20 @@ describe('NewCollectionDialog', () => {
     expect(screen.queryByText('Collection title is required.')).not.toBeInTheDocument();
 
     fireEvent.blur(screen.getByLabelText('Title'));
+
+    expect(screen.queryByText('Collection title is required.')).not.toBeInTheDocument();
+  });
+
+  it('shows required title feedback once the user types then erases the title', async () => {
+    render(
+      <NewCollectionDialog>
+        <Button>Open dialog</Button>
+      </NewCollectionDialog>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Proof of Work' } });
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: '' } });
 
     expect(await screen.findByText('Collection title is required.')).toBeInTheDocument();
   });
@@ -123,7 +141,8 @@ describe('NewCollectionDialog', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
-    fireEvent.blur(screen.getByLabelText('Title'));
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Draft' } });
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: '' } });
 
     expect(await screen.findByText('Collection title is required.')).toBeInTheDocument();
 

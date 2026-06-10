@@ -13,6 +13,7 @@ import { CollectionCard } from './CollectionCard';
 // ---------------------------------------------------------------------------
 
 const mockUseAuthStore = vi.fn();
+const mockLocalCollections: Record<string, string | undefined> = {};
 
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
@@ -35,6 +36,11 @@ vi.mock('@/hooks/useBookmark/useBookmark', () => ({
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => mockUseAuthStore(selector),
+}));
+
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: (selector: (state: { collections: Record<string, string | undefined> }) => unknown) =>
+    selector({ collections: mockLocalCollections }),
 }));
 
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
@@ -163,6 +169,7 @@ function setBookmark({ isBookmarked = false, isToggling = false } = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  for (const key of Object.keys(mockLocalCollections)) delete mockLocalCollections[key];
   setAuthStore(null);
   setPostDetails(COLLECTION_CONTENT);
   setOwnerProfile('Bitcoin Wizard', 'https://example.com/avatar.png');
@@ -218,6 +225,31 @@ describe('CollectionCard', () => {
 
     expect(screen.queryByText('A bit of Bitcoin purity amidst all of the madness.')).not.toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument(); // empty items count still renders
+  });
+
+  describe('cover image — local-files store fallback', () => {
+    // Cover-image background lives in an aria-hidden overlay div with `bg-cover`.
+    const findCoverOverlay = (container: HTMLElement) =>
+      container.querySelector<HTMLDivElement>('[aria-hidden="true"].bg-cover');
+
+    it('uses a recently-uploaded blob URL from the local-files store when present', () => {
+      mockLocalCollections[COMPOSITE_ID] = 'blob:mock-fresh-cover';
+
+      const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      const overlay = findCoverOverlay(container);
+
+      expect(overlay).not.toBeNull();
+      expect(overlay!.getAttribute('style')).toContain('blob:mock-fresh-cover');
+      expect(overlay!.getAttribute('style')).not.toContain('https://example.com/cover.png');
+    });
+
+    it('falls back to the envelope cover URL when the local-files store has no entry', () => {
+      const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      const overlay = findCoverOverlay(container);
+
+      expect(overlay).not.toBeNull();
+      expect(overlay!.getAttribute('style')).toContain('https://example.com/cover.png');
+    });
   });
 
   it('renders the card skeleton while post details have not loaded yet', () => {

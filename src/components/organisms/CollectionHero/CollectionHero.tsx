@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Minus, Pencil, Plus, Share2, StickyNote, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { TagKind } from '@/application/tag/tag.types';
@@ -18,8 +19,10 @@ import { buildCompositeId } from '@/models/models.utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionHeroSkeleton } from '@/organisms/CollectionHero/CollectionHero.skeleton';
+import { EditCollectionDialog } from '@/organisms/EditCollectionDialog/EditCollectionDialog';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { CollectionHeroContentProps, CollectionHeroProps } from './CollectionHero.types';
 
 /**
@@ -75,8 +78,12 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
   const itemCount = collection?.items?.length ?? 0;
   // Compact notation (e.g. 1.2K) keeps long counts from blowing out the owner row.
   const itemCountLabel = format.number(itemCount, { notation: 'compact' });
-  // The hero requests the higher-fidelity MAIN variant (the card uses FEED).
-  const coverImage = resolveCollectionCoverImage(collection?.cover_image, FileVariant.MAIN);
+  // Prefer a recently-uploaded blob URL stashed in the local-files store —
+  // covers the window between commit and CDN availability so the cover renders
+  // instantly after create/edit. The hero requests the higher-fidelity MAIN
+  // variant (the card uses FEED).
+  const localCoverUrl = useLocalFilesStore((s) => s.collections[compositeId]);
+  const coverImage = localCoverUrl ?? resolveCollectionCoverImage(collection?.cover_image, FileVariant.MAIN);
 
   const ownerName = ownerProfile?.name || authorPubky;
   const ownerAvatarUrl = ownerProfile?.avatarUrl;
@@ -102,9 +109,11 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
   const { openRepostDialog, dialogs } = usePostReplyRepostDialogs(compositeId);
   const handleShare = openRepostDialog;
 
-  // Placeholder actions — the flows themselves are out of scope this slice.
-  // TODO: wire in collection edit / delete (#1866 follow-ups).
-  const handleEdit = () => {};
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const handleEdit = () => setIsEditDialogOpen(true);
+
+  // Placeholder action — out of scope this slice.
+  // TODO: wire in collection delete (#1866 follow-ups).
   const handleDelete = () => {};
 
   return (
@@ -251,6 +260,13 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         </Container>
       </CardContent>
       {dialogs}
+      {isOwn && (
+        <EditCollectionDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          compositeCollectionId={compositeId}
+        />
+      )}
     </Card>
   );
 }

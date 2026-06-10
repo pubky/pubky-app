@@ -1254,6 +1254,12 @@
       "created": "收藏集 {name} 已创建",
       "createFailed": "创建收藏集失败。"
     },
+    "edit": {
+      "title": "编辑收藏集",
+      "save": "保存更改",
+      "updated": "收藏集 {name} 已更新",
+      "updateFailed": "更新收藏集失败。"
+    },
     "showMore": "显示更多",
     "loadFailed": "加载收藏集失败，请重试。",
     "my": {

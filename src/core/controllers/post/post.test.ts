@@ -17,6 +17,7 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { mockSession } from '@/test-utils/pubky';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 // Mock HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({
@@ -835,6 +836,222 @@ describe('PostController', () => {
             collectionId: collectionPostId,
             postId: targetPostId,
             shouldAdd: true,
+          }),
+        ).rejects.toThrow('Current user is not the author of this post');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+  });
+
+  describe('commitEditCollection', () => {
+    const collectionPostId = buildCompositeId({ pubky: testData.authorPubky, id: 'editCol1' });
+    const existingItemUri = 'pubky://target_author_pubky/pub/pubky.app/posts/keep-me';
+
+    const createCollectionDetails = (
+      content: { name: string; description?: string; items?: string[]; cover_image?: string | null } = {
+        name: 'Original name',
+        description: 'Original description',
+        items: [existingItemUri],
+        cover_image: 'pubky://author/pub/pubky.app/files/oldcover',
+      },
+      overrides: Partial<PostDetailsModelSchema> = {},
+    ) =>
+      ({
+        id: collectionPostId,
+        content: JSON.stringify(content),
+        indexed_at: Date.now(),
+        kind: 'collection',
+        uri: `pubky://${testData.authorPubky}/pub/pubky.app/posts/editCol1`,
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+        ...overrides,
+      }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
+
+    const stubToEdit = () =>
+      vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
+        post: { toJson: () => ({}) },
+        meta: { url: 'pubky://author/pub/pubky.app/posts/editCol1' },
+      } as never);
+
+    it('preserves the existing items array, name/description updates, and passes through a string cover URL', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const toEditSpy = stubToEdit();
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+      const toFileAttachmentSpy = vi.spyOn(FileApplication, 'toFileAttachment');
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEditCollection({
+          compositeCollectionId: collectionPostId,
+          name: 'Renamed',
+          description: 'Updated description',
+          coverImage: 'pubky://author/pub/pubky.app/files/oldcover',
+        });
+
+        expect(toFileAttachmentSpy).not.toHaveBeenCalled();
+        expect(toEditSpy).toHaveBeenCalledWith({
+          compositePostId: collectionPostId,
+          content: JSON.stringify({
+            name: 'Renamed',
+            description: 'Updated description',
+            items: [existingItemUri],
+            cover_image: 'pubky://author/pub/pubky.app/files/oldcover',
+          }),
+          currentUserPubky: testData.authorPubky,
+        });
+        expect(commitEditSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            compositePostId: collectionPostId,
+            postUrl: 'pubky://author/pub/pubky.app/posts/editCol1',
+          }),
+        );
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('uploads a new cover File, replaces cover_image with the resulting URL, and persists', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const toEditSpy = stubToEdit();
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      const file = new File(['new-cover-bytes'], 'cover.png', { type: 'image/png' });
+      const toFileAttachmentSpy = vi.spyOn(FileApplication, 'toFileAttachment').mockResolvedValue(
+        asOpaque<TFileAttachmentResult>({
+          fileResult: { meta: { url: 'pubky://author/pub/pubky.app/files/newcover' } },
+        }),
+      );
+      const commitFileCreateSpy = vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEditCollection({
+          compositeCollectionId: collectionPostId,
+          name: 'Renamed',
+          description: 'Updated description',
+          coverImage: file,
+        });
+
+        expect(toFileAttachmentSpy).toHaveBeenCalledWith({ file, pubky: testData.authorPubky });
+        expect(commitFileCreateSpy).toHaveBeenCalled();
+        expect(toEditSpy).toHaveBeenCalledWith({
+          compositePostId: collectionPostId,
+          content: JSON.stringify({
+            name: 'Renamed',
+            description: 'Updated description',
+            items: [existingItemUri],
+            cover_image: 'pubky://author/pub/pubky.app/files/newcover',
+          }),
+          currentUserPubky: testData.authorPubky,
+        });
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('clears the cover when coverImage is null', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const toEditSpy = stubToEdit();
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEditCollection({
+          compositeCollectionId: collectionPostId,
+          name: 'Renamed',
+          description: 'Updated description',
+          coverImage: null,
+        });
+
+        const lastCall = toEditSpy.mock.calls.at(-1)?.[0] as { content: string } | undefined;
+        expect(lastCall).toBeDefined();
+        const parsedContent = JSON.parse(lastCall!.content);
+        // cover_image is normalized to `undefined` (omitted) when input is null/empty —
+        // the CollectionPostContent normalizer drops it from the envelope.
+        expect(parsedContent).not.toHaveProperty('cover_image');
+        expect(parsedContent.items).toEqual([existingItemUri]);
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects when the collection cannot be loaded', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(null);
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: null,
+          }),
+        ).rejects.toThrow('Collection not found');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects when the existing collection content is unparseable', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(
+        createCollectionDetails(undefined, { content: 'not-json' }),
+      );
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: null,
+          }),
+        ).rejects.toThrow('Collection content is invalid');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('wraps cover-upload failures with a specific validation error', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      vi.spyOn(FileApplication, 'toFileAttachment').mockRejectedValue(new Error('boom'));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: new File(['x'], 'cover.png', { type: 'image/png' }),
+          }),
+        ).rejects.toThrow('Failed to upload collection cover image');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects when the current user is not the collection author', async () => {
+      setupAuthUser('different_user_pubky' as Pubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: null,
           }),
         ).rejects.toThrow('Current user is not the author of this post');
       } finally {

@@ -8,6 +8,7 @@ import type {
   TCreateCollectionParams,
   TCreatePostParams,
   TDeletePostParams,
+  TEditCollectionParams,
   TEditPostParams,
   TFetchMorePostTagsParams,
   TFetchPostTaggersParams,
@@ -283,6 +284,71 @@ export class PostController {
     });
 
     return compositePostId;
+  }
+
+  static async commitEditCollection({
+    compositeCollectionId,
+    name,
+    description,
+    coverImage,
+  }: TEditCollectionParams): Promise<void> {
+    const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
+    const collection = await PostApplication.getDetails({ compositeId: compositeCollectionId });
+
+    if (!collection) {
+      throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
+        service: ErrorService.Local,
+        operation: 'commitEditCollection',
+        context: { compositeCollectionId },
+      });
+    }
+
+    const currentContent = CollectionPostContent.parse(collection.content);
+    if (!currentContent) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Collection content is invalid', {
+        service: ErrorService.Local,
+        operation: 'commitEditCollection',
+        context: { compositeCollectionId },
+      });
+    }
+
+    const { pubky: authorId } = parseCompositeId(compositeCollectionId);
+
+    let coverImageUrl: string | null = null;
+    if (coverImage instanceof File) {
+      try {
+        const fileAttachment = await FileApplication.toFileAttachment({ file: coverImage, pubky: authorId });
+        await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
+        coverImageUrl = fileAttachment.fileResult.meta.url;
+      } catch (error) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
+          service: ErrorService.Local,
+          operation: 'commitEditCollection',
+          cause: error,
+        });
+      }
+    } else if (typeof coverImage === 'string') {
+      coverImageUrl = coverImage;
+    }
+
+    const nextContent = CollectionPostContent.toJson({
+      name,
+      description,
+      items: currentContent.items ?? [],
+      coverImage: coverImageUrl,
+    });
+
+    const { post, meta } = await PostNormalizer.toEdit({
+      compositePostId: compositeCollectionId,
+      content: nextContent,
+      currentUserPubky,
+    });
+
+    await PostApplication.commitEdit({
+      compositePostId: compositeCollectionId,
+      post,
+      postUrl: meta.url,
+    });
   }
 
   static async commitUpdateCollectionItem({

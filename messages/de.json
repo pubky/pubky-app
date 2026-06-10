@@ -1260,6 +1260,12 @@
       "created": "Sammlung {name} erstellt",
       "createFailed": "Sammlung konnte nicht erstellt werden."
     },
+    "edit": {
+      "title": "Sammlung bearbeiten",
+      "save": "Änderungen speichern",
+      "updated": "Sammlung {name} aktualisiert",
+      "updateFailed": "Sammlung konnte nicht aktualisiert werden."
+    },
     "showMore": "Mehr anzeigen",
     "loadFailed": "Sammlungen konnten nicht geladen werden. Bitte erneut versuchen.",
     "my": {

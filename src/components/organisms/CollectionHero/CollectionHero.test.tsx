@@ -14,6 +14,7 @@ import { CollectionHero } from './CollectionHero';
 // ---------------------------------------------------------------------------
 
 const mockUseAuthStore = vi.fn();
+const mockLocalCollections: Record<string, string | undefined> = {};
 
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
@@ -40,6 +41,27 @@ vi.mock('@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs', () => ({
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => mockUseAuthStore(selector),
+}));
+
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: (selector: (state: { collections: Record<string, string | undefined> }) => unknown) =>
+    selector({ collections: mockLocalCollections }),
+}));
+
+vi.mock('@/organisms/EditCollectionDialog/EditCollectionDialog', () => ({
+  EditCollectionDialog: ({
+    open,
+    compositeCollectionId,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    compositeCollectionId: string;
+  }) =>
+    open ? (
+      <div data-testid="edit-collection-dialog" data-collection-id={compositeCollectionId}>
+        edit collection dialog
+      </div>
+    ) : null,
 }));
 
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
@@ -181,6 +203,7 @@ function setRepostDialogs() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  for (const key of Object.keys(mockLocalCollections)) delete mockLocalCollections[key];
   setAuthStore(null);
   setPostDetails(COLLECTION_CONTENT);
   setOwnerProfile('Bitcoin Wizard', 'https://example.com/avatar.png');
@@ -259,7 +282,7 @@ describe('CollectionHero', () => {
       expect(screen.queryByLabelText('collections.single.unfollow')).not.toBeInTheDocument();
     });
 
-    it('does not toggle the bookmark when the owner clicks Edit or Delete (placeholders only)', () => {
+    it('does not toggle the bookmark when the owner clicks Edit or Delete', () => {
       setAuthStore(AUTHOR_PUBKY);
       const toggle = setBookmark({ isBookmarked: false });
 
@@ -269,6 +292,30 @@ describe('CollectionHero', () => {
       fireEvent.click(screen.getByLabelText('collections.single.delete'));
 
       expect(toggle).not.toHaveBeenCalled();
+    });
+
+    it('opens the EditCollectionDialog (controlled, with the composite id) when the owner clicks Edit', () => {
+      setAuthStore(AUTHOR_PUBKY);
+
+      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      // Dialog is mounted but `open=false` until the user clicks Edit.
+      expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByLabelText('collections.single.edit'));
+
+      const dialog = screen.getByTestId('edit-collection-dialog');
+      expect(dialog).toBeInTheDocument();
+      expect(dialog).toHaveAttribute('data-collection-id', COMPOSITE_ID);
+    });
+
+    it("does not mount the EditCollectionDialog for non-owners (the Edit button isn't shown either)", () => {
+      setAuthStore('some-other-user');
+
+      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      expect(screen.queryByLabelText('collections.single.edit')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
     });
 
     it('opens the repost dialog when the owner clicks Share', () => {
@@ -366,6 +413,24 @@ describe('CollectionHero', () => {
       const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
       expect(container.querySelector(`[style*="${COVER_URL}"]`)).toBeNull();
+    });
+
+    it('prefers a recently-uploaded blob URL from the local-files store over the envelope cover', () => {
+      mockLocalCollections[COMPOSITE_ID] = 'blob:mock-fresh-cover';
+
+      const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      expect(container.querySelector('[style*="blob:mock-fresh-cover"]')).not.toBeNull();
+      expect(container.querySelector(`[style*="${COVER_URL}"]`)).toBeNull();
+    });
+
+    it('renders the local blob cover even when the envelope has no cover_image', () => {
+      setPostDetails(COLLECTION_CONTENT_NO_COVER);
+      mockLocalCollections[COMPOSITE_ID] = 'blob:mock-fresh-cover';
+
+      const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      expect(container.querySelector('[style*="blob:mock-fresh-cover"]')).not.toBeNull();
     });
   });
 });

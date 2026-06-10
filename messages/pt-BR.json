@@ -1260,6 +1260,12 @@
       "created": "Coleção {name} criada",
       "createFailed": "Falha ao criar a coleção."
     },
+    "edit": {
+      "title": "Editar coleção",
+      "save": "Salvar alterações",
+      "updated": "Coleção {name} atualizada",
+      "updateFailed": "Falha ao atualizar a coleção."
+    },
     "showMore": "Mostrar mais",
     "loadFailed": "Falha ao carregar as coleções. Tente novamente.",
     "my": {

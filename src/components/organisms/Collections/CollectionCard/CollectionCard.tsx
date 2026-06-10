@@ -21,6 +21,7 @@ import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFal
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 interface CollectionCardProps {
   /** Collection owner pubky. */
@@ -152,7 +153,10 @@ function CollectionCardContent({
   // Compact notation (e.g. 1.2K, 3M) keeps long counts from blowing out the
   // header row when an envelope lists an absurd number of items.
   const itemCountLabel = format.number(itemCount, { notation: 'compact' });
-  const coverImage = resolveCollectionCoverImage(collection?.cover_image);
+  // Prefer a recently-uploaded blob URL stashed in the local-files store so the
+  // cover renders instantly after create/edit while the CDN catches up.
+  const localCoverUrl = useLocalFilesStore((s) => s.collections[compositeId]);
+  const coverImage = localCoverUrl ?? resolveCollectionCoverImage(collection?.cover_image);
 
   const ownerName = ownerProfile?.name || authorPubky;
   const ownerAvatarUrl = ownerProfile?.avatarUrl;
@@ -189,7 +193,10 @@ function CollectionCardContent({
     >
       <Card
         className={cn(
-          'relative h-full gap-0 overflow-hidden rounded-md py-0',
+          // `isolate` creates a new stacking context so the cover image at `-z-10`
+          // stays behind this card's content but does not slip behind an enclosing
+          // post card's opaque background when nested in `PostContentBase`.
+          'relative isolate h-full gap-0 overflow-hidden rounded-md py-0',
           coverImage && 'border-transparent bg-card/40',
           // Preview contexts pick their bg based on how nested they are:
           // one card-step deep (inline feed, dialog repost) reads fine on `bg-muted`,
