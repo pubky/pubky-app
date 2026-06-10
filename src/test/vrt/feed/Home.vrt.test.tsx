@@ -10,7 +10,7 @@ import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
-import { Home } from './Home';
+import { Home } from '@/templates/Feed/Home/Home';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
