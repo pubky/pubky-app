@@ -628,7 +628,9 @@
     },
     "deleteAccount": {
       "title": "删除账户",
-      "description": "您确定吗？您的账户信息将无法恢复。"
+      "description": "您确定吗？您的账户信息将无法恢复。",
+      "button": "删除账户",
+      "buttonLoading": "删除中... {progress}%"
     },
     "confirmDiscard": {
       "title": "要关闭吗？",
@@ -1021,6 +1023,7 @@
   },
   "errors": {
     "signOutFailed": "退出失败。请重试。",
+    "deleteAccountFailed": "删除账户失败。请重试。",
     "generic": "出现问题",
     "network": "网络错误。请重试。",
     "notFound": "页面未找到",
