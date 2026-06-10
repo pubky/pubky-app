@@ -66,6 +66,14 @@ export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) 
   // ready so the screenshot is never taken while the browser is still
   // showing the fallback face.
   await document.fonts.ready;
+  // Images (e.g. the mocked next/image <img>) load their src asynchronously.
+  // Without waiting for decode, the screenshot can fire before an image paints,
+  // producing intermittent diffs. Decode every image in the rendered tree; a
+  // failed/again-pending decode is ignored so a broken src never hangs the test.
+  const root = document.querySelector(`[data-testid="${VRT_ROOT_TESTID}"]`);
+  if (root) {
+    await Promise.all(Array.from(root.querySelectorAll('img')).map((img) => img.decode().catch(() => {})));
+  }
   return screen;
 }
 

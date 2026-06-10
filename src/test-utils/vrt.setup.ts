@@ -66,6 +66,39 @@ vi.mock('next/font/google', () => ({
   })),
 }));
 
+// 2b. Mock next/image with a plain <img>. next/image rewrites `src` to the
+//     `/_next/image?url=...` optimizer endpoint, which has no server in the
+//     vitest browser runtime, so every image 404s and renders as a broken-image
+//     box (cross-OS-flaky glyph + wrong layout). A plain <img> lets Vite serve
+//     the asset straight from `public/` (string src) or the bundled module
+//     (static import), so screenshots show the real artwork deterministically.
+//     Mocking next/image to a plain <img> is the pattern Vercel recommends for
+//     tests: https://github.com/vercel/next.js/discussions/32325
+import { createElement } from 'react';
+
+vi.mock('next/image', () => ({
+  __esModule: true,
+  // Forward only the props a plain <img> understands; next-specific props
+  // (priority, quality, loader, placeholder, sizes, unoptimized, …) are
+  // intentionally dropped so React doesn't warn about unknown DOM attributes.
+  default: ({ src, alt, width, height, fill, className, style }: Record<string, unknown>) => {
+    // Static imports resolve to `{ src, width, height }`; string srcs pass through.
+    const resolvedSrc = typeof src === 'object' && src !== null ? (src as { src: string }).src : src;
+    // `fill` makes next/image absolutely cover its positioned parent.
+    const fillStyle = fill
+      ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }
+      : undefined;
+    return createElement('img', {
+      src: resolvedSrc,
+      alt: alt ?? '',
+      width: fill ? undefined : width,
+      height: fill ? undefined : height,
+      className,
+      style: { ...(fillStyle ?? {}), ...((style as object) ?? {}) },
+    });
+  },
+}));
+
 // 3. Load Inter Tight from `@fontsource-variable/inter-tight` (committed npm
 //    dep; same font as the real app's `next/font/google` Inter Tight, just
 //    sourced locally so VRT has no network dependency). Vite resolves the
