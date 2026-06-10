@@ -35,7 +35,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const tCommon = useTranslations('common');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
-  const { isCoreExploreRoute } = usePublicRoute();
+  const { isPublicExploreRoute } = usePublicRoute();
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const unreadNotifications = useNotificationStore((state) => state.selectUnread());
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
@@ -78,9 +78,9 @@ export function MobileFooter({ className }: MobileFooterProps) {
     },
   ];
   const protectedNavHrefs = new Set<string>([APP_ROUTES.BOOKMARKS, SETTINGS_ROUTES.ACCOUNT]);
-  // Hide footer for unauthenticated users on non-explore routes (including dynamic public routes).
-  // Core explore routes use a reduced public footer below (checked after avatar computation).
-  if (!isAuthenticated && !isCoreExploreRoute) {
+  // Hide footer for guests only on non-explore routes. Core explore and dynamic public
+  // routes (/home, /post/..., /profile/...) use the public explore footer.
+  if (!isAuthenticated && !isPublicExploreRoute) {
     return null;
   }
 

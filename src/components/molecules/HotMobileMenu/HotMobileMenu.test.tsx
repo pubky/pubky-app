@@ -37,13 +37,14 @@ describe('HotMobileMenu', () => {
   it('applies Hot-specific margin overrides via className passthrough', () => {
     const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
     const rootElement = container.firstChild as HTMLElement;
-    expect(rootElement).toHaveClass('-mx-6', '-mt-6', 'mb-6');
+    expect(rootElement).toHaveClass('-mx-6');
+    expect(rootElement).not.toHaveClass('-mt-6', 'mb-6');
   });
 
   it('renders with sticky positioning', () => {
     const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
     const rootElement = container.firstChild as HTMLElement;
-    expect(rootElement).toHaveClass('sticky', 'top-(--header-height-mobile)');
+    expect(rootElement).toHaveClass('sticky', 'top-(--header-height-settings)');
   });
 
   it('exposes the hot-mobile-menu data-testid on the root', () => {

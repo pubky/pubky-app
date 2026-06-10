@@ -44,17 +44,17 @@ export function HelpContent() {
           question: t('questions.q2'),
           answer: t('questions.a2'),
         },
-        {
-          id: '3',
-          question: t('questions.q3'),
-          answer: t('questions.a3'),
-        },
       ] as FAQAccordionItem[],
     },
     {
       id: 'backup',
       title: t('sections.backup'),
       questions: [
+        {
+          id: '3',
+          question: t('questions.q3'),
+          answer: t('questions.a3'),
+        },
         {
           id: '4',
           question: t('questions.q4'),
@@ -80,17 +80,17 @@ export function HelpContent() {
           question: t('questions.q8'),
           answer: t('questions.a8'),
         },
-        {
-          id: '9',
-          question: t('questions.q9'),
-          answer: t('questions.a9'),
-        },
       ] as FAQAccordionItem[],
     },
     {
       id: 'profile',
       title: t('sections.profile'),
       questions: [
+        {
+          id: '9',
+          question: t('questions.q9'),
+          answer: t('questions.a9'),
+        },
         {
           id: '10',
           question: t('questions.q10'),
@@ -101,11 +101,6 @@ export function HelpContent() {
           question: t('questions.q11'),
           answer: t('questions.a11'),
         },
-        {
-          id: '12',
-          question: t('questions.q12'),
-          answer: t('questions.a12'),
-        },
       ] as FAQAccordionItem[],
     },
     {
@@ -113,14 +108,14 @@ export function HelpContent() {
       title: t('sections.pubky'),
       questions: [
         {
+          id: '12',
+          question: t('questions.q12'),
+          answer: t('questions.a12'),
+        },
+        {
           id: '13',
           question: t('questions.q13'),
           answer: t('questions.a13'),
-        },
-        {
-          id: '14',
-          question: t('questions.q14'),
-          answer: t('questions.a14'),
         },
       ] as FAQAccordionItem[],
     },

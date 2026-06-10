@@ -10,7 +10,6 @@ import {
   HeaderTitle,
 } from '@/molecules/Header/Header';
 import { HeaderHome } from '@/molecules/HeaderHome/HeaderHome';
-import { HeaderJoin } from '@/molecules/HeaderJoin/HeaderJoin';
 import { HeaderSignIn } from '@/molecules/HeaderSignIn/HeaderSignIn';
 import { Logo } from '@/molecules/Logo/Logo';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -20,7 +19,7 @@ export function Header() {
   const pathname = usePathname();
   const t = useTranslations('onboarding.steps');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
-  const { isCoreExploreRoute, isPublicRoute } = usePublicRoute();
+  const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
   const isCopyrightPage = pathname === '/copyright';
@@ -29,10 +28,11 @@ export function Header() {
   const currentTitle = stepConfig?.titleKey ? t(stepConfig.titleKey) : undefined;
 
   // Hide header on mobile when:
-  // - User is authenticated (not during onboarding) - they use MobileHeader
-  // - User is on public route (post/profile) - they use MobileHeader with Join button
-  // - User is on a core explore route - they use MobileHeader + MobileFooter public navigation
-  const shouldHideHeaderOnMobile = (isAuthenticated && !isOnboarding) || isPublicRoute || isCoreExploreRoute;
+  // - User is on a core explore route (/home, /hot, /search) — MobileHeader + MobileFooter
+  // - Any user on a dynamic public route (/post/..., /profile/[pubky]) — page shell owns mobile chrome
+  // - Authenticated on standard app routes — MobileHeader + MobileFooter
+  const shouldHideHeaderOnMobile =
+    isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
   // Show title only for onboarding/logout pages (when stepConfig exists) and user is not authenticated,
   // or during profile setup (step 5)
   const shouldShowTitle = currentTitle && (!isAuthenticated || currentStep === 5);
@@ -41,13 +41,12 @@ export function Header() {
   // public route, e.g. feed/post/profile) both render the feed + sidebars, so the header
   // must align with the content gutter. Onboarding and the landing page keep the default
   // centered padding instead.
-  const isAppShellLayout = !isOnboarding && (isAuthenticated || isPublicRoute || isCoreExploreRoute);
+  const isAppShellLayout = !isOnboarding && (isAuthenticated || isDynamicPublicRoute || isCoreExploreRoute);
   const classNameNav = isAppShellLayout ? ' xl:px-0' : '';
   // Determine which header content to show:
   // - Onboarding: HeaderOnboarding
   // - Authenticated: HeaderSignIn (navigation + avatar)
-  // - Unauthenticated on core explore route (home/hot/search): public explore navigation + join
-  // - Unauthenticated on public route (post/profile): HeaderJoin (minimal, just join icon)
+  // - Unauthenticated on core explore or dynamic public routes (home/hot/search/post/profile): explore navigation + join
   // - Unauthenticated on landing/other: HeaderHome (social links + sign in)
   const renderHeaderContent = () => {
     if (isOnboarding) {
@@ -56,11 +55,8 @@ export function Header() {
     if (isAuthenticated) {
       return <HeaderSignIn />;
     }
-    if (isCoreExploreRoute) {
+    if (isCoreExploreRoute || isDynamicPublicRoute) {
       return <HeaderExploreNavigationButtons />;
-    }
-    if (isPublicRoute) {
-      return <HeaderJoin />;
     }
     return <HeaderHome />;
   };

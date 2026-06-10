@@ -71,19 +71,23 @@ vi.mock('@/config/externalLinks', () => ({
   TELEGRAM_URL: 'https://telegram.com',
 }));
 
-vi.mock('@/app/routes', () => ({
-  AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout' },
-  HOME_ROUTES: { HOME: '/home' },
-  ROOT_ROUTES: '/',
-  ONBOARDING_ROUTES: {
-    HUMAN: '/onboarding/human',
-    INSTALL: '/onboarding/install',
-    SCAN: '/onboarding/scan',
-    PUBKY: '/onboarding/pubky',
-    BACKUP: '/onboarding/backup',
-    PROFILE: '/onboarding/profile',
-  },
-}));
+vi.mock('@/app/routes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/routes')>();
+  return {
+    ...actual,
+    AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout' },
+    HOME_ROUTES: { HOME: '/home' },
+    ROOT_ROUTES: '/',
+    ONBOARDING_ROUTES: {
+      HUMAN: '/onboarding/human',
+      INSTALL: '/onboarding/install',
+      SCAN: '/onboarding/scan',
+      PUBKY: '/onboarding/pubky',
+      BACKUP: '/onboarding/backup',
+      PROFILE: '/onboarding/profile',
+    },
+  };
+});
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
@@ -148,16 +152,6 @@ vi.mock('@/molecules/HeaderHome/HeaderHome', () => {
       <div data-testid="header-home">
         <div data-testid="header-social-links">Social Links</div>
         <button>Sign in</button>
-      </div>
-    ),
-  };
-});
-
-vi.mock('@/molecules/HeaderJoin/HeaderJoin', () => {
-  return {
-    HeaderJoin: () => (
-      <div data-testid="header-join">
-        <button aria-label="Join Pubky">Join</button>
       </div>
     ),
   };
@@ -611,15 +605,28 @@ describe('Header', () => {
   });
 
   describe('Public Route Behavior', () => {
-    it('renders HeaderJoin when unauthenticated on public route', () => {
+    it('renders explore navigation when unauthenticated on another user profile', () => {
       mockCurrentUserPubky = null;
       mockIsPublicRoute.mockReturnValue(true);
+      mockIsCoreExploreRoute.mockReturnValue(false);
+      mockUsePathname.mockReturnValue('/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
 
       render(<Header />);
 
-      expect(screen.getByTestId('header-join')).toBeInTheDocument();
+      expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
+    });
+
+    it('renders explore navigation when unauthenticated on a post page', () => {
+      mockCurrentUserPubky = null;
+      mockIsPublicRoute.mockReturnValue(true);
+      mockIsCoreExploreRoute.mockReturnValue(false);
+      mockUsePathname.mockReturnValue('/post/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G');
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
     });
 
     it('renders HeaderHome when unauthenticated on non-public route', () => {
@@ -631,7 +638,6 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-home')).toBeInTheDocument();
-      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
     });
 
     it('renders explore navigation when unauthenticated on a core explore route', () => {
@@ -643,7 +649,6 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
-      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
     });
@@ -667,8 +672,35 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
-      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
       expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
+    });
+
+    it('hides header on mobile when signed in on a post page', () => {
+      mockCurrentUserPubky = 'test-pubky-123';
+      mockIsPublicRoute.mockReturnValue(true);
+      mockIsCoreExploreRoute.mockReturnValue(false);
+      mockUsePathname.mockReturnValue('/post/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G');
+
+      render(<Header />);
+
+      const headerContainer = screen.getByTestId('header-container');
+      expect(headerContainer).toHaveAttribute('data-class-name', 'hidden lg:block');
+      expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
+      expect(screen.getByTestId('search-input')).toBeInTheDocument();
+    });
+
+    it('hides header on mobile when signed in on another user profile page', () => {
+      mockCurrentUserPubky = 'test-pubky-123';
+      mockIsPublicRoute.mockReturnValue(true);
+      mockIsCoreExploreRoute.mockReturnValue(false);
+      mockUsePathname.mockReturnValue('/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
+
+      render(<Header />);
+
+      const headerContainer = screen.getByTestId('header-container');
+      expect(headerContainer).toHaveAttribute('data-class-name', 'hidden lg:block');
+      expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
+      expect(screen.getByTestId('search-input')).toBeInTheDocument();
     });
 
     it('prioritizes onboarding header over public route state', () => {
@@ -679,7 +711,6 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('onboarding-header')).toBeInTheDocument();
-      expect(screen.queryByTestId('header-join')).not.toBeInTheDocument();
     });
   });
 

@@ -11,7 +11,7 @@ import {
   Signer,
 } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
-import { DEFAULT_HTTP_RELAY, HOMESERVER, PKARR_RELAYS, TESTNET } from '@/config/network';
+import { DEFAULT_HTTP_RELAY, HOMESERVER, HOMESERVER_URL, PKARR_RELAYS, TESTNET } from '@/config/network';
 import type { TPublicKeyParams } from '@/controllers/auth/auth.types';
 import { Env } from '@/libs/env/env';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
@@ -27,6 +27,7 @@ import type {
   THomeserverRestoreSessionParams,
   THomeserverSessionResult,
   THomeserverSignUpParams,
+  TSignupTokenVerificationStatus,
 } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { extractStatusCode, handleError } from './error.utils';
@@ -140,6 +141,53 @@ export class HomeserverService {
         statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
         alwaysUseHomeserverError: true,
       });
+    }
+  }
+
+  /**
+   * Verifies a signup token (invite code) against the homeserver.
+   *
+   * Performs a GET to the homeserver's `/signup_tokens/<token>` endpoint. This is a
+   * homeserver-root endpoint that cannot be reached via the homeserver pubkey (its PKARR
+   * record has no resolvable HTTPS endpoint), so the explicit {@link HOMESERVER_URL} is used.
+   *
+   * A definitive homeserver response distinguishes valid, used, and unknown tokens, whereas
+   * a failure to reach the homeserver is surfaced as a thrown error so callers can tell
+   * verification outcomes apart from "couldn't verify right now".
+   *
+   * @param signupToken - The signup token / invite code to verify
+   * @returns `'valid'` when the token exists and is unused, `'used'` when already redeemed,
+   *   `'invalid'` when the homeserver does not recognise the token (404).
+   * @throws When the homeserver could not be reached (network error, timeout, DNS/PKARR failure)
+   *   or returns an unexpected status.
+   */
+  static async verifySignupToken(signupToken: string): Promise<TSignupTokenVerificationStatus> {
+    const url = `${HOMESERVER_URL}/signup_tokens/${encodeURIComponent(signupToken)}`;
+    try {
+      const response = await this.getPubkySdk().client.fetch(url, { method: HttpMethod.GET });
+      Logger.debug('Signup token verification response', { status: response.status });
+
+      if (response.status === HttpStatusCode.NOT_FOUND) {
+        return 'invalid';
+      }
+
+      if (!response.ok) {
+        throw new Error(`Signup token verification failed with status ${response.status}`);
+      }
+
+      const data = (await response.json()) as { status?: string };
+      if (data.status === 'valid') {
+        return 'valid';
+      }
+      if (data.status === 'used') {
+        return 'used';
+      }
+
+      Logger.warn('Unexpected signup token verification payload', { status: data.status });
+      return 'invalid';
+    } catch (error) {
+      Logger.warn('Signup token verification could not reach the homeserver', { error });
+      throw error;
     }
   }
 

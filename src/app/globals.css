@@ -126,13 +126,38 @@ body {
   --header-height: 146px;
 
   /**
-   * Mobile header height
-   * - Used for sticky positioning of mobile menu below header
-   * - Matches MobileHeader component height
-   * - Applied: ProfilePageMobileMenu sticky top offset
-   * - Responsive: Mobile only (hidden on desktop via lg:hidden)
+   * Mobile header height (full chrome) — KNOWN STALE VALUE, do not trust without audit.
+   * - Actual full-chrome MobileHeader (p-6, side buttons) is 96px; this is still 80px.
+   * - MobileTabBar `headerTop="mobile"` default is unused: Hot, Profile, and Settings all
+   *   pass `headerTop="compact"` (see --header-height-settings).
+   * - ProfilePageLayout also reads this for min-height calc, but that page's header is 72px.
+   * - Intentionally left as-is until a broader mobile layout refactor; changing it now
+   *   would ripple through tab-bar positioning and profile feed height across the PR.
    */
   --header-height-mobile: 80px;
+
+  /**
+   * Compact mobile header height
+   * - Matches MobileHeader with `containerClassName="pb-0"` (logo-only chrome)
+   * - Applied: SettingsMobileMenu, ProfilePageMobileMenu sticky top offset;
+   *   Settings ContentLayout top padding via --settings-mobile-chrome-height
+   * - Responsive: Mobile only (hidden on desktop via lg:hidden)
+   */
+  --header-height-settings: 72px;
+
+  /**
+   * Mobile tab bar height (icon row)
+   * - Matches MobileTabBar tab cell + button + icon stack
+   * - Applied: Settings content top padding below header + tab bar
+   * - Responsive: Mobile only (hidden on desktop via lg:hidden)
+   */
+  --mobile-tab-bar-height: 48px;
+
+  /**
+   * Settings mobile chrome height (header + tab bar)
+   * - Applied: Settings ContentLayout mobile top padding
+   */
+  --settings-mobile-chrome-height: calc(var(--header-height-settings) + var(--mobile-tab-bar-height));
 
   /**
    * Main content header offset

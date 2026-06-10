@@ -83,9 +83,9 @@ describe('Onboarding', () => {
     cy.get('[data-cy="dialog-content"]').should('be.visible').and('contain.text', 'Join Pubky');
   });
 
-  it('cannot proceed with unauthorised invite code', () => {
-    // Intercept the signup request to the homeserver (POST .../signup?signup_token=...)
-    cy.intercept('POST', '**/signup*').as('signupRequest');
+  it('cannot proceed with unverified invite code', () => {
+    // Intercept invite code verification (GET .../signup_tokens/<code>)
+    cy.intercept('GET', '**/signup_tokens/*', { statusCode: 404 }).as('verifyInviteCode');
 
     // Start onboarding flow
     cy.get('#create-account-btn').click();
@@ -94,33 +94,86 @@ describe('Onboarding', () => {
     // Click 'enter invite code' button
     cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
 
-    // Enter invalid invite code (code is stored but not validated until pubky step)
+    // Enter invalid invite code - verification runs automatically when the full code is entered
     cy.get('[data-cy="human-invite-code-input"]').type('abcd-efgh-ijkl');
 
-    // Click continue button - navigates to install page (no signup request yet)
-    cy.get('[data-cy="human-invite-code-continue-btn"]').click();
-    cy.location('pathname').should('eq', '/onboarding/install');
+    cy.wait('@verifyInviteCode');
 
-    // Choose to create keys in browser
-    cy.get('#create-keys-in-browser-btn').click();
-    cy.location('pathname').should('eq', '/onboarding/pubky');
+    // Assert invalid invite code toast is shown
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invalid invite code');
 
-    // Verify pubky display is visible
-    cy.get('[data-cy="pubky-display"]').should('be.visible');
+    // Continue stays disabled and the user remains on the invite code step
+    cy.get('[data-cy="human-invite-code-continue-btn"]').should('be.disabled');
+    cy.location('pathname').should('eq', '/onboarding/human');
+  });
 
-    // Click continue on pubky page - this triggers the actual signup request with the invalid invite code
-    cy.get('#public-key-navigation-continue-btn').click();
+  it('cannot proceed with a reused invite code', () => {
+    const profileName = 'Reused Invite User';
+    const signupTokensPath = '/signup_tokens/';
+    let capturedInviteCode = '';
 
-    // Wait for the signup request and verify 401 Unauthorised response
-    cy.wait('@signupRequest').its('response.statusCode').should('eq', 401);
+    // Pass verification through to the homeserver and capture the invite code from the request URL.
+    cy.intercept('GET', '**/signup_tokens/*', (req) => {
+      const tokenStart = req.url.indexOf(signupTokensPath);
+      if (tokenStart !== -1) {
+        const encodedToken = req.url.slice(tokenStart + signupTokensPath.length).split('?')[0];
+        capturedInviteCode = decodeURIComponent(encodedToken);
+      }
+      req.continue();
+    }).as('verifyInviteCode');
 
-    // Assert error toast is shown with appropriate message
-    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invalid or expired invite code');
+    // First signup: homeserver verifies the fresh code as valid
+    cy.onboardAsNewUser(profileName);
+    cy.signOut(HasBackedUp.Yes);
 
-    // Assert still on onboarding/pubky page (user cannot proceed)
-    cy.location('pathname').should('eq', '/onboarding/pubky');
+    // Second signup: reuse the captured invite code; homeserver should report it as used
+    cy.get('#create-account-btn').click();
+    cy.location('pathname').should('eq', '/onboarding/human');
+    cy.get('[data-testid="human-dev-invite-code-btn"]').should('exist').click();
 
-    // Verify the continue button is enabled again (not stuck in loading state)
-    cy.get('#public-key-navigation-continue-btn').should('not.be.disabled');
+    cy.then(() => {
+      expect(capturedInviteCode, 'invite code captured from first verification').to.be.a('string').and.not.be.empty;
+      cy.get('[data-cy="human-invite-code-input"]').type(capturedInviteCode);
+      cy.wait('@verifyInviteCode');
+      cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code already used');
+      cy.get('[data-cy="human-invite-code-continue-btn"]').should('be.disabled');
+      cy.location('pathname').should('eq', '/onboarding/human');
+    });
+  });
+
+  it('can sign up via /invite/<code> URL', () => {
+    const profileName = 'Invite URL User';
+
+    cy.env(['homeserverAdminUrl', 'homeserverAdminPassword']).then(
+      ({ homeserverAdminUrl, homeserverAdminPassword }) => {
+        cy.request({
+          method: 'GET',
+          url: homeserverAdminUrl,
+          headers: {
+            'X-Admin-Password': homeserverAdminPassword,
+          },
+        }).then((response) => {
+          const inviteCode = response.body as string;
+
+          cy.visit(`/invite/${inviteCode}`);
+          cy.location('pathname').should('eq', '/onboarding/install');
+          cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invite code applied');
+          cy.get('#create-keys-in-browser-btn').should('be.visible');
+
+          cy.completeOnboardingFromInstall(profileName);
+        });
+      },
+    );
+  });
+
+  it('redirects home when /invite/<code> verification returns 404', () => {
+    cy.intercept('GET', '**/signup_tokens/*', { statusCode: 404 }).as('verifyInviteCode');
+
+    cy.visit('/invite/abcd-efgh-ijkl');
+
+    cy.wait('@verifyInviteCode');
+    cy.location('pathname').should('eq', '/');
+    cy.get('[data-cy="toast"]').should('be.visible').and('contain', 'Invalid invite code');
+    checkHeaderIsVisible();
   });
 });

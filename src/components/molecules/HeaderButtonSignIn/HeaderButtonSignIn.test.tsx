@@ -4,10 +4,12 @@ import { HeaderButtonSignIn } from './HeaderButtonSignIn';
 
 // Mock Next.js navigation
 const mockPush = vi.fn();
+const mockUsePathname = vi.fn(() => '/');
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => mockUsePathname(),
 }));
 
 // Mock atoms
@@ -38,11 +40,15 @@ vi.mock('@/app/routes', () => ({
   AUTH_ROUTES: {
     SIGN_IN: '/sign-in',
   },
+  ONBOARDING_ROUTES: {
+    HUMAN: '/onboarding/human',
+  },
 }));
 
 describe('HeaderButtonSignIn', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUsePathname.mockReturnValue('/');
   });
 
   it('renders sign in button with icon and text', () => {
@@ -60,6 +66,38 @@ describe('HeaderButtonSignIn', () => {
 
     const button = screen.getByRole('button', { name: /Sign in/i });
     button.click();
+
+    expect(mockPush).toHaveBeenCalledWith('/sign-in');
+  });
+
+  it('renders new here button on the sign-in page', () => {
+    mockUsePathname.mockReturnValue('/sign-in');
+    render(<HeaderButtonSignIn />);
+
+    expect(screen.getByRole('button', { name: /New here\?/i })).toBeInTheDocument();
+  });
+
+  it('navigates to onboarding when clicked on the sign-in page', () => {
+    mockUsePathname.mockReturnValue('/sign-in');
+    render(<HeaderButtonSignIn />);
+
+    screen.getByRole('button', { name: /New here\?/i }).click();
+
+    expect(mockPush).toHaveBeenCalledWith('/onboarding/human');
+  });
+
+  it('renders sign in button on the onboarding page', () => {
+    mockUsePathname.mockReturnValue('/onboarding/human');
+    render(<HeaderButtonSignIn />);
+
+    expect(screen.getByRole('button', { name: /Sign in/i })).toBeInTheDocument();
+  });
+
+  it('navigates to sign-in when clicked on the onboarding page', () => {
+    mockUsePathname.mockReturnValue('/onboarding/human');
+    render(<HeaderButtonSignIn />);
+
+    screen.getByRole('button', { name: /Sign in/i }).click();
 
     expect(mockPush).toHaveBeenCalledWith('/sign-in');
   });
