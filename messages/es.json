@@ -926,8 +926,12 @@
       "copyFailedDesc": "No se pudo copiar al portapapeles"
     },
     "follow": {
-      "followed": "Siguiendo a {username}",
-      "unfollowed": "Dejaste de seguir a {username}",
+      "followed": "Ahora sigues a {username}",
+      "unfollowed": "Ya no sigues a {username}",
+      "followFailed": "No se pudo seguir a {username}. Inténtalo de nuevo.",
+      "unfollowFailed": "No se pudo dejar de seguir a {username}. Inténtalo de nuevo.",
+      "loginRequired": "Inicia sesión para seguir personas.",
+      "selfFollow": "No puedes seguirte a ti mismo.",
       "failed": "No se pudo actualizar el estado de seguimiento"
     },
     "mute": {

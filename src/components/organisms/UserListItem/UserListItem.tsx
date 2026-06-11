@@ -440,7 +440,12 @@ export function UserListItem({
   const handleFollowClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    requireAuth(() => onFollowClick?.(user.id, isFollowing, resolveFollowDisplayName(user.id, user.name)));
+    const followResult = requireAuth(() =>
+      onFollowClick?.(user.id, isFollowing, resolveFollowDisplayName(user.id, user.name)),
+    );
+    void Promise.resolve(followResult).catch(() => {
+      // Error feedback is handled by useFollowUser or the parent follow handler.
+    });
   };
   const commonProps: VariantProps = {
     user,

@@ -48,7 +48,11 @@ export function WhoTaggedExpandedList({
   });
 
   const handleFollowClick = async (userId: string, isFollowing: boolean, displayName: string) => {
-    requireAuth(() => toggleFollow(userId, isFollowing, displayName));
+    try {
+      await requireAuth(() => toggleFollow(userId, isFollowing, displayName));
+    } catch {
+      // Error feedback is handled by useFollowUser.
+    }
   };
 
   const handleUserClick = (userId: string) => {

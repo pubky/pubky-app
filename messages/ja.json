@@ -920,8 +920,12 @@
     },
     "follow": {
       "failed": "フォロー状態を更新できませんでした",
-      "followed": "{username}をフォロー中",
-      "unfollowed": "{username}のフォローを解除しました"
+      "followed": "{username}をフォローしました",
+      "unfollowed": "{username}のフォローを解除しました",
+      "followFailed": "{username}をフォローできませんでした。もう一度お試しください。",
+      "unfollowFailed": "{username}のフォロー解除ができませんでした。もう一度お試しください。",
+      "loginRequired": "フォローするにはサインインしてください。",
+      "selfFollow": "自分自身をフォローすることはできません。"
     },
     "mute": {
       "muted": "{username}をミュートしました",

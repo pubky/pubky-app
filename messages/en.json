@@ -919,8 +919,12 @@
       "copyFailedDesc": "Could not copy to clipboard"
     },
     "follow": {
-      "followed": "Following {username}",
-      "unfollowed": "Unfollowed {username}",
+      "followed": "You're now following {username}",
+      "unfollowed": "You're no longer following {username}",
+      "followFailed": "Could not follow {username}. Please try again.",
+      "unfollowFailed": "Could not unfollow {username}. Please try again.",
+      "loginRequired": "Sign in to follow people.",
+      "selfFollow": "You can't follow yourself.",
       "failed": "Could not update follow status"
     },
     "mute": {

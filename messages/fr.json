@@ -920,8 +920,12 @@
     },
     "follow": {
       "failed": "Impossible de mettre à jour le statut d'abonnement",
-      "followed": "Vous suivez {username}",
-      "unfollowed": "Vous ne suivez plus {username}"
+      "followed": "Vous suivez maintenant {username}",
+      "unfollowed": "Vous ne suivez plus {username}",
+      "followFailed": "Impossible de suivre {username}. Réessayez.",
+      "unfollowFailed": "Impossible d'arrêter de suivre {username}. Réessayez.",
+      "loginRequired": "Connectez-vous pour suivre des personnes.",
+      "selfFollow": "Vous ne pouvez pas vous suivre vous-même."
     },
     "mute": {
       "muted": "{username} masqué",
