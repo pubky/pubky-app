@@ -79,88 +79,91 @@ export function PostMainListRow({ postId, shouldShowPostHeader, onReplyClick, on
   };
 
   return (
-    <CardContent className="flex min-w-0 items-center gap-6 p-6">
-      {shouldShowPostHeader ? (
-        <Link href={profileUrl} onClick={stopCardPropagation} className="shrink-0">
-          <AvatarWithFallback avatarUrl={avatarUrl} name={userDetails.name || ''} fallbackSeed={userId} size="md" />
-        </Link>
-      ) : null}
+    <CardContent className="flex min-w-0 flex-col gap-4 p-6">
+      <Container overrideDefaults className="flex min-w-0 items-center gap-6">
+        {shouldShowPostHeader ? (
+          <Link href={profileUrl} onClick={stopCardPropagation} className="shrink-0">
+            <AvatarWithFallback avatarUrl={avatarUrl} name={userDetails.name || ''} fallbackSeed={userId} size="md" />
+          </Link>
+        ) : null}
 
-      <Container overrideDefaults className="min-w-0 flex-1">
-        <Container overrideDefaults className="flex min-w-0 items-center gap-2">
-          {shouldShowPostHeader ? (
-            <Link href={profileUrl} onClick={stopCardPropagation} className="max-w-[40%] shrink-0">
-              <Typography className="truncate text-base font-bold text-foreground" overrideDefaults>
-                {userDetails.name}
+        <Container overrideDefaults className="min-w-0 flex-1">
+          <Container overrideDefaults className="flex min-w-0 items-center gap-2">
+            {shouldShowPostHeader ? (
+              <Link href={profileUrl} onClick={stopCardPropagation} className="max-w-[40%] shrink-0">
+                <Typography className="truncate text-base font-bold text-foreground" overrideDefaults>
+                  {userDetails.name}
+                </Typography>
+              </Link>
+            ) : null}
+            {snippet ? (
+              <Typography
+                className={cn('min-w-0 flex-1 truncate text-foreground', LIST_POST_BODY_TEXT_CLASS)}
+                overrideDefaults
+              >
+                {snippet}
               </Typography>
-            </Link>
-          ) : null}
-          {snippet ? (
-            <Typography
-              className={cn('min-w-0 flex-1 truncate text-foreground', LIST_POST_BODY_TEXT_CLASS)}
-              overrideDefaults
-            >
-              {snippet}
-            </Typography>
+            ) : null}
+          </Container>
+
+          {shouldShowPostHeader ? (
+            <Container overrideDefaults className="flex min-w-0 items-center gap-2">
+              <Typography
+                className="truncate text-xs font-medium tracking-[0.075rem] text-muted-foreground uppercase"
+                overrideDefaults
+              >
+                {formattedPublicKey}
+              </Typography>
+              <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />
+            </Container>
           ) : null}
         </Container>
 
-        {shouldShowPostHeader ? (
-          <Container overrideDefaults className="flex min-w-0 items-center gap-2">
-            <Typography
-              className="truncate text-xs font-medium tracking-[0.075rem] text-muted-foreground uppercase"
-              overrideDefaults
-            >
-              {formattedPublicKey}
-            </Typography>
-            <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />
-          </Container>
-        ) : null}
+        <Container
+          overrideDefaults
+          onClick={stopCardPropagation}
+          onAuxClick={stopCardPropagation}
+          className="flex shrink-0 items-center gap-3"
+        >
+          {!tagsExpanded ? (
+            <ClickableTagsList
+              taggedId={postId}
+              taggedKind={TagKind.POST}
+              maxTags={1}
+              showCount={true}
+              showInput={false}
+              showAddButton={false}
+              addMode={true}
+              className="hidden min-w-0 md:flex"
+            />
+          ) : null}
+          <PostActionsBar
+            postId={postId}
+            onTagClick={handleTagClick}
+            onReplyClick={onReplyClick}
+            onRepostClick={onRepostClick}
+            className="shrink-0"
+          />
+        </Container>
 
-        {tagsExpanded ? (
+        <PostListMediaThumbnail
+          postId={postId}
+          className={cn('hidden rounded-sm md:block', LIST_POST_MEDIA_THUMBNAIL_CLASS)}
+          onClick={stopCardPropagation}
+        />
+      </Container>
+
+      {tagsExpanded ? (
+        <Container overrideDefaults onClick={stopCardPropagation} onAuxClick={stopCardPropagation}>
           <PostTagsPanel
             ref={tagsPanelRef}
             postId={postId}
             widthMode="fit"
             autoFocusInput
             enableLoadingSkeleton={false}
-            className="mt-2"
           />
-        ) : null}
-      </Container>
-
-      <Container
-        overrideDefaults
-        onClick={stopCardPropagation}
-        onAuxClick={stopCardPropagation}
-        className="flex shrink-0 items-center gap-3"
-      >
-        {!tagsExpanded ? (
-          <ClickableTagsList
-            taggedId={postId}
-            taggedKind={TagKind.POST}
-            maxTags={1}
-            showCount={true}
-            showInput={false}
-            showAddButton={false}
-            addMode={true}
-            className="hidden min-w-0 md:flex"
-          />
-        ) : null}
-        <PostActionsBar
-          postId={postId}
-          onTagClick={handleTagClick}
-          onReplyClick={onReplyClick}
-          onRepostClick={onRepostClick}
-          className="shrink-0"
-        />
-      </Container>
-
-      <PostListMediaThumbnail
-        postId={postId}
-        className={cn('hidden rounded-sm md:block', LIST_POST_MEDIA_THUMBNAIL_CLASS)}
-        onClick={stopCardPropagation}
-      />
+        </Container>
+      ) : null}
     </CardContent>
   );
 }
