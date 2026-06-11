@@ -22,8 +22,6 @@ exports[`BookmarksCollection - Snapshots > matches the snapshot for the resolved
       data-testid="bookmarks-hero"
     />
     <div
-      data-bookmark-count="4"
-      data-is-loading="false"
       data-testid="bookmarks-items"
     />
     <div

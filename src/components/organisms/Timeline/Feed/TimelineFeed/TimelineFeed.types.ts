@@ -17,6 +17,13 @@ export interface TimelineFeedProps {
    * Children can access prependPosts via TimelineFeedContext
    */
   children?: ReactNode;
+  /**
+   * Optional custom empty state, rendered (in place of the default "no posts"
+   * message) when the resolved stream has no items. Lets a surface keep its own
+   * empty UI while the emptiness is still driven by the stream itself — so it
+   * can't diverge from what the grid actually renders.
+   */
+  emptyState?: ReactNode;
 }
 
 export interface TimelineFeedContextValue {

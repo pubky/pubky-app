@@ -34,19 +34,7 @@ vi.mock('@/organisms/Bookmarks/BookmarksHero/BookmarksHero', () => ({
 }));
 
 vi.mock('@/organisms/Bookmarks/BookmarksItems/BookmarksItems', () => ({
-  BookmarksItems: ({
-    bookmarkCount,
-    isBookmarkCountLoading,
-  }: {
-    bookmarkCount?: number;
-    isBookmarkCountLoading: boolean;
-  }) => (
-    <div
-      data-testid="bookmarks-items"
-      data-bookmark-count={String(bookmarkCount)}
-      data-is-loading={String(isBookmarkCountLoading)}
-    />
-  ),
+  BookmarksItems: () => <div data-testid="bookmarks-items" />,
 }));
 
 vi.mock('@/organisms/Collections/CollectionsSections/CollectionsSections', () => ({
@@ -91,7 +79,6 @@ describe('BookmarksCollection', () => {
       avatarSeed: 'alice-pubky',
       avatarUrl: 'https://example.com/avatar.png',
       bookmarkCount: 4,
-      isBookmarkCountLoading: false,
       isProfileResolved: true,
     });
 
@@ -102,7 +89,7 @@ describe('BookmarksCollection', () => {
     expect(screen.getByTestId('content-layout')).toHaveAttribute('data-show-left-mobile-button', 'false');
     expect(screen.getByTestId('content-layout')).toHaveAttribute('data-show-right-mobile-button', 'false');
     expect(screen.getByTestId('bookmarks-hero')).toHaveAttribute('data-bookmark-count', '4');
-    expect(screen.getByTestId('bookmarks-items')).toHaveAttribute('data-bookmark-count', '4');
+    expect(screen.getByTestId('bookmarks-items')).toBeInTheDocument();
     expect(screen.getByTestId('collections-sections')).toBeInTheDocument();
   });
 });
@@ -114,7 +101,6 @@ describe('BookmarksCollection - Snapshots', () => {
       avatarSeed: 'alice-pubky',
       avatarUrl: 'https://example.com/avatar.png',
       bookmarkCount: 4,
-      isBookmarkCountLoading: false,
       isProfileResolved: true,
     });
 

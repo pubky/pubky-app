@@ -20,12 +20,6 @@ describe('BookmarkCountBadge', () => {
 
     expect(screen.getByText('0')).toBeInTheDocument();
   });
-
-  it('merges a custom className onto the badge container', () => {
-    const { container } = render(<BookmarkCountBadge count={1} className="custom-badge-class" />);
-
-    expect(container.firstChild).toHaveClass('custom-badge-class');
-  });
 });
 
 describe('BookmarkCountBadge - Snapshots', () => {

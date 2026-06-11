@@ -3,10 +3,9 @@
 import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
-import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Typography } from '@/atoms/Typography/Typography';
 import { BookmarkCountBadge } from '@/molecules/BookmarkCountBadge/BookmarkCountBadge';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 
 interface BookmarksHeroProps {
   avatarName: string;
@@ -43,26 +42,13 @@ export function BookmarksHero({
         </Typography>
 
         <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:gap-6">
-          <Container overrideDefaults className="flex min-w-0 items-center gap-3">
-            <AvatarWithFallback
-              avatarUrl={avatarUrl}
-              name={avatarName}
-              fallbackSeed={avatarSeed}
-              size="sm"
-              alt={avatarName}
-            />
-            {isProfileResolved ? (
-              <Typography
-                as="span"
-                overrideDefaults
-                className="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
-              >
-                {avatarName}
-              </Typography>
-            ) : (
-              <Skeleton className="h-5 w-32 rounded-md" />
-            )}
-          </Container>
+          <HeroOwner
+            name={avatarName}
+            fallbackSeed={avatarSeed}
+            avatarUrl={avatarUrl}
+            isResolved={isProfileResolved}
+            size="sm"
+          />
 
           {bookmarkCount !== undefined && <BookmarkCountBadge count={bookmarkCount} />}
         </Container>

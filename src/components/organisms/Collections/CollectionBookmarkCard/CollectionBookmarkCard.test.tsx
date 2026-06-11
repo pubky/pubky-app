@@ -73,7 +73,6 @@ function setup(options: SetupOptions = {}) {
     avatarSeed,
     avatarUrl,
     bookmarkCount: 'bookmarkCount' in options ? options.bookmarkCount : 42,
-    isBookmarkCountLoading: false,
     isProfileResolved: true,
   });
 }

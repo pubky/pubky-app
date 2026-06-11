@@ -9,19 +9,12 @@ import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS, TIMELINE_FEED_VARIANT } f
 import { cn } from '@/libs/utils/utils';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
-interface BookmarksItemsProps {
-  bookmarkCount?: number;
-  isBookmarkCountLoading: boolean;
-}
-
-export function BookmarksItems({ bookmarkCount, isBookmarkCountLoading }: BookmarksItemsProps) {
-  const isConfirmedEmpty = !isBookmarkCountLoading && bookmarkCount === 0;
-
-  if (isConfirmedEmpty) {
-    return <BookmarksItemsEmpty />;
-  }
-
-  return <TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />;
+export function BookmarksItems() {
+  // The empty state is driven by the bookmarks stream itself (via TimelineFeed's
+  // `emptyState` slot), not the aggregate bookmark count — the two are populated
+  // by separate paths and can diverge, so gating on the count could hide a
+  // non-empty grid (or render an empty grid for a stale non-zero count).
+  return <TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} emptyState={<BookmarksItemsEmpty />} />;
 }
 
 function BookmarksItemsEmpty() {

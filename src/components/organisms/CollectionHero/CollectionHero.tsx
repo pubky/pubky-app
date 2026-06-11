@@ -6,7 +6,6 @@ import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
-import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
@@ -15,9 +14,9 @@ import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { cn } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionHeroSkeleton } from '@/organisms/CollectionHero/CollectionHero.skeleton';
+import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { CollectionHeroContentProps, CollectionHeroProps } from './CollectionHero.types';
@@ -139,26 +138,14 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
 
         {/* Owner + item count */}
         <Container overrideDefaults className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <Container overrideDefaults className="flex min-w-0 items-center gap-2">
-            <AvatarWithFallback
-              avatarUrl={ownerAvatarUrl}
-              name={ownerName}
-              fallbackSeed={authorPubky}
-              size="md"
-              alt={ownerName}
-            />
-            {isOwnerResolved ? (
-              <Typography
-                as="span"
-                overrideDefaults
-                className="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
-              >
-                {ownerName}
-              </Typography>
-            ) : (
-              <Skeleton className="h-5 w-32 rounded-md" />
-            )}
-          </Container>
+          <HeroOwner
+            name={ownerName}
+            fallbackSeed={authorPubky}
+            avatarUrl={ownerAvatarUrl}
+            isResolved={isOwnerResolved}
+            size="md"
+            className="gap-2"
+          />
 
           <Container overrideDefaults className="flex items-center gap-1 text-muted-foreground">
             <StickyNote className="size-3 shrink-0" />

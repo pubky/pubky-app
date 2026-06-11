@@ -23,8 +23,9 @@ interface CollectionBookmarkCardProps {
  * user's legacy bookmark feed. Always rendered as the first item inside
  * the "My Collections" section.
  *
- * Self-contained: derives `count` (current-user bookmark count), avatar
- * URL / name / seed, and href internally. No required props.
+ * Self-contained: reads the current-user bookmark count and avatar metadata
+ * from `useBookmarksCollectionSummary` and links to the bookmarks route.
+ * No required props.
  *
  * The `"PRIVATE"` visibility label that earlier designs included was
  * removed during Phase 3 planning — bookmarks aren't actually scoped
