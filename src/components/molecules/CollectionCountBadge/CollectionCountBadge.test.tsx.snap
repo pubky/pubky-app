@@ -1,13 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`BookmarkCountBadge - Snapshots > matches the snapshot 1`] = `
+exports[`CollectionCountBadge - Snapshots > matches the snapshot 1`] = `
 <div
   class="flex items-center gap-1 text-muted-foreground"
   data-testid="container"
 >
   <svg
     aria-hidden="true"
-    class="lucide lucide-sticky-note size-3"
+    class="lucide lucide-sticky-note size-3 shrink-0"
     fill="none"
     height="24"
     stroke="currentColor"

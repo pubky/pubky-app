@@ -58,7 +58,7 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-sticky-note size-3"
+              class="lucide lucide-sticky-note size-3 shrink-0"
               fill="none"
               height="24"
               stroke="currentColor"

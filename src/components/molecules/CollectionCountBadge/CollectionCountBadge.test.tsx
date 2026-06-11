@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { BookmarkCountBadge } from './BookmarkCountBadge';
+import { CollectionCountBadge } from './CollectionCountBadge';
 
 vi.mock('next-intl', () => ({
   useFormatter: () => ({
@@ -8,23 +8,23 @@ vi.mock('next-intl', () => ({
   }),
 }));
 
-describe('BookmarkCountBadge', () => {
+describe('CollectionCountBadge', () => {
   it('renders the formatted count', () => {
-    render(<BookmarkCountBadge count={42} />);
+    render(<CollectionCountBadge count={42} />);
 
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
   it('renders a zero count rather than hiding it', () => {
-    render(<BookmarkCountBadge count={0} />);
+    render(<CollectionCountBadge count={0} />);
 
     expect(screen.getByText('0')).toBeInTheDocument();
   });
 });
 
-describe('BookmarkCountBadge - Snapshots', () => {
+describe('CollectionCountBadge - Snapshots', () => {
   it('matches the snapshot', () => {
-    const { container } = render(<BookmarkCountBadge count={123} />);
+    const { container } = render(<CollectionCountBadge count={123} />);
 
     expect(container.firstChild).toMatchSnapshot();
   });

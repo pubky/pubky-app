@@ -1,7 +1,7 @@
 'use client';
 
-import { Library, Minus, Plus, StickyNote, Trash2 } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { Library, Minus, Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { getCollectionRoute } from '@/app/routes';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
@@ -17,6 +17,7 @@ import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post
 import { cn } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
+import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
@@ -121,7 +122,6 @@ function CollectionCardContent({
   const isPreview = variant === 'preview';
   const t = useTranslations('collections.card');
   const tCardToast = useTranslations('collections.card.toast');
-  const format = useFormatter();
 
   const { profile: ownerProfile } = useUserProfile(authorPubky);
 
@@ -149,9 +149,6 @@ function CollectionCardContent({
 
   const description = collection?.description?.trim() ?? '';
   const itemCount = collection?.items?.length ?? 0;
-  // Compact notation (e.g. 1.2K, 3M) keeps long counts from blowing out the
-  // header row when an envelope lists an absurd number of items.
-  const itemCountLabel = format.number(itemCount, { notation: 'compact' });
   const coverImage = resolveCollectionCoverImage(collection?.cover_image);
 
   const ownerName = ownerProfile?.name || authorPubky;
@@ -224,16 +221,7 @@ function CollectionCardContent({
             </Container>
 
             <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-3">
-              <Container overrideDefaults className="flex items-center gap-1 text-muted-foreground">
-                <StickyNote className="size-3" />
-                <Typography
-                  as="span"
-                  overrideDefaults
-                  className="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
-                >
-                  {itemCountLabel}
-                </Typography>
-              </Container>
+              <CollectionCountBadge count={itemCount} />
 
               <AvatarWithFallback
                 avatarUrl={ownerAvatarUrl}

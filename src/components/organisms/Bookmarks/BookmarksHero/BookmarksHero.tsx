@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { BookmarkCountBadge } from '@/molecules/BookmarkCountBadge/BookmarkCountBadge';
+import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 
 interface BookmarksHeroProps {
@@ -50,7 +50,7 @@ export function BookmarksHero({
             size="sm"
           />
 
-          {bookmarkCount !== undefined && <BookmarkCountBadge count={bookmarkCount} />}
+          {bookmarkCount !== undefined && <CollectionCountBadge count={bookmarkCount} />}
         </Container>
 
         <Typography

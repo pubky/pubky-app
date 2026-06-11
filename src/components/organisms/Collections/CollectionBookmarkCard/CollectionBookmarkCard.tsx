@@ -9,7 +9,7 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmarksCollectionSummary } from '@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary';
 import { cn } from '@/libs/utils/utils';
-import { BookmarkCountBadge } from '@/molecules/BookmarkCountBadge/BookmarkCountBadge';
+import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 
 interface CollectionBookmarkCardProps {
@@ -61,7 +61,7 @@ export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProp
             </Container>
 
             <Container overrideDefaults className="flex shrink-0 items-center gap-2 sm:gap-3">
-              {bookmarkCount !== undefined && <BookmarkCountBadge count={bookmarkCount} />}
+              {bookmarkCount !== undefined && <CollectionCountBadge count={bookmarkCount} />}
               <AvatarWithFallback
                 avatarUrl={avatarUrl}
                 name={avatarName}

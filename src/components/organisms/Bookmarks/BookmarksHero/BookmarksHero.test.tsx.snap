@@ -53,7 +53,7 @@ exports[`BookmarksHero - Snapshots > matches the snapshot with count and avatar 
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-sticky-note size-3"
+          class="lucide lucide-sticky-note size-3 shrink-0"
           fill="none"
           height="24"
           stroke="currentColor"

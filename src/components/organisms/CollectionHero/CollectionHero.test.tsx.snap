@@ -73,7 +73,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
           />
         </svg>
         <span
-          class="text-xs leading-4 font-medium"
+          class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
           data-testid="typography"
         >
           2
@@ -256,7 +256,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
           />
         </svg>
         <span
-          class="text-xs leading-4 font-medium"
+          class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
           data-testid="typography"
         >
           2
@@ -471,7 +471,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
           />
         </svg>
         <span
-          class="text-xs leading-4 font-medium"
+          class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
           data-testid="typography"
         >
           0
