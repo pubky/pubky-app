@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
@@ -8,6 +7,15 @@ import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ClickableTagsList } from './ClickableTagsList';
+
+function getPostTagButton(label: string, count?: number) {
+  const name = count !== undefined ? `${label} tag (${count} posts)` : `${label} tag`;
+  return screen.getByRole('button', { name });
+}
+
+function queryPostTagButton(label: string) {
+  return screen.queryByRole('button', { name: `${label} tag` });
+}
 
 // Mock hooks
 const mockHandleTagToggle = vi.fn();
@@ -160,45 +168,9 @@ vi.mock('@/atoms/Typography/Typography', () => {
   };
 });
 
-// Mock molecules — forwardRef so Radix PopoverTrigger (asChild) can merge props on desktop
-vi.mock('@/molecules/PostTag/PostTag', () => {
-  return {
-    PostTag: React.forwardRef(function PostTag(
-      {
-        label,
-        count,
-        selected,
-        showClose,
-        onClick,
-        onClose,
-      }: {
-        label: string;
-        count?: number;
-        selected?: boolean;
-        showClose?: boolean;
-        onClick?: (e: React.MouseEvent) => void;
-        onClose?: (e: React.MouseEvent) => void;
-      },
-      ref: React.Ref<HTMLButtonElement>,
-    ) {
-      return (
-        <button
-          ref={ref}
-          data-testid={`post-tag-${label}`}
-          data-selected={selected}
-          data-count={count}
-          onClick={onClick}
-        >
-          {label}
-          {showClose && (
-            <span data-testid={`close-${label}`} onClick={onClose}>
-              ×
-            </span>
-          )}
-        </button>
-      );
-    }),
-  };
+vi.mock('@/molecules/PostTag/PostTag', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/molecules/PostTag/PostTag')>();
+  return actual;
 });
 
 vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
@@ -207,27 +179,10 @@ vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
   };
 });
 
-vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', () => ({
-  PostTagPopoverWrapper: ({
-    taggers,
-    taggersCount,
-    children,
-  }: {
-    taggers: { id: string }[];
-    taggersCount: number;
-    children: React.ReactNode;
-  }) => {
-    const isMobile = mockUseIsMobile();
-    if (isMobile || (taggers.length === 0 && taggersCount === 0)) {
-      return <>{children}</>;
-    }
-    return (
-      <div data-testid="desktop-tag-popover" data-taggers-count={taggersCount}>
-        {children}
-      </div>
-    );
-  },
-}));
+vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper')>();
+  return actual;
+});
 
 vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
@@ -259,9 +214,9 @@ describe('ClickableTagsList', () => {
     it('renders correctly with tags', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
-      expect(screen.getByTestId('post-tag-ethereum')).toBeInTheDocument();
-      expect(screen.getByTestId('post-tag-web3')).toBeInTheDocument();
+      expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
+      expect(getPostTagButton('ethereum', 3)).toBeInTheDocument();
+      expect(getPostTagButton('web3', 10)).toBeInTheDocument();
     });
 
     it('returns null when no tags and no input/button', () => {
@@ -273,26 +228,26 @@ describe('ClickableTagsList', () => {
     it('shows tag count when showCount is true', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showCount={true} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).toHaveAttribute('data-count', '5');
+      expect(getPostTagButton('bitcoin', 5)).toHaveAccessibleName('bitcoin tag (5 posts)');
     });
 
     it('hides tag count when showCount is false', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showCount={false} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).not.toHaveAttribute('data-count');
+      expect(getPostTagButton('bitcoin')).toHaveAccessibleName('bitcoin tag');
     });
 
     it('shows selected state for viewer tags', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).toHaveAttribute('data-selected', 'true');
-      expect(screen.getByTestId('post-tag-ethereum')).toHaveAttribute('data-selected', 'false');
+      expect(getPostTagButton('bitcoin', 5)).toHaveAttribute('aria-pressed', 'true');
+      expect(getPostTagButton('ethereum', 3)).toHaveAttribute('aria-pressed', 'false');
     });
 
     it('shows close button when showTagClose is true', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showTagClose={true} />);
 
-      expect(screen.getByTestId('close-bitcoin')).toBeInTheDocument();
+      expect(screen.getByLabelText('Remove bitcoin tag')).toBeInTheDocument();
     });
 
     it('filters out tags when total character count exceeds maxTotalChars', () => {
@@ -305,11 +260,11 @@ describe('ClickableTagsList', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={tagsExceedingLimit} />);
 
       // First two tags should render (7 + 8 = 15 chars, within 20 limit)
-      expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
-      expect(screen.getByTestId('post-tag-ethereum')).toBeInTheDocument();
+      expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
+      expect(getPostTagButton('ethereum', 3)).toBeInTheDocument();
 
       // Third tag should be filtered out (would make total 21 chars, exceeding 20)
-      expect(screen.queryByTestId('post-tag-crypto')).not.toBeInTheDocument();
+      expect(queryPostTagButton('crypto')).not.toBeInTheDocument();
     });
   });
 
@@ -533,7 +488,7 @@ describe('ClickableTagsList', () => {
     it('calls handleTagToggle when tag is clicked without custom handler', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
-      fireEvent.click(screen.getByTestId('post-tag-bitcoin'));
+      fireEvent.click(getPostTagButton('bitcoin', 5));
 
       expect(mockHandleTagToggle).toHaveBeenCalled();
     });
@@ -544,7 +499,7 @@ describe('ClickableTagsList', () => {
         <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} onTagClick={customHandler} />,
       );
 
-      fireEvent.click(screen.getByTestId('post-tag-bitcoin'));
+      fireEvent.click(getPostTagButton('bitcoin', 5));
 
       expect(customHandler).toHaveBeenCalled();
       expect(mockHandleTagToggle).not.toHaveBeenCalled();
@@ -562,7 +517,7 @@ describe('ClickableTagsList', () => {
         />,
       );
 
-      fireEvent.click(screen.getByTestId('close-bitcoin'));
+      fireEvent.click(screen.getByLabelText('Remove bitcoin tag'));
 
       expect(closeHandler).toHaveBeenCalled();
     });
@@ -751,13 +706,13 @@ describe('ClickableTagsList', () => {
     it('works with USER tags', () => {
       render(<ClickableTagsList taggedId="user-123" taggedKind={TagKind.USER} tags={mockTags} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
+      expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
     });
 
     it('works with POST tags', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
+      expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
     });
   });
 
