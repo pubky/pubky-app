@@ -24,12 +24,12 @@ describe('BookmarksItems', () => {
     expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-variant', 'bookmarks');
   });
 
-  it('passes the empty card as the feed empty-state slot (stream-driven, not count-driven)', () => {
+  it('passes the add-content CTA as the feed empty-state slot (stream-driven, not count-driven)', () => {
     const { container } = render(<BookmarksItems />);
 
     expect(container.querySelector('[data-cy="bookmarks-items-empty"]')).toBeInTheDocument();
-    expect(screen.getByText('collections.bookmarks.emptyTitle')).toBeInTheDocument();
-    expect(screen.getByText('collections.bookmarks.emptyDescription')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'collections.single.addContent' })).toBeInTheDocument();
+    expect(screen.getByText('collections.single.addContent')).toBeInTheDocument();
   });
 });
 

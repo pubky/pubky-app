@@ -1,8 +1,8 @@
 'use client';
 
-import { Bookmark } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Card, CardContent } from '@/atoms/Card/Card';
+import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS, TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -18,7 +18,12 @@ export function BookmarksItems() {
 }
 
 function BookmarksItemsEmpty() {
-  const t = useTranslations('collections.bookmarks');
+  const t = useTranslations('collections.single');
+
+  // Placeholder — bookmarks now use collection-style empty chrome, but the
+  // add-content flow itself is out of scope for this slice.
+  // TODO: wire in collection add-content (#1866 follow-up).
+  const handleAddContent = () => {};
 
   return (
     <Container
@@ -26,20 +31,17 @@ function BookmarksItemsEmpty() {
       data-cy="bookmarks-items-empty"
       className={cn('grid', GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS)}
     >
-      <Card className="rounded-md py-0 md:col-span-2 xl:col-span-3">
-        <CardContent className="flex flex-col items-center justify-center gap-3 p-8 text-center md:p-12">
-          <Container
-            overrideDefaults
-            className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground"
-          >
-            <Bookmark className="size-6" />
-          </Container>
-          <Typography as="h2" overrideDefaults className="text-xl leading-7 font-bold text-foreground">
-            {t('emptyTitle')}
-          </Typography>
-          <Typography className="max-w-96 leading-6 text-muted-foreground">{t('emptyDescription')}</Typography>
-        </CardContent>
-      </Card>
+      <Button
+        overrideDefaults
+        onClick={handleAddContent}
+        aria-label={t('addContent')}
+        className="flex h-39 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+      >
+        <Plus className="size-4 shrink-0" />
+        <Typography as="span" overrideDefaults className="text-sm font-bold">
+          {t('addContent')}
+        </Typography>
+      </Button>
     </Container>
   );
 }

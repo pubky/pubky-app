@@ -1267,9 +1267,7 @@
     },
     "bookmarks": {
       "title": "Segnalibri",
-      "description": "Tutto ciò che vuoi salvare per dopo.",
-      "emptyTitle": "Ancora nessun segnalibro",
-      "emptyDescription": "Salva i post per ritrovarli qui più tardi."
+      "description": "Tutto ciò che vuoi salvare per dopo."
     },
     "card": {
       "follow": "Segui",

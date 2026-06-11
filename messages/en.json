@@ -1263,9 +1263,7 @@
     },
     "bookmarks": {
       "title": "Bookmarks",
-      "description": "Everything you want to save for later.",
-      "emptyTitle": "No bookmarks yet",
-      "emptyDescription": "Save posts to find them here later."
+      "description": "Everything you want to save for later."
     },
     "card": {
       "follow": "Follow",

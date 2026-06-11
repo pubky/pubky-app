@@ -10,51 +10,38 @@ exports[`BookmarksItems - Snapshots > matches the snapshot 1`] = `
     data-cy="bookmarks-items-empty"
     data-testid="container"
   >
-    <div
-      class="flex flex-col gap-6 bg-card text-card-foreground shadow-sm rounded-md py-0 md:col-span-2 xl:col-span-3"
-      data-slot="card"
-      data-testid="card"
+    <button
+      aria-label="collections.single.addContent"
+      class="flex h-39 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+      data-slot="button"
     >
-      <div
-        class="flex flex-col items-center justify-center gap-3 p-8 text-center md:p-12"
-        data-slot="card-content"
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-plus size-4 shrink-0"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        <div
-          class="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground"
-          data-testid="container"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-bookmark size-6"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
-            />
-          </svg>
-        </div>
-        <h2
-          class="text-xl leading-7 font-bold text-foreground"
-          data-testid="typography"
-        >
-          collections.bookmarks.emptyTitle
-        </h2>
-        <p
-          class="text-base font-medium max-w-96 leading-6 text-muted-foreground"
-          data-testid="typography"
-        >
-          collections.bookmarks.emptyDescription
-        </p>
-      </div>
-    </div>
+        <path
+          d="M5 12h14"
+        />
+        <path
+          d="M12 5v14"
+        />
+      </svg>
+      <span
+        class="text-sm font-bold"
+        data-testid="typography"
+      >
+        collections.single.addContent
+      </span>
+    </button>
   </div>
 </div>
 `;

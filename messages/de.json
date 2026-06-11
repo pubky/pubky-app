@@ -1267,9 +1267,7 @@
     },
     "bookmarks": {
       "title": "Lesezeichen",
-      "description": "Alles, was du für später speichern möchtest.",
-      "emptyTitle": "Noch keine Lesezeichen",
-      "emptyDescription": "Speichere Beiträge, um sie später hier wiederzufinden."
+      "description": "Alles, was du für später speichern möchtest."
     },
     "card": {
       "follow": "Folgen",
