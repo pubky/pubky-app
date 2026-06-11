@@ -15,7 +15,11 @@ vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
 }));
 
 vi.mock('@/organisms/SearchInput/SearchInput', () => ({
-  SearchInput: () => <div data-testid="search-input">SearchInput</div>,
+  SearchInput: ({ autoFocus }: { autoFocus?: boolean }) => (
+    <div data-auto-focus={String(Boolean(autoFocus))} data-testid="search-input">
+      SearchInput
+    </div>
+  ),
 }));
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
@@ -100,6 +104,10 @@ describe('Search', () => {
 });
 
 describe('Search - Snapshots', () => {
+  beforeEach(() => {
+    mockUseIsMobile.mockReturnValue(false);
+  });
+
   it('matches snapshot with tags present', () => {
     mockUseSearchTags.mockReturnValue(['pubky']);
     const { container } = render(<Search />);

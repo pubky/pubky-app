@@ -7,6 +7,7 @@ exports[`Search - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
     data-testid="container"
   >
     <div
+      data-auto-focus="true"
       data-testid="search-input"
     >
       SearchInput
@@ -38,6 +39,7 @@ exports[`Search - Snapshots > matches snapshot with no tags 1`] = `
     data-testid="container"
   >
     <div
+      data-auto-focus="true"
       data-testid="search-input"
     >
       SearchInput
@@ -58,6 +60,7 @@ exports[`Search - Snapshots > matches snapshot with tags present 1`] = `
     data-testid="container"
   >
     <div
+      data-auto-focus="false"
       data-testid="search-input"
     >
       SearchInput

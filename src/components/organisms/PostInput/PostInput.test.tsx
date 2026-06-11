@@ -990,6 +990,7 @@ describe('PostInput - autoFocusTextarea', () => {
 describe('PostInput - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useIsMobile).mockReturnValue(false);
     mockIsAuthenticated = true;
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePostReturn.content = '';
@@ -1002,7 +1003,11 @@ describe('PostInput - Snapshots', () => {
   });
 
   it('matches snapshot for post variant without content or attachments', () => {
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostInput variant={POST_INPUT_VARIANT.POST} />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -1117,7 +1122,11 @@ describe('PostInput - Mobile Snapshots', () => {
   });
 
   it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostInput variant={POST_INPUT_VARIANT.POST} />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

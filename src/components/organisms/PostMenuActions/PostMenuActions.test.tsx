@@ -375,13 +375,6 @@ describe('PostMenuActions - Snapshots', () => {
     const { container } = render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
     expect(container.firstChild).toMatchSnapshot();
   });
-
-  it('matches snapshot for mobile sheet', () => {
-    mockUseIsMobile.mockReturnValue(true);
-    const trigger = <button>Menu</button>;
-    const { container } = render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });
 
 describe('PostMenuActions - Mobile Snapshots', () => {

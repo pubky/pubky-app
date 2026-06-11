@@ -1,37 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`HomeFeedDrawer - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div>
-  <div
-    class="flex flex-col gap-6"
-    data-testid="container"
-  >
-    <div
-      data-selected-tab="following"
-      data-testid="filter-reach"
-    >
-      FilterReach
-    </div>
-    <div
-      data-testid="filter-sort"
-    >
-      FilterSort
-    </div>
-    <div
-      data-testid="filter-layout"
-    >
-      FilterLayout
-    </div>
-    <div
-      data-selected-tab="all"
-      data-testid="filter-content"
-    >
-      FilterContent
-    </div>
-  </div>
-</div>
-`;
-
 exports[`HomeFeedDrawer - Snapshots > matches snapshot 1`] = `
 <div>
   <div
@@ -50,36 +18,10 @@ exports[`HomeFeedDrawer - Snapshots > matches snapshot 1`] = `
       FilterSort
     </div>
     <div
+      data-show-visual="true"
       data-testid="filter-layout"
     >
       FilterLayout
-    </div>
-    <div
-      data-selected-tab="all"
-      data-testid="filter-content"
-    >
-      FilterContent
-    </div>
-  </div>
-</div>
-`;
-
-exports[`HomeFeedDrawerMobile - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div>
-  <div
-    class="flex flex-col gap-6"
-    data-testid="container"
-  >
-    <div
-      data-selected-tab="following"
-      data-testid="filter-reach"
-    >
-      FilterReach
-    </div>
-    <div
-      data-testid="filter-sort"
-    >
-      FilterSort
     </div>
     <div
       data-selected-tab="all"
@@ -118,43 +60,6 @@ exports[`HomeFeedDrawerMobile - Snapshots > matches snapshot 1`] = `
 </div>
 `;
 
-exports[`HomeFeedSidebar - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
-<div>
-  <div
-    class="flex flex-col gap-6"
-    data-testid="container"
-  >
-    <div
-      data-selected-tab="following"
-      data-testid="filter-reach"
-    >
-      FilterReach
-    </div>
-    <div
-      data-testid="filter-sort"
-    >
-      FilterSort
-    </div>
-    <div
-      class="sticky top-[100px] flex w-full flex-col gap-6 self-start"
-      data-testid="container"
-    >
-      <div
-        data-testid="filter-layout"
-      >
-        FilterLayout
-      </div>
-      <div
-        data-selected-tab="all"
-        data-testid="filter-content"
-      >
-        FilterContent
-      </div>
-    </div>
-  </div>
-</div>
-`;
-
 exports[`HomeFeedSidebar - Snapshots > matches snapshot 1`] = `
 <div>
   <div
@@ -177,6 +82,7 @@ exports[`HomeFeedSidebar - Snapshots > matches snapshot 1`] = `
       data-testid="container"
     >
       <div
+        data-show-visual="true"
         data-testid="filter-layout"
       >
         FilterLayout

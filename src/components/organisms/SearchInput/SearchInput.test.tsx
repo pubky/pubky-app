@@ -562,6 +562,10 @@ describe('SearchInput', () => {
   });
 
   describe('SearchInput - Snapshots', () => {
+    beforeEach(() => {
+      mockUseIsMobile.mockReturnValue(false);
+    });
+
     it('matches snapshot - default state', () => {
       const { container } = render(<SearchInput />);
       expect(container.firstChild).toMatchSnapshot();
@@ -662,7 +666,7 @@ describe('SearchInput - Mobile Snapshots', () => {
   });
 
   it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<SearchInput />);
+    const { container } = render(<SearchInput autoFocus />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

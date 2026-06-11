@@ -1,6 +1,8 @@
+import * as React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import type { Pubky } from '@/models/models.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -94,8 +96,15 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
 }));
 
 vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
-  useEnrichedTags: vi.fn((tags) => ({
-    enrichedTags: tags,
+  useEnrichedTags: vi.fn((tags: NexusTag[]) => ({
+    enrichedTags: tags.map((tag) => ({
+      ...tag,
+      taggers: tag.taggers.map((taggerId, index) => ({
+        id: taggerId as Pubky,
+        name: `User ${index + 1}`,
+        avatarUrl: `https://example.com/${taggerId}.png`,
+      })),
+    })),
     isLoading: false,
   })),
 }));
@@ -151,33 +160,44 @@ vi.mock('@/atoms/Typography/Typography', () => {
   };
 });
 
-// Mock molecules
+// Mock molecules — forwardRef so Radix PopoverTrigger (asChild) can merge props on desktop
 vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
-    PostTag: ({
-      label,
-      count,
-      selected,
-      showClose,
-      onClick,
-      onClose,
-    }: {
-      label: string;
-      count?: number;
-      selected?: boolean;
-      showClose?: boolean;
-      onClick?: (e: React.MouseEvent) => void;
-      onClose?: (e: React.MouseEvent) => void;
-    }) => (
-      <button data-testid={`post-tag-${label}`} data-selected={selected} data-count={count} onClick={onClick}>
-        {label}
-        {showClose && (
-          <span data-testid={`close-${label}`} onClick={onClose}>
-            ×
-          </span>
-        )}
-      </button>
-    ),
+    PostTag: React.forwardRef(function PostTag(
+      {
+        label,
+        count,
+        selected,
+        showClose,
+        onClick,
+        onClose,
+      }: {
+        label: string;
+        count?: number;
+        selected?: boolean;
+        showClose?: boolean;
+        onClick?: (e: React.MouseEvent) => void;
+        onClose?: (e: React.MouseEvent) => void;
+      },
+      ref: React.Ref<HTMLButtonElement>,
+    ) {
+      return (
+        <button
+          ref={ref}
+          data-testid={`post-tag-${label}`}
+          data-selected={selected}
+          data-count={count}
+          onClick={onClick}
+        >
+          {label}
+          {showClose && (
+            <span data-testid={`close-${label}`} onClick={onClose}>
+              ×
+            </span>
+          )}
+        </button>
+      );
+    }),
   };
 });
 
@@ -187,10 +207,27 @@ vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
   };
 });
 
-vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper')>();
-  return actual;
-});
+vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', () => ({
+  PostTagPopoverWrapper: ({
+    taggers,
+    taggersCount,
+    children,
+  }: {
+    taggers: { id: string }[];
+    taggersCount: number;
+    children: React.ReactNode;
+  }) => {
+    const isMobile = mockUseIsMobile();
+    if (isMobile || (taggers.length === 0 && taggersCount === 0)) {
+      return <>{children}</>;
+    }
+    return (
+      <div data-testid="desktop-tag-popover" data-taggers-count={taggersCount}>
+        {children}
+      </div>
+    );
+  },
+}));
 
 vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
@@ -725,12 +762,8 @@ describe('ClickableTagsList', () => {
   });
 
   describe('Snapshots', () => {
-    it('matches snapshot with tags and count', () => {
-      const { container } = render(
-        <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showCount={true} />,
-      );
-
-      expect(container).toMatchSnapshot();
+    beforeEach(() => {
+      mockUseIsMobile.mockReturnValue(false);
     });
 
     it('matches snapshot with input visible', () => {
@@ -770,6 +803,22 @@ const snapshotTags: NexusTag[] = [
   { label: 'ethereum', taggers_count: 3, taggers: ['user3'], relationship: false },
   { label: 'web3', taggers_count: 10, taggers: [], relationship: false },
 ];
+
+describe('ClickableTagsList - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsAuthenticated = true;
+    mockUseIsMobile.mockReturnValue(false);
+    useAuthStore.setState({ setShowSignInDialog: vi.fn() });
+  });
+
+  it('matches snapshot with tags and count', () => {
+    const { container } = render(
+      <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={snapshotTags} showCount={true} />,
+    );
+    expect(container).toMatchSnapshot();
+  });
+});
 
 describe('ClickableTagsList - Mobile Snapshots', () => {
   beforeEach(() => {

@@ -529,14 +529,23 @@ describe('ContentLayout - Custom Feed Layout Override', () => {
   });
 });
 
+const drawerSnapshotProps = {
+  leftDrawerContent: <div data-testid="left-drawer-desktop">Desktop drawer</div>,
+  leftDrawerContentMobile: <div data-testid="left-drawer-mobile">Mobile drawer</div>,
+};
+
 describe('ContentLayout - Snapshots', () => {
+  beforeEach(() => {
+    mockUseIsMobile.mockReturnValue(false);
+  });
+
   it('matches snapshot with default props', () => {
     const { container } = render(
-      <ContentLayout>
+      <ContentLayout {...drawerSnapshotProps}>
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with showLeftSidebar false', () => {
@@ -545,7 +554,7 @@ describe('ContentLayout - Snapshots', () => {
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with showRightSidebar false', () => {
@@ -554,7 +563,7 @@ describe('ContentLayout - Snapshots', () => {
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with both sidebars hidden', () => {
@@ -563,7 +572,7 @@ describe('ContentLayout - Snapshots', () => {
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with custom className', () => {
@@ -572,7 +581,7 @@ describe('ContentLayout - Snapshots', () => {
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with complex children', () => {
@@ -585,7 +594,7 @@ describe('ContentLayout - Snapshots', () => {
         </div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with renderMobileHeader false', () => {
@@ -594,7 +603,7 @@ describe('ContentLayout - Snapshots', () => {
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });
 
@@ -610,10 +619,10 @@ describe('ContentLayout - Mobile Snapshots', () => {
 
   it('matches snapshot on mobile viewport', () => {
     const { container } = render(
-      <ContentLayout>
+      <ContentLayout {...drawerSnapshotProps}>
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });

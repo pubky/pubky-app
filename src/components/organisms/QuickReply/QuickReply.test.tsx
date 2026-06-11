@@ -375,7 +375,11 @@ describe('QuickReply - Snapshots', () => {
   });
 
   it('matches snapshot with default props', () => {
-    const { container } = render(<QuickReply parentPostId="author:post1" />);
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <QuickReply parentPostId="author:post1" />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });
@@ -399,7 +403,11 @@ describe('QuickReply - Mobile Snapshots', () => {
   });
 
   it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<QuickReply parentPostId="author:post1" />);
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <QuickReply parentPostId="author:post1" />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

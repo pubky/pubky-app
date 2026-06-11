@@ -686,6 +686,7 @@ describe('PostMain - Tag Expansion', () => {
 describe('PostMain - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useIsMobile).mockReturnValue(false);
 
     // Reset mocked hook return values that are overridden in earlier (non-snapshot) tests.
     // Without this, running the full suite (e.g. CI `test:coverage`) can leak mocked
@@ -710,7 +711,11 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot with default state', () => {
-    const { container } = render(<PostMain postId="post-123" />);
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="post-123" />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -814,7 +819,11 @@ describe('PostMain - Mobile Snapshots', () => {
   });
 
   it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<PostMain postId="post-123" />);
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="post-123" />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

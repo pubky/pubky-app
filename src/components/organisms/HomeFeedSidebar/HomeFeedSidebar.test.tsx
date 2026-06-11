@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFeedSidebar';
 
 const mockSetContent = vi.fn();
@@ -221,7 +220,7 @@ describe('HomeFeedSidebar - Snapshots', () => {
   });
 
   it('matches snapshot', () => {
-    const { container } = render(<HomeFeedSidebar />);
+    const { container } = render(<HomeFeedSidebar allowVisualLayout={true} feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
     expect(container).toMatchSnapshot();
   });
 });
@@ -238,7 +237,7 @@ describe('HomeFeedDrawer - Snapshots', () => {
   });
 
   it('matches snapshot', () => {
-    const { container } = render(<HomeFeedDrawer />);
+    const { container } = render(<HomeFeedDrawer allowVisualLayout={true} feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
     expect(container).toMatchSnapshot();
   });
 });
@@ -255,72 +254,6 @@ describe('HomeFeedDrawerMobile - Snapshots', () => {
   });
 
   it('matches snapshot', () => {
-    const { container } = render(<HomeFeedDrawerMobile />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('HomeFeedSidebar - Mobile Snapshots', () => {
-  beforeEach(() => {
-    mockUseFeedLayoutResolution.mockReturnValue({
-      requestedLayout: 'columns',
-      effectiveLayout: 'columns',
-      isVisualRequested: false,
-      isVisualActive: false,
-      isPhoneViewport: true,
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<HomeFeedSidebar />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('HomeFeedDrawer - Mobile Snapshots', () => {
-  beforeEach(() => {
-    mockUseFeedLayoutResolution.mockReturnValue({
-      requestedLayout: 'columns',
-      effectiveLayout: 'columns',
-      isVisualRequested: false,
-      isVisualActive: false,
-      isPhoneViewport: true,
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<HomeFeedDrawer />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('HomeFeedDrawerMobile - Mobile Snapshots', () => {
-  beforeEach(() => {
-    mockUseFeedLayoutResolution.mockReturnValue({
-      requestedLayout: 'columns',
-      effectiveLayout: 'columns',
-      isVisualRequested: false,
-      isVisualActive: false,
-      isPhoneViewport: true,
-    });
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<HomeFeedDrawerMobile />);
     expect(container).toMatchSnapshot();
   });

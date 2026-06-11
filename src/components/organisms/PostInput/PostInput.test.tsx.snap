@@ -832,7 +832,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
 
 exports[`PostInput - Snapshots > matches snapshot for post variant without content or attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-12 border-input"
   data-testid="container"
 >
   <div
@@ -844,7 +844,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
-      data-size="normal"
+      data-size="large"
       data-testid="post-header"
     />
     <div
@@ -853,6 +853,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
       data-testid="container"
     >
       <textarea
+        data-class-name="text-xl leading-7"
         data-testid="textarea"
         placeholder="What's on your mind?"
       />
