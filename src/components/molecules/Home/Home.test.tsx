@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ElementType } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { APP_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { HomeActions, HomeFooter, HomePageHeading, HomeSectionTitle } from './Home';
 
 // Mock Next.js router
@@ -15,13 +15,13 @@ vi.mock('next/navigation', () => ({
 // Mock molecules
 vi.mock('@/molecules/ActionButtons/ActionButtons', () => {
   return {
-    ActionButtons: ({ onSignIn, onCreateAccount }: { onSignIn: () => void; onCreateAccount: () => void }) => (
+    ActionButtons: ({ onCreateAccount, onExplore }: { onCreateAccount: () => void; onExplore?: () => void }) => (
       <div data-testid="action-buttons">
-        <button data-testid="sign-in-button" onClick={onSignIn}>
-          Sign In
-        </button>
         <button data-testid="create-account-button" onClick={onCreateAccount}>
           Create Account
+        </button>
+        <button data-testid="explore-button" onClick={onExplore}>
+          Explore
         </button>
       </div>
     ),
@@ -139,8 +139,8 @@ describe('HomeActions', () => {
     render(<HomeActions />);
 
     expect(screen.getByTestId('action-buttons')).toBeInTheDocument();
-    expect(screen.getByTestId('sign-in-button')).toBeInTheDocument();
     expect(screen.getByTestId('create-account-button')).toBeInTheDocument();
+    expect(screen.getByTestId('explore-button')).toBeInTheDocument();
   });
 
   it('handles create account button click', () => {
@@ -152,13 +152,13 @@ describe('HomeActions', () => {
     expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.HUMAN);
   });
 
-  it('handles sign in button click', () => {
+  it('handles explore button click', () => {
     render(<HomeActions />);
 
-    const signInButton = screen.getByTestId('sign-in-button');
-    fireEvent.click(signInButton);
+    const exploreButton = screen.getByTestId('explore-button');
+    fireEvent.click(exploreButton);
 
-    expect(mockPush).toHaveBeenCalledWith(AUTH_ROUTES.SIGN_IN);
+    expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOME);
   });
 });
 

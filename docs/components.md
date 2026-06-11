@@ -49,6 +49,20 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 - **Config:** import from `@/config/<topic>` (concrete modules under `src/config/`, such as `@/config/nexus`, `@/config/posts`). Do not introduce an aggregate `src/config/index.ts` that re-exports the whole tree.
 - **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file.
 
+#### Explore mode (unauthenticated browsing)
+
+Guests can open routes that do not require a session:
+
+| Kind           | Paths                                                           | `@/app/routes` helper  | `usePublicRoute()` flag |
+| -------------- | --------------------------------------------------------------- | ---------------------- | ----------------------- |
+| Core explore   | `/home`, `/hot`, `/search`                                      | `isCoreExploreRoute`   | `isCoreExploreRoute`    |
+| Dynamic public | `/post/[userId]/[postId]`, `/profile/[pubky]`, `/invite/[code]` | `isDynamicPublicRoute` | `isDynamicPublicRoute`  |
+| Either         | —                                                               | `isPublicExploreRoute` | `isPublicExploreRoute`  |
+
+- **Route guard:** `EXPLORE_ROUTES` is included in `UNAUTHENTICATED_ROUTES`; dynamic public paths are allowed via `isDynamicPublicRoute()` in `RouteGuardProvider`.
+- **UI chrome:** use `usePublicRoute()` for layout (e.g. explore header, mobile footer on `/home`). `isPublicRoute` on the hook result is a **legacy alias** for `isDynamicPublicRoute` only—it is `false` on `/home` even though the page is browsable.
+- **Auth-gated actions:** use `useRequireAuth().requireAuth()` for post, reply, follow, filters, etc. Streams for guests should use `REACH.ALL` (see `useStreamIdFromFilters`, `useHotStreamId`).
+
 ## Component Template
 
 ```tsx

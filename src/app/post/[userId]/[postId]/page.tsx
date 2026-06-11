@@ -9,7 +9,7 @@ import { Metadata } from '@/molecules/Metadata/Metadata';
 import type { NexusPostDetails, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { postApi } from '@/services/nexus/post/post.api';
 import { userApi } from '@/services/nexus/user/user.api';
-import { SinglePost } from '@/templates/Post/SinglePost/SinglePost';
+import { SinglePostPage } from '@/templates/Post/SinglePost/SinglePostPage';
 
 export interface PostPageProps {
   params: Promise<{
@@ -109,5 +109,5 @@ export default async function PostPage({ params }: PostPageProps) {
   const { userId, postId } = await params;
   const compositeId = buildCompositeId({ pubky: userId, id: postId });
 
-  return <SinglePost postId={compositeId} />;
+  return <SinglePostPage postId={compositeId} />;
 }

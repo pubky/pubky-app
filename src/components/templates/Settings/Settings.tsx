@@ -21,7 +21,13 @@ export function Settings({ children }: SettingsProps) {
   return (
     <>
       {/* Mobile header - rendered here for control over hasGradientBackground */}
-      <MobileHeader hasGradientBackground={false} showLeftButton={false} showRightButton={false} fixed />
+      <MobileHeader
+        containerClassName="pb-0"
+        hasGradientBackground={false}
+        showLeftButton={false}
+        showRightButton={false}
+        fixed
+      />
 
       {/* Mobile tab navigation - visible only on mobile (< lg) */}
       <SettingsMobileMenu />
@@ -34,7 +40,7 @@ export function Settings({ children }: SettingsProps) {
         rightSidebarContent={<SettingsInfo hideFAQ={isOnHelpPage} />}
         leftDrawerContent={<SettingsMenu />}
         rightDrawerContent={<SettingsInfo hideFAQ={isOnHelpPage} />}
-        className="pt-[calc(var(--header-height-mobile)+5rem)] lg:pt-0"
+        className="pt-(--settings-mobile-chrome-height) lg:pt-0"
         disableWideShellLayout
       >
         {children}

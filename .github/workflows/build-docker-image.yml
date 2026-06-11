@@ -160,6 +160,7 @@ jobs:
             NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
             NEXT_PUBLIC_TTL_RETRY_DELAY_MS=60000
             NEXT_PUBLIC_HOMESERVER=8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo
+            NEXT_PUBLIC_HOMESERVER_URL=http://localhost:6286
             NEXT_PUBLIC_NEXUS_URL=http://localhost:8080
             NEXT_PUBLIC_CDN_URL=http://localhost:8080/static
             NEXT_PUBLIC_TESTNET=true
@@ -210,6 +211,7 @@ jobs:
             NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
             NEXT_PUBLIC_TTL_RETRY_DELAY_MS=60000
             NEXT_PUBLIC_HOMESERVER=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy
+            NEXT_PUBLIC_HOMESERVER_URL=https://homeserver.staging.pubky.app
             NEXT_PUBLIC_NEXUS_URL=https://nexus.staging.pubky.app
             NEXT_PUBLIC_CDN_URL=https://nexus.staging.pubky.app/static
             NEXT_PUBLIC_TESTNET=false

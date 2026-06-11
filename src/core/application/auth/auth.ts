@@ -100,6 +100,16 @@ export class AuthApplication {
   }
 
   /**
+   * Verifies a signup token (invite code) against the homeserver.
+   *
+   * @param signupToken - The signup token / invite code to verify
+   * @returns `'valid'`, `'used'`, or `'invalid'` depending on the homeserver response
+   */
+  static async verifySignupToken(signupToken: string) {
+    return await HomeserverService.verifySignupToken(signupToken);
+  }
+
+  /**
    * Authenticates the user against the homeserver using their cryptographic keypair.
    *
    * @param params - The authentication parameters

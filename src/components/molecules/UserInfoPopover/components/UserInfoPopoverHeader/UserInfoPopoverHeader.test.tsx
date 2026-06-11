@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserInfoPopoverHeader } from './UserInfoPopoverHeader';
 
@@ -95,9 +95,24 @@ describe('UserInfoPopoverHeader', () => {
   it('does not underline the username on hover', () => {
     render(<UserInfoPopoverHeader userId="user123" userName="Test User" formattedPublicKey="test123" avatarUrl="x" />);
 
-    const [, usernameTypography] = screen.getAllByTestId('typography');
+    const usernameLink = screen.getAllByTestId('profile-link')[1];
+    const usernameTypography = within(usernameLink).getByTestId('typography');
 
     expect(usernameTypography).not.toHaveClass('hover:underline');
+  });
+
+  it('constrains long user names in the popover preview header', () => {
+    const longName = 'BobiWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW';
+
+    render(<UserInfoPopoverHeader userId="user123" userName={longName} formattedPublicKey="test123" avatarUrl="x" />);
+
+    const profileLinks = screen.getAllByTestId('profile-link');
+    const usernameLink = profileLinks[1];
+    const usernameTypography = within(usernameLink).getByTestId('typography');
+
+    expect(usernameLink.closest('.w-0.flex-1')).toBeInTheDocument();
+    expect(usernameLink).toHaveClass('block', 'w-full', 'min-w-0');
+    expect(usernameTypography).toHaveClass('block', 'w-full', 'max-w-full', 'truncate');
   });
 });
 

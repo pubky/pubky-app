@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { resolveFollowDisplayName } from '@/hooks/useFollowUser/useFollowUser.utils';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 
 interface UseUserInfoPopoverActionsResult {
   isLoading: boolean;
@@ -25,6 +26,7 @@ export function useUserInfoPopoverActions({
   isFollowingStatusLoading: boolean;
 }): UseUserInfoPopoverActionsResult {
   const router = useRouter();
+  const { requireAuth } = useRequireAuth();
   const { toggleFollow, isUserLoading } = useFollowUser();
 
   const isLoading = isUserLoading(userId) || isFollowingStatusLoading;
@@ -39,11 +41,13 @@ export function useUserInfoPopoverActions({
     e.preventDefault();
     e.stopPropagation();
     if (isCurrentUser) return;
-    try {
-      await toggleFollow(userId, isFollowing, resolveFollowDisplayName(userId, userName));
-    } catch {
-      // Error already handled by useFollowUser (logged + state updated)
-    }
+    requireAuth(async () => {
+      try {
+        await toggleFollow(userId, isFollowing, resolveFollowDisplayName(userId, userName));
+      } catch {
+        // Error already handled by useFollowUser (logged + state updated)
+      }
+    });
   };
 
   return { isLoading, onEditClick, onFollowClick };

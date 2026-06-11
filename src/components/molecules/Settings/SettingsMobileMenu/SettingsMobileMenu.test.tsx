@@ -38,7 +38,7 @@ describe('SettingsMobileMenu', () => {
   it('preserves fixed positioning', () => {
     const { container } = render(<SettingsMobileMenu />);
     const root = container.firstChild as HTMLElement;
-    expect(root).toHaveClass('fixed', 'top-(--header-height-mobile)', 'right-0', 'left-0');
+    expect(root).toHaveClass('fixed', 'top-(--header-height-settings)', 'right-0', 'left-0');
     expect(root).not.toHaveClass('sticky');
   });
 });
