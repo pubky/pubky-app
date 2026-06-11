@@ -72,7 +72,12 @@ it('matches snapshot for small size', () => {
 
 ### Mobile Snapshot Tests
 
-Add mobile-viewport snapshot tests only for **organism** and **template** components that call `useIsMobile` in their implementation. Do not add mobile snapshots for components whose responsive behaviour is CSS-only (`lg:hidden`, etc.) — those produce identical HTML to desktop and add noise without coverage value.
+Add mobile-viewport snapshot tests for **organism** and **template** components when viewport-aware JavaScript can change the rendered HTML. This includes:
+
+- **Direct** `useIsMobile` usage in the component (or `useFeedLayoutResolution`, which uses `useIsMobile` internally).
+- **Indirect** usage: the component renders a child (molecule or organism) that calls `useIsMobile` — e.g. `ProfilePageHeader` → `StatusPickerWrapper`, `PostHeader` → `PostHeaderTimestamp`, `ClickableTagsList` → `PostTagPopoverWrapper`.
+
+Do not add mobile snapshots for components whose responsive behaviour is CSS-only (`lg:hidden`, etc.) — those produce identical HTML to desktop and add noise without coverage value.
 
 Atoms and molecules do not require mobile snapshots.
 
@@ -97,6 +102,16 @@ The mobile viewport is **390×844** (iPhone 12 Pro), matching `cypress/cypress.c
 Call `setMobileViewport()` in `beforeEach` **before** rendering, and `resetViewport()` in `afterEach` so later tests in the file are not left on a mobile-sized window.
 
 If the test file mocks `useIsMobile`, also set the mock to return `true` in the mobile `beforeEach`. Resizing the window alone has no effect when the hook is stubbed — the mobile snapshot would otherwise match desktop and miss JS-driven layout branches (e.g. `Sheet` instead of `Popover`).
+
+If the test file mocks `useFeedLayoutResolution`, set `isPhoneViewport: true` in the mobile `beforeEach` alongside `setMobileViewport()`.
+
+#### Indirect `useIsMobile` via children
+
+When an organism or template renders a child that calls `useIsMobile`, it needs mobile snapshot coverage even if the parent never imports the hook.
+
+**Do not stub those children in snapshot tests.** A passthrough mock (e.g. `PostTagPopoverWrapper: ({ children }) => children`) hides the mobile/desktop branch. Use the real child implementation in snapshot tests, or `vi.importActual` for that module, and mock only its non-viewport dependencies (data hooks, router, etc.).
+
+If the child calls `useIsMobile` and the test file does not mock the hook at the parent level, `setMobileViewport()` drives the real hook inside the child. If the hook is mocked anywhere in the file, set `mockReturnValue(true)` in the mobile `beforeEach` so the child receives the mobile branch too.
 
 ```typescript
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -126,15 +141,13 @@ describe('PostMenuActions - Mobile Snapshots', () => {
 });
 ```
 
-When `useIsMobile` is **not** mocked, `setMobileViewport()` is enough — the real hook reads `window.innerWidth` on mount.
-
 **Replicate mock setup from the desktop snapshot describe.** If the `ComponentName - Snapshots` block has a `beforeEach` that resets hooks, stores, or module-level mock state, copy that setup into the mobile `beforeEach` before `mockUseIsMobile.mockReturnValue(true)` and `setMobileViewport()`. A mobile snapshot test must use the same render call (component, props, wrappers, or in-file render helpers) as the first desktop snapshot test.
 
 **Nested describe blocks.** If the desktop snapshot describe is nested inside a parent `describe` whose `beforeEach` sets up mocks (e.g. `usePostNavigation`), the mobile describe may sit outside that parent — in that case, include those mock setups explicitly in the mobile `beforeEach`.
 
 #### Coverage
 
-Add **one** mobile snapshot per `useIsMobile` component, mirroring the first (simplest) desktop snapshot. Do not duplicate every desktop variant on mobile.
+Add **one** mobile snapshot per covered component, mirroring the first (simplest) desktop snapshot. Do not duplicate every desktop variant on mobile.
 
 When the hook is unmocked, `setMobileViewport()` drives the real `useIsMobile` implementation. When the test file mocks `useIsMobile`, also call `mockReturnValue(true)` in the mobile `beforeEach` — resizing the window alone has no effect on a stubbed hook.
 
@@ -287,7 +300,7 @@ npx vitest run -t "Mobile Snapshots" # Only mobile snapshot tests
 
 1. Run tests after creating new test files
 2. When adding new snapshot tests, update snapshots with `-u`
-3. New organism or template components that use `useIsMobile`: add both desktop (`ComponentName - Snapshots`) and mobile (`ComponentName - Mobile Snapshots`) snapshot coverage
+3. New organism or template components that use `useIsMobile` directly or indirectly (see [Mobile Snapshot Tests](#mobile-snapshot-tests)): add both desktop (`ComponentName - Snapshots`) and mobile (`ComponentName - Mobile Snapshots`) snapshot coverage
 4. Verify all tests pass before committing
 5. Review generated snapshot files to ensure they capture expected output
 
@@ -338,4 +351,4 @@ describe('Button - Snapshots', () => {
 });
 ```
 
-`Button` is an atom — desktop snapshots only. Organisms and templates that call `useIsMobile` additionally require a `ComponentName - Mobile Snapshots` block; see [Mobile Snapshot Tests](#mobile-snapshot-tests).
+`Button` is an atom — desktop snapshots only. Organisms and templates with direct or indirect `useIsMobile` (or `useFeedLayoutResolution`) additionally require a `ComponentName - Mobile Snapshots` block; see [Mobile Snapshot Tests](#mobile-snapshot-tests).

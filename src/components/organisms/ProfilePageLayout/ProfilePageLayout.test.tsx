@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ProfilePageLayout } from './ProfilePageLayout';
 import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 
@@ -527,5 +528,22 @@ describe('ProfilePageLayout', () => {
 
       expect(actionsKeys).toContain('onAvatarClick');
     });
+  });
+});
+
+describe('ProfilePageLayout - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsMobile.mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<ProfilePageLayout {...defaultProps} />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

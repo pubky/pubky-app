@@ -29,3 +29,13 @@ exports[`ProfilePageLayout > matches snapshot with different active pages 1`] = 
   Mobile Header
 </div>
 `;
+
+exports[`ProfilePageLayout - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-left="false"
+  data-right="false"
+  data-testid="mobile-header"
+>
+  Mobile Header
+</div>
+`;

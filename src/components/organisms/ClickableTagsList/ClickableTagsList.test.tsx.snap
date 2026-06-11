@@ -175,3 +175,39 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with tags and count 1`
   </div>
 </div>
 `;
+
+exports[`ClickableTagsList - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div>
+  <div
+    class="flex flex-col gap-1"
+    data-testid="container"
+  >
+    <div
+      class="flex flex-wrap items-center gap-2"
+      data-testid="container"
+    >
+      <button
+        data-count="5"
+        data-selected="true"
+        data-testid="post-tag-bitcoin"
+      >
+        bitcoin
+      </button>
+      <button
+        data-count="3"
+        data-selected="false"
+        data-testid="post-tag-ethereum"
+      >
+        ethereum
+      </button>
+      <button
+        data-count="10"
+        data-selected="false"
+        data-testid="post-tag-web3"
+      >
+        web3
+      </button>
+    </div>
+  </div>
+</div>
+`;

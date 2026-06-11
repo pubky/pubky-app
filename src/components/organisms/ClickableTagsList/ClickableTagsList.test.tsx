@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ClickableTagsList } from './ClickableTagsList';
 
 // Mock hooks
@@ -99,6 +100,38 @@ vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
   })),
 }));
 
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: () => mockUseIsMobile(),
+}));
+
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: () => false,
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
+  usePostTaggers: () => ({
+    taggersByLabel: new Map(),
+    taggerStates: new Map(),
+    fetchAllTaggers: vi.fn(),
+  }),
+}));
+
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
+  AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
+}));
+
+vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => ({
+  UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="user-info-popover">{children}</div>
+  ),
+}));
+
 // Mock atoms
 vi.mock('@/atoms/Container/Container', () => {
   return {
@@ -154,10 +187,9 @@ vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
   };
 });
 
-vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', () => {
-  return {
-    PostTagPopoverWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  };
+vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper')>();
+  return actual;
 });
 
 vi.mock('@/molecules/TagInput/TagInput', () => {
@@ -730,5 +762,32 @@ describe('ClickableTagsList', () => {
 
       expect(container).toMatchSnapshot();
     });
+  });
+});
+
+const snapshotTags: NexusTag[] = [
+  { label: 'bitcoin', taggers_count: 5, taggers: ['user1', 'user2'], relationship: true },
+  { label: 'ethereum', taggers_count: 3, taggers: ['user3'], relationship: false },
+  { label: 'web3', taggers_count: 10, taggers: [], relationship: false },
+];
+
+describe('ClickableTagsList - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsAuthenticated = true;
+    mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+    useAuthStore.setState({ setShowSignInDialog: vi.fn() });
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={snapshotTags} showCount={true} />,
+    );
+    expect(container).toMatchSnapshot();
   });
 });

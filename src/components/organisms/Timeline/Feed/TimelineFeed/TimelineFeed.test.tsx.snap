@@ -1,5 +1,44 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`TimelineFeed - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div>
+  <div
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    data-testid="container"
+  >
+    <div
+      data-testid="timeline-posts"
+    >
+      <span
+        data-testid="post-count"
+      >
+        3
+      </span>
+      <span
+        data-testid="loading"
+      >
+        false
+      </span>
+      <span
+        data-testid="loading-more"
+      >
+        false
+      </span>
+      <span
+        data-testid="error"
+      >
+        none
+      </span>
+      <span
+        data-testid="has-more"
+      >
+        true
+      </span>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`TimelineFeed - Snapshots > should match snapshot for bookmarks variant 1`] = `
 <div>
   <div
