@@ -23,9 +23,9 @@ interface TimelineGridPostsProps {
   loadMore: () => Promise<void>;
   /**
    * Whether to render the "You've reached the end" message once the grid is fully
-   * loaded. Defaults to `true`. The single-collection view sets this to `false`
-   * because the end-of-feed celebration reads as out of place when the items grid
-   * is immediately followed by the collections sections.
+   * loaded. Defaults to `true`. Collection and bookmarks grids set this to
+   * `false` because the end-of-feed celebration reads as out of place in these
+   * finite, library-style surfaces.
    */
   showEndMessage?: boolean;
   /**

@@ -34,6 +34,7 @@ export function TimelineFeed({ variant, children, emptyState }: TimelineFeedProp
     case TIMELINE_FEED_VARIANT.CUSTOM:
       return <CustomTimelineFeed>{children}</CustomTimelineFeed>;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
+      // Bookmarks owns a custom stream-driven empty state; other variants use the shared default.
       return <BookmarksTimelineFeed emptyState={emptyState}>{children}</BookmarksTimelineFeed>;
     case TIMELINE_FEED_VARIANT.PROFILE:
       return <ProfileTimelineFeed>{children}</ProfileTimelineFeed>;

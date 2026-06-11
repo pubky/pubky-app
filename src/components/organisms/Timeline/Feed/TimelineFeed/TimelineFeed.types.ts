@@ -10,6 +10,7 @@ export interface TimelineFeedProps {
    * - 'profile': Uses author stream from ProfileContext
    * - 'hot': Uses engagement sorting with reach from hot store
    * - 'search': Uses tags from URL query params with sort/content filters
+   * - 'collection': Uses a single collection's item stream from route params
    */
   variant: TimelineFeedVariant;
   /**
@@ -18,10 +19,9 @@ export interface TimelineFeedProps {
    */
   children?: ReactNode;
   /**
-   * Optional custom empty state, rendered (in place of the default "no posts"
-   * message) when the resolved stream has no items. Lets a surface keep its own
-   * empty UI while the emptiness is still driven by the stream itself — so it
-   * can't diverge from what the grid actually renders.
+   * Optional custom empty state for feed variants that forward one. Currently
+   * used by bookmarks to replace the default "No posts found" copy while keeping
+   * emptiness driven by the resolved bookmarks stream.
    */
   emptyState?: ReactNode;
 }
@@ -33,7 +33,7 @@ export interface TimelineFeedContextValue {
    * removing a no-longer-bookmarked post from the grid only on the bookmarks
    * feed.
    */
-  variant?: TimelineFeedVariant;
+  variant: TimelineFeedVariant;
   /**
    * Add post(s) to the timeline, sorted by timestamp
    * @param postIds - A single post ID or array of post IDs to add
