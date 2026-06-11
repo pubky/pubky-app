@@ -1,6 +1,6 @@
 'use client';
 
-import { type KeyboardEvent, type ReactNode, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useState } from 'react';
 import { Bookmark, Check, Library, Loader2, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
@@ -174,7 +174,7 @@ function SavePickerContent({
         dataCy="post-save-bookmarks-option"
         onActivate={() => void toggleBookmark()}
       >
-        {isBookmarkBusy ? <Loader2 className="size-4 animate-spin" /> : <Bookmark className="size-4" />}
+        <Bookmark className="size-4" />
         <Typography
           as="span"
           overrideDefaults
@@ -242,9 +242,25 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const isMobile = useIsMobile();
   const { requireAuth } = useRequireAuth();
   const feed = useTimelineFeedContext();
+  const feedVariant = feed?.variant;
+  const removePosts = feed?.removePosts;
   const [open, setOpen] = useState(false);
   const saveTargets = usePostSaveTargets(postId);
   const isBookmarkBusy = saveTargets.isBookmarkLoading || saveTargets.isBookmarkToggling;
+  const isBookmarkResolved = !saveTargets.isBookmarkLoading && !saveTargets.isBookmarkToggling;
+  const shouldRemoveFromBookmarksFeed =
+    feedVariant === TIMELINE_FEED_VARIANT.BOOKMARKS && !open && isBookmarkResolved && !saveTargets.isBookmarked;
+
+  // Closing the picker commits the save session. On the bookmarks feed, a post
+  // that is no longer bookmarked should leave the grid so the visible list
+  // matches the live bookmark count. While the picker stays open, the user can
+  // freely toggle targets without the card shifting under them. Waiting for the
+  // resolved bookmark state also covers closing while an unbookmark is in flight.
+  useEffect(() => {
+    if (!shouldRemoveFromBookmarksFeed || !removePosts) return;
+    removePosts(postId);
+  }, [postId, removePosts, shouldRemoveFromBookmarksFeed]);
+
   const trigger = (
     <Button
       variant="secondary"
@@ -262,18 +278,6 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setOpen(false);
-      // Closing the picker commits the save session. On the bookmarks feed, a
-      // post that is no longer bookmarked should leave the grid so the visible
-      // list matches the (live) bookmark count. While the picker stays open the
-      // user can freely toggle targets without the card shifting under them.
-      //
-      // Only act once the bookmark state is resolved: `useBookmark` seeds
-      // `isBookmarked = false` and flips it after `exists()` resolves, so a fast
-      // open/close before that would otherwise drop a still-bookmarked card.
-      const isBookmarkResolved = !saveTargets.isBookmarkLoading && !saveTargets.isBookmarkToggling;
-      if (feed?.variant === TIMELINE_FEED_VARIANT.BOOKMARKS && isBookmarkResolved && !saveTargets.isBookmarked) {
-        feed.removePosts(postId);
-      }
       return;
     }
 

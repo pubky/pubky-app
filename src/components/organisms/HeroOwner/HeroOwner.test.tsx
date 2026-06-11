@@ -31,7 +31,9 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
 
 describe('HeroOwner', () => {
   it('renders the avatar and the name once the profile resolves', () => {
-    render(<HeroOwner name="Alice" fallbackSeed="alice-pubky" avatarUrl="https://example.com/a.png" isResolved />);
+    render(
+      <HeroOwner name="Alice" fallbackSeed="alice-pubky" avatarUrl="https://example.com/a.png" isResolved size="sm" />,
+    );
 
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Alice');
@@ -42,15 +44,15 @@ describe('HeroOwner', () => {
   });
 
   it('renders a skeleton in place of the name while the profile is unresolved', () => {
-    render(<HeroOwner name="Alice" fallbackSeed="alice-pubky" isResolved={false} />);
+    render(<HeroOwner name="Alice" fallbackSeed="alice-pubky" isResolved={false} size="sm" />);
 
     // The avatar still renders, but the name text must not appear yet.
     expect(screen.getByTestId('avatar-with-fallback')).toBeInTheDocument();
     expect(screen.queryByText('Alice', { selector: 'span' })).not.toBeInTheDocument();
   });
 
-  it('defaults the avatar size to "sm" and lets callers override it', () => {
-    const { rerender } = render(<HeroOwner name="Alice" fallbackSeed="alice-pubky" isResolved />);
+  it('passes the caller-provided avatar size through', () => {
+    const { rerender } = render(<HeroOwner name="Alice" fallbackSeed="alice-pubky" isResolved size="sm" />);
     expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-size', 'sm');
 
     rerender(<HeroOwner name="Alice" fallbackSeed="alice-pubky" isResolved size="md" />);
@@ -58,7 +60,9 @@ describe('HeroOwner', () => {
   });
 
   it('merges a caller-provided gap class onto the row container', () => {
-    const { container } = render(<HeroOwner name="Alice" fallbackSeed="alice-pubky" isResolved className="gap-2" />);
+    const { container } = render(
+      <HeroOwner name="Alice" fallbackSeed="alice-pubky" isResolved size="sm" className="gap-2" />,
+    );
 
     expect(container.firstChild).toHaveClass('gap-2');
     expect(container.firstChild).not.toHaveClass('gap-3');

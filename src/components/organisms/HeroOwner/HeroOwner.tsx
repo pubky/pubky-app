@@ -17,7 +17,7 @@ interface HeroOwnerProps {
    * default or the raw pubky) before the profile loads.
    */
   isResolved: boolean;
-  size?: AvatarSize;
+  size: AvatarSize;
   className?: string;
 }
 
@@ -29,7 +29,7 @@ interface HeroOwnerProps {
  * heroes so they can't drift. Callers tune the avatar `size` and the row `gap`
  * (via `className`) to match their layout.
  */
-export function HeroOwner({ name, fallbackSeed, avatarUrl, isResolved, size = 'sm', className }: HeroOwnerProps) {
+export function HeroOwner({ name, fallbackSeed, avatarUrl, isResolved, size, className }: HeroOwnerProps) {
   return (
     <Container overrideDefaults className={cn('flex min-w-0 items-center gap-3', className)}>
       <AvatarWithFallback avatarUrl={avatarUrl} name={name} fallbackSeed={fallbackSeed} size={size} alt={name} />
