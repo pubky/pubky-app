@@ -6,6 +6,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn } from '@/libs/utils/utils';
 import { PostMenuActions } from '../PostMenuActions/PostMenuActions';
@@ -44,6 +45,7 @@ export function PostActionsBar({
   variant = 'default',
 }: PostActionsBarProps) {
   const { postCounts, isLoading: isCountsLoading } = usePostCounts(postId);
+  const { postDetails } = usePostDetails(postId);
   const { requireAuth } = useRequireAuth();
   const buttonClassName = postActionsButtonVariants({
     variant,
@@ -60,6 +62,7 @@ export function PostActionsBar({
     className: buttonClassName,
   };
   const tagCount = postCounts.unique_tags ?? 0;
+  const isCollection = postDetails?.kind === 'collection';
   const actionButtons: ActionButtonConfig[] = [
     {
       id: 'tag',
@@ -110,7 +113,7 @@ export function PostActionsBar({
           </Button>
         ),
       )}
-      <PostSavePicker postId={postId} buttonClassName={buttonClassName} />
+      {!isCollection && <PostSavePicker postId={postId} buttonClassName={buttonClassName} />}
       <PostMenuActions postId={postId} trigger={moreButton} />
     </Container>
   );

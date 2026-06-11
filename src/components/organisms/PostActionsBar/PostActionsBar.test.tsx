@@ -4,10 +4,15 @@ import { PostActionsBar } from './PostActionsBar';
 
 // Mock hooks
 const mockUsePostCounts = vi.fn();
+const mockUsePostDetails = vi.fn();
 const mockUseBookmark = vi.fn();
 
 vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
   usePostCounts: (postId: string) => mockUsePostCounts(postId),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: (postId: string) => mockUsePostDetails(postId),
 }));
 
 vi.mock('@/hooks/useBookmark/useBookmark', () => ({
@@ -123,6 +128,10 @@ describe('PostActionsBar', () => {
       isToggling: false,
       toggle: vi.fn(),
     });
+    mockUsePostDetails.mockReturnValue({
+      postDetails: { kind: 'short' },
+      isLoading: false,
+    });
   });
 
   it('shows skeleton loading state while counts are not available', () => {
@@ -185,6 +194,23 @@ describe('PostActionsBar', () => {
     expect(screen.getByTestId('post-save-picker')).toHaveAttribute('data-post-id', 'post-bookmark');
   });
 
+  it('hides the save picker for collection posts', () => {
+    mockUsePostCounts.mockReturnValue({
+      postCounts: { tags: 1, unique_tags: 1, replies: 1, reposts: 1 },
+      isLoading: false,
+    });
+    mockUsePostDetails.mockReturnValue({
+      postDetails: { kind: 'collection' },
+      isLoading: false,
+    });
+
+    render(<PostActionsBar postId="collection-author:collection-post" />);
+
+    expect(screen.queryByTestId('post-save-picker')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tag post (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More options' })).toBeInTheDocument();
+  });
+
   it('applies the visual variant classes to the action buttons', () => {
     mockUsePostCounts.mockReturnValue({
       postCounts: { tags: 2, unique_tags: 2, replies: 3, reposts: 4 },
@@ -209,6 +235,10 @@ describe('PostActionsBar - Snapshots', () => {
       isLoading: false,
       isToggling: false,
       toggle: vi.fn(),
+    });
+    mockUsePostDetails.mockReturnValue({
+      postDetails: { kind: 'short' },
+      isLoading: false,
     });
   });
 

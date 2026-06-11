@@ -1085,7 +1085,8 @@
       "images": "Bilder",
       "videos": "Videos",
       "links": "Links",
-      "files": "Dateien"
+      "files": "Dateien",
+      "collections": "Sammlungen"
     },
     "timeframe": {
       "title": "Zeitraum",

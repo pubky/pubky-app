@@ -9,7 +9,7 @@ import { CONTENT, type ContentType, SORT, type SortType } from '@/stores/home/ho
  * This hook reads the current filter state from useHomeStore and returns the corresponding
  * bookmarks stream ID based on:
  * - Sort: timeline (recent) or total_engagement (popularity)
- * - Content: all, short, long, image, video, link, file
+ * - Content: all, short, long, collection, image, video, link, file
  *
  * Note: Reach filter (all/following/friends) is not supported for bookmarks.
  *
@@ -46,6 +46,7 @@ export function useBookmarksStreamId(contentOverride?: ContentType): PostStreamT
         [CONTENT.VIDEOS]: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO,
         [CONTENT.LINKS]: PostStreamTypes.TIMELINE_BOOKMARKS_LINK,
         [CONTENT.FILES]: PostStreamTypes.TIMELINE_BOOKMARKS_FILE,
+        [CONTENT.COLLECTIONS]: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION,
       },
       [SORT.ENGAGEMENT]: {
         [CONTENT.ALL]: PostStreamTypes.POPULARITY_BOOKMARKS_ALL,
@@ -55,6 +56,7 @@ export function useBookmarksStreamId(contentOverride?: ContentType): PostStreamT
         [CONTENT.VIDEOS]: PostStreamTypes.POPULARITY_BOOKMARKS_VIDEO,
         [CONTENT.LINKS]: PostStreamTypes.POPULARITY_BOOKMARKS_LINK,
         [CONTENT.FILES]: PostStreamTypes.POPULARITY_BOOKMARKS_FILE,
+        [CONTENT.COLLECTIONS]: PostStreamTypes.POPULARITY_BOOKMARKS_COLLECTION,
       },
     };
 

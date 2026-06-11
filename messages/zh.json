@@ -1079,7 +1079,8 @@
       "images": "图片",
       "videos": "视频",
       "links": "链接",
-      "files": "文件"
+      "files": "文件",
+      "collections": "收藏集"
     },
     "timeframe": {
       "title": "时间范围",

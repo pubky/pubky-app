@@ -12,7 +12,11 @@ import { PostRelationshipsModel } from '@/models/post/relationships/postRelation
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import {
+  buildAuthorCollectionsStreamId,
+  type PostStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
@@ -853,6 +857,31 @@ describe('LocalPostService', () => {
         // Should also be in 'all' kind streams
         const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
         expect(timelineAllAll?.stream).toContain(postId);
+      });
+
+      it('should add collection posts to collection streams but not all-content streams', async () => {
+        const postId = testData.fullPostId1;
+        await setupUserCounts(testData.authorPubky);
+
+        await LocalPostService.create(createSaveParams('Collection content', undefined, PubkyAppPostKind.Collection));
+
+        const authorCollections = await PostStreamModel.table.get(buildAuthorCollectionsStreamId(testData.authorPubky));
+        const timelineAllCollection = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_COLLECTION);
+        const timelineFollowingCollection = await PostStreamModel.table.get(
+          PostStreamTypes.TIMELINE_FOLLOWING_COLLECTION,
+        );
+        const timelineFriendsCollection = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FRIENDS_COLLECTION);
+        const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
+        const timelineFollowingAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FOLLOWING_ALL);
+        const timelineFriendsAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FRIENDS_ALL);
+
+        expect(authorCollections?.stream).toContain(postId);
+        expect(timelineAllCollection?.stream).toContain(postId);
+        expect(timelineFollowingCollection?.stream).toContain(postId);
+        expect(timelineFriendsCollection?.stream).toContain(postId);
+        expect(timelineAllAll?.stream ?? []).not.toContain(postId);
+        expect(timelineFollowingAll?.stream ?? []).not.toContain(postId);
+        expect(timelineFriendsAll?.stream ?? []).not.toContain(postId);
       });
 
       it('should add reply to author_replies and post_replies streams only', async () => {

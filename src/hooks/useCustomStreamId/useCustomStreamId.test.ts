@@ -239,6 +239,21 @@ describe('useCustomStreamId', () => {
     expect(result.current).toBe('timeline:all:file:docs');
   });
 
+  it('handles Collection content mapping correctly', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({
+        reach: PubkyAppFeedReach.All,
+        sort: PubkyAppFeedSort.Recent,
+        content: PubkyAppPostKind.Collection,
+        tags: ['curated'],
+      }),
+    );
+
+    const { result } = renderHook(() => useCustomStreamId());
+
+    expect(result.current).toBe('timeline:all:collection:curated');
+  });
+
   // ============================================================================
   // Combined filter variations
   // ============================================================================

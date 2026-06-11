@@ -69,6 +69,14 @@ describe('useBookmarksStreamId', () => {
       const { result } = renderHook(() => useBookmarksStreamId());
       expect(result.current).toBe(PostStreamTypes.TIMELINE_BOOKMARKS_FILE);
     });
+
+    it('should return TIMELINE_BOOKMARKS_COLLECTION for collections content', () => {
+      act(() => {
+        useHomeStore.setState({ content: CONTENT.COLLECTIONS });
+      });
+      const { result } = renderHook(() => useBookmarksStreamId());
+      expect(result.current).toBe(PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION);
+    });
   });
 
   describe('with ENGAGEMENT sort', () => {
@@ -129,6 +137,14 @@ describe('useBookmarksStreamId', () => {
       });
       const { result } = renderHook(() => useBookmarksStreamId());
       expect(result.current).toBe(PostStreamTypes.POPULARITY_BOOKMARKS_FILE);
+    });
+
+    it('should return POPULARITY_BOOKMARKS_COLLECTION for collections content', () => {
+      act(() => {
+        useHomeStore.setState({ content: CONTENT.COLLECTIONS });
+      });
+      const { result } = renderHook(() => useBookmarksStreamId());
+      expect(result.current).toBe(PostStreamTypes.POPULARITY_BOOKMARKS_COLLECTION);
     });
   });
 

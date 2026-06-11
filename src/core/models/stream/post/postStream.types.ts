@@ -24,6 +24,7 @@ export enum PostStreamTypes {
   TIMELINE_ALL_VIDEO = 'timeline:all:video',
   TIMELINE_ALL_LINK = 'timeline:all:link',
   TIMELINE_ALL_FILE = 'timeline:all:file',
+  TIMELINE_ALL_COLLECTION = 'timeline:all:collection',
 
   // ============================================
   // TIMELINE (Recent) - FOLLOWING Source
@@ -35,6 +36,7 @@ export enum PostStreamTypes {
   TIMELINE_FOLLOWING_VIDEO = 'timeline:following:video',
   TIMELINE_FOLLOWING_LINK = 'timeline:following:link',
   TIMELINE_FOLLOWING_FILE = 'timeline:following:file',
+  TIMELINE_FOLLOWING_COLLECTION = 'timeline:following:collection',
 
   // ============================================
   // TIMELINE (Recent) - FRIENDS Source
@@ -46,6 +48,7 @@ export enum PostStreamTypes {
   TIMELINE_FRIENDS_VIDEO = 'timeline:friends:video',
   TIMELINE_FRIENDS_LINK = 'timeline:friends:link',
   TIMELINE_FRIENDS_FILE = 'timeline:friends:file',
+  TIMELINE_FRIENDS_COLLECTION = 'timeline:friends:collection',
 
   // ============================================
   // TIMELINE (Recent) - BOOKMARKS ALL Source
@@ -57,6 +60,7 @@ export enum PostStreamTypes {
   TIMELINE_BOOKMARKS_VIDEO = 'timeline:bookmarks:video',
   TIMELINE_BOOKMARKS_LINK = 'timeline:bookmarks:link',
   TIMELINE_BOOKMARKS_FILE = 'timeline:bookmarks:file',
+  TIMELINE_BOOKMARKS_COLLECTION = 'timeline:bookmarks:collection',
 
   // ============================================
   // POPULARITY (Total Engagement) - BOOKMARKS Source
@@ -68,6 +72,7 @@ export enum PostStreamTypes {
   POPULARITY_BOOKMARKS_VIDEO = 'total_engagement:bookmarks:video',
   POPULARITY_BOOKMARKS_LINK = 'total_engagement:bookmarks:link',
   POPULARITY_BOOKMARKS_FILE = 'total_engagement:bookmarks:file',
+  POPULARITY_BOOKMARKS_COLLECTION = 'total_engagement:bookmarks:collection',
 
   // ============================================
   // POPULARITY (Total Engagement) - ALL Sources
@@ -79,6 +84,7 @@ export enum PostStreamTypes {
   POPULARITY_ALL_VIDEO = 'total_engagement:all:video',
   POPULARITY_ALL_LINK = 'total_engagement:all:link',
   POPULARITY_ALL_FILE = 'total_engagement:all:file',
+  POPULARITY_ALL_COLLECTION = 'total_engagement:all:collection',
 
   // ============================================
   // POPULARITY (Total Engagement) - FOLLOWING Source
@@ -90,6 +96,7 @@ export enum PostStreamTypes {
   POPULARITY_FOLLOWING_VIDEO = 'total_engagement:following:video',
   POPULARITY_FOLLOWING_LINK = 'total_engagement:following:link',
   POPULARITY_FOLLOWING_FILE = 'total_engagement:following:file',
+  POPULARITY_FOLLOWING_COLLECTION = 'total_engagement:following:collection',
 
   // ============================================
   // POPULARITY (Total Engagement) - FRIENDS Source
@@ -101,6 +108,7 @@ export enum PostStreamTypes {
   POPULARITY_FRIENDS_VIDEO = 'total_engagement:friends:video',
   POPULARITY_FRIENDS_LINK = 'total_engagement:friends:link',
   POPULARITY_FRIENDS_FILE = 'total_engagement:friends:file',
+  POPULARITY_FRIENDS_COLLECTION = 'total_engagement:friends:collection',
 }
 
 export type ReplyStreamCompositeId = `${StreamSource.REPLIES}:${string}`;

@@ -161,6 +161,17 @@ describe('PostStreamApplication', () => {
     });
   };
 
+  const createPostDetailWithKind = async (postId: string, kind: 'short' | 'long' | 'collection') => {
+    await PostDetailsModel.create({
+      id: postId,
+      content: `Content for ${postId}`,
+      kind,
+      indexed_at: BASE_TIMESTAMP,
+      uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${postId}`,
+      attachments: null,
+    });
+  };
+
   const createStreamWithPosts = async (postIds: string[]) => {
     await PostStreamModel.create(streamId, postIds);
   };
@@ -207,6 +218,48 @@ describe('PostStreamApplication', () => {
   // ============================================================================
   // Tests
   // ============================================================================
+
+  describe('filterStreamPosts', () => {
+    it('excludes collection-kind posts from all content streams', async () => {
+      const shortPostId = `${DEFAULT_AUTHOR}:short-post`;
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      const longPostId = `${DEFAULT_AUTHOR}:long-post`;
+
+      await createPostDetailWithKind(shortPostId, 'short');
+      await createPostDetailWithKind(collectionPostId, 'collection');
+      await createPostDetailWithKind(longPostId, 'long');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
+        postIds: [shortPostId, collectionPostId, longPostId],
+      });
+
+      expect(result).toEqual([shortPostId, longPostId]);
+    });
+
+    it('keeps collection-kind posts in collection content streams', async () => {
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION,
+        postIds: [collectionPostId],
+      });
+
+      expect(result).toEqual([collectionPostId]);
+    });
+
+    it('keeps posts without cached details so cache misses can be resolved', async () => {
+      const missingPostId = `${DEFAULT_AUTHOR}:missing-post`;
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
+        postIds: [missingPostId],
+      });
+
+      expect(result).toEqual([missingPostId]);
+    });
+  });
 
   describe('getOrFetchStreamSlice', () => {
     it('should return posts from cache when available (no cursor)', async () => {

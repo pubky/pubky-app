@@ -1085,7 +1085,8 @@
       "images": "画像",
       "videos": "動画",
       "links": "リンク",
-      "files": "ファイル"
+      "files": "ファイル",
+      "collections": "コレクション"
     },
     "timeframe": {
       "title": "期間",

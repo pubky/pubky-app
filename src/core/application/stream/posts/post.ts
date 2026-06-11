@@ -20,7 +20,7 @@ import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
-import { isSkipPaginatedStream } from '@/models/stream/post/postStream.types';
+import { isSkipPaginatedStream, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
@@ -32,7 +32,7 @@ import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
-import { StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import { StreamKind, StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { breakDownStreamId, createPostStreamParams } from '@/services/nexus/stream/posts/postStream.utils';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { MuteFilter } from './muting/mute-filter';
@@ -112,6 +112,17 @@ export class PostStreamApplication {
    */
   static async filterDeletedPosts(postIds: string[]): Promise<string[]> {
     return LocalPostService.filterDeletedPosts(postIds);
+  }
+
+  static async filterStreamPosts({
+    streamId,
+    postIds,
+  }: {
+    streamId: PostStreamId;
+    postIds: string[];
+  }): Promise<string[]> {
+    const notDeletedPostIds = await LocalPostService.filterDeletedPosts(postIds);
+    return await this.filterCollectionsFromAllStream({ streamId, postIds: notDeletedPostIds });
   }
 
   /**
@@ -244,7 +255,7 @@ export class PostStreamApplication {
       filter: async (posts) => {
         // First filter muted users (sync), then filter deleted posts (async)
         const afterMuteFilter = MuteFilter.filterPosts(posts, mutedUserIds);
-        return LocalPostService.filterDeletedPosts(afterMuteFilter);
+        return PostStreamApplication.filterStreamPosts({ streamId, postIds: afterMuteFilter });
       },
       fetch: async (cursor) => {
         // Continue reading from cache using lastReturnedPostId to track position
@@ -539,6 +550,26 @@ export class PostStreamApplication {
   // Delegate to service for cache miss detection
   private static async getNotPersistedPostsInCache(postIds: string[]): Promise<string[]> {
     return LocalStreamPostsService.getNotPersistedPostsInCache(postIds);
+  }
+
+  private static async filterCollectionsFromAllStream({
+    streamId,
+    postIds,
+  }: {
+    streamId: PostStreamId;
+    postIds: string[];
+  }): Promise<string[]> {
+    if (!this.shouldExcludeCollectionsFromAllStream(streamId) || postIds.length === 0) {
+      return postIds;
+    }
+
+    const postDetails = await LocalPostService.readDetailsByIds(postIds);
+    return postIds.filter((_postId, index) => postDetails[index]?.kind !== StreamKind.COLLECTION);
+  }
+
+  private static shouldExcludeCollectionsFromAllStream(streamId: PostStreamId): boolean {
+    const [, , kind] = breakDownStreamId(streamId);
+    return kind === 'all';
   }
 
   /**

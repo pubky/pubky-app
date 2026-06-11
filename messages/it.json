@@ -1085,7 +1085,8 @@
       "images": "Immagini",
       "videos": "Video",
       "links": "Link",
-      "files": "File"
+      "files": "File",
+      "collections": "Collezioni"
     },
     "timeframe": {
       "title": "Periodo",

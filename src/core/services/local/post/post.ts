@@ -430,7 +430,13 @@ export class LocalPostService {
       ops.push(updateStream(`post_replies:${parentCompositeId}`, [compositePostId]));
     } else if (kind === 'collection') {
       ops.push(updateStream(buildAuthorCollectionsStreamId(authorId), [compositePostId]));
+      ops.push(updateStream(PostStreamTypes.TIMELINE_ALL_COLLECTION, [compositePostId]));
+      ops.push(updateStream(PostStreamTypes.TIMELINE_FOLLOWING_COLLECTION, [compositePostId]));
+      ops.push(updateStream(PostStreamTypes.TIMELINE_FRIENDS_COLLECTION, [compositePostId]));
       ops.push(removeFromUnreadStream(buildAuthorCollectionsStreamId(authorId), [compositePostId]));
+      ops.push(removeFromUnreadStream(PostStreamTypes.TIMELINE_ALL_COLLECTION, [compositePostId]));
+      ops.push(removeFromUnreadStream(PostStreamTypes.TIMELINE_FOLLOWING_COLLECTION, [compositePostId]));
+      ops.push(removeFromUnreadStream(PostStreamTypes.TIMELINE_FRIENDS_COLLECTION, [compositePostId]));
     } else {
       ops.push(updateStream(PostStreamTypes.TIMELINE_ALL_ALL, [compositePostId]));
       ops.push(updateStream(`timeline:all:${kind}` as PostStreamId, [compositePostId]));

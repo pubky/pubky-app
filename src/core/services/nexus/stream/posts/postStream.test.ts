@@ -388,6 +388,7 @@ describe('createPostStreamParams', () => {
       { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO, kind: StreamKind.VIDEO, name: 'video' },
       { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LINK, kind: StreamKind.LINK, name: 'link' },
       { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_FILE, kind: StreamKind.FILE, name: 'file' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION, kind: StreamKind.COLLECTION, name: 'collection' },
     ])('should handle timeline:bookmarks:$name stream', ({ streamType, kind }) => {
       const result = createPostStreamParams({
         streamId: streamType,
