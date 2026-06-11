@@ -413,8 +413,8 @@ describe('PublicKeyCard', () => {
     expect(mockShareWithFallback).toHaveBeenCalled();
     expect(mockCopyToClipboard).toHaveBeenCalledWith(mockPubky);
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Sharing unavailable',
-      description: 'We copied your pubky so you can paste it into your favorite app.',
+      variant: 'warning',
+      title: 'Sharing unavailable, pubky copied',
     });
   });
 
@@ -435,8 +435,8 @@ describe('PublicKeyCard', () => {
 
     expect(mockShareWithFallback).toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Share failed',
-      description: 'Unable to share right now. Please try again.',
+      variant: 'error',
+      description: 'Could not share. Try again.',
     });
   });
 

@@ -65,8 +65,8 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
   };
 
-  const handleFollowClick = async (userId: string, isFollowing: boolean) => {
-    await toggleFollow(userId, isFollowing);
+  const handleFollowClick = async (userId: string, isFollowing: boolean, displayName: string) => {
+    await toggleFollow(userId, isFollowing, displayName);
   };
 
   if (isLoading && participants.length === 0) {

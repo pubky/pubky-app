@@ -381,8 +381,8 @@ describe('PostAttachments', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
-          description: 'Failed to load post attachments',
+          variant: 'error',
+          description: 'Could not load attachments',
         });
       });
     });

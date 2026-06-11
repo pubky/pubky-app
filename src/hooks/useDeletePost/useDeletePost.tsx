@@ -32,7 +32,6 @@ import type { UseDeletePostResult } from './useDeletePost.types';
 export function useDeletePost(): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
-  const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
   const timelineFeed = useTimelineFeedContext();
 
@@ -45,9 +44,8 @@ export function useDeletePost(): UseDeletePostResult {
     if (!postId || !postId.trim()) {
       Logger.error('[useDeletePost] Invalid post ID provided', { postId });
       toast({
-        title: tToast('error'),
+        variant: 'error',
         description: tPost('invalidPostId'),
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
       return;
     }
@@ -62,7 +60,6 @@ export function useDeletePost(): UseDeletePostResult {
       Logger.info('[useDeletePost] Post deleted successfully', { postId });
       toast({
         title: tPost('postDeleted'),
-        description: tPost('postDeletedDesc'),
         dismissButton: true,
       });
     } catch (error) {
@@ -108,9 +105,8 @@ export function useDeletePost(): UseDeletePostResult {
       }
 
       toast({
-        title: tToast('error'),
+        variant: 'error',
         description: tPost('deleteFailed'),
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
     } finally {
       setIsDeleting(false);

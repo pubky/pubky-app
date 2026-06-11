@@ -55,14 +55,14 @@ export function PublicKeyCard() {
           onSuccess: (result) => {
             if (result.method === 'fallback') {
               toast({
+                variant: 'warning',
                 title: t('shareUnavailable'),
-                description: t('shareUnavailableDescription'),
               });
             }
           },
           onError: () => {
             toast({
-              title: t('shareFailed'),
+              variant: 'error',
               description: t('shareFailedDescription'),
             });
           },

@@ -47,10 +47,9 @@ import type {
 
 export function usePostMenuActions(postId: string, options: UsePostMenuActionsOptions): UsePostMenuActionsResult {
   const t = useTranslations('post.actions');
-  const tToast = useTranslations('toast');
+
   const tMute = useTranslations('toast.mute');
   const tCopy = useTranslations('toast.copy');
-  const tFollow = useTranslations('toast.follow');
   const { onReportClick, onEditClick, onDeleteClick, isDeleting = false } = options;
   const parsedId = parseCompositeId(postId);
   // Normalize author ID to ensure consistent format (strip pubky: or pk: prefix)
@@ -93,12 +92,9 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       icon: isFollowing ? UserRoundMinus : UserRoundPlus,
       onClick: async () => {
         try {
-          await toggleFollow(postAuthorId, isFollowing);
-        } catch (error) {
-          toast({
-            title: tToast('error'),
-            description: isAppError(error) ? error.message : tFollow('failed'),
-          });
+          await toggleFollow(postAuthorId, isFollowing, authorProfile?.name);
+        } catch {
+          // Error already handled by useFollowUser (toast + state)
         }
       },
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
@@ -114,7 +110,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         await copyPubky(withPubkyPrefix(postAuthorId));
       } catch (error) {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
         });
       }
@@ -130,7 +126,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         await copyLink(postUrl);
       } catch (error) {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
         });
       }
@@ -147,7 +143,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
           await copyText(postDetails?.content ?? '');
         } catch (error) {
           toast({
-            title: tToast('error'),
+            variant: 'error',
             description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
           });
         }
@@ -170,18 +166,11 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         try {
           await toggleMute(postAuthorId, isUserMuted);
           toast({
-            title: isUserMuted ? tMute('unmuted') : tMute('muted'),
-            description: isUserMuted
-              ? tMute('unmutedDesc', {
-                  username,
-                })
-              : tMute('mutedDesc', {
-                  username,
-                }),
+            title: isUserMuted ? tMute('unmuted', { username }) : tMute('muted', { username }),
           });
         } catch (error) {
           toast({
-            title: tToast('error'),
+            variant: 'error',
             description: isAppError(error) ? error.message : tMute('failed'),
           });
         }

@@ -146,7 +146,7 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-invoice' });
-      expect(mockToast).toHaveBeenCalledWith({ title: 'Invoice copied to clipboard' });
+      expect(mockToast).toHaveBeenCalledWith({ variant: 'info', title: 'Invoice copied to clipboard' });
     });
   });
 
@@ -162,7 +162,10 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-invoice' });
-      expect(mockToast).toHaveBeenCalledWith({ title: 'Failed to copy invoice' });
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not copy invoice.',
+      });
     });
   });
 
@@ -172,8 +175,8 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Failed to request lightning invoice',
-        description: 'Please try again later. If the problem persists, please contact support.',
+        variant: 'error',
+        description: 'Could not request Lightning invoice. Try again later.',
       });
     });
 
@@ -208,8 +211,8 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Please try again later. If the problem persists, please contact support.',
+        variant: 'error',
+        description: 'Could not request Lightning invoice. Try again later.',
       });
     });
 
@@ -228,8 +231,8 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Please try again later. If the problem persists, please contact support.',
+        variant: 'error',
+        description: 'Could not request Lightning invoice. Try again later.',
       });
     });
 

@@ -15,7 +15,7 @@ export interface ParticipantItemProps {
   /** Callback when user is clicked */
   onUserClick: (pubky: string) => void;
   /** Callback when follow button is clicked */
-  onFollowClick: (userId: string, isFollowing: boolean) => Promise<void>;
+  onFollowClick: (userId: string, isFollowing: boolean, displayName: string) => Promise<void>;
   /** Function to check if a user's follow action is loading */
   isUserLoading: (userId: string) => boolean;
 }

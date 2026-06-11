@@ -56,7 +56,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             Logger.error('Failed to persist session and check profile:', error);
             if (!isMountedRef.current) return;
             toast({
-              title: t('authInitFailedTitle'),
+              variant: 'error',
               description: t('authInitFailedDescription'),
             });
           }
@@ -81,7 +81,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           }
 
           toast({
-            title: t('authNotCompletedTitle'),
+            variant: 'error',
             description: t('authNotCompletedDescription'),
           });
         });
@@ -92,7 +92,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
       Logger.error('Failed to generate auth URL:', error);
       if (!isMountedRef.current) return;
       toast({
-        title: t('qrGenerationFailedTitle'),
+        variant: 'error',
         description: t('qrGenerationFailedDescription'),
       });
     } finally {

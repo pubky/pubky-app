@@ -45,8 +45,8 @@ export function ProfileFriends() {
   });
 
   // Handle follow/unfollow action
-  const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean) => {
-    await toggleFollow(userId, isCurrentlyFollowing);
+  const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean, displayName: string) => {
+    await toggleFollow(userId, isCurrentlyFollowing, displayName);
   };
 
   if (isLoading) {
