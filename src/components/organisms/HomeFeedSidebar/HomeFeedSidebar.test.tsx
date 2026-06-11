@@ -3,18 +3,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFeedSidebar';
 
-const mockSetContent = vi.fn();
-const mockUseHomeStore = vi.fn();
-let mockCurrentUserPubky: string | null = 'viewer-pubky';
-const mockFilterContent = vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
-  <div
-    data-testid="filter-content"
-    data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
-    data-selected-tab={selectedTab}
-  >
-    FilterContent
-  </div>
-));
+const { mockSetContent, mockUseHomeStore, mockFilterContent, mockUseFeedLayoutResolution, mockCurrentUserPubky } =
+  vi.hoisted(() => ({
+    mockSetContent: vi.fn(),
+    mockUseHomeStore: vi.fn(),
+    mockFilterContent: vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
+      <div
+        data-testid="filter-content"
+        data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
+        data-selected-tab={selectedTab}
+      >
+        FilterContent
+      </div>
+    )),
+    mockUseFeedLayoutResolution: vi.fn(() => ({
+      requestedLayout: 'columns',
+      effectiveLayout: 'columns',
+      isVisualRequested: false,
+      isVisualActive: false,
+      isPhoneViewport: false,
+    })),
+    mockCurrentUserPubky: { value: 'viewer-pubky' as string | null },
+  }));
 
 // Mock useHomeStore
 vi.mock('@/stores/home/home.types', () => ({
@@ -39,15 +49,7 @@ vi.mock('@/stores/home/home.store', () => ({
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
-    selector({ currentUserPubky: mockCurrentUserPubky }),
-}));
-
-const mockUseFeedLayoutResolution = vi.fn(() => ({
-  requestedLayout: 'columns',
-  effectiveLayout: 'columns',
-  isVisualRequested: false,
-  isVisualActive: false,
-  isPhoneViewport: false,
+    selector({ currentUserPubky: mockCurrentUserPubky.value }),
 }));
 
 vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
@@ -100,7 +102,7 @@ vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
 
 beforeEach(() => {
   mockSetContent.mockClear();
-  mockCurrentUserPubky = 'viewer-pubky';
+  mockCurrentUserPubky.value = 'viewer-pubky';
   mockUseHomeStore.mockReturnValue({
     layout: 'columns',
     setLayout: vi.fn(),
@@ -177,7 +179,7 @@ describe('HomeFeedSidebar', () => {
   });
 
   it('forces all reach when logged out', () => {
-    mockCurrentUserPubky = null;
+    mockCurrentUserPubky.value = null;
 
     render(<HomeFeedSidebar />);
 

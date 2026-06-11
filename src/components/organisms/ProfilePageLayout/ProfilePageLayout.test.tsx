@@ -113,7 +113,7 @@ vi.mock('@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu', async () => {
   };
 });
 
-const mockIsMobile = vi.fn(() => false);
+const mockIsMobile = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockIsMobile(),

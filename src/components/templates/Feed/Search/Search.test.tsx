@@ -3,8 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Search } from './Search';
 
-const mockUseIsMobile = vi.fn(() => false);
-const mockUseSearchTags = vi.fn(() => ['pubky']);
+const { mockUseIsMobile, mockUseSearchTags } = vi.hoisted(() => ({
+  mockUseIsMobile: vi.fn(() => false),
+  mockUseSearchTags: vi.fn(() => ['pubky']),
+}));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockUseIsMobile(),

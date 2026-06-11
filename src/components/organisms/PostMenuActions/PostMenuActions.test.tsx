@@ -78,13 +78,15 @@ vi.mock('@/atoms/Sheet/Sheet', () => {
   };
 });
 
-const mockUseIsMobile = vi.fn(() => false);
-const mockDeletePost = vi.fn();
-const mockUsePostMenuActions = vi.fn((_postId: string) => ({
-  menuItems: [] as unknown[],
-  isLoading: false,
+const { mockUseIsMobile, mockDeletePost, mockUsePostMenuActions, mockRequireAuth } = vi.hoisted(() => ({
+  mockUseIsMobile: vi.fn(() => false),
+  mockDeletePost: vi.fn(),
+  mockUsePostMenuActions: vi.fn((_postId: string) => ({
+    menuItems: [] as unknown[],
+    isLoading: false,
+  })),
+  mockRequireAuth: vi.fn((action: () => void) => action()),
 }));
-const mockRequireAuth = vi.fn((action: () => void) => action());
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockUseIsMobile(),
