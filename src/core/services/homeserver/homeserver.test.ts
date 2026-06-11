@@ -800,6 +800,58 @@ describe('HomeserverService', () => {
       });
     });
 
+    describe('listAll', () => {
+      const baseDirectory = 'pubky://user/pub/posts/';
+      const makeFiles = (count: number, offset = 0) =>
+        Array.from({ length: count }, (_, i) => `${baseDirectory}file${String(offset + i).padStart(4, '0')}`);
+
+      it('should return all files in a single page when below the page limit', async () => {
+        const files = makeFiles(3);
+        mockState.publicStorageList.mockResolvedValue(files);
+
+        const result = await HomeserverService.listAll({ baseDirectory });
+
+        expect(result).toEqual(files);
+        expect(mockState.publicStorageList).toHaveBeenCalledTimes(1);
+        expect(mockState.publicStorageList).toHaveBeenCalledWith(baseDirectory, null, false, 500, false);
+      });
+
+      it('should paginate with the last URL as cursor until a short page is returned', async () => {
+        const page1 = makeFiles(500);
+        const page2 = makeFiles(200, 500);
+        mockState.publicStorageList.mockImplementation((_dir: string, cursor: string | null) =>
+          Promise.resolve(cursor === null ? page1 : page2),
+        );
+
+        const result = await HomeserverService.listAll({ baseDirectory });
+
+        expect(result).toEqual([...page1, ...page2]);
+        expect(mockState.publicStorageList).toHaveBeenCalledTimes(2);
+        expect(mockState.publicStorageList).toHaveBeenNthCalledWith(2, baseDirectory, page1[499], false, 500, false);
+      });
+
+      it('should stop after an empty page when the file count is an exact multiple of the page size', async () => {
+        const page1 = makeFiles(500);
+        mockState.publicStorageList.mockImplementation((_dir: string, cursor: string | null) =>
+          Promise.resolve(cursor === null ? page1 : []),
+        );
+
+        const result = await HomeserverService.listAll({ baseDirectory });
+
+        expect(result).toEqual(page1);
+        expect(mockState.publicStorageList).toHaveBeenCalledTimes(2);
+      });
+
+      it('should propagate list failures', async () => {
+        mockState.publicStorageList.mockRejectedValue(new Error('List failed'));
+
+        await expect(HomeserverService.listAll({ baseDirectory })).rejects.toMatchObject({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.INTERNAL_ERROR,
+        });
+      });
+    });
+
     describe('delete', () => {
       it('should call request with DELETE method', async () => {
         mockState.currentSession = createMockSession();

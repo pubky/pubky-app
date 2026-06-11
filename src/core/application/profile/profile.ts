@@ -121,9 +121,9 @@ export class ProfileApplication {
     await LocalProfileService.deleteAll();
 
     const baseDirectory = baseUriBuilder(pubky);
-    // TODO: Using undefined, false, and Infinity here as a temporary workaround since
-    // homeserver.list does not yet support pagination. This ensures all files are deleted.
-    const dataList = await HomeserverService.list({ baseDirectory, reverse: false, limit: Infinity });
+    // Enumerate the full directory before deleting (single list calls are page-limited),
+    // so nothing is missed and progress reporting stays accurate.
+    const dataList = await HomeserverService.listAll({ baseDirectory });
 
     // Separate profile.json and other files
     const profileUrl = `${baseDirectory}profile.json`;
@@ -156,16 +156,18 @@ export class ProfileApplication {
 
   /**
    * Downloads all user data from the homeserver and packages it into a ZIP file.
-   * Fetches all files at once (using Infinity limit), formats JSON files with indentation, and preserves binary files.
+   * Enumerates every file via paginated listing, formats JSON files with indentation, and preserves binary files.
    * Automatically triggers a browser download of the generated ZIP file.
+   *
+   * NOTE: This export flow is not reachable from the UI yet. The Settings → Account
+   * "Download your data" section (translations already exist under `settings.account.download`)
+   * still needs to be built and wired to `ProfileController.downloadData`.
    * @param params - Parameters containing user's public key and optional progress callback
    */
   static async downloadData({ pubky, setProgress }: TDownloadDataParams) {
     const baseDirectory = baseUriBuilder(pubky);
 
-    // TODO: Using undefined, false, and Infinity here as a temporary workaround since homeserver.list does not yet
-    // support pagination. This ensures all files are retrieved.
-    const dataList = await HomeserverService.list({ baseDirectory, reverse: false, limit: Infinity });
+    const dataList = await HomeserverService.listAll({ baseDirectory });
 
     // Create JSZip instance and data folder
     const zip = new JSZip();
