@@ -177,7 +177,7 @@ describe('UserListItem - followButtonVariant', () => {
     expect(screen.getByText('Me')).toBeInTheDocument();
   });
 
-  it('does not leak rejected async follow callbacks', async () => {
+  it('calls the follow callback with user context when the callback rejects', async () => {
     const onFollowClick = vi.fn().mockRejectedValue(new Error('Follow failed'));
 
     render(<UserListItem user={mockUser} variant="compact" onFollowClick={onFollowClick} />);

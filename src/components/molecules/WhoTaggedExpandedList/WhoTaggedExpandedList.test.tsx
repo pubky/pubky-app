@@ -123,7 +123,7 @@ describe('WhoTaggedExpandedList', () => {
     expect(mockToggleFollow).toHaveBeenCalledWith('user1', false, 'Alice');
   });
 
-  it('does not leak rejected follow actions', async () => {
+  it('calls toggleFollow when the follow action rejects', async () => {
     mockToggleFollow.mockRejectedValue(new Error('Follow failed'));
 
     render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} fallbackTaggers={mockTaggers} />);

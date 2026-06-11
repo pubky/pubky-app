@@ -41,7 +41,6 @@ vi.mock('next-intl', () => ({
     if (key === 'unfollowFailed') return `Could not unfollow ${values?.username ?? ''}. Please try again.`;
     if (key === 'loginRequired') return 'Sign in to follow people.';
     if (key === 'selfFollow') return "You can't follow yourself.";
-    if (key === 'failed') return 'Could not update follow status';
     return key;
   },
 }));

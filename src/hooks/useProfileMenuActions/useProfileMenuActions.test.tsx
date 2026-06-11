@@ -118,7 +118,6 @@ describe('useProfileMenuActions', () => {
           'copy.copyFailedDesc': 'Could not copy to clipboard',
           'follow.followed': 'Following {username}',
           'follow.unfollowed': 'Unfollowed {username}',
-          'follow.failed': 'Could not update follow status',
           'mute.muted': '{username} muted',
           'mute.unmuted': '{username} unmuted',
           'mute.failed': 'Could not update mute status',
