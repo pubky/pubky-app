@@ -2,62 +2,54 @@
 
 exports[`PostNotFoundDiscoveryView - Snapshots > matches snapshot when composite author is invalid 1`] = `
 <div
-  data-testid="hot-discovery-content-layout"
+  class="flex flex-col gap-12"
+  data-override="true"
+  data-testid="container"
 >
   <div
-    class="flex flex-col gap-12"
+    data-post-id="68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5yx:00353GZ1H40WG"
+    data-testid="post-not-found-mock"
+  />
+  <div
+    class="flex flex-col gap-2"
     data-override="true"
     data-testid="container"
   >
-    <div
-      data-post-id="68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5yx:00353GZ1H40WG"
-      data-testid="post-not-found-mock"
-    />
-    <div
-      class="flex flex-col gap-2"
-      data-override="true"
-      data-testid="container"
+    <h5
+      data-testid="trending-heading"
     >
-      <h5
-        data-testid="trending-heading"
-      >
-        hot.trendingPosts
-      </h5>
-      <div
-        data-testid="timeline-feed"
-      />
-    </div>
+      hot.trendingPosts
+    </h5>
+    <div
+      data-testid="timeline-feed"
+    />
   </div>
 </div>
 `;
 
 exports[`PostNotFoundDiscoveryView - Snapshots > matches snapshot when composite author is valid 1`] = `
 <div
-  data-testid="hot-discovery-content-layout"
+  class="flex flex-col gap-12"
+  data-override="true"
+  data-testid="container"
 >
   <div
-    class="flex flex-col gap-12"
+    data-post-id="68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y:00353GZ1H40WG"
+    data-testid="post-not-found-mock"
+  />
+  <div
+    class="flex flex-col gap-2"
     data-override="true"
     data-testid="container"
   >
-    <div
-      data-post-id="68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y:00353GZ1H40WG"
-      data-testid="post-not-found-mock"
-    />
-    <div
-      class="flex flex-col gap-2"
-      data-override="true"
-      data-testid="container"
+    <h5
+      data-testid="trending-heading"
     >
-      <h5
-        data-testid="trending-heading"
-      >
-        hot.trendingPosts
-      </h5>
-      <div
-        data-testid="timeline-feed"
-      />
-    </div>
+      hot.trendingPosts
+    </h5>
+    <div
+      data-testid="timeline-feed"
+    />
   </div>
 </div>
 `;
