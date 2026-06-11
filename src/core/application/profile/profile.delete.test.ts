@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalProfileService } from '@/services/local/profile/profile';
@@ -25,12 +26,19 @@ vi.mock('@/services/local/profile/profile', () => ({
 }));
 
 let ProfileApplication: typeof import('./profile').ProfileApplication;
+let httpStatusCodeToError: typeof import('@/libs/error/error.http').httpStatusCodeToError;
 
 beforeEach(async () => {
   vi.clearAllMocks();
   vi.resetModules();
 
   ({ ProfileApplication } = await import('./profile'));
+  // Import from the same (reset) module graph as ./profile so AppError instanceof checks match
+  ({ httpStatusCodeToError } = await import('@/libs/error/error.http'));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('ProfileApplication.commitDelete', () => {
@@ -128,16 +136,66 @@ describe('ProfileApplication.commitDelete', () => {
     expect(deleteSpy).not.toHaveBeenCalled();
   });
 
-  it('propagates errors when delete fails', async () => {
+  it('propagates errors when delete keeps failing after exhausting retries', async () => {
+    vi.useFakeTimers();
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
     vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockRejectedValueOnce(new Error('delete failed'));
+    const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockRejectedValue(new Error('delete failed'));
 
-    await expect(ProfileApplication.commitDelete({ pubky })).rejects.toThrow('delete failed');
+    const commit = ProfileApplication.commitDelete({ pubky });
+    const expectation = expect(commit).rejects.toThrow('delete failed');
+    await vi.runAllTimersAsync();
+    await expectation;
 
-    expect(deleteSpy).toHaveBeenCalledTimes(1);
+    // All attempts spent on the first file, then the flow aborts
+    expect(deleteSpy).toHaveBeenCalledTimes(3);
+    expect(deleteSpy).toHaveBeenCalledWith(`${baseDirectory}file1`);
+  });
+
+  it('retries a transient delete failure and completes the deletion', async () => {
+    vi.useFakeTimers();
+    const fileList = [`${baseDirectory}file1`, `${baseDirectory}file2`, `${baseDirectory}profile.json`];
+
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    const deleteSpy = vi
+      .spyOn(HomeserverService, 'delete')
+      .mockRejectedValueOnce(new Error('HTTP transport error: error sending request'))
+      .mockResolvedValue(undefined);
+
+    const commit = ProfileApplication.commitDelete({ pubky });
+    await vi.runAllTimersAsync();
+    await commit;
+
+    // 3 files + 1 retry for the transient failure
+    expect(deleteSpy).toHaveBeenCalledTimes(4);
+    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl);
+  });
+
+  it('treats a 404 during delete as already removed and continues', async () => {
+    const fileList = [`${baseDirectory}file1`, `${baseDirectory}file2`, `${baseDirectory}profile.json`];
+
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    const notFound = httpStatusCodeToError(
+      404,
+      'Not Found',
+      ErrorService.Homeserver,
+      'request',
+      `${baseDirectory}file2`,
+    );
+    const deleteSpy = vi
+      .spyOn(HomeserverService, 'delete')
+      .mockRejectedValueOnce(notFound)
+      .mockResolvedValue(undefined);
+
+    await ProfileApplication.commitDelete({ pubky });
+
+    // No retry for the missing file; remaining files still deleted
+    expect(deleteSpy).toHaveBeenCalledTimes(3);
+    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl);
   });
 
   it('sorts files correctly before deletion', async () => {
