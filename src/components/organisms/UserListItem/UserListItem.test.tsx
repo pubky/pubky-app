@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { UserListItem } from './UserListItem';
 import type { UserListItemData } from './UserListItem.types';
@@ -175,19 +175,6 @@ describe('UserListItem - followButtonVariant', () => {
     render(<UserListItem user={mockUser} variant="compact" isCurrentUser followButtonVariant="iconWithText" />);
 
     expect(screen.getByText('Me')).toBeInTheDocument();
-  });
-
-  it('calls the follow callback with user context when the callback rejects', async () => {
-    const onFollowClick = vi.fn().mockRejectedValue(new Error('Follow failed'));
-
-    render(<UserListItem user={mockUser} variant="compact" onFollowClick={onFollowClick} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Follow Test User/i }));
-
-    expect(onFollowClick).toHaveBeenCalledWith(mockUser.id, false, 'Test User');
-    await waitFor(() => {
-      expect(onFollowClick).toHaveBeenCalledTimes(1);
-    });
   });
 });
 

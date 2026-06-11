@@ -920,12 +920,8 @@
     },
     "follow": {
       "failed": "تعذر تحديث حالة المتابعة",
-      "followed": "أنت تتابع {username} الآن",
-      "unfollowed": "لم تعد تتابع {username}",
-      "followFailed": "تعذر متابعة {username}. حاول مرة أخرى.",
-      "unfollowFailed": "تعذر إلغاء متابعة {username}. حاول مرة أخرى.",
-      "loginRequired": "سجّل الدخول لمتابعة الأشخاص.",
-      "selfFollow": "لا يمكنك متابعة نفسك."
+      "followed": "تتابع {username}",
+      "unfollowed": "ألغيت متابعة {username}"
     },
     "mute": {
       "muted": "تم كتم {username}",

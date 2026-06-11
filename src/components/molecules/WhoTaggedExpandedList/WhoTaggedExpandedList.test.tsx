@@ -123,16 +123,6 @@ describe('WhoTaggedExpandedList', () => {
     expect(mockToggleFollow).toHaveBeenCalledWith('user1', false, 'Alice');
   });
 
-  it('calls toggleFollow when the follow action rejects', async () => {
-    mockToggleFollow.mockRejectedValue(new Error('Follow failed'));
-
-    render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} fallbackTaggers={mockTaggers} />);
-    fireEvent.click(screen.getByTestId('follow-click-user1'));
-
-    expect(mockToggleFollow).toHaveBeenCalledWith('user1', false, 'Alice');
-    await Promise.resolve();
-  });
-
   it('applies custom data-testid', () => {
     render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} data-testid="custom-test-id" />);
     expect(screen.getByTestId('custom-test-id')).toBeInTheDocument();

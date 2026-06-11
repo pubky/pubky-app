@@ -920,12 +920,8 @@
     },
     "follow": {
       "failed": "Impossibile aggiornare lo stato di follow",
-      "followed": "Ora segui {username}",
-      "unfollowed": "Non segui più {username}",
-      "followFailed": "Non è stato possibile seguire {username}. Riprova.",
-      "unfollowFailed": "Non è stato possibile smettere di seguire {username}. Riprova.",
-      "loginRequired": "Accedi per seguire le persone.",
-      "selfFollow": "Non puoi seguire te stesso."
+      "followed": "Stai seguendo {username}",
+      "unfollowed": "Hai smesso di seguire {username}"
     },
     "mute": {
       "muted": "{username} silenziato",

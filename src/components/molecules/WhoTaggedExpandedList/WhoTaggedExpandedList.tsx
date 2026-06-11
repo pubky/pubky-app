@@ -47,12 +47,8 @@ export function WhoTaggedExpandedList({
     };
   });
 
-  const handleFollowClick = async (userId: string, isFollowing: boolean, displayName: string) => {
-    try {
-      await requireAuth(() => toggleFollow(userId, isFollowing, displayName));
-    } catch {
-      // Error feedback is handled by useFollowUser.
-    }
+  const handleFollowClick = (userId: string, isFollowing: boolean, displayName: string) => {
+    requireAuth(() => toggleFollow(userId, isFollowing, displayName));
   };
 
   const handleUserClick = (userId: string) => {

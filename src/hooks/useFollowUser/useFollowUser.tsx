@@ -9,7 +9,7 @@ import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseFollowUserResult } from './useFollowUser.types';
-import { resolveFollowDisplayName, resolveFollowToastDisplayName } from './useFollowUser.utils';
+import { resolveFollowToastDisplayName } from './useFollowUser.utils';
 
 /**
  * useFollowUser
@@ -43,16 +43,14 @@ export function useFollowUser(): UseFollowUserResult {
   const toggleFollow = useCallback(
     async (userId: Pubky, isCurrentlyFollowing: boolean, displayName?: string) => {
       if (!currentUserPubky) {
-        setError(t('loginRequired'));
+        setError('User not authenticated');
         return;
       }
 
       if (userId === currentUserPubky) {
-        setError(t('selfFollow'));
+        setError('Cannot follow yourself');
         return;
       }
-
-      const fallbackUsername = resolveFollowDisplayName(userId, displayName);
 
       setLoadingAction(isCurrentlyFollowing ? 'unfollow' : 'follow');
       setIsLoading(true);
@@ -76,9 +74,7 @@ export function useFollowUser(): UseFollowUserResult {
           userId,
         });
       } catch (err) {
-        const friendlyMessage = isCurrentlyFollowing
-          ? t('unfollowFailed', { username: fallbackUsername })
-          : t('followFailed', { username: fallbackUsername });
+        const friendlyMessage = t('failed');
         setError(friendlyMessage);
         toast({
           variant: 'error',

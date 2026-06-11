@@ -920,12 +920,8 @@
     },
     "follow": {
       "failed": "无法更新关注状态",
-      "followed": "你已关注 {username}",
-      "unfollowed": "你已取消关注 {username}",
-      "followFailed": "无法关注 {username}。请重试。",
-      "unfollowFailed": "无法取消关注 {username}。请重试。",
-      "loginRequired": "请登录后关注用户。",
-      "selfFollow": "你不能关注自己。"
+      "followed": "正在关注 {username}",
+      "unfollowed": "已取消关注 {username}"
     },
     "mute": {
       "muted": "已静音 {username}",

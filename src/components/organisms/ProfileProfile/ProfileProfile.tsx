@@ -49,12 +49,8 @@ export function ProfileProfile() {
 
   const handleFollowToggle = () => {
     if (!pubky) return;
-    void requireAuth(async () => {
-      try {
-        await toggleFollow(pubky, isFollowing, profile.name);
-      } catch {
-        // Error feedback is handled by useFollowUser.
-      }
+    requireAuth(async () => {
+      await toggleFollow(pubky, isFollowing, profile.name);
     });
   };
 

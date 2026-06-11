@@ -35,12 +35,9 @@ vi.mock('@/molecules/Toaster/use-toast', () => ({
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, values?: { username?: string }) => {
-    if (key === 'followed') return `You're now following ${values?.username ?? ''}`;
-    if (key === 'unfollowed') return `You're no longer following ${values?.username ?? ''}`;
-    if (key === 'followFailed') return `Could not follow ${values?.username ?? ''}. Please try again.`;
-    if (key === 'unfollowFailed') return `Could not unfollow ${values?.username ?? ''}. Please try again.`;
-    if (key === 'loginRequired') return 'Sign in to follow people.';
-    if (key === 'selfFollow') return "You can't follow yourself.";
+    if (key === 'followed') return `Following ${values?.username ?? ''}`;
+    if (key === 'unfollowed') return `Unfollowed ${values?.username ?? ''}`;
+    if (key === 'failed') return 'Could not update follow status';
     return key;
   },
 }));
@@ -62,7 +59,7 @@ describe('useFollowUser', () => {
       await result.current.toggleFollow('user-1', false);
     });
 
-    expect(result.current.error).toBe('Sign in to follow people.');
+    expect(result.current.error).toBe('User not authenticated');
     expect(mockCommitFollow).not.toHaveBeenCalled();
     expect(mockToast).not.toHaveBeenCalled();
   });
@@ -74,7 +71,7 @@ describe('useFollowUser', () => {
       await result.current.toggleFollow('current-user', false);
     });
 
-    expect(result.current.error).toBe("You can't follow yourself.");
+    expect(result.current.error).toBe('Cannot follow yourself');
     expect(mockCommitFollow).not.toHaveBeenCalled();
   });
 
@@ -90,7 +87,7 @@ describe('useFollowUser', () => {
       followee: 'user-1',
     });
     expect(mockToast).toHaveBeenCalledWith({
-      title: "You're now following Alice",
+      title: 'Following Alice',
     });
     expect(mockGetDetails).not.toHaveBeenCalled();
   });
@@ -107,7 +104,7 @@ describe('useFollowUser', () => {
       followee: 'user-1',
     });
     expect(mockToast).toHaveBeenCalledWith({
-      title: "You're no longer following Alice",
+      title: 'Unfollowed Alice',
     });
   });
 
@@ -122,7 +119,7 @@ describe('useFollowUser', () => {
 
     expect(mockGetDetails).toHaveBeenCalledWith({ userId: 'user-1' });
     expect(mockToast).toHaveBeenCalledWith({
-      title: "You're now following Bob",
+      title: 'Following Bob',
     });
   });
 
@@ -141,11 +138,11 @@ describe('useFollowUser', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.error).toBe('Could not follow Alice. Please try again.');
+      expect(result.current.error).toBe('Could not update follow status');
     });
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Could not follow Alice. Please try again.',
+      description: 'Could not update follow status',
     });
     expect(mockLogger.error).toHaveBeenCalledWith('[useFollowUser] Failed to toggle follow:', error);
   });

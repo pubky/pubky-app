@@ -920,12 +920,8 @@
     },
     "follow": {
       "failed": "Folgestatus konnte nicht aktualisiert werden",
-      "followed": "Du folgst {username} jetzt",
-      "unfollowed": "Du folgst {username} nicht mehr",
-      "followFailed": "Konnte {username} nicht folgen. Bitte versuche es erneut.",
-      "unfollowFailed": "Konnte {username} nicht entfolgen. Bitte versuche es erneut.",
-      "loginRequired": "Melde dich an, um Personen zu folgen.",
-      "selfFollow": "Du kannst dir nicht selbst folgen."
+      "followed": "Folge {username}",
+      "unfollowed": "{username} entfolgt"
     },
     "mute": {
       "muted": "{username} stummgeschaltet",
