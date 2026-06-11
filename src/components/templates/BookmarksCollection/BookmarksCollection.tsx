@@ -8,7 +8,8 @@ import { CollectionsSections } from '@/organisms/Collections/CollectionsSections
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 
 export function BookmarksCollection() {
-  const { avatarName, avatarSeed, avatarUrl, bookmarkCount, isBookmarkCountLoading } = useBookmarksCollectionSummary();
+  const { avatarName, avatarSeed, avatarUrl, bookmarkCount, isBookmarkCountLoading, isProfileResolved } =
+    useBookmarksCollectionSummary();
 
   return (
     <ContentLayout
@@ -24,6 +25,7 @@ export function BookmarksCollection() {
           avatarSeed={avatarSeed}
           avatarUrl={avatarUrl}
           bookmarkCount={bookmarkCount}
+          isProfileResolved={isProfileResolved}
         />
         <BookmarksItems bookmarkCount={bookmarkCount} isBookmarkCountLoading={isBookmarkCountLoading} />
         <CollectionsSections />

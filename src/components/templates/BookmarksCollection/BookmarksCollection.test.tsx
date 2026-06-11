@@ -14,11 +14,13 @@ vi.mock('@/organisms/Bookmarks/BookmarksHero/BookmarksHero', () => ({
     avatarSeed,
     avatarUrl,
     bookmarkCount,
+    isProfileResolved,
   }: {
     avatarName: string;
     avatarSeed: string;
     avatarUrl?: string;
     bookmarkCount?: number;
+    isProfileResolved: boolean;
   }) => (
     <div
       data-testid="bookmarks-hero"
@@ -26,6 +28,7 @@ vi.mock('@/organisms/Bookmarks/BookmarksHero/BookmarksHero', () => ({
       data-avatar-seed={avatarSeed}
       data-avatar-url={avatarUrl ?? ''}
       data-bookmark-count={String(bookmarkCount)}
+      data-is-profile-resolved={String(isProfileResolved)}
     />
   ),
 }));
@@ -89,6 +92,7 @@ describe('BookmarksCollection', () => {
       avatarUrl: 'https://example.com/avatar.png',
       bookmarkCount: 4,
       isBookmarkCountLoading: false,
+      isProfileResolved: true,
     });
 
     render(<BookmarksCollection />);
@@ -111,6 +115,7 @@ describe('BookmarksCollection - Snapshots', () => {
       avatarUrl: 'https://example.com/avatar.png',
       bookmarkCount: 4,
       isBookmarkCountLoading: false,
+      isProfileResolved: true,
     });
 
     const { container } = render(<BookmarksCollection />);

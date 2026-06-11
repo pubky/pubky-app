@@ -37,13 +37,13 @@ const mockGetAvatarUrl = vi.mocked(FileController.getAvatarUrl);
 function setup({
   currentUserPubky = CURRENT_USER_PUBKY,
   userDetails = { name: 'Alice', image: 'remote-avatar', indexed_at: 42 },
-  bookmarksStream = { stream: ['author-1:post-1', 'author-2:post-2', 'author-3:post-3'] },
+  userCounts = { bookmarks: 3 },
   isLoading = false,
   localAvatarUrl = null,
 }: {
   currentUserPubky?: string | null;
   userDetails?: Partial<NexusUserDetails> | null;
-  bookmarksStream?: { stream: string[] } | null;
+  userCounts?: { bookmarks: number } | null;
   isLoading?: boolean;
   localAvatarUrl?: string | null;
 } = {}) {
@@ -53,8 +53,8 @@ function setup({
     userDetails: userDetails ? asOpaque<NexusUserDetails>(userDetails) : null,
   });
   mockUseLocalFirstQuery.mockReturnValue(
-    asOpaque<UseLocalFirstQueryResult<{ stream: string[] }>>({
-      data: bookmarksStream,
+    asOpaque<UseLocalFirstQueryResult<{ bookmarks: number }>>({
+      data: userCounts,
       isLoading,
     }),
   );
@@ -66,13 +66,14 @@ describe('useBookmarksCollectionSummary', () => {
     setup();
   });
 
-  it('returns local bookmark count and avatar metadata', () => {
+  it('returns the aggregate bookmark count and avatar metadata', () => {
     const { result } = renderHook(() => useBookmarksCollectionSummary());
 
     expect(result.current.bookmarkCount).toBe(3);
     expect(result.current.avatarName).toBe('Alice');
     expect(result.current.avatarSeed).toBe(CURRENT_USER_PUBKY);
     expect(result.current.avatarUrl).toBe(`avatar:${CURRENT_USER_PUBKY}:42`);
+    expect(result.current.isProfileResolved).toBe(true);
   });
 
   it('uses the local avatar override without calling FileController', () => {
@@ -84,26 +85,27 @@ describe('useBookmarksCollectionSummary', () => {
     expect(mockGetAvatarUrl).not.toHaveBeenCalled();
   });
 
-  it('disables the bookmarks query when there is no current user', () => {
-    setup({ currentUserPubky: null, userDetails: null, bookmarksStream: null });
+  it('disables the bookmark count query when there is no current user', () => {
+    setup({ currentUserPubky: null, userDetails: null, userCounts: null });
 
     renderHook(() => useBookmarksCollectionSummary());
 
     expect(mockUseLocalFirstQuery).toHaveBeenCalledWith(expect.objectContaining({ enabled: false, deps: [null] }));
   });
 
-  it('falls back to U when profile details are unavailable', () => {
-    setup({ currentUserPubky: null, userDetails: null, bookmarksStream: null });
+  it('falls back to U and reports an unresolved profile when details are unavailable', () => {
+    setup({ currentUserPubky: null, userDetails: null, userCounts: null });
 
     const { result } = renderHook(() => useBookmarksCollectionSummary());
 
     expect(result.current.avatarName).toBe('U');
     expect(result.current.avatarSeed).toBe('U');
     expect(result.current.bookmarkCount).toBeUndefined();
+    expect(result.current.isProfileResolved).toBe(false);
   });
 
-  it('returns undefined count while the bookmarks stream is not cached', () => {
-    setup({ bookmarksStream: null });
+  it('returns undefined count while the aggregate counts are not cached', () => {
+    setup({ userCounts: null });
 
     const { result } = renderHook(() => useBookmarksCollectionSummary());
 

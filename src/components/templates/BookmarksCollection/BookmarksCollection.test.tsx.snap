@@ -18,6 +18,7 @@ exports[`BookmarksCollection - Snapshots > matches the snapshot for the resolved
       data-avatar-seed="alice-pubky"
       data-avatar-url="https://example.com/avatar.png"
       data-bookmark-count="4"
+      data-is-profile-resolved="true"
       data-testid="bookmarks-hero"
     />
     <div

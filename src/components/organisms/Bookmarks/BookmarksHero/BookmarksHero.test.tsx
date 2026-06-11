@@ -44,6 +44,7 @@ describe('BookmarksHero', () => {
         avatarSeed="alice-pubky"
         avatarUrl="https://example.com/avatar.png"
         bookmarkCount={15}
+        isProfileResolved={true}
       />,
     );
 
@@ -51,10 +52,11 @@ describe('BookmarksHero', () => {
     expect(screen.getByText('collections.bookmarks.description')).toBeInTheDocument();
     expect(screen.getByText('15')).toBeInTheDocument();
     expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-name', 'Alice');
+    expect(screen.getByText('Alice', { selector: 'span' })).toBeInTheDocument();
   });
 
   it('does not render custom-collection management actions for the system collection', () => {
-    render(<BookmarksHero avatarName="Alice" avatarSeed="alice-pubky" bookmarkCount={15} />);
+    render(<BookmarksHero avatarName="Alice" avatarSeed="alice-pubky" bookmarkCount={15} isProfileResolved={true} />);
 
     expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
@@ -62,9 +64,17 @@ describe('BookmarksHero', () => {
   });
 
   it('omits the count label while the count is unresolved', () => {
-    render(<BookmarksHero avatarName="Alice" avatarSeed="alice-pubky" />);
+    render(<BookmarksHero avatarName="Alice" avatarSeed="alice-pubky" isProfileResolved={true} />);
 
     expect(screen.queryByText('15')).not.toBeInTheDocument();
+  });
+
+  it('renders a skeleton in place of the username until the profile resolves', () => {
+    render(<BookmarksHero avatarName="U" avatarSeed="alice-pubky" bookmarkCount={15} isProfileResolved={false} />);
+
+    // The avatar still renders, but the username text must not appear yet.
+    expect(screen.getByTestId('avatar-with-fallback')).toBeInTheDocument();
+    expect(screen.queryByText('U', { selector: 'span' })).not.toBeInTheDocument();
   });
 });
 
@@ -76,6 +86,7 @@ describe('BookmarksHero - Snapshots', () => {
         avatarSeed="alice-pubky"
         avatarUrl="https://example.com/avatar.png"
         bookmarkCount={15}
+        isProfileResolved={true}
       />,
     );
 

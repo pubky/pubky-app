@@ -1,10 +1,9 @@
 'use client';
 
 import { FileController } from '@/controllers/file/file';
-import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { UserController } from '@/controllers/user/user';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 interface UseBookmarksCollectionSummaryResult {
@@ -13,15 +12,19 @@ interface UseBookmarksCollectionSummaryResult {
   avatarUrl?: string;
   bookmarkCount?: number;
   isBookmarkCountLoading: boolean;
+  isProfileResolved: boolean;
 }
 
 export function useBookmarksCollectionSummary(): UseBookmarksCollectionSummaryResult {
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
 
-  const { data: bookmarksStream, isLoading: isBookmarkCountLoading } = useLocalFirstQuery({
-    queryFn: () => StreamPostsController.getLocalStream({ streamId: PostStreamTypes.TIMELINE_BOOKMARKS_ALL }),
-    fetchFn: async () => undefined,
+  // The count comes from the Nexus aggregate counts, not the bookmarks stream:
+  // the stream only holds the currently paginated page, so its length
+  // under-reports the true total once there is more than one page.
+  const { data: userCounts, isLoading: isBookmarkCountLoading } = useLocalFirstQuery({
+    queryFn: () => UserController.getCounts({ userId: currentUserPubky! }),
+    fetchFn: () => UserController.fetchCounts({ userId: currentUserPubky! }),
     deps: [currentUserPubky],
     enabled: !!currentUserPubky,
   });
@@ -37,7 +40,8 @@ export function useBookmarksCollectionSummary(): UseBookmarksCollectionSummaryRe
     avatarName,
     avatarSeed: currentUserPubky ?? avatarName,
     avatarUrl,
-    bookmarkCount: bookmarksStream?.stream.length,
+    bookmarkCount: userCounts?.bookmarks,
     isBookmarkCountLoading,
+    isProfileResolved: userDetails != null,
   };
 }

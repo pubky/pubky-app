@@ -33,7 +33,7 @@ function BookmarksItemsEmpty() {
       data-cy="bookmarks-items-empty"
       className={cn('grid', GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS)}
     >
-      <Card className="rounded-md bg-muted/40 py-0 md:col-span-2 xl:col-span-3">
+      <Card className="rounded-md py-0 md:col-span-2 xl:col-span-3">
         <CardContent className="flex flex-col items-center justify-center gap-3 p-8 text-center md:p-12">
           <Container
             overrideDefaults

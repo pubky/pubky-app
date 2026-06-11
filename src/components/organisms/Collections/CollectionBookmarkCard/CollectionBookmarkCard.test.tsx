@@ -74,6 +74,7 @@ function setup(options: SetupOptions = {}) {
     avatarUrl,
     bookmarkCount: 'bookmarkCount' in options ? options.bookmarkCount : 42,
     isBookmarkCountLoading: false,
+    isProfileResolved: true,
   });
 }
 
