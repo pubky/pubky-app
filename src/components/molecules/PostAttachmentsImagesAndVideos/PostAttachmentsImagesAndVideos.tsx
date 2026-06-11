@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { type MouseEvent, type ReactNode, useEffect, useState } from 'react';
 import { Maximize, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
@@ -23,8 +23,15 @@ import { useToast } from '../Toaster/use-toast';
 
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
+  renderTrigger?: (props: {
+    imagesAndVideos: AttachmentConstructed[];
+    openPreview: (index: number, event?: MouseEvent) => void;
+  }) => ReactNode;
 };
-export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachmentsImagesAndVideosProps) => {
+export const PostAttachmentsImagesAndVideos = ({
+  imagesAndVideos,
+  renderTrigger,
+}: PostAttachmentsImagesAndVideosProps) => {
   const total = imagesAndVideos.length;
   const [open, setOpen] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
@@ -32,6 +39,13 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { toast } = useToast();
   const tFullscreen = useTranslations('toast.fullscreen');
+
+  const openPreview = (index: number, event?: MouseEvent) => {
+    event?.stopPropagation();
+    setCurrentIndex(index);
+    setOpen(true);
+  };
+
   const handleFullscreen = () => {
     const currentMedia = document.getElementById(`media-item-${currentIndex}`);
     if (currentMedia) {
@@ -65,46 +79,44 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
   const isOnlyMedia = imagesAndVideos.length === 1;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* Grid layout */}
-      <Container display="grid" className="gap-3 sm:grid-cols-2">
-        {imagesAndVideos.map((media, i) =>
-          media.type.startsWith('image') ? (
-            <DialogTrigger
-              key={i}
-              asChild
-              className="relative h-52 w-full cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
-            >
-              <Button
-                overrideDefaults
+      {renderTrigger ? (
+        renderTrigger({ imagesAndVideos, openPreview })
+      ) : (
+        /* Grid layout */
+        <Container display="grid" className="gap-3 sm:grid-cols-2">
+          {imagesAndVideos.map((media, i) =>
+            media.type.startsWith('image') ? (
+              <DialogTrigger
+                key={i}
+                asChild
+                className="relative h-52 w-full cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+              >
+                <Button overrideDefaults onClick={(e) => openPreview(i, e)}>
+                  <Image
+                    src={media.type === 'image/gif' ? media.urls.main : (media.urls.feed as string)}
+                    alt={media.name}
+                    fill={!isOnlyMedia}
+                    className={cn(
+                      'rounded-md',
+                      isOnlyMedia ? 'max-h-96 w-fit object-contain' : 'object-cover object-center',
+                    )}
+                  />
+                </Button>
+              </DialogTrigger>
+            ) : (
+              <Video
+                key={i}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setCurrentIndex(i);
                 }}
-              >
-                <Image
-                  src={media.type === 'image/gif' ? media.urls.main : (media.urls.feed as string)}
-                  alt={media.name}
-                  fill={!isOnlyMedia}
-                  className={cn(
-                    'rounded-md',
-                    isOnlyMedia ? 'max-h-96 w-fit object-contain' : 'object-cover object-center',
-                  )}
-                />
-              </Button>
-            </DialogTrigger>
-          ) : (
-            <Video
-              key={i}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              src={media.urls.main}
-              pauseVideo={open}
-              className="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
-            />
-          ),
-        )}
-      </Container>
+                src={media.urls.main}
+                pauseVideo={open}
+                className="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+              />
+            ),
+          )}
+        </Container>
+      )}
 
       {/* Carousel dialog */}
       <DialogContent
