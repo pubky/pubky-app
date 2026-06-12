@@ -52,20 +52,20 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
                 })
               : t('tooManyAttemptsDescription');
             toast({
-              variant: 'error',
+              variant: 'warning',
               description: retryMessage,
             });
             break;
           }
           case SmsCodeErrorType.RATE_LIMITED_WEEKLY:
             toast({
-              variant: 'error',
+              variant: 'warning',
               description: t('weeklyLimitDescription'),
             });
             break;
           case SmsCodeErrorType.RATE_LIMITED_YEARLY:
             toast({
-              variant: 'error',
+              variant: 'warning',
               description: t('yearlyLimitDescription'),
             });
             break;
