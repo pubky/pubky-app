@@ -15,7 +15,7 @@ export function Toaster() {
       {toasts.map(function ({ id, title, description, action, dismissButton, variant, className, ...props }) {
         const toastVariant = variant ?? 'default';
         const Icon = TOAST_ICONS[toastVariant];
-        const effectiveTitle = title ?? (toastVariant === 'error' ? tToast('error') : undefined);
+        const effectiveTitle = title ?? (toastVariant === 'error' ? tToast('genericErrorTitle') : undefined);
 
         return (
           <Toast key={id} variant={toastVariant} data-cy="toast" className={className} {...props}>
