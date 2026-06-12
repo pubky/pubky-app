@@ -79,8 +79,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -117,8 +116,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 fill="none"
@@ -139,8 +137,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Following
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -202,8 +199,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -239,8 +235,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Recent
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -302,8 +297,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -336,8 +330,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Columns
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -367,8 +360,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Wide
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -416,8 +408,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Visual
             </div>
             <div
-              data-testid="select-item-undefined"
-              data-value="undefined"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -492,8 +483,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-ALL"
-              data-value="ALL"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -522,8 +512,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -549,8 +538,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Posts
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -586,8 +574,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Articles
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -623,8 +610,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Images
             </div>
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -652,8 +638,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Videos
             </div>
             <div
-              data-testid="select-item-4"
-              data-value="4"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -679,8 +664,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Links
             </div>
             <div
-              data-testid="select-item-5"
-              data-value="5"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -856,8 +840,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -894,8 +877,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 fill="none"
@@ -916,8 +898,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Following
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -979,8 +960,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1016,8 +996,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Recent
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1079,8 +1058,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1113,8 +1091,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Columns
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1144,8 +1121,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Wide
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1193,8 +1169,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Visual
             </div>
             <div
-              data-testid="select-item-undefined"
-              data-value="undefined"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1269,8 +1244,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-ALL"
-              data-value="ALL"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1299,8 +1273,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1326,8 +1299,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Posts
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1363,8 +1335,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Articles
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1400,8 +1371,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Images
             </div>
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1429,8 +1399,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Videos
             </div>
             <div
-              data-testid="select-item-4"
-              data-value="4"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1456,8 +1425,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Links
             </div>
             <div
-              data-testid="select-item-5"
-              data-value="5"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1631,8 +1599,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1669,8 +1636,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 fill="none"
@@ -1691,8 +1657,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Following
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1754,8 +1719,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1791,8 +1755,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Recent
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1854,8 +1817,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1888,8 +1850,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Columns
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1919,8 +1880,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Wide
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1968,8 +1928,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Visual
             </div>
             <div
-              data-testid="select-item-undefined"
-              data-value="undefined"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2044,8 +2003,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-ALL"
-              data-value="ALL"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2074,8 +2032,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2101,8 +2058,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Posts
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2138,8 +2094,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Articles
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2175,8 +2130,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Images
             </div>
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2204,8 +2158,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Videos
             </div>
             <div
-              data-testid="select-item-4"
-              data-value="4"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2231,8 +2184,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Links
             </div>
             <div
-              data-testid="select-item-5"
-              data-value="5"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2473,8 +2425,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2511,8 +2462,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 fill="none"
@@ -2533,8 +2483,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Following
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2596,8 +2545,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2633,8 +2581,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Recent
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2696,8 +2643,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2730,8 +2676,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Columns
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2761,8 +2706,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Wide
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2810,8 +2754,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Visual
             </div>
             <div
-              data-testid="select-item-undefined"
-              data-value="undefined"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2886,8 +2829,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-ALL"
-              data-value="ALL"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2916,8 +2858,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2943,8 +2884,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Posts
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2980,8 +2920,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Articles
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3017,8 +2956,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Images
             </div>
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3046,8 +2984,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Videos
             </div>
             <div
-              data-testid="select-item-4"
-              data-value="4"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3073,8 +3010,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Links
             </div>
             <div
-              data-testid="select-item-5"
-              data-value="5"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3299,8 +3235,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3337,8 +3272,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 fill="none"
@@ -3359,8 +3293,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Following
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3421,8 +3354,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3458,8 +3390,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Recent
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3520,8 +3451,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3554,8 +3484,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Columns
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3585,8 +3514,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Wide
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3634,8 +3562,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Visual
             </div>
             <div
-              data-testid="select-item-undefined"
-              data-value="undefined"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3709,8 +3636,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-ALL"
-              data-value="ALL"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3739,8 +3665,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3766,8 +3691,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Posts
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3803,8 +3727,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Articles
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3840,8 +3763,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Images
             </div>
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3869,8 +3791,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Videos
             </div>
             <div
-              data-testid="select-item-4"
-              data-value="4"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3896,8 +3817,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Links
             </div>
             <div
-              data-testid="select-item-5"
-              data-value="5"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
