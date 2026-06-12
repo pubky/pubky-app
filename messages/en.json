@@ -622,7 +622,9 @@
     },
     "deleteAccount": {
       "title": "Delete Account",
-      "description": "Are you sure? Your account information cannot be recovered."
+      "description": "Are you sure? Your account information cannot be recovered.",
+      "button": "Delete Account",
+      "buttonLoading": "Deleting... {progress}%"
     },
     "confirmDiscard": {
       "title": "Do you want to close it?",
@@ -1015,6 +1017,7 @@
   },
   "errors": {
     "signOutFailed": "Failed to sign out. Please try again.",
+    "deleteAccountFailed": "Failed to delete account. Please try again.",
     "generic": "Something went wrong",
     "network": "Network error. Please try again.",
     "notFound": "Page not found",

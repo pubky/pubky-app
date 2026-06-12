@@ -628,7 +628,9 @@
     },
     "deleteAccount": {
       "title": "Konto löschen",
-      "description": "Sind Sie sicher? Ihre Kontoinformationen können nicht wiederhergestellt werden."
+      "description": "Sind Sie sicher? Ihre Kontoinformationen können nicht wiederhergestellt werden.",
+      "button": "Konto löschen",
+      "buttonLoading": "Wird gelöscht... {progress}%"
     },
     "confirmDiscard": {
       "title": "Möchten Sie schließen?",
@@ -1021,6 +1023,7 @@
   },
   "errors": {
     "signOutFailed": "Abmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "deleteAccountFailed": "Löschen des Kontos fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "generic": "Etwas ist schiefgelaufen",
     "network": "Netzwerkfehler. Bitte versuchen Sie es erneut.",
     "notFound": "Seite nicht gefunden",

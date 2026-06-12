@@ -9,7 +9,10 @@ import type {
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod } from '@/libs/http/http.types';
+import { hasHttpStatus } from '@/libs/error/error.utils';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
@@ -17,6 +20,9 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalProfileService } from '@/services/local/profile/profile';
 import { LocalUserService } from '@/services/local/user/user';
 import { useAuthStore } from '@/stores/auth/auth.store';
+
+const DELETE_FILE_MAX_ATTEMPTS = 3;
+const DELETE_FILE_RETRY_DELAY_MS = 500;
 
 export class ProfileApplication {
   private constructor() {} // Prevent instantiation
@@ -112,6 +118,33 @@ export class ProfileApplication {
   }
 
   /**
+   * Deletes a single homeserver file, absorbing transient failures.
+   *
+   * Account deletion issues one DELETE per file — hundreds in a row for an active
+   * account — so a single transport blip used to abort the entire flow mid-way
+   * (Sentry PUBKY-APP-6Y). Each file gets a few attempts with a short backoff.
+   * A 404 counts as success: the file may have been removed by an attempt whose
+   * response was lost, and "file gone" is the desired end state either way.
+   */
+  private static async deleteFile(url: string) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await HomeserverService.delete(url);
+        return;
+      } catch (error) {
+        if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
+          return;
+        }
+        if (attempt >= DELETE_FILE_MAX_ATTEMPTS) {
+          throw error;
+        }
+        Logger.warn('[ProfileApplication] File deletion failed, retrying', { url, attempt });
+        await sleep(DELETE_FILE_RETRY_DELAY_MS * attempt);
+      }
+    }
+  }
+
+  /**
    * Commits the delete profile operation to the homeserver and local database.
    * @param pubky - The public key of the user
    * @param setProgress - The function to set the progress
@@ -121,9 +154,9 @@ export class ProfileApplication {
     await LocalProfileService.deleteAll();
 
     const baseDirectory = baseUriBuilder(pubky);
-    // TODO: Using undefined, false, and Infinity here as a temporary workaround since
-    // homeserver.list does not yet support pagination. This ensures all files are deleted.
-    const dataList = await HomeserverService.list({ baseDirectory, reverse: false, limit: Infinity });
+    // Enumerate the full directory before deleting (single list calls are page-limited),
+    // so nothing is missed and progress reporting stays accurate.
+    const dataList = await HomeserverService.listAll({ baseDirectory });
 
     // Separate profile.json and other files
     const profileUrl = `${baseDirectory}profile.json`;
@@ -137,7 +170,7 @@ export class ProfileApplication {
 
     // Delete each file (excluding profile.json) and update progress
     for (let index = 0; index < filesToDelete.length; index++) {
-      await HomeserverService.delete(filesToDelete[index]);
+      await this.deleteFile(filesToDelete[index]);
 
       if (!setProgress) {
         continue;
@@ -147,7 +180,7 @@ export class ProfileApplication {
     }
 
     // Finally, delete profile.json and update progress to 100%
-    await HomeserverService.delete(profileUrl);
+    await this.deleteFile(profileUrl);
 
     if (setProgress) {
       setProgress(100);
@@ -156,16 +189,18 @@ export class ProfileApplication {
 
   /**
    * Downloads all user data from the homeserver and packages it into a ZIP file.
-   * Fetches all files at once (using Infinity limit), formats JSON files with indentation, and preserves binary files.
+   * Enumerates every file via paginated listing, formats JSON files with indentation, and preserves binary files.
    * Automatically triggers a browser download of the generated ZIP file.
+   *
+   * NOTE: This export flow is not reachable from the UI yet. The Settings → Account
+   * "Download your data" section (translations already exist under `settings.account.download`)
+   * still needs to be built and wired to `ProfileController.downloadData`.
    * @param params - Parameters containing user's public key and optional progress callback
    */
   static async downloadData({ pubky, setProgress }: TDownloadDataParams) {
     const baseDirectory = baseUriBuilder(pubky);
 
-    // TODO: Using undefined, false, and Infinity here as a temporary workaround since homeserver.list does not yet
-    // support pagination. This ensures all files are retrieved.
-    const dataList = await HomeserverService.list({ baseDirectory, reverse: false, limit: Infinity });
+    const dataList = await HomeserverService.listAll({ baseDirectory });
 
     // Create JSZip instance and data folder
     const zip = new JSZip();

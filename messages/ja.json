@@ -628,7 +628,9 @@
     },
     "deleteAccount": {
       "title": "アカウントを削除",
-      "description": "よろしいですか？アカウント情報は復元できません。"
+      "description": "よろしいですか？アカウント情報は復元できません。",
+      "button": "アカウントを削除",
+      "buttonLoading": "削除中... {progress}%"
     },
     "confirmDiscard": {
       "title": "閉じますか？",
@@ -1021,6 +1023,7 @@
   },
   "errors": {
     "signOutFailed": "ログアウトに失敗しました。再試行してください。",
+    "deleteAccountFailed": "アカウントの削除に失敗しました。再試行してください。",
     "generic": "問題が発生しました",
     "network": "ネットワークエラー。再試行してください。",
     "notFound": "ページが見つかりません",
