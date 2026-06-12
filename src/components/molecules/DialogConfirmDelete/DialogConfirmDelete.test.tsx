@@ -102,6 +102,22 @@ describe('DialogConfirmDelete', () => {
     const deleteButton = screen.getByTestId('button-destructive');
     expect(deleteButton.querySelector('.lucide-trash-2')).toBeInTheDocument();
   });
+
+  it('uses collection-specific copy when i18nNamespace="dialogs.deleteCollection"', () => {
+    render(
+      <DialogConfirmDelete
+        open={true}
+        onOpenChange={vi.fn()}
+        onConfirm={vi.fn()}
+        i18nNamespace="dialogs.deleteCollection"
+      />,
+    );
+
+    expect(screen.getByTestId('dialog-title')).toHaveTextContent('Delete collection?');
+    expect(screen.getByTestId('dialog-description')).toHaveTextContent(
+      'This action cannot be undone. The collection will be permanently deleted.',
+    );
+  });
 });
 
 describe('DialogConfirmDelete - Snapshots', () => {

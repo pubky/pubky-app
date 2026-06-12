@@ -39,6 +39,36 @@ vi.mock('@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs', () => ({
   usePostReplyRepostDialogs: vi.fn(),
 }));
 
+const mockRouterReplace = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: mockRouterReplace, push: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
+}));
+
+const mockDeletePost = vi.fn().mockResolvedValue(undefined);
+vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
+  useDeletePost: () => ({ deletePost: mockDeletePost, isDeleting: false }),
+}));
+
+vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
+  DialogConfirmDelete: ({
+    open,
+    onConfirm,
+    i18nNamespace,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+    i18nNamespace?: string;
+  }) =>
+    open ? (
+      <div data-testid="dialog-confirm-delete" data-i18n-namespace={i18nNamespace}>
+        <button data-testid="dialog-confirm-delete-btn" onClick={onConfirm}>
+          confirm delete
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => mockUseAuthStore(selector),
 }));
@@ -329,6 +359,51 @@ describe('CollectionHero', () => {
       expect(openRepostDialog).toHaveBeenCalledTimes(1);
       expect(mockUsePostReplyRepostDialogs).toHaveBeenCalledWith(COMPOSITE_ID);
       expect(screen.getByTestId('repost-dialogs')).toBeInTheDocument();
+    });
+
+    describe('delete flow', () => {
+      it('opens the confirmation dialog with the collection-specific i18n namespace on Delete click', () => {
+        setAuthStore(AUTHOR_PUBKY);
+        render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+        // Dialog mounts in closed state.
+        expect(screen.queryByTestId('dialog-confirm-delete')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByLabelText('collections.single.delete'));
+
+        const dialog = screen.getByTestId('dialog-confirm-delete');
+        expect(dialog).toBeInTheDocument();
+        // Must use the collection copy, not `dialogs.deletePost`.
+        expect(dialog).toHaveAttribute('data-i18n-namespace', 'dialogs.deleteCollection');
+      });
+
+      it('awaits deletePost then redirects to /collections via router.replace', async () => {
+        setAuthStore(AUTHOR_PUBKY);
+        mockDeletePost.mockClear();
+        mockRouterReplace.mockClear();
+        render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+        fireEvent.click(screen.getByLabelText('collections.single.delete'));
+        fireEvent.click(screen.getByTestId('dialog-confirm-delete-btn'));
+
+        // Await the microtask so the post-redirect chain settles.
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(mockDeletePost).toHaveBeenCalledTimes(1);
+        expect(mockDeletePost).toHaveBeenCalledWith(COMPOSITE_ID);
+        // Redirect must use `replace` (not `push`) so the back button skips
+        // the now-deleted collection page.
+        expect(mockRouterReplace).toHaveBeenCalledWith('/collections');
+      });
+
+      it('does not mount the confirm dialog for non-owners (Delete button absent)', () => {
+        setAuthStore('some-other-user');
+        render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+        expect(screen.queryByLabelText('collections.single.delete')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('dialog-confirm-delete')).not.toBeInTheDocument();
+      });
     });
   });
 

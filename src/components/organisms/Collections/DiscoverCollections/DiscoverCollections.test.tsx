@@ -3,9 +3,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_DISCOVER_BACKFILL_MAX_ROUNDS, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
+import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { buildDiscoverCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { DiscoverCollections } from './DiscoverCollections';
@@ -38,6 +40,12 @@ vi.mock('@/controllers/stream/posts/posts', () => ({
 vi.mock('@/controllers/bookmark/bookmark', () => ({
   BookmarkController: {
     getAll: vi.fn(),
+  },
+}));
+
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    getDetailsByIds: vi.fn(),
   },
 }));
 
@@ -94,6 +102,7 @@ const mockGetOrFetchStreamSlice = vi.mocked(StreamPostsController.getOrFetchStre
 const mockPrepareStreamForInitialLoad = vi.mocked(StreamPostsController.prepareStreamForInitialLoad);
 const mockGetCachedLastPostTimestamp = vi.mocked(StreamPostsController.getCachedLastPostTimestamp);
 const mockBookmarkGetAll = vi.mocked(BookmarkController.getAll);
+const mockGetDetailsByIds = vi.mocked(PostController.getDetailsByIds);
 
 function makeSlice({
   nextPageIds = [],
@@ -115,6 +124,7 @@ beforeEach(() => {
   mockGetCachedLastPostTimestamp.mockResolvedValue(0);
   mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ reachedEnd: true }));
   mockBookmarkGetAll.mockResolvedValue([]);
+  mockGetDetailsByIds.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -278,7 +288,13 @@ describe('DiscoverCollections', () => {
     mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true }));
     // Fetch-time bookmark set is empty; live overlay later includes 'a:1'.
     mockBookmarkGetAll.mockResolvedValue([]);
-    mockUseLiveQuery.mockReturnValue(['a:1']);
+    // Two `useLiveQuery` calls run inside the component: the bookmarks overlay
+    // (deps: `[]`) and the deletions overlay (deps: `[visibleIds]`). Branch on
+    // deps so only the bookmarks overlay sees 'a:1' and the deletions overlay
+    // gets an empty `Set` (no live-deleted ids in this scenario).
+    mockUseLiveQuery.mockImplementation((_fn: unknown, deps?: unknown[]) =>
+      Array.isArray(deps) && deps.length === 0 ? ['a:1'] : new Set<string>(),
+    );
 
     await act(async () => {
       render(<DiscoverCollections />);
@@ -289,6 +305,60 @@ describe('DiscoverCollections', () => {
       expect(cards).toHaveLength(1);
       expect(cards[0]).toHaveAttribute('data-post-id', '2');
       expect(cards[0]).toHaveAttribute('data-author-pubky', 'b');
+    });
+  });
+
+  it('fetch-time filter drops slice ids whose local PostDetails is tombstoned', async () => {
+    // Defense-in-depth against Nexus eventually-consistent streams: if a slice
+    // returns an id whose local PostDetails has `content === '[DELETED]'`,
+    // the fetch-time filter must skip it before it lands in `visibleIds`.
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true }));
+    mockGetDetailsByIds.mockResolvedValue([
+      asOpaque<PostDetailsModelSchema>({ id: 'a:1', kind: 'collection', content: '[DELETED]' }),
+      asOpaque<PostDetailsModelSchema>({ id: 'b:2', kind: 'collection', content: 'live' }),
+    ]);
+
+    await act(async () => {
+      render(<DiscoverCollections />);
+    });
+
+    await waitFor(() => {
+      const cards = screen.getAllByTestId('collection-card');
+      expect(cards).toHaveLength(1);
+      expect(cards[0]).toHaveAttribute('data-author-pubky', 'b');
+      expect(cards[0]).toHaveAttribute('data-post-id', '2');
+    });
+  });
+
+  it('live-overlay subtracts ids that have flipped to [DELETED] mid-session', async () => {
+    // Mirror the bookmarks-overlay test but for the deletions overlay: the
+    // second `useLiveQuery` returns the set of locally-deleted ids in the
+    // visible window, and `displayIds` must exclude them.
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true }));
+    mockBookmarkGetAll.mockResolvedValue([]);
+    // Fetch-time details are clean (live content); deletion only happens
+    // mid-session and is surfaced by the live overlay.
+    mockGetDetailsByIds.mockResolvedValue([
+      asOpaque<PostDetailsModelSchema>({ id: 'a:1', kind: 'collection', content: 'live' }),
+      asOpaque<PostDetailsModelSchema>({ id: 'b:2', kind: 'collection', content: 'live' }),
+    ]);
+    // Two live queries — bookmarks (deps: []) returns []; deletions (deps:
+    // [visibleIds]) returns the deleted-id Set.
+    mockUseLiveQuery.mockImplementation((_fn: unknown, deps?: unknown[]) =>
+      Array.isArray(deps) && deps.length === 0 ? [] : new Set<string>(['a:1']),
+    );
+
+    await act(async () => {
+      render(<DiscoverCollections />);
+    });
+
+    await waitFor(() => {
+      const cards = screen.getAllByTestId('collection-card');
+      expect(cards).toHaveLength(1);
+      expect(cards[0]).toHaveAttribute('data-author-pubky', 'b');
+      expect(cards[0]).toHaveAttribute('data-post-id', '2');
     });
   });
 

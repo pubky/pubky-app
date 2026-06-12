@@ -1,10 +1,13 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_MY_SECTION_SKELETON_COUNT, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { FileController } from '@/controllers/file/file';
+import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import type { Pubky } from '@/models/models.types';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -30,6 +33,16 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
+}));
+
+vi.mock('dexie-react-hooks', () => ({
+  useLiveQuery: vi.fn(),
+}));
+
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    getDetailsByIds: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 const mockToast = vi.fn();
@@ -326,6 +339,65 @@ describe('MyCollections', () => {
     expect(mockToast).toHaveBeenCalledWith({
       title: 'toast.error',
       description: 'collections.loadFailed',
+    });
+  });
+
+  describe('deleted-filter live query', () => {
+    // Defense-in-depth: `LocalPostService.delete`'s soft-delete branch keeps
+    // the id in the author's collection PostStream, so a redirect from
+    // `CollectionHero` would otherwise re-mount this section with the
+    // deleted id still present. The live query observes `post_details` so
+    // the filter reacts the moment the tombstone lands.
+    it('drops postIds whose local PostDetails content is the [DELETED] tombstone', async () => {
+      const ids = [
+        `${AUTHOR_A}:p1`,
+        `${AUTHOR_A}:p2`, // tombstoned
+        `${AUTHOR_A}:p3`,
+      ];
+      setup({
+        currentUserPubky: CURRENT_USER_PUBKY,
+        userDetails: { name: 'Alice', image: null, indexed_at: 1 },
+        pagination: { postIds: ids },
+      });
+      vi.mocked(PostController.getDetailsByIds).mockResolvedValue([
+        asOpaque<PostDetailsModelSchema>({ id: ids[0], kind: 'collection', content: 'live' }),
+        asOpaque<PostDetailsModelSchema>({ id: ids[1], kind: 'collection', content: '[DELETED]' }),
+        asOpaque<PostDetailsModelSchema>({ id: ids[2], kind: 'collection', content: 'live' }),
+      ]);
+
+      // Capture the function `useLiveQuery` receives, invoke it ourselves,
+      // and use the returned filtered list as `visibleIds` (mirrors the
+      // pattern used in FollowedCollections / DiscoverCollections tests).
+      let capturedFn: (() => Promise<string[]>) | null = null;
+      vi.mocked(useLiveQuery).mockImplementation((fn: unknown) => {
+        capturedFn = fn as () => Promise<string[]>;
+        return undefined;
+      });
+
+      await act(async () => {
+        render(<MyCollections />);
+      });
+
+      expect(capturedFn).not.toBeNull();
+      const result = await capturedFn!();
+      expect(result).toEqual([ids[0], ids[2]]);
+      expect(result).not.toContain(ids[1]);
+    });
+
+    it('falls back to the unfiltered postIds while the live query is still resolving', () => {
+      // `useLiveQuery` returns `undefined` until the first read settles.
+      // `?? postIds` keeps the section render-stable in that window.
+      const ids = [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`];
+      setup({
+        currentUserPubky: CURRENT_USER_PUBKY,
+        userDetails: { name: 'Alice', image: null, indexed_at: 1 },
+        pagination: { postIds: ids },
+      });
+      vi.mocked(useLiveQuery).mockReturnValue(undefined);
+
+      render(<MyCollections />);
+
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(2);
     });
   });
 

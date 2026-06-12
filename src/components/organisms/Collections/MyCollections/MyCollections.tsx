@@ -1,5 +1,6 @@
 'use client';
 
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Loader2, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
@@ -7,8 +8,10 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { COLLECTIONS_MY_SECTION_SKELETON_COUNT, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { FileController } from '@/controllers/file/file';
+import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { isPostDeleted } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
@@ -19,6 +22,7 @@ import { CollectionBookmarkCard } from '@/organisms/Collections/CollectionBookma
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { NewCollectionDialog } from '@/organisms/NewCollectionDialog/NewCollectionDialog';
+import { TimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 /**
@@ -99,7 +103,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
   const { toast } = useToast();
   const streamId = buildAuthorCollectionsStreamId(currentUserPubky);
 
-  const { postIds, hasMore, loadMore, loading, loadingMore } = useStreamPagination({
+  const { postIds, hasMore, loadMore, loading, loadingMore, prependPosts, removePosts } = useStreamPagination({
     streamId,
     limit: COLLECTIONS_SECTION_PAGE_SIZE,
     // Surface fetch failures to the user. Sibling sections (`FollowedCollections`,
@@ -119,15 +123,41 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
   // warm-cache loads don't flash a skeleton next to the pinned card.
   const showSkeletons = loading && postIds.length === 0;
 
+  // Filter out soft-deleted collections (content === '[DELETED]'). Soft delete
+  // is the path taken whenever a collection has connections (bookmarks /
+  // replies / reposts) — `LocalPostService.delete` flips `PostDetails.content`
+  // to `[DELETED]` but leaves the id in the author's collection PostStream, so
+  // a redirect from `CollectionHero` would otherwise re-mount this section
+  // with the deleted id still present. The live query observes `post_details`
+  // so the filter reacts the moment the soft-delete write lands. Falls back
+  // to the unfiltered `postIds` while the query resolves — safe because the
+  // only way a deleted id is present is mid-delete, and the query fires
+  // immediately. Mirrors the equivalent guards in `FollowedCollections` /
+  // `DiscoverCollections`.
+  const visibleIds =
+    useLiveQuery(async () => {
+      if (postIds.length === 0) return postIds;
+      const details = await PostController.getDetailsByIds({ compositeIds: postIds });
+      return postIds.filter((_, i) => {
+        const detail = details[i];
+        return !detail || !isPostDeleted(detail.content);
+      });
+    }, [postIds]) ?? postIds;
+
+  // Expose stream mutators via `TimelineFeedContext` so `useDeletePost`'s
+  // optimistic `removePosts(postId)` call fires for collections deleted from
+  // a `CollectionCard` rendered inside this section. The hook reads from the
+  // nearest provider — without this wrap, the optimistic call is a no-op and
+  // the deleted card lingers until the next stream refetch.
   return (
-    <>
+    <TimelineFeedContext.Provider value={{ prependPosts, removePosts }}>
       <Container overrideDefaults className="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6">
         <CollectionBookmarkCard />
         {showSkeletons
           ? Array.from({ length: COLLECTIONS_MY_SECTION_SKELETON_COUNT }).map((_, index) => (
               <CollectionCardSkeleton key={`my-collections-skeleton-${index}`} />
             ))
-          : postIds.map((compositeId) => {
+          : visibleIds.map((compositeId) => {
               const { pubky, id } = parseCompositeId(compositeId);
               return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} />;
             })}
@@ -141,6 +171,6 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
           </Button>
         </Container>
       )}
-    </>
+    </TimelineFeedContext.Provider>
   );
 }

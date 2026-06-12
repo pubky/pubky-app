@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Minus, Pencil, Plus, Share2, StickyNote, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
@@ -10,12 +12,14 @@ import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
+import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { cn } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
+import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionHeroSkeleton } from '@/organisms/CollectionHero/CollectionHero.skeleton';
@@ -112,9 +116,31 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const handleEdit = () => setIsEditDialogOpen(true);
 
-  // Placeholder action — out of scope this slice.
-  // TODO: wire in collection delete (#1866 follow-ups).
-  const handleDelete = () => {};
+  // Delete flow: open confirmation → on confirm, await the commit before
+  // redirecting to `/collections`. Awaiting matters: the local-first delete
+  // write is async, and racing the redirect causes (a) stream queries on the
+  // landing page to read stale state, and (b) for the soft-delete branch
+  // (linked collections), the `[DELETED]` content marker only lands after
+  // navigation, leaving the user able to navigate back to the still-rendered
+  // hero and re-fire `commitDelete` (which then errors on the homeserver as
+  // already-gone). `replace` so the back button doesn't return to the now-
+  // deleted page. Collection-specific toast copy so the success / failure
+  // toast reads as "Collection deleted" not "Post deleted".
+  const router = useRouter();
+  const tCollectionToast = useTranslations('toast.collection');
+  const { deletePost, isDeleting } = useDeletePost({
+    toastMessages: {
+      deleted: tCollectionToast('collectionDeleted'),
+      deletedDesc: tCollectionToast('collectionDeletedDesc'),
+      deleteFailed: tCollectionToast('deleteFailed'),
+    },
+  });
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const handleDelete = () => setDeleteConfirmOpen(true);
+  const handleDeleteConfirm = async () => {
+    await deletePost(compositeId);
+    router.replace(APP_ROUTES.COLLECTIONS);
+  };
 
   return (
     <Card
@@ -201,10 +227,14 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">
           {isOwn ? (
             <>
+              {/* While a delete is in flight, disable every owner action.
+                  Lets the user know something's happening and prevents racing
+                  Share / Edit against an imminent route replace. */}
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={handleShare}
+                disabled={isDeleting}
                 aria-label={t('share')}
                 className="gap-2 text-xs"
               >
@@ -215,6 +245,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
                 variant="secondary"
                 size="sm"
                 onClick={handleEdit}
+                disabled={isDeleting}
                 aria-label={t('edit')}
                 className="gap-2 text-xs"
               >
@@ -225,6 +256,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
                 variant="secondary"
                 size="sm"
                 onClick={handleDelete}
+                disabled={isDeleting}
                 aria-label={t('delete')}
                 className="gap-2 text-xs"
               >
@@ -261,11 +293,19 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
       </CardContent>
       {dialogs}
       {isOwn && (
-        <EditCollectionDialog
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          compositeCollectionId={compositeId}
-        />
+        <>
+          <EditCollectionDialog
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            compositeCollectionId={compositeId}
+          />
+          <DialogConfirmDelete
+            open={deleteConfirmOpen}
+            onOpenChange={setDeleteConfirmOpen}
+            onConfirm={() => void handleDeleteConfirm()}
+            i18nNamespace="dialogs.deleteCollection"
+          />
+        </>
       )}
     </Card>
   );

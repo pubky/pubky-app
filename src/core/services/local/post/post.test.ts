@@ -457,7 +457,11 @@ describe('LocalPostService', () => {
         getSavedTags(postId),
       ]);
 
-      expect(details).toBeUndefined();
+      // Hard-delete now leaves a `[DELETED]` tombstone in PostDetails so a
+      // concurrent Nexus refetch (cache-miss path) can't reanimate the post.
+      // All auxiliary records are still fully removed.
+      expect(details).toBeTruthy();
+      expect(details!.content).toBe(DELETED);
       expect(counts).toBeUndefined();
       expect(relationships).toBeUndefined();
       expect(tags).toBeUndefined();
@@ -485,7 +489,8 @@ describe('LocalPostService', () => {
       ).resolves.not.toThrow();
 
       const deletedPost = await getSavedPost(replyId);
-      expect(deletedPost).toBeUndefined();
+      expect(deletedPost).toBeTruthy();
+      expect(deletedPost!.content).toBe(DELETED);
     });
 
     it('should decrement parent reply count when deleting a reply', async () => {
@@ -647,8 +652,10 @@ describe('LocalPostService', () => {
       await PostCountsModel.update(parentPostId, { replies: 1 });
       await setupExistingPost(replyId, 'Reply post', parentUri);
 
-      // Spy to force failure during transaction
-      const spy = vi.spyOn(PostDetailsModel, 'deleteById').mockRejectedValueOnce(new Error('Simulated failure'));
+      // Spy to force failure during transaction. The hard-delete branch
+      // now tombstones via `PostDetailsModel.update` instead of `deleteById`,
+      // so the rejection has to target `update` to exercise the rollback.
+      const spy = vi.spyOn(PostDetailsModel, 'update').mockRejectedValueOnce(new Error('Simulated failure'));
 
       try {
         await expect(
@@ -742,18 +749,20 @@ describe('LocalPostService', () => {
       expect(postDetails!.content).toBe(DELETED);
     });
 
-    it('should hard delete post when it has no links and return false', async () => {
+    it('should hard delete post when it has no links and leave a tombstone', async () => {
       const postId = testData.fullPostId1;
       await setupExistingPost(postId, 'Test post');
       await setupUserCounts(testData.authorPubky);
 
-      // Delete should return false (hard delete)
+      // Delete should return false (hard delete branch)
       const result = await LocalPostService.delete({ compositePostId: postId });
       expect(result).toBe(false);
 
-      // Post should be completely removed
+      // Post should be tombstoned (content === DELETED) rather than fully
+      // removed, so a concurrent Nexus refetch can't reanimate it.
       const postDetails = await getSavedPost(postId);
-      expect(postDetails).toBeUndefined();
+      expect(postDetails).toBeTruthy();
+      expect(postDetails!.content).toBe(DELETED);
     });
 
     it('should handle deleting non-existent post gracefully (idempotent)', async () => {
@@ -762,6 +771,33 @@ describe('LocalPostService', () => {
       // Should not throw - delete is idempotent, returns false for hard delete path
       const result = await LocalPostService.delete({ compositePostId: nonExistentPostId });
       expect(result).toBe(false);
+    });
+
+    it('should short-circuit when the post is already tombstoned (no user-count drift)', async () => {
+      const postId = testData.fullPostId1;
+      await setupExistingPost(postId, 'Test post');
+      await setupUserCounts(testData.authorPubky);
+
+      // First delete: hard-delete path → tombstone, posts count decremented once.
+      const firstResult = await LocalPostService.delete({ compositePostId: postId });
+      expect(firstResult).toBe(false);
+      const tombstone = await getSavedPost(postId);
+      expect(tombstone!.content).toBe(DELETED);
+
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+      try {
+        // Second delete on the same tombstone must be a no-op: no transaction,
+        // no further user-count decrement. Guards against double-decrementing
+        // the author's post count if a stale page somehow re-fires delete.
+        const secondResult = await LocalPostService.delete({ compositePostId: postId });
+        expect(secondResult).toBe(false);
+        expect(userCountsSpy).not.toHaveBeenCalled();
+
+        const stillTombstone = await getSavedPost(postId);
+        expect(stillTombstone!.content).toBe(DELETED);
+      } finally {
+        userCountsSpy.mockRestore();
+      }
     });
   });
 

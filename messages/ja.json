@@ -559,6 +559,12 @@
       "confirmButton": "削除",
       "cancelButton": "キャンセル"
     },
+    "deleteCollection": {
+      "title": "コレクションを削除しますか？",
+      "description": "この操作は取り消せません。コレクションは完全に削除されます。",
+      "confirmButton": "削除",
+      "cancelButton": "キャンセル"
+    },
     "editPost": {
       "editArticle": "記事を編集",
       "editPost": "投稿を編集",
@@ -929,6 +935,11 @@
       "removeFailed": "ブックマークの削除に失敗しました",
       "loginRequired": "投稿をブックマークするにはログインが必要です"
     },
+    "collection": {
+      "collectionDeleted": "コレクションを削除しました",
+      "collectionDeletedDesc": "あなたのコレクションが削除されました",
+      "deleteFailed": "コレクションの削除に失敗しました。もう一度お試しください。"
+    },
     "copy": {
       "pubkyCopied": "pubkyをクリップボードにコピーしました",
       "linkCopied": "リンクをクリップボードにコピーしました",
@@ -1241,6 +1252,7 @@
     "warningReached": "最大文字数制限に達しました。"
   },
   "collections": {
+    "deleted": "このコレクションは作成者によって削除されました。",
     "new": {
       "cta": "新しいコレクション",
       "title": "新しいコレクション",

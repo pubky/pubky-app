@@ -307,6 +307,19 @@ export class LocalPostService {
   static async delete({ compositePostId }: TDeletePostParams): Promise<boolean> {
     const { pubky: authorId } = parseCompositeId(compositePostId);
 
+    // Idempotency guard: if the post is already tombstoned (`content ===
+    // DELETED`), short-circuit. Otherwise a stray re-delete would re-run the
+    // hard-delete transaction's `UserCountsModel.updateCounts({ posts: -1 })`
+    // and drift the author's post count. In normal UX this is unreachable —
+    // every render path for a tombstoned post shows the deleted-state
+    // component with no delete button — but the guard keeps the function
+    // idempotent against races and stale clients.
+    const existing = await PostDetailsModel.findById(compositePostId);
+    if (existing?.content === DELETED) {
+      Logger.warn('[LocalPostService.delete] post already tombstoned, skipping', { compositePostId });
+      return false;
+    }
+
     // TODO: There is an edge case where the post counts are not found, but the post is linked. This should be handled.
     const postCounts = await PostCountsModel.findById(compositePostId);
     // If counts exist and post is linked → soft delete (mark as DELETED, keep records)
@@ -340,7 +353,19 @@ export class LocalPostService {
         ],
         async () => {
           await Promise.all([
-            PostDetailsModel.deleteById(compositePostId),
+            // Tombstone, not delete. The hard-delete branch used to drop
+            // `PostDetails` entirely, but that left `useLocalFirstQuery`
+            // consumers seeing `data === null` and racing the homeserver
+            // DELETE: `fetchFn` would re-query Nexus, which still returned
+            // the post (Nexus eventual consistency between the delete index
+            // and the by-ids endpoint), and `persistPosts.bulkSave` wrote
+            // the original content back. Leaving a `content = [DELETED]`
+            // row makes `useLocalFirstQuery` treat the post as cache-hit
+            // (data is non-null), so `fetchFn` never fires and the post
+            // stays deleted. Auxiliary records (relationships, counts,
+            // tags) still get fully removed below — only the details row
+            // sticks around as a tombstone.
+            PostDetailsModel.update(compositePostId, { content: DELETED }),
             PostRelationshipsModel.deleteById(compositePostId),
             PostCountsModel.deleteById(compositePostId),
             PostTagsModel.deleteById(compositePostId),
