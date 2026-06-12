@@ -10,7 +10,7 @@ import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
-export interface UseDeleteAccountResult {
+interface UseDeleteAccountResult {
   handleDeleteAccount: () => Promise<void>;
   isDeleting: boolean;
   progress: number;
