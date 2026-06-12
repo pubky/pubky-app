@@ -122,7 +122,7 @@ export class PostStreamApplication {
     postIds: string[];
   }): Promise<string[]> {
     const notDeletedPostIds = await LocalPostService.filterDeletedPosts(postIds);
-    return await this.filterCollectionsFromAllStream({ streamId, postIds: notDeletedPostIds });
+    return await this.filterCollectionsFromStream({ streamId, postIds: notDeletedPostIds });
   }
 
   /**
@@ -552,14 +552,14 @@ export class PostStreamApplication {
     return LocalStreamPostsService.getNotPersistedPostsInCache(postIds);
   }
 
-  private static async filterCollectionsFromAllStream({
+  private static async filterCollectionsFromStream({
     streamId,
     postIds,
   }: {
     streamId: PostStreamId;
     postIds: string[];
   }): Promise<string[]> {
-    if (!this.shouldExcludeCollectionsFromAllStream(streamId) || postIds.length === 0) {
+    if (!this.shouldExcludeCollectionsFromStream(streamId) || postIds.length === 0) {
       return postIds;
     }
 
@@ -567,9 +567,10 @@ export class PostStreamApplication {
     return postIds.filter((_postId, index) => postDetails[index]?.kind !== StreamKind.COLLECTION);
   }
 
-  private static shouldExcludeCollectionsFromAllStream(streamId: PostStreamId): boolean {
+  /** Collections appear only on streams whose id encodes `kind=collection` (e.g. timeline:all:collection). */
+  private static shouldExcludeCollectionsFromStream(streamId: PostStreamId): boolean {
     const [, , kind] = breakDownStreamId(streamId);
-    return kind === 'all';
+    return kind !== StreamKind.COLLECTION;
   }
 
   /**

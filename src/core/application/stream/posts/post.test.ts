@@ -220,7 +220,7 @@ describe('PostStreamApplication', () => {
   // ============================================================================
 
   describe('filterStreamPosts', () => {
-    it('excludes collection-kind posts from all content streams', async () => {
+    it('excludes collection-kind posts from non-collection streams', async () => {
       const shortPostId = `${DEFAULT_AUTHOR}:short-post`;
       const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
       const longPostId = `${DEFAULT_AUTHOR}:long-post`;
@@ -247,6 +247,22 @@ describe('PostStreamApplication', () => {
       });
 
       expect(result).toEqual([collectionPostId]);
+    });
+
+    it('excludes collection-kind posts from author profile streams', async () => {
+      const authorStreamId = `author:${DEFAULT_AUTHOR}` as PostStreamId;
+      const shortPostId = `${DEFAULT_AUTHOR}:short-post`;
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+
+      await createPostDetailWithKind(shortPostId, 'short');
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: authorStreamId,
+        postIds: [shortPostId, collectionPostId],
+      });
+
+      expect(result).toEqual([shortPostId]);
     });
 
     it('keeps posts without cached details so cache misses can be resolved', async () => {
