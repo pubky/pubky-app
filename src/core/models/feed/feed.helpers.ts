@@ -20,6 +20,7 @@ export function layoutToString(layout: PubkyAppFeedLayout): string {
     [PubkyAppFeedLayout.Columns]: 'columns',
     [PubkyAppFeedLayout.Wide]: 'wide',
     [PubkyAppFeedLayout.Visual]: 'visual',
+    [PubkyAppFeedLayout.List]: 'list',
   };
   return map[layout];
 }
