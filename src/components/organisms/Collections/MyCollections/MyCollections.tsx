@@ -89,6 +89,8 @@ export function MyCollections() {
   );
 }
 
+const EMPTY_IDS: string[] = [];
+
 interface MyCollectionsStreamProps {
   currentUserPubky: Pubky;
 }
@@ -130,19 +132,18 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
   // a redirect from `CollectionHero` would otherwise re-mount this section
   // with the deleted id still present. The live query observes `post_details`
   // so the filter reacts the moment the soft-delete write lands. Falls back
-  // to the unfiltered `postIds` while the query resolves — safe because the
-  // only way a deleted id is present is mid-delete, and the query fires
-  // immediately. Mirrors the equivalent guards in `FollowedCollections` /
-  // `DiscoverCollections`.
+  // to `EMPTY_IDS` while the query resolves — same pattern as
+  // `FollowedCollections` so the section never paints unfiltered ids that
+  // could briefly show `CollectionDeleted` molecules before the filter lands.
   const visibleIds =
     useLiveQuery(async () => {
-      if (postIds.length === 0) return postIds;
+      if (postIds.length === 0) return EMPTY_IDS;
       const details = await PostController.getDetailsByIds({ compositeIds: postIds });
       return postIds.filter((_, i) => {
         const detail = details[i];
         return !detail || !isPostDeleted(detail.content);
       });
-    }, [postIds]) ?? postIds;
+    }, [postIds]) ?? EMPTY_IDS;
 
   // Expose stream mutators via `TimelineFeedContext` so `useDeletePost`'s
   // optimistic `removePosts(postId)` call fires for collections deleted from

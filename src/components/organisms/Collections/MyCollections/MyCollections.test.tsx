@@ -198,15 +198,18 @@ describe('MyCollections', () => {
   });
 
   it('renders one CollectionCard per stream post id with parsed author/postId; no Show More when hasMore=false', () => {
+    const ids = [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`];
     setup({
       currentUserPubky: CURRENT_USER_PUBKY,
       userDetails: { name: 'Alice', image: null, indexed_at: 0 },
       pagination: {
-        postIds: [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`],
+        postIds: ids,
         loading: false,
         hasMore: false,
       },
     });
+    // Resolved live query, no tombstones → echoes `postIds`.
+    vi.mocked(useLiveQuery).mockReturnValue(ids);
 
     render(<MyCollections />);
 
@@ -234,15 +237,18 @@ describe('MyCollections', () => {
   });
 
   it('does NOT render skeletons on warm-cache load (loading=true, postIds non-empty)', () => {
+    const ids = [`${AUTHOR_A}:p1`];
     setup({
       currentUserPubky: CURRENT_USER_PUBKY,
       userDetails: { name: 'Alice', image: null, indexed_at: 0 },
       pagination: {
-        postIds: [`${AUTHOR_A}:p1`],
+        postIds: ids,
         loading: true,
         hasMore: false,
       },
     });
+    // Resolved live query, no tombstones → echoes `postIds`.
+    vi.mocked(useLiveQuery).mockReturnValue(ids);
 
     render(<MyCollections />);
 
@@ -384,9 +390,13 @@ describe('MyCollections', () => {
       expect(result).not.toContain(ids[1]);
     });
 
-    it('falls back to the unfiltered postIds while the live query is still resolving', () => {
+    it('renders no CollectionCards while the live query is still resolving (`?? EMPTY_IDS` fallback)', () => {
       // `useLiveQuery` returns `undefined` until the first read settles.
-      // `?? postIds` keeps the section render-stable in that window.
+      // We fall back to an empty list (matching `FollowedCollections`) rather
+      // than the unfiltered `postIds` so the section never flashes a
+      // `CollectionDeleted` molecule for a tombstoned id during that window.
+      // Only the pinned `CollectionBookmarkCard` is visible until the filter
+      // resolves.
       const ids = [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`];
       setup({
         currentUserPubky: CURRENT_USER_PUBKY,
@@ -397,7 +407,9 @@ describe('MyCollections', () => {
 
       render(<MyCollections />);
 
-      expect(screen.getAllByTestId('collection-card')).toHaveLength(2);
+      expect(screen.queryAllByTestId('collection-card')).toHaveLength(0);
+      // Pinned bookmark card is still rendered — it lives outside the filtered list.
+      expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
     });
   });
 
@@ -441,15 +453,18 @@ describe('MyCollections', () => {
     });
 
     it('matches the snapshot for the authenticated state with two loaded cards', () => {
+      const ids = [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`];
       setup({
         currentUserPubky: CURRENT_USER_PUBKY,
         userDetails: { name: 'Alice', image: null, indexed_at: 0 },
         pagination: {
-          postIds: [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`],
+          postIds: ids,
           loading: false,
           hasMore: true,
         },
       });
+      // Resolved live query, no tombstones → echoes `postIds`.
+      vi.mocked(useLiveQuery).mockReturnValue(ids);
 
       const { container } = render(<MyCollections />);
       expect(container.firstChild).toMatchSnapshot();
