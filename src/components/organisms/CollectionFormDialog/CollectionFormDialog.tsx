@@ -84,7 +84,10 @@ export function CollectionFormDialog({
   } = cover;
 
   const watchedName = useWatch({ control: form.control, name: CREATE_COLLECTION_FORM_FIELDS.NAME });
-  const canSubmit = !!watchedName.trim() && !isSaving;
+  // Block submit while a cover-picker error is showing — the rejected file
+  // never made it into form state, so saving would commit unchanged content
+  // while the user is still staring at a validation error.
+  const canSubmit = !!watchedName.trim() && !isSaving && !coverError;
 
   const coverErrorMessage =
     coverError === 'invalid-type'
