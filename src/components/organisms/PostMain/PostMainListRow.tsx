@@ -98,7 +98,7 @@ export function PostMainListRow({ postId, shouldShowPostHeader, onReplyClick, on
             ) : null}
             {snippet ? (
               <Typography
-                className={cn('min-w-0 flex-1 truncate text-foreground', LIST_POST_BODY_TEXT_CLASS)}
+                className={cn('min-w-0 flex-1 truncate text-secondary-foreground', LIST_POST_BODY_TEXT_CLASS)}
                 overrideDefaults
               >
                 {snippet}
