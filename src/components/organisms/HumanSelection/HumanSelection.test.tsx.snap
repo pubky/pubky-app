@@ -33,7 +33,7 @@ exports[`HumanSelection > matches snapshot 1`] = `
     </h2>
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-6 lg:flex-row lg:items-stretch lg:gap-8"
+    class="mx-auto w-full flex-col flex gap-6 lg:flex-row lg:items-stretch lg:gap-6"
     data-testid="human-verification-cards"
   >
     <div
