@@ -587,7 +587,7 @@
       "newHere": "Neu hier?",
       "newHereDescription": "Erstellen Sie Ihr Konto und beginnen Sie, Pubky zu erkunden.",
       "joinButton": "Pubky beitreten",
-      "alreadyHaveAccount": "Sie haben bereits ein Konto?",
+      "alreadyHaveAccount": "Sie haben bereits einen Pubky?",
       "alreadyHaveAccountDescription": "Melden Sie sich an, um mit Beiträgen und Profilen zu interagieren.",
       "signInButton": "Anmelden"
     },
@@ -628,7 +628,9 @@
     },
     "deleteAccount": {
       "title": "Konto löschen",
-      "description": "Sind Sie sicher? Ihre Kontoinformationen können nicht wiederhergestellt werden."
+      "description": "Sind Sie sicher? Ihre Kontoinformationen können nicht wiederhergestellt werden.",
+      "button": "Konto löschen",
+      "buttonLoading": "Wird gelöscht... {progress}%"
     },
     "confirmDiscard": {
       "title": "Möchten Sie schließen?",
@@ -1021,6 +1023,7 @@
   },
   "errors": {
     "signOutFailed": "Abmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "deleteAccountFailed": "Löschen des Kontos fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "generic": "Etwas ist schiefgelaufen",
     "network": "Netzwerkfehler. Bitte versuchen Sie es erneut.",
     "notFound": "Seite nicht gefunden",

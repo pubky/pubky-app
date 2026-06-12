@@ -1,6 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogDeleteAccount } from './DialogDeleteAccount';
+
+// Capture the onOpenChange handler passed to Dialog so dismissal behavior can be tested
+let capturedOnOpenChange: ((open: boolean) => void) | undefined;
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
@@ -12,11 +15,14 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       children: React.ReactNode;
       open?: boolean;
       onOpenChange?: (open: boolean) => void;
-    }) => (
-      <div data-testid="dialog" data-open={open} data-on-open-change={!!onOpenChange}>
-        {children}
-      </div>
-    ),
+    }) => {
+      capturedOnOpenChange = onOpenChange;
+      return (
+        <div data-testid="dialog" data-open={open} data-on-open-change={!!onOpenChange}>
+          {children}
+        </div>
+      );
+    },
     DialogContent: ({
       children,
       className,
@@ -67,6 +73,7 @@ vi.mock('@/atoms/Button/Button', () => {
       size,
       className,
       onClick,
+      disabled,
       ...props
     }: {
       children: React.ReactNode;
@@ -74,6 +81,7 @@ vi.mock('@/atoms/Button/Button', () => {
       size?: string;
       className?: string;
       onClick?: () => void;
+      disabled?: boolean;
       [key: string]: unknown;
     }) => (
       <button
@@ -82,6 +90,7 @@ vi.mock('@/atoms/Button/Button', () => {
         data-size={size}
         className={className}
         onClick={onClick}
+        disabled={disabled}
         {...props}
       >
         {children}
@@ -112,12 +121,31 @@ vi.mock('@/atoms/Typography/Typography', () => {
   };
 });
 
+// Mock useDeleteAccount hook with mutable state
+const mockHandleDeleteAccount = vi.fn();
+let mockIsDeleting = false;
+let mockProgress = 0;
+
+vi.mock('@/hooks/useDeleteAccount/useDeleteAccount', () => ({
+  useDeleteAccount: () => ({
+    handleDeleteAccount: mockHandleDeleteAccount,
+    isDeleting: mockIsDeleting,
+    progress: mockProgress,
+  }),
+}));
+
 const defaultProps = {
   isOpen: true,
   onOpenChangeAction: vi.fn(),
 } as const;
 
 describe('DialogDeleteAccount', () => {
+  beforeEach(() => {
+    mockIsDeleting = false;
+    mockProgress = 0;
+    capturedOnOpenChange = undefined;
+  });
+
   it('renders with default props', () => {
     render(<DialogDeleteAccount {...defaultProps} />);
 
@@ -148,7 +176,7 @@ describe('DialogDeleteAccount', () => {
     expect(screen.getByRole('button', { name: /delete account/i })).toBeInTheDocument();
   });
 
-  it('handles click events on Cancel button', () => {
+  it('closes the dialog when Cancel is clicked', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogDeleteAccount {...defaultProps} onOpenChangeAction={onOpenChangeAction} />);
 
@@ -156,14 +184,51 @@ describe('DialogDeleteAccount', () => {
     fireEvent.click(cancelButton);
 
     expect(onOpenChangeAction).toHaveBeenCalledWith(false);
+    expect(mockHandleDeleteAccount).not.toHaveBeenCalled();
   });
 
-  it('handles click events on Delete Account button', () => {
+  it('triggers account deletion when Delete Account is clicked', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogDeleteAccount {...defaultProps} onOpenChangeAction={onOpenChangeAction} />);
 
     const deleteButton = screen.getByRole('button', { name: /delete account/i });
     fireEvent.click(deleteButton);
+
+    expect(mockHandleDeleteAccount).toHaveBeenCalledTimes(1);
+    expect(onOpenChangeAction).not.toHaveBeenCalled();
+  });
+
+  it('shows deletion progress while deleting', () => {
+    mockIsDeleting = true;
+    mockProgress = 42;
+    render(<DialogDeleteAccount {...defaultProps} />);
+
+    expect(screen.getByText('Deleting... 42%')).toBeInTheDocument();
+  });
+
+  it('disables both buttons while deleting', () => {
+    mockIsDeleting = true;
+    render(<DialogDeleteAccount {...defaultProps} />);
+
+    expect(screen.getByRole('button', { name: /deleting/i })).toBeDisabled();
+    expect(screen.getByText('Cancel').closest('button')).toBeDisabled();
+  });
+
+  it('blocks dialog dismissal while deleting', () => {
+    mockIsDeleting = true;
+    const onOpenChangeAction = vi.fn();
+    render(<DialogDeleteAccount {...defaultProps} onOpenChangeAction={onOpenChangeAction} />);
+
+    capturedOnOpenChange?.(false);
+
+    expect(onOpenChangeAction).not.toHaveBeenCalled();
+  });
+
+  it('allows dialog dismissal when not deleting', () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogDeleteAccount {...defaultProps} onOpenChangeAction={onOpenChangeAction} />);
+
+    capturedOnOpenChange?.(false);
 
     expect(onOpenChangeAction).toHaveBeenCalledWith(false);
   });
@@ -201,6 +266,11 @@ describe('DialogDeleteAccount', () => {
 });
 
 describe('DialogDeleteAccount - Snapshots', () => {
+  beforeEach(() => {
+    mockIsDeleting = false;
+    mockProgress = 0;
+  });
+
   it('matches snapshot for default DialogDeleteAccount', () => {
     const { container } = render(<DialogDeleteAccount {...defaultProps} />);
     expect(container.firstChild).toMatchSnapshot();
@@ -208,6 +278,13 @@ describe('DialogDeleteAccount - Snapshots', () => {
 
   it('matches snapshot when closed', () => {
     const { container } = render(<DialogDeleteAccount {...defaultProps} isOpen={false} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot while deleting', () => {
+    mockIsDeleting = true;
+    mockProgress = 50;
+    const { container } = render(<DialogDeleteAccount {...defaultProps} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -46,7 +46,7 @@ vi.mock('@/libs/env/env', async (importOriginal) => {
 // Mock HomeserverService methods
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
-    list: vi.fn(),
+    listAll: vi.fn(),
     get: vi.fn(),
   },
 }));
@@ -118,7 +118,7 @@ describe('ProfileApplication.downloadData', () => {
   it('should package files into a zip and trigger download', async () => {
     const dataUrls = [`pubky://${pubky}/pub/pubky.app/profile.json`, `pubky://${pubky}/pub/pubky.app/avatar.png`];
 
-    vi.spyOn(HomeserverService, 'list').mockResolvedValue(dataUrls);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(dataUrls);
     vi.spyOn(HomeserverService, 'get').mockImplementation(async (url: string) => {
       if (url.endsWith('profile.json')) {
         return new Response(JSON.stringify({ name: 'Test User' }), { status: 200 });
@@ -161,8 +161,8 @@ describe('ProfileApplication.downloadData', () => {
     expect(progressValues[progressValues.length - 1]).toBe(100);
   });
 
-  it('should pass Infinity as limit to HomeserverService.list', async () => {
-    const listSpy = vi.spyOn(HomeserverService, 'list').mockResolvedValue(['file1.json', 'file2.json']);
+  it('should enumerate every file via the paginated listAll', async () => {
+    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(['file1.json', 'file2.json']);
     // Return a new Response for each call since Response body can only be read once
     vi.spyOn(HomeserverService, 'get').mockImplementation(async () => new Response('{}', { status: 200 }));
 
@@ -170,14 +170,11 @@ describe('ProfileApplication.downloadData', () => {
 
     expect(listSpy).toHaveBeenCalledWith({
       baseDirectory: `pubky://${pubky}/pub/pubky.app/`,
-      cursor: undefined,
-      reverse: false,
-      limit: Infinity,
     });
   });
 
   it('should propagate error when list fails', async () => {
-    vi.spyOn(HomeserverService, 'list').mockRejectedValue(new Error('list failed'));
+    vi.spyOn(HomeserverService, 'listAll').mockRejectedValue(new Error('list failed'));
     const getSpy = vi.spyOn(HomeserverService, 'get');
 
     await expect(ProfileApplication.downloadData({ pubky })).rejects.toThrow('list failed');

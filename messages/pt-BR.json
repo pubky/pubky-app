@@ -587,7 +587,7 @@
       "newHere": "Novo aqui?",
       "newHereDescription": "Crie sua conta e comece a explorar o Pubky.",
       "joinButton": "Juntar-se ao Pubky",
-      "alreadyHaveAccount": "Ja tem uma conta?",
+      "alreadyHaveAccount": "Ja tem um pubky?",
       "alreadyHaveAccountDescription": "Entre para interagir com posts e perfis.",
       "signInButton": "Entrar"
     },
@@ -628,7 +628,9 @@
     },
     "deleteAccount": {
       "title": "Excluir Conta",
-      "description": "Tem certeza? As informações da sua conta não podem ser recuperadas."
+      "description": "Tem certeza? As informações da sua conta não podem ser recuperadas.",
+      "button": "Excluir Conta",
+      "buttonLoading": "Excluindo... {progress}%"
     },
     "confirmDiscard": {
       "title": "Deseja fechar?",
@@ -1021,6 +1023,7 @@
   },
   "errors": {
     "signOutFailed": "Falha ao sair. Por favor, tente novamente.",
+    "deleteAccountFailed": "Falha ao excluir a conta. Por favor, tente novamente.",
     "generic": "Algo deu errado",
     "network": "Erro de rede. Por favor, tente novamente.",
     "notFound": "Página não encontrada",

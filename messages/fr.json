@@ -587,7 +587,7 @@
       "newHere": "Nouveau ici ?",
       "newHereDescription": "Crééz votre compte et commencez a explorer Pubky.",
       "joinButton": "Rejoindre Pubky",
-      "alreadyHaveAccount": "Vous avez déjà un compte ?",
+      "alreadyHaveAccount": "Vous avez déjà un pubky ?",
       "alreadyHaveAccountDescription": "Connectez-vous pour interagir avec les publications et les profils.",
       "signInButton": "Se connecter"
     },
@@ -628,7 +628,9 @@
     },
     "deleteAccount": {
       "title": "Supprimér le compte",
-      "description": "Êtes-vous sur ? Les informations de votre compte ne peuvent pas etre recuperees."
+      "description": "Êtes-vous sur ? Les informations de votre compte ne peuvent pas etre recuperees.",
+      "button": "Supprimér le compte",
+      "buttonLoading": "Suppression... {progress}%"
     },
     "confirmDiscard": {
       "title": "Voulez-vous fermer ?",
@@ -1021,6 +1023,7 @@
   },
   "errors": {
     "signOutFailed": "Échec de la déconnexion. Veuillez réessayer.",
+    "deleteAccountFailed": "Échec de la suppression du compte. Veuillez réessayer.",
     "generic": "Quelque chose s'est mal passe",
     "network": "Erreur réseau. Veuillez réessayer.",
     "notFound": "Page non trouvee",
