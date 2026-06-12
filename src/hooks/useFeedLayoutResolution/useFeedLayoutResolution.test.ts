@@ -103,10 +103,19 @@ describe('resolveFeedLayout', () => {
       expect(result.isGridActive).toBe(true);
     });
 
+    it('marks the bookmarks variant as grid-active', () => {
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.COLUMNS,
+        variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+        isPhoneViewport: false,
+      });
+
+      expect(result.isGridActive).toBe(true);
+    });
+
     it.each([
       TIMELINE_FEED_VARIANT.HOME,
       TIMELINE_FEED_VARIANT.CUSTOM,
-      TIMELINE_FEED_VARIANT.BOOKMARKS,
       TIMELINE_FEED_VARIANT.PROFILE,
       TIMELINE_FEED_VARIANT.HOT,
       TIMELINE_FEED_VARIANT.SEARCH,

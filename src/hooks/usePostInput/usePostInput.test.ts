@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
@@ -88,6 +89,7 @@ vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
 const mockPrependPosts = vi.fn();
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: vi.fn(() => ({
+    variant: TIMELINE_FEED_VARIANT.HOME,
     prependPosts: mockPrependPosts,
     removePosts: vi.fn(),
   })),

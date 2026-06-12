@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -26,6 +26,7 @@ interface TimelineFeedContentProps {
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
+  emptyState?: ReactNode;
 }
 
 interface TimelineFeedWithStreamProps {
@@ -34,6 +35,7 @@ interface TimelineFeedWithStreamProps {
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
+  emptyState?: ReactNode;
 }
 
 /**
@@ -48,6 +50,7 @@ export function TimelineFeedWithStream({
   tagsLayout,
   layoutResolution,
   children,
+  emptyState,
 }: TimelineFeedWithStreamProps) {
   if (!streamId) {
     return <TimelineLoading />;
@@ -59,6 +62,7 @@ export function TimelineFeedWithStream({
       variant={variant}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+      emptyState={emptyState}
     >
       {children}
     </TimelineFeedContent>
@@ -77,7 +81,14 @@ export function TimelineFeedWithStream({
  * to preserve the same flex-col spacing that children previously inherited as
  * direct descendants of that container.
  */
-function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, children }: TimelineFeedContentProps) {
+function TimelineFeedContent({
+  streamId,
+  variant,
+  tagsLayout,
+  layoutResolution,
+  children,
+  emptyState,
+}: TimelineFeedContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousMutedUserIdSetRef = useRef<Set<string> | null>(null);
 
@@ -141,9 +152,12 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
   }, [mutedUserIdSet, rawPostIds, refresh, removePosts, variant]);
 
   const contextValue: TimelineFeedContextValue = {
+    variant,
     prependPosts,
     removePosts,
   };
+  const showGridEndMessage =
+    variant !== TIMELINE_FEED_VARIANT.COLLECTION && variant !== TIMELINE_FEED_VARIANT.BOOKMARKS;
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
@@ -167,7 +181,8 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
-              showEndMessage={variant !== TIMELINE_FEED_VARIANT.COLLECTION}
+              showEndMessage={showGridEndMessage}
+              emptyState={emptyState}
             />
           ) : isVisualActive ? (
             <VisualTimelinePosts

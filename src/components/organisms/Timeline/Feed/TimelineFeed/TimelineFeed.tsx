@@ -27,14 +27,15 @@ export { useTimelineFeedContext } from './TimelineFeedContext';
  * Organism that encapsulates stream calculation and pagination logic.
  * Routes to variant-specific wrappers so each only subscribes to its own data sources.
  */
-export function TimelineFeed({ variant, children }: TimelineFeedProps) {
+export function TimelineFeed({ variant, children, emptyState }: TimelineFeedProps) {
   switch (variant) {
     case TIMELINE_FEED_VARIANT.HOME:
       return <HomeTimelineFeed>{children}</HomeTimelineFeed>;
     case TIMELINE_FEED_VARIANT.CUSTOM:
       return <CustomTimelineFeed>{children}</CustomTimelineFeed>;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
-      return <BookmarksTimelineFeed>{children}</BookmarksTimelineFeed>;
+      // Bookmarks owns a custom stream-driven empty state; other variants use the shared default.
+      return <BookmarksTimelineFeed emptyState={emptyState}>{children}</BookmarksTimelineFeed>;
     case TIMELINE_FEED_VARIANT.PROFILE:
       return <ProfileTimelineFeed>{children}</ProfileTimelineFeed>;
     case TIMELINE_FEED_VARIANT.HOT:
@@ -89,7 +90,13 @@ function CustomTimelineFeed({ children }: { children?: TimelineFeedProps['childr
   );
 }
 
-function BookmarksTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
+function BookmarksTimelineFeed({
+  children,
+  emptyState,
+}: {
+  children?: TimelineFeedProps['children'];
+  emptyState?: TimelineFeedProps['emptyState'];
+}) {
   const content = useHomeStore((state) => state.content);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.BOOKMARKS);
   const resolvedContent = resolveVisualFeedContent({
@@ -107,6 +114,7 @@ function BookmarksTimelineFeed({ children }: { children?: TimelineFeedProps['chi
       variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+      emptyState={emptyState}
     >
       {children}
     </TimelineFeedWithStream>
