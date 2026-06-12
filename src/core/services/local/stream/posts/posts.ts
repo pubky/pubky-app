@@ -10,6 +10,7 @@ import { ModerationModel } from '@/models/moderation/moderation';
 import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import { PostTagsModel } from '@/models/post/tags/postTags';
@@ -310,7 +311,7 @@ export class LocalStreamPostsService {
     }
 
     // Tombstone guard. Defense-in-depth against a Nexus refetch racing a
-    // local delete: if a row already has `content === '[DELETED]'`, do NOT
+    // local delete: if a row already has `content === DELETED`, do NOT
     // overwrite it with whatever Nexus is returning right now (the by-ids
     // endpoint can be stale relative to the delete index, see
     // `LocalPostService.delete`'s hard-delete branch). Tombstoned ids are
@@ -319,7 +320,7 @@ export class LocalStreamPostsService {
     // deleted post.
     const tombstonedIds = new Set(
       (await PostDetailsModel.findByIdsPreserveOrder(postDetails.map((d) => d.id)))
-        .map((existing, i) => (existing?.content === '[DELETED]' ? postDetails[i].id : null))
+        .map((existing, i) => (existing?.content === DELETED ? postDetails[i].id : null))
         .filter((id): id is string => id !== null),
     );
     const liveDetails = postDetails.filter((d) => !tombstonedIds.has(d.id));
