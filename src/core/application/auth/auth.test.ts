@@ -167,6 +167,35 @@ describe('AuthApplication', () => {
     });
   });
 
+  describe('verifySignupToken', () => {
+    it('should return valid when the homeserver reports the token is valid', async () => {
+      const verifySpy = vi.spyOn(HomeserverService, 'verifySignupToken').mockResolvedValue('valid');
+
+      const result = await AuthApplication.verifySignupToken('YVB2-YFRN-GDY0');
+
+      expect(verifySpy).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+      expect(result).toBe('valid');
+    });
+
+    it('should return used when the homeserver reports the token is used', async () => {
+      const verifySpy = vi.spyOn(HomeserverService, 'verifySignupToken').mockResolvedValue('used');
+
+      const result = await AuthApplication.verifySignupToken('YVB2-YFRN-GDY0');
+
+      expect(verifySpy).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+      expect(result).toBe('used');
+    });
+
+    it('should return invalid when the homeserver does not recognise the token', async () => {
+      const verifySpy = vi.spyOn(HomeserverService, 'verifySignupToken').mockResolvedValue('invalid');
+
+      const result = await AuthApplication.verifySignupToken('BADC-0DE0-0000');
+
+      expect(verifySpy).toHaveBeenCalledWith('BADC-0DE0-0000');
+      expect(result).toBe('invalid');
+    });
+  });
+
   describe('restorePersistedSession', () => {
     const createMockAuthStore = (sessionExport: string | null = 'mock-session-export') =>
       mockAuthStore({

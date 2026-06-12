@@ -1,11 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { Logger } from '@/libs/logger/logger';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
+import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { useToast } from '@/molecules/Toaster/use-toast';
 import { HumanInviteCode } from '@/organisms/HumanInviteCode/HumanInviteCode';
+import type { InviteCodeVerificationResult } from '@/organisms/HumanInviteCode/HumanInviteCode.types';
 import { HumanLightningPayment } from '@/organisms/HumanLightningPayment/HumanLightningPayment';
 import { HumanPhoneCode } from '@/organisms/HumanPhoneCode/HumanPhoneCode';
 import { HumanPhoneInput } from '@/organisms/HumanPhoneInput/HumanPhoneInput';
@@ -25,6 +29,8 @@ export function Human() {
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const { setInviteCode, reset } = useOnboardingStore();
   const router = useRouter();
+  const { toast } = useToast();
+  const t = useTranslations('onboarding.install');
 
   useEffect(() => {
     reset();
@@ -36,6 +42,44 @@ export function Human() {
   function onSuccess(inviteCode: string) {
     setInviteCode(inviteCode);
     router.push(ONBOARDING_ROUTES.INSTALL);
+  }
+
+  // Manually entered invite codes are verified with the homeserver as soon as the full code is
+  // entered. On failure we surface a toast and keep the user on this step so they can try again.
+  // A homeserver that reports the code as invalid shows a warning toast; a homeserver we couldn't
+  // reach shows an error toast so the two are not conflated.
+  async function onInviteCodeVerify(inviteCode: string): Promise<InviteCodeVerificationResult> {
+    try {
+      const status = await AuthController.verifySignupToken(inviteCode);
+
+      if (status === 'valid') {
+        toast({
+          title: t('inviteCodeApplied'),
+          description: t('inviteCodeAppliedDescription', { inviteCode }),
+        });
+        return 'valid';
+      }
+
+      if (status === 'used') {
+        toast({
+          title: t('usedInviteCode'),
+          description: t('usedInviteCodeDescription'),
+        });
+        return 'used';
+      }
+
+      toast({
+        title: t('invalidInviteCode'),
+        description: t('invalidInviteCodeDescription'),
+      });
+      return 'invalid';
+    } catch {
+      showErrorToast({
+        title: t('verificationFailed'),
+        description: t('verificationFailedDescription'),
+      });
+      return 'error';
+    }
   }
   return (
     <OnboardingLayout testId="human-content">
@@ -80,7 +124,11 @@ export function Human() {
         <HumanLightningPayment onBack={() => setState(States.Selection)} onSuccess={onSuccess} />
       )}
       {state === States.InviteCode && (
-        <HumanInviteCode onBack={() => setState(States.Selection)} onSuccess={onSuccess} />
+        <HumanInviteCode
+          onBack={() => setState(States.Selection)}
+          onVerify={onInviteCodeVerify}
+          onSuccess={onSuccess}
+        />
       )}
     </OnboardingLayout>
   );

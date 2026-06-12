@@ -392,7 +392,15 @@
       "instructions": "قم بتحميل وتثبيت التطبيق المحمول. ثم تابع الى الخطوة التالية.",
       "alternative": "استخدم <pubkyRing>Pubky Ring</pubkyRing> او اي سلسلة مفاتيح اخرى مدعومة من <pubkyCore>Pubky Core</pubkyCore>، او انشئ مفاتيحك في المتصفح (اقل امانا).",
       "createInBrowser": "انشاء المفاتيح في المتصفح",
-      "continueWithRing": "متابعة مع Pubky Ring"
+      "continueWithRing": "متابعة مع Pubky Ring",
+      "inviteCodeApplied": "تم تطبيق رمز الدعوة",
+      "inviteCodeAppliedDescription": "تم تطبيق رمز الدعوة {inviteCode}.",
+      "invalidInviteCode": "رمز دعوة غير صالح",
+      "invalidInviteCodeDescription": "رمز الدعوة هذا غير صالح أو منتهي الصلاحية. يرجى استخدام رمز دعوة صالح.",
+      "usedInviteCode": "رمز الدعوة مستخدم بالفعل",
+      "usedInviteCodeDescription": "تم استخدام رمز الدعوة هذا بالفعل. يرجى استخدام رمز دعوة مختلف.",
+      "verificationFailed": "تعذّر التحقق من رمز الدعوة",
+      "verificationFailedDescription": "تعذّر علينا التحقق من رمز الدعوة الآن. يرجى التحقق من اتصالك والمحاولة مرة أخرى."
     },
     "createProfile": {
       "title": "انشئ <highlight>ملفك الشخصي.</highlight>",
@@ -579,7 +587,7 @@
       "newHere": "جديد هنا؟",
       "newHereDescription": "انشئ حسابك وابدا باستكشاف Pubky.",
       "joinButton": "انضم الى Pubky",
-      "alreadyHaveAccount": "لديك حساب بالفعل؟",
+      "alreadyHaveAccount": "هل لديك pubky بالفعل؟",
       "alreadyHaveAccountDescription": "سجل الدخول للتفاعل مع المنشورات والملفات الشخصية.",
       "signInButton": "تسجيل الدخول"
     },
@@ -620,7 +628,9 @@
     },
     "deleteAccount": {
       "title": "حذف الحساب",
-      "description": "هل انت متاكد؟ لا يمكن استرداد معلومات حسابك."
+      "description": "هل انت متاكد؟ لا يمكن استرداد معلومات حسابك.",
+      "button": "حذف الحساب",
+      "buttonLoading": "جاري الحذف... {progress}%"
     },
     "confirmDiscard": {
       "title": "هل تريد الاغلاق؟",
@@ -1013,6 +1023,7 @@
   },
   "errors": {
     "signOutFailed": "فشل تسجيل الخروج. يرجى المحاولة مرة اخرى.",
+    "deleteAccountFailed": "فشل حذف الحساب. يرجى المحاولة مرة اخرى.",
     "generic": "حدث خطا ما",
     "network": "خطا في الشبكة. يرجى المحاولة مرة اخرى.",
     "notFound": "الصفحة غير موجودة",

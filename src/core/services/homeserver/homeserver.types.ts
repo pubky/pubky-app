@@ -11,6 +11,9 @@ export type THomeserverSignUpParams = TKeypairParams & {
   signupToken: string;
 };
 
+/** Homeserver signup token verification outcome from GET /signup_tokens/<token>. */
+export type TSignupTokenVerificationStatus = 'valid' | 'used' | 'invalid';
+
 export type THomeserverSessionResult = {
   session: Session;
 };
@@ -69,6 +72,8 @@ export type THomeserverListParams = {
   reverse?: boolean;
   limit?: number;
 };
+
+export type THomeserverListAllParams = Pick<THomeserverListParams, 'baseDirectory'>;
 
 export type THomeserverUserEvent = {
   cursor: string;

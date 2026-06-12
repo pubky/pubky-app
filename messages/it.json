@@ -392,7 +392,15 @@
       "instructions": "Scarica e installa l'app mobile. Poi continua al passo successivo.",
       "alternative": "Usa <pubkyRing>Pubky Ring</pubkyRing> o qualsiasi altro portachiavi alimentato da <pubkyCore>Pubky Core</pubkyCore>, o crea le tue chiavi nel browser (meno sicuro).",
       "createInBrowser": "Crea chiavi nel browser",
-      "continueWithRing": "Continua con Pubky Ring"
+      "continueWithRing": "Continua con Pubky Ring",
+      "inviteCodeApplied": "Codice di invito applicato",
+      "inviteCodeAppliedDescription": "Il tuo codice di invito {inviteCode} è stato applicato.",
+      "invalidInviteCode": "Codice di invito non valido",
+      "invalidInviteCodeDescription": "Questo codice di invito non è valido o è scaduto. Usa un codice di invito valido.",
+      "usedInviteCode": "Codice di invito già utilizzato",
+      "usedInviteCodeDescription": "Questo codice di invito è già stato utilizzato. Usa un codice di invito diverso.",
+      "verificationFailed": "Impossibile verificare il codice di invito",
+      "verificationFailedDescription": "Non è stato possibile verificare il tuo codice di invito in questo momento. Controlla la connessione e riprova."
     },
     "createProfile": {
       "title": "Crea il tuo <highlight>profilo.</highlight>",
@@ -579,7 +587,7 @@
       "newHere": "Nuovo qui?",
       "newHereDescription": "Crea il tuo account e inizia a esplorare Pubky.",
       "joinButton": "Unisciti a Pubky",
-      "alreadyHaveAccount": "Hai già un account?",
+      "alreadyHaveAccount": "Hai già un pubky?",
       "alreadyHaveAccountDescription": "Accedi per interagire con post e profili.",
       "signInButton": "Accedi"
     },
@@ -620,7 +628,9 @@
     },
     "deleteAccount": {
       "title": "Elimina account",
-      "description": "Sei sicuro? Le informazioni del tuo account non possono essere recuperate."
+      "description": "Sei sicuro? Le informazioni del tuo account non possono essere recuperate.",
+      "button": "Elimina account",
+      "buttonLoading": "Eliminazione... {progress}%"
     },
     "confirmDiscard": {
       "title": "Vuoi chiudere?",
@@ -1013,6 +1023,7 @@
   },
   "errors": {
     "signOutFailed": "Disconnessione fallita. Riprova.",
+    "deleteAccountFailed": "Eliminazione dell'account fallita. Riprova.",
     "generic": "Qualcosa e andato storto",
     "network": "Errore di rete. Riprova.",
     "notFound": "Pagina non trovata",

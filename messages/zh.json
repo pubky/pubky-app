@@ -392,7 +392,15 @@
       "instructions": "下载并安装移动应用。然后继续下一步。",
       "alternative": "使用 <pubkyRing>Pubky Ring</pubkyRing> 或任何其他由 <pubkyCore>Pubky Core</pubkyCore> 驱动的密钥链，或在浏览器中创建密钥（安全性较低）。",
       "createInBrowser": "在浏览器中创建密钥",
-      "continueWithRing": "继续使用 Pubky Ring"
+      "continueWithRing": "继续使用 Pubky Ring",
+      "inviteCodeApplied": "邀请码已应用",
+      "inviteCodeAppliedDescription": "您的邀请码 {inviteCode} 已应用。",
+      "invalidInviteCode": "无效的邀请码",
+      "invalidInviteCodeDescription": "此邀请码无效或已过期。请使用有效的邀请码。",
+      "usedInviteCode": "邀请码已被使用",
+      "usedInviteCodeDescription": "此邀请码已被使用。请使用其他邀请码。",
+      "verificationFailed": "无法验证邀请码",
+      "verificationFailedDescription": "我们目前无法验证您的邀请码。请检查您的网络连接后重试。"
     },
     "createProfile": {
       "title": "创建您的<highlight>个人资料。</highlight>",
@@ -579,7 +587,7 @@
       "newHere": "新用户？",
       "newHereDescription": "创建您的账户并开始探索 Pubky。",
       "joinButton": "加入 Pubky",
-      "alreadyHaveAccount": "已有账户？",
+      "alreadyHaveAccount": "已有 pubky？",
       "alreadyHaveAccountDescription": "登录以与帖子和个人资料互动。",
       "signInButton": "登录"
     },
@@ -620,7 +628,9 @@
     },
     "deleteAccount": {
       "title": "删除账户",
-      "description": "您确定吗？您的账户信息将无法恢复。"
+      "description": "您确定吗？您的账户信息将无法恢复。",
+      "button": "删除账户",
+      "buttonLoading": "删除中... {progress}%"
     },
     "confirmDiscard": {
       "title": "要关闭吗？",
@@ -1013,6 +1023,7 @@
   },
   "errors": {
     "signOutFailed": "退出失败。请重试。",
+    "deleteAccountFailed": "删除账户失败。请重试。",
     "generic": "出现问题",
     "network": "网络错误。请重试。",
     "notFound": "页面未找到",

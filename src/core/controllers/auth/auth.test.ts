@@ -1489,4 +1489,33 @@ describe('AuthController', () => {
       expect(generateSignupTokenSpy).toHaveBeenCalled();
     });
   });
+
+  describe('verifySignupToken', () => {
+    it('should return valid when the invite code is valid', async () => {
+      const verifySpy = vi.spyOn(AuthApplication, 'verifySignupToken').mockResolvedValue('valid');
+
+      const result = await AuthController.verifySignupToken('YVB2-YFRN-GDY0');
+
+      expect(verifySpy).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+      expect(result).toBe('valid');
+    });
+
+    it('should return used when the invite code has already been used', async () => {
+      const verifySpy = vi.spyOn(AuthApplication, 'verifySignupToken').mockResolvedValue('used');
+
+      const result = await AuthController.verifySignupToken('YVB2-YFRN-GDY0');
+
+      expect(verifySpy).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
+      expect(result).toBe('used');
+    });
+
+    it('should return invalid when the invite code is not recognised', async () => {
+      const verifySpy = vi.spyOn(AuthApplication, 'verifySignupToken').mockResolvedValue('invalid');
+
+      const result = await AuthController.verifySignupToken('BADC-0DE0-0000');
+
+      expect(verifySpy).toHaveBeenCalledWith('BADC-0DE0-0000');
+      expect(result).toBe('invalid');
+    });
+  });
 });

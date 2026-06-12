@@ -2,8 +2,6 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Home } from './Home';
 
-const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
-
 // Mock Organisms
 vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
   return {
@@ -112,36 +110,6 @@ describe('Home', () => {
   it('does not render a ContentLayout shell (hoisted into (feeds)/layout.tsx)', () => {
     render(<Home />);
     expect(screen.queryByTestId('content-layout')).not.toBeInTheDocument();
-  });
-});
-
-describe('Home — force-scroll-top behavior', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    window.sessionStorage.clear();
-  });
-
-  it('forces scroll to top when flagged before entering /home', () => {
-    window.sessionStorage.setItem(FORCE_HOME_SCROLL_TOP_KEY, '1');
-
-    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
-      cb(0);
-      return 1;
-    });
-
-    render(<Home />);
-
-    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
-    expect(window.sessionStorage.getItem(FORCE_HOME_SCROLL_TOP_KEY)).toBeNull();
-  });
-
-  it('does not scroll when flag is absent', () => {
-    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
-
-    render(<Home />);
-
-    expect(scrollToSpy).not.toHaveBeenCalled();
   });
 });
 

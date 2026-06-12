@@ -14,46 +14,10 @@ import { BackupType, CheckForNewPosts, PostType, WaitForNewPosts } from './types
 // https://on.cypress.io/custom-commands
 // ***********************************************
 
+// Complete onboarding from install page. Separated from onboardAsNewUser to allow for reuse in onboarding test for /invite/<code> URL
 Cypress.Commands.add(
-  'onboardAsNewUser',
-  (
-    profileName: string,
-    profileBio: string = '',
-    backup?: BackupType[],
-    //skipOnboardingSlides: SkipOnboardingSlides = SkipOnboardingSlides.Yes,
-    pubkyAlias?: string,
-  ) => {
-    cy.location('pathname').then((pathname) => {
-      if (pathname !== '/') cy.visit('/');
-    });
-    cy.location('pathname').should('eq', '/');
-
-    cy.get('#create-account-btn').click();
-    cy.location('pathname').should('eq', '/onboarding/human');
-
-    // Click 'enter invite code' button
-    cy.get('[data-cy="invite-code-link"]').should('exist').click();
-
-    // use cy.request to get the invite code from the HOMESERVER_ADMIN_URL using the HOMESERVER_ADMIN_PASSWORD
-    cy.env(['homeserverAdminUrl', 'homeserverAdminPassword']).then(
-      ({ homeserverAdminUrl, homeserverAdminPassword }) => {
-        cy.request({
-          method: 'GET',
-          url: homeserverAdminUrl,
-          headers: {
-            'X-Admin-Password': homeserverAdminPassword,
-          },
-        }).then((response) => {
-          const inviteCode = response.body;
-          console.log('inviteCode', inviteCode);
-          cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
-          cy.get('[data-cy="human-invite-code-continue-btn"]').click();
-        });
-      },
-    );
-
-    cy.location('pathname').should('eq', '/onboarding/install');
-
+  'completeOnboardingFromInstall',
+  (profileName: string, profileBio: string = '', backup?: BackupType[], pubkyAlias?: string) => {
     cy.get('#create-keys-in-browser-btn').click();
     cy.location('pathname').should('eq', '/onboarding/pubky');
 
@@ -118,7 +82,6 @@ Cypress.Commands.add(
     if (profileBio) {
       cy.get('#profile-bio-input').type(profileBio);
     }
-    //cy.get('#profile-links-input').type(profileLinks);
 
     cy.get('#profile-finish-btn').click(extendedTimeout());
 
@@ -127,6 +90,50 @@ Cypress.Commands.add(
     // confirm welcome message is shown and dismiss it
     cy.get('#welcome-title').should('exist');
     cy.get('#welcome-explore-pubky-btn').click();
+  },
+);
+
+Cypress.Commands.add(
+  'onboardAsNewUser',
+  (
+    profileName: string,
+    profileBio: string = '',
+    backup?: BackupType[],
+    //skipOnboardingSlides: SkipOnboardingSlides = SkipOnboardingSlides.Yes,
+    pubkyAlias?: string,
+  ) => {
+    cy.location('pathname').then((pathname) => {
+      if (pathname !== '/') cy.visit('/');
+    });
+    cy.location('pathname').should('eq', '/');
+
+    cy.get('#create-account-btn').click();
+    cy.location('pathname').should('eq', '/onboarding/human');
+
+    // Click 'enter invite code' button
+    cy.get('[data-cy="invite-code-link"]').should('exist').click();
+
+    // use cy.request to get the invite code from the HOMESERVER_ADMIN_URL using the HOMESERVER_ADMIN_PASSWORD
+    cy.env(['homeserverAdminUrl', 'homeserverAdminPassword']).then(
+      ({ homeserverAdminUrl, homeserverAdminPassword }) => {
+        cy.request({
+          method: 'GET',
+          url: homeserverAdminUrl,
+          headers: {
+            'X-Admin-Password': homeserverAdminPassword,
+          },
+        }).then((response) => {
+          const inviteCode = response.body;
+          console.log('inviteCode', inviteCode);
+          cy.get('[data-cy="human-invite-code-input"]').type(inviteCode);
+          cy.get('[data-cy="human-invite-code-continue-btn"]').should('not.be.disabled').click();
+        });
+      },
+    );
+
+    cy.location('pathname').should('eq', '/onboarding/install');
+
+    cy.completeOnboardingFromInstall(profileName, profileBio, backup, pubkyAlias);
   },
 );
 

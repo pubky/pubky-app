@@ -1,11 +1,13 @@
 'use client';
 /**
  * Component for entering an invite code for homeserver during onboarding.
- * The parent validates the code with the homeserver before navigating; onSuccess may throw on invalid code.
+ * The parent verifies the code with the homeserver when all characters are entered; Continue is enabled
+ * only after verification succeeds.
  * @param onBack - Function to call when the user clicks the back button.
- * @param onSuccess - Called with the trimmed invite code; may be async. Throws on validation failure.
+ * @param onVerify - Called with the trimmed invite code when the full code is entered.
+ * @param onSuccess - Called when the user clicks Continue after successful verification.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CircleCheck, Loader2, Server } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
@@ -25,26 +27,74 @@ import { cn } from '@/libs/utils/utils';
 import { HumanFooter } from '@/molecules/HumanFooter/HumanFooter';
 import { PageTitle } from '@/molecules/Page/Page';
 import { PopoverInviteHomeserver } from '@/molecules/PopoverInviteHomeserver/PopoverInviteHomeserver';
-import type { HumanInviteCodeProps } from './HumanInviteCode.types';
+import type { HumanInviteCodeProps, InviteCodeVerificationResult } from './HumanInviteCode.types';
 import { formatInviteCode } from './HumanInviteCode.utils';
 
-export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => {
+export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCodeProps) => {
   const t = useTranslations('onboarding.inviteCode');
   const tCommon = useTranslations('common');
   const [inviteCode, setInviteCode] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [verificationOutcome, setVerificationOutcome] = useState<InviteCodeVerificationResult | null>(null);
+  const [verifiedInviteCode, setVerifiedInviteCode] = useState<string | null>(null);
+  const showDestructiveBorder = !isVerifying && (verificationOutcome === 'invalid' || verificationOutcome === 'used');
   const trimmedInviteCode = inviteCode.trim();
   const isInviteCodeEntered = trimmedInviteCode.length === 14;
-  async function handleSubmit() {
-    if (!isInviteCodeEntered || isSubmitting) {
+  const onVerifyRef = useRef(onVerify);
+  onVerifyRef.current = onVerify;
+
+  useEffect(() => {
+    if (!isInviteCodeEntered) {
+      setIsVerified(false);
+      setVerificationOutcome(null);
+      setVerifiedInviteCode(null);
       return;
     }
-    setIsSubmitting(true);
-    try {
-      await onSuccess(trimmedInviteCode);
-    } catch {
-      setIsSubmitting(false);
+
+    if (trimmedInviteCode === verifiedInviteCode) {
+      return;
     }
+
+    let cancelled = false;
+
+    async function verifyInviteCode() {
+      setIsVerifying(true);
+      setIsVerified(false);
+      setVerificationOutcome(null);
+      try {
+        const result = await onVerifyRef.current(trimmedInviteCode);
+        if (cancelled) {
+          return;
+        }
+        if (result === 'valid') {
+          setIsVerified(true);
+          setVerificationOutcome(null);
+          setVerifiedInviteCode(trimmedInviteCode);
+        } else {
+          setIsVerified(false);
+          setVerificationOutcome(result);
+          setVerifiedInviteCode(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsVerifying(false);
+        }
+      }
+    }
+
+    void verifyInviteCode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isInviteCodeEntered, trimmedInviteCode, verifiedInviteCode]);
+
+  function handleSubmit() {
+    if (!isVerified || isVerifying || verifiedInviteCode === null) {
+      return;
+    }
+    onSuccess(verifiedInviteCode);
   }
 
   // generate an invite code and put it in console log if you are in development mode
@@ -105,9 +155,14 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
           <Container className="gap-6">
             {/* Input */}
             <Container
+              data-testid="human-invite-code-input-field"
               className={cn(
                 'flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs',
-                isInviteCodeEntered ? 'border-brand' : 'border-input',
+                isVerified && !isVerifying
+                  ? 'border-brand'
+                  : showDestructiveBorder
+                    ? 'border-destructive'
+                    : 'border-input',
               )}
             >
               <Input
@@ -121,15 +176,16 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
                 maxLength={14}
                 className={cn(
                   'h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none',
-                  isInviteCodeEntered ? 'font-bold text-brand' : 'text-foreground',
+                  isVerified && !isVerifying ? 'font-bold text-brand' : 'text-foreground',
                 )}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && isInviteCodeEntered) {
+                  if (e.key === 'Enter' && isVerified && !isVerifying) {
                     handleSubmit();
                   }
                 }}
               />
-              {isInviteCodeEntered && <CircleCheck className="h-6 w-6 shrink-0 text-brand" />}
+              {isVerifying && <Loader2 className="h-6 w-6 shrink-0 animate-spin text-brand" />}
+              {isVerified && !isVerifying && <CircleCheck className="h-6 w-6 shrink-0 text-brand" />}
             </Container>
 
             {/* Custom homeserver row */}
@@ -171,10 +227,10 @@ export const HumanInviteCode = ({ onBack, onSuccess }: HumanInviteCodeProps) => 
           size="lg"
           className="w-full flex-1 rounded-full md:flex-0"
           variant="default"
-          disabled={!isInviteCodeEntered || isSubmitting}
+          disabled={!isVerified || isVerifying}
           onClick={handleSubmit}
         >
-          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
+          <ArrowRight className="mr-2 h-4 w-4" />
           {tCommon('continue')}
         </Button>
       </Container>

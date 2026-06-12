@@ -6,6 +6,12 @@ declare global {
       signOut(hasBackedUp: HasBackedUp): Chainable<void>;
       signInWithEncryptedFile(backupFilepath: string, passcode?: string): Chainable<void>;
       signInWithRecoveryPhrase(recoveryPhrase: string): Chainable<void>;
+      completeOnboardingFromInstall(
+        profileName: string,
+        profileBio?: string,
+        backup?: BackupType[],
+        pubkyAlias?: string,
+      ): Chainable<void>;
       onboardAsNewUser(
         profileName: string,
         profileBio?: string,

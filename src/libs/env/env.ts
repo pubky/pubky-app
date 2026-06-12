@@ -161,9 +161,12 @@ const envSchema = z.object({
   /** Homeserver public key */
   NEXT_PUBLIC_HOMESERVER: homeserverValue.default(NETWORK_RUNTIME_DEFAULTS.homeserver),
 
+  /** Homeserver HTTP base URL (the homeserver pubkey has no resolvable HTTPS PKARR endpoint) */
+  NEXT_PUBLIC_HOMESERVER_URL: z.url().default('https://homeserver.staging.pubky.app'),
+
   // Server-side only admin credentials for signup token generation (dev/test only)
   // These are NOT exposed to the client bundle - only available on the server
-  HOMESERVER_ADMIN_URL: z.string().url().default('http://localhost:6288/generate_signup_token'),
+  HOMESERVER_ADMIN_URL: z.url().default('http://localhost:6288/generate_signup_token'),
   HOMESERVER_ADMIN_PASSWORD: z.string().default('admin'),
 
   /** HTTP relay for pubky protocol (auth uses `/inbox` with Pubky SDK 0.7+) */
@@ -388,6 +391,7 @@ function parseEnv(): z.infer<typeof envSchema> {
     NEXT_PUBLIC_TESTNET: process.env.NEXT_PUBLIC_TESTNET,
     NEXT_PUBLIC_PKARR_RELAYS: process.env.NEXT_PUBLIC_PKARR_RELAYS,
     NEXT_PUBLIC_HOMESERVER: process.env.NEXT_PUBLIC_HOMESERVER,
+    NEXT_PUBLIC_HOMESERVER_URL: process.env.NEXT_PUBLIC_HOMESERVER_URL,
     HOMESERVER_ADMIN_URL: process.env.HOMESERVER_ADMIN_URL,
     HOMESERVER_ADMIN_PASSWORD: process.env.HOMESERVER_ADMIN_PASSWORD,
     NEXT_PUBLIC_DEFAULT_HTTP_RELAY: process.env.NEXT_PUBLIC_DEFAULT_HTTP_RELAY,
