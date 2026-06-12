@@ -13,6 +13,7 @@ import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -22,7 +23,6 @@ import { useNotificationStore } from '@/stores/notification/notification.store';
 export interface MobileFooterProps {
   className?: string;
 }
-const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 
 /**
  * MobileFooter - Bottom navigation for mobile devices
@@ -54,11 +54,13 @@ export function MobileFooter({ className }: MobileFooterProps) {
       href: APP_ROUTES.HOME,
       icon: Home,
       label: 'Home',
+      isFeedRoute: true,
     },
     {
       href: APP_ROUTES.SEARCH,
       icon: Search,
       label: 'Search',
+      isFeedRoute: true,
     },
     {
       href: APP_ROUTES.HOT,
@@ -69,6 +71,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       href: APP_ROUTES.BOOKMARKS,
       icon: Bookmark,
       label: 'Bookmarks',
+      isFeedRoute: true,
     },
     {
       href: SETTINGS_ROUTES.ACCOUNT,
@@ -106,8 +109,6 @@ export function MobileFooter({ className }: MobileFooterProps) {
         {authenticatedNavItems.map((item) => {
           const Icon = item.icon;
           const activePath = item.activePrefix ?? item.href;
-          const isHome = item.href === APP_ROUTES.HOME;
-          const isHomeActive = isHome && isActive(item.href);
           return (
             <Link
               key={item.href}
@@ -119,25 +120,8 @@ export function MobileFooter({ className }: MobileFooterProps) {
                   setShowSignInDialog(true);
                   return;
                 }
-
-                // Don't hijack modified clicks (new tab/window, etc.)
-                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
-                if (!isHome) return;
-                if (isHomeActive) {
-                  event.preventDefault();
-                  window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth',
-                  });
-                  return;
-                }
-
-                // Home feed is kept mounted to preserve scroll; mark explicit intent to reset to top on enter.
-                try {
-                  window.sessionStorage.setItem(FORCE_HOME_SCROLL_TOP_KEY, '1');
-                } catch {
-                  // Ignore storage errors and keep default navigation behavior.
-                }
+                if (!item.isFeedRoute) return;
+                handleFeedNavClick(event, { isActive: isActive(item.href), smoothScrollWhenActive: true });
               }}
               className={cn(
                 'rounded-full p-3 transition-all',

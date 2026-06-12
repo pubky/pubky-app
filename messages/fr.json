@@ -626,7 +626,9 @@
     },
     "deleteAccount": {
       "title": "Supprimér le compte",
-      "description": "Êtes-vous sur ? Les informations de votre compte ne peuvent pas etre recuperees."
+      "description": "Êtes-vous sur ? Les informations de votre compte ne peuvent pas etre recuperees.",
+      "button": "Supprimér le compte",
+      "buttonLoading": "Suppression... {progress}%"
     },
     "confirmDiscard": {
       "title": "Voulez-vous fermer ?",
@@ -1004,6 +1006,7 @@
   },
   "errors": {
     "signOutFailed": "Impossible de se déconnecter. Réessayez.",
+    "deleteAccountFailed": "Échec de la suppression du compte. Veuillez réessayer.",
     "generic": "Quelque chose s'est mal passe",
     "network": "Erreur réseau",
     "notFound": "Page non trouvee",

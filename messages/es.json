@@ -634,7 +634,9 @@
     },
     "deleteAccount": {
       "title": "Eliminar cuenta",
-      "description": "Estas seguro? La información de tu cuenta no puede recuperarse."
+      "description": "Estas seguro? La información de tu cuenta no puede recuperarse.",
+      "button": "Eliminar cuenta",
+      "buttonLoading": "Eliminando... {progress}%"
     },
     "confirmDiscard": {
       "title": "Quieres cerrar?",
@@ -1012,6 +1014,7 @@
   },
   "errors": {
     "signOutFailed": "No se pudo cerrar sesión. Inténtalo de nuevo.",
+    "deleteAccountFailed": "Error al eliminar la cuenta. Por favor intenta de nuevo.",
     "generic": "Algo salió mal",
     "network": "Error de red",
     "notFound": "Página no encontrada",
