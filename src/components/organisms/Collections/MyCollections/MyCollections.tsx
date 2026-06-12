@@ -22,7 +22,6 @@ import { CollectionBookmarkCard } from '@/organisms/Collections/CollectionBookma
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { NewCollectionDialog } from '@/organisms/NewCollectionDialog/NewCollectionDialog';
-import { TimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 /**
@@ -105,7 +104,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
   const { toast } = useToast();
   const streamId = buildAuthorCollectionsStreamId(currentUserPubky);
 
-  const { postIds, hasMore, loadMore, loading, loadingMore, prependPosts, removePosts } = useStreamPagination({
+  const { postIds, hasMore, loadMore, loading, loadingMore } = useStreamPagination({
     streamId,
     limit: COLLECTIONS_SECTION_PAGE_SIZE,
     // Surface fetch failures to the user. Sibling sections (`FollowedCollections`,
@@ -145,13 +144,8 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
       });
     }, [postIds]) ?? EMPTY_IDS;
 
-  // Expose stream mutators via `TimelineFeedContext` so `useDeletePost`'s
-  // optimistic `removePosts(postId)` call fires for collections deleted from
-  // a `CollectionCard` rendered inside this section. The hook reads from the
-  // nearest provider — without this wrap, the optimistic call is a no-op and
-  // the deleted card lingers until the next stream refetch.
   return (
-    <TimelineFeedContext.Provider value={{ prependPosts, removePosts }}>
+    <>
       <Container overrideDefaults className="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6">
         <CollectionBookmarkCard />
         {showSkeletons
@@ -172,6 +166,6 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
           </Button>
         </Container>
       )}
-    </TimelineFeedContext.Provider>
+    </>
   );
 }

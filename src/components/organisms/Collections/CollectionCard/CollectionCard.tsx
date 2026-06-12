@@ -19,9 +19,9 @@ import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
+import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { CollectionDeleted } from '@/molecules/CollectionDeleted/CollectionDeleted';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
-import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';

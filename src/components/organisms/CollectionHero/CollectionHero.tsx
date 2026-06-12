@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { APP_ROUTES } from '@/app/routes';
 import { Minus, Pencil, Plus, Share2, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
@@ -18,8 +18,8 @@ import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { cn } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
-import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
+import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionHeroSkeleton } from '@/organisms/CollectionHero/CollectionHero.skeleton';
 import { EditCollectionDialog } from '@/organisms/EditCollectionDialog/EditCollectionDialog';
