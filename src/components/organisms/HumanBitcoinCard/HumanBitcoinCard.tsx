@@ -30,10 +30,12 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
   const priceSat = lnInfo?.available ? lnInfo.amountSat : undefined;
   const dataAvailable = priceSat !== undefined && satUsdRate !== undefined;
   const formattedPrice = priceSat?.toLocaleString('en-US');
-  const usdAmount =
-    dataAvailable && priceSat !== undefined && satUsdRate !== undefined
-      ? (Math.round(satUsdRate * priceSat * 100) / 100).toFixed(2)
-      : undefined;
+  let usdAmount: string | undefined;
+  if (priceSat !== undefined && satUsdRate !== undefined) {
+    usdAmount = (Math.round(satUsdRate * priceSat * 100) / 100).toFixed(2);
+  } else {
+    usdAmount = undefined;
+  }
 
   if (isLoading) {
     return <HumanBitcoinCardSkeleton />;
@@ -70,7 +72,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
                 >
                   {t('title')}
                 </Typography>
-                {dataAvailable && formattedPrice !== undefined ? (
+                {dataAvailable ? (
                   <Badge
                     variant="secondary"
                     className="rounded-md border-0 bg-brand px-2 py-[2px] text-sm font-semibold tracking-wide text-primary-foreground shadow-sm lg:hidden"
@@ -82,7 +84,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
                 )}
               </Container>
 
-              {dataAvailable && formattedPrice !== undefined ? (
+              {dataAvailable ? (
                 <Typography as="p" className="hidden text-5xl leading-none font-bold text-brand lg:block lg:text-6xl">
                   ₿ {formattedPrice}
                 </Typography>
@@ -90,7 +92,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
                 <PriceSkeleton variant="price" />
               )}
 
-              {dataAvailable && usdAmount !== undefined && formattedPrice !== undefined ? (
+              {dataAvailable ? (
                 <>
                   <Typography as="p" className="mt-1 text-sm font-bold text-muted-foreground lg:hidden">
                     ₿ {formattedPrice} = $ {usdAmount}

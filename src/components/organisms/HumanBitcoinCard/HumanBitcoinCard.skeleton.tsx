@@ -2,39 +2,33 @@ import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 
+type PriceSkeletonVariant = 'badge' | 'conversion' | 'price';
+
 type PriceSkeletonProps = {
-  variant?: 'badge' | 'conversion' | 'price' | 'both';
+  variant: PriceSkeletonVariant;
 };
 
 /**
  * Skeleton for the price badge and conversion line while loading.
  */
-export function PriceSkeleton({ variant = 'both' }: PriceSkeletonProps) {
-  if (variant === 'badge') {
-    return <Skeleton className="h-6 w-20 rounded-md lg:hidden" />;
+export function PriceSkeleton({ variant }: PriceSkeletonProps) {
+  switch (variant) {
+    case 'badge':
+      return <Skeleton className="h-6 w-20 rounded-md lg:hidden" />;
+    case 'conversion':
+      return (
+        <>
+          <Skeleton className="mt-1 h-3.5 w-36 rounded lg:hidden" />
+          <Skeleton className="hidden h-3 w-32 rounded lg:block" />
+        </>
+      );
+    case 'price':
+      return <Skeleton className="hidden h-12 w-36 rounded lg:block lg:h-15" />;
+    default: {
+      const exhaustiveCheck: never = variant;
+      return exhaustiveCheck;
+    }
   }
-
-  if (variant === 'conversion') {
-    return (
-      <>
-        <Skeleton className="mt-1 h-3.5 w-36 rounded lg:hidden" />
-        <Skeleton className="hidden h-3 w-32 rounded lg:block" />
-      </>
-    );
-  }
-
-  if (variant === 'price') {
-    return <Skeleton className="hidden h-12 w-36 rounded lg:block lg:h-15" />;
-  }
-
-  return (
-    <>
-      <Skeleton className="h-6 w-20 rounded-md lg:hidden" />
-      <Skeleton className="hidden h-12 w-36 rounded lg:block lg:h-15" />
-      <Skeleton className="mt-1 h-3.5 w-36 rounded lg:hidden" />
-      <Skeleton className="hidden h-3 w-32 rounded lg:block" />
-    </>
-  );
 }
 
 /**
