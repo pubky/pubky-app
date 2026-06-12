@@ -48,6 +48,8 @@ spec:
               value: "false"
             - name: PUBKY_RUNTIME_HOMESERVER
               value: "ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy"
+            - name: PUBKY_RUNTIME_HOMESERVER_URL
+              value: "https://homeserver.staging.pubky.app"
             - name: PUBKY_RUNTIME_NEXUS_URL
               value: "https://nexus.staging.pubky.app"
             - name: PUBKY_RUNTIME_CDN_URL

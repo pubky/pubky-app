@@ -81,21 +81,21 @@ const eslintConfig = [
           varsIgnorePattern: '^_',
         },
       ],
-      // Network values (NEXUS_URL, CDN_URL, HOMESERVER, HOMEGATE_URL, DEFAULT_HTTP_RELAY,
-      // PKARR_RELAYS, TESTNET) are runtime-configurable. Reading them directly from `Env` or
-      // `process.env` (which Next inlines at build time) would freeze the build-time value and
-      // defeat runtime config. Read them via the getters in @/libs/runtime-config instead.
+      // Network values (NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL,
+      // DEFAULT_HTTP_RELAY, PKARR_RELAYS, TESTNET) are runtime-configurable. Reading them directly
+      // from `Env` or `process.env` (which Next inlines at build time) would freeze the build-time
+      // value and defeat runtime config. Read them via the getters in @/libs/runtime-config instead.
       'no-restricted-syntax': [
         'error',
         {
           selector:
-            'MemberExpression[object.name="Env"][property.name=/^NEXT_PUBLIC_(NEXUS_URL|CDN_URL|HOMESERVER|HOMEGATE_URL|DEFAULT_HTTP_RELAY|PKARR_RELAYS|TESTNET)$/]',
+            'MemberExpression[object.name="Env"][property.name=/^NEXT_PUBLIC_(NEXUS_URL|CDN_URL|HOMESERVER|HOMESERVER_URL|HOMEGATE_URL|DEFAULT_HTTP_RELAY|PKARR_RELAYS|TESTNET)$/]',
           message:
-            'Do not read network values from Env (build-time inlined). Use the runtime-config getters (getNexusUrl, getCdnUrl, getHomeserver, getHomegateUrl, getDefaultHttpRelay, getPkarrRelays, getTestnet) from @/libs/runtime-config/runtime-config.',
+            'Do not read network values from Env (build-time inlined). Use the runtime-config getters (getNexusUrl, getCdnUrl, getHomeserver, getHomeserverUrl, getHomegateUrl, getDefaultHttpRelay, getPkarrRelays, getTestnet) from @/libs/runtime-config/runtime-config.',
         },
         {
           selector:
-            'MemberExpression[object.type="MemberExpression"][object.object.name="process"][object.property.name="env"][property.name=/^NEXT_PUBLIC_(NEXUS_URL|CDN_URL|HOMESERVER|HOMEGATE_URL|DEFAULT_HTTP_RELAY|PKARR_RELAYS|TESTNET)$/]',
+            'MemberExpression[object.type="MemberExpression"][object.object.name="process"][object.property.name="env"][property.name=/^NEXT_PUBLIC_(NEXUS_URL|CDN_URL|HOMESERVER|HOMESERVER_URL|HOMEGATE_URL|DEFAULT_HTTP_RELAY|PKARR_RELAYS|TESTNET)$/]',
           message:
             'Do not read NEXT_PUBLIC_ network values from process.env (build-time inlined). Use the runtime-config getters from @/libs/runtime-config/runtime-config.',
         },

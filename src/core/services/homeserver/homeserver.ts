@@ -11,7 +11,7 @@ import {
   Signer,
 } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
-import { getDefaultHttpRelay, getHomeserver, getPkarrRelays, getTestnet } from '@/config/network';
+import { getDefaultHttpRelay, getHomeserver, getHomeserverUrl, getPkarrRelays, getTestnet } from '@/config/network';
 import type { TPublicKeyParams } from '@/controllers/auth/auth.types';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -147,7 +147,7 @@ export class HomeserverService {
    *
    * Performs a GET to the homeserver's `/signup_tokens/<token>` endpoint. This is a
    * homeserver-root endpoint that cannot be reached via the homeserver pubkey (its PKARR
-   * record has no resolvable HTTPS endpoint), so the explicit {@link HOMESERVER_URL} is used.
+   * record has no resolvable HTTPS endpoint), so the explicit {@link getHomeserverUrl} is used.
    *
    * A definitive homeserver response distinguishes valid, used, and unknown tokens, whereas
    * a failure to reach the homeserver is surfaced as a thrown error so callers can tell
@@ -160,7 +160,7 @@ export class HomeserverService {
    *   or returns an unexpected status.
    */
   static async verifySignupToken(signupToken: string): Promise<TSignupTokenVerificationStatus> {
-    const url = `${HOMESERVER_URL}/signup_tokens/${encodeURIComponent(signupToken)}`;
+    const url = `${getHomeserverUrl()}/signup_tokens/${encodeURIComponent(signupToken)}`;
     try {
       const response = await this.getPubkySdk().client.fetch(url, { method: HttpMethod.GET });
       Logger.debug('Signup token verification response', { status: response.status });

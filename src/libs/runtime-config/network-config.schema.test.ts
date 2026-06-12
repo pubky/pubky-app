@@ -10,6 +10,7 @@ const VALID_ENV_INPUT = {
   nexusUrl: 'https://nexus.example.com',
   cdnUrl: 'https://nexus.example.com/static',
   homeserver: 'some-homeserver-key',
+  homeserverUrl: 'https://homeserver.example.com',
   homegateUrl: 'https://homegate.example.com',
   defaultHttpRelay: 'https://relay.example.com/inbox',
   pkarrRelays: '["https://pkarr.example.com"]',

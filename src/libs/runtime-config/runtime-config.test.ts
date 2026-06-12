@@ -14,6 +14,7 @@ const RUNTIME_ENV_VALUES: Record<keyof RuntimeConfig, string> = {
   nexusUrl: 'https://nexus.runtime.example.com',
   cdnUrl: 'https://nexus.runtime.example.com/static',
   homeserver: 'runtime-homeserver-key',
+  homeserverUrl: 'https://homeserver.runtime.example.com',
   homegateUrl: 'https://homegate.runtime.example.com',
   defaultHttpRelay: 'https://relay.runtime.example.com/inbox',
   pkarrRelays: '["https://pkarr.runtime.example.com"]',

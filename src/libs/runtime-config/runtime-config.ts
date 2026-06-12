@@ -80,8 +80,8 @@ export function readServerConfig(): RuntimeConfig {
     throw new Error(
       'Runtime config is required but no PUBKY_RUNTIME_* environment variables are set. ' +
         'Set PUBKY_RUNTIME_NEXUS_URL, PUBKY_RUNTIME_CDN_URL, PUBKY_RUNTIME_HOMESERVER, ' +
-        'PUBKY_RUNTIME_HOMEGATE_URL, PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, PUBKY_RUNTIME_PKARR_RELAYS, ' +
-        'and PUBKY_RUNTIME_TESTNET on the container.',
+        'PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, ' +
+        'PUBKY_RUNTIME_PKARR_RELAYS, and PUBKY_RUNTIME_TESTNET on the container.',
     );
   }
 
@@ -144,6 +144,7 @@ export function resetRuntimeConfigForTests(): void {
 export const getNexusUrl = (): string => getRuntimeConfig().nexusUrl;
 export const getCdnUrl = (): string => getRuntimeConfig().cdnUrl;
 export const getHomeserver = (): string => getRuntimeConfig().homeserver;
+export const getHomeserverUrl = (): string => getRuntimeConfig().homeserverUrl;
 export const getHomegateUrl = (): string => getRuntimeConfig().homegateUrl;
 export const getDefaultHttpRelay = (): string => getRuntimeConfig().defaultHttpRelay;
 export const getPkarrRelays = (): string[] => getRuntimeConfig().pkarrRelays;

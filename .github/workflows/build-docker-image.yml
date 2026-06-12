@@ -38,6 +38,13 @@ on:
         description: 'Image name used for the build'
         value: ${{ jobs.check_image.outputs.image_name }}
     inputs:
+      env:
+        description: >-
+          Build variant: 'preview' builds pubky-app-preview (per-PR build args); any other value
+          builds the env-agnostic pubky-app image (network values supplied at runtime via PUBKY_RUNTIME_*)
+        required: false
+        type: string
+
       latest:
         description: 'Use latest tag'
         required: false
@@ -85,7 +92,7 @@ jobs:
         id: set_tag
         run: |
           echo image_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
-          echo image_name=${{ format('pubky-app', inputs.env) }} >> $GITHUB_OUTPUT
+          echo image_name=${{ inputs.env == 'preview' && 'pubky-app-preview' || 'pubky-app' }} >> $GITHUB_OUTPUT
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
@@ -97,12 +104,12 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
         id: check_image
         with:
-          image: ${{ env.registry }}/pubky-app
+          image: ${{ env.registry }}/${{ steps.set_tag.outputs.image_name }}
           tag: ${{ steps.sha_tag.outputs.hash }}
           arch: ${{ inputs.platforms }}
 
   build_image:
-    name: 'Build image for ${{ inputs.env }}'
+    name: Build and push image
     needs: [check_image]
     if: ${{ needs.check_image.outputs.image_exists != 'true' }}
     runs-on: ['ubuntu-latest']
@@ -126,6 +133,9 @@ jobs:
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}
           latest: ${{ inputs.latest }}
+          # NOTE: network values (NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL,
+          # DEFAULT_HTTP_RELAY, PKARR_RELAYS, TESTNET) are intentionally NOT build args. They are
+          # supplied at container runtime as PUBKY_RUNTIME_* (see Dockerfile and src/libs/runtime-config).
           build_args: |
             NEXT_PUBLIC_DB_VERSION=2
             NEXT_PUBLIC_DB_NAME=franky
@@ -145,13 +155,6 @@ jobs:
             NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE=20
             NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
             NEXT_PUBLIC_TTL_RETRY_DELAY_MS=60000
-            NEXT_PUBLIC_HOMESERVER=8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo
-            NEXT_PUBLIC_HOMESERVER_URL=http://localhost:6286
-            NEXT_PUBLIC_NEXUS_URL=http://localhost:8080
-            NEXT_PUBLIC_CDN_URL=http://localhost:8080/static
-            NEXT_PUBLIC_TESTNET=true
-            NEXT_PUBLIC_PKARR_RELAYS=["https://pkarr.pubky.app","https://pkarr.pubky.org"]
-            NEXT_PUBLIC_DEFAULT_HTTP_RELAY=http://localhost:15412/inbox/
             NEXT_PUBLIC_EXCHANGE_RATE_API=https://bitkit.stag0.blocktank.to/fx/rates/btc
             NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
             NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
@@ -162,7 +165,7 @@ jobs:
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             SENTRY_ORG=${{ vars.SENTRY_ORG }}
             SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
-        if: ${{ inputs.env == 'testnet' }}
+        if: ${{ inputs.env != 'preview' }}
 
       - name: Build and push image pubky-app (preview)
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
@@ -175,11 +178,13 @@ jobs:
           sha_tag: true
           tags: |
             type=raw,value=pr-${{ inputs.pr_number }}
+          # NOTE: network values (NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL,
+          # DEFAULT_HTTP_RELAY, PKARR_RELAYS, TESTNET) are intentionally NOT build args. They are
+          # supplied at container runtime as PUBKY_RUNTIME_* (see preview-deploy-service-file.yml).
           build_args: |
             NEXT_PUBLIC_DB_VERSION=2
             NEXT_PUBLIC_DB_NAME=franky-preview-${{ inputs.pr_number }}
             NEXT_PUBLIC_DEBUG_MODE=true
-            NEXT_PUBLIC_SYNC_TTL=3000
             NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS=8888
             NEXT_PUBLIC_NOTIFICATION_POLL_ON_START=true
             NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY=true
@@ -195,15 +200,7 @@ jobs:
             NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE=20
             NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
             NEXT_PUBLIC_TTL_RETRY_DELAY_MS=60000
-            NEXT_PUBLIC_HOMESERVER=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy
-            NEXT_PUBLIC_HOMESERVER_URL=https://homeserver.staging.pubky.app
-            NEXT_PUBLIC_NEXUS_URL=https://nexus.staging.pubky.app
-            NEXT_PUBLIC_CDN_URL=https://nexus.staging.pubky.app/static
-            NEXT_PUBLIC_TESTNET=false
-            NEXT_PUBLIC_PKARR_RELAYS=["https://pkarr.pubky.app","https://pkarr.pubky.org"]
-            NEXT_PUBLIC_DEFAULT_HTTP_RELAY=https://httprelay.staging.pubky.app/inbox
             NEXT_PUBLIC_EXCHANGE_RATE_API=https://bitkit.stag0.blocktank.to/fx/rates/btc
-            NEXT_PUBLIC_HOMEGATE_URL=https://homegate.staging.pubky.app
             NEXT_PUBLIC_PRELUDE_SDK_KEY=${{ vars.PRELUDE_SDK_KEY }}
             NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
             NEXT_PUBLIC_MODERATED_TAGS=["nudity"]

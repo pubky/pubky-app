@@ -65,6 +65,7 @@ jobs:
     needs: [set-vars]
     uses: ./.github/workflows/build-docker-image.yml
     with:
+      env: preview
       platforms: ${{ needs.set-vars.outputs.platforms }}
       pr_number: ${{ needs.set-vars.outputs.pr_number }}
       commit_sha: ${{ github.event.pull_request.head.sha || github.sha }}

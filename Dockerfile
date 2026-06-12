@@ -39,10 +39,10 @@ ARG NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS
 ARG NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE
 ARG NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE
 ARG NEXT_PUBLIC_TTL_RETRY_DELAY_MS
-# NOTE: NEXUS_URL, CDN_URL, HOMESERVER, HOMEGATE_URL, DEFAULT_HTTP_RELAY, PKARR_RELAYS and
-# TESTNET are intentionally NOT build args. They are runtime-configurable and must be supplied as
-# PUBKY_RUNTIME_* environment variables on the running container (see runner stage and
-# src/libs/runtime-config). This lets a single image be promoted across staging/prod/testnet.
+# NOTE: NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL, DEFAULT_HTTP_RELAY,
+# PKARR_RELAYS and TESTNET are intentionally NOT build args. They are runtime-configurable and must
+# be supplied as PUBKY_RUNTIME_* environment variables on the running container (see runner stage
+# and src/libs/runtime-config). This lets a single image be promoted across staging/prod/testnet.
 ARG NEXT_PUBLIC_EXCHANGE_RATE_API
 ARG NEXT_PUBLIC_PRELUDE_SDK_KEY
 ARG NEXT_PUBLIC_MODERATION_ID
@@ -110,6 +110,7 @@ ENV HOSTNAME="0.0.0.0"
 #   PUBKY_RUNTIME_NEXUS_URL
 #   PUBKY_RUNTIME_CDN_URL
 #   PUBKY_RUNTIME_HOMESERVER
+#   PUBKY_RUNTIME_HOMESERVER_URL
 #   PUBKY_RUNTIME_HOMEGATE_URL
 #   PUBKY_RUNTIME_DEFAULT_HTTP_RELAY
 #   PUBKY_RUNTIME_PKARR_RELAYS   (JSON array string, e.g. '["https://pkarr.pubky.app"]')

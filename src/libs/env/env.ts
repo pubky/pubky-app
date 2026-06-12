@@ -43,10 +43,10 @@ const envSchema = z.object({
   // These variables have staging defaults for development and CI/CD.
   // For production, override these with your production URLs.
 
-  // NOTE: NEXUS_URL, CDN_URL, HOMESERVER, HOMEGATE_URL, DEFAULT_HTTP_RELAY, PKARR_RELAYS and
-  // TESTNET are runtime-configurable. These NEXT_PUBLIC_ entries are build/dev/test DEFAULTS only;
-  // deployed environments must supply PUBKY_RUNTIME_* (see @/libs/runtime-config). They reuse the
-  // shared field validators so the notion of "valid" cannot drift from the runtime config.
+  // NOTE: NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL, DEFAULT_HTTP_RELAY,
+  // PKARR_RELAYS and TESTNET are runtime-configurable. These NEXT_PUBLIC_ entries are build/dev/test
+  // DEFAULTS only; deployed environments must supply PUBKY_RUNTIME_* (see @/libs/runtime-config).
+  // They reuse the shared field validators so the notion of "valid" cannot drift from the runtime config.
   /** Main API endpoint */
   NEXT_PUBLIC_NEXUS_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.nexusUrl),
   /** CDN URL for static assets */
@@ -162,7 +162,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_HOMESERVER: homeserverValue.default(NETWORK_RUNTIME_DEFAULTS.homeserver),
 
   /** Homeserver HTTP base URL (the homeserver pubkey has no resolvable HTTPS PKARR endpoint) */
-  NEXT_PUBLIC_HOMESERVER_URL: z.url().default('https://homeserver.staging.pubky.app'),
+  NEXT_PUBLIC_HOMESERVER_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.homeserverUrl),
 
   // Server-side only admin credentials for signup token generation (dev/test only)
   // These are NOT exposed to the client bundle - only available on the server

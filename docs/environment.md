@@ -60,7 +60,7 @@ const cdnUrl = Env.NEXT_PUBLIC_CDN_URL; // string (validated URL)
 
 A small set of **environment-specific network values** are configured at **runtime**, not build time, so a single Docker image can be promoted across staging / prod / testnet without rebuilding. See [ADR 0017](adr/0017-runtime-config-injection.md).
 
-Runtime-configurable values: `nexusUrl`, `cdnUrl`, `homeserver`, `homegateUrl`, `defaultHttpRelay`, `pkarrRelays`, `testnet`.
+Runtime-configurable values: `nexusUrl`, `cdnUrl`, `homeserver`, `homeserverUrl`, `homegateUrl`, `defaultHttpRelay`, `pkarrRelays`, `testnet`. (`homeserverUrl` is the homeserver's HTTP base URL, used for invite-code verification — the homeserver pubkey has no resolvable HTTPS endpoint, see [pubky-core#410](https://github.com/pubky/pubky-core/issues/410).)
 
 ### Why a separate mechanism
 
@@ -70,7 +70,7 @@ Next.js inlines every literal `process.env.NEXT_PUBLIC_*` reference at **build t
 
 - The server reads `PUBKY_RUNTIME_*` at request time, validates them, and memoizes the result (`src/libs/runtime-config/runtime-config.ts`).
 - The validated config is serialized into an inline `<script>` (`window.__PUBKY_CONFIG__`) in the dynamic root layout, available synchronously before any app code runs.
-- App code reads values through lazy getters — `getNexusUrl()`, `getCdnUrl()`, `getHomeserver()`, `getHomegateUrl()`, `getDefaultHttpRelay()`, `getPkarrRelays()`, `getTestnet()` — re-exported from `@/config/nexus` and `@/config/network`.
+- App code reads values through lazy getters — `getNexusUrl()`, `getCdnUrl()`, `getHomeserver()`, `getHomeserverUrl()`, `getHomegateUrl()`, `getDefaultHttpRelay()`, `getPkarrRelays()`, `getTestnet()` — re-exported from `@/config/nexus` and `@/config/network`.
 - Schema and defaults live in `src/libs/runtime-config/network-config.schema.ts` (shared with `env.ts` so validation cannot drift).
 
 ```typescript
@@ -87,7 +87,7 @@ const url = getNexusUrl(); // resolved at call time
 - **Deployed (`NODE_ENV=production`, including staging), or `PUBKY_RUNTIME_CONFIG_REQUIRED=true`**: `PUBKY_RUNTIME_*` are **required**. Missing/invalid config throws (no silent fallback to staging). If any one `PUBKY_RUNTIME_*` is set, **all** are required (catches partial deploy config).
 - **Local dev / tests**: falls back to the `NEXT_PUBLIC_*` defaults (honoring `.env.local` and `src/config/test.ts`).
 
-> Running a production build locally (`npm run build && npm run start`) runs as `NODE_ENV=production`, so it **requires** all seven `PUBKY_RUNTIME_*` to be set (a partial set throws). `npm run dev` does not — it uses the `NEXT_PUBLIC_*` fallback. See the `PUBKY_RUNTIME_*` block in `.env.example`.
+> Running a production build locally (`npm run build && npm run start`) runs as `NODE_ENV=production`, so it **requires** all eight `PUBKY_RUNTIME_*` to be set (a partial set throws). `npm run dev` does not — it uses the `NEXT_PUBLIC_*` fallback. See the `PUBKY_RUNTIME_*` block in `.env.example`.
 
 > Contract shift: staging runs `NODE_ENV=production`, so staging must now set `PUBKY_RUNTIME_*`. The `NEXT_PUBLIC_*` network values are now **local dev/test defaults only** — no deployed environment may rely on them.
 

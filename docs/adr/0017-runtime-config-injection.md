@@ -6,7 +6,7 @@ Accepted — 2026-06-02
 
 ## Context
 
-A set of environment-specific network values — `nexusUrl`, `cdnUrl`, `homeserver`, `homegateUrl`, `defaultHttpRelay`, `pkarrRelays`, `testnet` — differ across staging, production, and testnet. They were exposed as `NEXT_PUBLIC_*` variables, which Next.js inlines into the JavaScript bundle at **build time** (even in server code). As a result a separate Docker image had to be built per environment, which blocks promoting a single image through environments (and specifically blocks the migration to Ansible-based deployment).
+A set of environment-specific network values — `nexusUrl`, `cdnUrl`, `homeserver`, `homeserverUrl`, `homegateUrl`, `defaultHttpRelay`, `pkarrRelays`, `testnet` — differ across staging, production, and testnet. They were exposed as `NEXT_PUBLIC_*` variables, which Next.js inlines into the JavaScript bundle at **build time** (even in server code). As a result a separate Docker image had to be built per environment, which blocks promoting a single image through environments (and specifically blocks the migration to Ansible-based deployment).
 
 We need these values to be configurable at **runtime** while:
 
@@ -28,7 +28,7 @@ Read the runtime values from **non-`NEXT_PUBLIC_` env names** (`PUBKY_RUNTIME_*`
 - `src/libs/runtime-config/runtime-config.ts` is an isomorphic, memoized resolver: the server reads `PUBKY_RUNTIME_*`; the client reads `window.__PUBKY_CONFIG__`. It exposes getters (`getNexusUrl`, …) and `serializeRuntimeConfig()`.
 - `ContainerRoot` injects the serialized config as an inline `<script>` before app code runs (safe HTML escaping for `<`, `</script>`, U+2028/U+2029).
 - "Required" = `(NODE_ENV === 'production' || PUBKY_RUNTIME_CONFIG_REQUIRED === 'true') && not a test run`. When required and missing/invalid → throw. Otherwise fall back to `NEXT_PUBLIC_*` (local dev/test). A `next/constants` `PHASE_PRODUCTION_BUILD` guard ensures the throw can never fire during `next build`.
-- An ESLint rule bans direct `Env.NEXT_PUBLIC_*` / `process.env.NEXT_PUBLIC_*` reads of these seven values outside `env.ts` and `runtime-config/**`.
+- An ESLint rule bans direct `Env.NEXT_PUBLIC_*` / `process.env.NEXT_PUBLIC_*` reads of these eight values outside `env.ts` and `runtime-config/**`.
 
 ## Consequences
 
