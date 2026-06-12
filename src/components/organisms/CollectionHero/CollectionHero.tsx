@@ -1,12 +1,11 @@
 'use client';
 
-import { Minus, Pencil, Plus, Share2, StickyNote, Trash2 } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { Minus, Pencil, Plus, Share2, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
-import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
@@ -15,9 +14,10 @@ import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { cn } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
-import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionHeroSkeleton } from '@/organisms/CollectionHero/CollectionHero.skeleton';
+import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { CollectionHeroContentProps, CollectionHeroProps } from './CollectionHero.types';
@@ -58,7 +58,6 @@ export function CollectionHero({ authorPubky, postId, className }: CollectionHer
 function CollectionHeroContent({ authorPubky, compositeId, postDetails, className }: CollectionHeroContentProps) {
   const t = useTranslations('collections.single');
   const tCardToast = useTranslations('collections.card.toast');
-  const format = useFormatter();
 
   const { profile: ownerProfile } = useUserProfile(authorPubky);
   // Gate the owner name on the resolved profile so the hero doesn't flash the
@@ -73,8 +72,6 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
   const title = collection?.name ?? '';
   const description = collection?.description?.trim() ?? '';
   const itemCount = collection?.items?.length ?? 0;
-  // Compact notation (e.g. 1.2K) keeps long counts from blowing out the owner row.
-  const itemCountLabel = format.number(itemCount, { notation: 'compact' });
   // The hero requests the higher-fidelity MAIN variant (the card uses FEED).
   const coverImage = resolveCollectionCoverImage(collection?.cover_image, FileVariant.MAIN);
 
@@ -139,33 +136,16 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
 
         {/* Owner + item count */}
         <Container overrideDefaults className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <Container overrideDefaults className="flex min-w-0 items-center gap-2">
-            <AvatarWithFallback
-              avatarUrl={ownerAvatarUrl}
-              name={ownerName}
-              fallbackSeed={authorPubky}
-              size="md"
-              alt={ownerName}
-            />
-            {isOwnerResolved ? (
-              <Typography
-                as="span"
-                overrideDefaults
-                className="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
-              >
-                {ownerName}
-              </Typography>
-            ) : (
-              <Skeleton className="h-5 w-32 rounded-md" />
-            )}
-          </Container>
+          <HeroOwner
+            name={ownerName}
+            fallbackSeed={authorPubky}
+            avatarUrl={ownerAvatarUrl}
+            isResolved={isOwnerResolved}
+            size="md"
+            className="gap-2"
+          />
 
-          <Container overrideDefaults className="flex items-center gap-1 text-muted-foreground">
-            <StickyNote className="size-3 shrink-0" />
-            <Typography as="span" overrideDefaults className="text-xs leading-4 font-medium">
-              {itemCountLabel}
-            </Typography>
-          </Container>
+          <CollectionCountBadge count={itemCount} />
         </Container>
 
         {/* Description */}

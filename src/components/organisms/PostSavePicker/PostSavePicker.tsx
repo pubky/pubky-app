@@ -1,6 +1,6 @@
 'use client';
 
-import { type KeyboardEvent, type ReactNode, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useState } from 'react';
 import { Bookmark, Check, Library, Loader2, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
@@ -16,11 +16,13 @@ import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
 import { Typography } from '@/atoms/Typography/Typography';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { COLLECTION_NAME_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { type PostSaveCollectionTarget, usePostSaveTargets } from '@/hooks/usePostSaveTargets/usePostSaveTargets';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn } from '@/libs/utils/utils';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 
 type PostSavePickerProps = {
   postId: string;
@@ -84,7 +86,7 @@ function SavePickerRow({
           event.preventDefault();
           onActivate();
         }}
-        className="flex w-full items-center gap-2 p-0 text-base font-medium text-muted-foreground"
+        className="w-full gap-2 p-0 text-base font-medium text-muted-foreground"
         data-cy={dataCy}
       >
         {children}
@@ -124,7 +126,7 @@ function CollectionRow({
       <Typography
         as="span"
         overrideDefaults
-        className={cn('min-w-0 flex-1 truncate text-base font-medium', layout === 'sheet' && 'text-left')}
+        className={cn('min-w-0 flex-1 truncate', layout === 'sheet' && 'text-left')}
       >
         {collection.name}
       </Typography>
@@ -172,11 +174,11 @@ function SavePickerContent({
         dataCy="post-save-bookmarks-option"
         onActivate={() => void toggleBookmark()}
       >
-        {isBookmarkBusy ? <Loader2 className="size-4 animate-spin" /> : <Bookmark className="size-4" />}
+        <Bookmark className="size-4" />
         <Typography
           as="span"
           overrideDefaults
-          className={cn('min-w-0 flex-1 truncate text-base font-medium', layout === 'sheet' && 'text-left')}
+          className={cn('min-w-0 flex-1 truncate', layout === 'sheet' && 'text-left')}
         >
           {t('bookmarks')}
         </Typography>
@@ -201,11 +203,7 @@ function SavePickerContent({
         ))
       )}
 
-      {layout === 'dropdown' ? (
-        <DropdownMenuSeparator className="my-1" />
-      ) : (
-        <Container overrideDefaults className="h-px bg-muted" />
-      )}
+      {layout === 'dropdown' ? <DropdownMenuSeparator /> : <Container overrideDefaults className="h-px bg-muted" />}
 
       <Container overrideDefaults className={cn('flex flex-col gap-2', layout === 'dropdown' && 'pt-1')}>
         <Label className="text-xs tracking-widest text-muted-foreground uppercase">{t('newCollection')}</Label>
@@ -243,9 +241,26 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const t = useTranslations('postSave');
   const isMobile = useIsMobile();
   const { requireAuth } = useRequireAuth();
+  const feed = useTimelineFeedContext();
+  const feedVariant = feed?.variant;
+  const removePosts = feed?.removePosts;
   const [open, setOpen] = useState(false);
   const saveTargets = usePostSaveTargets(postId);
   const isBookmarkBusy = saveTargets.isBookmarkLoading || saveTargets.isBookmarkToggling;
+  const isBookmarkResolved = !saveTargets.isBookmarkLoading && !saveTargets.isBookmarkToggling;
+  const shouldRemoveFromBookmarksFeed =
+    feedVariant === TIMELINE_FEED_VARIANT.BOOKMARKS && !open && isBookmarkResolved && !saveTargets.isBookmarked;
+
+  // Closing the picker commits the save session. On the bookmarks feed, a post
+  // that is no longer bookmarked should leave the grid so the visible list
+  // matches the live bookmark count. While the picker stays open, the user can
+  // freely toggle targets without the card shifting under them. Waiting for the
+  // resolved bookmark state also covers closing while an unbookmark is in flight.
+  useEffect(() => {
+    if (!shouldRemoveFromBookmarksFeed || !removePosts) return;
+    removePosts(postId);
+  }, [postId, removePosts, shouldRemoveFromBookmarksFeed]);
+
   const trigger = (
     <Button
       variant="secondary"

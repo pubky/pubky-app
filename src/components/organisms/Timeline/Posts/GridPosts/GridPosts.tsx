@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS } from '@/config/feed';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
@@ -22,11 +23,16 @@ interface TimelineGridPostsProps {
   loadMore: () => Promise<void>;
   /**
    * Whether to render the "You've reached the end" message once the grid is fully
-   * loaded. Defaults to `true`. The single-collection view sets this to `false`
-   * because the end-of-feed celebration reads as out of place when the items grid
-   * is immediately followed by the collections sections.
+   * loaded. Defaults to `true`. Collection and bookmarks grids set this to
+   * `false` because the end-of-feed celebration reads as out of place in these
+   * finite, library-style surfaces.
    */
   showEndMessage?: boolean;
+  /**
+   * Optional custom empty state rendered when the stream resolves with no posts.
+   * Falls back to the shared "no posts" message when omitted.
+   */
+  emptyState?: ReactNode;
 }
 
 /**
@@ -54,6 +60,7 @@ export function TimelineGridPosts({
   hasMore,
   loadMore,
   showEndMessage = true,
+  emptyState,
 }: TimelineGridPostsProps) {
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
@@ -72,6 +79,7 @@ export function TimelineGridPosts({
       error={error}
       hasItems={postIds.length > 0}
       loadingComponent={<GridPostsSkeleton />}
+      emptyComponent={emptyState}
     >
       <Container data-cy="timeline-container">
         <Container

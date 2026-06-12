@@ -19,10 +19,12 @@ export type TimelineFeedVariant = (typeof TIMELINE_FEED_VARIANT)[keyof typeof TI
  *
  * Grid is intrinsic to the variant — not a user-selectable layout — so membership
  * lives here in feed-domain config rather than in the home store's `LAYOUT` enum.
- * `useFeedLayoutResolution` derives `isGridActive` from this set. The bookmarks
- * fast-follow PR adds `BOOKMARKS` here (also fixed-to-grid, no toggle).
+ * `useFeedLayoutResolution` derives `isGridActive` from this set.
  */
-export const GRID_LAYOUT_VARIANTS = new Set<TimelineFeedVariant>([TIMELINE_FEED_VARIANT.COLLECTION]);
+export const GRID_LAYOUT_VARIANTS = new Set<TimelineFeedVariant>([
+  TIMELINE_FEED_VARIANT.BOOKMARKS,
+  TIMELINE_FEED_VARIANT.COLLECTION,
+]);
 
 /**
  * Responsive column classes for the shared card grid (`TimelineGridPosts`).
