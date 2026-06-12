@@ -17,6 +17,7 @@ import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { Logger } from '@/libs/logger/logger';
+import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { buildDiscoverCollectionsStreamId } from '@/models/stream/post/postStream.types';
@@ -52,6 +53,8 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
  * filters out:
  *   - The current user's own collections.
  *   - Collections the current user has already bookmarked (followed).
+ *   - Collections whose local PostDetails is tombstoned (`'[DELETED]'`).
+ *   - Collections with zero items (nothing to discover).
  *
  * Filtering happens in two layers:
  *
@@ -181,19 +184,27 @@ export function DiscoverCollections() {
         let reachedPageCap = false;
         if (result.nextPageIds.length > 0) {
           // Read the local bookmark set after persist has committed.
-          // Filter own + already-bookmarked + deleted collections.
+          // Filter own + already-bookmarked + deleted + empty collections.
           const bookmarkedIds = new Set(await BookmarkController.getAll());
           if (token?.cancelled) return;
-          // Slice post details to identify already-deleted collections in this
-          // batch. Mirrors the timeline's `isPostDeleted` guard in
-          // `useVisualFeedTiles` and FollowedCollections' live-query filter.
+          // Slice post details to identify already-deleted and empty
+          // collections in this batch. Mirrors the timeline's `isPostDeleted`
+          // guard in `useVisualFeedTiles` and FollowedCollections' live-query
+          // filter; the empty-items check drops collections with nothing to
+          // discover.
           const sliceDetails = await PostController.getDetailsByIds({ compositeIds: result.nextPageIds });
           if (token?.cancelled) return;
           const deletedIds = new Set<string>();
+          const emptyIds = new Set<string>();
           for (let i = 0; i < result.nextPageIds.length; i += 1) {
             const detail = sliceDetails[i];
-            if (detail && isPostDeleted(detail.content)) {
+            if (!detail) continue;
+            if (isPostDeleted(detail.content)) {
               deletedIds.add(result.nextPageIds[i]);
+              continue;
+            }
+            if ((parseCollectionContent(detail.content)?.items?.length ?? 0) === 0) {
+              emptyIds.add(result.nextPageIds[i]);
             }
           }
           const alreadyVisible = new Set([...visibleIdsRef.current, ...collected]);
@@ -203,6 +214,7 @@ export function DiscoverCollections() {
             if (alreadyVisible.has(id)) continue;
             if (bookmarkedIds.has(id)) continue;
             if (deletedIds.has(id)) continue;
+            if (emptyIds.has(id)) continue;
             if (isOwnCollection(id, currentUserPubky)) continue;
             collected.push(id);
             alreadyVisible.add(id);
@@ -302,28 +314,34 @@ export function DiscoverCollections() {
   // first paint.
   const bookmarkedLive = useLiveQuery(() => BookmarkController.getAll(), []);
   const bookmarkedSet = bookmarkedLive ? new Set(bookmarkedLive) : null;
-  // Live overlay for deletions: subscribes to `post_details` (via
-  // `getDetailsByIds`) for the current visible set and returns the subset whose
-  // content has flipped to '[DELETED]'. This catches deletions that happen
-  // mid-session — e.g. an author deletes a collection on another device — so
-  // the card disappears from Discover without a reload. The fetch-time filter
-  // covers the cold path; this overlay covers the live path.
-  const deletedLive = useLiveQuery(async () => {
+  // Live overlay for deletions + empty collections: subscribes to `post_details`
+  // (via `getDetailsByIds`) for the current visible set and returns the subset
+  // whose content has flipped to '[DELETED]' OR whose item count has fallen to
+  // zero. Catches mid-session changes — e.g. an author deletes a collection or
+  // removes its last item on another device — so the card disappears from
+  // Discover without a reload. The fetch-time filter covers the cold path; this
+  // overlay covers the live path.
+  const hideLive = useLiveQuery(async () => {
     if (visibleIds.length === 0) return new Set<string>();
     const details = await PostController.getDetailsByIds({ compositeIds: visibleIds });
-    const deleted = new Set<string>();
+    const hide = new Set<string>();
     for (let i = 0; i < visibleIds.length; i += 1) {
       const detail = details[i];
-      if (detail && isPostDeleted(detail.content)) {
-        deleted.add(visibleIds[i]);
+      if (!detail) continue;
+      if (isPostDeleted(detail.content)) {
+        hide.add(visibleIds[i]);
+        continue;
+      }
+      if ((parseCollectionContent(detail.content)?.items?.length ?? 0) === 0) {
+        hide.add(visibleIds[i]);
       }
     }
-    return deleted;
+    return hide;
   }, [visibleIds]);
-  const deletedSet = deletedLive ?? null;
+  const hideSet = hideLive ?? null;
   const displayIds = visibleIds.filter((id) => {
     if (bookmarkedSet && bookmarkedSet.has(id)) return false;
-    if (deletedSet && deletedSet.has(id)) return false;
+    if (hideSet && hideSet.has(id)) return false;
     return true;
   });
 

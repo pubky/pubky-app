@@ -97,6 +97,9 @@ vi.mock('@/organisms/Collections/CollectionCard/CollectionCard.skeleton', () => 
 // Helpers
 // ---------------------------------------------------------------------------
 
+const collectionContent = (items: string[] = ['item:1']) =>
+  JSON.stringify({ name: 'Test Collection', items, description: '', cover_image: '' });
+
 const mockUseLiveQuery = vi.mocked(useLiveQuery);
 const mockGetOrFetchStreamSlice = vi.mocked(StreamPostsController.getOrFetchStreamSlice);
 const mockPrepareStreamForInitialLoad = vi.mocked(StreamPostsController.prepareStreamForInitialLoad);
@@ -316,7 +319,32 @@ describe('DiscoverCollections', () => {
     mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true }));
     mockGetDetailsByIds.mockResolvedValue([
       asOpaque<PostDetailsModelSchema>({ id: 'a:1', kind: 'collection', content: '[DELETED]' }),
-      asOpaque<PostDetailsModelSchema>({ id: 'b:2', kind: 'collection', content: 'live' }),
+      asOpaque<PostDetailsModelSchema>({ id: 'b:2', kind: 'collection', content: collectionContent() }),
+    ]);
+
+    await act(async () => {
+      render(<DiscoverCollections />);
+    });
+
+    await waitFor(() => {
+      const cards = screen.getAllByTestId('collection-card');
+      expect(cards).toHaveLength(1);
+      expect(cards[0]).toHaveAttribute('data-author-pubky', 'b');
+      expect(cards[0]).toHaveAttribute('data-post-id', '2');
+    });
+  });
+
+  it('fetch-time filter drops slice ids whose local PostDetails has zero items', async () => {
+    // Fourth filter layer (after own / followed / deleted): collections with
+    // an empty `items` array have nothing to discover, so they shouldn't reach
+    // `visibleIds`. Unparseable content (null envelope) is treated the same as
+    // empty — defensive against malformed content drifting in from Nexus.
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2', 'c:3'], reachedEnd: true }));
+    mockGetDetailsByIds.mockResolvedValue([
+      asOpaque<PostDetailsModelSchema>({ id: 'a:1', kind: 'collection', content: collectionContent([]) }),
+      asOpaque<PostDetailsModelSchema>({ id: 'b:2', kind: 'collection', content: collectionContent(['x:1']) }),
+      asOpaque<PostDetailsModelSchema>({ id: 'c:3', kind: 'collection', content: 'not-json' }),
     ]);
 
     await act(async () => {
@@ -341,8 +369,8 @@ describe('DiscoverCollections', () => {
     // Fetch-time details are clean (live content); deletion only happens
     // mid-session and is surfaced by the live overlay.
     mockGetDetailsByIds.mockResolvedValue([
-      asOpaque<PostDetailsModelSchema>({ id: 'a:1', kind: 'collection', content: 'live' }),
-      asOpaque<PostDetailsModelSchema>({ id: 'b:2', kind: 'collection', content: 'live' }),
+      asOpaque<PostDetailsModelSchema>({ id: 'a:1', kind: 'collection', content: collectionContent() }),
+      asOpaque<PostDetailsModelSchema>({ id: 'b:2', kind: 'collection', content: collectionContent() }),
     ]);
     // Two live queries — bookmarks (deps: []) returns []; deletions (deps:
     // [visibleIds]) returns the deleted-id Set.
