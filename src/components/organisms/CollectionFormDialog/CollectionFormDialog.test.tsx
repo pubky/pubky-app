@@ -178,6 +178,12 @@ describe('CollectionFormDialog', () => {
     expect(screen.getByText('collections.new.coverImageTooLarge')).toBeInTheDocument();
   });
 
+  it('disables the save button while a cover error is showing, even with a valid name', () => {
+    render(<Harness submitLabel="Save" initialName="Reading list" coverError="too-large" />);
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+  });
+
   it('wires the coverInputId to the hidden file input id and the label htmlFor', () => {
     render(<Harness />);
 

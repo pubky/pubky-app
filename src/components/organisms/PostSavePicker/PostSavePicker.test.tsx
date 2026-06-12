@@ -1,9 +1,15 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
+import { TimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { PostSavePicker } from './PostSavePicker';
 
 const mockState = vi.hoisted(() => ({
   isMobile: false,
+  isBookmarked: true,
+  isBookmarkLoading: false,
+  isBookmarkToggling: false,
   toggleBookmark: vi.fn(),
   toggleCollection: vi.fn(),
   createCollectionWithPost: vi.fn(),
@@ -24,9 +30,9 @@ const translations: Record<string, string> = {
 
 vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => ({
   usePostSaveTargets: () => ({
-    isBookmarked: true,
-    isBookmarkLoading: false,
-    isBookmarkToggling: false,
+    isBookmarked: mockState.isBookmarked,
+    isBookmarkLoading: mockState.isBookmarkLoading,
+    isBookmarkToggling: mockState.isBookmarkToggling,
     collections: [
       {
         id: 'author:collection1',
@@ -82,14 +88,33 @@ describe('PostSavePicker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.isMobile = false;
+    mockState.isBookmarked = true;
+    mockState.isBookmarkLoading = false;
+    mockState.isBookmarkToggling = false;
   });
 
-  const renderPicker = () => render(<PostSavePicker postId="author:post1" buttonClassName="border-none shadow-xs" />);
+  const renderPicker = (feedContext?: TimelineFeedContextValue) => {
+    const createPicker = () => {
+      const picker = <PostSavePicker postId="author:post1" buttonClassName="border-none shadow-xs" />;
+      return feedContext ? (
+        <TimelineFeedContext.Provider value={feedContext}>{picker}</TimelineFeedContext.Provider>
+      ) : (
+        picker
+      );
+    };
+    const result = render(createPicker());
+    return { ...result, rerenderPicker: () => result.rerender(createPicker()) };
+  };
 
   const openPicker = () => {
     const trigger = screen.getByRole('button', { name: 'Save post' });
     fireEvent.pointerDown(trigger);
     fireEvent.click(trigger);
+  };
+
+  const closePicker = () => {
+    // Escape dismisses the Radix dropdown, which drives onOpenChange(false).
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape', code: 'Escape' });
   };
 
   it('opens the desktop save menu with bookmarks and collections', async () => {
@@ -160,6 +185,87 @@ describe('PostSavePicker', () => {
       expect(screen.getByText('Save post')).toBeInTheDocument();
     });
     expect(screen.queryByText('Choose where this post should be saved.')).not.toBeInTheDocument();
+  });
+
+  it('removes the post from the bookmarks grid when the picker closes after unbookmarking', async () => {
+    const removePosts = vi.fn();
+
+    renderPicker({ variant: TIMELINE_FEED_VARIANT.BOOKMARKS, prependPosts: vi.fn(), removePosts });
+
+    openPicker();
+    await screen.findByText('Bookmarks');
+
+    mockState.isBookmarked = false;
+    closePicker();
+
+    expect(removePosts).toHaveBeenCalledWith('author:post1');
+  });
+
+  it('removes the post from the bookmarks grid after an in-flight unbookmark resolves', async () => {
+    const removePosts = vi.fn();
+    const { rerenderPicker } = renderPicker({
+      variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+      prependPosts: vi.fn(),
+      removePosts,
+    });
+
+    openPicker();
+    await screen.findByText('Bookmarks');
+
+    mockState.isBookmarked = false;
+    mockState.isBookmarkToggling = true;
+    closePicker();
+
+    expect(removePosts).not.toHaveBeenCalled();
+
+    mockState.isBookmarkToggling = false;
+    rerenderPicker();
+
+    expect(removePosts).toHaveBeenCalledWith('author:post1');
+  });
+
+  it('keeps the post in the bookmarks grid when it is still bookmarked on close', async () => {
+    const removePosts = vi.fn();
+    mockState.isBookmarked = true;
+
+    renderPicker({ variant: TIMELINE_FEED_VARIANT.BOOKMARKS, prependPosts: vi.fn(), removePosts });
+
+    openPicker();
+    await screen.findByText('Bookmarks');
+
+    closePicker();
+
+    expect(removePosts).not.toHaveBeenCalled();
+  });
+
+  it('does not remove the post while the bookmark state is still resolving', async () => {
+    const removePosts = vi.fn();
+    // Mirrors useBookmark's initial state: not yet resolved, seeded as not bookmarked.
+    mockState.isBookmarked = false;
+    mockState.isBookmarkLoading = true;
+
+    renderPicker({ variant: TIMELINE_FEED_VARIANT.BOOKMARKS, prependPosts: vi.fn(), removePosts });
+
+    openPicker();
+    await screen.findByText('Bookmarks');
+
+    closePicker();
+
+    expect(removePosts).not.toHaveBeenCalled();
+  });
+
+  it('does not remove the post on non-bookmarks feeds even when unbookmarked', async () => {
+    const removePosts = vi.fn();
+    mockState.isBookmarked = false;
+
+    renderPicker({ variant: TIMELINE_FEED_VARIANT.HOME, prependPosts: vi.fn(), removePosts });
+
+    openPicker();
+    await screen.findByText('Bookmarks');
+
+    closePicker();
+
+    expect(removePosts).not.toHaveBeenCalled();
   });
 
   it('matches desktop picker snapshot when open', async () => {

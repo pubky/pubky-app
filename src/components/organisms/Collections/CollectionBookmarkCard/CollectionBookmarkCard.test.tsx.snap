@@ -49,7 +49,7 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
           </span>
         </div>
         <div
-          class="flex shrink-0 items-center justify-end gap-2 sm:gap-3"
+          class="flex shrink-0 items-center gap-2 sm:gap-3"
           data-testid="container"
         >
           <div
@@ -58,7 +58,7 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-sticky-note size-3"
+              class="lucide lucide-sticky-note size-3 shrink-0"
               fill="none"
               height="24"
               stroke="currentColor"
@@ -85,7 +85,7 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
           </div>
           <div
             data-alt="Alice"
-            data-avatar-url="mocked-avatar-url:o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:7"
+            data-avatar-url="https://example.com/avatar.png"
             data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
             data-name="Alice"
             data-size="sm"
@@ -96,7 +96,7 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
         </div>
       </div>
       <p
-        class="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+        class="line-clamp-2 min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
         data-testid="typography"
       >
         collections.bookmarks.description
@@ -155,12 +155,12 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for the signe
           </span>
         </div>
         <div
-          class="flex shrink-0 items-center justify-end gap-2 sm:gap-3"
+          class="flex shrink-0 items-center gap-2 sm:gap-3"
           data-testid="container"
         >
           <div
             data-alt="U"
-            data-avatar-url=""
+            data-avatar-url="https://example.com/avatar.png"
             data-fallback-seed="U"
             data-name="U"
             data-size="sm"
@@ -171,7 +171,7 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for the signe
         </div>
       </div>
       <p
-        class="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+        class="line-clamp-2 min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
         data-testid="typography"
       >
         collections.bookmarks.description

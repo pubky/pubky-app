@@ -1,0 +1,47 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BookmarksItems - Snapshots > matches the snapshot 1`] = `
+<div
+  data-testid="timeline-feed"
+  data-variant="bookmarks"
+>
+  <div
+    class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-6"
+    data-cy="bookmarks-items-empty"
+    data-testid="container"
+  >
+    <button
+      aria-label="collections.single.addContent"
+      class="flex h-39 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+      data-slot="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-plus size-4 shrink-0"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M5 12h14"
+        />
+        <path
+          d="M12 5v14"
+        />
+      </svg>
+      <span
+        class="text-sm font-bold"
+        data-testid="typography"
+      >
+        collections.single.addContent
+      </span>
+    </button>
+  </div>
+</div>
+`;
