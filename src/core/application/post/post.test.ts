@@ -20,6 +20,7 @@ import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostService } from '@/services/local/post/post';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
@@ -37,6 +38,12 @@ vi.mock('@/services/local/post/post', () => ({
     readCounts: vi.fn(),
     readTags: vi.fn(),
     readRelationships: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/local/stream/posts/posts', () => ({
+  LocalStreamPostsService: {
+    read: vi.fn(),
   },
 }));
 
@@ -972,6 +979,48 @@ describe('Post Application', () => {
           viewerId: mockViewerId,
         }),
       ).rejects.toThrow('Nexus error');
+    });
+  });
+
+  describe('getAuthoredCollections', () => {
+    // Regression: after the `LocalPostService.delete` tombstone refactor, a
+    // soft-deleted collection has `content === '[DELETED]'` but `kind ===
+    // 'collection'`. Without an explicit `isPostDeleted` guard it would slip
+    // past the kind filter and only get dropped later by
+    // `CollectionPostContent.parse` failing on `[DELETED]` — fragile, since a
+    // future parser change could let it through and leak deleted collections
+    // into the post-save picker.
+    it('excludes tombstoned collections from the returned list', async () => {
+      const authorId = asOpaque<Pubky>('author-1');
+      const liveId = 'author-1:live';
+      const tombstonedId = 'author-1:tombstoned';
+      vi.mocked(LocalStreamPostsService.read).mockResolvedValue({
+        streamId: `${authorId}:author:collection`,
+        stream: [liveId, tombstonedId],
+      } as never);
+      vi.mocked(LocalPostService.readDetailsByIds).mockResolvedValue([
+        {
+          id: liveId,
+          content: JSON.stringify({ name: 'Live collection', items: [] }),
+          kind: 'collection',
+          uri: '',
+          indexed_at: 0,
+          attachments: null,
+        },
+        {
+          id: tombstonedId,
+          content: '[DELETED]',
+          kind: 'collection',
+          uri: '',
+          indexed_at: 0,
+          attachments: null,
+        },
+      ]);
+
+      const result = await PostApplication.getAuthoredCollections({ authorId });
+
+      expect(result).toHaveLength(1);
+      expect(result?.[0].details.id).toBe(liveId);
     });
   });
 

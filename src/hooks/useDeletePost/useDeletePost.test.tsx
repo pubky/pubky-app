@@ -164,6 +164,26 @@ describe('useDeletePost', () => {
     expect(mockPrependPosts).not.toHaveBeenCalled();
   });
 
+  it('does not restore when the row exists but is tombstoned (content === [DELETED])', async () => {
+    // After the `LocalPostService.delete` tombstone refactor, a successful
+    // local-first write leaves a row with `content === '[DELETED]'` instead
+    // of removing it. Without the content-aware check the hook would
+    // restore — bringing back a `PostDeleted` molecule where the user's
+    // post used to be. Verify the tombstone is treated as "local write
+    // committed" and the optimistic removal stays in place.
+    mockDelete.mockRejectedValue(new Error('homeserver sync failed'));
+    mockGetPostDetails.mockResolvedValue({ id: mockPostId, content: '[DELETED]' });
+
+    const { result } = renderHook(() => useDeletePost());
+
+    await act(async () => {
+      await result.current.deletePost(mockPostId);
+    });
+
+    expect(mockGetPostDetails).toHaveBeenCalledWith({ compositeId: mockPostId });
+    expect(mockPrependPosts).not.toHaveBeenCalled();
+  });
+
   it('shows error toast on deletion failure', async () => {
     const error = new Error('Deletion failed');
     mockDelete.mockRejectedValue(error);

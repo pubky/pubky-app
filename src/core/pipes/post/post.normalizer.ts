@@ -5,6 +5,7 @@ import { AuthErrorCode, ClientErrorCode, ValidationErrorCode } from '@/libs/erro
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import type { CollectionContentInput } from '@/models/post/collection/collectionPost.types';
@@ -119,7 +120,11 @@ export class PostNormalizer {
     const builder = PubkySpecsSingleton.get(authorId);
 
     const postDetails = await PostDetailsModel.findById(compositePostId);
-    if (!postDetails) {
+    // Tombstoned posts (`content === '[DELETED]'`) are treated as not-found
+    // here. Pre-tombstone refactor `!postDetails` caught hard-deleted rows;
+    // now they stick around as tombstones and falling through would build a
+    // `PubkyAppPost` whose content is the `[DELETED]` sentinel.
+    if (!postDetails || isPostDeleted(postDetails.content)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
         service: ErrorService.Local,
         operation: 'toEdit',

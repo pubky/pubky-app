@@ -825,6 +825,27 @@ describe('PostController', () => {
       }
     });
 
+    it('rejects tombstoned collections (content === [DELETED]) as not-found', async () => {
+      // Regression: pre-tombstone refactor `!collection` caught hard-deleted
+      // rows. Tombstones now stick around, and without the content check this
+      // path would surface "Collection content is invalid" instead.
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([], { content: '[DELETED]' }));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitUpdateCollectionItem({
+            collectionId: collectionPostId,
+            postId: targetPostId,
+            shouldAdd: true,
+          }),
+        ).rejects.toThrow('Collection not found');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
     it('rejects edits when the current user is not the collection author', async () => {
       setupAuthUser('different_user_pubky' as Pubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
@@ -1015,6 +1036,30 @@ describe('PostController', () => {
             coverImage: null,
           }),
         ).rejects.toThrow('Collection content is invalid');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects tombstoned collections (content === [DELETED]) as not-found', async () => {
+      // Regression: pre-tombstone refactor `!collection` caught hard-deleted
+      // rows. Tombstones now stick around, and without the content check this
+      // path would surface the misleading "Collection content is invalid".
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(
+        createCollectionDetails(undefined, { content: '[DELETED]' }),
+      );
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: null,
+          }),
+        ).rejects.toThrow('Collection not found');
       } finally {
         cleanupAuthUser();
       }

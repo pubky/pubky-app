@@ -21,6 +21,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
@@ -174,7 +175,15 @@ export class PostApplication {
     const details = await LocalPostService.readDetailsByIds(stream.stream);
 
     return details
-      .filter((post): post is PostDetailsModelSchema => post !== undefined && post.kind === 'collection')
+      .filter(
+        (post): post is PostDetailsModelSchema =>
+          // Drop tombstoned rows explicitly — they would currently be filtered
+          // out downstream by `CollectionPostContent.parse('[DELETED]')`
+          // returning `null`, but that's incidental: it relies on `[DELETED]`
+          // failing JSON parse. The explicit check is self-documenting and
+          // keeps the picker robust against future parser changes.
+          post !== undefined && post.kind === 'collection' && !isPostDeleted(post.content),
+      )
       .map((post) => {
         const content = CollectionPostContent.parse(post.content);
         return content ? { details: post, content } : null;

@@ -612,6 +612,24 @@ describe('PostNormalizer', () => {
         ).rejects.toThrow('Post not found');
       });
 
+      it('should throw POST_NOT_FOUND when the post is tombstoned (content === [DELETED])', async () => {
+        // Regression: pre-tombstone refactor `!postDetails` caught hard-deleted
+        // rows. Now they stick around as tombstones — without the content
+        // check, `toEdit` would try to build a `PubkyAppPost` whose content is
+        // the `[DELETED]` sentinel.
+        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(
+          asOpaque<PostDetailsModel>({ ...createMockPostDetails(compositePostId), content: '[DELETED]' }),
+        );
+
+        await expect(
+          PostNormalizer.toEdit({
+            compositePostId,
+            content: 'New content',
+            currentUserPubky: TEST_PUBKY.USER_1,
+          }),
+        ).rejects.toThrow('Post not found');
+      });
+
       it('should preserve parent URI for reply posts', async () => {
         const parentUri = buildPubkyUri(TEST_PUBKY.USER_2, `posts/${TEST_POST_IDS.POST_2}`);
 

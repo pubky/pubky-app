@@ -20,6 +20,7 @@ import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
@@ -308,7 +309,11 @@ export class PostController {
 
     const collection = await PostApplication.getDetails({ compositeId: compositeCollectionId });
 
-    if (!collection) {
+    // Tombstoned collections (`content === '[DELETED]'`) are treated as
+    // not-found here. Pre-tombstone refactor `!collection` caught hard-deleted
+    // rows; now they stick around as tombstones, and falling through would
+    // surface a misleading "Collection content is invalid" error.
+    if (!collection || isPostDeleted(collection.content)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitEditCollection',
@@ -370,7 +375,9 @@ export class PostController {
     const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
     const collection = await PostApplication.getDetails({ compositeId: collectionId });
 
-    if (!collection) {
+    // Tombstoned collections are not-found. See `commitEditCollection` above
+    // for the rationale.
+    if (!collection || isPostDeleted(collection.content)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitUpdateCollectionItem',
