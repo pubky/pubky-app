@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
+import { Typography } from '@/atoms/Typography/Typography';
 import { COLLECTIONS_MY_SECTION_SKELETON_COUNT, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { FileController } from '@/controllers/file/file';
 import { PostController } from '@/controllers/post/post';
@@ -36,7 +37,11 @@ import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
  * Pagination = "Show more" button (no infinite scroll on the landing).
  * No empty state — the pinned card is always present.
  */
-export function MyCollections() {
+interface MyCollectionsProps {
+  showPublicNote?: boolean;
+}
+
+export function MyCollections({ showPublicNote = false }: MyCollectionsProps = {}) {
   const t = useTranslations('collections');
 
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
@@ -53,27 +58,34 @@ export function MyCollections() {
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-4">
       {/* Header */}
-      <Container overrideDefaults className="flex flex-wrap items-center gap-3">
-        <Heading level={2} size="lg" className="font-light text-muted-foreground">
-          {t('my.title')}
-        </Heading>
-        {currentUserPubky ? (
-          <AvatarWithFallback
-            avatarUrl={avatarUrl}
-            name={avatarName}
-            fallbackSeed={avatarSeed}
-            size="md"
-            alt={avatarName}
-          />
-        ) : (
-          <AvatarStackSkeleton count={1} size="md" />
+      <Container overrideDefaults className="flex flex-wrap items-center justify-between gap-3">
+        <Container overrideDefaults className="flex flex-wrap items-center gap-3">
+          <Heading level={2} size="lg" className="font-light text-muted-foreground">
+            {t('my.title')}
+          </Heading>
+          {currentUserPubky ? (
+            <AvatarWithFallback
+              avatarUrl={avatarUrl}
+              name={avatarName}
+              fallbackSeed={avatarSeed}
+              size="md"
+              alt={avatarName}
+            />
+          ) : (
+            <AvatarStackSkeleton count={1} size="md" />
+          )}
+          <NewCollectionDialog>
+            <Button variant="secondary" size="sm">
+              <Plus />
+              {t('new.cta')}
+            </Button>
+          </NewCollectionDialog>
+        </Container>
+        {showPublicNote && (
+          <Typography as="span" size="md" className="text-input">
+            {t('my.publicNote')}
+          </Typography>
         )}
-        <NewCollectionDialog>
-          <Button variant="secondary" size="sm">
-            <Plus />
-            {t('new.cta')}
-          </Button>
-        </NewCollectionDialog>
       </Container>
 
       {/* Body */}

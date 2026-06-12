@@ -1281,7 +1281,8 @@
     "showMore": "Show more",
     "loadFailed": "Failed to load collections. Please try again.",
     "my": {
-      "title": "My Collections"
+      "title": "My Collections",
+      "publicNote": "Please note: all collections are public and discoverable."
     },
     "followed": {
       "title": "Followed Collections",

@@ -1285,7 +1285,8 @@
     "showMore": "Mehr anzeigen",
     "loadFailed": "Sammlungen konnten nicht geladen werden. Bitte erneut versuchen.",
     "my": {
-      "title": "Meine Sammlungen"
+      "title": "Meine Sammlungen",
+      "publicNote": "Hinweis: Alle Sammlungen sind öffentlich und auffindbar."
     },
     "followed": {
       "title": "Gefolgte Sammlungen",

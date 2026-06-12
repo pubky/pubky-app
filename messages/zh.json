@@ -1279,7 +1279,8 @@
     "showMore": "显示更多",
     "loadFailed": "加载收藏集失败，请重试。",
     "my": {
-      "title": "我的收藏集"
+      "title": "我的收藏集",
+      "publicNote": "请注意：所有收藏集均为公开且可被发现。"
     },
     "followed": {
       "title": "已关注的收藏集",

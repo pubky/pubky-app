@@ -6,6 +6,7 @@ exports[`CollectionsSections > matches the snapshot 1`] = `
   data-testid="container"
 >
   <div
+    data-show-public-note="false"
     data-testid="my-collections"
   />
   <div

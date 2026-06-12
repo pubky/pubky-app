@@ -1285,7 +1285,8 @@
     "showMore": "Mostrar mais",
     "loadFailed": "Falha ao carregar as coleções. Tente novamente.",
     "my": {
-      "title": "Minhas coleções"
+      "title": "Minhas coleções",
+      "publicNote": "Atenção: todas as coleções são públicas e podem ser descobertas."
     },
     "followed": {
       "title": "Coleções seguidas",
