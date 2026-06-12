@@ -13,6 +13,7 @@ import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { Logger } from '@/libs/logger/logger';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { buildFollowedCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { AvatarStack } from '@/molecules/AvatarStack/AvatarStack';
@@ -139,7 +140,11 @@ export function FollowedCollections() {
         const collectionIds: string[] = [];
         for (let i = 0; i < ids.length; i += 1) {
           const detail = details[i];
-          if (detail && detail.kind === COLLECTION_KIND_STRING) {
+          // Filter out deleted collections (content === '[DELETED]'). Mirrors
+          // the timeline's `isPostDeleted` guard in `useVisualFeedTiles`. The
+          // live query observes `post_details`, so deleting flips visibility
+          // immediately without a refresh.
+          if (detail && detail.kind === COLLECTION_KIND_STRING && !isPostDeleted(detail.content)) {
             collectionIds.push(ids[i]);
             if (collectionIds.length >= visibleLimit) break;
           }

@@ -559,6 +559,12 @@
       "confirmButton": "删除",
       "cancelButton": "取消"
     },
+    "deleteCollection": {
+      "title": "删除收藏集？",
+      "description": "此操作无法撤销。收藏集将被永久删除。",
+      "confirmButton": "删除",
+      "cancelButton": "取消"
+    },
     "editPost": {
       "editArticle": "编辑文章",
       "editPost": "编辑帖子",
@@ -929,6 +935,11 @@
       "removeFailed": "移除书签失败",
       "loginRequired": "您必须登录才能收藏帖子"
     },
+    "collection": {
+      "collectionDeleted": "收藏集已删除",
+      "collectionDeletedDesc": "您的收藏集已被删除",
+      "deleteFailed": "删除收藏集失败。请重试。"
+    },
     "copy": {
       "pubkyCopied": "Pubky 已复制到剪贴板",
       "linkCopied": "链接已复制到剪贴板",
@@ -1235,6 +1246,7 @@
     "warningReached": "您已达到最大字符数限制。"
   },
   "collections": {
+    "deleted": "此收藏集已被作者删除。",
     "new": {
       "cta": "新建收藏集",
       "title": "新建收藏集",

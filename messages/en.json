@@ -555,6 +555,12 @@
       "confirmButton": "Delete",
       "cancelButton": "Cancel"
     },
+    "deleteCollection": {
+      "title": "Delete collection?",
+      "description": "This action cannot be undone. The collection will be permanently deleted.",
+      "confirmButton": "Delete",
+      "cancelButton": "Cancel"
+    },
     "editPost": {
       "editArticle": "Edit Article",
       "editPost": "Edit Post",
@@ -925,6 +931,11 @@
       "removeFailed": "Failed to remove bookmark",
       "loginRequired": "You must be logged in to bookmark posts"
     },
+    "collection": {
+      "collectionDeleted": "Collection deleted",
+      "collectionDeletedDesc": "Your collection has been deleted",
+      "deleteFailed": "Failed to delete collection. Please try again."
+    },
     "copy": {
       "pubkyCopied": "Pubky copied to clipboard",
       "linkCopied": "Link copied to clipboard",
@@ -1237,6 +1248,7 @@
     "warningReached": "You've reached the maximum character limit."
   },
   "collections": {
+    "deleted": "This collection has been deleted by its author.",
     "new": {
       "cta": "New Collection",
       "title": "New Collection",

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Library, Minus, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getCollectionRoute } from '@/app/routes';
@@ -11,13 +12,16 @@ import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
+import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
-import { cn } from '@/libs/utils/utils';
+import { cn, isPostDeleted } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
+import { CollectionDeleted } from '@/molecules/CollectionDeleted/CollectionDeleted';
+import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
@@ -83,6 +87,14 @@ export function CollectionCard({
 
   if (!postDetails) {
     return <CollectionCardSkeleton className={className} />;
+  }
+
+  // Soft-deleted collections (`content === '[DELETED]'`) render the standard
+  // deleted-card fallback instead of an empty card. Short-circuits before
+  // `parseCollectionContent` is ever called against the `[DELETED]` sentinel.
+  // `CollectionDeleted` owns its full card shell — no wrappers needed here.
+  if (isPostDeleted(postDetails.content)) {
+    return <CollectionDeleted className={className} />;
   }
 
   return (
@@ -176,133 +188,159 @@ function CollectionCardContent({
     void toggle();
   };
 
+  // Collection-specific toast copy so success / failure reads as "Collection
+  // deleted" rather than "Post deleted". `useDeletePost` falls back to the
+  // generic `toast.post.*` strings for any field we omit.
+  const tCollectionToast = useTranslations('toast.collection');
+  const { deletePost, isDeleting } = useDeletePost({
+    toastMessages: {
+      deleted: tCollectionToast('collectionDeleted'),
+      deletedDesc: tCollectionToast('collectionDeletedDesc'),
+      deleteFailed: tCollectionToast('deleteFailed'),
+    },
+  });
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
   const handleDelete = (event: React.MouseEvent) => {
     suppressCardNavigation(event);
-    // TODO: wire up delete flow in a follow-up phase (placeholder per Phase 2 plan).
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    void deletePost(compositeId);
   };
 
   return (
-    <Link
-      overrideDefaults
-      href={href}
-      aria-label={title}
-      data-cy="collection-card"
-      className={cn('group relative block h-full w-full lg:max-w-187', className)}
-    >
-      <Card
-        className={cn(
-          // `isolate` creates a new stacking context so the cover image at `-z-10`
-          // stays behind this card's content but does not slip behind an enclosing
-          // post card's opaque background when nested in `PostContentBase`.
-          'relative isolate h-full gap-0 overflow-hidden rounded-md py-0',
-          coverImage && 'border-transparent bg-card/40',
-          // Preview contexts pick their bg based on how nested they are:
-          // one card-step deep (inline feed, dialog repost) reads fine on `bg-muted`,
-          // two steps deep (timeline repost — PostPreviewCard already uses `bg-muted`)
-          // needs `bg-accent` to stay distinct.
-          isPreview && !coverImage && (contrast === 'strong' ? 'bg-accent' : 'bg-muted'),
-        )}
+    <>
+      <Link
+        overrideDefaults
+        href={href}
+        aria-label={title}
+        data-cy="collection-card"
+        className={cn('group relative block h-full w-full lg:max-w-187', className)}
       >
-        {coverImage && (
-          <Container
-            overrideDefaults
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.35)), url(${coverImage})`,
-            }}
-          />
-        )}
-
-        <CardContent className="flex h-full flex-col gap-3 p-6">
-          {/* Header row: icon + title (left, grows) | item-count + avatar (right) */}
-          <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
-            <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">
-              <Library className="size-6 shrink-0 text-foreground" />
-              <Typography
-                as="span"
-                overrideDefaults
-                className="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
-              >
-                {title}
-              </Typography>
-            </Container>
-
-            <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-3">
-              <CollectionCountBadge count={itemCount} />
-
-              <AvatarWithFallback
-                avatarUrl={ownerAvatarUrl}
-                name={ownerName}
-                fallbackSeed={authorPubky}
-                size="sm"
-                alt={ownerName}
-              />
-            </Container>
-          </Container>
-
-          {/* Description */}
-          {description && (
-            <Typography
+        <Card
+          className={cn(
+            // `isolate` creates a new stacking context so the cover image at `-z-10`
+            // stays behind this card's content but does not slip behind an enclosing
+            // post card's opaque background when nested in `PostContentBase`.
+            'relative isolate h-full gap-0 overflow-hidden rounded-md py-0',
+            coverImage && 'border-transparent bg-card/40',
+            // Preview contexts pick their bg based on how nested they are:
+            // one card-step deep (inline feed, dialog repost) reads fine on `bg-muted`,
+            // two steps deep (timeline repost — PostPreviewCard already uses `bg-muted`)
+            // needs `bg-accent` to stay distinct.
+            isPreview && !coverImage && (contrast === 'strong' ? 'bg-accent' : 'bg-muted'),
+          )}
+        >
+          {coverImage && (
+            <Container
               overrideDefaults
-              className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
-            >
-              {description}
-            </Typography>
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+              style={{
+                backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.35)), url(${coverImage})`,
+              }}
+            />
           )}
 
-          {/* Bottom row: tags (left, grows) | action button (right).
+          <CardContent className="flex h-full flex-col gap-3 p-6">
+            {/* Header row: icon + title (left, grows) | item-count + avatar (right) */}
+            <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
+              <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">
+                <Library className="size-6 shrink-0 text-foreground" />
+                <Typography
+                  as="span"
+                  overrideDefaults
+                  className="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+                >
+                  {title}
+                </Typography>
+              </Container>
+
+              <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-3">
+                <CollectionCountBadge count={itemCount} />
+
+                <AvatarWithFallback
+                  avatarUrl={ownerAvatarUrl}
+                  name={ownerName}
+                  fallbackSeed={authorPubky}
+                  size="sm"
+                  alt={ownerName}
+                />
+              </Container>
+            </Container>
+
+            {/* Description */}
+            {description && (
+              <Typography
+                overrideDefaults
+                className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+              >
+                {description}
+              </Typography>
+            )}
+
+            {/* Bottom row: tags (left, grows) | action button (right).
               Hidden in `preview` so embedded collections (repost dialog, repost
               previews) match how normal reposts render — no inline tags, no
               actions on the previewed post. */}
-          {!isPreview && (
-            <Container
-              overrideDefaults
-              onClick={suppressCardNavigation}
-              onAuxClick={suppressCardNavigation}
-              className="flex w-full flex-wrap items-center justify-between gap-3 sm:flex-nowrap"
-            >
-              <Container overrideDefaults className="min-w-0 flex-1">
-                <ClickableTagsList
-                  taggedId={compositeId}
-                  taggedKind={TagKind.POST}
-                  showCount={true}
-                  showInput={false}
-                  showAddButton={true}
-                  addMode={true}
-                />
-              </Container>
+            {!isPreview && (
+              <Container
+                overrideDefaults
+                onClick={suppressCardNavigation}
+                onAuxClick={suppressCardNavigation}
+                className="flex w-full flex-wrap items-center justify-between gap-3 sm:flex-nowrap"
+              >
+                <Container overrideDefaults className="min-w-0 flex-1">
+                  <ClickableTagsList
+                    taggedId={compositeId}
+                    taggedKind={TagKind.POST}
+                    showCount={true}
+                    showInput={false}
+                    showAddButton={true}
+                    addMode={true}
+                  />
+                </Container>
 
-              <Container overrideDefaults className="flex shrink-0 items-center gap-2">
-                {isOwn ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleDelete}
-                    aria-label={t('delete')}
-                    className="gap-2 text-xs"
-                  >
-                    <Trash2 className="size-4" />
-                    {t('delete')}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleFollowToggle}
-                    disabled={isToggling}
-                    aria-label={isBookmarked ? t('unfollow') : t('follow')}
-                    className="gap-2 text-xs"
-                  >
-                    {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}
-                    {isBookmarked ? t('unfollow') : t('follow')}
-                  </Button>
-                )}
+                <Container overrideDefaults className="flex shrink-0 items-center gap-2">
+                  {isOwn ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                      aria-label={t('delete')}
+                      className="gap-2 text-xs"
+                    >
+                      <Trash2 className="size-4" />
+                      {t('delete')}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleFollowToggle}
+                      disabled={isToggling}
+                      aria-label={isBookmarked ? t('unfollow') : t('follow')}
+                      className="gap-2 text-xs"
+                    >
+                      {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}
+                      {isBookmarked ? t('unfollow') : t('follow')}
+                    </Button>
+                  )}
+                </Container>
               </Container>
-            </Container>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
+      <DialogConfirmDelete
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleDeleteConfirm}
+        i18nNamespace="dialogs.deleteCollection"
+      />
+    </>
   );
 }

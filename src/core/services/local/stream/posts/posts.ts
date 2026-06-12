@@ -10,6 +10,7 @@ import { ModerationModel } from '@/models/moderation/moderation';
 import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import { PostTagsModel } from '@/models/post/tags/postTags';
@@ -309,16 +310,37 @@ export class LocalStreamPostsService {
       this.addReplyToStream({ repliedUri: post.relationships.replied, replyPostId: postId, postReplies });
     }
 
+    // Tombstone guard. Defense-in-depth against a Nexus refetch racing a
+    // local delete: if a row already has `content === DELETED`, do NOT
+    // overwrite it with whatever Nexus is returning right now (the by-ids
+    // endpoint can be stale relative to the delete index, see
+    // `LocalPostService.delete`'s hard-delete branch). Tombstoned ids are
+    // dropped from every per-table batch below so we don't leave behind
+    // orphan counts / tags / relationships / bookmarks pointing at a
+    // deleted post.
+    const tombstonedIds = new Set(
+      (await PostDetailsModel.findByIdsPreserveOrder(postDetails.map((d) => d.id)))
+        .map((existing, i) => (existing?.content === DELETED ? postDetails[i].id : null))
+        .filter((id): id is string => id !== null),
+    );
+    const liveDetails = postDetails.filter((d) => !tombstonedIds.has(d.id));
+    const liveCounts = postCounts.filter(([id]) => !tombstonedIds.has(id));
+    const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));
+    const liveTags = postTags.filter(([id]) => !tombstonedIds.has(id));
+    const liveTtl = postTtl.filter(([id]) => !tombstonedIds.has(id));
+    const liveBookmarks = postBookmarks.filter((b) => !tombstonedIds.has(b.id));
+    const liveModerations = postModerations.filter((m) => !tombstonedIds.has(m.id));
+
     await Promise.all([
-      PostDetailsModel.bulkSave(postDetails),
-      PostCountsModel.bulkSave(postCounts),
-      PostTagsModel.bulkSave(postTags),
-      PostRelationshipsModel.bulkSave(postRelationships),
-      PostTtlModel.bulkSave(postTtl),
+      PostDetailsModel.bulkSave(liveDetails),
+      PostCountsModel.bulkSave(liveCounts),
+      PostTagsModel.bulkSave(liveTags),
+      PostRelationshipsModel.bulkSave(liveRelationships),
+      PostTtlModel.bulkSave(liveTtl),
       // Persist bookmarks from Nexus (viewer's bookmark status for each post)
-      postBookmarks.length > 0 ? BookmarkModel.bulkSave(postBookmarks) : Promise.resolve(),
+      liveBookmarks.length > 0 ? BookmarkModel.bulkSave(liveBookmarks) : Promise.resolve(),
       // Persist moderation records for moderated posts (is_blurred defaults to true)
-      postModerations.length > 0 ? ModerationModel.bulkSave(postModerations) : Promise.resolve(),
+      liveModerations.length > 0 ? ModerationModel.bulkSave(liveModerations) : Promise.resolve(),
     ]);
 
     if (Object.keys(postReplies).length > 0) {

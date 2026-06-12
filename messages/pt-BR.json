@@ -559,6 +559,12 @@
       "confirmButton": "Excluir",
       "cancelButton": "Cancelar"
     },
+    "deleteCollection": {
+      "title": "Excluir coleção?",
+      "description": "Esta ação não pode ser desfeita. A coleção será excluída permanentemente.",
+      "confirmButton": "Excluir",
+      "cancelButton": "Cancelar"
+    },
     "editPost": {
       "editArticle": "Editar Artigo",
       "editPost": "Editar Post",
@@ -929,6 +935,11 @@
       "removeFailed": "Falha ao remover bookmark",
       "loginRequired": "Voce precisa estar logado para salvar posts"
     },
+    "collection": {
+      "collectionDeleted": "Coleção excluída",
+      "collectionDeletedDesc": "Sua coleção foi excluída",
+      "deleteFailed": "Falha ao excluir a coleção. Tente novamente."
+    },
     "copy": {
       "pubkyCopied": "Pubky copiado para área de transferência",
       "linkCopied": "Link copiado para área de transferência",
@@ -1241,6 +1252,7 @@
     "warningReached": "Você atingiu o limite máximo de caracteres."
   },
   "collections": {
+    "deleted": "Esta coleção foi excluída pelo autor.",
     "new": {
       "cta": "Nova coleção",
       "title": "Nova coleção",

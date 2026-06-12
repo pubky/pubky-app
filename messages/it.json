@@ -559,6 +559,12 @@
       "confirmButton": "Elimina",
       "cancelButton": "Annulla"
     },
+    "deleteCollection": {
+      "title": "Eliminare la raccolta?",
+      "description": "Questa azione non può essere annullata. La raccolta verrà eliminata definitivamente.",
+      "confirmButton": "Elimina",
+      "cancelButton": "Annulla"
+    },
     "editPost": {
       "editArticle": "Modifica articolo",
       "editPost": "Modifica post",
@@ -929,6 +935,11 @@
       "removeFailed": "Rimozione segnalibro fallita",
       "loginRequired": "Devi accedere per salvare post"
     },
+    "collection": {
+      "collectionDeleted": "Raccolta eliminata",
+      "collectionDeletedDesc": "La tua raccolta è stata eliminata",
+      "deleteFailed": "Eliminazione raccolta fallita. Riprova."
+    },
     "copy": {
       "pubkyCopied": "Pubky copiato negli appunti",
       "linkCopied": "Link copiato negli appunti",
@@ -1241,6 +1252,7 @@
     "warningReached": "Hai raggiunto il limite massimo di caratteri."
   },
   "collections": {
+    "deleted": "Questa raccolta è stata eliminata dal suo autore.",
     "new": {
       "cta": "Nuova collezione",
       "title": "Nuova collezione",

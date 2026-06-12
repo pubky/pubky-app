@@ -10,9 +10,20 @@ interface DialogConfirmDeleteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  /**
+   * Override the i18n namespace to swap copy without forking the dialog.
+   * Defaults to `dialogs.deletePost`; collections pass `dialogs.deleteCollection`.
+   * The namespace must expose `title`, `description`, `confirmButton`, `cancelButton` keys.
+   */
+  i18nNamespace?: 'dialogs.deletePost' | 'dialogs.deleteCollection';
 }
-export function DialogConfirmDelete({ open, onOpenChange, onConfirm }: DialogConfirmDeleteProps) {
-  const t = useTranslations('dialogs.deletePost');
+export function DialogConfirmDelete({
+  open,
+  onOpenChange,
+  onConfirm,
+  i18nNamespace = 'dialogs.deletePost',
+}: DialogConfirmDeleteProps) {
+  const t = useTranslations(i18nNamespace);
   const handleDelete = () => {
     onConfirm();
     onOpenChange(false);

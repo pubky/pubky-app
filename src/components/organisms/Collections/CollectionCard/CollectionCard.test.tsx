@@ -34,6 +34,35 @@ vi.mock('@/hooks/useBookmark/useBookmark', () => ({
   useBookmark: vi.fn(),
 }));
 
+const mockDeletePost = vi.fn().mockResolvedValue(undefined);
+vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
+  useDeletePost: () => ({ deletePost: mockDeletePost, isDeleting: false }),
+}));
+
+vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
+  DialogConfirmDelete: ({
+    open,
+    onConfirm,
+    i18nNamespace,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+    i18nNamespace?: string;
+  }) =>
+    open ? (
+      <div data-testid="dialog-confirm-delete" data-i18n-namespace={i18nNamespace}>
+        <button data-testid="dialog-confirm-delete-btn" onClick={onConfirm}>
+          confirm delete
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('@/molecules/CollectionDeleted/CollectionDeleted', () => ({
+  CollectionDeleted: () => <div data-testid="collection-deleted" />,
+}));
+
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => mockUseAuthStore(selector),
 }));
@@ -333,6 +362,51 @@ describe('CollectionCard', () => {
       fireEvent.click(screen.getByLabelText('collections.card.delete'));
 
       expect(toggle).not.toHaveBeenCalled();
+    });
+
+    describe('delete flow', () => {
+      it('opens the confirmation dialog with collection-specific copy on Delete click', () => {
+        setAuthStore(AUTHOR_PUBKY);
+        setBookmark({ isBookmarked: false });
+        render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+        fireEvent.click(screen.getByLabelText('collections.card.delete'));
+
+        const dialog = screen.getByTestId('dialog-confirm-delete');
+        expect(dialog).toBeInTheDocument();
+        // The dialog must use the collection-specific i18n namespace, not the
+        // generic `dialogs.deletePost` copy.
+        expect(dialog).toHaveAttribute('data-i18n-namespace', 'dialogs.deleteCollection');
+      });
+
+      it('calls useDeletePost.deletePost with the composite id when confirming', () => {
+        setAuthStore(AUTHOR_PUBKY);
+        setBookmark({ isBookmarked: false });
+        mockDeletePost.mockClear();
+        render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+        fireEvent.click(screen.getByLabelText('collections.card.delete'));
+        fireEvent.click(screen.getByTestId('dialog-confirm-delete-btn'));
+
+        expect(mockDeletePost).toHaveBeenCalledTimes(1);
+        expect(mockDeletePost).toHaveBeenCalledWith(COMPOSITE_ID);
+      });
+    });
+  });
+
+  describe('deleted-state fallback', () => {
+    // When `usePostDetails` resolves with `content === '[DELETED]'`, the card
+    // must render the `CollectionDeleted` molecule instead of an empty card,
+    // without calling `parseCollectionContent` against the `[DELETED]` sentinel.
+    it('renders the CollectionDeleted molecule when content is the [DELETED] tombstone', () => {
+      setPostDetails('[DELETED]');
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      expect(screen.getByTestId('collection-deleted')).toBeInTheDocument();
+      // No follow / delete action row is rendered for deleted collections.
+      expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('collections.card.unfollow')).not.toBeInTheDocument();
     });
   });
 

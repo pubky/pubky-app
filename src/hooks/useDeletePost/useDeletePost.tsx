@@ -7,7 +7,7 @@ import { Logger } from '@/libs/logger/logger';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
-import type { UseDeletePostResult } from './useDeletePost.types';
+import type { UseDeletePostOptions, UseDeletePostResult } from './useDeletePost.types';
 
 /**
  * Hook to handle post deletion with optimistic UI updates and error recovery.
@@ -29,12 +29,19 @@ import type { UseDeletePostResult } from './useDeletePost.types';
  * </button>
  * ```
  */
-export function useDeletePost(): UseDeletePostResult {
+export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
   const timelineFeed = useTimelineFeedContext();
+
+  // Resolve toast copy with caller overrides so callers like CollectionCard /
+  // CollectionHero can swap in collection-specific copy without forking the hook.
+  // Missing fields fall back to the generic `toast.post.*` strings.
+  const deletedTitle = options?.toastMessages?.deleted ?? tPost('postDeleted');
+  const deletedDesc = options?.toastMessages?.deletedDesc ?? tPost('postDeletedDesc');
+  const deleteFailedDesc = options?.toastMessages?.deleteFailed ?? tPost('deleteFailed');
 
   const deletePost = async (postId: string) => {
     if (isDeleting) {
@@ -61,8 +68,8 @@ export function useDeletePost(): UseDeletePostResult {
       await PostController.commitDelete({ compositePostId: postId });
       Logger.info('[useDeletePost] Post deleted successfully', { postId });
       toast({
-        title: tPost('postDeleted'),
-        description: tPost('postDeletedDesc'),
+        title: deletedTitle,
+        description: deletedDesc,
         dismissButton: true,
       });
     } catch (error) {
@@ -109,7 +116,7 @@ export function useDeletePost(): UseDeletePostResult {
 
       toast({
         title: tToast('error'),
-        description: tPost('deleteFailed'),
+        description: deleteFailedDesc,
         className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
     } finally {

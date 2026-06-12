@@ -505,6 +505,78 @@ describe('LocalStreamPostsService', () => {
     });
   });
 
+  describe('persistPosts - tombstone guard', () => {
+    // Regression coverage for the bug where Nexus's by-ids endpoint could
+    // return a just-deleted post (Nexus eventual consistency between the
+    // delete index and the post-by-id read path), and `bulkSave` would
+    // overwrite the local `[DELETED]` tombstone written by
+    // `LocalPostService.delete`, effectively reanimating the post.
+
+    it('skips writing all records for ids whose existing PostDetails.content is [DELETED]', async () => {
+      const compositeId = buildCompositeId({ pubky: 'author-1', id: 'tombstoned' });
+
+      // Seed the tombstone the way `LocalPostService.delete` does.
+      await PostDetailsModel.table.put({
+        id: compositeId,
+        content: DELETED,
+        indexed_at: BASE_TIMESTAMP,
+        kind: 'collection',
+        uri: 'pubky://author-1/pub/pubky.app/posts/tombstoned',
+        attachments: null,
+      });
+
+      // Use the helper's default content (`Post tombstoned content`) — what
+      // matters is that it differs from the `[DELETED]` tombstone we just
+      // seeded, so the guard's behavior is observable.
+      const reanimating = createMockNexusPost('tombstoned', 'author-1', BASE_TIMESTAMP);
+
+      await LocalStreamPostsService.persistPosts({ posts: [reanimating] });
+
+      // Content must remain the tombstone — Nexus must not be able to
+      // overwrite it via the cache-miss flow.
+      const persisted = await PostDetailsModel.findById(compositeId);
+      expect(persisted!.content).toBe(DELETED);
+
+      // Auxiliary records must NOT be repopulated either — the hard-delete
+      // branch removed them deliberately; reinstating them would create
+      // orphan records pointing at a deleted post.
+      expect(await PostCountsModel.findById(compositeId)).toBeFalsy();
+      expect(await PostRelationshipsModel.findById(compositeId)).toBeFalsy();
+      expect(await PostTagsModel.findById(compositeId)).toBeFalsy();
+    });
+
+    it('still persists non-tombstoned posts in the same batch', async () => {
+      const tombstonedId = buildCompositeId({ pubky: 'author-1', id: 'tombstoned' });
+      const liveId = buildCompositeId({ pubky: 'author-2', id: 'live' });
+
+      await PostDetailsModel.table.put({
+        id: tombstonedId,
+        content: DELETED,
+        indexed_at: BASE_TIMESTAMP,
+        kind: 'short',
+        uri: 'pubky://author-1/pub/pubky.app/posts/tombstoned',
+        attachments: null,
+      });
+
+      const batch = [
+        createMockNexusPost('tombstoned', 'author-1', BASE_TIMESTAMP),
+        createMockNexusPost('live', 'author-2', BASE_TIMESTAMP),
+      ];
+
+      await LocalStreamPostsService.persistPosts({ posts: batch });
+
+      // Tombstone is preserved.
+      const tombstone = await PostDetailsModel.findById(tombstonedId);
+      expect(tombstone!.content).toBe(DELETED);
+      expect(await PostCountsModel.findById(tombstonedId)).toBeFalsy();
+
+      // Live post writes through normally — uses the helper's default content.
+      const live = await PostDetailsModel.findById(liveId);
+      expect(live!.content).toBe('Post live content');
+      expect(await PostCountsModel.findById(liveId)).toBeTruthy();
+    });
+  });
+
   describe('persistNewStreamChunk', () => {
     it('should append new stream chunk to existing stream', async () => {
       const initialStream = [postId('post-1'), postId('post-2')];

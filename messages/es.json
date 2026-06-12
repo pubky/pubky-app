@@ -559,6 +559,12 @@
       "confirmButton": "Eliminar",
       "cancelButton": "Cancelar"
     },
+    "deleteCollection": {
+      "title": "¿Eliminar colección?",
+      "description": "Esta acción no se puede deshacer. La colección se eliminará permanentemente.",
+      "confirmButton": "Eliminar",
+      "cancelButton": "Cancelar"
+    },
     "editPost": {
       "editArticle": "Editar articulo",
       "editPost": "Editar publicación",
@@ -929,6 +935,11 @@
       "removeFailed": "Error al eliminar favorito",
       "loginRequired": "Debes iniciar sesión para guardar publicaciónes"
     },
+    "collection": {
+      "collectionDeleted": "Colección eliminada",
+      "collectionDeletedDesc": "Tu colección ha sido eliminada",
+      "deleteFailed": "Error al eliminar la colección. Inténtalo de nuevo."
+    },
     "copy": {
       "pubkyCopied": "Pubky copiado al portapapeles",
       "linkCopied": "Enlace copiado al portapapeles",
@@ -1241,6 +1252,7 @@
     "warningReached": "Has alcanzado el límite máximo de caracteres."
   },
   "collections": {
+    "deleted": "Esta colección ha sido eliminada por su autor.",
     "new": {
       "cta": "Nueva colección",
       "title": "Nueva colección",

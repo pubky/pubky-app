@@ -559,6 +559,12 @@
       "confirmButton": "Löschen",
       "cancelButton": "Abbrechen"
     },
+    "deleteCollection": {
+      "title": "Sammlung löschen?",
+      "description": "Diese Aktion kann nicht rückgängig gemacht werden. Die Sammlung wird dauerhaft gelöscht.",
+      "confirmButton": "Löschen",
+      "cancelButton": "Abbrechen"
+    },
     "editPost": {
       "editArticle": "Artikel bearbeiten",
       "editPost": "Beitrag bearbeiten",
@@ -929,6 +935,11 @@
       "removeFailed": "Lesezeichen konnte nicht entfernt werden",
       "loginRequired": "Sie müssen angemeldet sein, um Beiträge zu speichern"
     },
+    "collection": {
+      "collectionDeleted": "Sammlung gelöscht",
+      "collectionDeletedDesc": "Ihre Sammlung wurde gelöscht",
+      "deleteFailed": "Sammlung konnte nicht gelöscht werden. Bitte erneut versuchen."
+    },
     "copy": {
       "pubkyCopied": "Pubky in Zwischenablage kopiert",
       "linkCopied": "Link in Zwischenablage kopiert",
@@ -1241,6 +1252,7 @@
     "warningReached": "Du hast das maximale Zeichenlimit erreicht."
   },
   "collections": {
+    "deleted": "Diese Sammlung wurde vom Autor gelöscht.",
     "new": {
       "cta": "Neue Sammlung",
       "title": "Neue Sammlung",

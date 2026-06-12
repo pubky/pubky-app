@@ -1,10 +1,13 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_MY_SECTION_SKELETON_COUNT, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { FileController } from '@/controllers/file/file';
+import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import type { Pubky } from '@/models/models.types';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -30,6 +33,16 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
+}));
+
+vi.mock('dexie-react-hooks', () => ({
+  useLiveQuery: vi.fn(),
+}));
+
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    getDetailsByIds: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 const mockToast = vi.fn();
@@ -185,15 +198,18 @@ describe('MyCollections', () => {
   });
 
   it('renders one CollectionCard per stream post id with parsed author/postId; no Show More when hasMore=false', () => {
+    const ids = [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`];
     setup({
       currentUserPubky: CURRENT_USER_PUBKY,
       userDetails: { name: 'Alice', image: null, indexed_at: 0 },
       pagination: {
-        postIds: [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`],
+        postIds: ids,
         loading: false,
         hasMore: false,
       },
     });
+    // Resolved live query, no tombstones → echoes `postIds`.
+    vi.mocked(useLiveQuery).mockReturnValue(ids);
 
     render(<MyCollections />);
 
@@ -221,15 +237,18 @@ describe('MyCollections', () => {
   });
 
   it('does NOT render skeletons on warm-cache load (loading=true, postIds non-empty)', () => {
+    const ids = [`${AUTHOR_A}:p1`];
     setup({
       currentUserPubky: CURRENT_USER_PUBKY,
       userDetails: { name: 'Alice', image: null, indexed_at: 0 },
       pagination: {
-        postIds: [`${AUTHOR_A}:p1`],
+        postIds: ids,
         loading: true,
         hasMore: false,
       },
     });
+    // Resolved live query, no tombstones → echoes `postIds`.
+    vi.mocked(useLiveQuery).mockReturnValue(ids);
 
     render(<MyCollections />);
 
@@ -329,6 +348,71 @@ describe('MyCollections', () => {
     });
   });
 
+  describe('deleted-filter live query', () => {
+    // Defense-in-depth: `LocalPostService.delete`'s soft-delete branch keeps
+    // the id in the author's collection PostStream, so a redirect from
+    // `CollectionHero` would otherwise re-mount this section with the
+    // deleted id still present. The live query observes `post_details` so
+    // the filter reacts the moment the tombstone lands.
+    it('drops postIds whose local PostDetails content is the [DELETED] tombstone', async () => {
+      const ids = [
+        `${AUTHOR_A}:p1`,
+        `${AUTHOR_A}:p2`, // tombstoned
+        `${AUTHOR_A}:p3`,
+      ];
+      setup({
+        currentUserPubky: CURRENT_USER_PUBKY,
+        userDetails: { name: 'Alice', image: null, indexed_at: 1 },
+        pagination: { postIds: ids },
+      });
+      vi.mocked(PostController.getDetailsByIds).mockResolvedValue([
+        asOpaque<PostDetailsModelSchema>({ id: ids[0], kind: 'collection', content: 'live' }),
+        asOpaque<PostDetailsModelSchema>({ id: ids[1], kind: 'collection', content: '[DELETED]' }),
+        asOpaque<PostDetailsModelSchema>({ id: ids[2], kind: 'collection', content: 'live' }),
+      ]);
+
+      // Capture the function `useLiveQuery` receives, invoke it ourselves,
+      // and use the returned filtered list as `visibleIds` (mirrors the
+      // pattern used in FollowedCollections / DiscoverCollections tests).
+      let capturedFn: (() => Promise<string[]>) | null = null;
+      vi.mocked(useLiveQuery).mockImplementation((fn: unknown) => {
+        capturedFn = fn as () => Promise<string[]>;
+        return undefined;
+      });
+
+      await act(async () => {
+        render(<MyCollections />);
+      });
+
+      expect(capturedFn).not.toBeNull();
+      const result = await capturedFn!();
+      expect(result).toEqual([ids[0], ids[2]]);
+      expect(result).not.toContain(ids[1]);
+    });
+
+    it('renders no CollectionCards while the live query is still resolving (`?? EMPTY_IDS` fallback)', () => {
+      // `useLiveQuery` returns `undefined` until the first read settles.
+      // We fall back to an empty list (matching `FollowedCollections`) rather
+      // than the unfiltered `postIds` so the section never flashes a
+      // `CollectionDeleted` molecule for a tombstoned id during that window.
+      // Only the pinned `CollectionBookmarkCard` is visible until the filter
+      // resolves.
+      const ids = [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`];
+      setup({
+        currentUserPubky: CURRENT_USER_PUBKY,
+        userDetails: { name: 'Alice', image: null, indexed_at: 1 },
+        pagination: { postIds: ids },
+      });
+      vi.mocked(useLiveQuery).mockReturnValue(undefined);
+
+      render(<MyCollections />);
+
+      expect(screen.queryAllByTestId('collection-card')).toHaveLength(0);
+      // Pinned bookmark card is still rendered — it lives outside the filtered list.
+      expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
+    });
+  });
+
   describe('avatar URL resolution', () => {
     it('uses FileController.getAvatarUrl when no local override and userDetails.image is truthy', () => {
       setup({
@@ -369,15 +453,18 @@ describe('MyCollections', () => {
     });
 
     it('matches the snapshot for the authenticated state with two loaded cards', () => {
+      const ids = [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`];
       setup({
         currentUserPubky: CURRENT_USER_PUBKY,
         userDetails: { name: 'Alice', image: null, indexed_at: 0 },
         pagination: {
-          postIds: [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`],
+          postIds: ids,
           loading: false,
           hasMore: true,
         },
       });
+      // Resolved live query, no tombstones → echoes `postIds`.
+      vi.mocked(useLiveQuery).mockReturnValue(ids);
 
       const { container } = render(<MyCollections />);
       expect(container.firstChild).toMatchSnapshot();

@@ -1,5 +1,6 @@
 'use client';
 
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Loader2, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
@@ -7,8 +8,10 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { COLLECTIONS_MY_SECTION_SKELETON_COUNT, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { FileController } from '@/controllers/file/file';
+import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { isPostDeleted } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
@@ -85,6 +88,8 @@ export function MyCollections() {
   );
 }
 
+const EMPTY_IDS: string[] = [];
+
 interface MyCollectionsStreamProps {
   currentUserPubky: Pubky;
 }
@@ -119,6 +124,26 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
   // warm-cache loads don't flash a skeleton next to the pinned card.
   const showSkeletons = loading && postIds.length === 0;
 
+  // Filter out soft-deleted collections (content === '[DELETED]'). Soft delete
+  // is the path taken whenever a collection has connections (bookmarks /
+  // replies / reposts) — `LocalPostService.delete` flips `PostDetails.content`
+  // to `[DELETED]` but leaves the id in the author's collection PostStream, so
+  // a redirect from `CollectionHero` would otherwise re-mount this section
+  // with the deleted id still present. The live query observes `post_details`
+  // so the filter reacts the moment the soft-delete write lands. Falls back
+  // to `EMPTY_IDS` while the query resolves — same pattern as
+  // `FollowedCollections` so the section never paints unfiltered ids that
+  // could briefly show `CollectionDeleted` molecules before the filter lands.
+  const visibleIds =
+    useLiveQuery(async () => {
+      if (postIds.length === 0) return EMPTY_IDS;
+      const details = await PostController.getDetailsByIds({ compositeIds: postIds });
+      return postIds.filter((_, i) => {
+        const detail = details[i];
+        return !detail || !isPostDeleted(detail.content);
+      });
+    }, [postIds]) ?? EMPTY_IDS;
+
   return (
     <>
       <Container overrideDefaults className="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6">
@@ -127,7 +152,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
           ? Array.from({ length: COLLECTIONS_MY_SECTION_SKELETON_COUNT }).map((_, index) => (
               <CollectionCardSkeleton key={`my-collections-skeleton-${index}`} />
             ))
-          : postIds.map((compositeId) => {
+          : visibleIds.map((compositeId) => {
               const { pubky, id } = parseCompositeId(compositeId);
               return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} />;
             })}

@@ -559,6 +559,12 @@
       "confirmButton": "Supprimer",
       "cancelButton": "Annuler"
     },
+    "deleteCollection": {
+      "title": "Supprimer la collection ?",
+      "description": "Cette action est irréversible. La collection sera définitivement supprimée.",
+      "confirmButton": "Supprimer",
+      "cancelButton": "Annuler"
+    },
     "editPost": {
       "editArticle": "Modifiér l'article",
       "editPost": "Modifiér la publication",
@@ -929,6 +935,11 @@
       "removeFailed": "Échec du retrait du favori",
       "loginRequired": "Vous devez etre connecte pour ajouter des favoris"
     },
+    "collection": {
+      "collectionDeleted": "Collection supprimée",
+      "collectionDeletedDesc": "Votre collection a été supprimée",
+      "deleteFailed": "Échec de la suppression de la collection. Veuillez réessayer."
+    },
     "copy": {
       "pubkyCopied": "Pubky copie dans le presse-papiers",
       "linkCopied": "Lien copie dans le presse-papiers",
@@ -1241,6 +1252,7 @@
     "warningReached": "Vous avez atteint la limite maximale de caractères."
   },
   "collections": {
+    "deleted": "Cette collection a été supprimée par son auteur.",
     "new": {
       "cta": "Nouvelle collection",
       "title": "Nouvelle collection",

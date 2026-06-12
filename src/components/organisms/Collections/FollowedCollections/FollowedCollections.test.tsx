@@ -232,6 +232,37 @@ describe('FollowedCollections', () => {
     expect(mockGetDetailsByIds).toHaveBeenCalledWith({ compositeIds: bookmarkIds });
   });
 
+  it('live-query callback excludes soft-deleted collections (content === [DELETED])', async () => {
+    // When a collection is deleted, `LocalPostService.delete` flips
+    // `PostDetails.content` to `[DELETED]`. The live query observes
+    // `post_details` so the bookmark stays (you bookmarked it), but the
+    // filter must drop the deleted id before the card list is built.
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+
+    const bookmarkIds = ['a:p1', 'a:p2', 'b:p3'];
+    mockBookmarkGetAll.mockResolvedValue(bookmarkIds);
+    mockGetDetailsByIds.mockResolvedValue([
+      asOpaque<PostDetailsModelSchema>({ id: 'a:p1', kind: 'collection', content: 'live' }),
+      asOpaque<PostDetailsModelSchema>({ id: 'a:p2', kind: 'collection', content: '[DELETED]' }),
+      asOpaque<PostDetailsModelSchema>({ id: 'b:p3', kind: 'collection', content: 'live' }),
+    ]);
+
+    let capturedFn: (() => Promise<string[]>) | null = null;
+    mockUseLiveQuery.mockImplementation((fn: unknown) => {
+      capturedFn = fn as () => Promise<string[]>;
+      return undefined;
+    });
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    expect(capturedFn).not.toBeNull();
+    const result = await capturedFn!();
+    expect(result).toEqual(['a:p1', 'b:p3']);
+    expect(result).not.toContain('a:p2');
+  });
+
   it('renders the empty state when seed finished and live query yields no ids', async () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
     mockUseLiveQuery.mockReturnValue([]);
