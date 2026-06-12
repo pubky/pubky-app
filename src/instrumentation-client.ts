@@ -1,12 +1,17 @@
 import * as Sentry from '@sentry/nextjs';
-import { Env } from '@/libs/env/env';
 import { getSentryInitBase, shouldEnableSentry } from '@/libs/observability/sentry';
+import {
+  getSentryReplaysOnErrorSampleRate,
+  getSentryReplaysSessionSampleRate,
+} from '@/libs/runtime-config/runtime-config';
 
+// Safe to read runtime config here: the inline `window.__PUBKY_CONFIG__` script in
+// ContainerRoot's <head> executes before any Next.js bundle (script tags are emitted after it).
 if (shouldEnableSentry()) {
   Sentry.init({
     ...getSentryInitBase(),
-    replaysSessionSampleRate: Env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
-    replaysOnErrorSampleRate: Env.NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE,
+    replaysSessionSampleRate: getSentryReplaysSessionSampleRate(),
+    replaysOnErrorSampleRate: getSentryReplaysOnErrorSampleRate(),
     integrations: [
       Sentry.replayIntegration({
         maskAllText: true,

@@ -58,9 +58,12 @@ const cdnUrl = Env.NEXT_PUBLIC_CDN_URL; // string (validated URL)
 
 ## Runtime configuration (`PUBKY_RUNTIME_*`)
 
-A small set of **environment-specific network values** are configured at **runtime**, not build time, so a single Docker image can be promoted across staging / prod / testnet without rebuilding. See [ADR 0017](adr/0017-runtime-config-injection.md).
+A small set of **environment-specific values** are configured at **runtime**, not build time, so a single Docker image can be promoted across staging / prod / testnet — and deployed by third parties against their own infrastructure — without rebuilding. See [ADR 0017](adr/0017-runtime-config-injection.md) and [ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md).
 
-Runtime-configurable values: `nexusUrl`, `cdnUrl`, `homeserver`, `homeserverUrl`, `homegateUrl`, `defaultHttpRelay`, `pkarrRelays`, `testnet`. (`homeserverUrl` is the homeserver's HTTP base URL, used for invite-code verification — the homeserver pubkey has no resolvable HTTPS endpoint, see [pubky-core#410](https://github.com/pubky/pubky-core/issues/410).)
+The contract has two tiers:
+
+- **Required (8 network values)**: `nexusUrl`, `cdnUrl`, `homeserver`, `homeserverUrl`, `homegateUrl`, `defaultHttpRelay`, `pkarrRelays`, `testnet`. (`homeserverUrl` is the homeserver's HTTP base URL, used for invite-code verification — the homeserver pubkey has no resolvable HTTPS endpoint, see [pubky-core#410](https://github.com/pubky/pubky-core/issues/410).)
+- **Optional (5 Sentry values)**: `sentryDsn` (absent/empty disables Sentry entirely), `sentryEnvironment` (absent falls back to `NODE_ENV`), `sentryTracesSampleRate` / `sentryReplaysSessionSampleRate` / `sentryReplaysOnErrorSampleRate` (defaults `0.1` / `0.0` / `1.0`). Optional values never trigger the all-or-nothing rule below, but a malformed value (bad DSN URL, rate outside `[0,1]`) still fails loudly.
 
 ### Why a separate mechanism
 
@@ -68,10 +71,10 @@ Next.js inlines every literal `process.env.NEXT_PUBLIC_*` reference at **build t
 
 ### How it works
 
-- The server reads `PUBKY_RUNTIME_*` at request time, validates them, and memoizes the result (`src/libs/runtime-config/runtime-config.ts`).
+- The server reads `PUBKY_RUNTIME_*` at boot (fail-fast in `src/instrumentation.ts`) and at request time, validates them, and memoizes the result (`src/libs/runtime-config/runtime-config.ts`).
 - The validated config is serialized into an inline `<script>` (`window.__PUBKY_CONFIG__`) in the dynamic root layout, available synchronously before any app code runs.
-- App code reads values through lazy getters — `getNexusUrl()`, `getCdnUrl()`, `getHomeserver()`, `getHomeserverUrl()`, `getHomegateUrl()`, `getDefaultHttpRelay()`, `getPkarrRelays()`, `getTestnet()` — re-exported from `@/config/nexus` and `@/config/network`.
-- Schema and defaults live in `src/libs/runtime-config/network-config.schema.ts` (shared with `env.ts` so validation cannot drift).
+- App code reads values through lazy getters — `getNexusUrl()`, `getCdnUrl()`, `getHomeserver()`, `getHomeserverUrl()`, `getHomegateUrl()`, `getDefaultHttpRelay()`, `getPkarrRelays()`, `getTestnet()` — re-exported from `@/config/nexus` and `@/config/network`. The Sentry getters (`getSentryDsn()`, `getSentryEnvironment()`, `getSentryTracesSampleRate()`, `getSentryReplaysSessionSampleRate()`, `getSentryReplaysOnErrorSampleRate()`) are consumed only by the observability layer, directly from `@/libs/runtime-config/runtime-config`.
+- Schema, tiers, and defaults live in `src/libs/runtime-config/runtime-config.schema.ts` (shared with `env.ts` so validation cannot drift).
 
 ```typescript
 import { getNexusUrl } from '@/config/nexus';
@@ -84,20 +87,37 @@ const url = getNexusUrl(); // resolved at call time
 
 ### Required vs fallback (fail loud)
 
-- **Deployed (`NODE_ENV=production`, including staging), or `PUBKY_RUNTIME_CONFIG_REQUIRED=true`**: `PUBKY_RUNTIME_*` are **required**. Missing/invalid config throws (no silent fallback to staging). If any one `PUBKY_RUNTIME_*` is set, **all** are required (catches partial deploy config).
-- **Local dev / tests**: falls back to the `NEXT_PUBLIC_*` defaults (honoring `.env.local` and `src/config/test.ts`).
+- **Deployed (`NODE_ENV=production`, including staging), or `PUBKY_RUNTIME_CONFIG_REQUIRED=true`**: the eight required `PUBKY_RUNTIME_*` must all be set. Missing/invalid config throws **at boot** (no silent fallback to staging). If any one `PUBKY_RUNTIME_*` is set, all required ones must be (catches partial deploy config). The `PUBKY_RUNTIME_SENTRY_*` set is exempt — it is optional in every mode.
+- **Local dev / tests**: falls back to the `NEXT_PUBLIC_*` defaults (honoring `.env.local` and `src/config/test.ts`). This includes `NEXT_PUBLIC_SENTRY_*` — set those in `.env.local` to point a dev session at Sentry.
 
-> Running a production build locally (`npm run build && npm run start`) runs as `NODE_ENV=production`, so it **requires** all eight `PUBKY_RUNTIME_*` to be set (a partial set throws). `npm run dev` does not — it uses the `NEXT_PUBLIC_*` fallback. See the `PUBKY_RUNTIME_*` block in `.env.example`.
+> Running a production build locally (`npm run build && npm run start`) runs as `NODE_ENV=production`, so it **requires** all eight required `PUBKY_RUNTIME_*` to be set (a partial set throws). `npm run dev` does not — it uses the `NEXT_PUBLIC_*` fallback. See the `PUBKY_RUNTIME_*` block in `.env.example`.
 
 > Contract shift: staging runs `NODE_ENV=production`, so staging must now set `PUBKY_RUNTIME_*`. The `NEXT_PUBLIC_*` network values are now **local dev/test defaults only** — no deployed environment may rely on them.
 
 ### These are PUBLIC values
 
-`PUBKY_RUNTIME_*` are public (URLs, the homeserver public key, relay lists) — they are exposed to the browser by design. They are **not secrets**; deployment tooling should not treat them as sensitive.
+`PUBKY_RUNTIME_*` are public (URLs, the homeserver public key, relay lists, the Sentry DSN) — they are exposed to the browser by design. They are **not secrets**; deployment tooling should not treat them as sensitive.
 
-### Known limitation: Sentry testnet gate
+### Running the public image (`docker run`)
 
-`shouldEnableSentry()` in `src/libs/observability/sentry.ts` still reads `Env.NEXT_PUBLIC_TESTNET` (build-time), because Sentry initializes across server/client/edge runtimes before the injected config is available. A testnet deploy of a prod-built image would therefore still enable Sentry. See [ADR 0017](adr/0017-runtime-config-injection.md).
+Copy-paste starting point for any deployer — eight required values plus the optional Sentry tier:
+
+```bash
+docker run -p 3000:3000 \
+  -e PUBKY_RUNTIME_NEXUS_URL=https://nexus.example.com \
+  -e PUBKY_RUNTIME_CDN_URL=https://nexus.example.com/static \
+  -e PUBKY_RUNTIME_HOMESERVER=<homeserver-pubkey> \
+  -e PUBKY_RUNTIME_HOMESERVER_URL=https://homeserver.example.com \
+  -e PUBKY_RUNTIME_HOMEGATE_URL=https://homegate.example.com \
+  -e PUBKY_RUNTIME_DEFAULT_HTTP_RELAY=https://httprelay.example.com/inbox \
+  -e PUBKY_RUNTIME_PKARR_RELAYS='["https://pkarr.example.com"]' \
+  -e PUBKY_RUNTIME_TESTNET=false \
+  -e PUBKY_RUNTIME_SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<project> \
+  -e PUBKY_RUNTIME_SENTRY_ENVIRONMENT=production \
+  pubky-app
+```
+
+Omit the `PUBKY_RUNTIME_SENTRY_*` lines to run without Sentry. Sample rates can be tuned with `PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE`, `PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`, and `PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` (defaults `0.1` / `0.0` / `1.0`). Note for Sentry users: the image ships without browser source maps (Debug IDs only) — see the source-maps section of [docs/sentry.md](sentry.md).
 
 ### Homeserver mute list sync
 

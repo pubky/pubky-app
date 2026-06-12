@@ -1,8 +1,15 @@
 import { z } from 'zod';
 
 /**
- * Shared, zod-only schema for the environment-specific network values that must be
- * configurable at RUNTIME (so a single Docker image works across staging/prod/testnet).
+ * Shared, zod-only schema for the environment-specific values that must be configurable at
+ * RUNTIME (so a single Docker image works across staging/prod/testnet and can be deployed by
+ * third parties against their own infrastructure).
+ *
+ * The config has two tiers:
+ *  - REQUIRED network values (nexusUrl, cdnUrl, ...): a deployed container must set all of
+ *    them; partial config fails loudly instead of silently resolving to staging defaults.
+ *  - OPTIONAL observability values (sentry*): absent means the feature is disabled (DSN) or
+ *    a documented default applies (sample rates).
  *
  * This module is a leaf (zod only, no `Env`, no logger) so that:
  *  - `env.ts` and the runtime-config resolver cannot drift on what counts as valid, and
@@ -24,6 +31,7 @@ export const urlValue = z.url();
 export const homeserverValue = z.string().min(1);
 export const pkarrRelaysValue = z.array(z.url()).min(1);
 export const testnetValue = z.boolean();
+export const sampleRateValue = z.number().min(0).max(1);
 
 /**
  * Parse a `PKARR_RELAYS` JSON-array string into a string[]. Throws on malformed input.
@@ -54,14 +62,44 @@ const pkarrRelaysFromString = z.string().transform((val, ctx) => {
 
 const testnetFromString = z.string().transform((val) => val === 'true');
 
+/**
+ * Optional-tier env strings: a missing OR empty/whitespace value means "unset".
+ * The outer `.optional()` keeps the key optional in the OUTPUT type too, so the env-input
+ * schemas stay pipe-compatible with `runtimeConfigValueSchema` (which owns the final
+ * validation and defaults for the optional tier).
+ */
+const optionalTrimmedString = z
+  .string()
+  .transform((val) => (val.trim() !== '' ? val : undefined))
+  .optional();
+
+/** Rates validate eagerly (bad number/range throws here); the default applies in the value schema. */
+const sampleRateFromString = z
+  .string()
+  .transform((val) => parseFloat(val))
+  .pipe(sampleRateValue)
+  .optional();
+
+/**
+ * Defaults for the optional Sentry sample rates (applied by `runtimeConfigValueSchema`, which
+ * every parse path runs through, so the resolved config always carries concrete numbers even
+ * when the env leaves them unset).
+ */
+export const SENTRY_RUNTIME_DEFAULTS = {
+  sentryTracesSampleRate: 0.1,
+  sentryReplaysSessionSampleRate: 0.0,
+  sentryReplaysOnErrorSampleRate: 1.0,
+} as const;
+
 // ---------------------------------------------------------------------------
 // App-facing config shape
 // ---------------------------------------------------------------------------
 
 /**
- * Parsed runtime config. Validates `window.__PUBKY_CONFIG__`.
+ * REQUIRED tier: environment-specific network values. A deployed container must set all of
+ * them (see `runtimeEnvInputSchema`).
  */
-export const runtimeConfigValueSchema = z.object({
+export const networkConfigValueSchema = z.object({
   nexusUrl: urlValue,
   cdnUrl: urlValue,
   homeserver: homeserverValue,
@@ -73,12 +111,30 @@ export const runtimeConfigValueSchema = z.object({
   testnet: testnetValue,
 });
 
+export type NetworkRuntimeConfig = z.infer<typeof networkConfigValueSchema>;
+
+/**
+ * Parsed runtime config (required network tier + OPTIONAL observability tier).
+ * Validates `window.__PUBKY_CONFIG__`.
+ */
+export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
+  /** Sentry DSN shared by browser/server/edge. Absent/empty disables Sentry entirely. */
+  sentryDsn: urlValue.optional(),
+  /** Environment tag attached to every Sentry event. Absent falls back to NODE_ENV (see sentry.ts). */
+  sentryEnvironment: z.string().min(1).optional(),
+  sentryTracesSampleRate: sampleRateValue.default(SENTRY_RUNTIME_DEFAULTS.sentryTracesSampleRate),
+  sentryReplaysSessionSampleRate: sampleRateValue.default(SENTRY_RUNTIME_DEFAULTS.sentryReplaysSessionSampleRate),
+  sentryReplaysOnErrorSampleRate: sampleRateValue.default(SENTRY_RUNTIME_DEFAULTS.sentryReplaysOnErrorSampleRate),
+});
+
 export type RuntimeConfig = z.infer<typeof runtimeConfigValueSchema>;
 
 /**
- * Strict env-input schema (string inputs -> parsed `RuntimeConfig`). NO defaults: a missing
- * value THROWS. Used for the production parse of `PUBKY_RUNTIME_*` so partial deploy config
- * fails loudly instead of silently resolving to a staging URL.
+ * Strict env-input schema (string inputs -> parsed `RuntimeConfig`). NO defaults for the
+ * required network tier: a missing value THROWS. Used for the production parse of
+ * `PUBKY_RUNTIME_*` so partial deploy config fails loudly instead of silently resolving to a
+ * staging URL. The optional Sentry tier stays optional here (absent = disabled / documented
+ * sample-rate default).
  */
 export const runtimeEnvInputSchema = z
   .object({
@@ -90,13 +146,18 @@ export const runtimeEnvInputSchema = z
     defaultHttpRelay: urlValue,
     pkarrRelays: pkarrRelaysFromString,
     testnet: testnetFromString,
+    sentryDsn: optionalTrimmedString,
+    sentryEnvironment: optionalTrimmedString,
+    sentryTracesSampleRate: sampleRateFromString,
+    sentryReplaysSessionSampleRate: sampleRateFromString,
+    sentryReplaysOnErrorSampleRate: sampleRateFromString,
   })
   .pipe(runtimeConfigValueSchema);
 
 /**
- * Canonical staging defaults (single source of truth, parsed shape).
+ * Canonical staging defaults for the required network tier (single source of truth, parsed shape).
  */
-export const NETWORK_RUNTIME_DEFAULTS: RuntimeConfig = {
+export const NETWORK_RUNTIME_DEFAULTS: NetworkRuntimeConfig = {
   nexusUrl: 'https://nexus.staging.pubky.app',
   cdnUrl: 'https://nexus.staging.pubky.app/static',
   homeserver: 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy',
@@ -121,6 +182,11 @@ export const runtimeEnvInputSchemaWithDefaults = z
     defaultHttpRelay: urlValue.default(NETWORK_RUNTIME_DEFAULTS.defaultHttpRelay),
     pkarrRelays: z.string().default(JSON.stringify(NETWORK_RUNTIME_DEFAULTS.pkarrRelays)).pipe(pkarrRelaysFromString),
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
+    sentryDsn: optionalTrimmedString,
+    sentryEnvironment: optionalTrimmedString,
+    sentryTracesSampleRate: sampleRateFromString,
+    sentryReplaysSessionSampleRate: sampleRateFromString,
+    sentryReplaysOnErrorSampleRate: sampleRateFromString,
   })
   .pipe(runtimeConfigValueSchema);
 
@@ -141,6 +207,11 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   defaultHttpRelay: 'PUBKY_RUNTIME_DEFAULT_HTTP_RELAY',
   pkarrRelays: 'PUBKY_RUNTIME_PKARR_RELAYS',
   testnet: 'PUBKY_RUNTIME_TESTNET',
+  sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',
+  sentryEnvironment: 'PUBKY_RUNTIME_SENTRY_ENVIRONMENT',
+  sentryTracesSampleRate: 'PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE',
+  sentryReplaysSessionSampleRate: 'PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE',
+  sentryReplaysOnErrorSampleRate: 'PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE',
 };
 
 /**
@@ -155,4 +226,9 @@ export const NEXT_PUBLIC_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   defaultHttpRelay: 'NEXT_PUBLIC_DEFAULT_HTTP_RELAY',
   pkarrRelays: 'NEXT_PUBLIC_PKARR_RELAYS',
   testnet: 'NEXT_PUBLIC_TESTNET',
+  sentryDsn: 'NEXT_PUBLIC_SENTRY_DSN',
+  sentryEnvironment: 'NEXT_PUBLIC_SENTRY_ENVIRONMENT',
+  sentryTracesSampleRate: 'NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE',
+  sentryReplaysSessionSampleRate: 'NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE',
+  sentryReplaysOnErrorSampleRate: 'NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE',
 };

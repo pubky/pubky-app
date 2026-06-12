@@ -52,15 +52,10 @@ ARG SUPPORT_API_ACCESS_TOKEN
 ARG SUPPORT_ACCOUNT_ID
 ARG SUPPORT_FEEDBACK_INBOX_ID
 
-# Sentry build args (auth token only used during the build stage; not propagated to the runner)
-ARG NEXT_PUBLIC_SENTRY_DSN
-ARG NEXT_PUBLIC_SENTRY_ENVIRONMENT
-ARG NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
-ARG NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE
-ARG NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE
-ARG SENTRY_AUTH_TOKEN
-ARG SENTRY_ORG
-ARG SENTRY_PROJECT
+# NOTE: Sentry is intentionally NOT a build concern. The DSN, environment, and sample rates
+# are runtime-configurable (PUBKY_RUNTIME_SENTRY_*, see runner stage), and source-map upload
+# happens in the CI pipeline — never during the image build — so this image builds without any
+# Sentry credentials and stays identical for every deployer.
 
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -70,6 +65,16 @@ ENV NEXT_STANDALONE=true
 
 # Build the application
 RUN npm run build
+
+# Inject Sentry Debug IDs into the built chunks and their source maps (deterministic, offline,
+# no credentials). The shipped JS must carry the same Debug IDs as the maps the CI pipeline
+# uploads — that pipeline extracts the maps from THIS stage (docker build --target builder),
+# so it must not re-inject. Browser maps are stripped from the runner stage below.
+# The standalone tree needs its own pass: sentry-cli skips hidden directories while walking,
+# so the nested .next/standalone/.next is missed by the first command. IDs are derived from
+# file content, so the standalone copies receive the exact same IDs as the originals.
+RUN npx sentry-cli sourcemaps inject .next \
+    && npx sentry-cli sourcemaps inject .next/standalone/.next
 
 # Stage 3: Runner
 FROM node:lts-alpine AS runner
@@ -95,6 +100,12 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Strip browser source maps from the public image: the chunks keep their injected Debug IDs
+# (enough for Sentry to match the maps uploaded by the CI pipeline), and the maps themselves
+# must not be served from /_next/static. Server-side maps under .next/standalone stay — they
+# are never exposed over HTTP and make Node stack traces readable.
+RUN find .next/static -name '*.map' -type f -delete
+
 # Switch to non-root user
 USER nextjs
 
@@ -105,8 +116,11 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Runtime configuration (PUBLIC values, NOT secrets) supplied per-environment at container
-# runtime (Ansible / docker compose / k8s). With NODE_ENV=production the app fails fast if any of
-# these are missing rather than silently falling back to staging defaults. See src/libs/runtime-config.
+# runtime (Ansible / docker compose / k8s). With NODE_ENV=production the app fails fast (at boot)
+# if any of the REQUIRED values are missing rather than silently falling back to staging
+# defaults. See src/libs/runtime-config.
+#
+# Required:
 #   PUBKY_RUNTIME_NEXUS_URL
 #   PUBKY_RUNTIME_CDN_URL
 #   PUBKY_RUNTIME_HOMESERVER
@@ -115,6 +129,13 @@ ENV HOSTNAME="0.0.0.0"
 #   PUBKY_RUNTIME_DEFAULT_HTTP_RELAY
 #   PUBKY_RUNTIME_PKARR_RELAYS   (JSON array string, e.g. '["https://pkarr.pubky.app"]')
 #   PUBKY_RUNTIME_TESTNET        ("true" | "false")
+#
+# Optional (absent DSN disables Sentry entirely; rates have defaults 0.1 / 0.0 / 1.0):
+#   PUBKY_RUNTIME_SENTRY_DSN
+#   PUBKY_RUNTIME_SENTRY_ENVIRONMENT
+#   PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE
+#   PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE
+#   PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE
 
 # Run the standalone server
 CMD ["node", "server.js"]

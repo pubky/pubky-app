@@ -60,6 +60,18 @@ spec:
               value: '["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
             - name: PUBKY_RUNTIME_DEFAULT_HTTP_RELAY
               value: "https://httprelay.staging.pubky.app/inbox"
+            # Optional Sentry tier (DSNs are public client-side values, not secrets).
+            # Mirrors the GitHub `SENTRY_DSN` repo variable.
+            - name: PUBKY_RUNTIME_SENTRY_DSN
+              value: "https://eba463f14570a9ce3b3bd831d3d7fa34@o4510935258234880.ingest.de.sentry.io/4510935265640528"
+            - name: PUBKY_RUNTIME_SENTRY_ENVIRONMENT
+              value: "preview"
+            - name: PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE
+              value: "0.5"
+            - name: PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE
+              value: "0.1"
+            - name: PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE
+              value: "1.0"
           resources:
             limits:
               cpu: '1'

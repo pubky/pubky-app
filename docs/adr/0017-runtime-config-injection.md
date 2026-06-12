@@ -24,11 +24,14 @@ Key codebase facts that shaped the design:
 
 Read the runtime values from **non-`NEXT_PUBLIC_` env names** (`PUBKY_RUNTIME_*`) on the server at request time, validate them, and inject them synchronously into the HTML as `window.__PUBKY_CONFIG__`. App code reads them through lazy getters.
 
-- `src/libs/runtime-config/network-config.schema.ts` (zod-only leaf module) defines the app-facing `RuntimeConfig` shape, shared field validators, defaults, and **two** schemas: `runtimeEnvInputSchema` (string env input, no defaults, strict) and `runtimeConfigValueSchema` (already-parsed `window` object). `env.ts` reuses the shared field validators so validation cannot drift.
+- `src/libs/runtime-config/runtime-config.schema.ts` (zod-only leaf module) defines the app-facing `RuntimeConfig` shape, shared field validators, defaults, and **two** schemas: `runtimeEnvInputSchema` (string env input, no defaults for required values, strict) and `runtimeConfigValueSchema` (already-parsed `window` object). `env.ts` reuses the shared field validators so validation cannot drift.
 - `src/libs/runtime-config/runtime-config.ts` is an isomorphic, memoized resolver: the server reads `PUBKY_RUNTIME_*`; the client reads `window.__PUBKY_CONFIG__`. It exposes getters (`getNexusUrl`, …) and `serializeRuntimeConfig()`.
 - `ContainerRoot` injects the serialized config as an inline `<script>` before app code runs (safe HTML escaping for `<`, `</script>`, U+2028/U+2029).
 - "Required" = `(NODE_ENV === 'production' || PUBKY_RUNTIME_CONFIG_REQUIRED === 'true') && not a test run`. When required and missing/invalid → throw. Otherwise fall back to `NEXT_PUBLIC_*` (local dev/test). A `next/constants` `PHASE_PRODUCTION_BUILD` guard ensures the throw can never fire during `next build`.
+- Boot-time fail-fast: `register()` in `src/instrumentation.ts` resolves the config at server startup, so a misconfigured deploy fails on boot (with the full list of required variables) instead of on the first request.
 - An ESLint rule bans direct `Env.NEXT_PUBLIC_*` / `process.env.NEXT_PUBLIC_*` reads of these eight values outside `env.ts` and `runtime-config/**`.
+
+This ADR covers the required **network** tier of the runtime config. The optional observability tier (Sentry) and the decoupled source-map strategy that build on this mechanism are covered by [ADR 0018](0018-runtime-sentry-and-decoupled-source-maps.md).
 
 ## Consequences
 
@@ -49,10 +52,6 @@ Read the runtime values from **non-`NEXT_PUBLIC_` env names** (`PUBKY_RUNTIME_*`
 - Config changes require a container restart + page reload (acceptable for the Ansible/restart model).
 - Staging now runs as a deployed environment and must set `PUBKY_RUNTIME_*`; `NEXT_PUBLIC_*` network values become local dev/test defaults only.
 
-### Known limitation
-
-- `shouldEnableSentry()` keeps reading build-time `Env.NEXT_PUBLIC_TESTNET`, because Sentry initializes (server/client/edge) before the injected config exists. A testnet deploy of a prod-built image would still enable Sentry. If runtime divergence of Sentry's testnet gate becomes necessary, it will need its own runtime treatment, separate from and earlier than the app-config injection path.
-
 ## Alternatives Considered
 
 ### Runtime config JSON fetched on app load ("on demand")
@@ -63,12 +62,12 @@ Read the runtime values from **non-`NEXT_PUBLIC_` env names** (`PUBKY_RUNTIME_*`
 
 ## Implementation Notes
 
-- Schema/defaults: `src/libs/runtime-config/network-config.schema.ts`
+- Schema/defaults: `src/libs/runtime-config/runtime-config.schema.ts`
 - Resolver/getters/serializer: `src/libs/runtime-config/runtime-config.ts`
+- Boot-time fail-fast: `src/instrumentation.ts`
 - Injection: `src/components/molecules/ContainerRoot/ContainerRoot.tsx`
 - Consumers: `src/config/nexus.ts`, `src/config/network.ts`, `src/core/services/nexus/nexus.utils.ts`, `src/core/services/homegate/homegate.api.ts`, `src/core/services/homeserver/homeserver.ts`, `src/components/organisms/AvatarWithFallback/AvatarWithFallback.utils.ts`
-- ESLint guard: `eslint.config.mjs` (`no-restricted-syntax`), with a single inline exception in `src/libs/observability/sentry.ts`
-- Optional ops hardening (not implemented in v1): validate + warm the server config at startup via `register()` in `src/instrumentation.ts` so a misconfigured deploy fails fast on boot/health check.
+- ESLint guard: `eslint.config.mjs` (`no-restricted-syntax`); also covers the optional-tier names from [ADR 0018](0018-runtime-sentry-and-decoupled-source-maps.md)
 
 ## References
 

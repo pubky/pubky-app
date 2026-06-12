@@ -6,7 +6,7 @@ import {
   runtimeConfigValueSchema,
   runtimeEnvInputSchema,
   runtimeEnvInputSchemaWithDefaults,
-} from './network-config.schema';
+} from './runtime-config.schema';
 
 /**
  * Server-injected synchronous runtime config.
@@ -81,7 +81,8 @@ export function readServerConfig(): RuntimeConfig {
       'Runtime config is required but no PUBKY_RUNTIME_* environment variables are set. ' +
         'Set PUBKY_RUNTIME_NEXUS_URL, PUBKY_RUNTIME_CDN_URL, PUBKY_RUNTIME_HOMESERVER, ' +
         'PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, ' +
-        'PUBKY_RUNTIME_PKARR_RELAYS, and PUBKY_RUNTIME_TESTNET on the container.',
+        'PUBKY_RUNTIME_PKARR_RELAYS, and PUBKY_RUNTIME_TESTNET on the container. ' +
+        'The PUBKY_RUNTIME_SENTRY_* variables are optional (absent disables Sentry).',
     );
   }
 
@@ -149,3 +150,10 @@ export const getHomegateUrl = (): string => getRuntimeConfig().homegateUrl;
 export const getDefaultHttpRelay = (): string => getRuntimeConfig().defaultHttpRelay;
 export const getPkarrRelays = (): string[] => getRuntimeConfig().pkarrRelays;
 export const getTestnet = (): boolean => getRuntimeConfig().testnet;
+
+// Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
+export const getSentryDsn = (): string | undefined => getRuntimeConfig().sentryDsn;
+export const getSentryEnvironment = (): string | undefined => getRuntimeConfig().sentryEnvironment;
+export const getSentryTracesSampleRate = (): number => getRuntimeConfig().sentryTracesSampleRate;
+export const getSentryReplaysSessionSampleRate = (): number => getRuntimeConfig().sentryReplaysSessionSampleRate;
+export const getSentryReplaysOnErrorSampleRate = (): number => getRuntimeConfig().sentryReplaysOnErrorSampleRate;

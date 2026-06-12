@@ -50,27 +50,38 @@ See [React 19's `onRecoverableError` docs](https://react.dev/reference/react-dom
 
 ## Files
 
-- `src/instrumentation.ts` — server runtime dispatch + `onRequestError`
+- `src/instrumentation.ts` — server runtime dispatch + `onRequestError` + boot-time runtime-config fail-fast
 - `src/instrumentation-client.ts` — browser init + Replay + `onRouterTransitionStart`
 - `src/sentry.server.config.ts` / `src/sentry.edge.config.ts` — runtime-specific init
-- `src/libs/observability/sentry.ts` — single source of truth (`shouldEnableSentry`, `getSentryInitBase`, `captureAppError`). Sentry is off when `NODE_ENV=test`, `VITEST` is set, `NEXT_PUBLIC_TESTNET=true`, or no DSN is configured.
+- `src/libs/observability/sentry.ts` — single source of truth (`shouldEnableSentry`, `getSentryInitBase`, `captureAppError`). Sentry is off when `NODE_ENV=test`, `VITEST` is set, the **runtime** config has `testnet=true`, or no **runtime** DSN is configured. If the runtime config cannot be resolved at all, the gate returns `false` instead of throwing (the capture funnel must never mask the original boot error).
 - `src/libs/error/error.factories.ts` — `createAppError()` calls `captureAppError(error)` after `Logger.error`
-- `next.config.ts` — wrapped by `withSentryConfig(...)` for source map upload
+- `next.config.ts` — wrapped by `withSentryConfig(...)` for SDK wiring only; source-map upload is disabled (see below)
 
 ## Environment variables
 
-Defined in `src/libs/env/env.ts`. See `.env.example` for descriptions.
+All Sentry values are part of the **optional runtime-config tier** ([ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md)): deployed environments set `PUBKY_RUNTIME_SENTRY_*` on the container; local dev/test falls back to `NEXT_PUBLIC_SENTRY_*` from `.env.local`. Schema and defaults live in `src/libs/runtime-config/runtime-config.schema.ts`.
 
-| Variable                                          | Runtime                 | Required?                                                  |
-| ------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
-| `NEXT_PUBLIC_SENTRY_DSN`                          | browser + server + edge | Optional. Empty/unset disables Sentry entirely.            |
-| `NEXT_PUBLIC_SENTRY_ENVIRONMENT`                  | all                     | Optional. Defaults to `NODE_ENV`.                          |
-| `NEXT_PUBLIC_TESTNET`                             | all                     | When `true`, Sentry is disabled (CI E2E / testnet Docker). |
-| `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`           | all                     | Optional. Default `0.1`.                                   |
-| `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`  | browser                 | Optional. Default `0.0` (record only on error).            |
-| `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | browser                 | Optional. Default `1.0`.                                   |
-| `SENTRY_AUTH_TOKEN`                               | build only              | Required for source-map upload. Skipped if absent.         |
-| `SENTRY_ORG`, `SENTRY_PROJECT`                    | build only              | Required alongside auth token.                             |
+| Variable (deployed / dev fallback)                                                                      | Runtime                 | Required?                                                  |
+| ------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
+| `PUBKY_RUNTIME_SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`                                                   | browser + server + edge | Optional. Empty/unset disables Sentry entirely.            |
+| `PUBKY_RUNTIME_SENTRY_ENVIRONMENT` / `NEXT_PUBLIC_SENTRY_ENVIRONMENT`                                   | all                     | Optional. Defaults to `NODE_ENV`.                          |
+| `PUBKY_RUNTIME_TESTNET` / `NEXT_PUBLIC_TESTNET`                                                         | all                     | When `true`, Sentry is disabled (CI E2E / testnet deploy). |
+| `PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`                     | all                     | Optional. Default `0.1`.                                   |
+| `PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`   | browser                 | Optional. Default `0.0` (record only on error).            |
+| `PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | browser                 | Optional. Default `1.0`.                                   |
+
+There are **no build-time Sentry variables**: `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` are CI-pipeline-only secrets and are no longer read by the app or the image build. The release tag comes from `NEXT_PUBLIC_APP_VERSION` (package.json version, injected by `next.config.ts`) — intrinsic to the artifact, deliberately not runtime-configurable.
+
+## Source maps (decoupled from the image build)
+
+The public Docker image is built **without** Sentry credentials, so the build never uploads source maps. Instead ([ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md)):
+
+1. `next.config.ts` generates maps for every build (`productionBrowserSourceMaps` + `experimental.serverSourceMaps`) and disables the plugin upload (`sourcemaps.disable: true`, `release.create: false`).
+2. The Dockerfile builder stage runs `npx sentry-cli sourcemaps inject` over `.next` and over the nested `.next/standalone/.next` (hidden directories are skipped by the walker) — offline, deterministic Debug-ID stamping of chunks and maps.
+3. The runner stage deletes `*.map` under `.next/static` (browser maps must not be publicly served); standalone server maps stay for readable Node stack traces.
+4. The CI pipeline extracts the maps from the builder stage (`docker build --target builder`) and uploads them with the org token, release = package.json version. It must not re-inject.
+
+Third-party deployers get unsymbolicated events unless they obtain the maps for their image version and upload them to their own org (publishing maps as a release artifact is the recommended follow-up).
 
 ## Privacy
 

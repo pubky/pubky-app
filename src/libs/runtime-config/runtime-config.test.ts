@@ -1,14 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NETWORK_RUNTIME_DEFAULTS, PUBKY_RUNTIME_ENV_NAMES, type RuntimeConfig } from './network-config.schema';
 import {
   escapeForInlineScript,
   getRuntimeConfig,
+  getSentryDsn,
+  getSentryEnvironment,
+  getSentryReplaysOnErrorSampleRate,
+  getSentryReplaysSessionSampleRate,
+  getSentryTracesSampleRate,
   readClientConfig,
   readServerConfig,
   resetRuntimeConfigForTests,
   RUNTIME_CONFIG_WINDOW_KEY,
   serializeRuntimeConfig,
 } from './runtime-config';
+import {
+  NETWORK_RUNTIME_DEFAULTS,
+  PUBKY_RUNTIME_ENV_NAMES,
+  type RuntimeConfig,
+  SENTRY_RUNTIME_DEFAULTS,
+} from './runtime-config.schema';
 
 const RUNTIME_ENV_VALUES: Record<keyof RuntimeConfig, string> = {
   nexusUrl: 'https://nexus.runtime.example.com',
@@ -19,10 +29,22 @@ const RUNTIME_ENV_VALUES: Record<keyof RuntimeConfig, string> = {
   defaultHttpRelay: 'https://relay.runtime.example.com/inbox',
   pkarrRelays: '["https://pkarr.runtime.example.com"]',
   testnet: 'false',
+  sentryDsn: 'https://abc123@o123.ingest.runtime.example.com/456',
+  sentryEnvironment: 'staging',
+  sentryTracesSampleRate: '0.5',
+  sentryReplaysSessionSampleRate: '0.25',
+  sentryReplaysOnErrorSampleRate: '1',
 };
 
 function setAllRuntimeEnv(): void {
   for (const key of Object.keys(PUBKY_RUNTIME_ENV_NAMES) as (keyof RuntimeConfig)[]) {
+    process.env[PUBKY_RUNTIME_ENV_NAMES[key]] = RUNTIME_ENV_VALUES[key];
+  }
+}
+
+/** Set only the REQUIRED network tier, leaving the optional Sentry tier unset. */
+function setNetworkRuntimeEnv(): void {
+  for (const key of Object.keys(NETWORK_RUNTIME_DEFAULTS) as (keyof RuntimeConfig)[]) {
     process.env[PUBKY_RUNTIME_ENV_NAMES[key]] = RUNTIME_ENV_VALUES[key];
   }
 }
@@ -82,11 +104,29 @@ describe('runtime-config resolver', () => {
       expect(config.nexusUrl).toBe('https://nexus.runtime.example.com');
       expect(config.pkarrRelays).toEqual(['https://pkarr.runtime.example.com']);
       expect(config.testnet).toBe(false);
+      expect(config.sentryDsn).toBe('https://abc123@o123.ingest.runtime.example.com/456');
+      expect(config.sentryEnvironment).toBe('staging');
+      expect(config.sentryTracesSampleRate).toBe(0.5);
+    });
+
+    it('parses without the optional Sentry tier (disabled DSN, defaulted rates)', () => {
+      setNetworkRuntimeEnv();
+      const config = readServerConfig();
+      expect(config.sentryDsn).toBeUndefined();
+      expect(config.sentryEnvironment).toBeUndefined();
+      expect(config.sentryTracesSampleRate).toBe(SENTRY_RUNTIME_DEFAULTS.sentryTracesSampleRate);
+      expect(config.sentryReplaysSessionSampleRate).toBe(SENTRY_RUNTIME_DEFAULTS.sentryReplaysSessionSampleRate);
+      expect(config.sentryReplaysOnErrorSampleRate).toBe(SENTRY_RUNTIME_DEFAULTS.sentryReplaysOnErrorSampleRate);
     });
 
     it('throws on partial PUBKY_RUNTIME_* config', () => {
       setAllRuntimeEnv();
       delete process.env[PUBKY_RUNTIME_ENV_NAMES.testnet];
+      expect(() => readServerConfig()).toThrow();
+    });
+
+    it('throws when only the optional Sentry tier is set (required tier still enforced)', () => {
+      process.env[PUBKY_RUNTIME_ENV_NAMES.sentryDsn] = RUNTIME_ENV_VALUES.sentryDsn;
       expect(() => readServerConfig()).toThrow();
     });
 
@@ -146,6 +186,44 @@ describe('runtime-config resolver', () => {
       const serialized = serializeRuntimeConfig();
       expect(serialized.startsWith(`window.${RUNTIME_CONFIG_WINDOW_KEY}=Object.freeze(`)).toBe(true);
       expect(serialized).toContain(NETWORK_RUNTIME_DEFAULTS.nexusUrl);
+    });
+
+    it('omits unset optional Sentry values from the injected script (JSON drops undefined)', () => {
+      window[RUNTIME_CONFIG_WINDOW_KEY] = { ...NETWORK_RUNTIME_DEFAULTS };
+      const serialized = serializeRuntimeConfig();
+      expect(serialized).not.toContain('sentryDsn');
+      expect(serialized).not.toContain('sentryEnvironment');
+      // Defaulted rates are always present so the client never re-derives them.
+      expect(serialized).toContain('sentryTracesSampleRate');
+    });
+  });
+
+  describe('Sentry getters', () => {
+    it('expose the injected optional tier', () => {
+      window[RUNTIME_CONFIG_WINDOW_KEY] = {
+        ...NETWORK_RUNTIME_DEFAULTS,
+        sentryDsn: 'https://abc123@o123.ingest.injected.example.com/456',
+        sentryEnvironment: 'preview',
+        sentryTracesSampleRate: 0.5,
+        sentryReplaysSessionSampleRate: 0.25,
+        sentryReplaysOnErrorSampleRate: 0.75,
+      };
+
+      expect(getSentryDsn()).toBe('https://abc123@o123.ingest.injected.example.com/456');
+      expect(getSentryEnvironment()).toBe('preview');
+      expect(getSentryTracesSampleRate()).toBe(0.5);
+      expect(getSentryReplaysSessionSampleRate()).toBe(0.25);
+      expect(getSentryReplaysOnErrorSampleRate()).toBe(0.75);
+    });
+
+    it('return undefined DSN/environment and defaulted rates when the tier is unset', () => {
+      window[RUNTIME_CONFIG_WINDOW_KEY] = { ...NETWORK_RUNTIME_DEFAULTS };
+
+      expect(getSentryDsn()).toBeUndefined();
+      expect(getSentryEnvironment()).toBeUndefined();
+      expect(getSentryTracesSampleRate()).toBe(SENTRY_RUNTIME_DEFAULTS.sentryTracesSampleRate);
+      expect(getSentryReplaysSessionSampleRate()).toBe(SENTRY_RUNTIME_DEFAULTS.sentryReplaysSessionSampleRate);
+      expect(getSentryReplaysOnErrorSampleRate()).toBe(SENTRY_RUNTIME_DEFAULTS.sentryReplaysOnErrorSampleRate);
     });
   });
 });
