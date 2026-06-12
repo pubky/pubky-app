@@ -69,6 +69,7 @@ export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKin
   if (content === null) return undefined;
   // Collection and Unknown have no Nexus StreamKind equivalent and resolve to undefined,
   // which buildFeedStreamId treats as the 'all' kind.
+  // TODO - Revert when Collections and Unknown are supported by Collections feature by Vlada and Matthew
   const map: Record<PubkyAppPostKind, StreamKind | undefined> = {
     [PubkyAppPostKind.Short]: StreamKind.SHORT,
     [PubkyAppPostKind.Long]: StreamKind.LONG,
