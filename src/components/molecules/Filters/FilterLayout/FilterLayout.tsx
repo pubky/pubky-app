@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Columns3, LayoutGrid, Menu, Rows4 } from 'lucide-react';
+import { Columns3, LayoutGrid, Rows2, Rows4 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
@@ -32,7 +32,7 @@ export function FilterLayout({
         {
           key: LAYOUT.WIDE,
           label: t('wide'),
-          icon: Menu,
+          icon: Rows2,
           disabled,
           dataCy: 'wide-layout-toggle',
         },

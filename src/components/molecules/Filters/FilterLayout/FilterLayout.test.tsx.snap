@@ -91,7 +91,7 @@ exports[`FilterLayout - Snapshots > matches snapshot with Columns selected tab 1
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-menu h-5 w-5"
+          class="lucide lucide-rows2 lucide-rows-2 h-5 w-5"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -102,14 +102,15 @@ exports[`FilterLayout - Snapshots > matches snapshot with Columns selected tab 1
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M4 5h16"
+          <rect
+            height="18"
+            rx="2"
+            width="18"
+            x="3"
+            y="3"
           />
           <path
-            d="M4 12h16"
-          />
-          <path
-            d="M4 19h16"
+            d="M3 12h18"
           />
         </svg>
         <span
@@ -263,7 +264,7 @@ exports[`FilterLayout - Snapshots > matches snapshot with Wide selected tab 1`] 
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-menu h-5 w-5"
+          class="lucide lucide-rows2 lucide-rows-2 h-5 w-5"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -274,14 +275,15 @@ exports[`FilterLayout - Snapshots > matches snapshot with Wide selected tab 1`] 
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M4 5h16"
+          <rect
+            height="18"
+            rx="2"
+            width="18"
+            x="3"
+            y="3"
           />
           <path
-            d="M4 12h16"
-          />
-          <path
-            d="M4 19h16"
+            d="M3 12h18"
           />
         </svg>
         <span
@@ -435,7 +437,7 @@ exports[`FilterLayout - Snapshots > matches snapshot with default props 1`] = `
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-menu h-5 w-5"
+          class="lucide lucide-rows2 lucide-rows-2 h-5 w-5"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -446,14 +448,15 @@ exports[`FilterLayout - Snapshots > matches snapshot with default props 1`] = `
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M4 5h16"
+          <rect
+            height="18"
+            rx="2"
+            width="18"
+            x="3"
+            y="3"
           />
           <path
-            d="M4 12h16"
-          />
-          <path
-            d="M4 19h16"
+            d="M3 12h18"
           />
         </svg>
         <span
@@ -609,7 +612,7 @@ exports[`FilterLayout - Snapshots > matches snapshot with disabled state 1`] = `
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-menu h-5 w-5"
+          class="lucide lucide-rows2 lucide-rows-2 h-5 w-5"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -620,14 +623,15 @@ exports[`FilterLayout - Snapshots > matches snapshot with disabled state 1`] = `
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M4 5h16"
+          <rect
+            height="18"
+            rx="2"
+            width="18"
+            x="3"
+            y="3"
           />
           <path
-            d="M4 12h16"
-          />
-          <path
-            d="M4 19h16"
+            d="M3 12h18"
           />
         </svg>
         <span
@@ -782,7 +786,7 @@ exports[`FilterLayout - Snapshots > matches snapshot with hidden visual selectio
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-menu h-5 w-5"
+          class="lucide lucide-rows2 lucide-rows-2 h-5 w-5"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -793,14 +797,15 @@ exports[`FilterLayout - Snapshots > matches snapshot with hidden visual selectio
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M4 5h16"
+          <rect
+            height="18"
+            rx="2"
+            width="18"
+            x="3"
+            y="3"
           />
           <path
-            d="M4 12h16"
-          />
-          <path
-            d="M4 19h16"
+            d="M3 12h18"
           />
         </svg>
         <span
