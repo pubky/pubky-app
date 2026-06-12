@@ -20,7 +20,7 @@ export function EditCollectionDialog({ open, onOpenChange, compositeCollectionId
   // begins. RHF's own `formState.isSubmitting` would otherwise be batched.
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
-  const { form, cover, submit, reset } = useEditCollection({ compositeCollectionId });
+  const { form, cover, isLoaded, submit, reset } = useEditCollection({ compositeCollectionId });
 
   const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
@@ -50,6 +50,7 @@ export function EditCollectionDialog({ open, onOpenChange, compositeCollectionId
       cover={cover}
       onSubmit={handleSave}
       isSaving={isSaving}
+      isLoading={!isLoaded}
       coverInputId="edit-collection-cover-image"
       disableOpenAutoFocus
     />

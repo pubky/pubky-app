@@ -154,6 +154,22 @@ describe('EditCollectionDialog', () => {
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 
+  it('disables inputs and the picker while the collection envelope is loading', async () => {
+    // Until `usePostDetails` resolves, the hook returns isLoaded=false. The
+    // dialog wires that through CollectionFormDialog so the user can't type
+    // into fields that the prefill effect is about to overwrite.
+    mocks.postDetails = null;
+
+    render(<EditCollectionDialog open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
+
+    expect(await screen.findByLabelText('Title')).toBeDisabled();
+    expect(screen.getByLabelText('Description')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add image' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    // Cancel stays available so the user can dismiss while loading.
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+  });
+
   it('calls onOpenChange(false) when the Cancel button is clicked', async () => {
     const onOpenChange = vi.fn();
     render(<EditCollectionDialog open onOpenChange={onOpenChange} compositeCollectionId={COMPOSITE_ID} />);

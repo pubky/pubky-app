@@ -40,6 +40,14 @@ type CollectionFormDialogProps = {
    */
   isSaving: boolean;
   /**
+   * Whether the dialog is waiting for upstream data (e.g. the edit dialog's
+   * `usePostDetails` resolving the envelope). When `true`, inputs and the
+   * picker are disabled so the user can't type into fields that are about to
+   * be overwritten by the prefill. The save button is already gated by an
+   * empty name, so it stays disabled implicitly. Defaults to `false`.
+   */
+  isLoading?: boolean;
+  /**
    * Unique id/htmlFor for the hidden cover file input. Distinct per caller so
    * create and edit dialogs don't collide if both mount at once.
    */
@@ -69,6 +77,7 @@ export function CollectionFormDialog({
   cover,
   onSubmit,
   isSaving,
+  isLoading = false,
   coverInputId,
   disableOpenAutoFocus = false,
   children,
@@ -84,10 +93,11 @@ export function CollectionFormDialog({
   } = cover;
 
   const watchedName = useWatch({ control: form.control, name: CREATE_COLLECTION_FORM_FIELDS.NAME });
+  const areInputsDisabled = isSaving || isLoading;
   // Block submit while a cover-picker error is showing — the rejected file
   // never made it into form state, so saving would commit unchanged content
   // while the user is still staring at a validation error.
-  const canSubmit = !!watchedName.trim() && !isSaving && !coverError;
+  const canSubmit = !!watchedName.trim() && !areInputsDisabled && !coverError;
 
   const coverErrorMessage =
     coverError === 'invalid-type'
@@ -116,7 +126,7 @@ export function CollectionFormDialog({
             maxLength={COLLECTION_NAME_MAX_CHARACTER_LENGTH}
             variant="dashed"
             size="lg"
-            disabled={isSaving}
+            disabled={areInputsDisabled}
           />
 
           <ControlledInputField
@@ -127,7 +137,7 @@ export function CollectionFormDialog({
             maxLength={COLLECTION_DESCRIPTION_MAX_CHARACTER_LENGTH}
             variant="dashed"
             size="lg"
-            disabled={isSaving}
+            disabled={areInputsDisabled}
           />
 
           <Container overrideDefaults className="flex flex-col gap-2">
@@ -147,7 +157,7 @@ export function CollectionFormDialog({
                   size="sm"
                   className="rounded-full"
                   onClick={removeCover}
-                  disabled={isSaving}
+                  disabled={areInputsDisabled}
                   aria-label={t('removeImage')}
                 >
                   <Trash2 className="size-4" />
@@ -162,7 +172,7 @@ export function CollectionFormDialog({
                   size="sm"
                   className="rounded-full"
                   onClick={chooseCover}
-                  disabled={isSaving}
+                  disabled={areInputsDisabled}
                   aria-label={t('addImage')}
                 >
                   <ImageIcon className="size-4" />
@@ -178,7 +188,7 @@ export function CollectionFormDialog({
                 accept="image/*"
                 className="hidden"
                 onChange={onCoverInputChange}
-                disabled={isSaving}
+                disabled={areInputsDisabled}
               />
             </Container>
             {coverErrorMessage && (

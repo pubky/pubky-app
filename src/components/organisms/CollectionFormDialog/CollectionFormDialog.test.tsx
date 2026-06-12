@@ -16,6 +16,7 @@ type Overrides = Partial<{
   title: string;
   submitLabel: string;
   isSaving: boolean;
+  isLoading: boolean;
   disableOpenAutoFocus: boolean;
   initialName: string;
   initialDescription: string;
@@ -36,6 +37,7 @@ function Harness({
   title = 'Test Title',
   submitLabel = 'Save',
   isSaving = false,
+  isLoading = false,
   disableOpenAutoFocus,
   initialName = '',
   initialDescription = '',
@@ -79,6 +81,7 @@ function Harness({
       cover={cover}
       onSubmit={onSubmit}
       isSaving={isSaving}
+      isLoading={isLoading}
       coverInputId={COVER_INPUT_ID}
       disableOpenAutoFocus={disableOpenAutoFocus}
     />
@@ -113,6 +116,28 @@ describe('CollectionFormDialog', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
 
     fireEvent.change(screen.getByLabelText('collections.new.nameLabel'), { target: { value: '   ' } });
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+  });
+
+  it('disables the inputs and picker (and keeps save disabled via empty name) when isLoading is true', () => {
+    render(<Harness isLoading />);
+
+    // Inputs + cover picker are blocked from interaction while the envelope
+    // hasn't propagated yet; the save button stays disabled because the name
+    // hasn't been prefilled yet.
+    expect(screen.getByLabelText('collections.new.nameLabel')).toBeDisabled();
+    expect(screen.getByLabelText('collections.new.descriptionLabel')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'collections.new.addImage' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    // Cancel stays enabled so the user can back out while the load is in flight.
+    expect(screen.getByRole('button', { name: 'collections.new.cancel' })).toBeEnabled();
+  });
+
+  it('keeps the save button disabled even with a non-empty name while isLoading is true', () => {
+    // Defensive: a name that happens to be present mustn't unlock save while
+    // the envelope is still loading (the next prefill would clobber it anyway).
+    render(<Harness isLoading initialName="Reading list" />);
 
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
