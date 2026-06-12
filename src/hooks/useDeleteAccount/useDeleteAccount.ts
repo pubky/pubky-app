@@ -9,7 +9,12 @@ import { ProfileController } from '@/controllers/profile/profile';
 import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import type { UseDeleteAccountResult } from './useDeleteAccount.types';
+
+export interface UseDeleteAccountResult {
+  handleDeleteAccount: () => Promise<void>;
+  isDeleting: boolean;
+  progress: number;
+}
 
 /**
  * Hook to handle account deletion.
