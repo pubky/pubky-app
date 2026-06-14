@@ -1,0 +1,54 @@
+name: Visual Regression Tests
+
+on:
+  merge_group:
+  push:
+    branches:
+      - master
+      - dev
+  pull_request:
+    branches:
+      - '**' # Run on PRs targeting any branch
+  # Enable manual trigger
+  workflow_dispatch:
+
+jobs:
+  vrt:
+    name: VRT (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    concurrency:
+      group: vrt-${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Run visual regression tests
+        run: npm run test:vrt
+
+      - name: Upload VRT failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vrt-failures-${{ matrix.os }}
+          path: .vitest-attachments/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 14
