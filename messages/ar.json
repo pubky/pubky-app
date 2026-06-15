@@ -442,6 +442,8 @@
     "addArticle": "اضافة مقال",
     "posting": "جاري النشر...",
     "viewOriginal": "عرض المنشور الاصلي",
+    "postBy": "منشور بواسطة",
+    "replyBy": "رد بواسطة",
     "youReposted": "أعدت النشر",
     "newPostsSingular": "عرض {count} منشور جديد",
     "newPostsPlural": "عرض {count} منشورات جديدة",

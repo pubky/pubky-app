@@ -442,6 +442,8 @@
     "addArticle": "Artikel hinzufügen",
     "posting": "Wird gepostet...",
     "viewOriginal": "Originalbeitrag ansehen",
+    "postBy": "Beitrag von",
+    "replyBy": "Antwort von",
     "youReposted": "Du hast geteilt",
     "newPostsSingular": "{count} neuen Beitrag anzeigen",
     "newPostsPlural": "{count} neue Beiträge anzeigen",

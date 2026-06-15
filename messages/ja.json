@@ -442,6 +442,8 @@
     "addArticle": "記事を追加",
     "posting": "投稿中...",
     "viewOriginal": "元の投稿を見る",
+    "postBy": "投稿者",
+    "replyBy": "返信者",
     "youReposted": "リポストしました",
     "newPostsSingular": "{count}件の新しい投稿を見る",
     "newPostsPlural": "{count}件の新しい投稿を見る",

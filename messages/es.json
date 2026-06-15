@@ -450,6 +450,8 @@
     "addArticle": "Agregar articulo",
     "posting": "Publicando...",
     "viewOriginal": "Ver publicación original",
+    "postBy": "Publicado por",
+    "replyBy": "Respondido por",
     "youReposted": "Republicaste",
     "newPostsSingular": "Ver {count} nueva publicación",
     "newPostsPlural": "Ver {count} nuevas publicaciónes",

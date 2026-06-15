@@ -442,6 +442,8 @@
     "addArticle": "Aggiungi articolo",
     "posting": "Pubblicazione...",
     "viewOriginal": "Vedi post originale",
+    "postBy": "Pubblicato da",
+    "replyBy": "Risposto da",
     "youReposted": "Hai ripubblicato",
     "newPostsSingular": "Vedi {count} nuovo post",
     "newPostsPlural": "Vedi {count} nuovi post",

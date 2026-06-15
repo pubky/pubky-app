@@ -442,6 +442,8 @@
     "addArticle": "Add article",
     "posting": "Posting...",
     "viewOriginal": "View original post",
+    "postBy": "Post by",
+    "replyBy": "Reply by",
     "youReposted": "You reposted",
     "newPostsSingular": "See {count} new post",
     "newPostsPlural": "See {count} new posts",
