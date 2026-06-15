@@ -442,6 +442,8 @@
     "addArticle": "添加文章",
     "posting": "发布中...",
     "viewOriginal": "查看原帖",
+    "postBy": "发布者",
+    "replyBy": "回复者",
     "youReposted": "你转发了",
     "newPostsSingular": "查看 {count} 条新帖子",
     "newPostsPlural": "查看 {count} 条新帖子",
