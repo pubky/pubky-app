@@ -319,13 +319,13 @@
       "notAvailable": "غير متاح حاليا في بلدك",
       "unavailable": "الخدمة غير متاحة مؤقتا"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "رقم الهاتف",
       "free": "مجاني",
       "lessPrivate": "اقل خصوصية لكن سهل",
       "storage": "1 جيجابايت تخزين",
       "speedLimit": "حد سرعة 1 ميجابايت/ث",
-      "receiveSms": "استلام رسالة قصيرة",
+      "receiveCode": "استلام الرمز",
       "notAvailable": "غير متاح حاليا في بلدك",
       "unavailable": "الخدمة غير متاحة مؤقتا"
     },

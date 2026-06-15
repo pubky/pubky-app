@@ -317,13 +317,13 @@
       "notAvailable": "現在お住まいの国では利用できません",
       "unavailable": "サービスは一時的に利用できません"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "電話番号",
       "free": "無料",
       "lessPrivate": "プライバシーは低いが簡単",
       "storage": "1GBストレージ",
       "speedLimit": "1MB/s速度制限",
-      "receiveSms": "SMSを受信",
+      "receiveCode": "コードを受信",
       "notAvailable": "現在お住まいの国では利用できません",
       "unavailable": "サービスは一時的に利用できません"
     },

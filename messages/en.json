@@ -241,7 +241,7 @@
       "signedOut": "Signed out"
     },
     "human": {
-      "title": "Prove <highlight>you're not a Robot.</highlight>",
+      "title": "Prove you're <highlight>not a Robot.</highlight>",
       "subtitle": "Verify quickly using your phone number or a small payment. Or use an",
       "inviteCode": "invite code.",
       "devMode": "Dev Mode",
@@ -317,13 +317,13 @@
       "notAvailable": "Currently not available in your country",
       "unavailable": "Service temporarily unavailable"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "Phone Number",
       "free": "Free",
       "lessPrivate": "LESS PRIVATE, BUT EASY",
       "storage": "1GB storage",
       "speedLimit": "1MB/s speed limit",
-      "receiveSms": "Receive SMS",
+      "receiveCode": "Receive Code",
       "notAvailable": "Currently not available in your country",
       "unavailable": "Service temporarily unavailable"
     },

@@ -317,13 +317,13 @@
       "notAvailable": "Actualmente no disponible en tu pais",
       "unavailable": "Servicio temporalmente no disponible"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "Número de teléfono",
       "free": "Gratis",
       "lessPrivate": "MENOS PRIVADO, PERO FACIL",
       "storage": "1GB de almacenamiento",
       "speedLimit": "Limite de velocidad 1MB/s",
-      "receiveSms": "Recibir SMS",
+      "receiveCode": "Recibir código",
       "notAvailable": "Actualmente no disponible en tu pais",
       "unavailable": "Servicio temporalmente no disponible"
     },

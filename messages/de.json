@@ -319,13 +319,13 @@
       "notAvailable": "Derzeit in Ihrem Land nicht verfügbar",
       "unavailable": "Service vorübergehend nicht verfügbar"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "Telefonnummer",
       "free": "Kostenlos",
       "lessPrivate": "WENIGER PRIVAT, ABER EINFACH",
       "storage": "1GB Speicher",
       "speedLimit": "1MB/s Geschwindigkeitslimit",
-      "receiveSms": "SMS empfangen",
+      "receiveCode": "Code empfangen",
       "notAvailable": "Derzeit in Ihrem Land nicht verfügbar",
       "unavailable": "Service vorübergehend nicht verfügbar"
     },

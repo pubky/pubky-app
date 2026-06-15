@@ -317,13 +317,13 @@
       "notAvailable": "您所在的国家/地区暂不可用",
       "unavailable": "服务暂时不可用"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "手机号码",
       "free": "免费",
       "lessPrivate": "隐私性较低，但简单",
       "storage": "1GB 存储空间",
       "speedLimit": "1MB/s 速度限制",
-      "receiveSms": "接收短信",
+      "receiveCode": "接收验证码",
       "notAvailable": "您所在的国家/地区暂不可用",
       "unavailable": "服务暂时不可用"
     },
