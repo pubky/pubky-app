@@ -238,7 +238,7 @@
       "unavailable": "Service temporarily unavailable"
     },
     "sms": {
-      "title": "SMS Verification",
+      "title": "Phone Number",
       "free": "Free",
       "lessPrivate": "LESS PRIVATE, BUT EASY",
       "storage": "1GB storage",

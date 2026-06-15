@@ -42,7 +42,7 @@ exports[`SmsVerificationCard > matches snapshot 1`] = `
               class="m-0 text-[20px] leading-none font-bold text-foreground lg:text-2xl lg:leading-8"
               data-testid="typography"
             >
-              SMS Verification
+              Phone Number
             </h3>
             <div
               class="inline-flex items-center justify-center w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent [a&]:hover:bg-secondary/90 rounded-md border-0 bg-primary px-2 py-[2px] text-sm font-semibold tracking-wide text-primary-foreground uppercase lg:hidden"
@@ -224,7 +224,7 @@ exports[`SmsVerificationCard > matches snapshot when geoblocked 1`] = `
               class="m-0 text-[20px] leading-none font-bold text-foreground lg:text-2xl lg:leading-8"
               data-testid="typography"
             >
-              SMS Verification
+              Phone Number
             </h3>
             <div
               class="inline-flex items-center justify-center w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent [a&]:hover:bg-secondary/90 rounded-md border-0 bg-primary px-2 py-[2px] text-sm font-semibold tracking-wide text-primary-foreground uppercase lg:hidden"
