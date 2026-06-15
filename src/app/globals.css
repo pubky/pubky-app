@@ -845,14 +845,6 @@ body {
     will-change: transform;
   }
 
-  :root[data-landing-swirl='broken'] .landing-hero-brand-footer,
-  :root[data-landing-swirl='how'] .landing-hero-brand-footer,
-  :root[data-landing-swirl='freedom'] .landing-hero-brand-footer,
-  :root[data-landing-swirl='final'] .landing-hero-brand-footer {
-    pointer-events: none;
-    opacity: 0;
-  }
-
   @media (min-width: 1024px) {
     .landing-swirl-background__graphic {
       --landing-swirl-size: min(75vw, 60rem);

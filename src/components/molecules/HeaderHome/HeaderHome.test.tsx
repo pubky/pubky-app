@@ -48,6 +48,13 @@ describe('HeaderHome', () => {
 
     expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /join/i })).not.toBeInTheDocument();
+  });
+
+  it('does not render the landing join button when the landing hero is absent', () => {
+    render(<HeaderHome showLandingJoinButton />);
+
+    expect(screen.queryByRole('button', { name: /join/i })).not.toBeInTheDocument();
   });
 
   it('applies correct container classes', () => {

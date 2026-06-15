@@ -60,6 +60,7 @@ export const HomeFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
           ),
         })}
       </FooterLinks>
+      <HomeBrandFooter className="mt-2" />
     </Container>
   );
 };

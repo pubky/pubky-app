@@ -12,12 +12,19 @@ import { LANDING_HERO_SECTION_ID } from '@/templates/Public/Landing/Landing.cons
 import { HeaderSocialLinks } from '../Header/Header';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 
-export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
+interface HeaderHomeProps extends React.HTMLAttributes<HTMLDivElement> {
+  showLandingJoinButton?: boolean;
+}
+
+export const HeaderHome = ({ showLandingJoinButton = false, ...props }: HeaderHomeProps) => {
   const router = useRouter();
   const t = useTranslations('landing');
   const [showJoinButton, setShowJoinButton] = React.useState(false);
 
   React.useEffect(() => {
+    setShowJoinButton(false);
+
+    if (!showLandingJoinButton) return;
     if (typeof IntersectionObserver === 'undefined') return;
 
     const heroSection = document.getElementById(LANDING_HERO_SECTION_ID);
@@ -43,7 +50,7 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [showLandingJoinButton]);
 
   const handleJoin = () => {
     router.push(ONBOARDING_ROUTES.HUMAN);
@@ -66,10 +73,10 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
                 id="header-join-btn"
                 variant="brand"
                 onClick={handleJoin}
-                className="shrink-0 gap-2 whitespace-nowrap"
+                className="size-10 shrink-0 gap-0 px-0 whitespace-nowrap sm:h-10 sm:w-auto sm:gap-2 sm:px-4"
               >
                 <UserRoundPlus className="size-4" />
-                {t('join')}
+                <span className="sr-only sm:not-sr-only">{t('join')}</span>
               </Button>
             </div>
           </motion.div>
