@@ -13,7 +13,7 @@ import { HumanSmsCardSkeleton } from './HumanSmsCard.skeleton';
 import type { HumanSmsCardProps } from './HumanSmsCard.types';
 
 export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
-  const t = useTranslations('onboarding.sms');
+  const t = useTranslations('onboarding.phoneNumber');
   const smsInfo = useSmsVerificationInfo();
 
   // Waiting for availability check
@@ -86,13 +86,13 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
 
             <Container className="gap-2 lg:hidden">
               <Container className="flex-row items-center gap-2">
-                <Check className="size-4 shrink-0 text-foreground" aria-hidden="true" />
+                <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
                 <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
                   {t('storage')}
                 </Typography>
               </Container>
               <Container className="flex-row items-center gap-2">
-                <Check className="size-4 shrink-0 text-foreground" aria-hidden="true" />
+                <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
                 <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
                   {t('speedLimit')}
                 </Typography>
@@ -107,7 +107,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
               disabled={isUnavailable}
             >
               <Smartphone className="mr-2 size-4" />
-              {t('receiveSms')}
+              {t('receiveCode')}
             </Button>
           </Container>
         </Container>

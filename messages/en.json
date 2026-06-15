@@ -243,13 +243,13 @@
       "notAvailable": "Currently not available in your country",
       "unavailable": "Service temporarily unavailable"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "Phone Number",
       "free": "Free",
       "lessPrivate": "LESS PRIVATE, BUT EASY",
       "storage": "1GB storage",
       "speedLimit": "1MB/s speed limit",
-      "receiveSms": "Receive SMS",
+      "receiveCode": "Receive Code",
       "notAvailable": "Currently not available in your country",
       "unavailable": "Service temporarily unavailable"
     },

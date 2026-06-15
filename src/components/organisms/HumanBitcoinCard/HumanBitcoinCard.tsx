@@ -120,13 +120,13 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
 
             <Container className="gap-2 lg:hidden">
               <Container className="flex-row items-center gap-2">
-                <Check className="size-4 shrink-0 text-foreground" aria-hidden="true" />
+                <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
                 <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
                   {t('storage')}
                 </Typography>
               </Container>
               <Container className="flex-row items-center gap-2">
-                <Check className="size-4 shrink-0 text-foreground" aria-hidden="true" />
+                <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
                 <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
                   {t('speedLimit')}
                 </Typography>
