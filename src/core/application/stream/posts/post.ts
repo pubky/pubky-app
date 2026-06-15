@@ -20,7 +20,11 @@ import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
-import { isSkipPaginatedStream, isAuthorStreamSkippingMuteFilter, type PostStreamId } from '@/models/stream/post/postStream.types';
+import {
+  isSkipPaginatedStream,
+  isAuthorStreamSkippingMuteFilter,
+  type PostStreamId,
+} from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
