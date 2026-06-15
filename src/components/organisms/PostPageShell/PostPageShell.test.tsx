@@ -1,9 +1,20 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { usePostMissing } from '@/hooks/usePostMissing/usePostMissing';
 import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { PostPageShell } from './PostPageShell';
 
 const VALID_COMPOSITE_POST_ID = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
+
+vi.mock('@/hooks/usePostMissing/usePostMissing', () => ({
+  usePostMissing: vi.fn(),
+}));
+
+vi.mock('@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout', () => ({
+  HotDiscoveryContentLayout: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="hot-discovery-content-layout">{children}</div>
+  ),
+}));
 
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
   ContentLayout: ({
@@ -45,6 +56,15 @@ vi.mock('@/organisms/SinglePostRightPanel/SinglePostRightPanel', () => ({
 }));
 
 describe('PostPageShell', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(usePostMissing).mockReturnValue({
+      postMissing: false,
+      postDetails: undefined,
+      isLoading: true,
+    });
+  });
+
   it('renders post body without in-column search or header navigation', () => {
     render(
       <PostPageShell postId={VALID_COMPOSITE_POST_ID}>
@@ -79,5 +99,25 @@ describe('PostPageShell', () => {
 
     expect(rightPanel).toHaveAttribute('data-post-id', VALID_COMPOSITE_POST_ID);
     expect(rightPanel).toHaveAttribute('data-show-feedback', 'true');
+  });
+
+  it('swaps to discovery layout without post sidebars when the post is missing', () => {
+    vi.mocked(usePostMissing).mockReturnValue({
+      postMissing: true,
+      postDetails: null,
+      isLoading: false,
+    });
+
+    render(
+      <PostPageShell postId={VALID_COMPOSITE_POST_ID}>
+        <div data-testid="post-body">body</div>
+      </PostPageShell>,
+    );
+
+    const discoveryLayout = screen.getByTestId('hot-discovery-content-layout');
+    expect(discoveryLayout).toContainElement(screen.getByTestId('post-body'));
+    expect(screen.queryByTestId('content-layout')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('single-post-left-sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('single-post-right-panel')).not.toBeInTheDocument();
   });
 });
