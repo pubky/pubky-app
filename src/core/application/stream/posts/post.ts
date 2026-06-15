@@ -21,8 +21,8 @@ import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import {
-  isSkipPaginatedStream,
   isAuthorStreamSkippingMuteFilter,
+  isSkipPaginatedStream,
   type PostStreamId,
 } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
