@@ -61,7 +61,7 @@ describe('useCopyToClipboard', () => {
   it('should accept options and return them in the hook', () => {
     const options = {
       successTitle: 'Custom success',
-      errorTitle: 'Custom error',
+      errorDescription: 'Custom error',
       onSuccess: vi.fn(),
       onError: vi.fn(),
     };
@@ -97,7 +97,7 @@ describe('useCopyToClipboard', () => {
 
   it('should handle different option combinations', () => {
     const { result: result1 } = renderHook(() => useCopyToClipboard({ successTitle: 'Success' }));
-    const { result: result2 } = renderHook(() => useCopyToClipboard({ errorTitle: 'Error' }));
+    const { result: result2 } = renderHook(() => useCopyToClipboard({ errorDescription: 'Error' }));
     const { result: result3 } = renderHook(() => useCopyToClipboard({ onSuccess: vi.fn() }));
     const { result: result4 } = renderHook(() => useCopyToClipboard({ onError: vi.fn() }));
 
@@ -162,7 +162,7 @@ describe('useCopyToClipboard', () => {
 
     await expect(result.current.copyToClipboard('test text')).resolves.toBe(false);
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'copyFailed',
+      variant: 'error',
       description: 'copyFailedDesc',
     });
   });

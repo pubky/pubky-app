@@ -70,8 +70,8 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
     router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
   };
 
-  const handleFollowClick = async (userId: Pubky, isCurrentlyFollowing: boolean) => {
-    await toggleFollow(userId, isCurrentlyFollowing);
+  const handleFollowClick = async (userId: Pubky, isCurrentlyFollowing: boolean, displayName: string) => {
+    await toggleFollow(userId, isCurrentlyFollowing, displayName);
   };
 
   return (

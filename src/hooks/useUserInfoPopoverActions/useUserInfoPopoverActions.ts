@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { resolveFollowDisplayName } from '@/hooks/useFollowUser/useFollowUser.utils';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 
 interface UseUserInfoPopoverActionsResult {
@@ -13,11 +14,13 @@ interface UseUserInfoPopoverActionsResult {
 
 export function useUserInfoPopoverActions({
   userId,
+  userName,
   isCurrentUser,
   isFollowing,
   isFollowingStatusLoading,
 }: {
   userId: string;
+  userName: string;
   isCurrentUser: boolean;
   isFollowing: boolean;
   isFollowingStatusLoading: boolean;
@@ -40,7 +43,7 @@ export function useUserInfoPopoverActions({
     if (isCurrentUser) return;
     requireAuth(async () => {
       try {
-        await toggleFollow(userId, isFollowing);
+        await toggleFollow(userId, isFollowing, resolveFollowDisplayName(userId, userName));
       } catch {
         // Error already handled by useFollowUser (logged + state updated)
       }

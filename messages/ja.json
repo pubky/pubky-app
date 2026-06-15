@@ -184,9 +184,15 @@
       "blocked": "電話番号がブロックされています",
       "blockedDescription": "この電話番号は確認に使用できません。",
       "tooManyAttempts": "確認の試行回数が多すぎます",
-      "tooManyAttemptsDescription": "この電話番号の最大確認回数に達しました。",
+      "tooManyAttemptsDescription": "認証試行回数が多すぎます",
       "sendFailed": "SMSコードの送信に失敗しました",
-      "sendFailedDescription": "後でもう一度お試しください。問題が続く場合はサポートにお問い合わせください。"
+      "sendFailedDescription": "認証コードを送信できませんでした。後でもう一度お試しください。",
+      "rateLimitedWithRetry": "認証試行回数が多すぎます。{seconds}秒後に再試行してください。",
+      "weeklyLimitReached": "認証試行回数が多すぎます",
+      "weeklyLimitDescription": "認証試行回数が多すぎます",
+      "yearlyLimitReached": "認証試行回数が多すぎます",
+      "yearlyLimitDescription": "認証試行回数が多すぎます",
+      "verificationFailed": "電話認証に失敗しました。もう一度お試しください。"
     },
     "phoneCode": {
       "title": "コードを<highlight>入力。</highlight>",
@@ -199,7 +205,7 @@
       "valid": "確認コードは有効です",
       "invalid": "確認コードが無効です。再試行してください。",
       "verifyFailed": "SMSコードの確認に失敗しました",
-      "verifyFailedDescription": "後でもう一度お試しください。問題が続く場合はサポートにお問い合わせください。"
+      "verifyFailedDescription": "コードを確認できませんでした。後でもう一度お試しください。"
     },
     "lightning": {
       "title": "スキャンして<highlight>支払い。</highlight>",
@@ -215,9 +221,9 @@
       "paymentSuccess": "支払い成功",
       "paymentExpired": "支払いの期限が切れました",
       "requestFailed": "Lightning請求書のリクエストに失敗しました",
-      "requestFailedDescription": "後でもう一度お試しください。問題が続く場合はサポートにお問い合わせください。",
+      "requestFailedDescription": "Lightning請求書をリクエストできませんでした。後でもう一度お試しください。",
       "invoiceCopied": "請求書をクリップボードにコピーしました",
-      "copyFailed": "請求書のコピーに失敗しました"
+      "copyFailed": "請求書をコピーできませんでした。"
     },
     "inviteCode": {
       "title": "ロボットではないことを<highlight>証明してください。</highlight>",
@@ -259,11 +265,8 @@
       "subtitleDesktop": "Pubky Ringを開き、「pubkyを追加」をタップして、このQRをスキャンしてください。",
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
-
       "clickToReload": "クリックして再読み込み",
-
       "openingRing": "Pubky Ringを開いています...",
-
       "authorize": "Pubky Ringで認証",
       "authorizeSub": "<pubkyRing>Pubky Ring</pubkyRing>または<pubkyCore>Pubky Core</pubkyCore>搭載の他のキーチェーンを使用してください。",
       "linkFailed": "Pubky Ring署名アプリへの接続に失敗しました",
@@ -276,22 +279,18 @@
       "progressSubtitle": "Pubky の体験を読み込んでいます。しばらくお待ちください。",
       "generating": "QRコード生成中...",
       "generatingShort": "生成中...",
-
       "clickToReload": "クリックして再読み込み",
-
       "openingRing": "Pubky Ringを開いています...",
-
       "authorize": "Pubky Ringで認証",
       "linkCopied": "リンクをコピーしました",
-      "linkCopiedDescription": "認証リンクをクリップボードにコピーしました。",
       "linkFailed": "Pubky Ring署名アプリへの接続に失敗しました",
       "tryAgain": "再試行してください。",
-      "authInitFailedTitle": "ログインに失敗しました。もう一度お試しください。",
-      "authInitFailedDescription": "Pubky Ring での認証を完了できませんでした。もう一度お試しください。",
+      "authInitFailedTitle": "サインインに失敗しました。もう一度お試しください。",
+      "authInitFailedDescription": "サインインに失敗しました。もう一度お試しください。",
       "authNotCompletedTitle": "認証が完了しませんでした",
-      "authNotCompletedDescription": "署名側で認証が完了しませんでした。もう一度お試しください。",
+      "authNotCompletedDescription": "認可に失敗しました。もう一度お試しください。",
       "qrGenerationFailedTitle": "QRコードの生成に失敗しました",
-      "qrGenerationFailedDescription": "サインイン用QRコードを生成できませんでした。更新してもう一度お試しください。",
+      "qrGenerationFailedDescription": "QRコードを生成できませんでした。更新してもう一度お試しください。",
       "recoveryHint": "<pubkyRing>Pubky Ring</pubkyRing>でログインできませんか？リカバリーフレーズまたは暗号化ファイルを使用してアカウントを復元してください。",
       "verifyingAccount": "アカウントを確認中",
       "loadingData": "データを読み込み中",
@@ -308,7 +307,7 @@
         "restore": "復元",
         "restoring": "復元中...",
         "errorTitle": "ニーモニックでのログインエラー",
-        "errorDescription": "再試行してください。"
+        "errorDescription": "サインインできませんでした。もう一度お試しください。"
       },
       "restoreEncryptedFile": {
         "title": "暗号化ファイルで復元",
@@ -322,7 +321,7 @@
         "invalidPassword": "パスワードが無効かファイルが破損しています。パスワードを確認して再試行してください。",
         "nexusError": "nexusでエラーが発生しました。再試行してください。",
         "restoreError": "ファイルからの復元に失敗しました。ファイルを確認して再試行してください。",
-        "unexpectedError": "予期しないエラーが発生しました",
+        "unexpectedError": "予期しないエラーが発生しました。",
         "cancel": "キャンセル",
         "restore": "復元",
         "restoring": "復元中..."
@@ -338,12 +337,11 @@
       "myPubky": "マイPubky",
       "shareText": "これが私のPubkyです：\n{displayPubky}",
       "shareUnavailable": "共有が利用できません",
-      "shareUnavailableDescription": "pubkyをコピーしました。お気に入りのアプリに貼り付けできます。",
       "shareFailed": "共有に失敗しました",
-      "shareFailedDescription": "現在共有できません。再試行してください。",
+      "shareFailedDescription": "共有できませんでした。もう一度お試しください。",
       "signUpFailed": "エラー - サインアップに失敗しました",
-      "signUpError": "問題が発生しました。再試行してください。",
-      "invalidInvite": "無効または期限切れの招待コードです。新しい招待コードを取得またはリクエストしてください。"
+      "signUpError": "登録できませんでした。もう一度お試しください。",
+      "invalidInvite": "招待コードが無効または期限切れです。"
     },
     "backupMethod": {
       "title": "バックアップ方法を選択",
@@ -355,8 +353,8 @@
       "title": "<highlight>pubky</highlight>をバックアップ。",
       "subtitle": "後でアカウントにアクセスを復元するにはバックアップが必要です。",
       "signUpFailed": "エラー - 登録に失敗しました",
-      "signUpError": "問題が発生しました。再試行してください。",
-      "invalidInvite": "招待コードが無効または期限切れです。新しい招待コードを取得または申請してください。"
+      "signUpError": "登録できませんでした。もう一度お試しください。",
+      "invalidInvite": "招待コードが無効または期限切れです。"
     },
     "backupPhrase": {
       "title": "リカバリーフレーズのバックアップ",
@@ -668,11 +666,11 @@
       "saveFeed": "フィードを保存",
       "deleteFeed": "フィードを削除",
       "feedCreated": "フィード {name} を作成しました！",
-      "feedCreateError": "フィードを作成できませんでした。もう一度お試しいただくか、サポートにお問い合わせください。",
+      "feedCreateError": "フィードを作成できませんでした。もう一度お試しください。",
       "feedEdited": "フィード {name} を編集しました！",
-      "feedEditError": "フィードを編集できませんでした。もう一度お試しいただくか、サポートにお問い合わせください。",
+      "feedEditError": "フィードを更新できませんでした。もう一度お試しください。",
       "feedDeleted": "フィード {name} を削除しました！",
-      "feedDeleteError": "フィードを削除できませんでした。もう一度お試しいただくか、サポートにお問い合わせください。"
+      "feedDeleteError": "フィードを削除できませんでした。もう一度お試しください。"
     }
   },
   "sidebar": {
@@ -708,7 +706,7 @@
     },
     "userSuggestion": "ユーザー {name}（{pubky}）",
     "viewProfile": "{name}のプロフィールを見る",
-    "invalidTag": "タグは20文字以内で、特殊文字を含めることはできません"
+    "invalidTag": "タグは最大20文字で、特殊文字は使用できません"
   },
   "feedback": {
     "title": "フィードバックを送信",
@@ -895,123 +893,108 @@
     "success": "成功",
     "error": "エラー",
     "errors": "エラー",
-    "genericErrorTitle": "おっと！問題が発生しました。",
+    "genericErrorTitle": "エラー",
     "post": {
       "replyPosted": "返信を投稿しました",
-      "replyPostedDesc": "返信が正常に投稿されました。",
-      "replyFailed": "返信の投稿に失敗しました。再試行してください。",
+      "replyFailed": "返信を投稿できませんでした。もう一度お試しください。",
       "postCreated": "投稿を作成しました",
-      "postCreatedDesc": "投稿が正常に作成されました。",
-      "postFailed": "投稿の作成に失敗しました。再試行してください。",
+      "postFailed": "投稿を作成できませんでした。もう一度お試しください。",
       "repostSuccess": "リポストしました！",
-      "repostSuccessDesc": "{author}さんの投稿をリポストしました！",
-      "repostSuccessDescFallback": "リポストが正常に作成されました。",
       "repostUndo": "元に戻す",
-      "repostFailed": "リポストに失敗しました。再試行してください。",
+      "repostFailed": "リポストできませんでした。もう一度お試しください。",
       "postEdited": "投稿を編集しました",
-      "postEditedDesc": "投稿が正常に編集されました。",
-      "editFailed": "投稿の編集に失敗しました。再試行してください。",
+      "editFailed": "投稿を更新できませんでした。もう一度お試しください。",
       "postDeleted": "投稿を削除しました",
-      "postDeletedDesc": "投稿が削除されました",
-      "deleteFailed": "投稿の削除に失敗しました。再試行してください。",
-      "invalidPostId": "無効な投稿ID。再試行してください。",
+      "deleteFailed": "投稿を削除できませんでした。もう一度お試しください。",
+      "invalidPostId": "無効な投稿です。もう一度お試しください。",
       "attachmentsCleared": "添付ファイルを消去しました",
-      "attachmentsClearedDesc": "記事はカバー画像1枚のみをサポートします。",
-      "failedToLoadPosts": "新しい投稿の読み込みに失敗しました",
-      "failedToLoadPostsDesc": "新しい投稿を表示できません。再試行してください。",
-      "parseError": "記事コンテンツの解析に失敗しました",
-      "coverImageError": "記事のカバー画像の読み込みに失敗しました",
-      "attachmentsLoadFailed": "添付ファイルの読み込みに失敗しました"
+      "failedToLoadPosts": "新しい投稿を読み込めませんでした",
+      "parseError": "記事コンテンツを解析できませんでした",
+      "coverImageError": "カバー画像を読み込めませんでした",
+      "attachmentsLoadFailed": "添付ファイルを読み込めませんでした",
+      "repostSuccessFallback": "リポストしました"
     },
     "bookmark": {
       "added": "ブックマークを追加しました",
-      "addedDesc": "投稿をブックマークに保存しました",
       "removed": "ブックマークを削除しました",
-      "removedDesc": "投稿をブックマークから削除しました",
-      "addFailed": "ブックマークの追加に失敗しました",
-      "removeFailed": "ブックマークの削除に失敗しました",
-      "loginRequired": "投稿をブックマークするにはログインが必要です"
+      "addFailed": "ブックマークを追加できませんでした",
+      "removeFailed": "ブックマークを削除できませんでした",
+      "loginRequired": "投稿を保存するにはサインインしてください"
     },
     "copy": {
       "pubkyCopied": "pubkyをクリップボードにコピーしました",
       "linkCopied": "リンクをクリップボードにコピーしました",
       "textCopied": "テキストをクリップボードにコピーしました",
       "profileLinkCopied": "プロフィールリンクをクリップボードにコピーしました",
-      "copyFailed": "コピーに失敗しました",
-      "copyFailedDesc": "クリップボードにコピーできません"
+      "copyFailed": "クリップボードにコピーできませんでした",
+      "copyFailedDesc": "クリップボードにコピーできませんでした"
     },
     "follow": {
-      "failed": "フォロー状態の更新に失敗しました"
+      "failed": "フォロー状態を更新できませんでした",
+      "followed": "{username}をフォロー中",
+      "unfollowed": "{username}のフォローを解除しました"
     },
     "mute": {
-      "muted": "ユーザーをミュートしました",
-      "unmuted": "ユーザーのミュートを解除しました",
-      "mutedDesc": "{username}をミュートしました。",
-      "unmutedDesc": "{username}のミュートを解除しました。",
-      "failed": "ミュート状態の更新に失敗しました"
+      "muted": "{username}をミュートしました",
+      "unmuted": "{username}のミュートを解除しました",
+      "failed": "ミュート状態を更新できませんでした"
     },
     "profile": {
       "updated": "プロフィールを更新しました",
-      "updatedDesc": "プロフィールが正常に更新されました。",
       "sessionExpired": "セッションが期限切れです",
-      "sessionExpiredDesc": "続行するにはログアウトして再度ログインしてください。",
-      "saveFailed": "プロフィールの保存に失敗しました",
-      "saveFailedDesc": "再試行してください。",
-      "fetchFailed": "再試行してください。",
-      "fetchFailedDesc": "新しいユーザーデータの取得に失敗しました。インデックスが進行中の可能性があります...",
-      "updateFailed": "プロフィールの更新に失敗しました。"
+      "sessionExpiredDesc": "セッションが期限切れです。サインインしてください。",
+      "saveFailed": "プロフィールを保存できませんでした",
+      "fetchFailedDesc": "プロフィールを更新できませんでした",
+      "updateFailed": "プロフィールを更新できませんでした"
     },
     "report": {
-      "userNotLoaded": "ユーザープロフィールが読み込まれていません。再試行してください。",
-      "submitFailed": "報告の送信に失敗しました",
-      "submitFailedDesc": "報告の送信に失敗しました。再試行してください。"
+      "userNotLoaded": "プロフィールを読み込めませんでした",
+      "submitFailedDesc": "報告を送信できませんでした。もう一度お試しください。"
     },
     "feedback": {
-      "userNotLoaded": "ユーザープロフィールが読み込まれていません。再試行してください。",
-      "submitFailed": "フィードバックの送信に失敗しました",
-      "submitFailedDesc": "フィードバックの送信に失敗しました。再試行してください。"
+      "userNotLoaded": "プロフィールを読み込めませんでした",
+      "submitFailedDesc": "フィードバックを送信できませんでした。もう一度お試しください。"
     },
     "copyright": {
       "success": "リクエストが正常に送信されました",
-      "error": "リクエスト送信エラー",
-      "submitFailed": "リクエストの送信に失敗しました"
+      "error": "リクエストを送信できませんでした",
+      "submitFailed": "リクエストを送信できませんでした"
     },
     "tags": {
-      "loadFailed": "タグの追加読み込みに失敗しました",
-      "loadFailedDesc": "タグを追加で読み込めません。再試行してください。",
+      "loadFailed": "タグをさらに読み込めませんでした",
       "labelEmpty": "タグラベルは空にできません",
       "postIdRequired": "投稿IDは必須です",
       "userIdRequired": "ユーザーIDは必須です",
       "loginRequired": "タグを追加するにはログインが必要です",
       "alreadyAdded": "このタグは既に追加済みです",
-      "addFailed": "タグの追加に失敗しました",
-      "addFailedDesc": "「{label}」を追加できません。再試行してください。",
-      "removeFailed": "タグの削除に失敗しました",
-      "removeFailedDesc": "「{label}」を削除できません。再試行してください。"
+      "added": "タグを追加しました: {label}",
+      "removed": "タグを削除しました: {label}",
+      "addFailed": "タグを追加できませんでした: {label}",
+      "removeFailed": "タグを削除できませんでした: {label}"
     },
     "auth": {
-      "signInFailed": "ログインに失敗しました。再試行してください。",
-      "signInFailedDesc": "Pubky Ringでの認証を完了できませんでした。再試行してください。",
+      "signInFailed": "サインインに失敗しました。もう一度お試しください。",
+      "signInFailedDesc": "サインインに失敗しました。もう一度お試しください。",
       "authNotCompleted": "認証が完了しませんでした",
-      "authNotCompletedDesc": "署名者が認証を完了しませんでした。再試行してください。",
+      "authNotCompletedDesc": "認可に失敗しました。もう一度お試しください。",
       "qrFailed": "QRコード生成に失敗しました",
-      "qrFailedDesc": "ログインQRコードを生成できません。更新して再試行してください。"
+      "qrFailedDesc": "QRコードを生成できませんでした。更新してもう一度お試しください。"
     },
     "file": {
       "maxFiles": "最大{max}ファイルまで許可されています",
       "maxFilesPartial": "最大{max}ファイルまで許可されています。一部のファイルは追加されませんでした。",
-      "unsupportedType": "「{name}」はサポートされていないタイプ「{type}」です。サポートされている形式：{formats}。",
-      "fileTooLarge": "「{name}」は最大サイズ{maxSize}を超えています。"
+      "unsupportedType": "{name}のファイル形式はサポートされていません。対応: {formats}。",
+      "fileTooLarge": "{name}は{maxSize}の制限を超えています。"
     },
     "status": {
-      "updateFailed": "ステータスの更新に失敗しました。再試行してください。",
-      "userNotLoaded": "ユーザープロフィールが読み込まれていません。再試行してください。"
+      "updateFailed": "ステータスを更新できませんでした。もう一度お試しください。",
+      "userNotLoaded": "プロフィールを読み込めませんでした。もう一度お試しください。"
     },
     "fullscreen": {
-      "error": "フルスクリーンの有効化中にエラーが発生しました"
+      "error": "全画面表示にできませんでした。"
     },
     "logout": {
-      "failed": "ログアウトに失敗しました。再試行してください。"
+      "failed": "ログアウトできませんでした。もう一度お試しください。"
     }
   },
   "empty": {
@@ -1022,10 +1005,10 @@
     "noNotifications": "通知がありません"
   },
   "errors": {
-    "signOutFailed": "ログアウトに失敗しました。再試行してください。",
+    "signOutFailed": "サインアウトできませんでした。もう一度お試しください。",
     "deleteAccountFailed": "アカウントの削除に失敗しました。再試行してください。",
     "generic": "問題が発生しました",
-    "network": "ネットワークエラー。再試行してください。",
+    "network": "ネットワークエラー",
     "notFound": "ページが見つかりません",
     "couldNotFind": "リクエストされたリソースが見つかりませんでした",
     "database": {
@@ -1130,9 +1113,7 @@
     "unmuteAll": "すべてのユーザーのミュートを解除",
     "noMutedUsers": "まだミュートしたユーザーがいません",
     "userUnmuted": "ユーザーのミュートを解除しました",
-    "userUnmutedDesc": "{username}のミュートを解除しました。",
     "allUsersUnmuted": "すべてのユーザーのミュートを解除しました",
-    "allUsersUnmutedDesc": "すべてのミュートしたユーザーのミュートを解除しました。",
     "partialSuccess": "部分的に成功",
     "partialSuccessDesc": "{success}人のユーザーのミュートを解除、{failed}人失敗。"
   },

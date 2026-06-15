@@ -7,7 +7,7 @@ import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentU
 import { postJson } from '@/libs/api/client-request';
 import { Logger } from '@/libs/logger/logger';
 import { parseCompositeId } from '@/models/models.utils';
-import { showErrorToast as showErrorToastMessage } from '@/molecules/Toaster/showErrorToast';
+import { toast } from '@/molecules/Toaster/use-toast';
 import type { ReportIssueType } from '@/pipes/report/report.types';
 import { REPORT_API_ENDPOINT, REPORT_POST_STEPS } from './useReportPost.constants';
 import type { ReportPostStep } from './useReportPost.types';
@@ -35,12 +35,6 @@ export function useReportPost(postId: string): UseReportPostReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const showErrorToast = (description: string) => {
-    showErrorToastMessage({
-      description,
-    });
-  };
-
   const selectIssueType = (issueType: ReportIssueType) => {
     setSelectedIssueType(issueType);
     setStep(REPORT_POST_STEPS.REASON_INPUT);
@@ -57,7 +51,7 @@ export function useReportPost(postId: string): UseReportPostReturn {
     if (!canSubmit) return;
 
     if (!currentUserPubky || !userDetails?.name) {
-      showErrorToast(tReport('userNotLoaded'));
+      toast({ variant: 'error', description: tReport('userNotLoaded') });
       return;
     }
 
@@ -75,7 +69,10 @@ export function useReportPost(postId: string): UseReportPostReturn {
       setIsSuccess(true);
     } catch (err) {
       Logger.error('Error submitting report:', err);
-      showErrorToast(err instanceof Error ? err.message : tReport('submitFailedDesc'));
+      toast({
+        variant: 'error',
+        description: err instanceof Error ? err.message : tReport('submitFailedDesc'),
+      });
     } finally {
       setIsSubmitting(false);
     }

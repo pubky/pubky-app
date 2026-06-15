@@ -34,7 +34,6 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const t = useTranslations('notifications.actions');
   const tCommon = useTranslations('common');
   const tProfile = useTranslations('profile');
-  const tToast = useTranslations('toast');
   const tPostToast = useTranslations('toast.post');
   const tPost = useTranslations('post');
   const router = useRouter();
@@ -80,7 +79,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             } catch {
               setPostContent(post.content);
               toast({
-                title: tToast('error'),
+                variant: 'error',
                 description: tPostToast('parseError'),
               });
             }

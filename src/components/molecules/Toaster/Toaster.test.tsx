@@ -103,6 +103,7 @@ describe('Toaster', () => {
 
     const okButton = screen.getByRole('button', { name: 'OK' });
     expect(okButton).toBeInTheDocument();
+    expect(okButton).toHaveClass('border-brand');
 
     fireEvent.click(okButton);
     expect(mockDismiss).toHaveBeenCalledWith('dismiss-toast');
@@ -123,6 +124,52 @@ describe('Toaster', () => {
     render(<Toaster />);
 
     expect(screen.queryByRole('button', { name: 'OK' })).not.toBeInTheDocument();
+  });
+
+  it('should apply error variant styles to dismiss ToastAction', () => {
+    const mockDismiss = vi.fn();
+    mockUseToast.mockReturnValue({
+      toasts: [
+        {
+          id: 'error-dismiss-toast',
+          title: 'Failed',
+          description: 'Something went wrong',
+          dismissButton: true,
+          variant: 'error',
+          open: true,
+        },
+      ],
+      dismiss: mockDismiss,
+    });
+
+    render(<Toaster />);
+
+    const okButton = screen.getByRole('button', { name: 'OK' });
+    expect(okButton).toHaveClass('bg-secondary', 'text-secondary-foreground');
+  });
+
+  it.each([
+    ['default', 'default'],
+    ['error', 'error'],
+    ['warning', 'warning'],
+    ['info', 'info'],
+  ] as const)('should render %s variant with icon and data-variant attribute', (variant, expectedVariant) => {
+    mockUseToast.mockReturnValue({
+      toasts: [
+        {
+          id: `${variant}-toast`,
+          title: `${variant} toast`,
+          open: true,
+          variant,
+        },
+      ],
+    });
+
+    const { container } = render(<Toaster />);
+
+    const toastElement = screen.getByText(`${variant} toast`).closest('[data-cy="toast"]');
+    expect(toastElement).toHaveAttribute('data-variant', expectedVariant);
+    expect(container.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
   });
 
   it('should handle complex toast with action button click', () => {

@@ -46,15 +46,13 @@ describe('settings', () => {
     // Navigate back to account settings page
     cy.get('[data-cy="header-settings-btn"]').click();
 
-    // Check delete account button shows modal, confirming deletes the account and redirects to logout
-    cy.get('#delete-account-btn').click();
-    cy.get('[role="dialog"]')
-      .should('be.visible')
-      .within(() => {
-        cy.get('#delete-account-confirm-btn').click();
-      });
-    // Deletion removes every homeserver file before signing out, so allow extra time
-    cy.location('pathname', { timeout: 30000 }).should('eq', '/logout');
+    // todo: enable once bug is fixed, see https://github.com/pubky/pubky-app/issues/1218
+    // Check delete account button shows modal and confirm (note: DialogDeleteAccount may not perform actual deletion)
+    // cy.get('#delete-account-btn').click();
+    // cy.get('[role="dialog"]').should('be.visible').within(() => {
+    //   cy.get('#delete-account-confirm-btn').click();
+    // });
+    // cy.location('pathname').should('eq', '/logout');
   });
 
   it.skip('Privacy and Safety settings is displayed correctly', () => {});

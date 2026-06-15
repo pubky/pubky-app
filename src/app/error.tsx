@@ -25,7 +25,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         Something went wrong
       </Typography>
       <Typography size="md" className="mt-2 text-destructive">
-        {error.message || 'An unexpected error occurred'}
+        {error.message || 'Unexpected error occurred.'}
       </Typography>
       <Button type="button" className="mt-4" variant="brand" onClick={reset}>
         Try again

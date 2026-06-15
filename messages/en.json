@@ -184,9 +184,15 @@
       "blocked": "Phone number blocked",
       "blockedDescription": "This phone number cannot be used for verification.",
       "tooManyAttempts": "Too many verification attempts",
-      "tooManyAttemptsDescription": "You have reached the maximum number of verifications for this phone number.",
+      "tooManyAttemptsDescription": "Too many verification attempts",
+      "rateLimitedWithRetry": "Too many verification attempts. Retry in {seconds}s.",
+      "weeklyLimitReached": "Too many verification attempts",
+      "weeklyLimitDescription": "Too many verification attempts",
+      "yearlyLimitReached": "Too many verification attempts",
+      "yearlyLimitDescription": "Too many verification attempts",
+      "verificationFailed": "Phone verification failed. Try again.",
       "sendFailed": "Failed to send SMS code",
-      "sendFailedDescription": "Please try again later. If the problem persists, please contact support."
+      "sendFailedDescription": "Could not send verification code. Try again later."
     },
     "phoneCode": {
       "title": "Enter <highlight>Code.</highlight>",
@@ -196,10 +202,10 @@
       "resend": "Resend Code",
       "resendTimer": "Resend Code ({seconds}s)",
       "verify": "Verify Code",
-      "valid": "Verification Code Valid",
+      "valid": "Verification code valid",
       "invalid": "Verification Code Invalid. Try again.",
       "verifyFailed": "Failed to verify sms code",
-      "verifyFailedDescription": "Please try again later. If the problem persists, please contact support."
+      "verifyFailedDescription": "Could not verify code. Try again later."
     },
     "lightning": {
       "title": "Scan to <highlight>Pay.</highlight>",
@@ -215,9 +221,9 @@
       "paymentSuccess": "Payment successful",
       "paymentExpired": "Payment expired",
       "requestFailed": "Failed to request lightning invoice",
-      "requestFailedDescription": "Please try again later. If the problem persists, please contact support.",
+      "requestFailedDescription": "Could not request Lightning invoice. Try again later.",
       "invoiceCopied": "Invoice copied to clipboard",
-      "copyFailed": "Failed to copy invoice"
+      "copyFailed": "Could not copy invoice."
     },
     "inviteCode": {
       "title": "Prove you're <highlight>not a Robot.</highlight>",
@@ -276,16 +282,15 @@
       "clickToReload": "Click to reload",
       "openingRing": "Opening Pubky Ring...",
       "authorize": "Authorize with Pubky Ring",
-      "linkCopied": "Link copied",
-      "linkCopiedDescription": "Authentication link copied to clipboard.",
+      "linkCopied": "Authentication link copied",
       "linkFailed": "Unable to link to signer application Pubky Ring",
       "tryAgain": "Please try again.",
-      "authInitFailedTitle": "Sign in failed. Please try again.",
-      "authInitFailedDescription": "Unable to complete authorization with Pubky Ring. Please try again.",
+      "authInitFailedTitle": "Sign in failed. Try again.",
+      "authInitFailedDescription": "Sign in failed. Try again.",
       "authNotCompletedTitle": "Authorization was not completed",
-      "authNotCompletedDescription": "The signer did not complete authorization. Please try again.",
+      "authNotCompletedDescription": "Authorization failed. Try again.",
       "qrGenerationFailedTitle": "QR code generation failed",
-      "qrGenerationFailedDescription": "Unable to generate sign-in QR code. Please refresh and try again.",
+      "qrGenerationFailedDescription": "Could not generate QR. Refresh and try again.",
       "recoveryHint": "Not able to sign in with <pubkyRing>Pubky Ring</pubkyRing>? Use the recovery phrase or encrypted file to restore your account.",
       "verifyingAccount": "Verifying account",
       "loadingData": "Loading your data",
@@ -302,7 +307,7 @@
         "restore": "Restore",
         "restoring": "Restoring...",
         "errorTitle": "Error logging in with mnemonic",
-        "errorDescription": "Please try again."
+        "errorDescription": "Could not sign in. Try again."
       },
       "restoreEncryptedFile": {
         "title": "Restore with encrypted file",
@@ -316,7 +321,7 @@
         "invalidPassword": "Invalid password or corrupted file. Please check your password and try again.",
         "nexusError": "Something went wrong with nexus. Please try again.",
         "restoreError": "Failed to restore from file. Please check your file and try again.",
-        "unexpectedError": "An unexpected error occurred",
+        "unexpectedError": "Unexpected error occurred.",
         "cancel": "Cancel",
         "restore": "Restore",
         "restoring": "Restoring..."
@@ -331,13 +336,12 @@
       "generating": "Generating pubky...",
       "myPubky": "My Pubky",
       "shareText": "Here is my Pubky:\n{displayPubky}",
-      "shareUnavailable": "Sharing unavailable",
-      "shareUnavailableDescription": "We copied your pubky so you can paste it into your favorite app.",
+      "shareUnavailable": "Sharing unavailable, pubky copied",
       "shareFailed": "Share failed",
-      "shareFailedDescription": "Unable to share right now. Please try again.",
+      "shareFailedDescription": "Could not share. Try again.",
       "signUpFailed": "Error - Failed to sign up",
-      "signUpError": "Something went wrong. Please try again.",
-      "invalidInvite": "Invalid or expired invite code. Please get or request a new invite code."
+      "signUpError": "Could not sign up. Try again.",
+      "invalidInvite": "Invite code is invalid or expired."
     },
     "backupMethod": {
       "title": "Choose backup method",
@@ -349,8 +353,8 @@
       "title": "Back up your <highlight>pubky.</highlight>",
       "subtitle": "You need a backup to restore access to your account later.",
       "signUpFailed": "Error - Failed to sign up",
-      "signUpError": "Something went wrong. Please try again.",
-      "invalidInvite": "Invalid or expired invite code. Please get or request a new invite code."
+      "signUpError": "Could not sign up. Try again.",
+      "invalidInvite": "Invite code is invalid or expired."
     },
     "backupPhrase": {
       "title": "Backup recovery phrase",
@@ -661,12 +665,12 @@
       "filterTags": "Filter on Content Tags",
       "saveFeed": "Save Feed",
       "deleteFeed": "Delete Feed",
-      "feedCreated": "Feed {name} created!",
-      "feedCreateError": "Could not create feed, please try again or reach out to support.",
-      "feedEdited": "Feed {name} edited!",
-      "feedEditError": "Could not edit feed, please try again or reach out to support.",
-      "feedDeleted": "Feed {name} deleted!",
-      "feedDeleteError": "Could not delete feed, please try again or reach out to support."
+      "feedCreated": "Feed created: {name}",
+      "feedCreateError": "Could not create feed. Try again.",
+      "feedEdited": "Feed updated: {name}",
+      "feedEditError": "Could not update feed. Try again.",
+      "feedDeleted": "Feed deleted: {name}",
+      "feedDeleteError": "Could not delete feed. Try again."
     }
   },
   "sidebar": {
@@ -702,7 +706,7 @@
     },
     "userSuggestion": "User {name} ({pubky})",
     "viewProfile": "View profile for {name}",
-    "invalidTag": "Tags must be 20 characters or less and cannot contain special characters"
+    "invalidTag": "Tags can be max 20 chars and cannot contain special characters"
   },
   "feedback": {
     "title": "Provide Feedback",
@@ -889,123 +893,108 @@
     "success": "Success",
     "error": "Error",
     "errors": "Errors",
-    "genericErrorTitle": "Uh oh! Something went wrong!",
+    "genericErrorTitle": "Error",
     "post": {
       "replyPosted": "Reply posted",
-      "replyPostedDesc": "Your reply has been posted successfully.",
-      "replyFailed": "Failed to post reply. Please try again.",
+      "replyFailed": "Could not post reply. Try again.",
       "postCreated": "Post created",
-      "postCreatedDesc": "Your post has been created successfully.",
-      "postFailed": "Failed to create post. Please try again.",
-      "repostSuccess": "Reposted!",
-      "repostSuccessDesc": "You successfully reposted a post by {author}!",
-      "repostSuccessDescFallback": "Your repost has been created successfully.",
+      "postFailed": "Could not create post. Try again.",
+      "repostSuccess": "Reposted {author}'s post",
+      "repostSuccessFallback": "Reposted",
       "repostUndo": "Undo",
-      "repostFailed": "Failed to repost. Please try again.",
-      "postEdited": "Post edited",
-      "postEditedDesc": "Your post has been edited successfully.",
-      "editFailed": "Failed to edit post. Please try again.",
+      "repostFailed": "Could not repost. Try again.",
+      "postEdited": "Post updated",
+      "editFailed": "Could not update post. Try again.",
       "postDeleted": "Post deleted",
-      "postDeletedDesc": "Your post has been deleted",
-      "deleteFailed": "Failed to delete post. Please try again.",
-      "invalidPostId": "Invalid post ID. Please try again.",
-      "attachmentsCleared": "Attachments cleared",
-      "attachmentsClearedDesc": "Articles support one cover image only.",
-      "failedToLoadPosts": "Failed to load new posts",
-      "failedToLoadPostsDesc": "Unable to display new posts. Please try again.",
-      "parseError": "Failed to parse article content",
-      "coverImageError": "Failed to load article cover image",
-      "attachmentsLoadFailed": "Failed to load post attachments"
+      "deleteFailed": "Could not delete post. Try again.",
+      "invalidPostId": "Invalid post. Try again.",
+      "attachmentsCleared": "Articles support one cover image",
+      "failedToLoadPosts": "Could not load new posts",
+      "parseError": "Could not parse article content",
+      "coverImageError": "Could not load cover image",
+      "attachmentsLoadFailed": "Could not load attachments"
     },
     "bookmark": {
-      "added": "Bookmark added",
-      "addedDesc": "Post saved to your bookmarks",
-      "removed": "Bookmark removed",
-      "removedDesc": "Post removed from your bookmarks",
-      "addFailed": "Failed to add bookmark",
-      "removeFailed": "Failed to remove bookmark",
-      "loginRequired": "You must be logged in to bookmark posts"
+      "added": "Post saved to bookmarks",
+      "removed": "Post removed from bookmarks",
+      "addFailed": "Could not add bookmark",
+      "removeFailed": "Could not remove bookmark",
+      "loginRequired": "Sign in to bookmark posts"
     },
     "copy": {
       "pubkyCopied": "Pubky copied to clipboard",
       "linkCopied": "Link copied to clipboard",
       "textCopied": "Text copied to clipboard",
       "profileLinkCopied": "Profile link copied to clipboard",
-      "copyFailed": "Copy failed",
-      "copyFailedDesc": "Unable to copy to clipboard"
+      "copyFailed": "Could not copy to clipboard",
+      "copyFailedDesc": "Could not copy to clipboard"
     },
     "follow": {
-      "failed": "Failed to update follow status"
+      "followed": "Following {username}",
+      "unfollowed": "Unfollowed {username}",
+      "failed": "Could not update follow status"
     },
     "mute": {
-      "muted": "User muted",
-      "unmuted": "User unmuted",
-      "mutedDesc": "{username} has been muted.",
-      "unmutedDesc": "{username} has been unmuted.",
-      "failed": "Failed to update mute status"
+      "muted": "{username} muted",
+      "unmuted": "{username} unmuted",
+      "failed": "Could not update mute status"
     },
     "profile": {
       "updated": "Profile updated",
-      "updatedDesc": "Your profile has been updated successfully.",
       "sessionExpired": "Session expired",
-      "sessionExpiredDesc": "Please sign out and sign in again to continue.",
-      "saveFailed": "Failed to save profile",
-      "saveFailedDesc": "Please try again.",
-      "fetchFailed": "Please try again.",
-      "fetchFailedDesc": "Failed to fetch the new user data. Indexing might be in progress...",
-      "updateFailed": "Failed to update profile."
+      "sessionExpiredDesc": "Session expired. Please sign in.",
+      "saveFailed": "Could not save profile",
+      "fetchFailedDesc": "Could not refresh profile",
+      "updateFailed": "Could not update profile"
     },
     "report": {
-      "userNotLoaded": "User profile not loaded. Please try again.",
-      "submitFailed": "Failed to submit report",
-      "submitFailedDesc": "Failed to submit report. Please try again."
+      "userNotLoaded": "Could not load profile",
+      "submitFailedDesc": "Could not submit report. Try again."
     },
     "feedback": {
-      "userNotLoaded": "User profile not loaded. Please try again.",
-      "submitFailed": "Failed to submit feedback",
-      "submitFailedDesc": "Failed to submit feedback. Please try again."
+      "userNotLoaded": "Could not load profile",
+      "submitFailedDesc": "Could not submit feedback. Try again."
     },
     "copyright": {
-      "success": "Request sent successfully",
-      "error": "Error sending request",
-      "submitFailed": "Failed to submit request"
+      "success": "Request sent",
+      "error": "Could not send request",
+      "submitFailed": "Could not submit request"
     },
     "tags": {
-      "loadFailed": "Failed to load more tags",
-      "loadFailedDesc": "Could not load more tags. Please try again.",
+      "loadFailed": "Could not load more tags",
       "labelEmpty": "Tag label cannot be empty",
       "postIdRequired": "Post ID is required",
       "userIdRequired": "User ID is required",
       "loginRequired": "You must be logged in to add tags",
       "alreadyAdded": "You have already added this tag",
-      "addFailed": "Failed to add tag",
-      "addFailedDesc": "Could not add \"{label}\". Please try again.",
-      "removeFailed": "Failed to remove tag",
-      "removeFailedDesc": "Could not remove \"{label}\". Please try again."
+      "added": "Tag added: {label}",
+      "removed": "Tag removed: {label}",
+      "addFailed": "Could not add tag: {label}",
+      "removeFailed": "Could not remove tag: {label}"
     },
     "auth": {
-      "signInFailed": "Sign in failed. Please try again.",
-      "signInFailedDesc": "Unable to complete authorization with Pubky Ring. Please try again.",
+      "signInFailed": "Sign in failed. Try again.",
+      "signInFailedDesc": "Sign in failed. Try again.",
       "authNotCompleted": "Authorization was not completed",
-      "authNotCompletedDesc": "The signer did not complete authorization. Please try again.",
+      "authNotCompletedDesc": "Authorization failed. Try again.",
       "qrFailed": "QR code generation failed",
-      "qrFailedDesc": "Unable to generate sign-in QR code. Please refresh and try again."
+      "qrFailedDesc": "Could not generate QR. Refresh and try again."
     },
     "file": {
-      "maxFiles": "Maximum of {max} files allowed",
-      "maxFilesPartial": "Maximum of {max} files allowed. Some files were not added.",
-      "unsupportedType": "\"{name}\" has unsupported type \"{type}\". Supported formats: {formats}.",
-      "fileTooLarge": "\"{name}\" exceeds the maximum size of {maxSize}."
+      "maxFiles": "Maximum {max} files allowed",
+      "maxFilesPartial": "Maximum {max} files allowed. Some files were not added.",
+      "unsupportedType": "Unsupported file type for {name}. Supported: {formats}.",
+      "fileTooLarge": "{name} exceeds the {maxSize} limit."
     },
     "status": {
-      "updateFailed": "Failed to update status. Please try again.",
-      "userNotLoaded": "User profile not loaded. Please try again."
+      "updateFailed": "Could not update status. Try again.",
+      "userNotLoaded": "Could not load profile. Try again."
     },
     "fullscreen": {
-      "error": "Error attempting to enable fullscreen"
+      "error": "Could not enter fullscreen."
     },
     "logout": {
-      "failed": "Failed to logout. Please try again."
+      "failed": "Could not log out. Try again."
     }
   },
   "empty": {
@@ -1016,10 +1005,10 @@
     "noNotifications": "No notifications"
   },
   "errors": {
-    "signOutFailed": "Failed to sign out. Please try again.",
+    "signOutFailed": "Could not sign out. Try again.",
     "deleteAccountFailed": "Failed to delete account. Please try again.",
     "generic": "Something went wrong",
-    "network": "Network error. Please try again.",
+    "network": "Network error",
     "notFound": "Page not found",
     "couldNotFind": "Could not find requested resource",
     "database": {
@@ -1123,10 +1112,8 @@
     "unmute": "Unmute",
     "unmuteAll": "Unmute all users",
     "noMutedUsers": "No muted users yet",
-    "userUnmuted": "User unmuted",
-    "userUnmutedDesc": "{username} has been unmuted.",
+    "userUnmuted": "{username} unmuted",
     "allUsersUnmuted": "All users unmuted",
-    "allUsersUnmutedDesc": "All muted users have been unmuted.",
     "partialSuccess": "Partial success",
     "partialSuccessDesc": "{success} users unmuted, {failed} failed."
   },

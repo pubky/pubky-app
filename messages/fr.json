@@ -184,9 +184,15 @@
       "blocked": "Numéro de téléphone bloque",
       "blockedDescription": "Ce numéro de téléphone ne peut pas etre utilise pour la vérification.",
       "tooManyAttempts": "Trop de tentatives de vérification",
-      "tooManyAttemptsDescription": "Vous avez atteint le nombre maximum de vérifications pour ce numéro de téléphone.",
+      "tooManyAttemptsDescription": "Trop de tentatives de vérification",
       "sendFailed": "Échec de l'envoi du code SMS",
-      "sendFailedDescription": "Veuillez réessayer plus tard. Si le probleme persiste, contactez le support."
+      "sendFailedDescription": "Impossible d'envoyer le code de vérification. Réessayez plus tard.",
+      "rateLimitedWithRetry": "Trop de tentatives de vérification. Réessayez dans {seconds}s.",
+      "weeklyLimitReached": "Trop de tentatives de vérification",
+      "weeklyLimitDescription": "Trop de tentatives de vérification",
+      "yearlyLimitReached": "Trop de tentatives de vérification",
+      "yearlyLimitDescription": "Trop de tentatives de vérification",
+      "verificationFailed": "Échec de la vérification téléphonique. Réessayez."
     },
     "phoneCode": {
       "title": "Entrez le <highlight>code.</highlight>",
@@ -199,7 +205,7 @@
       "valid": "Code de vérification valide",
       "invalid": "Code de vérification invalide. Reessayez.",
       "verifyFailed": "Échec de la vérification du code SMS",
-      "verifyFailedDescription": "Veuillez réessayer plus tard. Si le probleme persiste, contactez le support."
+      "verifyFailedDescription": "Impossible de vérifier le code. Réessayez plus tard."
     },
     "lightning": {
       "title": "Scannez pour <highlight>payer.</highlight>",
@@ -215,9 +221,9 @@
       "paymentSuccess": "Paiement reussi",
       "paymentExpired": "Paiement expire",
       "requestFailed": "Échec de la demande de facture Lightning",
-      "requestFailedDescription": "Veuillez réessayer plus tard. Si le probleme persiste, contactez le support.",
+      "requestFailedDescription": "Impossible de demander la facture Lightning. Réessayez plus tard.",
       "invoiceCopied": "Facture copiee dans le presse-papiers",
-      "copyFailed": "Échec de la copie de la facture"
+      "copyFailed": "Impossible de copier la facture."
     },
     "inviteCode": {
       "title": "Prouvez que vous <highlight>n'etes pas un robot.</highlight>",
@@ -259,11 +265,8 @@
       "subtitleDesktop": "Ouvrez Pubky Ring, appuyez sur 'Ajouter un pubky', et scannez ce QR.",
       "generating": "Génération du code QR...",
       "generatingShort": "Génération...",
-
       "clickToReload": "Cliquez pour recharger",
-
       "openingRing": "Ouverture de Pubky Ring...",
-
       "authorize": "Autoriser avec Pubky Ring",
       "authorizeSub": "Utilisez <pubkyRing>Pubky Ring</pubkyRing> ou tout autre trousseau alimente par <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "Impossible de se connecter a l'application Pubky Ring",
@@ -276,22 +279,18 @@
       "progressSubtitle": "Veuillez patienter pendant le chargement de votre expérience Pubky.",
       "generating": "Génération du code QR...",
       "generatingShort": "Génération...",
-
       "clickToReload": "Cliquez pour recharger",
-
       "openingRing": "Ouverture de Pubky Ring...",
-
       "authorize": "Autoriser avec Pubky Ring",
       "linkCopied": "Lien copie",
-      "linkCopiedDescription": "Lien d'authentification copie dans le presse-papiers.",
       "linkFailed": "Impossible de se connecter a l'application Pubky Ring",
       "tryAgain": "Veuillez réessayer.",
-      "authInitFailedTitle": "Échec de la connexion. Veuillez réessayer.",
-      "authInitFailedDescription": "Impossible de terminer l'autorisation avec Pubky Ring. Veuillez réessayer.",
+      "authInitFailedTitle": "Échec de la connexion. Réessayez.",
+      "authInitFailedDescription": "Échec de la connexion. Réessayez.",
       "authNotCompletedTitle": "L'autorisation n'a pas été terminée",
-      "authNotCompletedDescription": "Le signataire n'a pas terminé l'autorisation. Veuillez réessayer.",
+      "authNotCompletedDescription": "Autorisation échouée. Réessayez.",
       "qrGenerationFailedTitle": "Échec de la génération du code QR",
-      "qrGenerationFailedDescription": "Impossible de générer le code QR de connexion. Actualisez et réessayez.",
+      "qrGenerationFailedDescription": "Impossible de générer le QR. Actualisez et réessayez.",
       "recoveryHint": "Vous ne pouvez pas vous connecter avec <pubkyRing>Pubky Ring</pubkyRing> ? Utilisez la phrase de récupération ou le fichier chiffre pour restaurer votre compte.",
       "verifyingAccount": "Vérification du compte",
       "loadingData": "Chargement de vos donnees",
@@ -308,7 +307,7 @@
         "restore": "Restaurer",
         "restoring": "Restauration...",
         "errorTitle": "Erreur de connexion avec le mnémonique",
-        "errorDescription": "Veuillez réessayer."
+        "errorDescription": "Impossible de se connecter. Réessayez."
       },
       "restoreEncryptedFile": {
         "title": "Restaurer avec le fichier chiffré",
@@ -322,7 +321,7 @@
         "invalidPassword": "Mot de passe invalide ou fichier corrompu. Veuillez vérifier votre mot de passe et réessayer.",
         "nexusError": "Quelque chose s'est mal passé avec nexus. Veuillez réessayer.",
         "restoreError": "Échec de la restauration depuis le fichier. Veuillez vérifier votre fichier et réessayer.",
-        "unexpectedError": "Une erreur inattendue s'est produite",
+        "unexpectedError": "Erreur inattendue.",
         "cancel": "Annuler",
         "restore": "Restaurer",
         "restoring": "Restauration..."
@@ -338,12 +337,11 @@
       "myPubky": "Mon Pubky",
       "shareText": "Voici mon Pubky :\n{displayPubky}",
       "shareUnavailable": "Partage indisponible",
-      "shareUnavailableDescription": "Nous avons copie votre pubky pour que vous puissiez le coller dans votre application préférée.",
       "shareFailed": "Échec du partage",
-      "shareFailedDescription": "Impossible de partager pour le moment. Veuillez réessayer.",
+      "shareFailedDescription": "Impossible de partager. Réessayez.",
       "signUpFailed": "Erreur - Échec de l'inscription",
-      "signUpError": "Une erreur s'est produite. Veuillez réessayer.",
-      "invalidInvite": "Code d'invitation invalide ou expiré. Veuillez obtenir ou demander un nouveau code d'invitation."
+      "signUpError": "Impossible de s'inscrire. Réessayez.",
+      "invalidInvite": "Le code d'invitation est invalide ou expiré."
     },
     "backupMethod": {
       "title": "Choisir la methode de sauvegarde",
@@ -355,8 +353,8 @@
       "title": "Sauvegardez votre <highlight>pubky.</highlight>",
       "subtitle": "Vous avez besoin d'une sauvegarde pour restaurer l'acces a votre compte plus tard.",
       "signUpFailed": "Erreur - Échec de l'inscription",
-      "signUpError": "Quelque chose s'est mal passe. Veuillez réessayer.",
-      "invalidInvite": "Code d'invitation invalide ou expire. Veuillez obtenir ou demander un nouveau code d'invitation."
+      "signUpError": "Impossible de s'inscrire. Réessayez.",
+      "invalidInvite": "Le code d'invitation est invalide ou expiré."
     },
     "backupPhrase": {
       "title": "Sauvegarde de la phrase de récupération",
@@ -668,11 +666,11 @@
       "saveFeed": "Enregistrer le flux",
       "deleteFeed": "Supprimer le flux",
       "feedCreated": "Flux {name} cree !",
-      "feedCreateError": "Impossible de creer le flux, veuillez reessayer ou contacter le support.",
+      "feedCreateError": "Impossible de créer le flux. Réessayez.",
       "feedEdited": "Flux {name} modifie !",
-      "feedEditError": "Impossible de modifier le flux, veuillez reessayer ou contacter le support.",
+      "feedEditError": "Impossible de mettre à jour le flux. Réessayez.",
       "feedDeleted": "Flux {name} supprime !",
-      "feedDeleteError": "Impossible de supprimer le flux, veuillez reessayer ou contacter le support."
+      "feedDeleteError": "Impossible de supprimer le flux. Réessayez."
     }
   },
   "sidebar": {
@@ -708,7 +706,7 @@
     },
     "userSuggestion": "Utilisateur {name} ({pubky})",
     "viewProfile": "Voir le profil de {name}",
-    "invalidTag": "Les tags doivent contenir 20 caractères ou moins et ne peuvent pas contenir de caractères spéciaux"
+    "invalidTag": "Les tags peuvent avoir max. 20 caractères et ne peuvent pas contenir de caractères spéciaux"
   },
   "feedback": {
     "title": "Donner votre avis",
@@ -895,123 +893,108 @@
     "success": "Succes",
     "error": "Erreur",
     "errors": "Erreurs",
-    "genericErrorTitle": "Oups! Une erreur s'est produite!",
+    "genericErrorTitle": "Erreur",
     "post": {
       "replyPosted": "Réponse publiee",
-      "replyPostedDesc": "Votre réponse a ete publiee avec succes.",
-      "replyFailed": "Échec de la publication de la réponse. Veuillez réessayer.",
+      "replyFailed": "Impossible de publier la réponse. Réessayez.",
       "postCreated": "Publication créée",
-      "postCreatedDesc": "Votre publication a ete créée avec succes.",
-      "postFailed": "Échec de la creation de la publication. Veuillez réessayer.",
+      "postFailed": "Impossible de créer la publication. Réessayez.",
       "repostSuccess": "Republié !",
-      "repostSuccessDesc": "Vous avez republié avec succès une publication de {author} !",
-      "repostSuccessDescFallback": "Votre republication a été créée avec succès.",
       "repostUndo": "Annuler",
-      "repostFailed": "Échec de la republication. Veuillez réessayer.",
+      "repostFailed": "Impossible de republier. Réessayez.",
       "postEdited": "Publication modifiée",
-      "postEditedDesc": "Votre publication a ete modifiée avec succes.",
-      "editFailed": "Échec de la modification de la publication. Veuillez réessayer.",
+      "editFailed": "Impossible de mettre à jour la publication. Réessayez.",
       "postDeleted": "Publication supprimée",
-      "postDeletedDesc": "Votre publication a ete supprimée",
-      "deleteFailed": "Échec de la suppression de la publication. Veuillez réessayer.",
-      "invalidPostId": "ID de publication invalide. Veuillez réessayer.",
+      "deleteFailed": "Impossible de supprimer la publication. Réessayez.",
+      "invalidPostId": "Publication invalide. Réessayez.",
       "attachmentsCleared": "Pieces jointes supprimées",
-      "attachmentsClearedDesc": "Les articles ne supportent qu'une seule image de couverture.",
-      "failedToLoadPosts": "Échec du chargement des nouvelles publications",
-      "failedToLoadPostsDesc": "Impossible d'afficher les nouvelles publications. Veuillez réessayer.",
-      "parseError": "Échec de l'analyse du contenu de l'article",
-      "coverImageError": "Échec du chargement de l'image de couverture de l'article",
-      "attachmentsLoadFailed": "Échec du chargement des pièces jointes"
+      "failedToLoadPosts": "Impossible de charger les nouvelles publications",
+      "parseError": "Impossible d'analyser le contenu de l'article",
+      "coverImageError": "Impossible de charger l'image de couverture",
+      "attachmentsLoadFailed": "Impossible de charger les pièces jointes",
+      "repostSuccessFallback": "Republié"
     },
     "bookmark": {
       "added": "Favori ajoute",
-      "addedDesc": "Publication enregistree dans vos favoris",
       "removed": "Favori retire",
-      "removedDesc": "Publication retiree de vos favoris",
-      "addFailed": "Échec de l'ajout du favori",
-      "removeFailed": "Échec du retrait du favori",
-      "loginRequired": "Vous devez etre connecte pour ajouter des favoris"
+      "addFailed": "Impossible d'ajouter le favori",
+      "removeFailed": "Impossible de retirer le favori",
+      "loginRequired": "Connectez-vous pour enregistrer des publications"
     },
     "copy": {
       "pubkyCopied": "Pubky copie dans le presse-papiers",
       "linkCopied": "Lien copie dans le presse-papiers",
       "textCopied": "Texte copie dans le presse-papiers",
       "profileLinkCopied": "Lien du profil copie dans le presse-papiers",
-      "copyFailed": "Échec de la copie",
+      "copyFailed": "Impossible de copier dans le presse-papiers",
       "copyFailedDesc": "Impossible de copier dans le presse-papiers"
     },
     "follow": {
-      "failed": "Échec de la mise a jour du statut de suivi"
+      "failed": "Impossible de mettre à jour le statut d'abonnement",
+      "followed": "Vous suivez {username}",
+      "unfollowed": "Vous ne suivez plus {username}"
     },
     "mute": {
-      "muted": "Utilisateur masque",
-      "unmuted": "Utilisateur affiche",
-      "mutedDesc": "{username} a ete masque.",
-      "unmutedDesc": "{username} a ete affiche.",
-      "failed": "Échec de la mise a jour du statut de masquage"
+      "muted": "{username} masqué",
+      "unmuted": "{username} n'est plus masqué",
+      "failed": "Impossible de mettre à jour le statut de silence"
     },
     "profile": {
       "updated": "Profil mis a jour",
-      "updatedDesc": "Votre profil a ete mis a jour avec succes.",
       "sessionExpired": "Session expiree",
-      "sessionExpiredDesc": "Veuillez vous déconnectér et vous reconnecter pour continuer.",
-      "saveFailed": "Échec de l'enregistrement du profil",
-      "saveFailedDesc": "Veuillez réessayer.",
-      "fetchFailed": "Veuillez réessayer.",
-      "fetchFailedDesc": "Échec de la récupération des nouvelles donnees utilisateur. L'indexation est peut-etre en cours...",
-      "updateFailed": "Échec de la mise a jour du profil."
+      "sessionExpiredDesc": "Session expirée. Veuillez vous connecter.",
+      "saveFailed": "Impossible d'enregistrer le profil",
+      "fetchFailedDesc": "Impossible d'actualiser le profil",
+      "updateFailed": "Impossible de mettre à jour le profil"
     },
     "report": {
-      "userNotLoaded": "Profil utilisateur non charge. Veuillez réessayer.",
-      "submitFailed": "Échec de l'envoi du signalement",
-      "submitFailedDesc": "Échec de l'envoi du signalement. Veuillez réessayer."
+      "userNotLoaded": "Impossible de charger le profil",
+      "submitFailedDesc": "Impossible d'envoyer le signalement. Réessayez."
     },
     "feedback": {
-      "userNotLoaded": "Profil utilisateur non charge. Veuillez réessayer.",
-      "submitFailed": "Échec de l'envoi des commentaires",
-      "submitFailedDesc": "Échec de l'envoi des commentaires. Veuillez réessayer."
+      "userNotLoaded": "Impossible de charger le profil",
+      "submitFailedDesc": "Impossible d'envoyer le commentaire. Réessayez."
     },
     "copyright": {
       "success": "Demande envoyee avec succes",
-      "error": "Erreur lors de l'envoi de la demande",
-      "submitFailed": "Échec de l'envoi de la demande"
+      "error": "Impossible d'envoyer la demande",
+      "submitFailed": "Impossible d'envoyer la demande"
     },
     "tags": {
-      "loadFailed": "Échec du chargement de plus de tags",
-      "loadFailedDesc": "Impossible de charger plus de tags. Veuillez réessayer.",
+      "loadFailed": "Impossible de charger plus de tags",
       "labelEmpty": "Le libelle du tag ne peut pas etre vide",
       "postIdRequired": "L'ID de publication est obligatoire",
       "userIdRequired": "L'ID utilisateur est obligatoire",
       "loginRequired": "Vous devez etre connecte pour ajouter des tags",
       "alreadyAdded": "Vous avez déjà ajoute ce tag",
-      "addFailed": "Échec de l'ajout du tag",
-      "addFailedDesc": "Impossible d'ajouter \"{label}\". Veuillez réessayer.",
-      "removeFailed": "Échec du retrait du tag",
-      "removeFailedDesc": "Impossible de retirer \"{label}\". Veuillez réessayer."
+      "added": "Tag ajouté : {label}",
+      "removed": "Tag supprimé : {label}",
+      "addFailed": "Impossible d'ajouter le tag : {label}",
+      "removeFailed": "Impossible de retirer le tag : {label}"
     },
     "auth": {
-      "signInFailed": "Échec de la connexion. Veuillez réessayer.",
-      "signInFailedDesc": "Impossible de terminér l'autorisation avec Pubky Ring. Veuillez réessayer.",
+      "signInFailed": "Échec de la connexion. Réessayez.",
+      "signInFailedDesc": "Échec de la connexion. Réessayez.",
       "authNotCompleted": "L'autorisation n'a pas ete completee",
-      "authNotCompletedDesc": "Le signataire n'a pas complete l'autorisation. Veuillez réessayer.",
+      "authNotCompletedDesc": "Autorisation échouée. Réessayez.",
       "qrFailed": "Échec de la génération du code QR",
-      "qrFailedDesc": "Impossible de générér le code QR de connexion. Veuillez rafraichir et réessayer."
+      "qrFailedDesc": "Impossible de générer le QR. Actualisez et réessayez."
     },
     "file": {
-      "maxFiles": "Maximum {max} fichiers autorises",
-      "maxFilesPartial": "Maximum {max} fichiers autorises. Certains fichiers n'ont pas ete ajoutes.",
-      "unsupportedType": "\"{name}\" a un type non supporte \"{type}\". Formats supportes : {formats}.",
-      "fileTooLarge": "\"{name}\" depasse la taille maximale de {maxSize}."
+      "maxFiles": "Maximum {max} fichiers autorisés",
+      "maxFilesPartial": "Maximum {max} fichiers autorisés. Certains fichiers n'ont pas été ajoutés.",
+      "unsupportedType": "Type de fichier non pris en charge pour {name}. Pris en charge : {formats}.",
+      "fileTooLarge": "{name} dépasse la limite de {maxSize}."
     },
     "status": {
-      "updateFailed": "Échec de la mise à jour du statut. Veuillez réessayer.",
-      "userNotLoaded": "Profil utilisateur non chargé. Veuillez réessayer."
+      "updateFailed": "Impossible de mettre à jour le statut. Réessayez.",
+      "userNotLoaded": "Impossible de charger le profil. Réessayez."
     },
     "fullscreen": {
-      "error": "Erreur lors de l'activation du plein écran"
+      "error": "Impossible d'activer le plein écran."
     },
     "logout": {
-      "failed": "Échec de la déconnexion. Veuillez réessayer."
+      "failed": "Impossible de se déconnecter. Réessayez."
     }
   },
   "empty": {
@@ -1022,10 +1005,10 @@
     "noNotifications": "Aucune notification"
   },
   "errors": {
-    "signOutFailed": "Échec de la déconnexion. Veuillez réessayer.",
+    "signOutFailed": "Impossible de se déconnecter. Réessayez.",
     "deleteAccountFailed": "Échec de la suppression du compte. Veuillez réessayer.",
     "generic": "Quelque chose s'est mal passe",
-    "network": "Erreur réseau. Veuillez réessayer.",
+    "network": "Erreur réseau",
     "notFound": "Page non trouvee",
     "couldNotFind": "Impossible de trouver la ressource demandee",
     "database": {
@@ -1130,9 +1113,7 @@
     "unmuteAll": "Afficher tous les utilisateurs",
     "noMutedUsers": "Aucun utilisateur masque pour l'instant",
     "userUnmuted": "Utilisateur affiche",
-    "userUnmutedDesc": "{username} a ete affiche.",
     "allUsersUnmuted": "Tous les utilisateurs affiches",
-    "allUsersUnmutedDesc": "Tous les utilisateurs masques ont ete affiches.",
     "partialSuccess": "Succes partiel",
     "partialSuccessDesc": "{success} utilisateurs affiches, {failed} echoues."
   },

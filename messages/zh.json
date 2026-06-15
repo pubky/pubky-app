@@ -184,9 +184,15 @@
       "blocked": "手机号已被封锁",
       "blockedDescription": "此手机号无法用于验证。",
       "tooManyAttempts": "验证尝试次数过多",
-      "tooManyAttemptsDescription": "您已达到此手机号的最大验证次数。",
+      "tooManyAttemptsDescription": "验证尝试次数过多",
       "sendFailed": "发送短信验证码失败",
-      "sendFailedDescription": "请稍后重试。如问题持续，请联系支持。"
+      "sendFailedDescription": "无法发送验证码。请稍后重试。",
+      "rateLimitedWithRetry": "验证尝试次数过多。请在{seconds}秒后重试。",
+      "weeklyLimitReached": "验证尝试次数过多",
+      "weeklyLimitDescription": "验证尝试次数过多",
+      "yearlyLimitReached": "验证尝试次数过多",
+      "yearlyLimitDescription": "验证尝试次数过多",
+      "verificationFailed": "手机验证失败。请重试。"
     },
     "phoneCode": {
       "title": "输入<highlight>验证码。</highlight>",
@@ -199,7 +205,7 @@
       "valid": "验证码有效",
       "invalid": "验证码无效。请重试。",
       "verifyFailed": "短信验证码验证失败",
-      "verifyFailedDescription": "请稍后重试。如问题持续，请联系支持。"
+      "verifyFailedDescription": "无法验证验证码。请稍后重试。"
     },
     "lightning": {
       "title": "扫码<highlight>支付。</highlight>",
@@ -215,9 +221,9 @@
       "paymentSuccess": "支付成功",
       "paymentExpired": "支付已过期",
       "requestFailed": "请求闪电发票失败",
-      "requestFailedDescription": "请稍后重试。如问题持续，请联系支持。",
+      "requestFailedDescription": "无法请求 Lightning 发票。请稍后重试。",
       "invoiceCopied": "发票已复制到剪贴板",
-      "copyFailed": "复制发票失败"
+      "copyFailed": "无法复制发票。"
     },
     "inviteCode": {
       "title": "证明您<highlight>不是机器人。</highlight>",
@@ -259,11 +265,8 @@
       "subtitleDesktop": "打开 Pubky Ring，点击'添加 pubky'，并扫描此二维码。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
-
       "clickToReload": "点击重新加载",
-
       "openingRing": "正在打开 Pubky Ring...",
-
       "authorize": "使用 Pubky Ring 授权",
       "authorizeSub": "使用 <pubkyRing>Pubky Ring</pubkyRing> 或任何其他由 <pubkyCore>Pubky Core</pubkyCore> 驱动的密钥链。",
       "linkFailed": "无法连接到 Pubky Ring 签名应用",
@@ -276,22 +279,18 @@
       "progressSubtitle": "请稍候，正在加载你的 Pubky 体验。",
       "generating": "正在生成二维码...",
       "generatingShort": "生成中...",
-
       "clickToReload": "点击重新加载",
-
       "openingRing": "正在打开 Pubky Ring...",
-
       "authorize": "使用 Pubky Ring 授权",
       "linkCopied": "链接已复制",
-      "linkCopiedDescription": "认证链接已复制到剪贴板。",
       "linkFailed": "无法连接到 Pubky Ring 签名应用",
       "tryAgain": "请重试。",
       "authInitFailedTitle": "登录失败，请重试。",
-      "authInitFailedDescription": "无法完成 Pubky Ring 授权，请重试。",
+      "authInitFailedDescription": "登录失败。请重试。",
       "authNotCompletedTitle": "授权未完成",
-      "authNotCompletedDescription": "签名器未完成授权，请重试。",
+      "authNotCompletedDescription": "授权失败。请重试。",
       "qrGenerationFailedTitle": "二维码生成失败",
-      "qrGenerationFailedDescription": "无法生成登录二维码。请刷新后重试。",
+      "qrGenerationFailedDescription": "无法生成二维码。请刷新后重试。",
       "recoveryHint": "无法使用 <pubkyRing>Pubky Ring</pubkyRing> 登录？使用恢复短语或加密文件恢复您的账户。",
       "verifyingAccount": "验证账户",
       "loadingData": "加载您的数据",
@@ -308,7 +307,7 @@
         "restore": "恢复",
         "restoring": "恢复中...",
         "errorTitle": "助记词登录错误",
-        "errorDescription": "请重试。"
+        "errorDescription": "无法登录。请重试。"
       },
       "restoreEncryptedFile": {
         "title": "使用加密文件恢复",
@@ -322,7 +321,7 @@
         "invalidPassword": "密码无效或文件损坏。请检查密码后重试。",
         "nexusError": "nexus 出现问题。请重试。",
         "restoreError": "从文件恢复失败。请检查您的文件后重试。",
-        "unexpectedError": "发生意外错误",
+        "unexpectedError": "发生意外错误。",
         "cancel": "取消",
         "restore": "恢复",
         "restoring": "恢复中..."
@@ -338,12 +337,11 @@
       "myPubky": "我的 Pubky",
       "shareText": "这是我的 Pubky：\n{displayPubky}",
       "shareUnavailable": "分享不可用",
-      "shareUnavailableDescription": "我们已复制您的 pubky，您可以将其粘贴到您喜欢的应用中。",
       "shareFailed": "分享失败",
-      "shareFailedDescription": "当前无法分享。请重试。",
+      "shareFailedDescription": "无法分享。请重试。",
       "signUpFailed": "错误 - 注册失败",
-      "signUpError": "出了点问题。请重试。",
-      "invalidInvite": "无效或已过期的邀请码。请获取或申请新的邀请码。"
+      "signUpError": "无法注册。请重试。",
+      "invalidInvite": "邀请码无效或已过期。"
     },
     "backupMethod": {
       "title": "选择备份方式",
@@ -355,8 +353,8 @@
       "title": "备份您的 <highlight>pubky。</highlight>",
       "subtitle": "您需要备份才能在以后恢复账户访问权限。",
       "signUpFailed": "错误 - 注册失败",
-      "signUpError": "出现问题。请重试。",
-      "invalidInvite": "邀请码无效或已过期。请获取或申请新的邀请码。"
+      "signUpError": "无法注册。请重试。",
+      "invalidInvite": "邀请码无效或已过期。"
     },
     "backupPhrase": {
       "title": "备份恢复短语",
@@ -668,11 +666,11 @@
       "saveFeed": "保存信息流",
       "deleteFeed": "删除信息流",
       "feedCreated": "信息流 {name} 已创建！",
-      "feedCreateError": "无法创建信息流，请重试或联系支持。",
+      "feedCreateError": "无法创建信息流。请重试。",
       "feedEdited": "信息流 {name} 已编辑！",
-      "feedEditError": "无法编辑信息流，请重试或联系支持。",
+      "feedEditError": "无法更新信息流。请重试。",
       "feedDeleted": "信息流 {name} 已删除！",
-      "feedDeleteError": "无法删除信息流，请重试或联系支持。"
+      "feedDeleteError": "无法删除信息流。请重试。"
     }
   },
   "sidebar": {
@@ -708,7 +706,7 @@
     },
     "userSuggestion": "用户 {name}（{pubky}）",
     "viewProfile": "查看 {name} 的个人资料",
-    "invalidTag": "标签不能超过20个字符，且不能包含特殊字符"
+    "invalidTag": "标签最多20个字符，且不能包含特殊字符"
   },
   "feedback": {
     "title": "提供反馈",
@@ -895,123 +893,108 @@
     "success": "成功",
     "error": "错误",
     "errors": "错误",
-    "genericErrorTitle": "糟糕！出了点问题！",
+    "genericErrorTitle": "错误",
     "post": {
       "replyPosted": "回复已发布",
-      "replyPostedDesc": "您的回复已成功发布。",
-      "replyFailed": "回复发布失败。请重试。",
+      "replyFailed": "无法发布回复。请重试。",
       "postCreated": "帖子已创建",
-      "postCreatedDesc": "您的帖子已成功创建。",
-      "postFailed": "帖子创建失败。请重试。",
+      "postFailed": "无法创建帖子。请重试。",
       "repostSuccess": "已转发！",
-      "repostSuccessDesc": "您成功转发了{author}的帖子！",
-      "repostSuccessDescFallback": "您的转发已成功创建。",
       "repostUndo": "撤销",
-      "repostFailed": "转发失败。请重试。",
+      "repostFailed": "无法转发。请重试。",
       "postEdited": "帖子已编辑",
-      "postEditedDesc": "您的帖子已成功编辑。",
-      "editFailed": "帖子编辑失败。请重试。",
+      "editFailed": "无法更新帖子。请重试。",
       "postDeleted": "帖子已删除",
-      "postDeletedDesc": "您的帖子已被删除",
-      "deleteFailed": "帖子删除失败。请重试。",
-      "invalidPostId": "无效的帖子 ID。请重试。",
+      "deleteFailed": "无法删除帖子。请重试。",
+      "invalidPostId": "帖子无效。请重试。",
       "attachmentsCleared": "附件已清除",
-      "attachmentsClearedDesc": "文章仅支持一张封面图片。",
-      "failedToLoadPosts": "加载新帖子失败",
-      "failedToLoadPostsDesc": "无法显示新帖子。请重试。",
-      "parseError": "解析文章内容失败",
-      "coverImageError": "加载文章封面图片失败",
-      "attachmentsLoadFailed": "加载附件失败"
+      "failedToLoadPosts": "无法加载新帖子",
+      "parseError": "无法解析文章内容",
+      "coverImageError": "无法加载封面图片",
+      "attachmentsLoadFailed": "无法加载附件",
+      "repostSuccessFallback": "已转发"
     },
     "bookmark": {
       "added": "书签已添加",
-      "addedDesc": "帖子已保存到您的书签",
       "removed": "书签已移除",
-      "removedDesc": "帖子已从您的书签中移除",
-      "addFailed": "添加书签失败",
-      "removeFailed": "移除书签失败",
-      "loginRequired": "您必须登录才能收藏帖子"
+      "addFailed": "无法添加书签",
+      "removeFailed": "无法移除书签",
+      "loginRequired": "请登录以保存帖子"
     },
     "copy": {
       "pubkyCopied": "Pubky 已复制到剪贴板",
       "linkCopied": "链接已复制到剪贴板",
       "textCopied": "文本已复制到剪贴板",
       "profileLinkCopied": "个人资料链接已复制到剪贴板",
-      "copyFailed": "复制失败",
+      "copyFailed": "无法复制到剪贴板",
       "copyFailedDesc": "无法复制到剪贴板"
     },
     "follow": {
-      "failed": "更新关注状态失败"
+      "failed": "无法更新关注状态",
+      "followed": "正在关注 {username}",
+      "unfollowed": "已取消关注 {username}"
     },
     "mute": {
-      "muted": "用户已静音",
-      "unmuted": "用户已取消静音",
-      "mutedDesc": "{username} 已被静音。",
-      "unmutedDesc": "{username} 已取消静音。",
-      "failed": "更新静音状态失败"
+      "muted": "已静音 {username}",
+      "unmuted": "已取消静音 {username}",
+      "failed": "无法更新静音状态"
     },
     "profile": {
       "updated": "个人资料已更新",
-      "updatedDesc": "您的个人资料已成功更新。",
       "sessionExpired": "会话已过期",
-      "sessionExpiredDesc": "请退出并重新登录以继续。",
-      "saveFailed": "保存个人资料失败",
-      "saveFailedDesc": "请重试。",
-      "fetchFailed": "请重试。",
-      "fetchFailedDesc": "获取新用户数据失败。索引可能正在进行中...",
-      "updateFailed": "更新个人资料失败。"
+      "sessionExpiredDesc": "会话已过期。请登录。",
+      "saveFailed": "无法保存个人资料",
+      "fetchFailedDesc": "无法刷新个人资料",
+      "updateFailed": "无法更新个人资料"
     },
     "report": {
-      "userNotLoaded": "用户资料未加载。请重试。",
-      "submitFailed": "提交举报失败",
-      "submitFailedDesc": "提交举报失败。请重试。"
+      "userNotLoaded": "无法加载个人资料",
+      "submitFailedDesc": "无法提交举报。请重试。"
     },
     "feedback": {
-      "userNotLoaded": "用户资料未加载。请重试。",
-      "submitFailed": "提交反馈失败",
-      "submitFailedDesc": "提交反馈失败。请重试。"
+      "userNotLoaded": "无法加载个人资料",
+      "submitFailedDesc": "无法提交反馈。请重试。"
     },
     "copyright": {
       "success": "请求已成功发送",
-      "error": "发送请求时出错",
-      "submitFailed": "提交请求失败"
+      "error": "无法发送请求",
+      "submitFailed": "无法提交请求"
     },
     "tags": {
-      "loadFailed": "加载更多标签失败",
-      "loadFailedDesc": "无法加载更多标签。请重试。",
+      "loadFailed": "无法加载更多标签",
       "labelEmpty": "标签名称不能为空",
       "postIdRequired": "帖子 ID 为必填项",
       "userIdRequired": "用户 ID 为必填项",
       "loginRequired": "您必须登录才能添加标签",
       "alreadyAdded": "您已添加此标签",
-      "addFailed": "添加标签失败",
-      "addFailedDesc": "无法添加 \"{label}\"。请重试。",
-      "removeFailed": "移除标签失败",
-      "removeFailedDesc": "无法移除 \"{label}\"。请重试。"
+      "added": "已添加标签：{label}",
+      "removed": "已移除标签：{label}",
+      "addFailed": "无法添加标签：{label}",
+      "removeFailed": "无法移除标签：{label}"
     },
     "auth": {
       "signInFailed": "登录失败。请重试。",
-      "signInFailedDesc": "无法完成与 Pubky Ring 的授权。请重试。",
+      "signInFailedDesc": "登录失败。请重试。",
       "authNotCompleted": "授权未完成",
-      "authNotCompletedDesc": "签名者未完成授权。请重试。",
+      "authNotCompletedDesc": "授权失败。请重试。",
       "qrFailed": "二维码生成失败",
-      "qrFailedDesc": "无法生成登录二维码。请刷新并重试。"
+      "qrFailedDesc": "无法生成二维码。请刷新后重试。"
     },
     "file": {
       "maxFiles": "最多允许 {max} 个文件",
-      "maxFilesPartial": "最多允许 {max} 个文件。部分文件未被添加。",
-      "unsupportedType": "\"{name}\" 的类型 \"{type}\" 不受支持。支持的格式：{formats}。",
-      "fileTooLarge": "\"{name}\" 超过最大大小 {maxSize}。"
+      "maxFilesPartial": "最多允许 {max} 个文件。部分文件未添加。",
+      "unsupportedType": "{name} 的文件类型不受支持。支持：{formats}。",
+      "fileTooLarge": "{name} 超过 {maxSize} 限制。"
     },
     "status": {
-      "updateFailed": "更新状态失败。请重试。",
-      "userNotLoaded": "用户资料未加载。请重试。"
+      "updateFailed": "无法更新状态。请重试。",
+      "userNotLoaded": "无法加载个人资料。请重试。"
     },
     "fullscreen": {
-      "error": "尝试启用全屏时出错"
+      "error": "无法进入全屏。"
     },
     "logout": {
-      "failed": "退出登录失败。请重试。"
+      "failed": "无法退出登录。请重试。"
     }
   },
   "empty": {
@@ -1022,10 +1005,10 @@
     "noNotifications": "暂无通知"
   },
   "errors": {
-    "signOutFailed": "退出失败。请重试。",
+    "signOutFailed": "无法退出登录。请重试。",
     "deleteAccountFailed": "删除账户失败。请重试。",
     "generic": "出现问题",
-    "network": "网络错误。请重试。",
+    "network": "网络错误",
     "notFound": "页面未找到",
     "couldNotFind": "无法找到请求的资源",
     "database": {
@@ -1124,9 +1107,7 @@
     "unmuteAll": "取消所有用户的静音",
     "noMutedUsers": "暂无已静音用户",
     "userUnmuted": "用户已取消静音",
-    "userUnmutedDesc": "{username} 已取消静音。",
     "allUsersUnmuted": "所有用户已取消静音",
-    "allUsersUnmutedDesc": "所有已静音用户均已取消静音。",
     "partialSuccess": "部分成功",
     "partialSuccessDesc": "{success} 个用户已取消静音，{failed} 个失败。"
   },

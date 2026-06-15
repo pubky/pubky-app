@@ -184,9 +184,15 @@
       "blocked": "Número de teléfono bloqueado",
       "blockedDescription": "Este número de teléfono no puede usarse para verificación.",
       "tooManyAttempts": "Demasiados intentos de verificación",
-      "tooManyAttemptsDescription": "Has alcanzado el número maximo de verificaciónes para este número de teléfono.",
+      "tooManyAttemptsDescription": "Demasiados intentos de verificación",
+      "rateLimitedWithRetry": "Demasiados intentos de verificación. Reintenta en {seconds}s.",
+      "weeklyLimitReached": "Demasiados intentos de verificación",
+      "weeklyLimitDescription": "Demasiados intentos de verificación",
+      "yearlyLimitReached": "Demasiados intentos de verificación",
+      "yearlyLimitDescription": "Demasiados intentos de verificación",
+      "verificationFailed": "La verificación del teléfono falló. Inténtalo de nuevo.",
       "sendFailed": "Error al enviar código SMS",
-      "sendFailedDescription": "Por favor intenta de nuevo más tarde. Si el problema persiste, contacta a soporte."
+      "sendFailedDescription": "No se pudo enviar el código de verificación. Inténtalo más tarde."
     },
     "phoneCode": {
       "title": "Ingresa el <highlight>código.</highlight>",
@@ -199,7 +205,7 @@
       "valid": "Código de verificación válido",
       "invalid": "Código de verificación inválido. Intenta de nuevo.",
       "verifyFailed": "Error al verificar código SMS",
-      "verifyFailedDescription": "Por favor intenta de nuevo más tarde. Si el problema persiste, contacta a soporte."
+      "verifyFailedDescription": "No se pudo verificar el código. Inténtalo más tarde."
     },
     "lightning": {
       "title": "Escanea para <highlight>pagar.</highlight>",
@@ -215,9 +221,9 @@
       "paymentSuccess": "Pago exitoso",
       "paymentExpired": "Pago expirado",
       "requestFailed": "Error al solicitar factura Lightning",
-      "requestFailedDescription": "Por favor intenta de nuevo más tarde. Si el problema persiste, contacta a soporte.",
+      "requestFailedDescription": "No se pudo solicitar la factura Lightning. Inténtalo más tarde.",
       "invoiceCopied": "Factura copiada al portapapeles",
-      "copyFailed": "Error al copiar factura"
+      "copyFailed": "No se pudo copiar la factura."
     },
     "inviteCode": {
       "title": "Demuestra que <highlight>no eres un robot.</highlight>",
@@ -286,12 +292,12 @@
       "linkCopiedDescription": "Enlace de autenticacion copiado al portapapeles.",
       "linkFailed": "No se pudo conectar a la aplicacion firmante Pubky Ring",
       "tryAgain": "Por favor intenta de nuevo.",
-      "authInitFailedTitle": "Error al iniciar sesión. Por favor intenta de nuevo.",
-      "authInitFailedDescription": "No se pudo completar la autorización con Pubky Ring. Por favor intenta de nuevo.",
+      "authInitFailedTitle": "Error al iniciar sesión. Inténtalo de nuevo.",
+      "authInitFailedDescription": "Error al iniciar sesión. Inténtalo de nuevo.",
       "authNotCompletedTitle": "La autorización no se completó",
-      "authNotCompletedDescription": "El firmante no completó la autorización. Por favor intenta de nuevo.",
+      "authNotCompletedDescription": "La autorización falló. Inténtalo de nuevo.",
       "qrGenerationFailedTitle": "Error al generar el código QR",
-      "qrGenerationFailedDescription": "No se pudo generar el código QR de inicio de sesión. Actualiza e inténtalo de nuevo.",
+      "qrGenerationFailedDescription": "No se pudo generar el QR. Actualiza e inténtalo de nuevo.",
       "recoveryHint": "No puedes iniciar sesión con <pubkyRing>Pubky Ring</pubkyRing>? Usa la frase de recuperación o el archivo encriptado para restaurar tu cuenta.",
       "verifyingAccount": "Verificando cuenta",
       "loadingData": "Cargando tus datos",
@@ -308,7 +314,7 @@
         "restore": "Restaurar",
         "restoring": "Restaurando...",
         "errorTitle": "Error al iniciar sesión con mnemónico",
-        "errorDescription": "Por favor intenta de nuevo."
+        "errorDescription": "No se pudo iniciar sesión. Inténtalo de nuevo."
       },
       "restoreEncryptedFile": {
         "title": "Restaurar con archivo encriptado",
@@ -322,7 +328,7 @@
         "invalidPassword": "Contraseña inválida o archivo corrupto. Por favor verifica tu contraseña e intenta de nuevo.",
         "nexusError": "Algo salió mal con nexus. Por favor intenta de nuevo.",
         "restoreError": "Error al restaurar desde el archivo. Por favor verifica tu archivo e intenta de nuevo.",
-        "unexpectedError": "Ocurrió un error inesperado",
+        "unexpectedError": "Ocurrió un error inesperado.",
         "cancel": "Cancelar",
         "restore": "Restaurar",
         "restoring": "Restaurando..."
@@ -340,10 +346,10 @@
       "shareUnavailable": "Compartir no disponible",
       "shareUnavailableDescription": "Copiamos tu pubky para que puedas pegarlo en tu app favorita.",
       "shareFailed": "Error al compartir",
-      "shareFailedDescription": "No se puede compartir ahora. Por favor intenta de nuevo.",
+      "shareFailedDescription": "No se pudo compartir. Inténtalo de nuevo.",
       "signUpFailed": "Error - Fallo en el registro",
-      "signUpError": "Algo salió mal. Por favor intenta de nuevo.",
-      "invalidInvite": "Código de invitación inválido o expirado. Por favor obtén o solicita un nuevo código de invitación."
+      "signUpError": "No se pudo registrar. Inténtalo de nuevo.",
+      "invalidInvite": "El código de invitación no es válido o ha expirado."
     },
     "backupMethod": {
       "title": "Elige el metodo de respaldo",
@@ -355,8 +361,8 @@
       "title": "Respalda tu <highlight>pubky.</highlight>",
       "subtitle": "Necesitas un respaldo para restaurar el acceso a tu cuenta más tarde.",
       "signUpFailed": "Error - Fallo en el registro",
-      "signUpError": "Algo salio mal. Por favor intenta de nuevo.",
-      "invalidInvite": "Código de invitacion inválido o expirado. Por favor obtiene o solicita un nuevo código de invitacion."
+      "signUpError": "No se pudo registrar. Inténtalo de nuevo.",
+      "invalidInvite": "El código de invitación no es válido o ha expirado."
     },
     "backupPhrase": {
       "title": "Respaldo de frase de recuperación",
@@ -668,11 +674,11 @@
       "saveFeed": "Guardar Feed",
       "deleteFeed": "Eliminar Feed",
       "feedCreated": "¡Feed {name} creado!",
-      "feedCreateError": "No se pudo crear el feed, por favor intenta de nuevo o contacta a soporte.",
-      "feedEdited": "¡Feed {name} editado!",
-      "feedEditError": "No se pudo editar el feed, por favor intenta de nuevo o contacta a soporte.",
-      "feedDeleted": "¡Feed {name} eliminado!",
-      "feedDeleteError": "No se pudo eliminar el feed, por favor intenta de nuevo o contacta a soporte."
+      "feedCreateError": "No se pudo crear el feed. Inténtalo de nuevo.",
+      "feedEdited": "Feed actualizado: {name}",
+      "feedEditError": "No se pudo actualizar el feed. Inténtalo de nuevo.",
+      "feedDeleted": "Feed eliminado: {name}",
+      "feedDeleteError": "No se pudo eliminar el feed. Inténtalo de nuevo."
     }
   },
   "sidebar": {
@@ -708,7 +714,7 @@
     },
     "userSuggestion": "Usuario {name} ({pubky})",
     "viewProfile": "Ver perfil de {name}",
-    "invalidTag": "Las etiquetas deben tener 20 caracteres o menos y no pueden contener caracteres especiales"
+    "invalidTag": "Las etiquetas pueden tener máx. 20 caracteres y no pueden contener caracteres especiales"
   },
   "feedback": {
     "title": "Enviar comentarios",
@@ -895,123 +901,108 @@
     "success": "Exito",
     "error": "Error",
     "errors": "Errores",
-    "genericErrorTitle": "¡Ups! Algo salio mal!",
+    "genericErrorTitle": "Error",
     "post": {
       "replyPosted": "Respuesta publicada",
-      "replyPostedDesc": "Tu respuesta ha sido publicada exitosamente.",
-      "replyFailed": "Error al publicar respuesta. Por favor intenta de nuevo.",
+      "replyFailed": "No se pudo publicar la respuesta. Inténtalo de nuevo.",
       "postCreated": "Publicacion creada",
-      "postCreatedDesc": "Tu publicación ha sido creada exitosamente.",
-      "postFailed": "Error al crear publicación. Por favor intenta de nuevo.",
-      "repostSuccess": "¡Republicado!",
-      "repostSuccessDesc": "¡Has republicado exitosamente una publicación de {author}!",
-      "repostSuccessDescFallback": "Tu republicación ha sido creada exitosamente.",
+      "postFailed": "No se pudo crear la publicación. Inténtalo de nuevo.",
+      "repostSuccess": "Republicaste la publicación de {author}",
+      "repostSuccessFallback": "Republicado",
       "repostUndo": "Deshacer",
-      "repostFailed": "Error al republicar. Por favor intenta de nuevo.",
-      "postEdited": "Publicacion editada",
-      "postEditedDesc": "Tu publicación ha sido editada exitosamente.",
-      "editFailed": "Error al editar publicación. Por favor intenta de nuevo.",
+      "repostFailed": "No se pudo republicar. Inténtalo de nuevo.",
+      "postEdited": "Publicación actualizada",
+      "editFailed": "No se pudo actualizar la publicación. Inténtalo de nuevo.",
       "postDeleted": "Publicacion eliminada",
-      "postDeletedDesc": "Tu publicación ha sido eliminada",
-      "deleteFailed": "Error al eliminar publicación. Por favor intenta de nuevo.",
-      "invalidPostId": "ID de publicación inválido. Por favor intenta de nuevo.",
-      "attachmentsCleared": "Adjuntos eliminados",
-      "attachmentsClearedDesc": "Los articulos solo soportan una imagen de portada.",
-      "failedToLoadPosts": "Error al cargar nuevas publicaciónes",
-      "failedToLoadPostsDesc": "No se pueden mostrar nuevas publicaciónes. Por favor intenta de nuevo.",
-      "parseError": "Error al analizar contenido del articulo",
-      "coverImageError": "Error al cargar imagen de portada del articulo",
-      "attachmentsLoadFailed": "Error al cargar los archivos adjuntos"
+      "deleteFailed": "No se pudo eliminar la publicación. Inténtalo de nuevo.",
+      "invalidPostId": "Publicación no válida. Inténtalo de nuevo.",
+      "attachmentsCleared": "Los artículos admiten una imagen de portada",
+      "failedToLoadPosts": "No se pudieron cargar las publicaciones nuevas",
+      "parseError": "No se pudo analizar el contenido del artículo",
+      "coverImageError": "No se pudo cargar la imagen de portada",
+      "attachmentsLoadFailed": "No se pudieron cargar los archivos adjuntos"
     },
     "bookmark": {
-      "added": "Favorito agregado",
-      "addedDesc": "Publicacion guardada en tus favoritos",
-      "removed": "Favorito eliminado",
-      "removedDesc": "Publicacion eliminada de tus favoritos",
-      "addFailed": "Error al agregar favorito",
-      "removeFailed": "Error al eliminar favorito",
-      "loginRequired": "Debes iniciar sesión para guardar publicaciónes"
+      "added": "Publicación guardada en marcadores",
+      "removed": "Publicación eliminada de marcadores",
+      "addFailed": "No se pudo agregar el marcador",
+      "removeFailed": "No se pudo eliminar el marcador",
+      "loginRequired": "Inicia sesión para guardar publicaciones"
     },
     "copy": {
       "pubkyCopied": "Pubky copiado al portapapeles",
       "linkCopied": "Enlace copiado al portapapeles",
       "textCopied": "Texto copiado al portapapeles",
       "profileLinkCopied": "Enlace del perfil copiado al portapapeles",
-      "copyFailed": "Error al copiar",
+      "copyFailed": "No se pudo copiar al portapapeles",
       "copyFailedDesc": "No se pudo copiar al portapapeles"
     },
     "follow": {
-      "failed": "Error al actualizar estado de seguimiento"
+      "followed": "Siguiendo a {username}",
+      "unfollowed": "Dejaste de seguir a {username}",
+      "failed": "No se pudo actualizar el estado de seguimiento"
     },
     "mute": {
-      "muted": "Usuario silenciado",
-      "unmuted": "Usuario desilenciado",
-      "mutedDesc": "{username} ha sido silenciado.",
-      "unmutedDesc": "{username} ha sido desilenciado.",
-      "failed": "Error al actualizar estado de silenciado"
+      "muted": "{username} silenciado",
+      "unmuted": "{username} ya no está silenciado",
+      "failed": "No se pudo actualizar el estado de silencio"
     },
     "profile": {
       "updated": "Perfil actualizado",
-      "updatedDesc": "Tu perfil ha sido actualizado exitosamente.",
-      "sessionExpired": "Sesion expirada",
-      "sessionExpiredDesc": "Por favor cierra sesión e inicia sesión de nuevo para continuar.",
-      "saveFailed": "Error al guardar perfil",
-      "saveFailedDesc": "Por favor intenta de nuevo.",
-      "fetchFailed": "Por favor intenta de nuevo.",
-      "fetchFailedDesc": "Error al obtener nuevos datos del usuario. La indexacion puede estar en progreso...",
-      "updateFailed": "Error al actualizar perfil."
+      "sessionExpired": "Sesión expirada",
+      "sessionExpiredDesc": "Sesión expirada. Inicia sesión.",
+      "saveFailed": "No se pudo guardar el perfil",
+      "fetchFailedDesc": "No se pudo actualizar el perfil",
+      "updateFailed": "No se pudo actualizar el perfil"
     },
     "report": {
-      "userNotLoaded": "Perfil de usuario no cargado. Por favor intenta de nuevo.",
-      "submitFailed": "Error al enviar reporte",
-      "submitFailedDesc": "Error al enviar reporte. Por favor intenta de nuevo."
+      "userNotLoaded": "No se pudo cargar el perfil",
+      "submitFailedDesc": "No se pudo enviar el reporte. Inténtalo de nuevo."
     },
     "feedback": {
-      "userNotLoaded": "Perfil de usuario no cargado. Por favor intenta de nuevo.",
-      "submitFailed": "Error al enviar comentarios",
-      "submitFailedDesc": "Error al enviar comentarios. Por favor intenta de nuevo."
+      "userNotLoaded": "No se pudo cargar el perfil",
+      "submitFailedDesc": "No se pudo enviar los comentarios. Inténtalo de nuevo."
     },
     "copyright": {
-      "success": "Solicitud enviada exitosamente",
-      "error": "Error al enviar solicitud",
-      "submitFailed": "Error al enviar solicitud"
+      "success": "Solicitud enviada",
+      "error": "No se pudo enviar la solicitud",
+      "submitFailed": "No se pudo enviar la solicitud"
     },
     "tags": {
-      "loadFailed": "Error al cargar más etiquetas",
-      "loadFailedDesc": "No se pudieron cargar más etiquetas. Por favor intenta de nuevo.",
-      "labelEmpty": "La etiqueta no puede estar vacia",
-      "postIdRequired": "ID de publicación requerido",
-      "userIdRequired": "ID de usuario requerido",
+      "loadFailed": "No se pudieron cargar más etiquetas",
+      "labelEmpty": "La etiqueta no puede estar vacía",
+      "postIdRequired": "Se requiere el ID de la publicación",
+      "userIdRequired": "Se requiere el ID de usuario",
       "loginRequired": "Debes iniciar sesión para agregar etiquetas",
       "alreadyAdded": "Ya has agregado esta etiqueta",
-      "addFailed": "Error al agregar etiqueta",
-      "addFailedDesc": "No se pudo agregar \"{label}\". Por favor intenta de nuevo.",
-      "removeFailed": "Error al eliminar etiqueta",
-      "removeFailedDesc": "No se pudo eliminar \"{label}\". Por favor intenta de nuevo."
+      "added": "Etiqueta agregada: {label}",
+      "removed": "Etiqueta eliminada: {label}",
+      "addFailed": "No se pudo agregar la etiqueta: {label}",
+      "removeFailed": "No se pudo eliminar la etiqueta: {label}"
     },
     "auth": {
-      "signInFailed": "Error al iniciar sesión. Por favor intenta de nuevo.",
-      "signInFailedDesc": "No se pudo completar la autorización con Pubky Ring. Por favor intenta de nuevo.",
-      "authNotCompleted": "Autorizacion no completada",
-      "authNotCompletedDesc": "El firmante no completo la autorización. Por favor intenta de nuevo.",
-      "qrFailed": "Error al generar código QR",
-      "qrFailedDesc": "No se pudo generar código QR de inicio de sesión. Por favor actualiza e intenta de nuevo."
+      "signInFailed": "Error al iniciar sesión. Inténtalo de nuevo.",
+      "signInFailedDesc": "Error al iniciar sesión. Inténtalo de nuevo.",
+      "authNotCompleted": "La autorización no se completó",
+      "authNotCompletedDesc": "La autorización falló. Inténtalo de nuevo.",
+      "qrFailed": "Error al generar el código QR",
+      "qrFailedDesc": "No se pudo generar el QR. Actualiza e inténtalo de nuevo."
     },
     "file": {
-      "maxFiles": "Maximo {max} archivos permitidos",
-      "maxFilesPartial": "Maximo {max} archivos permitidos. Algunos archivos no fueron agregados.",
-      "unsupportedType": "\"{name}\" tiene tipo no soportado \"{type}\". Formatos soportados: {formats}.",
-      "fileTooLarge": "\"{name}\" excede el tamaño maximo de {maxSize}."
+      "maxFiles": "Máximo {max} archivos permitidos",
+      "maxFilesPartial": "Máximo {max} archivos permitidos. Algunos archivos no se agregaron.",
+      "unsupportedType": "Tipo de archivo no compatible para {name}. Compatible: {formats}.",
+      "fileTooLarge": "{name} supera el límite de {maxSize}."
     },
     "status": {
-      "updateFailed": "Error al actualizar el estado. Por favor intenta de nuevo.",
-      "userNotLoaded": "Perfil de usuario no cargado. Por favor intenta de nuevo."
+      "updateFailed": "No se pudo actualizar el estado. Inténtalo de nuevo.",
+      "userNotLoaded": "No se pudo cargar el perfil. Inténtalo de nuevo."
     },
     "fullscreen": {
-      "error": "Error al intentar habilitar pantalla completa"
+      "error": "No se pudo activar la pantalla completa."
     },
     "logout": {
-      "failed": "Error al cerrar sesión. Por favor intenta de nuevo."
+      "failed": "No se pudo cerrar sesión. Inténtalo de nuevo."
     }
   },
   "empty": {
@@ -1022,10 +1013,10 @@
     "noNotifications": "Sin notificaciónes"
   },
   "errors": {
-    "signOutFailed": "Error al cerrar sesión. Por favor intenta de nuevo.",
+    "signOutFailed": "No se pudo cerrar sesión. Inténtalo de nuevo.",
     "deleteAccountFailed": "Error al eliminar la cuenta. Por favor intenta de nuevo.",
-    "generic": "Algo salio mal",
-    "network": "Error de red. Por favor intenta de nuevo.",
+    "generic": "Algo salió mal",
+    "network": "Error de red",
     "notFound": "Página no encontrada",
     "couldNotFind": "No se pudo encontrar el recurso solicitado",
     "database": {

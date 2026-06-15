@@ -66,7 +66,7 @@ describe('useSignOut', () => {
 
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({
-        description: 'Failed to sign out. Please try again.',
+        description: 'Could not sign out. Try again.',
       }),
     );
     expect(result.current.isLoading).toBe(false);

@@ -9,7 +9,7 @@ export type FollowAction = (typeof FOLLOW_ACTIONS)[keyof typeof FOLLOW_ACTIONS];
 
 export interface UseFollowUserResult {
   /** Toggles follow status for a user */
-  toggleFollow: (userId: Pubky, isCurrentlyFollowing: boolean) => Promise<void>;
+  toggleFollow: (userId: Pubky, isCurrentlyFollowing: boolean, displayName?: string) => Promise<void>;
   /** Whether a follow/unfollow action is in progress */
   isLoading: boolean;
   /** Current action in progress (follow/unfollow), null if idle */

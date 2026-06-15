@@ -47,8 +47,8 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => {
     const t: Record<string, string> = {
       signUpFailed: 'Error - Failed to sign up',
-      signUpError: 'Something went wrong. Please try again.',
-      invalidInvite: 'Invalid or expired invite code.',
+      signUpError: 'Could not sign up. Try again.',
+      invalidInvite: 'Invite code is invalid or expired.',
     };
     return t[key] ?? key;
   },
@@ -142,8 +142,8 @@ describe('useInviteCodeSignUp', () => {
     ).rejects.toThrow();
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error - Failed to sign up',
-      description: 'Something went wrong. Please try again.',
+      variant: 'error',
+      description: 'Could not sign up. Try again.',
     });
   });
 
@@ -162,8 +162,8 @@ describe('useInviteCodeSignUp', () => {
     ).rejects.toThrow();
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error - Failed to sign up',
-      description: 'Invalid or expired invite code.',
+      variant: 'error',
+      description: 'Invite code is invalid or expired.',
     });
   });
 
@@ -211,7 +211,7 @@ describe('useInviteCodeSignUp', () => {
     expect(mockSignUp).toHaveBeenCalledTimes(4);
     expect(mockClearSecrets).not.toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error - Failed to sign up',
+      variant: 'error',
       description: 'Network down',
     });
   });

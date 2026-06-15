@@ -68,7 +68,6 @@ export function usePostInput({
 
   // Hooks
   const t = useTranslations('post.placeholder');
-  const tToast = useTranslations('toast');
   const tFile = useTranslations('toast.file');
   const { currentUserPubky } = useCurrentUserProfile();
   const {
@@ -310,7 +309,7 @@ export function usePostInput({
 
       if (availableSlots <= 0) {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tFile('maxFiles', { max: ATTACHMENT_MAX_FILES }),
         });
         return;
@@ -347,7 +346,7 @@ export function usePostInput({
 
       if (errors.length > 0) {
         toast({
-          title: errors.length > 1 ? tToast('errors') : tToast('error'),
+          variant: 'error',
           description: errors.join('\n'),
         });
       }
@@ -356,7 +355,7 @@ export function usePostInput({
         setAttachments((prev) => [...prev, ...validFiles]);
       }
     },
-    [isArticle, isSubmitting, attachments.length, setAttachments, toast, tToast, tFile],
+    [isArticle, isSubmitting, attachments.length, setAttachments, toast, tFile],
   );
 
   // Drag and drop handlers

@@ -204,7 +204,7 @@ describe('FeedbackApplication', () => {
       const unexpectedError = new Error('Unexpected error');
       vi.spyOn(ChatwootService, 'createOrFindContact').mockRejectedValue(unexpectedError);
 
-      await expect(FeedbackApplication.submit(input)).rejects.toThrow('Failed to submit feedback');
+      await expect(FeedbackApplication.submit(input)).rejects.toThrow('Could not submit feedback. Try again.');
 
       expect(Logger.error).toHaveBeenCalledWith('Unexpected error during feedback submission', {
         error: unexpectedError,

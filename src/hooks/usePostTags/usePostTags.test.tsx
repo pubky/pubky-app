@@ -55,25 +55,15 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, values?: { label?: string }) => {
     switch (key) {
       case 'loadFailed':
-        return 'Failed to load more tags';
-      case 'loadFailedDesc':
-        return 'Could not load more tags. Please try again.';
+        return 'Could not load more tags';
       case 'added':
-        return 'Tag added';
-      case 'addedDesc':
-        return `"${values?.label}" was added successfully.`;
+        return values?.label ? `Tag added: ${values.label}` : 'Tag added';
       case 'removed':
-        return 'Tag removed';
-      case 'removedDesc':
-        return `"${values?.label}" was removed successfully.`;
+        return values?.label ? `Tag removed: ${values.label}` : 'Tag removed';
       case 'addFailed':
-        return 'Failed to add tag';
-      case 'addFailedDesc':
-        return `Could not add "${values?.label}". Please try again.`;
+        return `Could not add tag: ${values?.label}`;
       case 'removeFailed':
-        return 'Failed to remove tag';
-      case 'removeFailedDesc':
-        return `Could not remove "${values?.label}". Please try again.`;
+        return `Could not remove tag: ${values?.label}`;
       default:
         return key;
     }
@@ -195,7 +185,7 @@ describe('usePostTags', () => {
       expect(response.error).toBe('You must be logged in to add tags');
     });
 
-    it('does not show a success toast when a tag is added', async () => {
+    it('shows a success toast when a tag is added', async () => {
       const { result } = renderHook(() => usePostTags('author:post123'));
 
       let response: Awaited<ReturnType<typeof result.current.handleTagAdd>>;
@@ -204,7 +194,9 @@ describe('usePostTags', () => {
       });
 
       expect(response!).toEqual({ success: true });
-      expect(mockToast).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Tag added: test-tag',
+      });
     });
 
     it('shows an error toast when adding a tag fails', async () => {
@@ -219,8 +211,8 @@ describe('usePostTags', () => {
 
       expect(response!).toEqual({ success: false, error: 'Failed to add tag' });
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Failed to add tag',
-        description: 'Could not add "broken-tag". Please try again.',
+        variant: 'error',
+        description: 'Could not add tag: broken-tag',
       });
     });
   });
@@ -270,7 +262,7 @@ describe('usePostTags', () => {
       expect(result.current.tags[0].relationship).toBe(false);
     });
 
-    it('does not show a success toast when a tag is removed', async () => {
+    it('shows a success toast when a tag is removed', async () => {
       const mockViewerId = 'viewer-123';
       vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
       vi.mocked(useLiveQuery).mockReturnValue([
@@ -285,7 +277,9 @@ describe('usePostTags', () => {
         await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
       });
 
-      expect(mockToast).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Tag removed: solo-tag',
+      });
     });
 
     it('shows an error toast when removing a tag fails', async () => {
@@ -305,8 +299,8 @@ describe('usePostTags', () => {
       });
 
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Failed to remove tag',
-        description: 'Could not remove "solo-tag". Please try again.',
+        variant: 'error',
+        description: 'Could not remove tag: solo-tag',
       });
     });
   });

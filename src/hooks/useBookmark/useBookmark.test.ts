@@ -103,8 +103,7 @@ describe('useBookmark', () => {
     });
     expect(result.current.isBookmarked).toBe(true);
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Bookmark added',
-      description: 'Post saved to your bookmarks',
+      title: 'Post saved to bookmarks',
     });
   });
 
@@ -128,8 +127,7 @@ describe('useBookmark', () => {
     });
     expect(result.current.isBookmarked).toBe(false);
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Bookmark removed',
-      description: 'Post removed from your bookmarks',
+      title: 'Post removed from bookmarks',
     });
   });
 
@@ -148,8 +146,8 @@ describe('useBookmark', () => {
     });
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
-      description: 'You must be logged in to bookmark posts',
+      variant: 'error',
+      description: 'Sign in to bookmark posts',
     });
     expect(BookmarkController.commitCreate).not.toHaveBeenCalled();
   });
@@ -169,8 +167,8 @@ describe('useBookmark', () => {
     });
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
-      description: 'Failed to add bookmark',
+      variant: 'error',
+      description: 'Could not add bookmark',
     });
     // State should not change on error
     expect(result.current.isBookmarked).toBe(false);
