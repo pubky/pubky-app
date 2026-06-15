@@ -115,13 +115,13 @@ describe('useProfileMenuActions', () => {
         toast: {
           'copy.pubkyCopied': 'Pubky copied to clipboard',
           'copy.profileLinkCopied': 'Profile link copied to clipboard',
-          'copy.copyFailed': 'Copy failed',
-          'follow.failed': 'Failed to update follow status',
-          'mute.muted': 'User muted',
-          'mute.unmuted': 'User unmuted',
-          'mute.mutedDesc': '{username} has been muted.',
-          'mute.unmutedDesc': '{username} has been unmuted.',
-          'mute.failed': 'Failed to update mute status',
+          'copy.copyFailedDesc': 'Could not copy to clipboard',
+          'follow.followed': 'Following {username}',
+          'follow.unfollowed': 'Unfollowed {username}',
+          'follow.failed': 'Could not update follow status',
+          'mute.muted': '{username} muted',
+          'mute.unmuted': '{username} unmuted',
+          'mute.failed': 'Could not update mute status',
         },
         errors: {
           title: 'Error',
@@ -208,37 +208,54 @@ describe('useProfileMenuActions', () => {
       expect(followItem?.disabled).toBe(true);
     });
 
-    it('calls toggleFollow on follow action click', async () => {
+    it('calls toggleFollow with full profile name on follow action click', async () => {
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
 
       const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
+      expect(followItem).toBeDefined();
 
       await act(async () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, false);
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, false, 'Test User');
     });
 
-    it('shows error toast when follow fails', async () => {
-      const error = new Error('Follow failed');
-      vi.mocked(isAppError).mockReturnValue(false);
-      defaultMocks.toggleFollow.mockRejectedValue(error);
+    it('calls toggleFollow with full profile name on unfollow action click', async () => {
+      mockUseIsFollowing.mockReturnValue({
+        isFollowing: true,
+        isLoading: false,
+      });
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
 
       const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
+      expect(followItem).toBeDefined();
 
       await act(async () => {
         await followItem?.onClick();
       });
 
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
-          description: 'Failed to update follow status',
-        });
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, true, 'Test User');
+    });
+
+    it('swallows follow rejection after useFollowUser handles the error', async () => {
+      const followError = new Error('Follow failed');
+      mockUseFollowUser.mockReturnValue({
+        toggleFollow: vi.fn().mockRejectedValue(followError),
+        isLoading: false,
+        isUserLoading: defaultMocks.isUserLoading,
       });
+
+      const { result } = renderHook(() => useProfileMenuActions(mockUserId));
+
+      const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
+
+      await expect(
+        act(async () => {
+          await followItem?.onClick();
+        }),
+      ).resolves.not.toThrow();
     });
   });
 
@@ -286,8 +303,7 @@ describe('useProfileMenuActions', () => {
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockUserId, false);
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'User muted',
-        description: 'Test User has been muted.',
+        title: 'Test User muted',
       });
     });
 
@@ -304,8 +320,7 @@ describe('useProfileMenuActions', () => {
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockUserId, true);
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'User unmuted',
-        description: 'Test User has been unmuted.',
+        title: 'Test User unmuted',
       });
     });
 
@@ -324,8 +339,8 @@ describe('useProfileMenuActions', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
-          description: 'Failed to update mute status',
+          variant: 'error',
+          description: 'Could not update mute status',
         });
       });
     });
@@ -387,8 +402,8 @@ describe('useProfileMenuActions', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
-          description: 'Copy failed',
+          variant: 'error',
+          description: 'Could not copy to clipboard',
         });
       });
     });
@@ -408,8 +423,8 @@ describe('useProfileMenuActions', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
-          description: 'Copy failed',
+          variant: 'error',
+          description: 'Could not copy to clipboard',
         });
       });
     });

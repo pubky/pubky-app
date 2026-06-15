@@ -184,9 +184,15 @@
       "blocked": "رقم الهاتف محظور",
       "blockedDescription": "لا يمكن استخدام رقم الهاتف هذا للتحقق.",
       "tooManyAttempts": "محاولات تحقق كثيرة جدا",
-      "tooManyAttemptsDescription": "لقد وصلت الى الحد الاقصى للتحقق لهذا الرقم.",
+      "tooManyAttemptsDescription": "محاولات تحقق كثيرة جداً",
       "sendFailed": "فشل ارسال رمز الرسالة القصيرة",
-      "sendFailedDescription": "يرجى المحاولة لاحقا. اذا استمرت المشكلة، تواصل مع الدعم."
+      "sendFailedDescription": "تعذر إرسال رمز التحقق. حاول لاحقاً.",
+      "rateLimitedWithRetry": "محاولات تحقق كثيرة جداً. أعد المحاولة خلال {seconds} ث.",
+      "weeklyLimitReached": "محاولات تحقق كثيرة جداً",
+      "weeklyLimitDescription": "محاولات تحقق كثيرة جداً",
+      "yearlyLimitReached": "محاولات تحقق كثيرة جداً",
+      "yearlyLimitDescription": "محاولات تحقق كثيرة جداً",
+      "verificationFailed": "فشل التحقق من الهاتف. حاول مرة أخرى."
     },
     "phoneCode": {
       "title": "ادخل <highlight>الرمز.</highlight>",
@@ -199,7 +205,7 @@
       "valid": "رمز التحقق صحيح",
       "invalid": "رمز التحقق غير صحيح. حاول مرة اخرى.",
       "verifyFailed": "فشل التحقق من رمز الرسالة القصيرة",
-      "verifyFailedDescription": "يرجى المحاولة لاحقا. اذا استمرت المشكلة، تواصل مع الدعم."
+      "verifyFailedDescription": "تعذر التحقق من الرمز. حاول لاحقاً."
     },
     "lightning": {
       "title": "امسح <highlight>للدفع.</highlight>",
@@ -215,9 +221,9 @@
       "paymentSuccess": "تم الدفع بنجاح",
       "paymentExpired": "انتهت صلاحية الدفع",
       "requestFailed": "فشل طلب فاتورة Lightning",
-      "requestFailedDescription": "يرجى المحاولة لاحقا. اذا استمرت المشكلة، تواصل مع الدعم.",
+      "requestFailedDescription": "تعذر طلب فاتورة Lightning. حاول لاحقاً.",
       "invoiceCopied": "تم نسخ الفاتورة الى الحافظة",
-      "copyFailed": "فشل نسخ الفاتورة"
+      "copyFailed": "تعذر نسخ الفاتورة."
     },
     "inviteCode": {
       "title": "اثبت انك <highlight>لست روبوتا.</highlight>",
@@ -259,11 +265,8 @@
       "subtitleDesktop": "افتح Pubky Ring، اضغط على 'اضافة pubky'، وامسح رمز QR هذا.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
-
       "clickToReload": "انقر لإعادة التحميل",
-
       "openingRing": "جارٍ فتح Pubky Ring...",
-
       "authorize": "تفويض باستخدام Pubky Ring",
       "authorizeSub": "استخدم <pubkyRing>Pubky Ring</pubkyRing> او اي سلسلة مفاتيح اخرى مدعومة من <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
@@ -276,22 +279,18 @@
       "progressSubtitle": "يرجى الانتظار بينما يتم تحميل تجربتك على Pubky.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
-
       "clickToReload": "انقر لإعادة التحميل",
-
       "openingRing": "جارٍ فتح Pubky Ring...",
-
       "authorize": "تفويض باستخدام Pubky Ring",
       "linkCopied": "تم نسخ الرابط",
-      "linkCopiedDescription": "تم نسخ رابط المصادقة الى الحافظة.",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
       "tryAgain": "يرجى المحاولة مرة اخرى.",
-      "authInitFailedTitle": "فشل تسجيل الدخول. يرجى المحاولة مرة اخرى.",
-      "authInitFailedDescription": "تعذر اكمال التفويض باستخدام Pubky Ring. يرجى المحاولة مرة اخرى.",
+      "authInitFailedTitle": "فشل تسجيل الدخول. حاول مرة أخرى.",
+      "authInitFailedDescription": "فشل تسجيل الدخول. حاول مرة أخرى.",
       "authNotCompletedTitle": "لم يكتمل التفويض",
-      "authNotCompletedDescription": "لم يكمل تطبيق التوقيع عملية التفويض. يرجى المحاولة مرة اخرى.",
+      "authNotCompletedDescription": "فشل التفويض. حاول مرة أخرى.",
       "qrGenerationFailedTitle": "فشل انشاء رمز QR",
-      "qrGenerationFailedDescription": "تعذر انشاء رمز QR لتسجيل الدخول. يرجى التحديث والمحاولة مرة اخرى.",
+      "qrGenerationFailedDescription": "تعذر إنشاء رمز QR. حدّث الصفحة وحاول مرة أخرى.",
       "recoveryHint": "لا تستطيع تسجيل الدخول باستخدام <pubkyRing>Pubky Ring</pubkyRing>؟ استخدم عبارة الاسترداد او الملف المشفر لاستعادة حسابك.",
       "verifyingAccount": "جاري التحقق من الحساب",
       "loadingData": "جاري تحميل بياناتك",
@@ -308,7 +307,7 @@
         "restore": "استعادة",
         "restoring": "جاري الاستعادة...",
         "errorTitle": "خطا في تسجيل الدخول بالعبارة السرية",
-        "errorDescription": "يرجى المحاولة مرة اخرى."
+        "errorDescription": "تعذر تسجيل الدخول. حاول مرة أخرى."
       },
       "restoreEncryptedFile": {
         "title": "الاستعادة باستخدام ملف مشفر",
@@ -322,7 +321,7 @@
         "invalidPassword": "كلمة مرور غير صالحة او ملف تالف. يرجى التحقق من كلمة المرور والمحاولة مرة اخرى.",
         "nexusError": "حدث خطا مع nexus. يرجى المحاولة مرة اخرى.",
         "restoreError": "فشلت الاستعادة من الملف. يرجى التحقق من الملف والمحاولة مرة اخرى.",
-        "unexpectedError": "حدث خطا غير متوقع",
+        "unexpectedError": "حدث خطأ غير متوقع.",
         "cancel": "الغاء",
         "restore": "استعادة",
         "restoring": "جاري الاستعادة..."
@@ -338,12 +337,11 @@
       "myPubky": "بوبكي الخاص بي",
       "shareText": "هذا هو بوبكي الخاص بي:\n{displayPubky}",
       "shareUnavailable": "المشاركة غير متاحة",
-      "shareUnavailableDescription": "قمنا بنسخ البوبكي الخاص بك حتى تتمكن من لصقه في تطبيقك المفضل.",
       "shareFailed": "فشلت المشاركة",
-      "shareFailedDescription": "تعذرت المشاركة الان. يرجى المحاولة مرة اخرى.",
+      "shareFailedDescription": "تعذر المشاركة. حاول مرة أخرى.",
       "signUpFailed": "خطأ - فشل التسجيل",
-      "signUpError": "حدث خطأ ما. يرجى المحاولة مرة اخرى.",
-      "invalidInvite": "رمز الدعوة غير صالح او منتهي الصلاحية. يرجى الحصول على رمز دعوة جديد."
+      "signUpError": "تعذر التسجيل. حاول مرة أخرى.",
+      "invalidInvite": "رمز الدعوة غير صالح أو منتهي الصلاحية."
     },
     "backupMethod": {
       "title": "اختر طريقة النسخ الاحتياطي",
@@ -355,8 +353,8 @@
       "title": "قم بعمل نسخة احتياطية <highlight>للبوبكي.</highlight>",
       "subtitle": "تحتاج الى نسخة احتياطية لاستعادة الوصول الى حسابك لاحقا.",
       "signUpFailed": "خطا - فشل التسجيل",
-      "signUpError": "حدث خطا ما. يرجى المحاولة مرة اخرى.",
-      "invalidInvite": "رمز دعوة غير صالح او منتهي الصلاحية. يرجى الحصول على رمز دعوة جديد."
+      "signUpError": "تعذر التسجيل. حاول مرة أخرى.",
+      "invalidInvite": "رمز الدعوة غير صالح أو منتهي الصلاحية."
     },
     "backupPhrase": {
       "title": "نسخ احتياطي لعبارة الاسترداد",
@@ -668,11 +666,11 @@
       "saveFeed": "حفظ الخلاصة",
       "deleteFeed": "حذف الخلاصة",
       "feedCreated": "تم إنشاء الخلاصة {name}!",
-      "feedCreateError": "تعذر إنشاء الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم.",
+      "feedCreateError": "تعذر إنشاء الخلاصة. حاول مرة أخرى.",
       "feedEdited": "تم تعديل الخلاصة {name}!",
-      "feedEditError": "تعذر تعديل الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم.",
+      "feedEditError": "تعذر تحديث الخلاصة. حاول مرة أخرى.",
       "feedDeleted": "تم حذف الخلاصة {name}!",
-      "feedDeleteError": "تعذر حذف الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم."
+      "feedDeleteError": "تعذر حذف الخلاصة. حاول مرة أخرى."
     }
   },
   "sidebar": {
@@ -708,7 +706,7 @@
     },
     "userSuggestion": "المستخدم {name} ({pubky})",
     "viewProfile": "عرض ملف {name} الشخصي",
-    "invalidTag": "يجب أن تكون العلامات 20 حرفًا أو أقل ولا يمكن أن تحتوي على أحرف خاصة"
+    "invalidTag": "يمكن أن تكون الوسوم بحد أقصى 20 حرفاً ولا يمكن أن تحتوي على أحرف خاصة"
   },
   "feedback": {
     "title": "ارسال ملاحظات",
@@ -895,123 +893,108 @@
     "success": "نجاح",
     "error": "خطا",
     "errors": "اخطاء",
-    "genericErrorTitle": "عذرا! حدث خطا ما!",
+    "genericErrorTitle": "خطأ",
     "post": {
       "replyPosted": "تم نشر الرد",
-      "replyPostedDesc": "تم نشر ردك بنجاح.",
-      "replyFailed": "فشل نشر الرد. يرجى المحاولة مرة اخرى.",
+      "replyFailed": "تعذر نشر الرد. حاول مرة أخرى.",
       "postCreated": "تم انشاء المنشور",
-      "postCreatedDesc": "تم انشاء منشورك بنجاح.",
-      "postFailed": "فشل انشاء المنشور. يرجى المحاولة مرة اخرى.",
+      "postFailed": "تعذر إنشاء المنشور. حاول مرة أخرى.",
       "repostSuccess": "تمت إعادة النشر!",
-      "repostSuccessDesc": "لقد أعدت نشر منشور {author} بنجاح!",
-      "repostSuccessDescFallback": "تمت إعادة نشر منشورك بنجاح.",
       "repostUndo": "تراجع",
-      "repostFailed": "فشلت اعادة النشر. يرجى المحاولة مرة اخرى.",
+      "repostFailed": "تعذر إعادة النشر. حاول مرة أخرى.",
       "postEdited": "تم تعديل المنشور",
-      "postEditedDesc": "تم تعديل منشورك بنجاح.",
-      "editFailed": "فشل تعديل المنشور. يرجى المحاولة مرة اخرى.",
+      "editFailed": "تعذر تحديث المنشور. حاول مرة أخرى.",
       "postDeleted": "تم حذف المنشور",
-      "postDeletedDesc": "تم حذف منشورك",
-      "deleteFailed": "فشل حذف المنشور. يرجى المحاولة مرة اخرى.",
-      "invalidPostId": "معرف منشور غير صالح. يرجى المحاولة مرة اخرى.",
+      "deleteFailed": "تعذر حذف المنشور. حاول مرة أخرى.",
+      "invalidPostId": "منشور غير صالح. حاول مرة أخرى.",
       "attachmentsCleared": "تم ازالة المرفقات",
-      "attachmentsClearedDesc": "المقالات تدعم صورة غلاف واحدة فقط.",
-      "failedToLoadPosts": "فشل تحميل المنشورات الجديدة",
-      "failedToLoadPostsDesc": "تعذر عرض المنشورات الجديدة. يرجى المحاولة مرة اخرى.",
-      "parseError": "فشل تحليل محتوى المقال",
-      "coverImageError": "فشل تحميل صورة غلاف المقال",
-      "attachmentsLoadFailed": "فشل تحميل المرفقات"
+      "failedToLoadPosts": "تعذر تحميل المنشورات الجديدة",
+      "parseError": "تعذر تحليل محتوى المقال",
+      "coverImageError": "تعذر تحميل صورة الغلاف",
+      "attachmentsLoadFailed": "تعذر تحميل المرفقات",
+      "repostSuccessFallback": "أُعيد النشر"
     },
     "bookmark": {
       "added": "تمت اضافة المفضلة",
-      "addedDesc": "تم حفظ المنشور في مفضلتك",
       "removed": "تمت ازالة المفضلة",
-      "removedDesc": "تمت ازالة المنشور من مفضلتك",
-      "addFailed": "فشل اضافة المفضلة",
-      "removeFailed": "فشل ازالة المفضلة",
-      "loginRequired": "يجب تسجيل الدخول لحفظ المنشورات"
+      "addFailed": "تعذر إضافة الإشارة المرجعية",
+      "removeFailed": "تعذر إزالة الإشارة المرجعية",
+      "loginRequired": "سجّل الدخول لحفظ المنشورات"
     },
     "copy": {
       "pubkyCopied": "تم نسخ البوبكي الى الحافظة",
       "linkCopied": "تم نسخ الرابط الى الحافظة",
       "textCopied": "تم نسخ النص الى الحافظة",
       "profileLinkCopied": "تم نسخ رابط الملف الشخصي الى الحافظة",
-      "copyFailed": "فشل النسخ",
-      "copyFailedDesc": "تعذر النسخ الى الحافظة"
+      "copyFailed": "تعذر النسخ إلى الحافظة",
+      "copyFailedDesc": "تعذر النسخ إلى الحافظة"
     },
     "follow": {
-      "failed": "فشل تحديث حالة المتابعة"
+      "failed": "تعذر تحديث حالة المتابعة",
+      "followed": "تتابع {username}",
+      "unfollowed": "ألغيت متابعة {username}"
     },
     "mute": {
-      "muted": "تم كتم المستخدم",
-      "unmuted": "تم الغاء كتم المستخدم",
-      "mutedDesc": "تم كتم {username}.",
-      "unmutedDesc": "تم الغاء كتم {username}.",
-      "failed": "فشل تحديث حالة الكتم"
+      "muted": "تم كتم {username}",
+      "unmuted": "تم إلغاء كتم {username}",
+      "failed": "تعذر تحديث حالة الكتم"
     },
     "profile": {
       "updated": "تم تحديث الملف الشخصي",
-      "updatedDesc": "تم تحديث ملفك الشخصي بنجاح.",
       "sessionExpired": "انتهت الجلسة",
-      "sessionExpiredDesc": "يرجى تسجيل الخروج وتسجيل الدخول مرة اخرى للمتابعة.",
-      "saveFailed": "فشل حفظ الملف الشخصي",
-      "saveFailedDesc": "يرجى المحاولة مرة اخرى.",
-      "fetchFailed": "يرجى المحاولة مرة اخرى.",
-      "fetchFailedDesc": "فشل جلب بيانات المستخدم الجديدة. قد تكون الفهرسة جارية...",
-      "updateFailed": "فشل تحديث الملف الشخصي."
+      "sessionExpiredDesc": "انتهت الجلسة. يرجى تسجيل الدخول.",
+      "saveFailed": "تعذر حفظ الملف الشخصي",
+      "fetchFailedDesc": "تعذر تحديث الملف الشخصي",
+      "updateFailed": "تعذر تحديث الملف الشخصي"
     },
     "report": {
-      "userNotLoaded": "لم يتم تحميل ملف المستخدم. يرجى المحاولة مرة اخرى.",
-      "submitFailed": "فشل ارسال البلاغ",
-      "submitFailedDesc": "فشل ارسال البلاغ. يرجى المحاولة مرة اخرى."
+      "userNotLoaded": "تعذر تحميل الملف الشخصي",
+      "submitFailedDesc": "تعذر إرسال البلاغ. حاول مرة أخرى."
     },
     "feedback": {
-      "userNotLoaded": "لم يتم تحميل ملف المستخدم. يرجى المحاولة مرة اخرى.",
-      "submitFailed": "فشل ارسال الملاحظات",
-      "submitFailedDesc": "فشل ارسال الملاحظات. يرجى المحاولة مرة اخرى."
+      "userNotLoaded": "تعذر تحميل الملف الشخصي",
+      "submitFailedDesc": "تعذر إرسال الملاحظات. حاول مرة أخرى."
     },
     "copyright": {
       "success": "تم ارسال الطلب بنجاح",
-      "error": "خطا في ارسال الطلب",
-      "submitFailed": "فشل ارسال الطلب"
+      "error": "تعذر إرسال الطلب",
+      "submitFailed": "تعذر إرسال الطلب"
     },
     "tags": {
-      "loadFailed": "فشل تحميل المزيد من الوسوم",
-      "loadFailedDesc": "تعذر تحميل المزيد من الوسوم. يرجى المحاولة مرة اخرى.",
+      "loadFailed": "تعذر تحميل المزيد من الوسوم",
       "labelEmpty": "تسمية الوسم لا يمكن ان تكون فارغة",
       "postIdRequired": "معرف المنشور مطلوب",
       "userIdRequired": "معرف المستخدم مطلوب",
       "loginRequired": "يجب تسجيل الدخول لاضافة وسوم",
       "alreadyAdded": "لقد اضفت هذا الوسم بالفعل",
-      "addFailed": "فشل اضافة الوسم",
-      "addFailedDesc": "تعذر اضافة \"{label}\". يرجى المحاولة مرة اخرى.",
-      "removeFailed": "فشل ازالة الوسم",
-      "removeFailedDesc": "تعذر ازالة \"{label}\". يرجى المحاولة مرة اخرى."
+      "added": "تمت إضافة الوسم: {label}",
+      "removed": "تمت إزالة الوسم: {label}",
+      "addFailed": "تعذر إضافة الوسم: {label}",
+      "removeFailed": "تعذر إزالة الوسم: {label}"
     },
     "auth": {
-      "signInFailed": "فشل تسجيل الدخول. يرجى المحاولة مرة اخرى.",
-      "signInFailedDesc": "تعذر اكمال التفويض مع Pubky Ring. يرجى المحاولة مرة اخرى.",
+      "signInFailed": "فشل تسجيل الدخول. حاول مرة أخرى.",
+      "signInFailedDesc": "فشل تسجيل الدخول. حاول مرة أخرى.",
       "authNotCompleted": "لم يكتمل التفويض",
-      "authNotCompletedDesc": "لم يكمل الموقع التفويض. يرجى المحاولة مرة اخرى.",
+      "authNotCompletedDesc": "فشل التفويض. حاول مرة أخرى.",
       "qrFailed": "فشل انشاء رمز QR",
-      "qrFailedDesc": "تعذر انشاء رمز QR لتسجيل الدخول. يرجى التحديث والمحاولة مرة اخرى."
+      "qrFailedDesc": "تعذر إنشاء رمز QR. حدّث الصفحة وحاول مرة أخرى."
     },
     "file": {
-      "maxFiles": "الحد الاقصى {max} ملفات",
-      "maxFilesPartial": "الحد الاقصى {max} ملفات. لم تتم اضافة بعض الملفات.",
-      "unsupportedType": "\"{name}\" نوعه \"{type}\" غير مدعوم. الانواع المدعومة: {formats}.",
-      "fileTooLarge": "\"{name}\" يتجاوز الحجم الاقصى {maxSize}."
+      "maxFiles": "الحد الأقصى {max} ملفات",
+      "maxFilesPartial": "الحد الأقصى {max} ملفات. لم تتم إضافة بعض الملفات.",
+      "unsupportedType": "نوع ملف غير مدعوم لـ {name}. المدعوم: {formats}.",
+      "fileTooLarge": "{name} يتجاوز حد {maxSize}."
     },
     "status": {
-      "updateFailed": "فشل تحديث الحالة. يرجى المحاولة مرة اخرى.",
-      "userNotLoaded": "لم يتم تحميل ملف المستخدم. يرجى المحاولة مرة اخرى."
+      "updateFailed": "تعذر تحديث الحالة. حاول مرة أخرى.",
+      "userNotLoaded": "تعذر تحميل الملف الشخصي. حاول مرة أخرى."
     },
     "fullscreen": {
-      "error": "خطأ في محاولة تفعيل وضع ملء الشاشة"
+      "error": "تعذر تفعيل ملء الشاشة."
     },
     "logout": {
-      "failed": "فشل تسجيل الخروج. يرجى المحاولة مرة اخرى."
+      "failed": "تعذر تسجيل الخروج. حاول مرة أخرى."
     }
   },
   "empty": {
@@ -1022,10 +1005,10 @@
     "noNotifications": "لا توجد اشعارات"
   },
   "errors": {
-    "signOutFailed": "فشل تسجيل الخروج. يرجى المحاولة مرة اخرى.",
+    "signOutFailed": "تعذر تسجيل الخروج. حاول مرة أخرى.",
     "deleteAccountFailed": "فشل حذف الحساب. يرجى المحاولة مرة اخرى.",
     "generic": "حدث خطا ما",
-    "network": "خطا في الشبكة. يرجى المحاولة مرة اخرى.",
+    "network": "خطأ في الشبكة",
     "notFound": "الصفحة غير موجودة",
     "couldNotFind": "تعذر العثور على المورد المطلوب",
     "database": {
@@ -1124,9 +1107,7 @@
     "unmuteAll": "الغاء كتم جميع المستخدمين",
     "noMutedUsers": "لا يوجد مستخدمون مكتومون بعد",
     "userUnmuted": "تم الغاء كتم المستخدم",
-    "userUnmutedDesc": "تم الغاء كتم {username}.",
     "allUsersUnmuted": "تم الغاء كتم جميع المستخدمين",
-    "allUsersUnmutedDesc": "تم الغاء كتم جميع المستخدمين المكتومين.",
     "partialSuccess": "نجاح جزئي",
     "partialSuccessDesc": "تم الغاء كتم {success} مستخدمين، فشل {failed}."
   },

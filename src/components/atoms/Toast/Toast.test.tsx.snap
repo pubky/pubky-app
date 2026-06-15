@@ -1,5 +1,305 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`Toast - Snapshots > matches snapshot for Toast variant=default 1`] = `
+<div
+  aria-label="Notifications (F8)"
+  role="region"
+  style=""
+  tabindex="-1"
+>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+  <ol
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    tabindex="-1"
+  >
+    <li
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-brand/32 bg-brand/8"
+      data-radix-collection-item=""
+      data-state="open"
+      data-swipe-direction="right"
+      data-variant="default"
+      style="user-select: none; touch-action: none;"
+      tabindex="0"
+    >
+      Toast content
+    </li>
+  </ol>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+</div>
+`;
+
+exports[`Toast - Snapshots > matches snapshot for Toast variant=error 1`] = `
+<div
+  aria-label="Notifications (F8)"
+  role="region"
+  style=""
+  tabindex="-1"
+>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+  <ol
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    tabindex="-1"
+  >
+    <li
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-destructive/32 bg-destructive/8"
+      data-radix-collection-item=""
+      data-state="open"
+      data-swipe-direction="right"
+      data-variant="error"
+      style="user-select: none; touch-action: none;"
+      tabindex="0"
+    >
+      Toast content
+    </li>
+  </ol>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+</div>
+`;
+
+exports[`Toast - Snapshots > matches snapshot for Toast variant=info 1`] = `
+<div
+  aria-label="Notifications (F8)"
+  role="region"
+  style=""
+  tabindex="-1"
+>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+  <ol
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    tabindex="-1"
+  >
+    <li
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-accent/32 bg-accent/8"
+      data-radix-collection-item=""
+      data-state="open"
+      data-swipe-direction="right"
+      data-variant="info"
+      style="user-select: none; touch-action: none;"
+      tabindex="0"
+    >
+      Toast content
+    </li>
+  </ol>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+</div>
+`;
+
+exports[`Toast - Snapshots > matches snapshot for Toast variant=warning 1`] = `
+<div
+  aria-label="Notifications (F8)"
+  role="region"
+  style=""
+  tabindex="-1"
+>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+  <ol
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    tabindex="-1"
+  >
+    <li
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-yellow-500/32 bg-yellow-500/8"
+      data-radix-collection-item=""
+      data-state="open"
+      data-swipe-direction="right"
+      data-variant="warning"
+      style="user-select: none; touch-action: none;"
+      tabindex="0"
+    >
+      Toast content
+    </li>
+  </ol>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+</div>
+`;
+
+exports[`Toast - Snapshots > matches snapshot for ToastAction variant=default 1`] = `
+<div
+  aria-label="Notifications (F8)"
+  role="region"
+  style=""
+  tabindex="-1"
+>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+  <ol
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    tabindex="-1"
+  >
+    <li
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-brand/32 bg-brand/8"
+      data-radix-collection-item=""
+      data-state="open"
+      data-swipe-direction="right"
+      data-variant="default"
+      style="user-select: none; touch-action: none;"
+      tabindex="0"
+    >
+      <button
+        class="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 border-brand bg-brand/16 text-brand hover:!bg-brand/30"
+        data-radix-toast-announce-alt="OK"
+        data-radix-toast-announce-exclude=""
+        type="button"
+      >
+        OK
+      </button>
+    </li>
+  </ol>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+</div>
+`;
+
+exports[`Toast - Snapshots > matches snapshot for ToastAction variant=error 1`] = `
+<div
+  aria-label="Notifications (F8)"
+  role="region"
+  style=""
+  tabindex="-1"
+>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+  <ol
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    tabindex="-1"
+  >
+    <li
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-destructive/32 bg-destructive/8"
+      data-radix-collection-item=""
+      data-state="open"
+      data-swipe-direction="right"
+      data-variant="error"
+      style="user-select: none; touch-action: none;"
+      tabindex="0"
+    >
+      <button
+        class="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-accent"
+        data-radix-toast-announce-alt="OK"
+        data-radix-toast-announce-exclude=""
+        type="button"
+      >
+        OK
+      </button>
+    </li>
+  </ol>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+</div>
+`;
+
+exports[`Toast - Snapshots > matches snapshot for ToastAction variant=info 1`] = `
+<div
+  aria-label="Notifications (F8)"
+  role="region"
+  style=""
+  tabindex="-1"
+>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+  <ol
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    tabindex="-1"
+  >
+    <li
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-accent/32 bg-accent/8"
+      data-radix-collection-item=""
+      data-state="open"
+      data-swipe-direction="right"
+      data-variant="info"
+      style="user-select: none; touch-action: none;"
+      tabindex="0"
+    >
+      <button
+        class="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-accent"
+        data-radix-toast-announce-alt="OK"
+        data-radix-toast-announce-exclude=""
+        type="button"
+      >
+        OK
+      </button>
+    </li>
+  </ol>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+</div>
+`;
+
+exports[`Toast - Snapshots > matches snapshot for ToastAction variant=warning 1`] = `
+<div
+  aria-label="Notifications (F8)"
+  role="region"
+  style=""
+  tabindex="-1"
+>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+  <ol
+    class="fixed bottom-16 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:bottom-8 sm:max-w-[550px]"
+    tabindex="-1"
+  >
+    <li
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-yellow-500/32 bg-yellow-500/8"
+      data-radix-collection-item=""
+      data-state="open"
+      data-swipe-direction="right"
+      data-variant="warning"
+      style="user-select: none; touch-action: none;"
+      tabindex="0"
+    >
+      <button
+        class="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-accent"
+        data-radix-toast-announce-alt="OK"
+        data-radix-toast-announce-exclude=""
+        type="button"
+      >
+        OK
+      </button>
+    </li>
+  </ol>
+  <span
+    style="position: fixed; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    tabindex="0"
+  />
+</div>
+`;
+
 exports[`Toast - Snapshots > matches snapshot for ToastProvider 1`] = `
 <div>
   Test content

@@ -24,10 +24,10 @@ describe('useWhoToFollowFollowPreservation', () => {
     const { result } = renderHook(() => useWhoToFollowFollowPreservation());
 
     act(() => {
-      void result.current.handleFollowClick('user-1', false);
+      void result.current.handleFollowClick('user-1', false, 'User One');
     });
 
-    expect(mockToggleFollow).toHaveBeenCalledWith('user-1', false);
+    expect(mockToggleFollow).toHaveBeenCalledWith('user-1', false, 'User One');
     await waitFor(() => {
       expect(result.current.preservedFollowedUserIds).toEqual(['user-1']);
     });
@@ -37,10 +37,10 @@ describe('useWhoToFollowFollowPreservation', () => {
     const { result } = renderHook(() => useWhoToFollowFollowPreservation());
 
     await act(async () => {
-      await result.current.handleFollowClick('user-1', false);
+      await result.current.handleFollowClick('user-1', false, 'User One');
     });
     await act(async () => {
-      await result.current.handleFollowClick('user-1', true);
+      await result.current.handleFollowClick('user-1', true, 'User One');
     });
 
     expect(result.current.preservedFollowedUserIds).toEqual([]);
@@ -51,7 +51,7 @@ describe('useWhoToFollowFollowPreservation', () => {
     const { result } = renderHook(() => useWhoToFollowFollowPreservation());
 
     await act(async () => {
-      await result.current.handleFollowClick('user-1', false);
+      await result.current.handleFollowClick('user-1', false, 'User One');
     });
 
     expect(result.current.preservedFollowedUserIds).toEqual([]);
@@ -63,7 +63,7 @@ describe('useWhoToFollowFollowPreservation', () => {
     });
 
     await act(async () => {
-      await result.current.handleFollowClick('user-1', false);
+      await result.current.handleFollowClick('user-1', false, 'User One');
     });
     expect(result.current.preservedFollowedUserIds).toEqual(['user-1']);
 

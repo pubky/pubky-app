@@ -82,7 +82,7 @@ export class FeedbackApplication {
 
       // Wrap unexpected errors
       Logger.error('Unexpected error during feedback submission', { error });
-      throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to submit feedback', {
+      throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Could not submit feedback. Try again.', {
         service: ErrorService.Chatwoot,
         operation: 'submit',
         cause: error,

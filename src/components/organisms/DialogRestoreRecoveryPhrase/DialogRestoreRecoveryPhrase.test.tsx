@@ -523,8 +523,8 @@ describe('DialogRestoreRecoveryPhrase', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error logging in with mnemonic',
-          description: 'Please try again.',
+          variant: 'error',
+          description: 'Could not sign in. Try again.',
         });
       });
 

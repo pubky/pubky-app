@@ -184,9 +184,15 @@
       "blocked": "Numero di telefono bloccato",
       "blockedDescription": "Questo numero di telefono non può essere usato per la verifica.",
       "tooManyAttempts": "Troppi tentativi di verifica",
-      "tooManyAttemptsDescription": "Hai raggiunto il numero massimo di verifiche per questo numero di telefono.",
+      "tooManyAttemptsDescription": "Troppi tentativi di verifica",
       "sendFailed": "Invio codice SMS fallito",
-      "sendFailedDescription": "Riprova più tardi. Se il problema persiste, contatta il supporto."
+      "sendFailedDescription": "Impossibile inviare il codice di verifica. Riprova più tardi.",
+      "rateLimitedWithRetry": "Troppi tentativi di verifica. Riprova tra {seconds}s.",
+      "weeklyLimitReached": "Troppi tentativi di verifica",
+      "weeklyLimitDescription": "Troppi tentativi di verifica",
+      "yearlyLimitReached": "Troppi tentativi di verifica",
+      "yearlyLimitDescription": "Troppi tentativi di verifica",
+      "verificationFailed": "Verifica telefonica fallita. Riprova."
     },
     "phoneCode": {
       "title": "Inserisci il <highlight>codice.</highlight>",
@@ -199,7 +205,7 @@
       "valid": "Codice di verifica valido",
       "invalid": "Codice di verifica non valido. Riprova.",
       "verifyFailed": "Verifica codice SMS fallita",
-      "verifyFailedDescription": "Riprova più tardi. Se il problema persiste, contatta il supporto."
+      "verifyFailedDescription": "Impossibile verificare il codice. Riprova più tardi."
     },
     "lightning": {
       "title": "Scansiona per <highlight>pagare.</highlight>",
@@ -215,9 +221,9 @@
       "paymentSuccess": "Pagamento riuscito",
       "paymentExpired": "Pagamento scaduto",
       "requestFailed": "Richiesta fattura Lightning fallita",
-      "requestFailedDescription": "Riprova più tardi. Se il problema persiste, contatta il supporto.",
+      "requestFailedDescription": "Impossibile richiedere la fattura Lightning. Riprova più tardi.",
       "invoiceCopied": "Fattura copiata negli appunti",
-      "copyFailed": "Copia fattura fallita"
+      "copyFailed": "Impossibile copiare la fattura."
     },
     "inviteCode": {
       "title": "Dimostra di <highlight>non essere un robot.</highlight>",
@@ -259,11 +265,8 @@
       "subtitleDesktop": "Apri Pubky Ring, tocca 'Aggiungi pubky', e scansiona questo QR.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
-
       "clickToReload": "Clicca per ricaricare",
-
       "openingRing": "Apertura di Pubky Ring...",
-
       "authorize": "Autorizza con Pubky Ring",
       "authorizeSub": "Usa <pubkyRing>Pubky Ring</pubkyRing> o qualsiasi altro portachiavi alimentato da <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "Impossibile collegarsi all'applicazione Pubky Ring",
@@ -276,22 +279,18 @@
       "progressSubtitle": "Attendi mentre la tua esperienza Pubky viene caricata.",
       "generating": "Generazione codice QR...",
       "generatingShort": "Generazione...",
-
       "clickToReload": "Clicca per ricaricare",
-
       "openingRing": "Apertura di Pubky Ring...",
-
       "authorize": "Autorizza con Pubky Ring",
       "linkCopied": "Link copiato",
-      "linkCopiedDescription": "Link di autenticazione copiato negli appunti.",
       "linkFailed": "Impossibile collegarsi all'applicazione Pubky Ring",
       "tryAgain": "Riprova.",
       "authInitFailedTitle": "Accesso non riuscito. Riprova.",
-      "authInitFailedDescription": "Impossibile completare l'autorizzazione con Pubky Ring. Riprova.",
+      "authInitFailedDescription": "Accesso fallito. Riprova.",
       "authNotCompletedTitle": "L'autorizzazione non è stata completata",
-      "authNotCompletedDescription": "Il firmatario non ha completato l'autorizzazione. Riprova.",
+      "authNotCompletedDescription": "Autorizzazione fallita. Riprova.",
       "qrGenerationFailedTitle": "Generazione del codice QR non riuscita",
-      "qrGenerationFailedDescription": "Impossibile generare il codice QR di accesso. Aggiorna e riprova.",
+      "qrGenerationFailedDescription": "Impossibile generare il QR. Aggiorna e riprova.",
       "recoveryHint": "Non riesci ad accedere con <pubkyRing>Pubky Ring</pubkyRing>? Usa la frase di recupero o il file crittografato per ripristinare il tuo account.",
       "verifyingAccount": "Verifica account",
       "loadingData": "Caricamento dei tuoi dati",
@@ -308,7 +307,7 @@
         "restore": "Ripristina",
         "restoring": "Ripristino in corso...",
         "errorTitle": "Errore di accesso con mnemonico",
-        "errorDescription": "Riprova."
+        "errorDescription": "Impossibile accedere. Riprova."
       },
       "restoreEncryptedFile": {
         "title": "Ripristina con file crittografato",
@@ -322,7 +321,7 @@
         "invalidPassword": "Password non valida o file corrotto. Verifica la password e riprova.",
         "nexusError": "Qualcosa è andato storto con nexus. Riprova.",
         "restoreError": "Ripristino dal file fallito. Verifica il file e riprova.",
-        "unexpectedError": "Si è verificato un errore imprevisto",
+        "unexpectedError": "Errore imprevisto.",
         "cancel": "Annulla",
         "restore": "Ripristina",
         "restoring": "Ripristino in corso..."
@@ -338,12 +337,11 @@
       "myPubky": "Il mio Pubky",
       "shareText": "Ecco il mio Pubky:\n{displayPubky}",
       "shareUnavailable": "Condivisione non disponibile",
-      "shareUnavailableDescription": "Abbiamo copiato il tuo pubky cosi puoi incollarlo nella tua app preferita.",
       "shareFailed": "Condivisione fallita",
-      "shareFailedDescription": "Impossibile condividere al momento. Riprova.",
+      "shareFailedDescription": "Impossibile condividere. Riprova.",
       "signUpFailed": "Errore - Registrazione fallita",
-      "signUpError": "Qualcosa e andato storto. Riprova.",
-      "invalidInvite": "Codice invito non valido o scaduto. Ottieni o richiedi un nuovo codice invito."
+      "signUpError": "Impossibile registrarsi. Riprova.",
+      "invalidInvite": "Il codice invito non è valido o è scaduto."
     },
     "backupMethod": {
       "title": "Scegli il metodo di backup",
@@ -355,8 +353,8 @@
       "title": "Esegui il backup del tuo <highlight>pubky.</highlight>",
       "subtitle": "Hai bisogno di un backup per ripristinare l'accesso al tuo account in seguito.",
       "signUpFailed": "Errore - Registrazione fallita",
-      "signUpError": "Qualcosa e andato storto. Riprova.",
-      "invalidInvite": "Codice invito non valido o scaduto. Ottieni o richiedi un nuovo codice invito."
+      "signUpError": "Impossibile registrarsi. Riprova.",
+      "invalidInvite": "Il codice invito non è valido o è scaduto."
     },
     "backupPhrase": {
       "title": "Backup frase di recupero",
@@ -668,11 +666,11 @@
       "saveFeed": "Salva Feed",
       "deleteFeed": "Elimina Feed",
       "feedCreated": "Feed {name} creato!",
-      "feedCreateError": "Impossibile creare il feed, riprova o contatta il supporto.",
+      "feedCreateError": "Impossibile creare il feed. Riprova.",
       "feedEdited": "Feed {name} modificato!",
-      "feedEditError": "Impossibile modificare il feed, riprova o contatta il supporto.",
+      "feedEditError": "Impossibile aggiornare il feed. Riprova.",
       "feedDeleted": "Feed {name} eliminato!",
-      "feedDeleteError": "Impossibile eliminare il feed, riprova o contatta il supporto."
+      "feedDeleteError": "Impossibile eliminare il feed. Riprova."
     }
   },
   "sidebar": {
@@ -708,7 +706,7 @@
     },
     "userSuggestion": "Utente {name} ({pubky})",
     "viewProfile": "Vedi profilo di {name}",
-    "invalidTag": "I tag devono avere al massimo 20 caratteri e non possono contenere caratteri speciali"
+    "invalidTag": "I tag possono avere max 20 caratteri e non possono contenere caratteri speciali"
   },
   "feedback": {
     "title": "Invia feedback",
@@ -895,123 +893,108 @@
     "success": "Successo",
     "error": "Errore",
     "errors": "Errori",
-    "genericErrorTitle": "Ops! Qualcosa e andato storto!",
+    "genericErrorTitle": "Errore",
     "post": {
       "replyPosted": "Risposta pubblicata",
-      "replyPostedDesc": "La tua risposta e stata pubblicata con successo.",
-      "replyFailed": "Pubblicazione risposta fallita. Riprova.",
+      "replyFailed": "Impossibile pubblicare la risposta. Riprova.",
       "postCreated": "Post creato",
-      "postCreatedDesc": "Il tuo post e stato creato con successo.",
-      "postFailed": "Creazione post fallita. Riprova.",
+      "postFailed": "Impossibile creare il post. Riprova.",
       "repostSuccess": "Ripubblicato!",
-      "repostSuccessDesc": "Hai ripubblicato con successo un post di {author}!",
-      "repostSuccessDescFallback": "La tua ripubblicazione è stata creata con successo.",
       "repostUndo": "Annulla",
-      "repostFailed": "Ripubblicazione fallita. Riprova.",
+      "repostFailed": "Impossibile ripubblicare. Riprova.",
       "postEdited": "Post modificato",
-      "postEditedDesc": "Il tuo post e stato modificato con successo.",
-      "editFailed": "Modifica post fallita. Riprova.",
+      "editFailed": "Impossibile aggiornare il post. Riprova.",
       "postDeleted": "Post eliminato",
-      "postDeletedDesc": "Il tuo post e stato eliminato",
-      "deleteFailed": "Eliminazione post fallita. Riprova.",
-      "invalidPostId": "ID post non valido. Riprova.",
+      "deleteFailed": "Impossibile eliminare il post. Riprova.",
+      "invalidPostId": "Post non valido. Riprova.",
       "attachmentsCleared": "Allegati rimossi",
-      "attachmentsClearedDesc": "Gli articoli supportano solo un'immagine di copertina.",
-      "failedToLoadPosts": "Caricamento nuovi post fallito",
-      "failedToLoadPostsDesc": "Impossibile visualizzare nuovi post. Riprova.",
-      "parseError": "Analisi contenuto articolo fallita",
-      "coverImageError": "Caricamento immagine di copertina articolo fallito",
-      "attachmentsLoadFailed": "Caricamento allegati fallito"
+      "failedToLoadPosts": "Impossibile caricare i nuovi post",
+      "parseError": "Impossibile analizzare il contenuto dell'articolo",
+      "coverImageError": "Impossibile caricare l'immagine di copertina",
+      "attachmentsLoadFailed": "Impossibile caricare gli allegati",
+      "repostSuccessFallback": "Ripubblicato"
     },
     "bookmark": {
       "added": "Segnalibro aggiunto",
-      "addedDesc": "Post salvato nei tuoi segnalibri",
       "removed": "Segnalibro rimosso",
-      "removedDesc": "Post rimosso dai tuoi segnalibri",
-      "addFailed": "Aggiunta segnalibro fallita",
-      "removeFailed": "Rimozione segnalibro fallita",
-      "loginRequired": "Devi accedere per salvare post"
+      "addFailed": "Impossibile aggiungere il segnalibro",
+      "removeFailed": "Impossibile rimuovere il segnalibro",
+      "loginRequired": "Accedi per salvare i post"
     },
     "copy": {
       "pubkyCopied": "Pubky copiato negli appunti",
       "linkCopied": "Link copiato negli appunti",
       "textCopied": "Testo copiato negli appunti",
       "profileLinkCopied": "Link profilo copiato negli appunti",
-      "copyFailed": "Copia fallita",
+      "copyFailed": "Impossibile copiare negli appunti",
       "copyFailedDesc": "Impossibile copiare negli appunti"
     },
     "follow": {
-      "failed": "Aggiornamento stato follow fallito"
+      "failed": "Impossibile aggiornare lo stato di follow",
+      "followed": "Stai seguendo {username}",
+      "unfollowed": "Hai smesso di seguire {username}"
     },
     "mute": {
-      "muted": "Utente silenziato",
-      "unmuted": "Utente riattivato",
-      "mutedDesc": "{username} e stato silenziato.",
-      "unmutedDesc": "{username} e stato riattivato.",
-      "failed": "Aggiornamento stato silenziamento fallito"
+      "muted": "{username} silenziato",
+      "unmuted": "{username} non più silenziato",
+      "failed": "Impossibile aggiornare lo stato di silenziamento"
     },
     "profile": {
       "updated": "Profilo aggiornato",
-      "updatedDesc": "Il tuo profilo e stato aggiornato con successo.",
       "sessionExpired": "Sessione scaduta",
-      "sessionExpiredDesc": "Esci e accedi nuovamente per continuare.",
-      "saveFailed": "Salvataggio profilo fallito",
-      "saveFailedDesc": "Riprova.",
-      "fetchFailed": "Riprova.",
-      "fetchFailedDesc": "Recupero nuovi dati utente fallito. L'indicizzazione potrebbe essere in corso...",
-      "updateFailed": "Aggiornamento profilo fallito."
+      "sessionExpiredDesc": "Sessione scaduta. Accedi.",
+      "saveFailed": "Impossibile salvare il profilo",
+      "fetchFailedDesc": "Impossibile aggiornare il profilo",
+      "updateFailed": "Impossibile aggiornare il profilo"
     },
     "report": {
-      "userNotLoaded": "Profilo utente non caricato. Riprova.",
-      "submitFailed": "Invio segnalazione fallito",
-      "submitFailedDesc": "Invio segnalazione fallito. Riprova."
+      "userNotLoaded": "Impossibile caricare il profilo",
+      "submitFailedDesc": "Impossibile inviare la segnalazione. Riprova."
     },
     "feedback": {
-      "userNotLoaded": "Profilo utente non caricato. Riprova.",
-      "submitFailed": "Invio feedback fallito",
-      "submitFailedDesc": "Invio feedback fallito. Riprova."
+      "userNotLoaded": "Impossibile caricare il profilo",
+      "submitFailedDesc": "Impossibile inviare il feedback. Riprova."
     },
     "copyright": {
       "success": "Richiesta inviata con successo",
-      "error": "Errore nell'invio della richiesta",
-      "submitFailed": "Invio richiesta fallito"
+      "error": "Impossibile inviare la richiesta",
+      "submitFailed": "Impossibile inviare la richiesta"
     },
     "tags": {
-      "loadFailed": "Caricamento altri tag fallito",
-      "loadFailedDesc": "Impossibile caricare altri tag. Riprova.",
+      "loadFailed": "Impossibile caricare altri tag",
       "labelEmpty": "L'etichetta del tag non può essere vuota",
       "postIdRequired": "ID post obbligatorio",
       "userIdRequired": "ID utente obbligatorio",
       "loginRequired": "Devi accedere per aggiungere tag",
       "alreadyAdded": "Hai già aggiunto questo tag",
-      "addFailed": "Aggiunta tag fallita",
-      "addFailedDesc": "Impossibile aggiungere \"{label}\". Riprova.",
-      "removeFailed": "Rimozione tag fallita",
-      "removeFailedDesc": "Impossibile rimuovere \"{label}\". Riprova."
+      "added": "Tag aggiunto: {label}",
+      "removed": "Tag rimosso: {label}",
+      "addFailed": "Impossibile aggiungere il tag: {label}",
+      "removeFailed": "Impossibile rimuovere il tag: {label}"
     },
     "auth": {
       "signInFailed": "Accesso fallito. Riprova.",
-      "signInFailedDesc": "Impossibile completare l'autorizzazione con Pubky Ring. Riprova.",
+      "signInFailedDesc": "Accesso fallito. Riprova.",
       "authNotCompleted": "Autorizzazione non completata",
-      "authNotCompletedDesc": "Il firmatario non ha completato l'autorizzazione. Riprova.",
+      "authNotCompletedDesc": "Autorizzazione fallita. Riprova.",
       "qrFailed": "Generazione codice QR fallita",
-      "qrFailedDesc": "Impossibile generare codice QR di accesso. Aggiorna e riprova."
+      "qrFailedDesc": "Impossibile generare il QR. Aggiorna e riprova."
     },
     "file": {
       "maxFiles": "Massimo {max} file consentiti",
       "maxFilesPartial": "Massimo {max} file consentiti. Alcuni file non sono stati aggiunti.",
-      "unsupportedType": "\"{name}\" ha tipo non supportato \"{type}\". Formati supportati: {formats}.",
-      "fileTooLarge": "\"{name}\" supera la dimensione massima di {maxSize}."
+      "unsupportedType": "Tipo di file non supportato per {name}. Supportati: {formats}.",
+      "fileTooLarge": "{name} supera il limite di {maxSize}."
     },
     "status": {
       "updateFailed": "Impossibile aggiornare lo stato. Riprova.",
-      "userNotLoaded": "Profilo utente non caricato. Riprova."
+      "userNotLoaded": "Impossibile caricare il profilo. Riprova."
     },
     "fullscreen": {
-      "error": "Errore durante l'attivazione della modalità schermo intero"
+      "error": "Impossibile attivare lo schermo intero."
     },
     "logout": {
-      "failed": "Disconnessione fallita. Riprova."
+      "failed": "Impossibile disconnettersi. Riprova."
     }
   },
   "empty": {
@@ -1022,10 +1005,10 @@
     "noNotifications": "Nessuna notifica"
   },
   "errors": {
-    "signOutFailed": "Disconnessione fallita. Riprova.",
+    "signOutFailed": "Impossibile disconnettersi. Riprova.",
     "deleteAccountFailed": "Eliminazione dell'account fallita. Riprova.",
     "generic": "Qualcosa e andato storto",
-    "network": "Errore di rete. Riprova.",
+    "network": "Errore di rete",
     "notFound": "Pagina non trovata",
     "couldNotFind": "Impossibile trovare la risorsa richiesta",
     "database": {
@@ -1130,9 +1113,7 @@
     "unmuteAll": "Riattiva tutti gli utenti",
     "noMutedUsers": "Ancora nessun utente silenziato",
     "userUnmuted": "Utente riattivato",
-    "userUnmutedDesc": "{username} e stato riattivato.",
     "allUsersUnmuted": "Tutti gli utenti riattivati",
-    "allUsersUnmutedDesc": "Tutti gli utenti silenziati sono stati riattivati.",
     "partialSuccess": "Successo parziale",
     "partialSuccessDesc": "{success} utenti riattivati, {failed} falliti."
   },

@@ -32,7 +32,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
 
   const handleEnter = (value: string) => {
     if (!isValidTagLabel(value.trim().toLowerCase())) {
-      toast({ description: t('invalidTag') });
+      toast({ variant: 'error', description: t('invalidTag') });
       return false;
     }
 

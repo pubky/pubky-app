@@ -9,7 +9,6 @@ import { AuthController } from '@/controllers/auth/auth';
 import { formatInviteCode } from '@/libs/utils/utils';
 import { InstallCard, InstallFooter, InstallHeader, InstallNavigation } from '@/molecules/Install/Install';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
@@ -58,7 +57,8 @@ export function Install() {
         }
       } catch {
         // The homeserver could not be reached, so we couldn't confirm the code.
-        showErrorToast({
+        toast({
+          variant: 'error',
           title: t('verificationFailed'),
           description: t('verificationFailedDescription'),
         });

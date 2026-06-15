@@ -32,14 +32,13 @@ export function MutedUsersList() {
     try {
       await toggleMute(userId, true);
       toast({
-        title: t('userUnmuted'),
-        description: t('userUnmutedDesc', {
+        title: t('userUnmuted', {
           username: userName || userId,
         }),
       });
     } catch (error) {
       toast({
-        title: tCommon('error'),
+        variant: 'error',
         description: isAppError(error) ? error.message : tToast('failed'),
       });
     }
@@ -56,6 +55,7 @@ export function MutedUsersList() {
       const failedCount = results.filter((r) => r.status === 'rejected').length;
       if (failedCount > 0) {
         toast({
+          variant: 'warning',
           title: t('partialSuccess'),
           description: t('partialSuccessDesc', {
             success: idsToUnmute.length - failedCount,
@@ -65,12 +65,11 @@ export function MutedUsersList() {
       } else {
         toast({
           title: t('allUsersUnmuted'),
-          description: t('allUsersUnmutedDesc'),
         });
       }
     } catch (error) {
       toast({
-        title: tCommon('error'),
+        variant: 'error',
         description: isAppError(error) ? error.message : tToast('failed'),
       });
     } finally {

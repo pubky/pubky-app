@@ -6,7 +6,6 @@ import { ONBOARDING_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { Logger } from '@/libs/logger/logger';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { HumanInviteCode } from '@/organisms/HumanInviteCode/HumanInviteCode';
 import type { InviteCodeVerificationResult } from '@/organisms/HumanInviteCode/HumanInviteCode.types';
@@ -74,7 +73,8 @@ export function Human() {
       });
       return 'invalid';
     } catch {
-      showErrorToast({
+      toast({
+        variant: 'error',
         title: t('verificationFailed'),
         description: t('verificationFailedDescription'),
       });

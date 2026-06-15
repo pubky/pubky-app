@@ -116,7 +116,7 @@ export class ReportApplication {
 
       // Wrap unexpected errors
       Logger.error('Unexpected error during report submission', { error });
-      throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to submit report', {
+      throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Could not submit report. Try again.', {
         service: ErrorService.Chatwoot,
         operation: 'submit',
         cause: error,

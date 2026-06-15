@@ -48,7 +48,6 @@ export function usePostArticle({
   coverImageVariant,
 }: UsePostArticleParams): UsePostArticleResult {
   const { toast } = useToast();
-  const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
 
   const [title, setTitle] = useState('');
@@ -62,7 +61,7 @@ export function usePostArticle({
       setBody(parsed.body || '');
     } catch {
       toast({
-        title: tToast('error'),
+        variant: 'error',
         description: tPost('parseError'),
       });
     }
@@ -89,7 +88,7 @@ export function usePostArticle({
         if (cancelled) return;
 
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tPost('coverImageError'),
         });
       }

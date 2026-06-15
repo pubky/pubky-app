@@ -16,7 +16,6 @@ export const PostAttachments = ({ attachments, localAttachments }: PostAttachmen
   const [genericFiles, setGenericFiles] = useState<AttachmentConstructed[]>([]);
 
   const { toast } = useToast();
-  const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
 
   useEffect(() => {
@@ -66,7 +65,7 @@ export const PostAttachments = ({ attachments, localAttachments }: PostAttachmen
         setGenericFiles(genericFiles);
       } catch {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tPost('attachmentsLoadFailed'),
         });
       }

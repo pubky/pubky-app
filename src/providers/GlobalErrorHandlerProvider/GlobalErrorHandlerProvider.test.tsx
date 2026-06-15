@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { toast } from '@/molecules/Toaster/use-toast';
 import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
 
 vi.mock('@/libs/logger/logger', async (importOriginal) => {
@@ -24,9 +24,9 @@ vi.mock('@/libs/error/error.utils', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules/Toaster/showErrorToast', () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    showErrorToast: vi.fn(),
+    toast: vi.fn(),
   };
 });
 
@@ -63,7 +63,7 @@ describe('GlobalErrorHandlerProvider', () => {
 
     expect(getErrorMessage).toHaveBeenCalled();
     expect(Logger.error).toHaveBeenCalled();
-    expect(showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
+    expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Something went wrong' });
   });
 
   it('handles unhandledrejection events', () => {
@@ -80,7 +80,7 @@ describe('GlobalErrorHandlerProvider', () => {
     });
     expect(getErrorMessage).toHaveBeenCalled();
     expect(Logger.error).toHaveBeenCalled();
-    expect(showErrorToast).toHaveBeenCalledWith({ description: 'Something went wrong' });
+    expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Something went wrong' });
   });
 
   it('throttles duplicate error toasts within the cooldown window', () => {
@@ -99,13 +99,13 @@ describe('GlobalErrorHandlerProvider', () => {
     });
 
     expect(Logger.error).toHaveBeenCalledTimes(2);
-    expect(showErrorToast).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledTimes(1);
 
     act(() => {
       vi.advanceTimersByTime(3001);
       window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom'), message: 'boom' }));
     });
 
-    expect(showErrorToast).toHaveBeenCalledTimes(2);
+    expect(toast).toHaveBeenCalledTimes(2);
   });
 });

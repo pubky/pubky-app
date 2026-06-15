@@ -10,7 +10,7 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { NewPostsButton } from '@/molecules/NewPostsButton/NewPostsButton';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { toast } from '@/molecules/Toaster/use-toast';
 
 interface NewPostsSectionProps {
   streamId: PostStreamId;
@@ -67,9 +67,9 @@ export function NewPostsSection({
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       Logger.error('Failed to load new posts:', error);
-      showErrorToast({
-        title: t('failedToLoadPosts'),
-        description: t('failedToLoadPostsDesc'),
+      toast({
+        variant: 'error',
+        description: t('failedToLoadPosts'),
       });
     }
   };
