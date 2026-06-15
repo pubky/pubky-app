@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { UserRoundPlus } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
@@ -12,19 +13,18 @@ import { LANDING_HERO_SECTION_ID } from '@/templates/Public/Landing/Landing.cons
 import { HeaderSocialLinks } from '../Header/Header';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 
-interface HeaderHomeProps extends React.HTMLAttributes<HTMLDivElement> {
-  showLandingJoinButton?: boolean;
-}
-
-export const HeaderHome = ({ showLandingJoinButton = false, ...props }: HeaderHomeProps) => {
+export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const router = useRouter();
   const t = useTranslations('landing');
+  const pathname = usePathname();
   const [showJoinButton, setShowJoinButton] = React.useState(false);
+
+  const isHomePage = pathname === '/';
 
   React.useEffect(() => {
     setShowJoinButton(false);
 
-    if (!showLandingJoinButton) return;
+    if (!isHomePage) return;
     if (typeof IntersectionObserver === 'undefined') return;
 
     const heroSection = document.getElementById(LANDING_HERO_SECTION_ID);
@@ -50,7 +50,7 @@ export const HeaderHome = ({ showLandingJoinButton = false, ...props }: HeaderHo
     return () => {
       observer.disconnect();
     };
-  }, [showLandingJoinButton]);
+  }, [isHomePage]);
 
   const handleJoin = () => {
     router.push(ONBOARDING_ROUTES.HUMAN);

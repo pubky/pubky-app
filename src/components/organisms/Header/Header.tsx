@@ -61,7 +61,7 @@ export function Header() {
     if (isCoreExploreRoute || isDynamicPublicRoute) {
       return <HeaderExploreNavigationButtons />;
     }
-    return <HeaderHome showLandingJoinButton={isLandingPage} />;
+    return <HeaderHome />;
   };
 
   // Copyright page shows only logo (minimal header).
