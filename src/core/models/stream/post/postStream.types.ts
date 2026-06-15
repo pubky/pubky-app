@@ -143,6 +143,20 @@ export function buildAuthorCollectionsStreamId(authorPubky: Pubky): AuthorCollec
   return `${authorPubky}:${StreamSource.AUTHOR}:${StreamKind.COLLECTION}`;
 }
 
+/**
+ * Author-scoped profile streams intentionally include posts from muted users
+ * (viewing someone's profile shows their full timeline, same as bookmarks #1804).
+ */
+export function isAuthorStreamSkippingMuteFilter(streamId: string): boolean {
+  if (streamId.startsWith(`${StreamSource.AUTHOR}:`)) {
+    return true;
+  }
+  if (streamId.startsWith(`${StreamSource.AUTHOR_REPLIES}:`)) {
+    return true;
+  }
+  return streamId.endsWith(`:${StreamSource.AUTHOR}:${StreamKind.COLLECTION}`);
+}
+
 export function buildFollowedCollectionsStreamId(): FollowedCollectionsStreamId {
   return `${StreamSorting.TIMELINE}:${StreamSource.BOOKMARKS}:${StreamKind.COLLECTION}`;
 }

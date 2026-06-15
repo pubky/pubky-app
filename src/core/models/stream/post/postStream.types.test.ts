@@ -6,6 +6,7 @@ import {
   buildDiscoverCollectionsStreamId,
   buildFollowedCollectionsStreamId,
   buildPostReplyStreamId,
+  isAuthorStreamSkippingMuteFilter,
   isSkipPaginatedStream,
 } from '@/models/stream/post/postStream.types';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
@@ -85,5 +86,19 @@ describe('isSkipPaginatedStream', () => {
     expect(isSkipPaginatedStream('timeline:bookmarks:collection')).toBe(false);
     expect(isSkipPaginatedStream(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(false);
     expect(isSkipPaginatedStream(`${TEST_PUBKY}:author`)).toBe(false);
+  });
+});
+
+describe('isAuthorStreamSkippingMuteFilter', () => {
+  it('returns true for author profile streams', () => {
+    expect(isAuthorStreamSkippingMuteFilter(`author:${TEST_PUBKY}`)).toBe(true);
+    expect(isAuthorStreamSkippingMuteFilter(`author_replies:${TEST_PUBKY}`)).toBe(true);
+    expect(isAuthorStreamSkippingMuteFilter(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(true);
+  });
+
+  it('returns false for global and discover streams', () => {
+    expect(isAuthorStreamSkippingMuteFilter('timeline:all:all')).toBe(false);
+    expect(isAuthorStreamSkippingMuteFilter(buildDiscoverCollectionsStreamId())).toBe(false);
+    expect(isAuthorStreamSkippingMuteFilter(buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(false);
   });
 });

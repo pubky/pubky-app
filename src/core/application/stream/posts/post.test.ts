@@ -8,7 +8,7 @@ import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DELETED } from '@/models/post/details/postDetails.constants';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { type PostStreamId, PostStreamTypes, buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamModel } from '@/models/stream/user/userStream';
@@ -1945,6 +1945,50 @@ describe('PostStreamApplication', () => {
       });
 
       expect(result.nextPageIds).toEqual(['author-1:post-1', 'author-2:post-2', 'author-3:post-3']);
+    });
+
+    it('does not filter author profile stream posts from muted authors', async () => {
+      await setupMutedUsers([DEFAULT_AUTHOR] as Pubky[]);
+
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
+        post_keys: [`${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`],
+        last_post_score: BASE_TIMESTAMP + 1,
+      };
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      const authorStreamId = `author:${DEFAULT_AUTHOR}` as PostStreamId;
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: authorStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+
+      expect(result.nextPageIds).toEqual([`${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`]);
+    });
+
+    it('does not filter author collections stream posts from muted authors', async () => {
+      await setupMutedUsers([DEFAULT_AUTHOR] as Pubky[]);
+
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
+        post_keys: [`${DEFAULT_AUTHOR}:collection-1`, `${DEFAULT_AUTHOR}:collection-2`],
+        last_post_score: BASE_TIMESTAMP + 1,
+      };
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      const authorCollectionsStreamId = buildAuthorCollectionsStreamId(DEFAULT_AUTHOR as Pubky);
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: authorCollectionsStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+
+      expect(result.nextPageIds).toEqual([`${DEFAULT_AUTHOR}:collection-1`, `${DEFAULT_AUTHOR}:collection-2`]);
     });
 
     it('should fetch more posts until limit is reached after mute filtering', async () => {
