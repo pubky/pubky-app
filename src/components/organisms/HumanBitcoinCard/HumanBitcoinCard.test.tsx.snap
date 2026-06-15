@@ -112,7 +112,7 @@ exports[`BitcoinPaymentCard > matches snapshot 1`] = `
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-check size-4 shrink-0 text-foreground"
+              class="lucide lucide-check size-6 shrink-0 text-foreground"
               fill="none"
               height="24"
               stroke="currentColor"
@@ -140,7 +140,7 @@ exports[`BitcoinPaymentCard > matches snapshot 1`] = `
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-check size-4 shrink-0 text-foreground"
+              class="lucide lucide-check size-6 shrink-0 text-foreground"
               fill="none"
               height="24"
               stroke="currentColor"
@@ -291,7 +291,7 @@ exports[`BitcoinPaymentCard > matches snapshot when geo-blocked 1`] = `
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-check size-4 shrink-0 text-foreground"
+              class="lucide lucide-check size-6 shrink-0 text-foreground"
               fill="none"
               height="24"
               stroke="currentColor"
@@ -319,7 +319,7 @@ exports[`BitcoinPaymentCard > matches snapshot when geo-blocked 1`] = `
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-check size-4 shrink-0 text-foreground"
+              class="lucide lucide-check size-6 shrink-0 text-foreground"
               fill="none"
               height="24"
               stroke="currentColor"
