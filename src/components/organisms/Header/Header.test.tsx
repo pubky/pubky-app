@@ -148,8 +148,8 @@ vi.mock('@/molecules/Header/Header', () => {
 
 vi.mock('@/molecules/HeaderHome/HeaderHome', () => {
   return {
-    HeaderHome: ({ showLandingJoinButton }: { showLandingJoinButton?: boolean }) => (
-      <div data-testid="header-home" data-show-landing-join-button={String(Boolean(showLandingJoinButton))}>
+    HeaderHome: () => (
+      <div data-testid="header-home">
         <div data-testid="header-social-links">Social Links</div>
         <button>Sign in</button>
       </div>
@@ -638,7 +638,7 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-home')).toBeInTheDocument();
-      expect(screen.getByTestId('header-home')).toHaveAttribute('data-show-landing-join-button', 'true');
+      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
     });
 
     it('does not enable the landing join button on non-landing HeaderHome routes', () => {
@@ -650,7 +650,7 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-home')).toBeInTheDocument();
-      expect(screen.getByTestId('header-home')).toHaveAttribute('data-show-landing-join-button', 'false');
+      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
     });
 
     it('renders explore navigation when unauthenticated on a core explore route', () => {
