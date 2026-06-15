@@ -27,5 +27,6 @@ store) lives elsewhere — see `../mocks/`.
   not `nexus/posts.ts`).
 - All exported symbols are prefixed `VRT_` so the test harness origin is
   obvious at every call site.
-- Avatars and other binary assets live under `public/test-fixtures/` so they
-  resolve via the same Next.js static path the app uses in production.
+- VRT profile fixtures set `image: null` so every avatar uses the deterministic
+  FacehashAvatar fallback (see `feed/profiles.ts`). `vrt.setup.ts` freezes
+  facehash motion (no blink, 3D tilt, or hover) for pixel-stable screenshots.

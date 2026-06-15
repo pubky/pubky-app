@@ -14,14 +14,14 @@ export const VRT_AUTHOR_PUBKYS = {
   hana: 'vrt0000000000000000000000000000000000000000000hana08' as Pubky,
 } as const;
 
-const FIXTURE_AVATAR_BASE = '/test-fixtures/avatars';
-
+// No uploaded avatar images in VRT — every profile renders the pubky/name-derived
+// FacehashAvatar fallback (same path as the signed-in header avatar).
 export const VRT_AUTHOR_PROFILES: Record<Pubky, NexusUserDetails> = {
   [VRT_AUTHOR_PUBKYS.alice]: {
     id: VRT_AUTHOR_PUBKYS.alice,
     name: 'Alice Mercado',
     bio: 'Designing local-first social tools. Probably outside.',
-    image: `${FIXTURE_AVATAR_BASE}/01-mint.svg`,
+    image: null,
     links: [{ title: 'Site', url: 'https://example.com/alice' }],
     status: null,
     indexed_at: VRT_FROZEN_NOW_MS - 30 * 24 * HOUR_MS,
@@ -30,7 +30,7 @@ export const VRT_AUTHOR_PROFILES: Record<Pubky, NexusUserDetails> = {
     id: VRT_AUTHOR_PUBKYS.bran,
     name: 'Bran Ó Conaill',
     bio: 'Distributed systems / Bitcoin / cold-brew enthusiast.',
-    image: `${FIXTURE_AVATAR_BASE}/02-violet.svg`,
+    image: null,
     links: null,
     status: null,
     indexed_at: VRT_FROZEN_NOW_MS - 24 * 24 * HOUR_MS,
@@ -39,7 +39,7 @@ export const VRT_AUTHOR_PROFILES: Record<Pubky, NexusUserDetails> = {
     id: VRT_AUTHOR_PUBKYS.cleo,
     name: 'Cleo Ramirez',
     bio: 'Photographer. Sunlight, skylines, slow shutters.',
-    image: `${FIXTURE_AVATAR_BASE}/03-amber.svg`,
+    image: null,
     links: null,
     status: null,
     indexed_at: VRT_FROZEN_NOW_MS - 18 * 24 * HOUR_MS,
@@ -48,7 +48,7 @@ export const VRT_AUTHOR_PROFILES: Record<Pubky, NexusUserDetails> = {
     id: VRT_AUTHOR_PUBKYS.dion,
     name: 'Dion Park',
     bio: 'Reading list maximalist. Notes app at full health.',
-    image: `${FIXTURE_AVATAR_BASE}/04-rose.svg`,
+    image: null,
     links: null,
     status: null,
     indexed_at: VRT_FROZEN_NOW_MS - 14 * 24 * HOUR_MS,
@@ -57,7 +57,7 @@ export const VRT_AUTHOR_PROFILES: Record<Pubky, NexusUserDetails> = {
     id: VRT_AUTHOR_PUBKYS.eira,
     name: 'Eira Hauksson',
     bio: 'Building protocols for human-scale networks.',
-    image: `${FIXTURE_AVATAR_BASE}/05-sky.svg`,
+    image: null,
     links: null,
     status: null,
     indexed_at: VRT_FROZEN_NOW_MS - 9 * 24 * HOUR_MS,
@@ -66,7 +66,7 @@ export const VRT_AUTHOR_PROFILES: Record<Pubky, NexusUserDetails> = {
     id: VRT_AUTHOR_PUBKYS.fynn,
     name: 'Fynn Aldridge',
     bio: 'Music, mostly. Mixing engineer by day.',
-    image: `${FIXTURE_AVATAR_BASE}/06-lime.svg`,
+    image: null,
     links: null,
     status: null,
     indexed_at: VRT_FROZEN_NOW_MS - 6 * 24 * HOUR_MS,
@@ -75,7 +75,7 @@ export const VRT_AUTHOR_PROFILES: Record<Pubky, NexusUserDetails> = {
     id: VRT_AUTHOR_PUBKYS.glen,
     name: 'Glen Iwobi',
     bio: 'Cycling, kettles, and key-value stores.',
-    image: `${FIXTURE_AVATAR_BASE}/07-coral.svg`,
+    image: null,
     links: null,
     status: null,
     indexed_at: VRT_FROZEN_NOW_MS - 3 * 24 * HOUR_MS,
@@ -84,7 +84,7 @@ export const VRT_AUTHOR_PROFILES: Record<Pubky, NexusUserDetails> = {
     id: VRT_AUTHOR_PUBKYS.hana,
     name: 'Hana Voss',
     bio: 'Type-setter. Long walks. Longer footnotes.',
-    image: `${FIXTURE_AVATAR_BASE}/08-slate.svg`,
+    image: null,
     links: null,
     status: null,
     indexed_at: VRT_FROZEN_NOW_MS - 30 * MINUTE_MS,

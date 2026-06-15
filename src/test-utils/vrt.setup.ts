@@ -9,13 +9,14 @@
 // `src/libs/env/env.ts` are set here — everything else falls through to the
 // schema default and stays in sync automatically. Do not paste real config
 // values here; this file is committed.
-(globalThis as { process?: { env: Record<string, string | undefined> } }).process ??= {
+(globalThis as { process?: { env: Record<string, string | undefined> }; __VRT__?: boolean }).process ??= {
   env: {
     NODE_ENV: 'test',
     VITEST: 'true',
     NEXT_PUBLIC_APP_VERSION: '0.0.0-test',
   },
 };
+(globalThis as { __VRT__?: boolean }).__VRT__ = true;
 
 // Load Tailwind + design tokens. Without this, every screenshot collapses to an
 // unstyled blank page and the baseline is useless.
@@ -29,11 +30,21 @@ import { vi } from 'vitest';
 // 1. Disable animations, transitions, and caret blinking — these are the
 //    most common causes of flaky pixel diffs.
 // 2. Hide the and document scrollbars (OS-dependent gutter)
+// 3. Freeze facehash avatars — disable 3D tilt, blink, and hover transitions
+//    (see FacehashAvatar `__VRT__` props) so GPU rasterisation is identical
+//    across local runs and CI.
 const stabilizerCss = `
   *, *::before, *::after {
     transition: none !important;
     animation: none !important;
     caret-color: transparent !important;
+  }
+
+  [data-facehash],
+  [data-facehash-face] {
+    perspective: none !important;
+    transform: none !important;
+    transform-style: flat !important;
   }
 
   html,
