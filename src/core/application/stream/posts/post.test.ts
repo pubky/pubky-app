@@ -265,6 +265,20 @@ describe('PostStreamApplication', () => {
       expect(result).toEqual([shortPostId]);
     });
 
+    it('keeps collection-kind posts in author collections streams', async () => {
+      const authorCollectionsStreamId = `${DEFAULT_AUTHOR}:author:collection` as PostStreamId;
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: authorCollectionsStreamId,
+        postIds: [collectionPostId],
+      });
+
+      expect(result).toEqual([collectionPostId]);
+    });
+
     it('keeps posts without cached details so cache misses can be resolved', async () => {
       const missingPostId = `${DEFAULT_AUTHOR}:missing-post`;
 

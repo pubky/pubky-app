@@ -7,6 +7,7 @@ import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import {
+  buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
   type PostStreamId,
   PostStreamTypes,
@@ -429,6 +430,40 @@ describe('TimelineFeedContent', () => {
         <TimelineFeedWithStream
           streamId={profileStreamId}
           variant={TIMELINE_FEED_VARIANT.PROFILE}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+      expect(mockRemovePosts).not.toHaveBeenCalled();
+    });
+
+    it('does not remove or refresh posts for profile collections feeds', () => {
+      let mutedUserIds = ['muted-user'];
+      const profileCollectionsStreamId = buildAuthorCollectionsStreamId('profile-user');
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['muted-user:collection-1', 'other-user:collection-2'],
+      });
+      mockUseMutedUsers.mockImplementation(() => ({
+        ...defaultMutedUsersResult,
+        mutedUserIds,
+        mutedUserIdSet: new Set(mutedUserIds),
+      }));
+
+      const { rerender } = render(
+        <TimelineFeedWithStream
+          streamId={profileCollectionsStreamId}
+          variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS}
+          tagsLayout="inline"
+        />,
+      );
+
+      mutedUserIds = [];
+      rerender(
+        <TimelineFeedWithStream
+          streamId={profileCollectionsStreamId}
+          variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS}
           tagsLayout="inline"
         />,
       );

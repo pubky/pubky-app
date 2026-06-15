@@ -9,7 +9,11 @@ import { useHotStreamId } from '@/hooks/useHotStreamId/useHotStreamId';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
-import { type AuthorStreamCompositeId, buildCollectionItemsStreamId } from '@/models/stream/post/postStream.types';
+import {
+  type AuthorStreamCompositeId,
+  buildAuthorCollectionsStreamId,
+  buildCollectionItemsStreamId,
+} from '@/models/stream/post/postStream.types';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
@@ -38,6 +42,8 @@ export function TimelineFeed({ variant, children, emptyState }: TimelineFeedProp
       return <BookmarksTimelineFeed emptyState={emptyState}>{children}</BookmarksTimelineFeed>;
     case TIMELINE_FEED_VARIANT.PROFILE:
       return <ProfileTimelineFeed>{children}</ProfileTimelineFeed>;
+    case TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS:
+      return <ProfileCollectionsTimelineFeed>{children}</ProfileCollectionsTimelineFeed>;
     case TIMELINE_FEED_VARIANT.HOT:
       return <HotTimelineFeed>{children}</HotTimelineFeed>;
     case TIMELINE_FEED_VARIANT.SEARCH:
@@ -131,6 +137,24 @@ function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['child
     <TimelineFeedWithStream
       streamId={streamId}
       variant={TIMELINE_FEED_VARIANT.PROFILE}
+      tagsLayout={tagsLayout}
+      layoutResolution={layoutResolution}
+    >
+      {children}
+    </TimelineFeedWithStream>
+  );
+}
+
+function ProfileCollectionsTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
+  const { pubky } = useProfileContext();
+  const streamId = pubky ? buildAuthorCollectionsStreamId(pubky) : undefined;
+  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
+
+  return (
+    <TimelineFeedWithStream
+      streamId={streamId}
+      variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
     >

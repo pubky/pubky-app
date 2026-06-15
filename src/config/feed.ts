@@ -6,6 +6,7 @@ export const TIMELINE_FEED_VARIANT = {
   CUSTOM: 'custom',
   BOOKMARKS: 'bookmarks',
   PROFILE: 'profile',
+  PROFILE_COLLECTIONS: 'profile_collections',
   HOT: 'hot',
   SEARCH: 'search',
   COLLECTION: 'collection',

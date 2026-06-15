@@ -17,7 +17,7 @@ const mockStats: ProfileStats = {
 
 describe('ProfilePageFilterBar', () => {
   it('renders all filter items with stats', () => {
-    render(
+    const { container } = render(
       <ProfilePageFilterBar
         activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS}
         onPageChangeAction={() => {}}
@@ -28,6 +28,7 @@ describe('ProfilePageFilterBar', () => {
     // The component uses t(item.labelKey) to translate labels
     expect(screen.getByText('Notifications')).toBeInTheDocument();
     expect(screen.getByText('Posts')).toBeInTheDocument();
+    expect(screen.getByText('Collections')).toBeInTheDocument();
     expect(screen.getByText('Replies')).toBeInTheDocument();
     expect(screen.getByText('Followers')).toBeInTheDocument();
     expect(screen.getByText('Following')).toBeInTheDocument();
@@ -37,6 +38,7 @@ describe('ProfilePageFilterBar', () => {
     // Check that counts are rendered
     expect(screen.getByText('2')).toBeInTheDocument(); // notifications
     expect(screen.getByText('4')).toBeInTheDocument(); // posts
+    expect(container.querySelector('[data-cy="profile-filter-item-collections-count"]')).not.toBeInTheDocument();
   });
 
   it('has correct structure with sticky positioning', () => {
@@ -73,7 +75,7 @@ describe('ProfilePageFilterBar', () => {
     expect(screen.getByText('Notifications')).toBeInTheDocument();
     // Should show loading spinners when stats are undefined
     const spinners = screen.getAllByTestId('spinner');
-    expect(spinners.length).toBe(7); // One for each filter item
+    expect(spinners.length).toBe(7); // One for each filter item with a count
   });
 
   it('renders with zero counts when stats are provided but individual values are zero', () => {

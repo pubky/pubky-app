@@ -112,6 +112,14 @@ describe('useProfileNavigation', () => {
       expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.UNIQUE_TAGS);
     });
 
+    it('should return COLLECTIONS for the collections route', () => {
+      mockPathname.mockReturnValue(PROFILE_ROUTES.COLLECTIONS);
+
+      const { result } = renderHook(() => useProfileNavigation());
+
+      expect(result.current.activePage).toBe(PROFILE_PAGE_TYPES.COLLECTIONS);
+    });
+
     it('should return PROFILE for the profile page route', () => {
       mockPathname.mockReturnValue(PROFILE_ROUTES.PROFILE_PAGE);
 
@@ -168,6 +176,7 @@ describe('useProfileNavigation', () => {
         { route: PROFILE_ROUTES.FOLLOWING, type: PROFILE_PAGE_TYPES.FOLLOWING },
         { route: PROFILE_ROUTES.FRIENDS, type: PROFILE_PAGE_TYPES.FRIENDS },
         { route: PROFILE_ROUTES.UNIQUE_TAGS, type: PROFILE_PAGE_TYPES.UNIQUE_TAGS },
+        { route: PROFILE_ROUTES.COLLECTIONS, type: PROFILE_PAGE_TYPES.COLLECTIONS },
       ];
 
       pages.forEach(({ route, type }) => {
@@ -202,6 +211,7 @@ describe('useProfileNavigation', () => {
         { page: PROFILE_PAGE_TYPES.FOLLOWING, route: PROFILE_ROUTES.FOLLOWING },
         { page: PROFILE_PAGE_TYPES.FRIENDS, route: PROFILE_ROUTES.FRIENDS },
         { page: PROFILE_PAGE_TYPES.UNIQUE_TAGS, route: PROFILE_ROUTES.UNIQUE_TAGS },
+        { page: PROFILE_PAGE_TYPES.COLLECTIONS, route: PROFILE_ROUTES.COLLECTIONS },
         { page: PROFILE_PAGE_TYPES.PROFILE, route: PROFILE_ROUTES.PROFILE_PAGE },
       ];
 

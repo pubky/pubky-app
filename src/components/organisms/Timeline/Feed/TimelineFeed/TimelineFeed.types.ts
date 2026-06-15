@@ -7,7 +7,8 @@ export interface TimelineFeedProps {
    * - 'home': Uses global filters (sort, reach, content)
    * - 'custom': Uses custom filters (sort, reach, layout, content, tags)
    * - 'bookmarks': Uses bookmarks stream with sort/content filters
-   * - 'profile': Uses author stream from ProfileContext
+   * - 'profile': Uses author stream from ProfileContext (all posts except collections)
+   * - 'profile_collections': Uses the author's collection posts stream from ProfileContext
    * - 'hot': Uses engagement sorting with reach from hot store
    * - 'search': Uses tags from URL query params with sort/content filters
    * - 'collection': Uses a single collection's item stream from route params

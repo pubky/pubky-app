@@ -465,6 +465,7 @@
     "tabs": {
       "notifications": "Notifications",
       "posts": "Posts",
+      "collections": "Collections",
       "replies": "Replies",
       "followers": "Followers",
       "following": "Following",

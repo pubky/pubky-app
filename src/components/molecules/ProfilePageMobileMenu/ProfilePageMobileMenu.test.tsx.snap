@@ -263,6 +263,43 @@ exports[`ProfilePageMobileMenu - Snapshots > matches snapshot with default props
         </svg>
       </button>
     </div>
+    <div
+      class="flex flex-1 justify-center border-b px-0 py-1.5 border-border"
+      data-testid="container"
+    >
+      <button
+        aria-label="Collections"
+        class="px-2.5 py-2"
+        data-slot="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-library text-muted-foreground"
+          fill="none"
+          height="20"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m16 6 4 14"
+          />
+          <path
+            d="M12 6v14"
+          />
+          <path
+            d="M8 8v12"
+          />
+          <path
+            d="M4 4v16"
+          />
+        </svg>
+      </button>
+    </div>
   </div>
 </div>
 `;

@@ -117,6 +117,7 @@ describe('resolveFeedLayout', () => {
       TIMELINE_FEED_VARIANT.HOME,
       TIMELINE_FEED_VARIANT.CUSTOM,
       TIMELINE_FEED_VARIANT.PROFILE,
+      TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS,
       TIMELINE_FEED_VARIANT.HOT,
       TIMELINE_FEED_VARIANT.SEARCH,
     ])('does not mark the %s variant as grid-active', (variant) => {

@@ -9,7 +9,11 @@ import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeed
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import {
+  buildAuthorCollectionsStreamId,
+  type PostStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
 import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, type ContentType, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
@@ -544,6 +548,33 @@ describe('TimelineFeed', () => {
       // TimelineFeed shows loading state and doesn't call useStreamPagination
       expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
       expect(mockUseStreamPagination).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Profile Collections Variant', () => {
+    const profilePubky = 'profile-user-pubky';
+
+    it('should show loading when profile context has no pubky', () => {
+      render(
+        <ProfileProvider>
+          <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS} />
+        </ProfileProvider>,
+      );
+
+      expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
+      expect(mockUseStreamPagination).not.toHaveBeenCalled();
+    });
+
+    it('should paginate the author collections stream when pubky is available', () => {
+      render(
+        <ProfileProvider pubky={profilePubky}>
+          <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS} />
+        </ProfileProvider>,
+      );
+
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({
+        streamId: buildAuthorCollectionsStreamId(profilePubky),
+      });
     });
   });
 
