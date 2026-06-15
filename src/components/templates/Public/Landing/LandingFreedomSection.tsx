@@ -1,0 +1,132 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
+import { Typography } from '@/atoms/Typography/Typography';
+import { LANDING_FREEDOM_SECTION_ID } from './Landing.constants';
+
+const SLIDE_DURATION_MS = 6000;
+
+const FEATURES: Array<{ key: 'creation' | 'browsing' | 'feeds' | 'tagging'; backgroundImage?: string }> = [
+  { key: 'creation', backgroundImage: '/images/landing-experience1.png' },
+  { key: 'browsing', backgroundImage: '/images/landing-experience2.png' },
+  { key: 'feeds', backgroundImage: '/images/landing-experience3.png' },
+  { key: 'tagging', backgroundImage: '/images/landing-experience4.png' },
+];
+
+export function LandingFreedomSection() {
+  const t = useTranslations('landing.freedom');
+  const sectionRef = useRef<HTMLElement>(null);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [isSectionVisible, setIsSectionVisible] = useState(false);
+  const [carouselRun, setCarouselRun] = useState(0);
+
+  const handleNextSlide = useCallback(() => {
+    setActiveSlide((currentSlide) => (currentSlide + 1) % FEATURES.length);
+  }, []);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const isVisible = entry.isIntersecting;
+        setIsSectionVisible(isVisible);
+
+        if (isVisible) {
+          setActiveSlide(0);
+          setCarouselRun((currentRun) => currentRun + 1);
+        }
+      },
+      { threshold: 0.35 },
+    );
+
+    observer.observe(section);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isSectionVisible) return;
+
+    const timeoutId = window.setTimeout(handleNextSlide, SLIDE_DURATION_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeSlide, handleNextSlide, isSectionVisible]);
+
+  const activeFeature = FEATURES[activeSlide];
+  const slideNumber = String(activeSlide + 1).padStart(2, '0');
+
+  return (
+    <section
+      ref={sectionRef}
+      id={LANDING_FREEDOM_SECTION_ID}
+      className="relative z-0 min-h-svh scroll-mt-[48px] py-20 sm:py-24"
+    >
+      <Container size="container" className="gap-10 px-6">
+        <Container className="mx-0 max-w-[760px] gap-5">
+          <Typography as="span" size="xs" className="text-brand tracking-[1.2px] uppercase">
+            {t('eyebrow')}
+          </Typography>
+          <Heading level={2} size="xl" className="max-w-[680px] text-4xl sm:text-6xl lg:max-w-none lg:whitespace-nowrap">
+            {t.rich('title', {
+              highlight: (chunks) => (
+                <>
+                  <br className="sm:hidden" />
+                  <span className="text-brand">{chunks}</span>
+                </>
+              ),
+            })}
+          </Heading>
+          <Typography size="md" className="max-w-[680px] text-muted-foreground sm:text-xl">
+            {t('description')}
+          </Typography>
+        </Container>
+        <article className="relative min-h-[560px] overflow-hidden rounded-md bg-card/80 p-12 shadow-sm backdrop-blur-sm md:min-h-[368px]">
+          {FEATURES.map(({ key, backgroundImage }, index) => (
+            <div
+              key={key}
+              className={`absolute inset-x-0 bottom-0 h-[58%] bg-[length:auto_100%] bg-no-repeat opacity-0 transition-opacity duration-500 ease-in-out [background-position:calc(50%+100px)_100%] md:inset-0 md:h-auto md:bg-cover md:bg-center ${
+                activeSlide === index ? 'opacity-100' : ''
+              }`}
+              style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : undefined}
+              aria-hidden
+            />
+          ))}
+          <div className="relative z-10 flex items-start gap-5 md:ml-auto md:w-[30%]">
+            <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-brand/15 text-brand">
+              <div
+                key={`${carouselRun}-${activeSlide}`}
+                className="absolute inset-0 origin-bottom animate-[landing-carousel-progress-fill_6000ms_linear_forwards] bg-brand/32"
+                aria-hidden
+              />
+              <Typography as="span" overrideDefaults className="text-xl font-semibold leading-none">
+                {slideNumber}
+              </Typography>
+            </div>
+            <div className="min-w-0">
+              <Typography as="h3" size="lg" className="text-xl">
+                {t(`features.${activeFeature.key}.title`)}
+              </Typography>
+              <Typography size="md" className="mt-1 text-muted-foreground">
+                {t(`features.${activeFeature.key}.description`)}
+              </Typography>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="absolute right-8 bottom-8 z-20 flex size-12 cursor-pointer items-center justify-center text-brand transition-all duration-200 hover:scale-110 hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none md:right-10 md:bottom-10"
+            onClick={handleNextSlide}
+            aria-label={t('nextSlide')}
+          >
+            <ChevronRight className="size-10" strokeWidth={2.5} />
+          </button>
+        </article>
+      </Container>
+    </section>
+  );
+}

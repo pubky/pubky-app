@@ -2,6 +2,14 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { HeaderHome } from './HeaderHome';
 
+const mockPush = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 // Mock molecules
 vi.mock('@/molecules/Header/Header', () => {
   return {

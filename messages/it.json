@@ -7,10 +7,84 @@
   "landing": {
     "title": "<highlight>Sblocca</highlight> il web.",
     "subtitle": "Le tue chiavi, i tuoi contenuti, le tue regole.",
-    "explore": "Esplora",
-    "joinNow": "Unisciti ora",
+    "learn": "Impara",
+    "join": "Unisciti",
+    "videoLabel": "Video di Pubky",
+    "scrollToNext": "Scorri alla sezione successiva",
+    "scrollToTop": "Torna in alto",
     "aTetherCompany": "un'azienda <tether>tether.</tether>",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tutti i diritti riservati."
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tutti i diritti riservati.",
+    "broken": {
+      "eyebrow": "Il problema",
+      "title": "Il web è <highlight>rotto</highlight>.",
+      "description": "Le piattaforme centralizzate controllano la tua identità, i tuoi dati e la tua portata.",
+      "features": {
+        "identity": {
+          "title": "Ti possiedono",
+          "description": "Ti agganciano con contenuti facili e dopamina. L’accesso può essere revocato in qualsiasi momento."
+        },
+        "data": {
+          "title": "Ti intrappolano",
+          "description": "Post, profili e relazioni restano chiusi in silos che rendono difficile andarsene."
+        },
+        "reach": {
+          "title": "Ti limitano",
+          "description": "Gli algoritmi decidono chi ti ascolta, cosa si diffonde e cosa scompare nel vuoto."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "La soluzione",
+      "title": "<highlight>Pubky</highlight> è diverso.",
+      "description": "Ti rimette al controllo della tua vita digitale.",
+      "features": {
+        "core": {
+          "title": "Tu sei le tue chiavi",
+          "description": "Gli account sono alimentati da chiavi crittografiche. Nessun server centrale, nessun gatekeeper."
+        },
+        "taggable": {
+          "title": "Il web taggabile",
+          "description": "Tagga post, media e profili. I tag aggiungono significato e aiutano a modellare il tuo grafo sociale."
+        },
+        "social": {
+          "title": "Social, ma personale",
+          "description": "Sei tu a gestire il tuo feed, i tuoi contenuti e le tue connessioni. Scegli tu la tua esperienza."
+        },
+        "portable": {
+          "title": "Un'identità portatile",
+          "description": "Passa da un'app all'altra senza ricominciare da zero. La tua identità, i tuoi dati e i tuoi amici restano tuoi."
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "Costruito per la libertà",
+      "title": "Sei tu <highlight>l’algoritmo</highlight>.",
+      "description": "Nessuno decide il tuo feed. Crea, modella e vivi il web alle tue condizioni.",
+      "nextSlide": "Slide successiva",
+      "features": {
+        "creation": {
+          "title": "Crea senza limiti",
+          "description": "Pubblica qualsiasi cosa: pensieri, articoli, foto, video, link. I tuoi contenuti partono da te e restano con te."
+        },
+        "browsing": {
+          "title": "Naviga a modo tuo",
+          "description": "Passa tra layout o cambia la tua portata per filtrare il rumore e concentrarti su ciò che conta."
+        },
+        "feeds": {
+          "title": "Dai forma a prospettive",
+          "description": "Costruisci feed dinamici che si aggiornano in tempo reale e restano salvati come prospettive riutilizzabili."
+        },
+        "tagging": {
+          "title": "Tagga tutto",
+          "description": "Tagga post, media e profili per aggiungere contesto, trovare contenuti migliori, scoprire persone e reagire rapidamente."
+        }
+      }
+    },
+    "final": {
+      "title": "Entra nel <line><highlight>web libero</highlight>.</line>",
+      "joinNow": "Unisciti ora"
+    },
+    "explore": "Esplora"
   },
   "status": {
     "available": "Disponibile",

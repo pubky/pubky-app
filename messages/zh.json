@@ -7,10 +7,84 @@
   "landing": {
     "title": "<highlight>解锁</highlight>网络。",
     "subtitle": "你的密钥，你的内容，你的规则。",
-    "explore": "探索",
-    "joinNow": "立即加入",
+    "learn": "学习",
+    "join": "加入",
+    "videoLabel": "Pubky 视频",
+    "scrollToNext": "滚动到下一部分",
+    "scrollToTop": "滚动到顶部",
     "aTetherCompany": "<tether>tether.</tether> 旗下公司",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026。保留所有权利。"
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026。保留所有权利。",
+    "broken": {
+      "eyebrow": "问题",
+      "title": "网络已经<highlight>坏了</highlight>。",
+      "description": "中心化平台控制你的身份、数据和触达范围。",
+      "features": {
+        "identity": {
+          "title": "它们拥有你",
+          "description": "它们用廉价内容和多巴胺让你上瘾。访问权限随时可能被撤销。"
+        },
+        "data": {
+          "title": "它们困住你",
+          "description": "帖子、资料和关系被锁在孤岛中，让离开变得困难。"
+        },
+        "reach": {
+          "title": "它们限制你",
+          "description": "算法决定谁能听见你、什么会传播、什么会消失在虚空中。"
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "解决方案",
+      "title": "<highlight>Pubky</highlight> 与众不同。",
+      "description": "它让你重新掌控自己的数字生活。",
+      "features": {
+        "core": {
+          "title": "你就是你的密钥",
+          "description": "账户由加密密钥驱动。没有中心服务器，没有守门人。"
+        },
+        "taggable": {
+          "title": "可标记的网络",
+          "description": "标记帖子、媒体和资料。标签赋予意义，并帮助塑造你的社交图谱。"
+        },
+        "social": {
+          "title": "社交，但属于你",
+          "description": "你的动态、内容和连接由你掌控。你的体验由你选择。"
+        },
+        "portable": {
+          "title": "可携带的身份",
+          "description": "在应用之间移动而无需重新开始。你的身份、数据和朋友始终属于你。"
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "为自由而构建",
+      "title": "你就是<highlight>算法</highlight>.",
+      "description": "没人决定你的信息流。按你的条件创建、塑造并体验网络。",
+      "nextSlide": "下一张幻灯片",
+      "features": {
+        "creation": {
+          "title": "无限制创作",
+          "description": "发布任何内容：想法、文章、照片、视频、链接。你的内容从你开始，也会留在你身边。"
+        },
+        "browsing": {
+          "title": "按你的方式浏览",
+          "description": "在布局之间切换，或改变你的触达范围来过滤噪音，专注重要内容。"
+        },
+        "feeds": {
+          "title": "塑造视角",
+          "description": "构建会实时更新的动态信息流，并保存为可复用的视角。"
+        },
+        "tagging": {
+          "title": "标记一切",
+          "description": "标记帖子、媒体和资料，用来添加上下文、找到更相关的内容、发现人物并快速回应。"
+        }
+      }
+    },
+    "final": {
+      "title": "进入<line><highlight>自由网络</highlight>。</line>",
+      "joinNow": "立即加入"
+    },
+    "explore": "探索"
   },
   "status": {
     "available": "有空",

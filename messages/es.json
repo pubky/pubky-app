@@ -7,10 +7,84 @@
   "landing": {
     "title": "<highlight>Desbloquea</highlight> la web.",
     "subtitle": "Tus claves, tu contenido, tus reglas.",
-    "explore": "Explorar",
-    "joinNow": "Únete ahora",
+    "learn": "Aprender",
+    "join": "Unirse",
+    "videoLabel": "Video de Pubky",
+    "scrollToNext": "Desplazarse a la siguiente sección",
+    "scrollToTop": "Volver arriba",
     "aTetherCompany": "una empresa de <tether>tether.</tether>",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Todos los derechos reservados."
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Todos los derechos reservados.",
+    "broken": {
+      "eyebrow": "El problema",
+      "title": "La web está <highlight>rota</highlight>.",
+      "description": "Las plataformas centralizadas controlan tu identidad, tus datos y tu alcance.",
+      "features": {
+        "identity": {
+          "title": "Son dueños de ti",
+          "description": "Te enganchan con contenido barato y dopamina. El acceso puede revocarse en cualquier momento."
+        },
+        "data": {
+          "title": "Te atrapan",
+          "description": "Publicaciones, perfiles y relaciones quedan encerrados en silos que hacen difícil marcharse."
+        },
+        "reach": {
+          "title": "Te limitan",
+          "description": "Los algoritmos deciden quién te escucha, qué se difunde y qué desaparece en el vacío."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "La solución",
+      "title": "<highlight>Pubky</highlight> es diferente.",
+      "description": "Te devuelve el control de tu vida digital.",
+      "features": {
+        "core": {
+          "title": "Tú eres tus claves",
+          "description": "Las cuentas funcionan con claves criptográficas. Sin servidor central, sin guardianes."
+        },
+        "taggable": {
+          "title": "La web etiquetable",
+          "description": "Etiqueta publicaciones, medios y perfiles. Las etiquetas añaden significado y ayudan a dar forma a tu grafo social."
+        },
+        "social": {
+          "title": "Social, pero personal",
+          "description": "Tú estás a cargo de tu feed, contenido y conexiones. Tú eliges tu experiencia."
+        },
+        "portable": {
+          "title": "Una identidad portable",
+          "description": "Muévete entre apps sin empezar de nuevo. Tu identidad, tus datos y tus amigos siguen siendo tuyos."
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "Creado para la libertad",
+      "title": "Tú eres <highlight>el algoritmo</highlight>.",
+      "description": "Nadie decide tu feed. Crea, da forma y experimenta la web en tus términos.",
+      "nextSlide": "Siguiente slide",
+      "features": {
+        "creation": {
+          "title": "Crea sin límites",
+          "description": "Publica cualquier cosa: ideas, artículos, fotos, videos, enlaces. Tu contenido empieza contigo y se queda contigo."
+        },
+        "browsing": {
+          "title": "Navega a tu manera",
+          "description": "Cambia entre diseños o ajusta tu alcance para filtrar el ruido y concentrarte en lo importante."
+        },
+        "feeds": {
+          "title": "Da forma a perspectivas",
+          "description": "Construye feeds dinámicos que se actualizan en tiempo real y quedan guardados como perspectivas reutilizables."
+        },
+        "tagging": {
+          "title": "Etiqueta todo",
+          "description": "Etiqueta publicaciones, medios y perfiles para añadir contexto, encontrar mejor contenido, descubrir personas y reaccionar rápido."
+        }
+      }
+    },
+    "final": {
+      "title": "Entra en la <line><highlight>web libre</highlight>.</line>",
+      "joinNow": "Únete ahora"
+    },
+    "explore": "Explorar"
   },
   "status": {
     "available": "Disponible",
@@ -265,11 +339,8 @@
       "subtitleDesktop": "Abre Pubky Ring, toca 'Agregar pubky', y escanea este QR.",
       "generating": "Generando código QR...",
       "generatingShort": "Generando...",
-
       "clickToReload": "Haz clic para recargar",
-
       "openingRing": "Abriendo Pubky Ring...",
-
       "authorize": "Autorizar con Pubky Ring",
       "authorizeSub": "Usa <pubkyRing>Pubky Ring</pubkyRing> o cualquier otro llavero impulsado por <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "No se pudo conectar a la aplicacion firmante Pubky Ring",
@@ -282,11 +353,8 @@
       "progressSubtitle": "Espera mientras se carga tu experiencia en Pubky.",
       "generating": "Generando código QR...",
       "generatingShort": "Generando...",
-
       "clickToReload": "Haz clic para recargar",
-
       "openingRing": "Abriendo Pubky Ring...",
-
       "authorize": "Autorizar con Pubky Ring",
       "linkCopied": "Enlace copiado",
       "linkCopiedDescription": "Enlace de autenticacion copiado al portapapeles.",

@@ -69,6 +69,24 @@ body {
   --shadow-xl: 0 20px 25px 0px rgba(5, 5, 10, 0.25), 0 8px 10px 0px rgba(5, 5, 10, 0.25);
 }
 
+@property --landing-swirl-mask-hole {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+
+@property --landing-swirl-mask-ring-start {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+
+@property --landing-swirl-mask-ring-end {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 100%;
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(0.118 0.014 284.115);
@@ -651,6 +669,245 @@ body {
    */
   img:fullscreen {
     object-fit: contain;
+  }
+
+  @keyframes landing-swirl-pulse {
+    0%,
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
+    50% {
+      transform: scale(0.9) rotate(14deg);
+    }
+  }
+
+  @keyframes landing-swirl-spin {
+    from {
+      transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+    to {
+      transform: translate3d(0, 0, 0) rotate(360deg);
+    }
+  }
+
+  @keyframes landing-swirl-spin-reverse {
+    from {
+      transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+    to {
+      transform: translate3d(0, 0, 0) rotate(-360deg);
+    }
+  }
+
+  @keyframes landing-swirl-spin-offset {
+    from {
+      transform: translate3d(0, 0, 0) rotate(18deg);
+    }
+    to {
+      transform: translate3d(0, 0, 0) rotate(378deg);
+    }
+  }
+
+  @keyframes landing-scroll-cue-bounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(0.5rem);
+    }
+  }
+
+  @keyframes landing-carousel-progress-fill {
+    from {
+      transform: scaleY(1);
+    }
+
+    to {
+      transform: scaleY(0);
+    }
+  }
+
+  .landing-swirl-background {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: -10;
+    clip-path: none;
+    overflow: hidden;
+  }
+
+  .landing-swirl-background__graphic {
+    --landing-swirl-size: min(100vw, 34rem);
+    --landing-swirl-offset-x: -50px;
+    --landing-swirl-offset-y: 250px;
+    --landing-swirl-clip: circle(75% at 50% 50%);
+    --landing-swirl-mask-hole: 0%;
+    --landing-swirl-mask-ring-start: 0%;
+    --landing-swirl-mask-ring-end: 100%;
+    --landing-swirl-opacity: 1;
+
+    position: absolute;
+    right: calc((var(--landing-swirl-size) / -2) + var(--landing-swirl-offset-x));
+    bottom: calc((var(--landing-swirl-size) * -0.5) + var(--landing-swirl-offset-y));
+    width: var(--landing-swirl-size);
+    aspect-ratio: 960 / 976;
+    background-image: url('/images/bg-home.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    animation: landing-swirl-pulse 6s ease-in-out infinite;
+    clip-path: var(--landing-swirl-clip);
+    mask-image: radial-gradient(
+      circle at 50% 50%,
+      transparent 0 var(--landing-swirl-mask-hole),
+      #000 var(--landing-swirl-mask-ring-start) var(--landing-swirl-mask-ring-end),
+      transparent calc(var(--landing-swirl-mask-ring-end) + 1%)
+    );
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+    opacity: var(--landing-swirl-opacity);
+    transition:
+      right 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      bottom 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      width 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      clip-path 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      --landing-swirl-mask-hole 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      --landing-swirl-mask-ring-start 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      --landing-swirl-mask-ring-end 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      opacity 1000ms cubic-bezier(0.65, 0, 0.35, 1);
+    transform-origin: 50% 50%;
+    will-change: transform, clip-path, opacity;
+    -webkit-mask-image: radial-gradient(
+      circle at 50% 50%,
+      transparent 0 var(--landing-swirl-mask-hole),
+      #000 var(--landing-swirl-mask-ring-start) var(--landing-swirl-mask-ring-end),
+      transparent calc(var(--landing-swirl-mask-ring-end) + 1%)
+    );
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+  }
+
+  :root[data-landing-swirl='broken'] .landing-swirl-background__graphic {
+    --landing-swirl-size: min(164vw, 88rem);
+    --landing-swirl-offset-x: 0px;
+    --landing-swirl-offset-y: 0px;
+    --landing-swirl-clip: circle(19% at 50% 50%);
+    --landing-swirl-opacity: 1;
+    animation: landing-swirl-spin-reverse 24s linear infinite;
+  }
+
+  .landing-swirl-background__graphic--secondary {
+    right: auto;
+    opacity: 0;
+    transition:
+      bottom 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      left 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      width 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      clip-path 1000ms cubic-bezier(0.65, 0, 0.35, 1),
+      opacity 1000ms cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  :root[data-landing-swirl='how'] .landing-swirl-background__graphic {
+    --landing-swirl-size: min(200vw, 68rem);
+    --landing-swirl-offset-x: -38vw;
+    --landing-swirl-offset-y: 160px;
+    --landing-swirl-clip: circle(75% at 50% 50%);
+    --landing-swirl-opacity: 1;
+    animation: landing-swirl-spin 24s linear infinite;
+  }
+
+  :root[data-landing-swirl='freedom'] .landing-swirl-background__graphic {
+    --landing-swirl-size: min(460vw, 160rem);
+    --landing-swirl-clip: circle(75% at 50% 50%);
+    --landing-swirl-opacity: 1;
+
+    right: calc(50vw - (var(--landing-swirl-size) / 2));
+    bottom: calc(var(--landing-swirl-size) * -0.9);
+    animation: landing-swirl-spin-offset 24s linear infinite;
+  }
+
+  :root[data-landing-swirl='final'] .landing-swirl-background__graphic {
+    --landing-swirl-size: min(2500vw, 110rem);
+    --landing-swirl-clip: circle(75% at 50% 50%);
+    --landing-swirl-mask-hole: 35%;
+    --landing-swirl-mask-ring-start: 36%;
+    --landing-swirl-mask-ring-end: 49%;
+    --landing-swirl-opacity: 1;
+
+    right: calc(50vw - (var(--landing-swirl-size) / 2));
+    bottom: calc(50vh - (var(--landing-swirl-size) * 0.508));
+    animation: landing-swirl-spin 18s linear infinite;
+  }
+
+  .landing-scroll-cue__icon {
+    animation: landing-scroll-cue-bounce 1.4s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  :root[data-landing-swirl='broken'] .landing-hero-brand-footer,
+  :root[data-landing-swirl='how'] .landing-hero-brand-footer,
+  :root[data-landing-swirl='freedom'] .landing-hero-brand-footer,
+  :root[data-landing-swirl='final'] .landing-hero-brand-footer {
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .landing-swirl-background__graphic {
+      --landing-swirl-size: min(75vw, 60rem);
+      --landing-swirl-offset-x: 100px;
+      --landing-swirl-offset-y: 100px;
+    }
+
+    :root[data-landing-swirl='broken'] .landing-swirl-background__graphic {
+      --landing-swirl-size: min(104vw, 84rem);
+      --landing-swirl-offset-x: 8vw;
+      --landing-swirl-offset-y: 8vh;
+    }
+
+    :root[data-landing-swirl='how'] .landing-swirl-background__graphic {
+      --landing-swirl-size: min(150vw, 120rem);
+      --landing-swirl-offset-x: -28vw;
+      --landing-swirl-offset-y: 12vh;
+    }
+
+    :root[data-landing-swirl='freedom'] .landing-swirl-background__graphic {
+      --landing-swirl-size: min(320vw, 160rem);
+
+      bottom: calc(var(--landing-swirl-size) * -0.88);
+      animation-duration: 36s;
+    }
+
+    :root[data-landing-swirl='final'] .landing-swirl-background__graphic {
+      --landing-swirl-size: min(130vw, 90rem);
+    }
+  }
+
+  @media (min-width: 1536px) {
+    :root[data-landing-swirl='freedom'] .landing-swirl-background__graphic {
+      --landing-swirl-size: min(260vw, 170rem);
+    }
+  }
+
+  :root[data-landing-swirl='broken'] .landing-swirl-background__graphic--secondary {
+    --landing-swirl-size: min(112vw, 48rem);
+    --landing-swirl-clip: circle(19% at 50% 50%);
+    --landing-swirl-mask-hole: 0%;
+    --landing-swirl-mask-ring-start: 0%;
+    --landing-swirl-mask-ring-end: 100%;
+
+    bottom: calc(var(--landing-swirl-size) * -0.18);
+    left: calc(var(--landing-swirl-size) * -0.42);
+    opacity: 1;
+    animation: landing-swirl-spin 28s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .landing-swirl-background__graphic,
+    .landing-scroll-cue__icon {
+      animation: none;
+    }
   }
 
   .onboarding-nav {

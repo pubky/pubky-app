@@ -7,10 +7,84 @@
   "landing": {
     "title": "<highlight>Unlock</highlight> the web.",
     "subtitle": "Your keys, your content, your rules.",
-    "explore": "Explore",
-    "joinNow": "Join now",
+    "learn": "Learn",
+    "join": "Join",
+    "videoLabel": "Pubky video",
+    "scrollToNext": "Scroll to next section",
+    "scrollToTop": "Scroll to top",
     "aTetherCompany": "a <tether>tether.</tether> company",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026. All rights reserved."
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026. All rights reserved.",
+    "broken": {
+      "eyebrow": "The problem",
+      "title": "The web is <highlight>broken</highlight>.",
+      "description": "Centralized platforms control your identity, your data, and your reach.",
+      "features": {
+        "identity": {
+          "title": "They own you",
+          "description": "They hook you on cheap content and dopamine. Access can be revoked anytime."
+        },
+        "data": {
+          "title": "They trap you",
+          "description": "Posts, profiles, and relationships are locked inside silos that make it difficult to leave."
+        },
+        "reach": {
+          "title": "They limit you",
+          "description": "Algorithms decide who hears you, what spreads, and what disappears in the void."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "The solution",
+      "title": "<highlight>Pubky</highlight> is different.",
+      "description": "It puts you back in control of your digital life.",
+      "features": {
+        "core": {
+          "title": "You are your keys",
+          "description": "Accounts are powered by cryptographic keys. No central server, no gatekeepers."
+        },
+        "taggable": {
+          "title": "The taggable web",
+          "description": "Tag posts, media, and profiles. Tags add meaning and help shape your social graph."
+        },
+        "social": {
+          "title": "Social, but personal",
+          "description": "You are in charge of your feed, content, and connections. You choose your experience."
+        },
+        "portable": {
+          "title": "A portable identity",
+          "description": "Move between apps without starting over. Your identity, data, and friends stay yours."
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "Built for freedom",
+      "title": "You are <highlight>the algorithm</highlight>.",
+      "description": "Nobody feeds you. Create, shape, and experience the web on your terms.",
+      "nextSlide": "Next slide",
+      "features": {
+        "creation": {
+          "title": "Create without limits",
+          "description": "Post anything: thoughts, articles, photos, videos, links. Your content starts with you, and stays with you."
+        },
+        "browsing": {
+          "title": "Browse your way",
+          "description": "Switch between layouts or change your reach to filter out the noise, and focus on what matters."
+        },
+        "feeds": {
+          "title": "Shape perspectives",
+          "description": "Build dynamic feeds that update in real time and stay saved as reusable perspectives."
+        },
+        "tagging": {
+          "title": "Tag everything",
+          "description": "Tag posts, media, and profiles to add context, find better content, discover people, and react quickly."
+        }
+      }
+    },
+    "final": {
+      "title": "Enter the <line><highlight>freedom web</highlight>.</line>",
+      "joinNow": "Join now"
+    },
+    "explore": "Explore"
   },
   "status": {
     "available": "Available",

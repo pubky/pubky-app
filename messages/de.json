@@ -7,10 +7,86 @@
   "landing": {
     "title": "<highlight>Entsperre</highlight> das Web.",
     "subtitle": "Deine Schlüssel, deine Inhalte, deine Regeln.",
-    "explore": "Entdecken",
-    "joinNow": "Jetzt beitreten",
+    "signIn": "Anmelden",
+    "learn": "Lernen",
+    "join": "Beitreten",
+    "createAccount": "Jetzt beitreten",
+    "videoLabel": "Pubky-Video",
+    "scrollToNext": "Zum nächsten Abschnitt scrollen",
+    "scrollToTop": "Nach oben scrollen",
     "aTetherCompany": "ein <tether>tether.</tether> Unternehmen",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Alle Rechte vorbehalten."
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Alle Rechte vorbehalten.",
+    "broken": {
+      "eyebrow": "Das Problem",
+      "title": "Das Web ist <highlight>kaputt</highlight>.",
+      "description": "Zentralisierte Plattformen kontrollieren deine Identität, deine Daten und deine Reichweite.",
+      "features": {
+        "identity": {
+          "title": "Sie besitzen dich",
+          "description": "Sie machen dich süchtig nach billigem Content und Dopamin. Zugriff kann jederzeit entzogen werden."
+        },
+        "data": {
+          "title": "Sie sperren dich ein",
+          "description": "Beiträge, Profile und Beziehungen stecken in Silos fest, die den Wechsel erschweren."
+        },
+        "reach": {
+          "title": "Sie begrenzen dich",
+          "description": "Algorithmen entscheiden, wer dich hört, was sich verbreitet und was im Nichts verschwindet."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "Die Lösung",
+      "title": "<highlight>Pubky</highlight> ist anders.",
+      "description": "Es gibt dir die Kontrolle über dein digitales Leben zurück.",
+      "features": {
+        "core": {
+          "title": "Du bist deine Schlüssel",
+          "description": "Konten werden von kryptografischen Schlüsseln angetrieben. Kein zentraler Server, keine Gatekeeper."
+        },
+        "taggable": {
+          "title": "Das taggbare Web",
+          "description": "Tagge Beiträge, Medien und Profile. Tags geben Bedeutung und helfen, deinen Social Graph zu formen."
+        },
+        "social": {
+          "title": "Sozial, aber persönlich",
+          "description": "Du hast deinen Feed, deine Inhalte und Verbindungen in der Hand. Du wählst deine Erfahrung."
+        },
+        "portable": {
+          "title": "Eine portable Identität",
+          "description": "Wechsle zwischen Apps, ohne von vorne anzufangen. Deine Identität, Daten und Freunde bleiben deine."
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "Für Freiheit gebaut",
+      "title": "Du bist <highlight>der Algorithmus</highlight>.",
+      "description": "Niemand bestimmt deinen Feed. Erstelle, forme und erlebe das Web nach deinen Regeln.",
+      "nextSlide": "Nächste Folie",
+      "features": {
+        "creation": {
+          "title": "Ohne Grenzen erstellen",
+          "description": "Poste alles: Gedanken, Artikel, Fotos, Videos, Links. Deine Inhalte beginnen bei dir und bleiben bei dir."
+        },
+        "browsing": {
+          "title": "Browsen auf deine Art",
+          "description": "Wechsle zwischen Layouts oder ändere deine Reichweite, um den Lärm zu filtern und dich auf das Wichtige zu konzentrieren."
+        },
+        "feeds": {
+          "title": "Perspektiven formen",
+          "description": "Erstelle dynamische Feeds, die sich in Echtzeit aktualisieren und als wiederverwendbare Perspektiven gespeichert bleiben."
+        },
+        "tagging": {
+          "title": "Alles taggen",
+          "description": "Tagge Beiträge, Medien und Profile, um Kontext hinzuzufügen, bessere Inhalte zu finden, Menschen zu entdecken und schnell zu reagieren."
+        }
+      }
+    },
+    "final": {
+      "title": "Betritt das <line><highlight>freie Web</highlight>.</line>",
+      "joinNow": "Jetzt beitreten"
+    },
+    "explore": "Entdecken"
   },
   "status": {
     "available": "Verfügbar",

@@ -7,10 +7,84 @@
   "landing": {
     "title": "<highlight>Libérez</highlight> le web.",
     "subtitle": "Vos clés, votre contenu, vos règles.",
-    "explore": "Explorer",
-    "joinNow": "Rejoignez-nous maintenant",
+    "learn": "Apprendre",
+    "join": "Rejoindre",
+    "videoLabel": "Vidéo Pubky",
+    "scrollToNext": "Faire défiler jusqu'à la section suivante",
+    "scrollToTop": "Revenir en haut",
     "aTetherCompany": "une entreprise <tether>tether.</tether>",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tous droits réservés."
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tous droits réservés.",
+    "broken": {
+      "eyebrow": "Le problème",
+      "title": "Le web est <highlight>cassé</highlight>.",
+      "description": "Les plateformes centralisées contrôlent votre identité, vos données et votre portée.",
+      "features": {
+        "identity": {
+          "title": "Elles vous possèdent",
+          "description": "Elles vous accrochent avec du contenu facile et de la dopamine. L’accès peut être révoqué à tout moment."
+        },
+        "data": {
+          "title": "Elles vous enferment",
+          "description": "Publications, profils et relations sont coincés dans des silos qui rendent le départ difficile."
+        },
+        "reach": {
+          "title": "Elles vous limitent",
+          "description": "Les algorithmes décident qui vous entend, ce qui circule et ce qui disparaît dans le vide."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "La solution",
+      "title": "<highlight>Pubky</highlight> est différent.",
+      "description": "Il vous remet aux commandes de votre vie numérique.",
+      "features": {
+        "core": {
+          "title": "Vous êtes vos clés",
+          "description": "Les comptes reposent sur des clés cryptographiques. Pas de serveur central, pas de gatekeepers."
+        },
+        "taggable": {
+          "title": "Le web taggable",
+          "description": "Taguez les publications, médias et profils. Les tags ajoutent du sens et aident à façonner votre graphe social."
+        },
+        "social": {
+          "title": "Social, mais personnel",
+          "description": "Vous gardez la maîtrise de votre fil, de votre contenu et de vos connexions. Vous choisissez votre expérience."
+        },
+        "portable": {
+          "title": "Une identité portable",
+          "description": "Passez d’une app à l’autre sans repartir de zéro. Votre identité, vos données et vos amis restent à vous."
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "Conçu pour la liberté",
+      "title": "Vous êtes <highlight>l’algorithme</highlight>.",
+      "description": "Personne ne décide de votre fil. Créez, façonnez et vivez le web selon vos règles.",
+      "nextSlide": "Slide suivant",
+      "features": {
+        "creation": {
+          "title": "Créer sans limites",
+          "description": "Publiez n’importe quoi : pensées, articles, photos, vidéos, liens. Votre contenu commence avec vous et reste avec vous."
+        },
+        "browsing": {
+          "title": "Naviguer à votre façon",
+          "description": "Changez de mise en page ou changez votre portée pour filtrer le bruit et vous concentrer sur l’essentiel."
+        },
+        "feeds": {
+          "title": "Façonner des perspectives",
+          "description": "Construisez des fils dynamiques qui se mettent à jour en temps réel et restent enregistrés comme perspectives réutilisables."
+        },
+        "tagging": {
+          "title": "Tout taguer",
+          "description": "Taguez publications, médias et profils pour ajouter du contexte, trouver du contenu plus pertinent, découvrir des personnes et réagir vite."
+        }
+      }
+    },
+    "final": {
+      "title": "Entrez dans le <line><highlight>web libre</highlight>.</line>",
+      "joinNow": "Rejoindre"
+    },
+    "explore": "Explorer"
   },
   "status": {
     "available": "Disponible",

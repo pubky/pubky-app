@@ -2,7 +2,9 @@
 
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import type { MouseEvent } from 'react';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { cn } from '@/libs/utils/utils';
 import {
   HeaderContainer,
   HeaderExploreNavigationButtons,
@@ -22,6 +24,7 @@ export function Header() {
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
+  const isLandingPage = pathname === '/';
   const isCopyrightPage = pathname === '/copyright';
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
@@ -72,9 +75,19 @@ export function Header() {
     );
   }
 
+  const handleLandingLogoClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!isLandingPage) return;
+
+    event.preventDefault();
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  };
+
   return (
-    <HeaderContainer classNameNav={classNameNav} className={shouldHideHeaderOnMobile ? 'hidden lg:block' : undefined}>
-      <Logo noLink={currentStep === 5} />
+    <HeaderContainer
+      classNameNav={classNameNav}
+      className={cn(isLandingPage && 'p-0 sm:py-6', shouldHideHeaderOnMobile && 'hidden lg:block')}
+    >
+      <Logo noLink={currentStep === 5} onClick={handleLandingLogoClick} />
       {shouldShowTitle && <HeaderTitle currentTitle={currentTitle} />}
       {renderHeaderContent()}
     </HeaderContainer>

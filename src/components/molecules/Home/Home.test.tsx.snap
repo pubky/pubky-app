@@ -5,6 +5,11 @@ exports[`Home - Snapshots > matches snapshot for HomeActions with default props 
   data-testid="action-buttons"
 >
   <button
+    data-testid="learn-button"
+  >
+    Learn
+  </button>
+  <button
     data-testid="create-account-button"
   >
     Create Account
@@ -17,9 +22,44 @@ exports[`Home - Snapshots > matches snapshot for HomeActions with default props 
 </div>
 `;
 
+exports[`Home - Snapshots > matches snapshot for HomeBrandFooter with default props 1`] = `
+<div
+  class="landing-brand-footer inline-flex min-w-max items-center gap-2 whitespace-nowrap transition-opacity duration-300 [&_*]:shrink-0"
+>
+  <a
+    class="inline-flex items-center"
+    data-testid="link"
+    href="https://synonym.to"
+    target="_blank"
+  >
+    <img
+      alt="Synonym"
+      data-testid="image"
+      height="24"
+      src="/images/synonym-grey-logo.svg"
+      width="95"
+    />
+  </a>
+  <a
+    class="inline-flex items-center"
+    data-testid="link"
+    href="https://tether.io/"
+    target="_blank"
+  >
+    <img
+      alt="a tether. company"
+      data-testid="image"
+      height="16"
+      src="/images/a-tether-company.svg"
+      width="109"
+    />
+  </a>
+</div>
+`;
+
 exports[`Home - Snapshots > matches snapshot for HomeFooter with default props 1`] = `
 <div
-  class="flex-1 flex-col items-start justify-end gap-1 pt-3"
+  class="flex-1 flex-col items-start justify-end gap-1"
   data-testid="container"
 >
   <div
@@ -62,40 +102,6 @@ exports[`Home - Snapshots > matches snapshot for HomeFooter with default props 1
     </a>
      and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.
   </div>
-  <div
-    class="flex-row items-center gap-1 pt-2"
-    data-testid="container"
-  >
-    <a
-      class="block"
-      data-testid="link"
-      href="https://synonym.to"
-      target="_blank"
-    >
-      <img
-        alt="Synonym"
-        data-testid="image"
-        height="24"
-        src="/images/synonym-grey-logo.svg"
-        width="95"
-      />
-    </a>
-    <span
-      class="inline-flex items-center gap-1 font-normal text-muted-foreground"
-      data-size="sm"
-      data-testid="typography"
-    >
-      a 
-      <img
-        alt="tether."
-        data-testid="image"
-        height="9"
-        src="/images/tether-text.svg"
-        width="40"
-      />
-       company
-    </span>
-  </div>
 </div>
 `;
 
@@ -109,10 +115,7 @@ exports[`Home - Snapshots > matches snapshot for HomePageHeading with default pr
   >
     Unlock
   </span>
-   
-  <br
-    class="block sm:hidden"
-  />
+  <br />
    the web.
 </div>
 `;
@@ -123,7 +126,7 @@ exports[`Home - Snapshots > matches snapshot for HomeSectionTitle with default p
   data-testid="container"
 >
   <h2
-    class="self-center text-xl font-light text-brand sm:text-2xl"
+    class="self-center font-light text-muted-foreground sm:text-3xl"
     data-size="md"
     data-testid="typography"
   >

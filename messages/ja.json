@@ -7,10 +7,84 @@
   "landing": {
     "title": "ウェブを<highlight>解放</highlight>する。",
     "subtitle": "あなたの鍵、あなたのコンテンツ、あなたのルール。",
-    "explore": "探索",
-    "joinNow": "今すぐ参加",
+    "learn": "学ぶ",
+    "join": "参加",
+    "videoLabel": "Pubkyの動画",
+    "scrollToNext": "次のセクションへスクロール",
+    "scrollToTop": "トップへスクロール",
     "aTetherCompany": "<tether>tether.</tether>グループ企業",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026. 無断転載を禁じます。"
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026. 無断転載を禁じます。",
+    "broken": {
+      "eyebrow": "問題",
+      "title": "ウェブは<highlight>壊れています</highlight>。",
+      "description": "中央集権型プラットフォームは、あなたのアイデンティティ、データ、リーチを支配しています。",
+      "features": {
+        "identity": {
+          "title": "彼らがあなたを所有する",
+          "description": "彼らは安易なコンテンツとドーパミンであなたを夢中にさせます。アクセスはいつでも取り消される可能性があります。"
+        },
+        "data": {
+          "title": "彼らがあなたを閉じ込める",
+          "description": "投稿、プロフィール、つながりはサイロに閉じ込められ、離れることが難しくなります。"
+        },
+        "reach": {
+          "title": "彼らがあなたを制限する",
+          "description": "アルゴリズムが、誰に届くか、何が広がるか、何が虚空に消えるかを決めます。"
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "解決策",
+      "title": "<highlight>Pubky</highlight> は違います。",
+      "description": "あなたのデジタル生活のコントロールを取り戻します。",
+      "features": {
+        "core": {
+          "title": "あなたはあなたの鍵",
+          "description": "アカウントは暗号鍵によって動きます。中央サーバーもゲートキーパーもありません。"
+        },
+        "taggable": {
+          "title": "タグ付けできるウェブ",
+          "description": "投稿、メディア、プロフィールにタグを付けましょう。タグは意味を加え、あなたのソーシャルグラフづくりを助けます。"
+        },
+        "social": {
+          "title": "ソーシャル、でも自分のもの",
+          "description": "フィード、コンテンツ、つながりはあなたが管理します。体験を選ぶのはあなたです。"
+        },
+        "portable": {
+          "title": "ポータブルなアイデンティティ",
+          "description": "最初からやり直さずにアプリ間を移動できます。アイデンティティ、データ、友人はあなたのものです。"
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "自由のために設計",
+      "title": "あなた自身が<highlight>アルゴリズム</highlight>です.",
+      "description": "誰かがあなたのフィードを決めることはありません。あなたの条件でウェブを作り、形にし、体験できます。",
+      "nextSlide": "次のスライド",
+      "features": {
+        "creation": {
+          "title": "制限なく作成",
+          "description": "考え、記事、写真、動画、リンクなど、何でも投稿できます。コンテンツはあなたから始まり、あなたと一緒に残ります。"
+        },
+        "browsing": {
+          "title": "自分の見方で閲覧",
+          "description": "レイアウトを切り替えたり、リーチを変えてノイズを減らし、大切なものに集中できます。"
+        },
+        "feeds": {
+          "title": "視点を形作る",
+          "description": "リアルタイムで更新され、再利用できる視点として保存される動的なフィードを作成できます。"
+        },
+        "tagging": {
+          "title": "すべてをタグ付け",
+          "description": "投稿、メディア、プロフィールにタグを付けて文脈を加え、より関連性の高いコンテンツや人を見つけ、すばやく反応できます。"
+        }
+      }
+    },
+    "final": {
+      "title": "<line><highlight>自由なウェブ</highlight>へ。</line>",
+      "joinNow": "今すぐ参加"
+    },
+    "explore": "探索"
   },
   "status": {
     "available": "対応可能",
