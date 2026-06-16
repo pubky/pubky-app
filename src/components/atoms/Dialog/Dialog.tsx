@@ -76,7 +76,7 @@ function DialogContent({
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay onCloseRef={closeRef} contentRef={contentRef} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
         <DialogPrimitive.Content
           ref={contentRef}
           aria-describedby={undefined}
@@ -86,8 +86,14 @@ function DialogContent({
           className={cn(
             'relative z-50 grid',
             'duration-200',
-            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
-            'm-4 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+            'm-0 sm:m-4',
+            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+            'data-[state=open]:animate-in data-[state=open]:fade-in-0',
+            // Mobile: slide up from the bottom.
+            'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
+            // Desktop: reset the slide and zoom in/out instead.
+            'sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0',
+            'sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95',
             overrideDefaults
               ? ''
               : 'max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:p-8',
