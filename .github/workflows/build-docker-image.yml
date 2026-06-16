@@ -160,4 +160,4 @@ jobs:
             SUPPORT_FEEDBACK_INBOX_ID=26
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             SENTRY_ORG=synonym-52
-            SENTRY_PROJECT=pubky-app-docker
+            SENTRY_PROJECT=pubky-app-preview
