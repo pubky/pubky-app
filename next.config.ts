@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
     serverSourceMaps: true,
   },
   // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
-  ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),
+  ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone', experimental: { instrumentationHook: true } }),
   async redirects() {
     return [
       // /profile/[pubky] is the canonical other-user posts view (see app/profile/[pubky]/page.tsx).
