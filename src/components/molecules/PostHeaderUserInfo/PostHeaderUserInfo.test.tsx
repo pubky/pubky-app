@@ -97,7 +97,10 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: () => mockUseAuthStore(),
+  useAuthStore: (selector?: (state: { currentUserPubky?: string | null }) => unknown) => {
+    const state = mockUseAuthStore();
+    return typeof selector === 'function' ? selector(state) : state;
+  },
 }));
 
 // Mock atoms

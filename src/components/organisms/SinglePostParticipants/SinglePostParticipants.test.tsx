@@ -38,6 +38,8 @@ vi.mock('@/app/routes', () => ({
   APP_ROUTES: {
     PROFILE: '/profile',
   },
+  getUserProfileUrl: (pubky: string, currentUserPubky?: string | null) =>
+    currentUserPubky && pubky === currentUserPubky ? '/profile' : `/profile/${pubky}`,
 }));
 
 // Mock molecules
