@@ -86,9 +86,9 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
           <span>{t('title')}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent avoidKeyboard className="max-w-xl" hiddenTitle={t('title')}>
+      <DialogContent avoidKeyboard className="w-xl" hiddenTitle={t('title')}>
         <DialogHeader className="pr-6">
-          <DialogTitle className="text-2xl font-bold text-foreground sm:text-xl">{t('title')}</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
 
         <Container className="gap-6">
