@@ -73,8 +73,7 @@ RUN npm run build
 # The standalone tree needs its own pass: sentry-cli skips hidden directories while walking,
 # so the nested .next/standalone/.next is missed by the first command. IDs are derived from
 # file content, so the standalone copies receive the exact same IDs as the originals.
-RUN npx sentry-cli sourcemaps inject .next \
-    && npx sentry-cli sourcemaps inject .next/standalone/.next
+RUN npx sentry-cli sourcemaps inject .next/standalone/.next
 
 # 3. Upload the source maps to Sentry's cloud
 # (Requires SENTRY_AUTH_TOKEN, SENTRY_ORG, and SENTRY_PROJECT env variables to be present)
