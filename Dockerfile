@@ -73,14 +73,14 @@ RUN npm run build
 # The standalone tree needs its own pass: sentry-cli skips hidden directories while walking,
 # so the nested .next/standalone/.next is missed by the first command. IDs are derived from
 # file content, so the standalone copies receive the exact same IDs as the originals.
-RUN npx sentry-cli sourcemaps inject .next/standalone/.next
+RUN npx sentry-cli sourcemaps inject .next
 
 # 3. Upload the source maps to Sentry's cloud
 # (Requires SENTRY_AUTH_TOKEN, SENTRY_ORG, and SENTRY_PROJECT env variables to be present)
 ARG SENTRY_AUTH_TOKEN
 ARG SENTRY_ORG
 ARG SENTRY_PROJECT
-RUN npx sentry-cli sourcemaps upload .next/standalone/.next
+RUN npx sentry-cli sourcemaps upload .next
 
 # Strip browser source maps from the public image: the chunks keep their injected Debug IDs
 # (enough for Sentry to match the maps uploaded by the CI pipeline), and the maps themselves
@@ -101,18 +101,18 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Copy public assets
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
 # Set correct permissions for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
-# 1. Copy the core standalone build output
+# 1. Copy standalone server files (Next.js automatically links to .next/static from here)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
-# 2. FIX: Copy public assets and the INJECTED static files from the standalone tree
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# Grab the static folder that was actually processed by sentry-cli inject
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/.next/static ./.next/static
+# 2. Copy the client-side static assets from the root .next/static folder
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Switch to non-root user
 USER nextjs
