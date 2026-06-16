@@ -16,6 +16,12 @@ export interface UseElementKeyboardAvoidanceOptions {
    * Default: 150px.
    */
   threshold?: number;
+  /**
+   * Minimum space to keep above the element's top so it is never lifted off the
+   * top of the screen. Tall elements stay put and scroll internally instead.
+   * Default: 16px.
+   */
+  topInset?: number;
 }
 
 export interface UseElementKeyboardAvoidanceResult {

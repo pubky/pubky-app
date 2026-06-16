@@ -80,17 +80,17 @@ describe('useElementKeyboardAvoidance', () => {
     });
   });
 
-  function createElementRef(bottom: number) {
+  function createElementRef(bottom: number, height = 200) {
     const element = document.createElement('div');
     vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
       bottom,
-      height: 200,
+      height,
       left: 0,
       right: 300,
-      top: bottom - 200,
+      top: bottom - height,
       width: 300,
       x: 0,
-      y: bottom - 200,
+      y: bottom - height,
       toJSON: () => ({}),
     });
 
@@ -149,6 +149,19 @@ describe('useElementKeyboardAvoidance', () => {
     const { result } = renderHook(() => useElementKeyboardAvoidance(ref));
 
     expect(result.current.keyboardAvoidanceOffset).toBe(150);
+  });
+
+  it('caps the lift so a tall element is never pushed above the top inset', () => {
+    mockVisualViewport.height = 500;
+    // 760px tall element whose top sits at 20px: lifting it flush to the keyboard
+    // would push the top to -260px. The lift must be capped to top - topInset (16).
+    const ref = createElementRef(780, 760);
+
+    const { result } = renderHook(() => useElementKeyboardAvoidance(ref));
+
+    expect(result.current.isKeyboardVisible).toBe(true);
+    expect(result.current.keyboardAvoidanceOffset).toBe(4);
+    expect(result.current.keyboardAvoidanceStyle).toEqual({ transform: 'translateY(-4px)' });
   });
 
   it('handles missing visualViewport gracefully', () => {

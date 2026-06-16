@@ -9,12 +9,18 @@ import type {
 
 const DEFAULT_BOTTOM_MARGIN = 0;
 const DEFAULT_THRESHOLD = 150;
+const DEFAULT_TOP_INSET = 16;
 
 export function useElementKeyboardAvoidance<T extends HTMLElement>(
   elementRef: RefObject<T | null>,
   options: UseElementKeyboardAvoidanceOptions = {},
 ): UseElementKeyboardAvoidanceResult {
-  const { enabled = true, bottomMargin = DEFAULT_BOTTOM_MARGIN, threshold = DEFAULT_THRESHOLD } = options;
+  const {
+    enabled = true,
+    bottomMargin = DEFAULT_BOTTOM_MARGIN,
+    threshold = DEFAULT_THRESHOLD,
+    topInset = DEFAULT_TOP_INSET,
+  } = options;
   const [keyboardAvoidanceOffset, setKeyboardAvoidanceOffset] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
@@ -59,8 +65,15 @@ export function useElementKeyboardAvoidance<T extends HTMLElement>(
       const keyboardTop = viewport.height + viewport.offsetTop;
       // getBoundingClientRect reflects the applied transform; add currentOffset back
       // to measure the untransformed layout position.
-      const elementBottom = element.getBoundingClientRect().bottom + currentOffset;
-      const offset = Math.max(0, Math.ceil(elementBottom - keyboardTop + bottomMargin));
+      const rect = element.getBoundingClientRect();
+      const elementBottom = rect.bottom + currentOffset;
+      const elementTop = rect.top + currentOffset;
+      const overlap = elementBottom - keyboardTop + bottomMargin;
+      // Never lift so far that the element's top is pushed above the top inset.
+      // This keeps tall elements (e.g. an article editor) on screen and scrolling
+      // internally instead of flying off the top of the viewport.
+      const maxLift = Math.max(0, elementTop - topInset);
+      const offset = Math.max(0, Math.min(Math.ceil(overlap), Math.floor(maxLift)));
       currentOffset = offset;
       setKeyboardAvoidanceOffset(offset);
     };
@@ -84,7 +97,7 @@ export function useElementKeyboardAvoidance<T extends HTMLElement>(
       viewport.removeEventListener('scroll', scheduleCalculateOffset);
       resizeObserver?.disconnect();
     };
-  }, [bottomMargin, elementRef, enabled, threshold]);
+  }, [bottomMargin, elementRef, enabled, threshold, topInset]);
 
   return {
     isKeyboardVisible,
