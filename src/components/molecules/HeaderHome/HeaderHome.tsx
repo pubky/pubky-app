@@ -19,12 +19,12 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
   const pathname = usePathname();
   const [showJoinButton, setShowJoinButton] = React.useState(false);
 
-  const isHomePage = pathname === '/';
+  const isLandingPage = pathname === '/';
 
   React.useEffect(() => {
     setShowJoinButton(false);
 
-    if (!isHomePage) return;
+    if (!isLandingPage) return;
     if (typeof IntersectionObserver === 'undefined') return;
 
     const heroSection = document.getElementById(LANDING_HERO_SECTION_ID);
@@ -50,7 +50,7 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
     return () => {
       observer.disconnect();
     };
-  }, [isHomePage]);
+  }, [isLandingPage]);
 
   const handleJoin = () => {
     router.push(ONBOARDING_ROUTES.HUMAN);
@@ -68,7 +68,7 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
             exit={{ opacity: 0, width: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
           >
-            <div className="flex shrink-0 items-center p-2">
+            <div className="flex shrink-0 items-center px-2">
               <Button
                 id="header-join-btn"
                 variant="brand"
