@@ -87,12 +87,12 @@ function DialogContent({
             'relative z-50 grid',
             'duration-200',
             'm-0 sm:m-4',
-            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
-            'data-[state=open]:animate-in data-[state=open]:fade-in-0',
-            // Mobile: slide up from the bottom.
+            'data-[state=closed]:animate-out data-[state=open]:animate-in',
+            // Mobile: clean slide up/down from the bottom (the overlay handles the dimming).
             'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
-            // Desktop: reset the slide and zoom in/out instead.
+            // Desktop: reset the slide and fade + zoom in/out instead.
             'sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0',
+            'sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0',
             'sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95',
             overrideDefaults
               ? ''
