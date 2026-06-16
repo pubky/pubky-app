@@ -4,7 +4,11 @@ import type { PropsWithChildren } from 'react';
 import { usePostMissing } from '@/hooks/usePostMissing/usePostMissing';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { HotDiscoveryContentLayout } from '@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout';
-import { SinglePostLeftDrawer, SinglePostLeftSidebar } from '@/organisms/SinglePostLeftSidebar/SinglePostLeftSidebar';
+import {
+  SinglePostLeftDrawer,
+  SinglePostLeftDrawerMobile,
+  SinglePostLeftSidebar,
+} from '@/organisms/SinglePostLeftSidebar/SinglePostLeftSidebar';
 import { SinglePostRightPanel } from '@/organisms/SinglePostRightPanel/SinglePostRightPanel';
 
 export interface PostPageShellProps extends PropsWithChildren {
@@ -38,6 +42,7 @@ export function PostPageShell({ postId, children }: PostPageShellProps) {
       leftSidebarContent={<SinglePostLeftSidebar />}
       rightSidebarContent={<SinglePostRightPanel postId={postId} />}
       leftDrawerContent={<SinglePostLeftDrawer />}
+      leftDrawerContentMobile={<SinglePostLeftDrawerMobile />}
       rightDrawerContent={<SinglePostRightPanel postId={postId} showFeedback={false} />}
     >
       {children}

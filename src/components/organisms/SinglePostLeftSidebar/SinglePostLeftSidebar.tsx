@@ -10,16 +10,16 @@ import { useHomeStore } from '@/stores/home/home.store';
  * SinglePostFilters
  *
  * Filter set for SinglePost page left panels.
- * Currently supports layout only.
+ * Currently supports layout in desktop sidebar and wide-shell drawer contexts.
  */
-function SinglePostFilters() {
+function SinglePostFilters({ hideLayoutFilter = false }: { hideLayoutFilter?: boolean }) {
   const { layout, setLayout } = useHomeStore();
 
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
       <FilterReach selectedTab={undefined} defaultSelectedTab={undefined} disabled />
       <FilterSort selectedTab={undefined} defaultSelectedTab={undefined} disabled />
-      <FilterLayout selectedTab={layout} onTabChange={setLayout} />
+      {!hideLayoutFilter && <FilterLayout selectedTab={layout} onTabChange={setLayout} />}
       <FilterContent selectedTab={undefined} defaultSelectedTab={undefined} disabled />
     </Container>
   );
@@ -37,8 +37,17 @@ export function SinglePostLeftSidebar() {
 /**
  * SinglePostLeftDrawer
  *
- * Left drawer for SinglePost page (tablet/mobile).
+ * Left drawer for SinglePost page outside mobile drawer contexts.
  */
 export function SinglePostLeftDrawer() {
   return <SinglePostFilters />;
+}
+
+/**
+ * SinglePostLeftDrawerMobile
+ *
+ * Left drawer for SinglePost page on mobile viewports.
+ */
+export function SinglePostLeftDrawerMobile() {
+  return <SinglePostFilters hideLayoutFilter />;
 }
