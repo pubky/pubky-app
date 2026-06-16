@@ -36,7 +36,10 @@ const mockFilterLayout = vi.fn(
 );
 
 vi.mock('@/stores/home/home.store', () => ({
-  useHomeStore: () => mockUseHomeStore(),
+  useHomeStore: (selector?: (state: ReturnType<typeof mockUseHomeStore>) => unknown) => {
+    const state = mockUseHomeStore();
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock('@/atoms/Container/Container', () => ({
