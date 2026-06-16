@@ -101,16 +101,18 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy public assets
-COPY --from=builder /app/public ./public
-
 # Set correct permissions for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
-# Copy standalone build output
+# 1. Copy the core standalone build output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# 2. FIX: Copy public assets and the INJECTED static files from the standalone tree
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Grab the static folder that was actually processed by sentry-cli inject
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/.next/static ./.next/static
 
 # Switch to non-root user
 USER nextjs
