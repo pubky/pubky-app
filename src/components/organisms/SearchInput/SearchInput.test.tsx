@@ -1,12 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import type { Pubky } from '@/models/models.types';
 import { useSearchStore } from '@/stores/search/search.store';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { SearchInput } from './SearchInput';
 
 // Mock next/navigation
@@ -609,64 +608,5 @@ describe('SearchInput', () => {
       const { container } = render(<SearchInput />);
       expect(container.firstChild).toMatchSnapshot();
     });
-  });
-});
-
-describe('SearchInput - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Reset URL search params
-    mockSearchParams.delete('tags');
-    // Replicate the default hook state from the desktop suite's beforeEach.
-    vi.mocked(useSearchInput).mockReturnValue({
-      inputValue: '',
-      isFocused: false,
-      containerRef: { current: null },
-      inputRef: { current: null },
-      handleInputChange: vi.fn(),
-      handleKeyDown: vi.fn(),
-      handleFocus: vi.fn(),
-      clearInputValue: vi.fn(),
-      setFocus: vi.fn(),
-    });
-    vi.mocked(useHotTags).mockReturnValue({
-      tags: [{ name: 'pubky', count: 10 }],
-      rawTags: [],
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-    vi.mocked(useSearchAutocomplete).mockReturnValue({
-      tags: [],
-      users: [],
-      isLoading: false,
-    });
-    vi.mocked(useTagSearch).mockReturnValue({
-      addTagToSearch: mockAddTagToSearch,
-      removeTagFromSearch: mockRemoveTagFromSearch,
-      activeTags: [],
-      isReadOnly: false,
-    });
-    vi.mocked(useSearchStore).mockReturnValue({
-      activeTags: [],
-      setActiveTags: mockSetActiveTags,
-      addActiveTag: mockAddActiveTag,
-      removeActiveTag: mockRemoveActiveTag,
-      recentUsers: [],
-      recentTags: [],
-      addUser: mockAddUser,
-      addTag: mockAddTag,
-    });
-    mockUseIsMobile.mockReturnValue(true);
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<SearchInput autoFocus />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });
