@@ -49,8 +49,8 @@ vi.mock('@/molecules/Toaster/use-toast', () => ({
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: createZustandLikeHook({
-    currentUserPubky: 'vrt000000000000000000000000000000000000000000alice01',
-    selectCurrentUserPubky: () => 'vrt000000000000000000000000000000000000000000alice01',
+    currentUserPubky: 'ybndrfg8ejkmcpqxot1uwisza345h769ybndrfg8ejkmcpqxot1u',
+    selectCurrentUserPubky: () => 'ybndrfg8ejkmcpqxot1uwisza345h769ybndrfg8ejkmcpqxot1u',
     hasHydrated: true,
   }),
 }));
