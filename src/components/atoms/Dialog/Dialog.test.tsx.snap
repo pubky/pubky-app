@@ -12,7 +12,7 @@ exports[`Dialog - Snapshots > matches snapshot for DialogContent with close butt
 >
   <div
     aria-labelledby="radix-normalized"
-    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:p-8"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-t-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8"
     data-cy="dialog-content"
     data-slot="dialog-content"
     data-state="open"
@@ -67,7 +67,7 @@ exports[`Dialog - Snapshots > matches snapshot for DialogContent with default pr
 >
   <div
     aria-labelledby="radix-normalized"
-    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:p-8"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-t-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8"
     data-cy="dialog-content"
     data-slot="dialog-content"
     data-state="open"
@@ -191,7 +191,7 @@ exports[`Dialog - Snapshots > matches snapshot for DialogContent without close b
 >
   <div
     aria-labelledby="radix-normalized"
-    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:p-8"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-t-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8"
     data-cy="dialog-content"
     data-slot="dialog-content"
     data-state="open"
@@ -246,7 +246,7 @@ exports[`Dialog - Snapshots > matches snapshot for DialogContent without overrid
 >
   <div
     aria-labelledby="radix-normalized"
-    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:p-8"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-t-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8"
     data-cy="dialog-content"
     data-slot="dialog-content"
     data-state="open"
@@ -383,7 +383,7 @@ exports[`Dialog - Snapshots > matches snapshot for complete dialog structure 1`]
 >
   <div
     aria-labelledby="radix-normalized"
-    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:p-8"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-t-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8"
     data-cy="dialog-content"
     data-slot="dialog-content"
     data-state="open"
