@@ -130,15 +130,15 @@ describe('useElementKeyboardAvoidance', () => {
     expect(result.current.keyboardAvoidanceStyle).toBeUndefined();
   });
 
-  it('translates upward by the keyboard overlap plus margin', () => {
+  it('translates upward by the keyboard overlap so the element sits against the keyboard', () => {
     mockVisualViewport.height = 500;
     const ref = createElementRef(700);
 
     const { result } = renderHook(() => useElementKeyboardAvoidance(ref));
 
     expect(result.current.isKeyboardVisible).toBe(true);
-    expect(result.current.keyboardAvoidanceOffset).toBe(216);
-    expect(result.current.keyboardAvoidanceStyle).toEqual({ transform: 'translateY(-216px)' });
+    expect(result.current.keyboardAvoidanceOffset).toBe(200);
+    expect(result.current.keyboardAvoidanceStyle).toEqual({ transform: 'translateY(-200px)' });
   });
 
   it('handles visual viewport offsetTop', () => {
@@ -148,7 +148,7 @@ describe('useElementKeyboardAvoidance', () => {
 
     const { result } = renderHook(() => useElementKeyboardAvoidance(ref));
 
-    expect(result.current.keyboardAvoidanceOffset).toBe(166);
+    expect(result.current.keyboardAvoidanceOffset).toBe(150);
   });
 
   it('handles missing visualViewport gracefully', () => {

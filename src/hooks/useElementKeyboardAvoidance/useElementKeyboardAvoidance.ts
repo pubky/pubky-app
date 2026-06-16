@@ -7,7 +7,7 @@ import type {
   UseElementKeyboardAvoidanceResult,
 } from './useElementKeyboardAvoidance.types';
 
-const DEFAULT_BOTTOM_MARGIN = 16;
+const DEFAULT_BOTTOM_MARGIN = 0;
 const DEFAULT_THRESHOLD = 150;
 
 export function useElementKeyboardAvoidance<T extends HTMLElement>(

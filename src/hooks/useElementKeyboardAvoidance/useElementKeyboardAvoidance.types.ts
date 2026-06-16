@@ -8,7 +8,7 @@ export interface UseElementKeyboardAvoidanceOptions {
   enabled?: boolean;
   /**
    * Minimum space to keep between the element bottom and the visual viewport bottom.
-   * Default: 16px.
+   * Default: 0px (the element sits flush against the keyboard).
    */
   bottomMargin?: number;
   /**
