@@ -86,7 +86,7 @@ exports[`DialogAddLink - Snapshots > matches snapshot for default DialogAddLink 
     </button>
   </div>
   <div
-    class="max-w-xl rounded-xl border bg-popover p-8 sm:rounded-lg sm:p-6"
+    class="max-w-xl"
     data-testid="dialog-content"
   >
     <div
