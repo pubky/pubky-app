@@ -24,7 +24,7 @@ export function FollowerItem({ follower, isFollowing = false, onFollow, isCurren
   const handleFollowClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onFollow?.(follower.id, isFollowing);
+    onFollow?.(follower.id, isFollowing, displayName);
   };
 
   return (

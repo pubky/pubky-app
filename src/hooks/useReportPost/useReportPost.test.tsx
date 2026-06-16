@@ -36,10 +36,10 @@ vi.mock('@/models/models.utils', () => ({
 }));
 
 // Mock toast helpers
-const mockShowErrorToast = vi.fn();
-vi.mock('@/molecules/Toaster/showErrorToast', () => {
+const mockToast = vi.fn();
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    showErrorToast: (params: { title?: string; description: string }) => mockShowErrorToast(params),
+    toast: (params: { title?: string; description: string; variant?: string }) => mockToast(params),
   };
 });
 
@@ -290,8 +290,9 @@ describe('useReportPost', () => {
         expect(result.current.isSuccess).toBe(false);
       });
 
-      expect(mockShowErrorToast).toHaveBeenCalledWith(
+      expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
+          variant: 'error',
           description: 'Server error',
         }),
       );
@@ -376,9 +377,10 @@ describe('useReportPost', () => {
 
       expect(result.current.isSubmitting).toBe(false);
       expect(result.current.isSuccess).toBe(false);
-      expect(mockShowErrorToast).toHaveBeenCalledWith(
+      expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: 'User profile not loaded. Please try again.',
+          variant: 'error',
+          description: 'Could not load profile',
         }),
       );
       expect(global.fetch).not.toHaveBeenCalled();
@@ -409,9 +411,10 @@ describe('useReportPost', () => {
 
       expect(result.current.isSubmitting).toBe(false);
       expect(result.current.isSuccess).toBe(false);
-      expect(mockShowErrorToast).toHaveBeenCalledWith(
+      expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: 'User profile not loaded. Please try again.',
+          variant: 'error',
+          description: 'Could not load profile',
         }),
       );
       expect(global.fetch).not.toHaveBeenCalled();
@@ -442,8 +445,9 @@ describe('useReportPost', () => {
         expect(result.current.isSuccess).toBe(false);
       });
 
-      expect(mockShowErrorToast).toHaveBeenCalledWith(
+      expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
+          variant: 'error',
           description: 'Network error',
         }),
       );

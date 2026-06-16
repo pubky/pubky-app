@@ -35,6 +35,7 @@ import type {
   PubPath,
   TGenerateSignupAuthUrlParams,
   THomeserverFetchParams,
+  THomeserverListAllParams,
   THomeserverListParams,
   THomeserverRequestParams,
   THomeserverUserEvent,
@@ -450,6 +451,33 @@ export class HomeserverService {
         return [];
       }
       return handleError({ error, additionalContext: { url: baseDirectory, baseDirectory } });
+    }
+  }
+
+  /**
+   * Lists ALL files under a base directory by paginating with a cursor until exhausted.
+   *
+   * A single `list` call is page-limited and must use a finite limit: non-finite values
+   * (e.g. Infinity) coerce to 0 at the SDK's WASM boundary and silently return an empty
+   * page. Paginating with the SDK cursor ("start after this URL") is the only reliable
+   * way to enumerate an entire directory.
+   *
+   * @param {string} baseDirectory - Base directory path to list all files from.
+   * @returns {Promise<string[]>} Array of every file URL under the directory.
+   */
+  static async listAll({ baseDirectory }: THomeserverListAllParams): Promise<string[]> {
+    const files: string[] = [];
+    let cursor: string | undefined;
+
+    for (;;) {
+      const batch = await this.list({ baseDirectory, cursor, limit: LIST_DEFAULT_LIMIT });
+      files.push(...batch);
+
+      if (batch.length < LIST_DEFAULT_LIMIT) {
+        return files;
+      }
+
+      cursor = batch[batch.length - 1];
     }
   }
 

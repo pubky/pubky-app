@@ -50,7 +50,6 @@ export function PostInput({
   initialAttachments,
 }: PostInputProps) {
   const t = useTranslations('post');
-  const tCommon = useTranslations('common');
   const tToast = useTranslations('toast.post');
   const {
     textareaRef,
@@ -164,7 +163,7 @@ export function PostInput({
           setContent(parsed.body || '');
         } catch {
           toast({
-            title: tCommon('error'),
+            variant: 'error',
             description: tToast('parseError'),
           });
         }

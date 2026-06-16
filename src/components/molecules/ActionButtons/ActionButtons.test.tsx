@@ -6,7 +6,7 @@ describe('ActionButtons', () => {
   it('renders create account button with default text', () => {
     render(<ActionButtons />);
 
-    const createAccountButton = screen.getByRole('button', { name: /join now/i });
+    const createAccountButton = screen.getByRole('button', { name: /join/i });
 
     expect(createAccountButton).toBeInTheDocument();
 
@@ -17,7 +17,7 @@ describe('ActionButtons', () => {
     const mockOnCreateAccount = vi.fn();
     render(<ActionButtons onCreateAccount={mockOnCreateAccount} />);
 
-    const createAccountButton = screen.getByRole('button', { name: /join now/i });
+    const createAccountButton = screen.getByRole('button', { name: /join/i });
     fireEvent.click(createAccountButton);
 
     expect(mockOnCreateAccount).toHaveBeenCalledTimes(1);
@@ -29,7 +29,7 @@ describe('ActionButtons', () => {
 
     render(<ActionButtons onCreateAccount={mockOnCreateAccount} onExplore={mockOnExplore} />);
 
-    const createAccountButton = screen.getByRole('button', { name: /join now/i });
+    const createAccountButton = screen.getByRole('button', { name: /join/i });
     const exploreButton = screen.getByRole('button', { name: /explore/i });
 
     fireEvent.click(exploreButton);
@@ -37,6 +37,18 @@ describe('ActionButtons', () => {
 
     expect(mockOnExplore).toHaveBeenCalledTimes(1);
     expect(mockOnCreateAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders and calls Learn when onLearn is provided', () => {
+    const mockOnLearn = vi.fn();
+    render(<ActionButtons onLearn={mockOnLearn} />);
+
+    const learnButton = screen.getByRole('button', { name: /learn/i });
+    fireEvent.click(learnButton);
+
+    expect(learnButton).toBeInTheDocument();
+    expect(document.querySelector('.lucide-book-open')).toBeInTheDocument();
+    expect(mockOnLearn).toHaveBeenCalledTimes(1);
   });
 
   it('renders and calls Explore when onExplore is provided', () => {
@@ -68,6 +80,17 @@ describe('ActionButtons - Snapshots', () => {
     const mockOnExplore = vi.fn();
 
     const { container } = render(<ActionButtons onCreateAccount={mockOnCreateAccount} onExplore={mockOnExplore} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with all callbacks', () => {
+    const mockOnLearn = vi.fn();
+    const mockOnCreateAccount = vi.fn();
+    const mockOnExplore = vi.fn();
+
+    const { container } = render(
+      <ActionButtons onLearn={mockOnLearn} onCreateAccount={mockOnCreateAccount} onExplore={mockOnExplore} />,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 

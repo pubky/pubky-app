@@ -6,7 +6,6 @@ import { Install } from './Install';
 
 const mockSearchParamsGet = vi.fn<(key: string) => string | null>(() => null);
 const mockToast = vi.fn();
-const mockShowErrorToast = vi.fn();
 const mockSetInviteCode = vi.fn();
 const mockReplace = vi.fn();
 const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<'valid' | 'used' | 'invalid'>>();
@@ -57,18 +56,11 @@ vi.mock('@/molecules/Toaster/use-toast', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/showErrorToast', () => {
-  return {
-    showErrorToast: (params: unknown) => mockShowErrorToast(params),
-  };
-});
-
 describe('Install template', () => {
   beforeEach(() => {
     mockSearchParamsGet.mockReset();
     mockSearchParamsGet.mockReturnValue(null);
     mockToast.mockClear();
-    mockShowErrorToast.mockClear();
     mockSetInviteCode.mockClear();
     mockReplace.mockClear();
     mockVerifySignupToken.mockReset();
@@ -116,7 +108,7 @@ describe('Install template', () => {
       title: 'Invalid invite code',
       description: 'This invite code is not recognized. Please use a different invite code.',
     });
-    expect(mockShowErrorToast).not.toHaveBeenCalled();
+    expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
 
   it('does not apply the invite code and redirects home when the code has already been used', async () => {
@@ -133,7 +125,7 @@ describe('Install template', () => {
       title: 'Invite code already used',
       description: 'This invite code has already been used. Please use a different invite code.',
     });
-    expect(mockShowErrorToast).not.toHaveBeenCalled();
+    expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
 
   it('shows an error toast and redirects home when verification fails to reach the homeserver', async () => {
@@ -146,12 +138,13 @@ describe('Install template', () => {
     });
     expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     expect(mockSetInviteCode).not.toHaveBeenCalled();
-    expect(mockShowErrorToast).toHaveBeenCalledWith({
+    expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
       title: "Couldn't verify invite code",
       description: "We couldn't verify your invite code right now. Please check your connection and try again.",
     });
-    // The invalid-code warning toast is not shown for transient errors
-    expect(mockToast).not.toHaveBeenCalled();
+    // The invalid-code warning toast is not shown for transient errors.
+    expect(mockToast).toHaveBeenCalledTimes(1);
   });
 
   it('does not verify or set invite code when URL param is missing', () => {

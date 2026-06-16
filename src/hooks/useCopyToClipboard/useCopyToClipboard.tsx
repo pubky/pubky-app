@@ -7,16 +7,14 @@ interface UseCopyToClipboardOptions {
   onSuccess?: (text: string) => void;
   onError?: (error: Error) => void;
   successTitle?: string;
-  errorTitle?: string;
   errorDescription?: string;
 }
 
 export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
   const tCopy = useTranslations('toast.copy');
-  const { onSuccess, onError, successTitle, errorTitle, errorDescription } = options;
+  const { onSuccess, onError, successTitle, errorDescription } = options;
 
   const resolvedSuccessTitle = successTitle ?? tCopy('pubkyCopied');
-  const resolvedErrorTitle = errorTitle ?? tCopy('copyFailed');
   const resolvedErrorDescription = errorDescription ?? tCopy('copyFailedDesc');
 
   const copyToClipboardHandler = useCallback(
@@ -25,8 +23,8 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
         await copyToClipboard({ text });
 
         toast({
+          variant: 'info',
           title: resolvedSuccessTitle,
-          description: text,
           dismissButton: true,
         });
 
@@ -34,7 +32,7 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
         return true;
       } catch (error) {
         toast({
-          title: resolvedErrorTitle,
+          variant: 'error',
           description: resolvedErrorDescription,
         });
 
@@ -42,7 +40,7 @@ export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
         return false;
       }
     },
-    [onSuccess, onError, resolvedSuccessTitle, resolvedErrorTitle, resolvedErrorDescription],
+    [onSuccess, onError, resolvedSuccessTitle, resolvedErrorDescription],
   );
 
   return { copyToClipboard: copyToClipboardHandler };

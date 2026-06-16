@@ -38,7 +38,7 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
         </PageSubtitle>
       </PageHeader>
 
-      <Container data-testid="human-verification-cards" className="gap-6 lg:flex-row lg:items-stretch lg:gap-8">
+      <Container data-testid="human-verification-cards" className="gap-6 lg:flex-row lg:items-stretch lg:gap-6">
         <HumanSmsCard onClick={() => onClick('sms')} />
         <HumanBitcoinCard onClick={() => onClick('payment')} />
       </Container>

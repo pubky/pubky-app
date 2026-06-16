@@ -2,7 +2,7 @@
 import { type ReactNode, useEffect, useRef } from 'react';
 import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { toast } from '@/molecules/Toaster/use-toast';
 
 interface GlobalErrorHandlerProviderProps {
   children: ReactNode;
@@ -41,7 +41,7 @@ export function GlobalErrorHandlerProvider({ children }: GlobalErrorHandlerProvi
       }
 
       toastTimestampsRef.current.set(toastKey, now);
-      showErrorToast({ description: message });
+      toast({ variant: 'error', description: message });
     };
 
     const onWindowError = (event: ErrorEvent) => {
