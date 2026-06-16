@@ -16,7 +16,7 @@ export function LandingHowItWorksSection() {
   const t = useTranslations('landing.howItWorks');
 
   return (
-    <section id={LANDING_HOW_SECTION_ID} className="relative z-0 min-h-svh scroll-mt-[48px] py-20 sm:py-24">
+    <section id={LANDING_HOW_SECTION_ID} className="relative z-0 min-h-svh scroll-mt-[48px] py-10 sm:py-24">
       <Container size="container" className="gap-10 px-6">
         <Container className="mx-0 max-w-[760px] gap-5">
           <Typography as="span" size="xs" className="text-brand tracking-[1.2px] uppercase">
