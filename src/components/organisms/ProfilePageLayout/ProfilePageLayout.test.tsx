@@ -566,6 +566,7 @@ describe('ProfilePageLayout - Mobile Snapshots', () => {
 
   afterEach(() => {
     resetViewport();
+    vi.restoreAllMocks();
   });
 
   it('matches snapshot on mobile viewport', () => {
