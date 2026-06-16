@@ -87,7 +87,7 @@ RUN npx sentry-cli sourcemaps upload .next/standalone/.next
 # (enough for Sentry to match the maps uploaded by the CI pipeline), and the maps themselves
 # must not be served from /_next/static. Server-side maps under .next/standalone stay — they
 # are never exposed over HTTP and make Node stack traces readable.
-RUN find .next/static -name '*.map' -type f -delete
+RUN find .next/standalone/.next -name '*.map' -type f -delete
 
 # Stage 3: Runner
 FROM node:lts-alpine AS runner
