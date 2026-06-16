@@ -30,7 +30,12 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')} onAnimationEnd={handleDialogContentAnimationEnd}>
+      <DialogContent
+        avoidKeyboard
+        className="w-3xl"
+        hiddenTitle={t('hiddenTitle')}
+        onAnimationEnd={handleDialogContentAnimationEnd}
+      >
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription className="sr-only">{t('description')}</DialogDescription>

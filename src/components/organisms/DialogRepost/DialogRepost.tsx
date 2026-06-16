@@ -16,7 +16,7 @@ export function DialogRepost({ postId, open, onOpenChangeAction }: DialogRepostP
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-3xl" hiddenTitle="Repost">
+      <DialogContent avoidKeyboard className="w-3xl" hiddenTitle="Repost">
         <DialogHeader>
           <DialogTitle>Repost</DialogTitle>
           <DialogDescription className="sr-only">Repost dialog</DialogDescription>

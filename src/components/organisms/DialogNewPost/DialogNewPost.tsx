@@ -5,8 +5,6 @@ import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
-import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
-import { cn } from '@/libs/utils/utils';
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostInput } from '../PostInput/PostInput';
@@ -21,22 +19,9 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
       onClose: () => onOpenChangeAction(false),
     });
 
-  // Dialogs are already centered, so reduce the offset to avoid over-compensation
-  const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset({ offsetAdjustment: 200 });
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className={cn('w-3xl', isKeyboardVisible && 'transition-transform duration-75')}
-        style={
-          isKeyboardVisible && keyboardOffset > 0
-            ? {
-                transform: `translateY(-${keyboardOffset}px)`,
-              }
-            : undefined
-        }
-        hiddenTitle={title}
-      >
+      <DialogContent avoidKeyboard className="w-3xl" hiddenTitle={title}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="sr-only">{t('description', { title })}</DialogDescription>

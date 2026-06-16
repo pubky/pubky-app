@@ -25,12 +25,14 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
         children,
         className,
         hiddenTitle,
+        avoidKeyboard: _avoidKeyboard,
         'aria-describedby': ariaDescribedBy,
         ...props
       }: {
         children: React.ReactNode;
         className?: string;
         hiddenTitle?: string;
+        avoidKeyboard?: boolean;
         'aria-describedby'?: string;
         [key: string]: unknown;
       }) => (
@@ -228,6 +230,13 @@ describe('DialogReply', () => {
 
     const dialog = screen.getByTestId('dialog');
     expect(dialog).toHaveAttribute('data-open', 'true');
+  });
+
+  it('enables keyboard avoidance on DialogContent', () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    expect(vi.mocked(DialogContent).mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ avoidKeyboard: true }));
   });
 
   it('calls onOpenChangeAction when PostInput onSuccess is called', async () => {
