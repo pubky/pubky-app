@@ -86,10 +86,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
           <span>{t('title')}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent
-        className="max-w-xl rounded-xl border bg-popover p-8 sm:rounded-lg sm:p-6"
-        hiddenTitle={t('title')}
-      >
+      <DialogContent avoidKeyboard className="max-w-xl" hiddenTitle={t('title')}>
         <DialogHeader className="pr-6">
           <DialogTitle className="text-2xl font-bold text-foreground sm:text-xl">{t('title')}</DialogTitle>
         </DialogHeader>
