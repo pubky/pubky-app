@@ -13,6 +13,7 @@ import {
   Image,
   Layers,
   LayoutGrid,
+  Library,
   Link,
   Menu,
   Newspaper,
@@ -150,6 +151,11 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       value: PubkyAppPostKind.Long,
       label: tFilter('content.articles'),
       icon: Newspaper,
+    },
+    {
+      value: PubkyAppPostKind.Collection,
+      label: tFilter('content.collections'),
+      icon: Library,
     },
     {
       value: PubkyAppPostKind.Image,
