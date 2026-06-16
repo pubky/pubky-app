@@ -9,7 +9,7 @@ import { userApi } from '@/services/nexus/user/user.api';
  * Server-side fetch with Next.js caching and proper error handling.
  * Used for SSR/ISR metadata generation where client-side services are not available.
  */
-export async function fetchWithValidation<T>(url: string, operation: string): Promise<T | null> {
+async function fetchWithValidation<T>(url: string, operation: string): Promise<T | null> {
   const res = await fetch(url, { next: { revalidate: 3600 } });
   if (res.status === HttpStatusCode.NOT_FOUND) {
     return null;
