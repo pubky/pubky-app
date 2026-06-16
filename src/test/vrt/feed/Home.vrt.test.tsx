@@ -129,7 +129,13 @@ vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
-  usePublicRoute: () => ({ isPublicRoute: false }),
+  // Mirror the real hook on /home: a core explore route (not a dynamic public route).
+  usePublicRoute: () => ({
+    isPublicRoute: false,
+    isCoreExploreRoute: true,
+    isDynamicPublicRoute: false,
+    isPublicExploreRoute: true,
+  }),
 }));
 
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
