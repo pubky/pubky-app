@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { IMAGE_ENCODE_QUALITY, IMAGE_MAX_DIMENSION } from '@/config/images';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { stripImageMetadata } from './stripImageMetadata';
 
@@ -68,6 +69,15 @@ describe('stripImageMetadata', () => {
     global.Image = originalImageConstructor;
   });
 
+  function setMockImageDimensions(width: number, height: number): void {
+    Object.assign(mockImage, {
+      naturalWidth: width,
+      naturalHeight: height,
+      width,
+      height,
+    });
+  }
+
   it('sanitizes supported image types and returns a new file', async () => {
     const inputFile = new File(['raw-image-bytes'], 'photo.jpg', { type: 'image/jpeg' });
 
@@ -83,9 +93,21 @@ describe('stripImageMetadata', () => {
     expect(mockContext.drawImage).toHaveBeenCalledWith(mockImage, 0, 0, 120, 80);
     expect(mockCanvas.toBlob).toHaveBeenCalled();
     expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][1]).toBe('image/jpeg');
-    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][2]).toBe(1);
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][2]).toBe(IMAGE_ENCODE_QUALITY);
     expect(URL.createObjectURL).toHaveBeenCalledWith(inputFile);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:input-image');
+  });
+
+  it('downscales oversized raster images preserving aspect ratio', async () => {
+    setMockImageDimensions(4096, 2048);
+    const inputFile = new File(['raw-image-bytes'], 'large-photo.jpg', { type: 'image/jpeg' });
+
+    await stripImageMetadata(inputFile);
+
+    expect(mockCanvas.width).toBe(IMAGE_MAX_DIMENSION);
+    expect(mockCanvas.height).toBe(1024);
+    expect(mockContext.drawImage).toHaveBeenCalledWith(mockImage, 0, 0, IMAGE_MAX_DIMENSION, 1024);
+    expect(mockContext.imageSmoothingQuality).toBe('high');
   });
 
   it('detects PNG files from magic bytes when file.type is empty', async () => {
@@ -101,6 +123,7 @@ describe('stripImageMetadata', () => {
     expect(URL.createObjectURL).toHaveBeenCalledWith(inputFile);
     expect(mockCanvas.toBlob).toHaveBeenCalled();
     expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1]).toBe('image/png');
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[2]).toBeUndefined();
   });
 
   it('falls back to file extension when file.type is empty', async () => {
@@ -115,7 +138,7 @@ describe('stripImageMetadata', () => {
     expect(URL.createObjectURL).toHaveBeenCalledWith(inputFile);
     expect(mockCanvas.toBlob).toHaveBeenCalled();
     expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1]).toBe('image/jpeg');
-    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[2]).toBe(1);
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[2]).toBe(IMAGE_ENCODE_QUALITY);
   });
 
   it('leaves non-image files unchanged', async () => {
@@ -128,23 +151,36 @@ describe('stripImageMetadata', () => {
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['image/gif', 'animated.gif', 'gif'],
-    ['image/svg+xml', 'icon.svg', 'svg'],
-  ])('keeps safe %s upload while obfuscating filename', async (mimeType, fileName, extension) => {
-    const content =
-      mimeType === 'image/svg+xml'
-        ? '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="4"/></svg>'
-        : 'original-content';
-    const inputFile = new File([content], fileName, { type: mimeType });
+  it('keeps GIF uploads out of the canvas path while obfuscating filename', async () => {
+    const inputFile = new File(['original-content'], 'animated.gif', { type: 'image/gif' });
 
     const result = await stripImageMetadata(inputFile);
 
     expect(result).toBeInstanceOf(File);
     expect(result).not.toBe(inputFile);
-    expect(result.type).toBe(mimeType);
-    expect(result.name).not.toBe(fileName);
-    expect(result.name).toMatch(new RegExp(`^[a-z0-9]+\\.${extension}$`));
+    expect(result.type).toBe('image/gif');
+    expect(result.name).not.toBe(inputFile.name);
+    expect(result.name).toMatch(/^[a-z0-9]+\.gif$/);
+    expect(await result.text()).toBe('original-content');
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('keeps safe SVG uploads while obfuscating filename', async () => {
+    const inputFile = new File(
+      ['<svg xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="4"/></svg>'],
+      'icon.svg',
+      {
+        type: 'image/svg+xml',
+      },
+    );
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result).toBeInstanceOf(File);
+    expect(result).not.toBe(inputFile);
+    expect(result.type).toBe('image/svg+xml');
+    expect(result.name).not.toBe(inputFile.name);
+    expect(result.name).toMatch(/^[a-z0-9]+\.svg$/);
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 

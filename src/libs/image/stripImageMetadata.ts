@@ -1,3 +1,5 @@
+import { IMAGE_ENCODE_QUALITY, IMAGE_MAX_DIMENSION } from '@/config/images';
+
 const IMAGE_MIME_TYPE_TO_EXTENSION: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -18,7 +20,6 @@ const IMAGE_EXTENSION_TO_MIME_TYPE: Record<string, string> = {
 const MIME_TYPES_WITH_CANVAS_SANITIZATION = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MIME_TYPES_WITH_LOSSY_REENCODING = new Set(['image/jpeg', 'image/webp']);
 const SVG_MIME_TYPE = 'image/svg+xml';
-const LOSSY_IMAGE_ENCODE_QUALITY = 1;
 const FILE_HEADER_BYTES_LENGTH = 512;
 const TEXT_DECODER = new TextDecoder();
 const SVG_ACTIVE_ELEMENT_NAMES = new Set([
@@ -170,7 +171,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 function getCanvasEncodeQuality(mimeType: string): number | undefined {
-  return MIME_TYPES_WITH_LOSSY_REENCODING.has(mimeType) ? LOSSY_IMAGE_ENCODE_QUALITY : undefined;
+  return MIME_TYPES_WITH_LOSSY_REENCODING.has(mimeType) ? IMAGE_ENCODE_QUALITY : undefined;
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality?: number): Promise<Blob> {
@@ -189,21 +190,41 @@ function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality?: num
   });
 }
 
+function getScaledDimensions(width: number, height: number, maxDimension: number): { width: number; height: number } {
+  const longestEdge = Math.max(width, height);
+
+  if (longestEdge <= maxDimension || longestEdge === 0) {
+    return { width, height };
+  }
+
+  const scale = maxDimension / longestEdge;
+
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  };
+}
+
 async function sanitizeRasterImage(file: File, mimeType: string): Promise<Blob> {
   const objectUrl = URL.createObjectURL(file);
 
   try {
     const image = await loadImage(objectUrl);
+    const naturalWidth = image.naturalWidth || image.width;
+    const naturalHeight = image.naturalHeight || image.height;
+    const { width, height } = getScaledDimensions(naturalWidth, naturalHeight, IMAGE_MAX_DIMENSION);
+
     const canvas = document.createElement('canvas');
-    canvas.width = image.naturalWidth || image.width;
-    canvas.height = image.naturalHeight || image.height;
+    canvas.width = width;
+    canvas.height = height;
 
     const context = canvas.getContext('2d');
     if (!context) {
       throw new Error('Failed to get canvas context for metadata stripping');
     }
 
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(image, 0, 0, width, height);
     return await canvasToBlob(canvas, mimeType, getCanvasEncodeQuality(mimeType));
   } finally {
     URL.revokeObjectURL(objectUrl);
@@ -306,7 +327,8 @@ async function sanitizeSvgImage(file: File): Promise<Blob> {
 /**
  * Removes sensitive metadata from supported image formats before upload.
  * - JPEG/PNG/WebP: re-encodes via canvas to strip metadata (fail-closed on errors)
- * - JPEG/WebP: encoded at quality 1.0 to avoid browser default quality reduction
+ * - JPEG/WebP: encoded at configured quality to reduce upload size
+ * - Oversized raster images: downscaled preserving aspect ratio
  * - GIF and other raster types: keep bytes to avoid visual regressions
  * - SVG: best-effort XML rewrite that removes active content and risky references
  * - All image types: replace original filename with an obfuscated one
