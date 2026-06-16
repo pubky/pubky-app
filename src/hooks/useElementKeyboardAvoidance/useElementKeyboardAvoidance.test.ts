@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useElementKeyboardAvoidance } from './useElementKeyboardAvoidance';
 
@@ -21,12 +21,14 @@ describe('useElementKeyboardAvoidance', () => {
   let originalVisualViewport: typeof window.visualViewport;
   let originalRequestAnimationFrame: typeof window.requestAnimationFrame;
   let originalCancelAnimationFrame: typeof window.cancelAnimationFrame;
+  let originalGetComputedStyle: typeof window.getComputedStyle;
 
   beforeEach(() => {
     originalInnerHeight = window.innerHeight;
     originalVisualViewport = window.visualViewport;
     originalRequestAnimationFrame = window.requestAnimationFrame;
     originalCancelAnimationFrame = window.cancelAnimationFrame;
+    originalGetComputedStyle = window.getComputedStyle;
     listeners.clear();
     mockVisualViewport.height = 800;
     mockVisualViewport.offsetTop = 0;
@@ -78,11 +80,15 @@ describe('useElementKeyboardAvoidance', () => {
       writable: true,
       value: originalCancelAnimationFrame,
     });
+    Object.defineProperty(window, 'getComputedStyle', {
+      configurable: true,
+      writable: true,
+      value: originalGetComputedStyle,
+    });
   });
 
-  function createElementRef(bottom: number, height = 200) {
-    const element = document.createElement('div');
-    vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+  function createRect(bottom: number, height = 200): DOMRect {
+    return {
       bottom,
       height,
       left: 0,
@@ -92,9 +98,29 @@ describe('useElementKeyboardAvoidance', () => {
       x: 0,
       y: bottom - height,
       toJSON: () => ({}),
-    });
+    };
+  }
+
+  function createElementRef(bottom: number, height = 200) {
+    const element = document.createElement('div');
+    vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(createRect(bottom, height));
 
     return { current: element };
+  }
+
+  function mockComputedTransforms(...transforms: string[]) {
+    let index = 0;
+
+    Object.defineProperty(window, 'getComputedStyle', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => {
+        const transform = transforms[Math.min(index, transforms.length - 1)] ?? 'none';
+        index += 1;
+
+        return { transform } as CSSStyleDeclaration;
+      }),
+    });
   }
 
   it('returns no transform when the keyboard is not visible', () => {
@@ -139,6 +165,23 @@ describe('useElementKeyboardAvoidance', () => {
     expect(result.current.isKeyboardVisible).toBe(true);
     expect(result.current.keyboardAvoidanceOffset).toBe(200);
     expect(result.current.keyboardAvoidanceStyle).toEqual({ transform: 'translateY(-200px)' });
+  });
+
+  it('keeps the offset stable during transform transitions', () => {
+    mockVisualViewport.height = 500;
+    const element = document.createElement('div');
+    vi.spyOn(element, 'getBoundingClientRect').mockReturnValueOnce(createRect(700)).mockReturnValue(createRect(620));
+    mockComputedTransforms('none', 'matrix(1, 0, 0, 1, 0, -80)');
+
+    const { result } = renderHook(() => useElementKeyboardAvoidance({ current: element }));
+
+    expect(result.current.keyboardAvoidanceOffset).toBe(200);
+
+    act(() => {
+      listeners.get('resize')?.forEach((listener) => listener(new Event('resize')));
+    });
+
+    expect(result.current.keyboardAvoidanceOffset).toBe(200);
   });
 
   it('handles visual viewport offsetTop', () => {
