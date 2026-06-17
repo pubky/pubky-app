@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`HomeFeedDrawer > matches snapshot 1`] = `
+exports[`HomeFeedDrawer - Snapshots > matches snapshot 1`] = `
 <div>
   <div
     class="flex flex-col gap-6"
@@ -18,6 +18,7 @@ exports[`HomeFeedDrawer > matches snapshot 1`] = `
       FilterSort
     </div>
     <div
+      data-show-visual="true"
       data-testid="filter-layout"
     >
       FilterLayout
@@ -32,7 +33,7 @@ exports[`HomeFeedDrawer > matches snapshot 1`] = `
 </div>
 `;
 
-exports[`HomeFeedDrawerMobile > matches snapshot 1`] = `
+exports[`HomeFeedDrawerMobile - Snapshots > matches snapshot 1`] = `
 <div>
   <div
     class="flex flex-col gap-6"
@@ -59,7 +60,7 @@ exports[`HomeFeedDrawerMobile > matches snapshot 1`] = `
 </div>
 `;
 
-exports[`HomeFeedSidebar > matches snapshot 1`] = `
+exports[`HomeFeedSidebar - Snapshots > matches snapshot 1`] = `
 <div>
   <div
     class="flex flex-col gap-6"
@@ -81,6 +82,7 @@ exports[`HomeFeedSidebar > matches snapshot 1`] = `
       data-testid="container"
     >
       <div
+        data-show-visual="true"
         data-testid="filter-layout"
       >
         FilterLayout

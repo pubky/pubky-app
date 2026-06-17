@@ -1,5 +1,98 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
+  data-testid="container"
+>
+  <div
+    class="gap-4 contain-inline-size"
+    data-testid="container"
+  >
+    <div
+      data-count="0"
+      data-is-reply="true"
+      data-max="2000"
+      data-post-id="test-user-id:pubkey"
+      data-size="normal"
+      data-testid="post-header"
+    />
+    <div
+      class="relative"
+      data-override-defaults="true"
+      data-testid="container"
+    >
+      <textarea
+        data-testid="textarea"
+        placeholder="What's on your mind?"
+      />
+    </div>
+    <div
+      data-is-article="false"
+      data-submitting="false"
+      data-testid="post-input-attachments"
+    >
+      <button
+        data-testid="attachment-button"
+      >
+        Attach
+      </button>
+    </div>
+    <div
+      class="overflow-hidden "
+      style="height: auto; opacity: 1;"
+    >
+      <div
+        class="gap-6"
+        data-testid="container"
+      >
+        <div
+          class="justify-between gap-4 md:flex-row md:gap-0"
+          data-testid="container"
+        >
+          <div
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="0"
+            data-character-max="2000"
+            data-post-disabled="true"
+            data-testid="post-input-action-bar"
+          >
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
+            >
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+              disabled=""
+            >
+              Post
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
@@ -739,7 +832,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
 
 exports[`PostInput - Snapshots > matches snapshot for post variant without content or attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-12 border-input"
   data-testid="container"
 >
   <div
@@ -751,7 +844,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
       data-is-reply="true"
       data-max="2000"
       data-post-id="test-user-id:pubkey"
-      data-size="normal"
+      data-size="large"
       data-testid="post-header"
     />
     <div
@@ -760,6 +853,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
       data-testid="container"
     >
       <textarea
+        data-class-name="text-xl leading-7"
         data-testid="textarea"
         placeholder="What's on your mind?"
       />

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import enMessages from '../../../../messages/en.json';
 import { ProfilePageHeader } from './ProfilePageHeader';
 import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
@@ -258,6 +259,21 @@ describe('ProfilePageHeader', () => {
 
 describe('ProfilePageHeader - Snapshots', () => {
   it('matches snapshot', () => {
+    const { container } = render(<ProfilePageHeader {...mockProps} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('ProfilePageHeader - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<ProfilePageHeader {...mockProps} />);
     expect(container.firstChild).toMatchSnapshot();
   });

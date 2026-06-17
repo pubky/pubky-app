@@ -1,9 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ContentLayout } from './ContentLayout';
 
 const mockUseCustomFeed = vi.fn();
 const mockResolveFeedLayout = vi.fn();
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
 let mockHomeLayout = 'columns';
 
 // Mock the home store
@@ -36,7 +38,7 @@ vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
 }));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
-  useIsMobile: () => false,
+  useIsMobile: mockUseIsMobile,
 }));
 
 // Mock the molecules
@@ -527,14 +529,23 @@ describe('ContentLayout - Custom Feed Layout Override', () => {
   });
 });
 
+const drawerSnapshotProps = {
+  leftDrawerContent: <div data-testid="left-drawer-desktop">Desktop drawer</div>,
+  leftDrawerContentMobile: <div data-testid="left-drawer-mobile">Mobile drawer</div>,
+};
+
 describe('ContentLayout - Snapshots', () => {
+  beforeEach(() => {
+    mockUseIsMobile.mockReturnValue(false);
+  });
+
   it('matches snapshot with default props', () => {
     const { container } = render(
-      <ContentLayout>
+      <ContentLayout {...drawerSnapshotProps}>
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with showLeftSidebar false', () => {
@@ -543,7 +554,7 @@ describe('ContentLayout - Snapshots', () => {
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with showRightSidebar false', () => {
@@ -552,7 +563,7 @@ describe('ContentLayout - Snapshots', () => {
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with both sidebars hidden', () => {
@@ -561,7 +572,7 @@ describe('ContentLayout - Snapshots', () => {
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with custom className', () => {
@@ -570,7 +581,7 @@ describe('ContentLayout - Snapshots', () => {
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with complex children', () => {
@@ -583,7 +594,7 @@ describe('ContentLayout - Snapshots', () => {
         </div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with renderMobileHeader false', () => {
@@ -592,6 +603,26 @@ describe('ContentLayout - Snapshots', () => {
         <div>Test Content</div>
       </ContentLayout>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('ContentLayout - Mobile Snapshots', () => {
+  beforeEach(() => {
+    mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <ContentLayout {...drawerSnapshotProps}>
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+    expect(container).toMatchSnapshot();
   });
 });

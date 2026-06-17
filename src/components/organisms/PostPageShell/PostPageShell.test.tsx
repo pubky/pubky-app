@@ -22,6 +22,7 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
     leftSidebarContent,
     rightSidebarContent,
     leftDrawerContent,
+    leftDrawerContentMobile,
     rightDrawerContent,
     classNameWrapperContent,
   }: {
@@ -29,6 +30,7 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
     leftSidebarContent?: React.ReactNode;
     rightSidebarContent?: React.ReactNode;
     leftDrawerContent?: React.ReactNode;
+    leftDrawerContentMobile?: React.ReactNode;
     rightDrawerContent?: React.ReactNode;
     classNameWrapperContent?: string;
   }) => (
@@ -36,6 +38,7 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
       {leftSidebarContent && <div data-testid="left-sidebar">{leftSidebarContent}</div>}
       {rightSidebarContent && <div data-testid="right-sidebar">{rightSidebarContent}</div>}
       {leftDrawerContent && <div data-testid="left-drawer">{leftDrawerContent}</div>}
+      {leftDrawerContentMobile && <div data-testid="left-drawer-mobile">{leftDrawerContentMobile}</div>}
       {rightDrawerContent && <div data-testid="right-drawer">{rightDrawerContent}</div>}
       {children}
     </div>
@@ -45,6 +48,7 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
 vi.mock('@/organisms/SinglePostLeftSidebar/SinglePostLeftSidebar', () => ({
   SinglePostLeftSidebar: () => <div data-testid="single-post-left-sidebar">SinglePostLeftSidebar</div>,
   SinglePostLeftDrawer: () => <div data-testid="single-post-left-drawer">SinglePostLeftDrawer</div>,
+  SinglePostLeftDrawerMobile: () => <div data-testid="single-post-left-drawer-mobile">SinglePostLeftDrawerMobile</div>,
 }));
 
 vi.mock('@/organisms/SinglePostRightPanel/SinglePostRightPanel', () => ({
@@ -85,6 +89,18 @@ describe('PostPageShell', () => {
 
     expect(screen.getByTestId('single-post-left-sidebar')).toBeInTheDocument();
     expect(screen.getByTestId('left-sidebar')).toContainElement(screen.getByTestId('single-post-left-sidebar'));
+  });
+
+  it('passes the mobile left drawer variant to ContentLayout', () => {
+    render(
+      <PostPageShell postId={VALID_COMPOSITE_POST_ID}>
+        <div>body</div>
+      </PostPageShell>,
+    );
+
+    expect(screen.getByTestId('left-drawer-mobile')).toContainElement(
+      screen.getByTestId('single-post-left-drawer-mobile'),
+    );
   });
 
   it('renders SinglePostRightPanel in right sidebar with postId', () => {
