@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Image } from '@/atoms/Image/Image';
 import { BREAKPOINTS } from '@/config/theme';
 import { cn } from '@/libs/utils/utils';
@@ -33,6 +33,7 @@ interface LandingBrokenPosterProps {
 
 export function LandingBrokenPoster({ alt, className, image, video }: LandingBrokenPosterProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
   const shouldLoadVideo = useSyncExternalStore(
     subscribeToBreakpoint,
     getBreakpointSnapshot,
@@ -50,12 +51,15 @@ export function LandingBrokenPoster({ alt, className, image, video }: LandingBro
 
     if (!videoElement) return;
 
+    setIsHovered(true);
     videoElement.currentTime = 0;
     void videoElement.play();
   };
 
   const handlePointerLeave = () => {
     const videoElement = videoRef.current;
+
+    setIsHovered(false);
 
     if (!videoElement) return;
 
@@ -76,7 +80,10 @@ export function LandingBrokenPoster({ alt, className, image, video }: LandingBro
         preload="auto"
         muted
         playsInline
-        className="absolute inset-0 size-full object-cover opacity-0 transition-opacity duration-200 ease-out group-hover:opacity-100"
+        className={cn(
+          'absolute inset-0 size-full object-cover opacity-0 transition-opacity duration-200 ease-out',
+          isHovered && 'opacity-100',
+        )}
         aria-hidden="true"
       />
     </div>
