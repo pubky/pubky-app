@@ -994,6 +994,7 @@
       "attachmentsCleared": "Allegati rimossi",
       "failedToLoadPosts": "Impossibile caricare i nuovi post",
       "parseError": "Impossibile analizzare il contenuto dell'articolo",
+      "collectionParseError": "Impossibile analizzare il contenuto della raccolta",
       "coverImageError": "Impossibile caricare l'immagine di copertina",
       "attachmentsLoadFailed": "Impossibile caricare gli allegati",
       "repostSuccessFallback": "Ripubblicato"

@@ -994,6 +994,7 @@
       "attachmentsCleared": "Anexos removidos",
       "failedToLoadPosts": "Não foi possível carregar novas publicações",
       "parseError": "Não foi possível analisar o conteúdo do artigo",
+      "collectionParseError": "Não foi possível analisar o conteúdo da coleção",
       "coverImageError": "Não foi possível carregar a imagem de capa",
       "attachmentsLoadFailed": "Não foi possível carregar os anexos",
       "repostSuccessFallback": "Repostado"

@@ -995,6 +995,7 @@
       "attachmentsCleared": "Articles support one cover image",
       "failedToLoadPosts": "Could not load new posts",
       "parseError": "Could not parse article content",
+      "collectionParseError": "Could not parse collection content",
       "coverImageError": "Could not load cover image",
       "attachmentsLoadFailed": "Could not load attachments"
     },

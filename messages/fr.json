@@ -994,6 +994,7 @@
       "attachmentsCleared": "Pieces jointes supprimées",
       "failedToLoadPosts": "Impossible de charger les nouvelles publications",
       "parseError": "Impossible d'analyser le contenu de l'article",
+      "collectionParseError": "Impossible d'analyser le contenu de la collection",
       "coverImageError": "Impossible de charger l'image de couverture",
       "attachmentsLoadFailed": "Impossible de charger les pièces jointes",
       "repostSuccessFallback": "Republié"

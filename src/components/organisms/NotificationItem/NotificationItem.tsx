@@ -11,6 +11,7 @@ import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { Logger } from '@/libs/logger/logger';
+import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { formatNotificationTime, isPostDeleted } from '@/libs/utils/utils';
 import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationIcon } from '@/molecules/NotificationIcon/NotificationIcon';
@@ -81,6 +82,17 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
               toast({
                 variant: 'error',
                 description: tPostToast('parseError'),
+              });
+            }
+          } else if (post.kind === 'collection') {
+            const parsed = parseCollectionContent(post.content);
+            if (parsed) {
+              setPostContent(parsed.name);
+            } else {
+              setPostContent(post.content);
+              toast({
+                variant: 'error',
+                description: tPostToast('collectionParseError'),
               });
             }
           } else {

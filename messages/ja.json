@@ -994,6 +994,7 @@
       "attachmentsCleared": "添付ファイルを消去しました",
       "failedToLoadPosts": "新しい投稿を読み込めませんでした",
       "parseError": "記事コンテンツを解析できませんでした",
+      "collectionParseError": "コレクションのコンテンツを解析できませんでした",
       "coverImageError": "カバー画像を読み込めませんでした",
       "attachmentsLoadFailed": "添付ファイルを読み込めませんでした",
       "repostSuccessFallback": "リポストしました"

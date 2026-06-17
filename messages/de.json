@@ -996,6 +996,7 @@
       "attachmentsCleared": "Anhaenge entfernt",
       "failedToLoadPosts": "Neue Beiträge konnten nicht geladen werden",
       "parseError": "Artikelinhalt konnte nicht analysiert werden",
+      "collectionParseError": "Sammlungsinhalt konnte nicht analysiert werden",
       "coverImageError": "Titelbild konnte nicht geladen werden",
       "attachmentsLoadFailed": "Anhänge konnten nicht geladen werden",
       "repostSuccessFallback": "Repostet"

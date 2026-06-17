@@ -997,6 +997,7 @@
       "attachmentsCleared": "Los artículos admiten una imagen de portada",
       "failedToLoadPosts": "No se pudieron cargar las publicaciones nuevas",
       "parseError": "No se pudo analizar el contenido del artículo",
+      "collectionParseError": "No se pudo analizar el contenido de la colección",
       "coverImageError": "No se pudo cargar la imagen de portada",
       "attachmentsLoadFailed": "No se pudieron cargar los archivos adjuntos"
     },

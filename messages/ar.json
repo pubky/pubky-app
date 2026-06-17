@@ -996,6 +996,7 @@
       "attachmentsCleared": "تم ازالة المرفقات",
       "failedToLoadPosts": "تعذر تحميل المنشورات الجديدة",
       "parseError": "تعذر تحليل محتوى المقال",
+      "collectionParseError": "تعذر تحليل محتوى المجموعة",
       "coverImageError": "تعذر تحميل صورة الغلاف",
       "attachmentsLoadFailed": "تعذر تحميل المرفقات",
       "repostSuccessFallback": "أُعيد النشر"

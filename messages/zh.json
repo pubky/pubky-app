@@ -994,6 +994,7 @@
       "attachmentsCleared": "附件已清除",
       "failedToLoadPosts": "无法加载新帖子",
       "parseError": "无法解析文章内容",
+      "collectionParseError": "无法解析合集内容",
       "coverImageError": "无法加载封面图片",
       "attachmentsLoadFailed": "无法加载附件",
       "repostSuccessFallback": "已转发"
