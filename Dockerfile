@@ -73,20 +73,8 @@ RUN npm run build
 # The standalone tree needs its own pass: sentry-cli skips hidden directories while walking,
 # so the nested .next/standalone/.next is missed by the first command. IDs are derived from
 # file content, so the standalone copies receive the exact same IDs as the originals.
-RUN npx sentry-cli sourcemaps inject .next
-
-# 3. Upload the source maps to Sentry's cloud
-# (Requires SENTRY_AUTH_TOKEN, SENTRY_ORG, and SENTRY_PROJECT env variables to be present)
-ARG SENTRY_AUTH_TOKEN
-ARG SENTRY_ORG
-ARG SENTRY_PROJECT
-RUN npx sentry-cli sourcemaps upload .next
-
-# Strip browser source maps from the public image: the chunks keep their injected Debug IDs
-# (enough for Sentry to match the maps uploaded by the CI pipeline), and the maps themselves
-# must not be served from /_next/static. Server-side maps under .next/standalone stay — they
-# are never exposed over HTTP and make Node stack traces readable.
-RUN find .next/standalone/.next -name '*.map' -type f -delete
+RUN npx sentry-cli sourcemaps inject .next \
+    && npx sentry-cli sourcemaps inject .next/standalone/.next
 
 # Stage 3: Runner
 FROM node:lts-alpine AS runner
@@ -113,6 +101,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
 # 2. Copy the client-side static assets from the root .next/static folder
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Strip browser source maps from the public image: the chunks keep their injected Debug IDs
+# (enough for Sentry to match the maps uploaded by the CI pipeline), and the maps themselves
+# must not be served from /_next/static. Server-side maps under .next/standalone stay — they
+# are never exposed over HTTP and make Node stack traces readable.
+RUN find .next/static -name '*.map' -type f -delete
 
 # Switch to non-root user
 USER nextjs
