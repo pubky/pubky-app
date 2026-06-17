@@ -39,6 +39,7 @@ ARG NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS
 ARG NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE
 ARG NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE
 ARG NEXT_PUBLIC_TTL_RETRY_DELAY_MS
+ARG NEXT_PUBLIC_APP_VERSION
 # NOTE: NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL, DEFAULT_HTTP_RELAY,
 # PKARR_RELAYS and TESTNET are intentionally NOT build args. They are runtime-configurable and must
 # be supplied as PUBKY_RUNTIME_* environment variables on the running container (see runner stage
@@ -79,8 +80,7 @@ RUN npx sentry-cli sourcemaps inject .next \
 ARG SENTRY_AUTH_TOKEN
 ARG SENTRY_ORG
 ARG SENTRY_PROJECT
-ARG SENTRY_RELEASE
-RUN npx sentry-cli sourcemaps upload --release=$SENTRY_RELEASE .next
+RUN npx sentry-cli sourcemaps upload --release=$NEXT_PUBLIC_APP_VERSION .next
 
 # Strip browser source maps from the public image: the chunks keep their injected Debug IDs
 # (enough for Sentry to match the maps uploaded by the CI pipeline), and the maps themselves

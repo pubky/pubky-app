@@ -154,6 +154,7 @@ jobs:
             NEXT_PUBLIC_EXCHANGE_RATE_API=https://bitkit.stag0.blocktank.to/fx/rates/btc
             NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
             NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
+            NEXT_PUBLIC_APP_VERSION=${{ github.sha }}
             BASE_URL_SUPPORT=https://chatwoot.example.com
             SUPPORT_API_ACCESS_TOKEN=your_token_here
             SUPPORT_ACCOUNT_ID=123
@@ -161,5 +162,4 @@ jobs:
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             SENTRY_ORG=synonym-52
             SENTRY_PROJECT=pubky-app-preview
-            SENTRY_RELEASE=${{ github.sha }}
 
