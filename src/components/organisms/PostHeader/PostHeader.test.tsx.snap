@@ -1,5 +1,61 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`PostHeader - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="flex w-full min-w-0 items-start justify-between gap-3"
+  data-testid="container"
+>
+  <div
+    data-size="normal"
+    data-testid="post-header-user-info"
+  >
+    <div
+      data-testid="avatar"
+    />
+    <div>
+      Snapshot User
+    </div>
+    <div>
+      @
+      snapshot
+    </div>
+  </div>
+  <div
+    class="flex flex-shrink-0 items-center gap-1"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-clock size-4 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+      />
+      <path
+        d="M12 6v6l4 2"
+      />
+    </svg>
+    <span
+      class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground"
+      data-testid="typography"
+    >
+      2h
+    </span>
+  </div>
+</div>
+`;
+
 exports[`PostHeader - Snapshots > matches snapshot in loaded state 1`] = `
 <div
   class="flex w-full min-w-0 items-start justify-between gap-3"
@@ -21,13 +77,41 @@ exports[`PostHeader - Snapshots > matches snapshot in loaded state 1`] = `
     </div>
   </div>
   <div
-    data-testid="post-header-timestamp"
+    class="flex flex-shrink-0 items-center gap-1"
+    data-testid="container"
   >
-    <svg
-      data-testid="clock-icon"
-    />
-    <span>
-      2h
+    <span
+      class="flex flex-shrink-0 items-center gap-1"
+      data-state="closed"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-clock size-4 text-muted-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="M12 6v6l4 2"
+        />
+      </svg>
+      <span
+        class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground"
+        data-testid="typography"
+      >
+        2h
+      </span>
     </span>
   </div>
 </div>

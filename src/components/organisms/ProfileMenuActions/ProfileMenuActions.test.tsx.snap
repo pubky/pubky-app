@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PostMenuActions - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+exports[`ProfileMenuActions - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div
   data-open="false"
   data-testid="sheet"
@@ -23,7 +23,7 @@ exports[`PostMenuActions - Mobile Snapshots > matches snapshot on mobile viewpor
         class="sr-only"
         data-testid="sheet-title"
       >
-        Post Actions
+        Profile Actions
       </div>
     </div>
     <div
@@ -31,27 +31,12 @@ exports[`PostMenuActions - Mobile Snapshots > matches snapshot on mobile viewpor
       data-testid="container"
     >
       <div
-        data-post-id="pk:test123:post456"
-        data-testid="post-menu-actions-content"
+        data-testid="profile-menu-actions-content"
+        data-user-id="pk:test123"
         data-variant="sheet"
       >
         <button>
           Close
-        </button>
-        <button
-          data-testid="report-button"
-        >
-          Report
-        </button>
-        <button
-          data-testid="edit-button"
-        >
-          Edit
-        </button>
-        <button
-          data-testid="delete-button"
-        >
-          Delete
         </button>
       </div>
     </div>
@@ -59,7 +44,7 @@ exports[`PostMenuActions - Mobile Snapshots > matches snapshot on mobile viewpor
 </div>
 `;
 
-exports[`PostMenuActions - Snapshots > matches snapshot for desktop dropdown 1`] = `
+exports[`ProfileMenuActions - Snapshots > matches snapshot for desktop dropdown 1`] = `
 <div
   data-open="false"
   data-testid="dropdown-menu"
@@ -80,27 +65,12 @@ exports[`PostMenuActions - Snapshots > matches snapshot for desktop dropdown 1`]
     data-testid="dropdown-content"
   >
     <div
-      data-post-id="pk:test123:post456"
-      data-testid="post-menu-actions-content"
+      data-testid="profile-menu-actions-content"
+      data-user-id="pk:test123"
       data-variant="dropdown"
     >
       <button>
         Close
-      </button>
-      <button
-        data-testid="report-button"
-      >
-        Report
-      </button>
-      <button
-        data-testid="edit-button"
-      >
-        Edit
-      </button>
-      <button
-        data-testid="delete-button"
-      >
-        Delete
       </button>
     </div>
   </div>
