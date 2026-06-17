@@ -79,7 +79,7 @@ RUN npx sentry-cli sourcemaps inject .next \
 ARG SENTRY_AUTH_TOKEN
 ARG SENTRY_ORG
 ARG SENTRY_PROJECT
-ARG SETNTRY_RELEASE
+ARG SENTRY_RELEASE
 RUN npx sentry-cli sourcemaps upload --release=$SENTRY_RELEASE .next
 
 # Strip browser source maps from the public image: the chunks keep their injected Debug IDs
