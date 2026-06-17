@@ -1,14 +1,10 @@
 name: Visual Regression Tests
 
 on:
-  merge_group:
   push:
     branches:
       - master
       - dev
-  pull_request:
-    branches:
-      - '**' # Run on PRs targeting any branch
   # Enable manual trigger
   workflow_dispatch:
 
