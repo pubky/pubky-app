@@ -391,7 +391,7 @@
         "passwordPlaceholder": "输入您的密码",
         "selectFile": "选择文件",
         "invalidFileType": "请选择 .pkarr 文件",
-        "missingFields": "请选择文件并输入密码",
+        "missingFields": "请选择文件",
         "invalidPassword": "密码无效或文件损坏。请检查密码后重试。",
         "nexusError": "nexus 出现问题。请重试。",
         "restoreError": "从文件恢复失败。请检查您的文件后重试。",

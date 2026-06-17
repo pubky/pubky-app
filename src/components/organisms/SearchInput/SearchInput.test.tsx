@@ -12,13 +12,13 @@ import { SearchInput } from './SearchInput';
 const mockPush = vi.fn();
 const mockSearchParams = new URLSearchParams();
 const mockPathname = vi.fn(() => '/home');
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
   useSearchParams: () => mockSearchParams,
   usePathname: () => mockPathname(),
-  useIsMobile: () => false,
 }));
 
 // Mock hooks
@@ -64,7 +64,7 @@ vi.mock('@/hooks/useTagSearch/useTagSearch', () => ({
 }));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
-  useIsMobile: () => false,
+  useIsMobile: mockUseIsMobile,
 }));
 
 // Mock dependencies
@@ -561,6 +561,10 @@ describe('SearchInput', () => {
   });
 
   describe('SearchInput - Snapshots', () => {
+    beforeEach(() => {
+      mockUseIsMobile.mockReturnValue(false);
+    });
+
     it('matches snapshot - default state', () => {
       const { container } = render(<SearchInput />);
       expect(container.firstChild).toMatchSnapshot();

@@ -27,7 +27,7 @@ export function LandingFinalSection() {
   };
 
   return (
-    <section id={LANDING_FINAL_SECTION_ID} className="relative z-0 flex min-h-svh items-center px-6 py-20">
+    <section id={LANDING_FINAL_SECTION_ID} className="relative z-0 flex min-h-svh items-center px-6 py-10 sm:py-20">
       <Container size="container" className="items-center gap-8 text-center">
         <Heading level={2} size="xl" className="max-w-[820px] text-5xl sm:text-7xl">
           {t.rich('title', {

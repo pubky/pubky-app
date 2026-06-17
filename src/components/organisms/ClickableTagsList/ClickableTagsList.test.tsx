@@ -1,10 +1,21 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import type { Pubky } from '@/models/models.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ClickableTagsList } from './ClickableTagsList';
+
+function getPostTagButton(label: string, count?: number) {
+  const name = count !== undefined ? `${label} tag (${count} posts)` : `${label} tag`;
+  return screen.getByRole('button', { name });
+}
+
+function queryPostTagButton(label: string) {
+  return screen.queryByRole('button', { name: `${label} tag` });
+}
 
 // Mock hooks
 const mockHandleTagToggle = vi.fn();
@@ -93,10 +104,49 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
 }));
 
 vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
-  useEnrichedTags: vi.fn((tags) => ({
-    enrichedTags: tags,
+  useEnrichedTags: vi.fn((tags: NexusTag[]) => ({
+    enrichedTags: tags.map((tag) => ({
+      ...tag,
+      taggers: tag.taggers.map((taggerId, index) => ({
+        id: taggerId as Pubky,
+        name: `User ${index + 1}`,
+        avatarUrl: `https://example.com/${taggerId}.png`,
+      })),
+    })),
     isLoading: false,
   })),
+}));
+
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: () => mockUseIsMobile(),
+}));
+
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: () => false,
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
+  usePostTaggers: () => ({
+    taggersByLabel: new Map(),
+    taggerStates: new Map(),
+    fetchAllTaggers: vi.fn(),
+  }),
+}));
+
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
+  AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
+}));
+
+vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => ({
+  UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="user-info-popover">{children}</div>
+  ),
 }));
 
 // Mock atoms
@@ -118,34 +168,9 @@ vi.mock('@/atoms/Typography/Typography', () => {
   };
 });
 
-// Mock molecules
-vi.mock('@/molecules/PostTag/PostTag', () => {
-  return {
-    PostTag: ({
-      label,
-      count,
-      selected,
-      showClose,
-      onClick,
-      onClose,
-    }: {
-      label: string;
-      count?: number;
-      selected?: boolean;
-      showClose?: boolean;
-      onClick?: (e: React.MouseEvent) => void;
-      onClose?: (e: React.MouseEvent) => void;
-    }) => (
-      <button data-testid={`post-tag-${label}`} data-selected={selected} data-count={count} onClick={onClick}>
-        {label}
-        {showClose && (
-          <span data-testid={`close-${label}`} onClick={onClose}>
-            ×
-          </span>
-        )}
-      </button>
-    ),
-  };
+vi.mock('@/molecules/PostTag/PostTag', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/molecules/PostTag/PostTag')>();
+  return actual;
 });
 
 vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
@@ -154,10 +179,9 @@ vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
   };
 });
 
-vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', () => {
-  return {
-    PostTagPopoverWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  };
+vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper')>();
+  return actual;
 });
 
 vi.mock('@/molecules/TagInput/TagInput', () => {
@@ -190,9 +214,9 @@ describe('ClickableTagsList', () => {
     it('renders correctly with tags', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
-      expect(screen.getByTestId('post-tag-ethereum')).toBeInTheDocument();
-      expect(screen.getByTestId('post-tag-web3')).toBeInTheDocument();
+      expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
+      expect(getPostTagButton('ethereum', 3)).toBeInTheDocument();
+      expect(getPostTagButton('web3', 10)).toBeInTheDocument();
     });
 
     it('returns null when no tags and no input/button', () => {
@@ -204,26 +228,26 @@ describe('ClickableTagsList', () => {
     it('shows tag count when showCount is true', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showCount={true} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).toHaveAttribute('data-count', '5');
+      expect(getPostTagButton('bitcoin', 5)).toHaveAccessibleName('bitcoin tag (5 posts)');
     });
 
     it('hides tag count when showCount is false', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showCount={false} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).not.toHaveAttribute('data-count');
+      expect(getPostTagButton('bitcoin')).toHaveAccessibleName('bitcoin tag');
     });
 
     it('shows selected state for viewer tags', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).toHaveAttribute('data-selected', 'true');
-      expect(screen.getByTestId('post-tag-ethereum')).toHaveAttribute('data-selected', 'false');
+      expect(getPostTagButton('bitcoin', 5)).toHaveAttribute('aria-pressed', 'true');
+      expect(getPostTagButton('ethereum', 3)).toHaveAttribute('aria-pressed', 'false');
     });
 
     it('shows close button when showTagClose is true', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showTagClose={true} />);
 
-      expect(screen.getByTestId('close-bitcoin')).toBeInTheDocument();
+      expect(screen.getByLabelText('Remove bitcoin tag')).toBeInTheDocument();
     });
 
     it('filters out tags when total character count exceeds maxTotalChars', () => {
@@ -236,11 +260,11 @@ describe('ClickableTagsList', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={tagsExceedingLimit} />);
 
       // First two tags should render (7 + 8 = 15 chars, within 20 limit)
-      expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
-      expect(screen.getByTestId('post-tag-ethereum')).toBeInTheDocument();
+      expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
+      expect(getPostTagButton('ethereum', 3)).toBeInTheDocument();
 
       // Third tag should be filtered out (would make total 21 chars, exceeding 20)
-      expect(screen.queryByTestId('post-tag-crypto')).not.toBeInTheDocument();
+      expect(queryPostTagButton('crypto')).not.toBeInTheDocument();
     });
   });
 
@@ -464,7 +488,7 @@ describe('ClickableTagsList', () => {
     it('calls handleTagToggle when tag is clicked without custom handler', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
-      fireEvent.click(screen.getByTestId('post-tag-bitcoin'));
+      fireEvent.click(getPostTagButton('bitcoin', 5));
 
       expect(mockHandleTagToggle).toHaveBeenCalled();
     });
@@ -475,7 +499,7 @@ describe('ClickableTagsList', () => {
         <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} onTagClick={customHandler} />,
       );
 
-      fireEvent.click(screen.getByTestId('post-tag-bitcoin'));
+      fireEvent.click(getPostTagButton('bitcoin', 5));
 
       expect(customHandler).toHaveBeenCalled();
       expect(mockHandleTagToggle).not.toHaveBeenCalled();
@@ -493,7 +517,7 @@ describe('ClickableTagsList', () => {
         />,
       );
 
-      fireEvent.click(screen.getByTestId('close-bitcoin'));
+      fireEvent.click(screen.getByLabelText('Remove bitcoin tag'));
 
       expect(closeHandler).toHaveBeenCalled();
     });
@@ -682,23 +706,19 @@ describe('ClickableTagsList', () => {
     it('works with USER tags', () => {
       render(<ClickableTagsList taggedId="user-123" taggedKind={TagKind.USER} tags={mockTags} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
+      expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
     });
 
     it('works with POST tags', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
-      expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
+      expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
     });
   });
 
   describe('Snapshots', () => {
-    it('matches snapshot with tags and count', () => {
-      const { container } = render(
-        <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showCount={true} />,
-      );
-
-      expect(container).toMatchSnapshot();
+    beforeEach(() => {
+      mockUseIsMobile.mockReturnValue(false);
     });
 
     it('matches snapshot with input visible', () => {
@@ -730,5 +750,48 @@ describe('ClickableTagsList', () => {
 
       expect(container).toMatchSnapshot();
     });
+  });
+});
+
+const snapshotTags: NexusTag[] = [
+  { label: 'bitcoin', taggers_count: 5, taggers: ['user1', 'user2'], relationship: true },
+  { label: 'ethereum', taggers_count: 3, taggers: ['user3'], relationship: false },
+  { label: 'web3', taggers_count: 10, taggers: [], relationship: false },
+];
+
+describe('ClickableTagsList - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsAuthenticated = true;
+    mockUseIsMobile.mockReturnValue(false);
+    useAuthStore.setState({ setShowSignInDialog: vi.fn() });
+  });
+
+  it('matches snapshot with tags and count', () => {
+    const { container } = render(
+      <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={snapshotTags} showCount={true} />,
+    );
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('ClickableTagsList - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsAuthenticated = true;
+    mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+    useAuthStore.setState({ setShowSignInDialog: vi.fn() });
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={snapshotTags} showCount={true} />,
+    );
+    expect(container).toMatchSnapshot();
   });
 });

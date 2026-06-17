@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ProfilePageLayout } from './ProfilePageLayout';
 import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
 
@@ -112,7 +113,7 @@ vi.mock('@/molecules/ProfilePageMobileMenu/ProfilePageMobileMenu', async () => {
   };
 });
 
-const mockIsMobile = vi.fn(() => false);
+const mockIsMobile = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockIsMobile(),
@@ -190,6 +191,14 @@ const defaultProps: ProfilePageLayoutProps = {
   navigateToPage: vi.fn(),
   isLoading: false,
   userId: 'test123',
+};
+
+const otherUserPostsSnapshotProps: ProfilePageLayoutProps = {
+  ...defaultProps,
+  isOwnProfile: false,
+  activePage: PROFILE_PAGE_TYPES.POSTS,
+  filterBarActivePage: PROFILE_PAGE_TYPES.POSTS,
+  children: <div data-testid="posts-content">Posts Content</div>,
 };
 
 describe('ProfilePageLayout', () => {
@@ -457,27 +466,6 @@ describe('ProfilePageLayout', () => {
     expect(screen.getAllByTestId('profile-page-header')).toHaveLength(1);
   });
 
-  it('matches snapshot with default props', () => {
-    const { container } = render(<ProfilePageLayout {...defaultProps} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when loading', () => {
-    const { container } = render(<ProfilePageLayout {...defaultProps} isLoading={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with different active pages', () => {
-    const { container } = render(
-      <ProfilePageLayout
-        {...defaultProps}
-        activePage={PROFILE_PAGE_TYPES.POSTS}
-        filterBarActivePage={PROFILE_PAGE_TYPES.POSTS}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
   describe('Avatar Zoom Modal', () => {
     it('does not show modal initially', () => {
       render(<ProfilePageLayout {...defaultProps} />);
@@ -527,5 +515,62 @@ describe('ProfilePageLayout', () => {
 
       expect(actionsKeys).toContain('onAvatarClick');
     });
+  });
+});
+
+describe('ProfilePageLayout - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsMobile.mockReturnValue(false);
+  });
+
+  it('matches snapshot for other-user posts on desktop', () => {
+    const { container } = render(<ProfilePageLayout {...otherUserPostsSnapshotProps} />);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot when loading', () => {
+    const { container } = render(<ProfilePageLayout {...defaultProps} isLoading={true} />);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot with different active pages', () => {
+    const { container } = render(
+      <ProfilePageLayout
+        {...defaultProps}
+        activePage={PROFILE_PAGE_TYPES.POSTS}
+        filterBarActivePage={PROFILE_PAGE_TYPES.POSTS}
+      />,
+    );
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('ProfilePageLayout - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsMobile.mockReturnValue(true);
+    setMobileViewport();
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+    // Other-user mobile posts auto-scroll into view; scroll-margin-top leaves room for the sticky tab bar.
+    // Mock menu geometry below — JSDOM does not lay out the menu, so without it the inline style would be absent.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function getBoundingClientRect(
+      this: HTMLElement,
+    ) {
+      if (this.getAttribute('data-testid') === 'profile-page-mobile-menu') {
+        return new DOMRect(0, 80, 0, 64);
+      }
+      return new DOMRect();
+    });
+  });
+
+  afterEach(() => {
+    resetViewport();
+    vi.restoreAllMocks();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<ProfilePageLayout {...otherUserPostsSnapshotProps} />);
+    expect(container).toMatchSnapshot();
   });
 });

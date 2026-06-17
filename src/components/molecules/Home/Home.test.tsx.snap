@@ -102,6 +102,38 @@ exports[`Home - Snapshots > matches snapshot for HomeFooter with default props 1
     </a>
      and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.
   </div>
+  <div
+    class="landing-brand-footer inline-flex min-w-max items-center gap-2 whitespace-nowrap transition-opacity duration-300 [&_*]:shrink-0 mt-2"
+  >
+    <a
+      class="inline-flex items-center"
+      data-testid="link"
+      href="https://synonym.to"
+      target="_blank"
+    >
+      <img
+        alt="Synonym"
+        data-testid="image"
+        height="24"
+        src="/images/synonym-grey-logo.svg"
+        width="95"
+      />
+    </a>
+    <a
+      class="inline-flex items-center"
+      data-testid="link"
+      href="https://tether.io/"
+      target="_blank"
+    >
+      <img
+        alt="a tether. company"
+        data-testid="image"
+        height="16"
+        src="/images/a-tether-company.svg"
+        width="109"
+      />
+    </a>
+  </div>
 </div>
 `;
 
