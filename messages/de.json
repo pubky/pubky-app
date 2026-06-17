@@ -393,7 +393,7 @@
         "passwordPlaceholder": "Geben Sie Ihr Passwort ein",
         "selectFile": "Datei auswählen",
         "invalidFileType": "Bitte wählen Sie eine .pkarr-Datei",
-        "missingFields": "Bitte wählen Sie eine Datei und geben Sie Ihr Passwort ein",
+        "missingFields": "Bitte wählen Sie eine Datei",
         "invalidPassword": "Ungültiges Passwort oder beschädigte Datei. Bitte überprüfen Sie Ihr Passwort und versuchen Sie es erneut.",
         "nexusError": "Bei Nexus ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
         "restoreError": "Wiederherstellung aus Datei fehlgeschlagen. Bitte überprüfen Sie Ihre Datei und versuchen Sie es erneut.",

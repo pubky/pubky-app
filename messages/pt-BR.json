@@ -391,7 +391,7 @@
         "passwordPlaceholder": "Digite sua senha",
         "selectFile": "Selecionar arquivo",
         "invalidFileType": "Por favor, selecione um arquivo .pkarr",
-        "missingFields": "Por favor, selecione um arquivo e digite sua senha",
+        "missingFields": "Por favor, selecione um arquivo",
         "invalidPassword": "Senha inválida ou arquivo corrompido. Por favor, verifique sua senha e tente novamente.",
         "nexusError": "Algo deu errado com o nexus. Por favor, tente novamente.",
         "restoreError": "Falha ao restaurar do arquivo. Por favor, verifique seu arquivo e tente novamente.",

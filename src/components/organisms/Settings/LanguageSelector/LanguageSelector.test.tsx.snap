@@ -1,5 +1,58 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`LanguageSelector - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="flex w-full flex-col gap-4"
+  data-testid="container"
+>
+  <label
+    class="text-xs leading-4 font-medium tracking-[1.2px] text-muted-foreground uppercase"
+    data-testid="typography"
+  >
+    Display language
+  </label>
+  <button
+    aria-controls="radix-normalized"
+    aria-expanded="false"
+    aria-haspopup="dialog"
+    class="flex h-8 w-full cursor-pointer items-center gap-1 transition-opacity hover:opacity-80"
+    data-slot="button"
+    data-state="closed"
+    type="button"
+  >
+    <span
+      class="text-base"
+      data-testid="typography"
+    >
+      🇺🇸
+    </span>
+    <span
+      class="flex-1 text-left text-base leading-6 font-bold"
+      data-testid="typography"
+    >
+      US English
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down shrink-0 transition-transform duration-300"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
+</div>
+`;
+
 exports[`LanguageSelector - Snapshots > matches snapshot - closed 1`] = `
 <div
   class="flex w-full flex-col gap-4"
