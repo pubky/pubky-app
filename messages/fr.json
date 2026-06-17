@@ -391,7 +391,7 @@
         "passwordPlaceholder": "Entrez votre mot de passe",
         "selectFile": "Sélectionner le fichier",
         "invalidFileType": "Veuillez sélectionner un fichier .pkarr",
-        "missingFields": "Veuillez sélectionner un fichier et entrer votre mot de passe",
+        "missingFields": "Veuillez sélectionner un fichier",
         "invalidPassword": "Mot de passe invalide ou fichier corrompu. Veuillez vérifier votre mot de passe et réessayer.",
         "nexusError": "Quelque chose s'est mal passé avec nexus. Veuillez réessayer.",
         "restoreError": "Échec de la restauration depuis le fichier. Veuillez vérifier votre fichier et réessayer.",

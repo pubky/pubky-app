@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { LanguageSelector } from './LanguageSelector';
 
 // Mock Next.js router
@@ -114,6 +115,22 @@ describe('LanguageSelector - Snapshots', () => {
     const { container } = render(<LanguageSelector />);
     const trigger = screen.getByRole('button');
     fireEvent.click(trigger);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('LanguageSelector - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<LanguageSelector />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

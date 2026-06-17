@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMenuActions } from './PostMenuActions';
 
 vi.mock('@/atoms/DropdownMenu/DropdownMenu', () => {
@@ -77,13 +78,15 @@ vi.mock('@/atoms/Sheet/Sheet', () => {
   };
 });
 
-const mockUseIsMobile = vi.fn(() => false);
-const mockDeletePost = vi.fn();
-const mockUsePostMenuActions = vi.fn((_postId: string) => ({
-  menuItems: [] as unknown[],
-  isLoading: false,
+const { mockUseIsMobile, mockDeletePost, mockUsePostMenuActions, mockRequireAuth } = vi.hoisted(() => ({
+  mockUseIsMobile: vi.fn(() => false),
+  mockDeletePost: vi.fn(),
+  mockUsePostMenuActions: vi.fn((_postId: string) => ({
+    menuItems: [] as unknown[],
+    isLoading: false,
+  })),
+  mockRequireAuth: vi.fn((action: () => void) => action()),
 }));
-const mockRequireAuth = vi.fn((action: () => void) => action());
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockUseIsMobile(),
@@ -374,9 +377,20 @@ describe('PostMenuActions - Snapshots', () => {
     const { container } = render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
     expect(container.firstChild).toMatchSnapshot();
   });
+});
 
-  it('matches snapshot for mobile sheet', () => {
+describe('PostMenuActions - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
     mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const trigger = <button>Menu</button>;
     const { container } = render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
     expect(container.firstChild).toMatchSnapshot();

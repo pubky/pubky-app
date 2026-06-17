@@ -128,101 +128,330 @@ exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when cus
 </div>
 `;
 
-exports[`ContentLayout - Snapshots > matches snapshot with both sidebars hidden 1`] = `
-<div
-  data-testid="mobile-header"
->
-  <button>
-    Left
-  </button>
-  <button>
-    Right
-  </button>
-</div>
-`;
-
-exports[`ContentLayout - Snapshots > matches snapshot with complex children 1`] = `
-<div
-  data-testid="mobile-header"
->
-  <button>
-    Left
-  </button>
-  <button>
-    Right
-  </button>
-</div>
-`;
-
-exports[`ContentLayout - Snapshots > matches snapshot with custom className 1`] = `
-<div
-  data-testid="mobile-header"
->
-  <button>
-    Left
-  </button>
-  <button>
-    Right
-  </button>
-</div>
-`;
-
-exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
-<div
-  data-testid="mobile-header"
->
-  <button>
-    Left
-  </button>
-  <button>
-    Right
-  </button>
-</div>
-`;
-
-exports[`ContentLayout - Snapshots > matches snapshot with renderMobileHeader false 1`] = `
-<div
-  class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
-  data-testid="container"
->
+exports[`ContentLayout - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div>
   <div
-    class="flex gap-6"
+    data-testid="mobile-header"
+  >
+    <button>
+      Left
+    </button>
+    <button>
+      Right
+    </button>
+  </div>
+  <div
+    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
     data-testid="container"
   >
     <div
-      class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+      class="flex gap-6"
       data-testid="container"
     >
-      <div>
-        Test Content
+      <div
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
       </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Mobile Footer
+  </div>
+  <div
+    data-open="false"
+    data-testid="side-drawer-left"
+  >
+    <button>
+      Close
+    </button>
+    <div
+      data-testid="left-drawer-mobile"
+    >
+      Mobile drawer
     </div>
   </div>
 </div>
 `;
 
+exports[`ContentLayout - Snapshots > matches snapshot with both sidebars hidden 1`] = `
+<div>
+  <div
+    data-testid="mobile-header"
+  >
+    <button>
+      Left
+    </button>
+    <button>
+      Right
+    </button>
+  </div>
+  <div
+    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    data-testid="container"
+  >
+    <div
+      class="flex gap-6"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Mobile Footer
+  </div>
+</div>
+`;
+
+exports[`ContentLayout - Snapshots > matches snapshot with complex children 1`] = `
+<div>
+  <div
+    data-testid="mobile-header"
+  >
+    <button>
+      Left
+    </button>
+    <button>
+      Right
+    </button>
+  </div>
+  <div
+    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    data-testid="container"
+  >
+    <div
+      class="flex gap-6"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        data-testid="container"
+      >
+        <div>
+          <h1>
+            Title
+          </h1>
+          <p>
+            Description
+          </p>
+          <button>
+            Action
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Mobile Footer
+  </div>
+</div>
+`;
+
+exports[`ContentLayout - Snapshots > matches snapshot with custom className 1`] = `
+<div>
+  <div
+    data-testid="mobile-header"
+  >
+    <button>
+      Left
+    </button>
+    <button>
+      Right
+    </button>
+  </div>
+  <div
+    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0 custom-layout"
+    data-testid="container"
+  >
+    <div
+      class="flex gap-6"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Mobile Footer
+  </div>
+</div>
+`;
+
+exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
+<div>
+  <div
+    data-testid="mobile-header"
+  >
+    <button>
+      Left
+    </button>
+    <button>
+      Right
+    </button>
+  </div>
+  <div
+    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    data-testid="container"
+  >
+    <div
+      class="flex gap-6"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Mobile Footer
+  </div>
+  <div
+    data-open="false"
+    data-testid="side-drawer-left"
+  >
+    <button>
+      Close
+    </button>
+    <div
+      data-testid="left-drawer-desktop"
+    >
+      Desktop drawer
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ContentLayout - Snapshots > matches snapshot with renderMobileHeader false 1`] = `
+<div>
+  <div
+    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    data-testid="container"
+  >
+    <div
+      class="flex gap-6"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Mobile Footer
+  </div>
+</div>
+`;
+
 exports[`ContentLayout - Snapshots > matches snapshot with showLeftSidebar false 1`] = `
-<div
-  data-testid="mobile-header"
->
-  <button>
-    Left
-  </button>
-  <button>
-    Right
-  </button>
+<div>
+  <div
+    data-testid="mobile-header"
+  >
+    <button>
+      Left
+    </button>
+    <button>
+      Right
+    </button>
+  </div>
+  <div
+    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    data-testid="container"
+  >
+    <div
+      class="flex gap-6"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Mobile Footer
+  </div>
 </div>
 `;
 
 exports[`ContentLayout - Snapshots > matches snapshot with showRightSidebar false 1`] = `
-<div
-  data-testid="mobile-header"
->
-  <button>
-    Left
-  </button>
-  <button>
-    Right
-  </button>
+<div>
+  <div
+    data-testid="mobile-header"
+  >
+    <button>
+      Left
+    </button>
+    <button>
+      Right
+    </button>
+  </div>
+  <div
+    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    data-testid="container"
+  >
+    <div
+      class="flex gap-6"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Mobile Footer
+  </div>
 </div>
 `;

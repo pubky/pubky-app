@@ -638,6 +638,19 @@ describe('Header', () => {
       render(<Header />);
 
       expect(screen.getByTestId('header-home')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    });
+
+    it('does not enable the landing join button on non-landing HeaderHome routes', () => {
+      mockCurrentUserPubky = null;
+      mockIsPublicRoute.mockReturnValue(false);
+      mockIsCoreExploreRoute.mockReturnValue(false);
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.SIGN_IN);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-home')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
     });
 
     it('renders explore navigation when unauthenticated on a core explore route', () => {

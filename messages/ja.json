@@ -391,7 +391,7 @@
         "passwordPlaceholder": "パスワードを入力してください",
         "selectFile": "ファイルを選択",
         "invalidFileType": ".pkarrファイルを選択してください",
-        "missingFields": "ファイルを選択してパスワードを入力してください",
+        "missingFields": "ファイルを選択してください",
         "invalidPassword": "パスワードが無効かファイルが破損しています。パスワードを確認して再試行してください。",
         "nexusError": "nexusでエラーが発生しました。再試行してください。",
         "restoreError": "ファイルからの復元に失敗しました。ファイルを確認して再試行してください。",
