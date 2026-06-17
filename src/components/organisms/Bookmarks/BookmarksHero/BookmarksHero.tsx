@@ -4,7 +4,11 @@ import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
+// TODO: Re-enable the bookmark count badge once the backend exposes an accurate
+// posts-only bookmark count. The current `userCounts.bookmarks` total also counts
+// bookmarked collections and deleted posts, so it overstates what the grid shows
+// (e.g. 60 total vs 5 visible posts). The BE team will add a dedicated count to rewire here.
+// import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 
 interface BookmarksHeroProps {
@@ -19,7 +23,10 @@ export function BookmarksHero({
   avatarName,
   avatarSeed,
   avatarUrl,
-  bookmarkCount,
+  // TODO: `bookmarkCount` is intentionally not consumed while the count badge is
+  // hidden (see import note above). Kept on the props/interface so re-wiring the
+  // badge later is a one-line change.
+  // bookmarkCount,
   isProfileResolved,
 }: BookmarksHeroProps) {
   const t = useTranslations('collections.bookmarks');
@@ -50,7 +57,9 @@ export function BookmarksHero({
             size="sm"
           />
 
-          {bookmarkCount !== undefined && <CollectionCountBadge count={bookmarkCount} />}
+          {/* TODO: Bookmark count badge hidden — see import note above. Re-enable once
+              the backend provides an accurate posts-only bookmark count. */}
+          {/* {bookmarkCount !== undefined && <CollectionCountBadge count={bookmarkCount} />} */}
         </Container>
 
         <Typography

@@ -37,7 +37,7 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
 }));
 
 describe('BookmarksHero', () => {
-  it('renders the system collection title, owner, count, and description', () => {
+  it('renders the system collection title, owner, and description', () => {
     render(
       <BookmarksHero
         avatarName="Alice"
@@ -50,7 +50,10 @@ describe('BookmarksHero', () => {
 
     expect(screen.getByRole('heading', { name: 'collections.bookmarks.title' })).toBeInTheDocument();
     expect(screen.getByText('collections.bookmarks.description')).toBeInTheDocument();
-    expect(screen.getByText('15')).toBeInTheDocument();
+    // TODO: The bookmark count badge is temporarily hidden (the BE total counts
+    // collections + deleted posts, overstating the grid). Re-assert once the
+    // backend exposes an accurate posts-only count and the badge is re-wired.
+    expect(screen.queryByText('15')).not.toBeInTheDocument();
     expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-name', 'Alice');
     expect(screen.getByText('Alice', { selector: 'span' })).toBeInTheDocument();
   });
