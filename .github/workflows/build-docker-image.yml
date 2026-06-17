@@ -147,6 +147,7 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: synonym-52
+          SENTRY_PROJECT: pubky-app
         run: |
           if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
             echo "SENTRY_AUTH_TOKEN is not available; skipping source-map upload."
@@ -156,12 +157,6 @@ jobs:
           if [ "${{ inputs.platforms }}" != "linux/amd64" ]; then
             echo "Source-map upload currently supports linux/amd64 only; skipping for ${{ inputs.platforms }}."
             exit 0
-          fi
-
-          if [ -n "${{ inputs.pr_number }}" ]; then
-            SENTRY_PROJECT="pubky-app-preview"
-          else
-            SENTRY_PROJECT="pubky-app"
           fi
 
           RELEASE="$(node -p "require('./package.json').version")"

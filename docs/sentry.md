@@ -55,8 +55,6 @@ See [React 19's `onRecoverableError` docs](https://react.dev/reference/react-dom
 - `src/sentry.server.config.ts` / `src/sentry.edge.config.ts` — runtime-specific init
 - `src/libs/observability/sentry.ts` — single source of truth (`shouldEnableSentry`, `getSentryInitBase`, `captureAppError`). Sentry is off when `NODE_ENV=test`, `VITEST` is set, the **runtime** config has `testnet=true`, or no **runtime** DSN is configured. If the runtime config cannot be resolved at all, the gate returns `false` instead of throwing (the capture funnel must never mask the original boot error).
 - `src/libs/error/error.factories.ts` — `createAppError()` calls `captureAppError(error)` after `Logger.error`
-- `src/libs/observability/sentry-test-harness.ts` — gating (`isSentryTestHarnessEnabled`) + diagnostics for the `/sentry-test` harness (see Verification)
-- `src/app/sentry-test/` + `src/app/api/sentry-test/route.ts` — the verification harness (non-production only)
 - `next.config.ts` — wrapped by `withSentryConfig(...)` for SDK wiring only; source-map upload is disabled (see below)
 
 ## Environment variables
@@ -128,19 +126,6 @@ Deliberately untouched: `event.tags` (app-controlled operational labels — `err
 
 ## Verification
 
-A built-in harness lives at **`/sentry-test`** (page) and **`/api/sentry-test`** (server route). It is
-reachable on dev, preview, and staging, and returns **404 in production** — gating is on the resolved
-Sentry environment (not `NEXT_PUBLIC_DEBUG_MODE`, since previews build with it `false`), centralized in
-`src/libs/observability/sentry-test-harness.ts`. To validate capture + source maps on a PR preview, open
-`<preview-url>/sentry-test` and use each trigger; confirm exactly one event per trigger in the matching
-Sentry environment:
-
-1. **Render error** — throws during React render. Captured by the `src/app/error.tsx` boundary (1 event); the page shows the error screen, use “Try again” to return.
-2. **Browser globalHandlers** — throws synchronously inside an event handler. Captured by Sentry globalHandlers with a readable (source-mapped) stack and no `AppError` duplicate.
-3. **Unhandled promise rejection** — rejects a promise with no catch. Captured once via `onunhandledrejection`.
-4. **Err.\* factory funnel (client)** — `Err.validation(...)`. Confirm tags `error.category=validation`, `error.service=local`, `error.operation=sentryTest.client.factory`.
-5. **Server `onRequestError`** — `GET /api/sentry-test?type=unhandled` throws; the request returns 500. Confirm capture with `runtime.name=node`.
-6. **Err.\* factory funnel (server)** — `GET /api/sentry-test?type=factory` routes an AppError through the funnel (returns 200). Confirm tags `error.service=nextjs-server`.
-7. **Replay** — open Replays for an errored session and confirm masked DOM (no usernames, post bodies, or input contents visible).
-
-For each event also confirm the **source maps** resolve (original `.tsx`/`.ts` frames, not minified bundle names) and the **`release`** tag matches `NEXT_PUBLIC_APP_VERSION` for the build under test.
+To verify a deployment, inspect recent Sentry events for the configured environment and confirm the
+**source maps** resolve (original `.tsx`/`.ts` frames, not minified bundle names) and the **`release`**
+tag matches `NEXT_PUBLIC_APP_VERSION` for the build under test.
