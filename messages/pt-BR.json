@@ -7,10 +7,84 @@
   "landing": {
     "title": "<highlight>Desbloqueie</highlight> a web.",
     "subtitle": "Suas chaves, seu conteúdo, suas regras.",
-    "explore": "Explorar",
-    "joinNow": "Junte-se agora",
+    "learn": "Aprender",
+    "join": "Entrar",
+    "videoLabel": "Vídeo da Pubky",
+    "scrollToNext": "Rolar para a próxima seção",
+    "scrollToTop": "Voltar ao topo",
     "aTetherCompany": "uma empresa <tether>tether.</tether>",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Todos os direitos reservados."
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Todos os direitos reservados.",
+    "broken": {
+      "eyebrow": "O problema",
+      "title": "A web está <highlight>quebrada</highlight>.",
+      "description": "Plataformas centralizadas controlam sua identidade, seus dados e seu alcance.",
+      "features": {
+        "identity": {
+          "title": "Elas possuem você",
+          "description": "Elas prendem você com conteúdo barato e dopamina. O acesso pode ser revogado a qualquer momento."
+        },
+        "data": {
+          "title": "Elas prendem você",
+          "description": "Posts, perfis e relações ficam presos em silos que dificultam sair."
+        },
+        "reach": {
+          "title": "Elas limitam você",
+          "description": "Algoritmos decidem quem escuta você, o que se espalha e o que desaparece no vazio."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "A solução",
+      "title": "O <highlight>Pubky</highlight> é diferente.",
+      "description": "Ele coloca você de volta no controle da sua vida digital.",
+      "features": {
+        "core": {
+          "title": "Você é suas chaves",
+          "description": "As contas são movidas por chaves criptográficas. Sem servidor central, sem gatekeepers."
+        },
+        "taggable": {
+          "title": "A web etiquetável",
+          "description": "Etiquete posts, mídia e perfis. As tags adicionam significado e ajudam a moldar seu grafo social."
+        },
+        "social": {
+          "title": "Social, mas pessoal",
+          "description": "Você está no controle do seu feed, conteúdo e conexões. Você escolhe sua experiência."
+        },
+        "portable": {
+          "title": "Uma identidade portátil",
+          "description": "Mude entre apps sem começar do zero. Sua identidade, seus dados e seus amigos continuam seus."
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "Criado para a liberdade",
+      "title": "Você é <highlight>o algoritmo</highlight>.",
+      "description": "Ninguém decide seu feed. Crie, molde e experimente a web nos seus termos.",
+      "nextSlide": "Próximo slide",
+      "features": {
+        "creation": {
+          "title": "Crie sem limites",
+          "description": "Publique qualquer coisa: pensamentos, artigos, fotos, vídeos, links. Seu conteúdo começa com você e fica com você."
+        },
+        "browsing": {
+          "title": "Navegue do seu jeito",
+          "description": "Alterne entre layouts ou mude seu alcance para filtrar o ruído e focar no que importa."
+        },
+        "feeds": {
+          "title": "Molde perspectivas",
+          "description": "Construa feeds dinâmicos que são atualizados em tempo real e ficam salvos como perspectivas reutilizáveis."
+        },
+        "tagging": {
+          "title": "Etiquete tudo",
+          "description": "Etiquete posts, mídia e perfis para adicionar contexto, encontrar conteúdo melhor, descobrir pessoas e reagir rapidamente."
+        }
+      }
+    },
+    "final": {
+      "title": "Entre na <line><highlight>web livre</highlight>.</line>",
+      "joinNow": "Entrar agora"
+    },
+    "explore": "Explorar"
   },
   "status": {
     "available": "Disponível",
@@ -243,13 +317,13 @@
       "notAvailable": "Atualmente não disponivel no seu pais",
       "unavailable": "Servico temporariamente indisponivel"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "Número de telefone",
       "free": "Gratis",
       "lessPrivate": "MENOS PRIVADO, MAS FACIL",
       "storage": "1GB de armazenamento",
       "speedLimit": "Limite de 1MB/s",
-      "receiveSms": "Receber SMS",
+      "receiveCode": "Receber código",
       "notAvailable": "Atualmente não disponivel no seu pais",
       "unavailable": "Servico temporariamente indisponivel"
     },
@@ -317,7 +391,7 @@
         "passwordPlaceholder": "Digite sua senha",
         "selectFile": "Selecionar arquivo",
         "invalidFileType": "Por favor, selecione um arquivo .pkarr",
-        "missingFields": "Por favor, selecione um arquivo e digite sua senha",
+        "missingFields": "Por favor, selecione um arquivo",
         "invalidPassword": "Senha inválida ou arquivo corrompido. Por favor, verifique sua senha e tente novamente.",
         "nexusError": "Algo deu errado com o nexus. Por favor, tente novamente.",
         "restoreError": "Falha ao restaurar do arquivo. Por favor, verifique seu arquivo e tente novamente.",
@@ -442,6 +516,8 @@
     "addArticle": "Adicionar artigo",
     "posting": "Publicando...",
     "viewOriginal": "Ver post original",
+    "postBy": "Publicado por",
+    "replyBy": "Respondido por",
     "youReposted": "Você repostou",
     "newPostsSingular": "Ver {count} novo post",
     "newPostsPlural": "Ver {count} novos posts",

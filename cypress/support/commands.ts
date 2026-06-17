@@ -209,7 +209,9 @@ Cypress.Commands.add('signInWithEncryptedFile', (backupFilepath: string, passcod
     { force: true }, // force to bypass visibility check of hidden input field
   );
 
-  cy.get('#restore-password').type(passcode);
+  if (passcode) {
+    cy.get('#restore-password').type(passcode);
+  }
   cy.get('#encrypted-file-restore-btn').click();
 
   cy.location('pathname').should('eq', '/home');

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInputActionBar } from './PostInputActionBar';
 
 // Use real libs - use actual implementations
@@ -294,6 +295,23 @@ describe('PostInputActionBar - Snapshots', () => {
 
   it('matches snapshot with isEdit prop', () => {
     const { container } = render(<PostInputActionBar hideArticleButton={false} isEdit={true} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostInputActionBar - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useIsMobile).mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<PostInputActionBar hideArticleButton={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

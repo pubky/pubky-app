@@ -43,8 +43,9 @@ describe('BitcoinPaymentCard', () => {
     render(<HumanBitcoinCard />);
 
     expect(screen.getByText(/Bitcoin Payment/i)).toBeInTheDocument();
-    // Use regex to match formatted number (handles different locale separators)
-    expect(screen.getByText(/₿ 1[,.]000/)).toBeInTheDocument();
+    // Price appears in the mobile badge, desktop headline, and conversion line
+    expect(screen.getAllByText(/₿ 1[,.]000/)).toHaveLength(3);
+    expect(screen.getByText(/₿ 1[,.]000 = \$ 0\.50/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Pay Once/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Pay Once/i })).not.toBeDisabled();
   });

@@ -6,16 +6,16 @@ exports[`SmsVerificationCard > matches snapshot 1`] = `
   data-testid="container"
 >
   <div
-    class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm flex-1 gap-0 p-6 md:p-12"
+    class="flex flex-col bg-card text-card-foreground shadow-sm flex-1 gap-0 rounded-md p-6 lg:p-12"
     data-slot="card"
     data-testid="sms-verification-card"
   >
     <div
-      class="mx-auto w-full flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-12"
+      class="mx-auto flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12"
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col hidden h-full w-full flex-1 items-center lg:block lg:w-auto"
+        class="mx-auto flex-col hidden w-48 shrink-0 lg:block"
         data-testid="container"
       >
         <img
@@ -27,33 +27,45 @@ exports[`SmsVerificationCard > matches snapshot 1`] = `
         />
       </div>
       <div
-        class="mx-auto flex-col flex w-full flex-1 items-start gap-6"
+        class="mx-auto flex w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6"
         data-testid="container"
       >
         <div
-          class="mx-auto w-full flex-col flex gap-3"
+          class="mx-auto flex w-full flex-col gap-3"
           data-testid="container"
         >
-          <h3
-            class="text-2xl leading-8 font-semibold text-foreground"
-            data-testid="typography"
+          <div
+            class="mx-auto w-full flex flex-row items-center justify-between gap-4 lg:justify-start"
+            data-testid="container"
           >
-            Phone Number
-          </h3>
+            <h3
+              class="m-0 text-[20px] leading-none font-bold text-foreground lg:text-2xl lg:leading-8"
+              data-testid="typography"
+            >
+              Phone Number
+            </h3>
+            <div
+              class="inline-flex items-center justify-center w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent [a&]:hover:bg-secondary/90 rounded-md border-0 bg-primary px-2 py-[2px] text-sm font-semibold tracking-wide text-primary-foreground uppercase lg:hidden"
+              data-slot="badge"
+              data-variant="secondary"
+            >
+              Free
+            </div>
+          </div>
           <p
-            class="text-5xl leading-none font-semibold text-brand lg:text-6xl"
+            class="hidden text-5xl leading-none font-bold text-brand lg:block lg:text-6xl"
             data-testid="typography"
           >
             Free
           </p>
           <p
-            class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+            class="mt-1 text-sm font-bold tracking-widest text-muted-foreground uppercase lg:mt-0 lg:text-xs lg:font-medium lg:tracking-[1.2px]"
             data-testid="typography"
           >
             LESS PRIVATE, BUT EASY
           </p>
           <div
-            class="mx-auto w-full flex-col flex gap-1"
+            class="mx-auto w-full hidden flex-col lg:flex"
             data-testid="container"
           >
             <p
@@ -70,8 +82,69 @@ exports[`SmsVerificationCard > matches snapshot 1`] = `
             </p>
           </div>
         </div>
+        <div
+          class="mx-auto w-full flex-col flex gap-2 lg:hidden"
+          data-testid="container"
+        >
+          <div
+            class="mx-auto w-full flex flex-row items-center gap-2"
+            data-testid="container"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-6 shrink-0 text-foreground"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+            <p
+              class="text-base leading-6 font-medium text-secondary-foreground/80"
+              data-testid="typography"
+            >
+              1GB storage
+            </p>
+          </div>
+          <div
+            class="mx-auto w-full flex flex-row items-center gap-2"
+            data-testid="container"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-6 shrink-0 text-foreground"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+            <p
+              class="text-base leading-6 font-medium text-secondary-foreground/80"
+              data-testid="typography"
+            >
+              1MB/s speed limit
+            </p>
+          </div>
+        </div>
         <button
-          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border bg-secondary text-secondary-foreground hover:bg-accent gap-1 py-2 has-[>svg]:px-4 h-10 rounded-full px-4 text-sm font-semibold shadow-xs"
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border bg-secondary text-secondary-foreground hover:bg-accent gap-1 py-2 has-[>svg]:px-4 h-10 w-full shrink-0 rounded-full px-4 text-sm font-semibold shadow-xs lg:w-auto lg:self-start"
           data-slot="button"
           data-testid="human-sms-card-receive-sms-btn"
           data-variant="secondary"
@@ -101,7 +174,7 @@ exports[`SmsVerificationCard > matches snapshot 1`] = `
               d="M12 18h.01"
             />
           </svg>
-          Receive SMS
+          Receive Code
         </button>
       </div>
     </div>
@@ -115,16 +188,16 @@ exports[`SmsVerificationCard > matches snapshot when geoblocked 1`] = `
   data-testid="container"
 >
   <div
-    class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm flex-1 gap-0 p-6 md:p-12 pointer-events-none opacity-60 blur-[5px]"
+    class="flex flex-col bg-card text-card-foreground shadow-sm flex-1 gap-0 rounded-md p-6 lg:p-12 pointer-events-none opacity-60 blur-[5px]"
     data-slot="card"
     data-testid="sms-verification-card"
   >
     <div
-      class="mx-auto w-full flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-12"
+      class="mx-auto flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12"
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col hidden h-full w-full flex-1 items-center lg:block lg:w-auto"
+        class="mx-auto flex-col hidden w-48 shrink-0 lg:block"
         data-testid="container"
       >
         <img
@@ -136,33 +209,45 @@ exports[`SmsVerificationCard > matches snapshot when geoblocked 1`] = `
         />
       </div>
       <div
-        class="mx-auto flex-col flex w-full flex-1 items-start gap-6"
+        class="mx-auto flex w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6"
         data-testid="container"
       >
         <div
-          class="mx-auto w-full flex-col flex gap-3"
+          class="mx-auto flex w-full flex-col gap-3"
           data-testid="container"
         >
-          <h3
-            class="text-2xl leading-8 font-semibold text-foreground"
-            data-testid="typography"
+          <div
+            class="mx-auto w-full flex flex-row items-center justify-between gap-4 lg:justify-start"
+            data-testid="container"
           >
-            Phone Number
-          </h3>
+            <h3
+              class="m-0 text-[20px] leading-none font-bold text-foreground lg:text-2xl lg:leading-8"
+              data-testid="typography"
+            >
+              Phone Number
+            </h3>
+            <div
+              class="inline-flex items-center justify-center w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent [a&]:hover:bg-secondary/90 rounded-md border-0 bg-primary px-2 py-[2px] text-sm font-semibold tracking-wide text-primary-foreground uppercase lg:hidden"
+              data-slot="badge"
+              data-variant="secondary"
+            >
+              Free
+            </div>
+          </div>
           <p
-            class="text-5xl leading-none font-semibold text-brand lg:text-6xl"
+            class="hidden text-5xl leading-none font-bold text-brand lg:block lg:text-6xl"
             data-testid="typography"
           >
             Free
           </p>
           <p
-            class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+            class="mt-1 text-sm font-bold tracking-widest text-muted-foreground uppercase lg:mt-0 lg:text-xs lg:font-medium lg:tracking-[1.2px]"
             data-testid="typography"
           >
             LESS PRIVATE, BUT EASY
           </p>
           <div
-            class="mx-auto w-full flex-col flex gap-1"
+            class="mx-auto w-full hidden flex-col lg:flex"
             data-testid="container"
           >
             <p
@@ -179,8 +264,69 @@ exports[`SmsVerificationCard > matches snapshot when geoblocked 1`] = `
             </p>
           </div>
         </div>
+        <div
+          class="mx-auto w-full flex-col flex gap-2 lg:hidden"
+          data-testid="container"
+        >
+          <div
+            class="mx-auto w-full flex flex-row items-center gap-2"
+            data-testid="container"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-6 shrink-0 text-foreground"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+            <p
+              class="text-base leading-6 font-medium text-secondary-foreground/80"
+              data-testid="typography"
+            >
+              1GB storage
+            </p>
+          </div>
+          <div
+            class="mx-auto w-full flex flex-row items-center gap-2"
+            data-testid="container"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-6 shrink-0 text-foreground"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+            <p
+              class="text-base leading-6 font-medium text-secondary-foreground/80"
+              data-testid="typography"
+            >
+              1MB/s speed limit
+            </p>
+          </div>
+        </div>
         <button
-          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border bg-secondary text-secondary-foreground hover:bg-accent gap-1 py-2 has-[>svg]:px-4 h-10 rounded-full px-4 text-sm font-semibold shadow-xs"
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer border bg-secondary text-secondary-foreground hover:bg-accent gap-1 py-2 has-[>svg]:px-4 h-10 w-full shrink-0 rounded-full px-4 text-sm font-semibold shadow-xs lg:w-auto lg:self-start"
           data-slot="button"
           data-testid="human-sms-card-receive-sms-btn"
           data-variant="secondary"
@@ -211,7 +357,7 @@ exports[`SmsVerificationCard > matches snapshot when geoblocked 1`] = `
               d="M12 18h.01"
             />
           </svg>
-          Receive SMS
+          Receive Code
         </button>
       </div>
     </div>
@@ -264,16 +410,16 @@ exports[`SmsVerificationCard > matches snapshot when loading 1`] = `
   data-testid="container"
 >
   <div
-    class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm flex-1 gap-0 p-6 md:p-12"
+    class="flex flex-col bg-card text-card-foreground shadow-sm flex-1 gap-0 rounded-md p-6 lg:p-12"
     data-slot="card"
     data-testid="sms-verification-card-skeleton"
   >
     <div
-      class="mx-auto w-full flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-12"
+      class="mx-auto flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12"
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col hidden h-full w-full flex-1 items-center lg:block lg:w-auto"
+        class="mx-auto flex-col hidden w-48 shrink-0 lg:block"
         data-testid="container"
       >
         <div
@@ -282,27 +428,36 @@ exports[`SmsVerificationCard > matches snapshot when loading 1`] = `
         />
       </div>
       <div
-        class="mx-auto flex-col flex w-full flex-1 items-start gap-6"
+        class="mx-auto flex w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6"
         data-testid="container"
       >
         <div
-          class="mx-auto flex-col flex w-full gap-3"
+          class="mx-auto flex w-full flex-col gap-3"
           data-testid="container"
         >
           <div
-            class="animate-pulse bg-muted h-8 w-48 rounded"
+            class="mx-auto w-full flex flex-row items-center justify-between gap-4 lg:justify-start"
+            data-testid="container"
+          >
+            <div
+              class="animate-pulse bg-muted h-5 w-48 rounded lg:h-8 lg:w-56"
+              data-slot="skeleton"
+            />
+            <div
+              class="animate-pulse bg-muted h-6 w-14 rounded-md lg:hidden"
+              data-slot="skeleton"
+            />
+          </div>
+          <div
+            class="animate-pulse bg-muted hidden h-12 w-20 rounded lg:block lg:h-15"
             data-slot="skeleton"
           />
           <div
-            class="animate-pulse bg-muted h-12 w-20 rounded lg:h-15"
+            class="animate-pulse bg-muted mt-1 h-3.5 w-44 rounded lg:mt-0"
             data-slot="skeleton"
           />
           <div
-            class="animate-pulse bg-muted h-4 w-44 rounded"
-            data-slot="skeleton"
-          />
-          <div
-            class="mx-auto w-full flex-col flex gap-1"
+            class="mx-auto w-full hidden flex-col gap-1 lg:flex"
             data-testid="container"
           >
             <div
@@ -316,7 +471,20 @@ exports[`SmsVerificationCard > matches snapshot when loading 1`] = `
           </div>
         </div>
         <div
-          class="animate-pulse bg-muted h-10 w-36 rounded-full"
+          class="mx-auto w-full flex-col flex gap-2 lg:hidden"
+          data-testid="container"
+        >
+          <div
+            class="animate-pulse bg-muted h-6 w-32 rounded"
+            data-slot="skeleton"
+          />
+          <div
+            class="animate-pulse bg-muted h-6 w-40 rounded"
+            data-slot="skeleton"
+          />
+        </div>
+        <div
+          class="animate-pulse bg-muted h-10 w-full rounded-full lg:w-36"
           data-slot="skeleton"
         />
       </div>
