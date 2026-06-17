@@ -8,7 +8,7 @@ import type {
   TPersistUnreadNewStreamChunkParams,
   TPostStreamChunkResponse,
 } from '@/application/stream/posts/post.types';
-import { STREAM_CACHE_MAX_AGE_MS } from '@/config/nexus';
+import { getStreamCacheMaxAgeMs } from '@/config/nexus';
 import {
   FORCE_FETCH_NEW_POSTS,
   NOT_FOUND_CACHED_STREAM,
@@ -142,7 +142,7 @@ export class PostStreamApplication {
         streamId,
         headTimestamp: mainStreamHead,
         ageMs: now - mainStreamHead,
-        maxAgeMs: STREAM_CACHE_MAX_AGE_MS,
+        maxAgeMs: getStreamCacheMaxAgeMs(),
       });
       await Promise.all([
         LocalStreamPostsService.deleteById({ streamId }),
@@ -159,7 +159,7 @@ export class PostStreamApplication {
         streamId,
         headTimestamp: unreadStreamHead,
         ageMs: now - unreadStreamHead,
-        maxAgeMs: STREAM_CACHE_MAX_AGE_MS,
+        maxAgeMs: getStreamCacheMaxAgeMs(),
       });
       await LocalStreamPostsService.clearUnreadStream({ streamId });
       return;
@@ -180,7 +180,7 @@ export class PostStreamApplication {
       return false;
     }
     const ageMs = now - timestamp;
-    return ageMs > STREAM_CACHE_MAX_AGE_MS;
+    return ageMs > getStreamCacheMaxAgeMs();
   }
 
   /**

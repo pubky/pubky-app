@@ -2,8 +2,11 @@ import { Inter_Tight } from 'next/font/google';
 import Script from 'next/script';
 import { Container } from '@/atoms/Container/Container';
 import { isRtlLocale } from '@/i18n/constants';
-import { Env } from '@/libs/env/env';
-import { serializeRuntimeConfig } from '@/libs/runtime-config/runtime-config';
+import {
+  getPlausibleDomain,
+  getPlausibleScriptUrl,
+  serializeRuntimeConfig,
+} from '@/libs/runtime-config/runtime-config';
 import { PageContainer } from '../Page/Page';
 
 const interTight = Inter_Tight({
@@ -18,6 +21,8 @@ interface RootContainerProps {
 
 export function RootContainer({ children, locale = 'en' }: RootContainerProps) {
   const dir = isRtlLocale(locale) ? 'rtl' : 'ltr';
+  const plausibleDomain = getPlausibleDomain();
+  const plausibleScriptUrl = getPlausibleScriptUrl();
 
   return (
     <Container as="html" lang={locale} dir={dir}>
@@ -29,12 +34,8 @@ export function RootContainer({ children, locale = 'en' }: RootContainerProps) {
           NOTE: if a Content-Security-Policy is added later, this inline script needs a nonce.
         */}
         <script id="pubky-runtime-config" dangerouslySetInnerHTML={{ __html: serializeRuntimeConfig() }} />
-        {Env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && Env.NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL && (
-          <Script
-            data-domain={Env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN}
-            src={Env.NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL}
-            strategy="afterInteractive"
-          />
+        {plausibleDomain && plausibleScriptUrl && (
+          <Script data-domain={plausibleDomain} src={plausibleScriptUrl} strategy="afterInteractive" />
         )}
         <PageContainer>{children}</PageContainer>
       </Container>

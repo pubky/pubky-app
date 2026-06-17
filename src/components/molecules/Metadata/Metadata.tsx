@@ -1,12 +1,12 @@
 import {
-  DEFAULT_AUTHOR,
-  DEFAULT_CREATOR,
-  DEFAULT_KEYWORDS,
-  DEFAULT_LOCALE,
-  DEFAULT_PREVIEW_IMAGE,
-  DEFAULT_SITE_NAME,
-  DEFAULT_TYPE,
-  DEFAULT_URL,
+  getAuthor,
+  getCreator,
+  getDefaultUrl,
+  getKeywords,
+  getLocale,
+  getPreviewImage,
+  getSiteName,
+  getType,
 } from '@/config/metadata';
 
 interface MetadataProps {
@@ -31,7 +31,7 @@ export function getPWAConfig() {
     appleWebApp: {
       capable: true,
       statusBarStyle: 'black' as const,
-      title: DEFAULT_SITE_NAME,
+      title: getSiteName(),
     },
   };
 }
@@ -39,25 +39,36 @@ export function getPWAConfig() {
 export function Metadata({
   title,
   description,
-  image = DEFAULT_PREVIEW_IMAGE,
-  type = DEFAULT_TYPE,
-  url = DEFAULT_URL,
-  siteName = DEFAULT_SITE_NAME,
-  locale = DEFAULT_LOCALE,
-  author = DEFAULT_AUTHOR,
-  keywords = DEFAULT_KEYWORDS,
+  image,
+  type,
+  url,
+  siteName,
+  locale,
+  author,
+  keywords,
   robots = true,
-  creator = DEFAULT_CREATOR,
-  site = DEFAULT_URL,
+  creator,
+  site,
   favicon = '/pubky-favicon.svg',
 }: MetadataProps) {
+  const defaultUrl = getDefaultUrl();
+  const resolvedImage = image ?? getPreviewImage();
+  const resolvedType = type ?? getType();
+  const resolvedUrl = url ?? defaultUrl;
+  const resolvedSiteName = siteName ?? getSiteName();
+  const resolvedLocale = locale ?? getLocale();
+  const resolvedAuthor = author ?? getAuthor();
+  const resolvedKeywords = keywords ?? getKeywords();
+  const resolvedCreator = creator ?? getCreator();
+  const resolvedSite = site ?? defaultUrl;
+
   return {
-    metadataBase: new URL(DEFAULT_URL),
+    metadataBase: new URL(defaultUrl),
     title,
     description,
-    keywords,
-    authors: [{ name: author }],
-    creator: author,
+    keywords: resolvedKeywords,
+    authors: [{ name: resolvedAuthor }],
+    creator: resolvedAuthor,
     icons: {
       icon: favicon,
       shortcut: favicon,
@@ -70,33 +81,33 @@ export function Metadata({
     openGraph: {
       title,
       description,
-      url,
-      siteName,
+      url: resolvedUrl,
+      siteName: resolvedSiteName,
       images: [
         {
-          url: image,
+          url: resolvedImage,
           width: 1200,
           height: 630,
           alt: title,
         },
       ],
-      locale,
-      type,
+      locale: resolvedLocale,
+      type: resolvedType,
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [image],
-      creator,
-      site,
+      images: [resolvedImage],
+      creator: resolvedCreator,
+      site: resolvedSite,
     },
     robots: {
       index: robots,
       follow: robots,
     },
     alternates: {
-      canonical: url,
+      canonical: resolvedUrl,
     },
     ...getPWAConfig(),
   };

@@ -3,7 +3,7 @@ import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Link } from '@/atoms/Link/Link';
-import { PUBKY_CORE_URL } from '@/config/externalLinks';
+import { getPubkyCoreLink } from '@/config/externalLinks';
 import { cn } from '@/libs/utils/utils';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
 import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
@@ -23,7 +23,7 @@ export const HumanFooter = () => {
       <FooterLinks>
         {t.rich('copyright', {
           pubkyCore: (chunks) => (
-            <Link href={PUBKY_CORE_URL} target="_blank">
+            <Link href={getPubkyCoreLink()} target="_blank">
               {chunks}
             </Link>
           ),

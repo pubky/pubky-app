@@ -1,5 +1,6 @@
 import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 import {
+  NETWORK_RUNTIME_ENV_NAMES,
   NEXT_PUBLIC_ENV_NAMES,
   PUBKY_RUNTIME_ENV_NAMES,
   type RuntimeConfig,
@@ -53,10 +54,16 @@ function isProductionBuildPhase(): boolean {
  * through the defaulted schema, so local `.env.local` and test overrides are honored and
  * staging defaults fill the gaps.
  */
-function parseFallbackConfig(): RuntimeConfig {
+function parseFallbackConfig(
+  runtimeOverrides: Partial<Record<keyof RuntimeConfig, string | undefined>> = {},
+): RuntimeConfig {
   const input: Record<string, string | undefined> = {};
   for (const key of Object.keys(NEXT_PUBLIC_ENV_NAMES) as (keyof RuntimeConfig)[]) {
     input[key] = process.env[NEXT_PUBLIC_ENV_NAMES[key]];
+  }
+  for (const key of Object.keys(runtimeOverrides) as (keyof RuntimeConfig)[]) {
+    const value = runtimeOverrides[key];
+    if (value !== undefined) input[key] = value;
   }
   return runtimeEnvInputSchemaWithDefaults.parse(input);
 }
@@ -64,15 +71,20 @@ function parseFallbackConfig(): RuntimeConfig {
 /** Exported for unit tests; prefer `getRuntimeConfig()` in app code. */
 export function readServerConfig(): RuntimeConfig {
   const input: Record<string, string | undefined> = {};
-  let anyPresent = false;
   for (const key of Object.keys(PUBKY_RUNTIME_ENV_NAMES) as (keyof RuntimeConfig)[]) {
-    const value = process.env[PUBKY_RUNTIME_ENV_NAMES[key]];
-    input[key] = value;
-    if (value !== undefined && value !== '') anyPresent = true;
+    input[key] = process.env[PUBKY_RUNTIME_ENV_NAMES[key]];
   }
 
-  // Any PUBKY_RUNTIME_* present means we strictly require ALL of them (catches partial config).
-  if (anyPresent) {
+  const anyRequiredNetworkPresent = (
+    Object.keys(NETWORK_RUNTIME_ENV_NAMES) as (keyof typeof NETWORK_RUNTIME_ENV_NAMES)[]
+  ).some((key) => {
+    const value = process.env[NETWORK_RUNTIME_ENV_NAMES[key]];
+    return value !== undefined && value !== '';
+  });
+
+  // Any required network PUBKY_RUNTIME_* present means we require the whole network tier.
+  // Optional/defaulted runtime values can be set independently and must not trigger this rule.
+  if (anyRequiredNetworkPresent) {
     return runtimeEnvInputSchema.parse(input);
   }
 
@@ -86,7 +98,7 @@ export function readServerConfig(): RuntimeConfig {
     );
   }
 
-  return parseFallbackConfig();
+  return parseFallbackConfig(input);
 }
 
 /** Exported for unit tests; prefer `getRuntimeConfig()` in app code. */
@@ -157,3 +169,42 @@ export const getSentryEnvironment = (): string | undefined => getRuntimeConfig()
 export const getSentryTracesSampleRate = (): number => getRuntimeConfig().sentryTracesSampleRate;
 export const getSentryReplaysSessionSampleRate = (): number => getRuntimeConfig().sentryReplaysSessionSampleRate;
 export const getSentryReplaysOnErrorSampleRate = (): number => getRuntimeConfig().sentryReplaysOnErrorSampleRate;
+export const getNotificationPollIntervalMs = (): number => getRuntimeConfig().notificationPollIntervalMs;
+export const getNotificationPollOnStart = (): boolean => getRuntimeConfig().notificationPollOnStart;
+export const getNotificationRespectPageVisibility = (): boolean => getRuntimeConfig().notificationRespectPageVisibility;
+export const getStreamPollIntervalMs = (): number => getRuntimeConfig().streamPollIntervalMs;
+export const getStreamPollOnStart = (): boolean => getRuntimeConfig().streamPollOnStart;
+export const getStreamRespectPageVisibility = (): boolean => getRuntimeConfig().streamRespectPageVisibility;
+export const getStreamFetchLimit = (): number => getRuntimeConfig().streamFetchLimit;
+export const getStreamCacheMaxAgeMs = (): number => getRuntimeConfig().streamCacheMaxAgeMs;
+export const getMaxStreamTags = (): number => getRuntimeConfig().maxStreamTags;
+export const getTtlPostMs = (): number => getRuntimeConfig().ttlPostMs;
+export const getTtlUserMs = (): number => getRuntimeConfig().ttlUserMs;
+export const getTtlBatchIntervalMs = (): number => getRuntimeConfig().ttlBatchIntervalMs;
+export const getTtlPostMaxBatchSize = (): number => getRuntimeConfig().ttlPostMaxBatchSize;
+export const getTtlUserMaxBatchSize = (): number => getRuntimeConfig().ttlUserMaxBatchSize;
+export const getTtlRetryDelayMs = (): number => getRuntimeConfig().ttlRetryDelayMs;
+export const getModerationId = (): string => getRuntimeConfig().moderationId;
+export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
+export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;
+export const getPreludeSdkKey = (): string | undefined => getRuntimeConfig().preludeSdkKey;
+export const getPreludeSdkTimeoutMs = (): number => getRuntimeConfig().preludeSdkTimeoutMs;
+export const getPlausibleDomain = (): string | undefined => getRuntimeConfig().plausibleDomain;
+export const getPlausibleScriptUrl = (): string | undefined => getRuntimeConfig().plausibleScriptUrl;
+export const getPreviewImage = (): string => getRuntimeConfig().previewImage;
+export const getSiteName = (): string => getRuntimeConfig().siteName;
+export const getLocale = (): string => getRuntimeConfig().locale;
+export const getAuthor = (): string => getRuntimeConfig().author;
+export const getKeywords = (): string => getRuntimeConfig().keywords;
+export const getType = (): string => getRuntimeConfig().type;
+export const getCreator = (): string => getRuntimeConfig().creator;
+export const getDefaultUrl = (): string => getRuntimeConfig().defaultUrl;
+export const getPubkyRingUrl = (): string => getRuntimeConfig().pubkyRingUrl;
+export const getPubkyCoreUrl = (): string => getRuntimeConfig().pubkyCoreUrl;
+export const getTwitterUrl = (): string => getRuntimeConfig().twitterUrl;
+export const getTwitterGetpubkyUrl = (): string => getRuntimeConfig().twitterGetpubkyUrl;
+export const getTelegramUrl = (): string => getRuntimeConfig().telegramUrl;
+export const getGithubUrl = (): string => getRuntimeConfig().githubUrl;
+export const getEmail = (): string => getRuntimeConfig().email;
+export const getAppStoreUrl = (): string => getRuntimeConfig().appStoreUrl;
+export const getPlayStoreUrl = (): string => getRuntimeConfig().playStoreUrl;

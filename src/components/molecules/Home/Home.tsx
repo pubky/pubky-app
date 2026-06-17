@@ -9,7 +9,7 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Image } from '@/atoms/Image/Image';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { PUBKY_CORE_URL } from '@/config/externalLinks';
+import { getPubkyCoreLink } from '@/config/externalLinks';
 import { cn } from '@/libs/utils/utils';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
 import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
@@ -43,7 +43,7 @@ export const HomeFooter = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
         {tFooter('andConfirmAge')} <DialogAge />{' '}
         {tFooter.rich('copyright', {
           pubkyCore: (chunks) => (
-            <Link href={PUBKY_CORE_URL} target="_blank">
+            <Link href={getPubkyCoreLink()} target="_blank">
               {chunks}
             </Link>
           ),

@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_URL } from '@/config/metadata';
+import { getDefaultUrl } from '@/config/metadata';
 import { FileController } from '@/controllers/file/file';
 import { UserController } from '@/controllers/user/user';
 import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
@@ -64,8 +64,8 @@ export function useUserProfile(userId: string, options?: UseUserProfileOptions):
   const publicKey = withPubkyPrefix(userId);
 
   // Build profile link using config (SSR-safe)
-  // Use DEFAULT_URL from config to avoid window.location.origin which breaks SSR
-  const link = `${DEFAULT_URL}/profile/${userId}`;
+  // Use runtime config to avoid window.location.origin, which breaks SSR.
+  const link = `${getDefaultUrl()}/profile/${userId}`;
 
   const profile: UserProfile = {
     name: userDetails.name ?? '',

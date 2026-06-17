@@ -1,5 +1,5 @@
 import type { TFetchStreamParams } from '@/application/stream/posts/post.types';
-import { Env } from '@/libs/env/env';
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type {
   THandleNotCommonStreamParamsParams,
@@ -116,7 +116,7 @@ export function breakDownStreamId(streamId: PostStreamId): TStreamIdBreakdown {
   const [sorting, invokeEndpoint, kind, tags] = streamId.split(':');
   // Tags are separated by ',' character. Only the first MAX_STREAM_TAGS are considered.
   const limitTags = tags
-    ? tags.split(POST_STREAM_TAG_DELIMITER).slice(0, Env.NEXT_MAX_STREAM_TAGS).join(POST_STREAM_TAG_DELIMITER)
+    ? tags.split(POST_STREAM_TAG_DELIMITER).slice(0, getMaxStreamTags()).join(POST_STREAM_TAG_DELIMITER)
     : undefined;
 
   if (kind) {

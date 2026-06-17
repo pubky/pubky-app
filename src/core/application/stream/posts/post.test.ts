@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
-import { STREAM_CACHE_MAX_AGE_MS } from '@/config/nexus';
+import { getStreamCacheMaxAgeMs } from '@/config/nexus';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type { Pubky } from '@/models/models.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -1465,8 +1465,8 @@ describe('PostStreamApplication', () => {
     });
 
     it('should clear both streams when main stream cache is stale', async () => {
-      const now = BASE_TIMESTAMP + STREAM_CACHE_MAX_AGE_MS + 10;
-      const staleTimestamp = now - STREAM_CACHE_MAX_AGE_MS - 1;
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+      const staleTimestamp = now - getStreamCacheMaxAgeMs() - 1;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
@@ -1485,9 +1485,9 @@ describe('PostStreamApplication', () => {
     });
 
     it('should clear unread stream when unread cache is stale and main is fresh', async () => {
-      const now = BASE_TIMESTAMP + STREAM_CACHE_MAX_AGE_MS + 10;
-      const freshTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 1;
-      const staleTimestamp = now - STREAM_CACHE_MAX_AGE_MS - 1;
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+      const freshTimestamp = now - getStreamCacheMaxAgeMs() + 1;
+      const staleTimestamp = now - getStreamCacheMaxAgeMs() - 1;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
@@ -1507,7 +1507,7 @@ describe('PostStreamApplication', () => {
     });
 
     it('should merge unread into main and clear unread when both streams are fresh', async () => {
-      const now = BASE_TIMESTAMP + STREAM_CACHE_MAX_AGE_MS + 10;
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const mainPostIds = [`${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`];
@@ -1515,10 +1515,10 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(mainPostIds);
       await UnreadPostStreamModel.create(streamId, unreadPostIds);
 
-      const mainHeadTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 2;
-      const mainOlderTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 1;
-      const unreadNewestTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 4;
-      const unreadOlderTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 3;
+      const mainHeadTimestamp = now - getStreamCacheMaxAgeMs() + 2;
+      const mainOlderTimestamp = now - getStreamCacheMaxAgeMs() + 1;
+      const unreadNewestTimestamp = now - getStreamCacheMaxAgeMs() + 4;
+      const unreadOlderTimestamp = now - getStreamCacheMaxAgeMs() + 3;
 
       await createPostDetailWithTimestamp(mainPostIds[0], mainHeadTimestamp);
       await createPostDetailWithTimestamp(mainPostIds[1], mainOlderTimestamp);

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { MODERATED_TAGS, MODERATION_ID } from '@/config/moderation';
+import { getModeratedTags, getModerationId } from '@/config/moderation';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
 import { ModerationType } from '@/models/moderation/moderation.schema';
@@ -381,8 +381,8 @@ describe('LocalStreamUsersService', () => {
         const userId = 'user-moderated' as Pubky;
         const moderatedTags: NexusTag[] = [
           {
-            label: MODERATED_TAGS[0],
-            taggers: [MODERATION_ID],
+            label: getModeratedTags()[0],
+            taggers: [getModerationId()],
             taggers_count: 1,
             relationship: true,
           },
@@ -419,7 +419,7 @@ describe('LocalStreamUsersService', () => {
         const userId = 'user-wrong-tagger' as Pubky;
         const tagsWithWrongTagger: NexusTag[] = [
           {
-            label: MODERATED_TAGS[0],
+            label: getModeratedTags()[0],
             taggers: ['wrong-tagger-id'],
             taggers_count: 1,
             relationship: true,
@@ -440,8 +440,8 @@ describe('LocalStreamUsersService', () => {
         const moderatedUser = createMockNexusUser(moderatedUserId, {
           tags: [
             {
-              label: MODERATED_TAGS[0],
-              taggers: [MODERATION_ID],
+              label: getModeratedTags()[0],
+              taggers: [getModerationId()],
               taggers_count: 1,
               relationship: true,
             },

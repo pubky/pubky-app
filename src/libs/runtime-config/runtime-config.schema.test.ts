@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  APP_RUNTIME_DEFAULTS,
   NETWORK_RUNTIME_DEFAULTS,
   runtimeConfigValueSchema,
   runtimeEnvInputSchema,
@@ -24,6 +25,22 @@ const SENTRY_ENV_INPUT = {
   sentryTracesSampleRate: '0.5',
   sentryReplaysSessionSampleRate: '0.25',
   sentryReplaysOnErrorSampleRate: '1',
+};
+
+const APP_ENV_INPUT = {
+  notificationPollIntervalMs: '1234',
+  notificationPollOnStart: 'false',
+  streamFetchLimit: '25',
+  maxStreamTags: '7',
+  ttlPostMs: '45000',
+  moderationId: 'moderation-key',
+  moderatedTags: '["spam","nudity"]',
+  exchangeRateApi: 'https://rates.example.com/btc',
+  plausibleDomain: 'example.com',
+  plausibleScriptUrl: 'https://analytics.example.com/script.js',
+  siteName: 'Example App',
+  defaultUrl: 'https://app.example.com',
+  pubkyRingUrl: 'https://ring.example.com',
 };
 
 describe('runtimeEnvInputSchema', () => {
@@ -78,6 +95,19 @@ describe('runtimeEnvInputSchema', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, sentryTracesSampleRate: '1.5' })).toThrow();
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, sentryTracesSampleRate: 'abc' })).toThrow();
   });
+
+  it('parses defaulted app/deployer values when provided', () => {
+    const parsed = runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, ...APP_ENV_INPUT });
+
+    expect(parsed.notificationPollIntervalMs).toBe(1234);
+    expect(parsed.notificationPollOnStart).toBe(false);
+    expect(parsed.streamFetchLimit).toBe(25);
+    expect(parsed.maxStreamTags).toBe(7);
+    expect(parsed.moderatedTags).toEqual(['spam', 'nudity']);
+    expect(parsed.exchangeRateApi).toBe('https://rates.example.com/btc');
+    expect(parsed.siteName).toBe('Example App');
+    expect(parsed.defaultUrl).toBe('https://app.example.com');
+  });
 });
 
 describe('runtimeConfigValueSchema', () => {
@@ -85,6 +115,8 @@ describe('runtimeConfigValueSchema', () => {
     const parsed = runtimeConfigValueSchema.parse(NETWORK_RUNTIME_DEFAULTS);
     expect(parsed.sentryDsn).toBeUndefined();
     expect(parsed.sentryTracesSampleRate).toBe(SENTRY_RUNTIME_DEFAULTS.sentryTracesSampleRate);
+    expect(parsed.notificationPollIntervalMs).toBe(APP_RUNTIME_DEFAULTS.notificationPollIntervalMs);
+    expect(parsed.moderatedTags).toEqual(APP_RUNTIME_DEFAULTS.moderatedTags);
   });
 
   it('accepts an already-parsed config object with the Sentry tier present', () => {
@@ -110,7 +142,7 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     const parsed = runtimeEnvInputSchemaWithDefaults.parse({});
 
     // Defaults must come out PARSED, not as strings.
-    expect(parsed).toEqual({ ...NETWORK_RUNTIME_DEFAULTS, ...SENTRY_RUNTIME_DEFAULTS });
+    expect(parsed).toEqual({ ...NETWORK_RUNTIME_DEFAULTS, ...SENTRY_RUNTIME_DEFAULTS, ...APP_RUNTIME_DEFAULTS });
     expect(Array.isArray(parsed.pkarrRelays)).toBe(true);
     expect(typeof parsed.testnet).toBe('boolean');
   });

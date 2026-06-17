@@ -1,5 +1,9 @@
-import { Env } from '@/libs/env/env';
 import { Logger } from '@/libs/logger/logger';
+import {
+  getNotificationPollIntervalMs,
+  getNotificationPollOnStart,
+  getNotificationRespectPageVisibility,
+} from '@/libs/runtime-config/runtime-config';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import {
   type CoordinatorInitOptions,
@@ -28,9 +32,9 @@ import {
 export abstract class Coordinator<Config extends PollingServiceConfig, State extends PollingServiceState> {
   // Configuration
   protected config: Required<Config> = {
-    intervalMs: Env.NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS,
-    pollOnStart: Env.NEXT_PUBLIC_NOTIFICATION_POLL_ON_START,
-    respectPageVisibility: Env.NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY,
+    intervalMs: getNotificationPollIntervalMs(),
+    pollOnStart: getNotificationPollOnStart(),
+    respectPageVisibility: getNotificationRespectPageVisibility(),
   } as Required<Config>;
 
   // State

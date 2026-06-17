@@ -24,39 +24,19 @@ COPY . .
 ARG NEXT_PUBLIC_DB_VERSION
 ARG NEXT_PUBLIC_DB_NAME
 ARG NEXT_PUBLIC_DEBUG_MODE
-ARG NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS
-ARG NEXT_PUBLIC_NOTIFICATION_POLL_ON_START
-ARG NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY
-ARG NEXT_PUBLIC_STREAM_POLL_INTERVAL_MS
-ARG NEXT_PUBLIC_STREAM_POLL_ON_START
-ARG NEXT_PUBLIC_STREAM_RESPECT_PAGE_VISIBILITY
-ARG NEXT_PUBLIC_STREAM_FETCH_LIMIT
-ARG NEXT_PUBLIC_STREAM_CACHE_MAX_AGE_MS
-ARG NEXT_MAX_STREAM_TAGS
-ARG NEXT_PUBLIC_TTL_POST_MS
-ARG NEXT_PUBLIC_TTL_USER_MS
-ARG NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS
-ARG NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE
-ARG NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE
-ARG NEXT_PUBLIC_TTL_RETRY_DELAY_MS
 ARG NEXT_PUBLIC_APP_VERSION
 # NOTE: NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL, DEFAULT_HTTP_RELAY,
 # PKARR_RELAYS and TESTNET are intentionally NOT build args. They are runtime-configurable and must
 # be supplied as PUBKY_RUNTIME_* environment variables on the running container (see runner stage
 # and src/libs/runtime-config). This lets a single image be promoted across staging/prod/testnet.
-ARG NEXT_PUBLIC_EXCHANGE_RATE_API
-ARG NEXT_PUBLIC_PRELUDE_SDK_KEY
-ARG NEXT_PUBLIC_MODERATION_ID
-ARG NEXT_PUBLIC_MODERATED_TAGS
 ARG BASE_URL_SUPPORT
 ARG SUPPORT_API_ACCESS_TOKEN
 ARG SUPPORT_ACCOUNT_ID
 ARG SUPPORT_FEEDBACK_INBOX_ID
 
-# NOTE: Sentry is intentionally NOT a build concern. The DSN, environment, and sample rates
-# are runtime-configurable (PUBKY_RUNTIME_SENTRY_*, see runner stage), and source-map upload
-# happens in the CI pipeline — never during the image build — so this image builds without any
-# Sentry credentials and stays identical for every deployer.
+# NOTE: Sentry runtime values (DSN, environment, sample rates) are runtime-configurable
+# (PUBKY_RUNTIME_SENTRY_*, see runner stage). Source-map upload is optional: Synonym CI passes
+# Sentry build credentials, while third-party public image builds skip upload and still succeed.
 
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -80,7 +60,11 @@ RUN npx sentry-cli sourcemaps inject .next \
 ARG SENTRY_AUTH_TOKEN
 ARG SENTRY_ORG
 ARG SENTRY_PROJECT
-RUN npx sentry-cli sourcemaps upload --release=$NEXT_PUBLIC_APP_VERSION .next
+RUN if [ -n "$SENTRY_AUTH_TOKEN" ] && [ -n "$SENTRY_ORG" ] && [ -n "$SENTRY_PROJECT" ]; then \
+      npx sentry-cli sourcemaps upload --release="$NEXT_PUBLIC_APP_VERSION" .next; \
+    else \
+      echo "Skipping Sentry source-map upload; Sentry build credentials not set."; \
+    fi
 
 # Strip browser source maps from the public image: the chunks keep their injected Debug IDs
 # (enough for Sentry to match the maps uploaded by the CI pipeline), and the maps themselves
@@ -123,10 +107,11 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Runtime configuration (PUBLIC values, NOT secrets) supplied per-environment at container
+# Runtime configuration (PUBLIC values, NOT secrets) is supplied per-environment at container
 # runtime (Ansible / docker compose / k8s). With NODE_ENV=production the app fails fast (at boot)
-# if any of the REQUIRED values are missing rather than silently falling back to staging
-# defaults. See src/libs/runtime-config.
+# if any of the REQUIRED network values are missing rather than silently falling back to staging
+# defaults. Optional/defaulted PUBKY_RUNTIME_* values can override deployer-facing public config
+# without rebuilding the image. See docs/environment.md and src/libs/runtime-config.
 #
 # Required:
 #   PUBKY_RUNTIME_NEXUS_URL

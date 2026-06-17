@@ -20,7 +20,7 @@ import {
   SENTRY_RUNTIME_DEFAULTS,
 } from './runtime-config.schema';
 
-const RUNTIME_ENV_VALUES: Record<keyof RuntimeConfig, string> = {
+const RUNTIME_ENV_VALUES: Partial<Record<keyof RuntimeConfig, string>> = {
   nexusUrl: 'https://nexus.runtime.example.com',
   cdnUrl: 'https://nexus.runtime.example.com/static',
   homeserver: 'runtime-homeserver-key',
@@ -37,7 +37,7 @@ const RUNTIME_ENV_VALUES: Record<keyof RuntimeConfig, string> = {
 };
 
 function setAllRuntimeEnv(): void {
-  for (const key of Object.keys(PUBKY_RUNTIME_ENV_NAMES) as (keyof RuntimeConfig)[]) {
+  for (const key of Object.keys(RUNTIME_ENV_VALUES) as (keyof RuntimeConfig)[]) {
     process.env[PUBKY_RUNTIME_ENV_NAMES[key]] = RUNTIME_ENV_VALUES[key];
   }
 }
@@ -125,9 +125,14 @@ describe('runtime-config resolver', () => {
       expect(() => readServerConfig()).toThrow();
     });
 
-    it('throws when only the optional Sentry tier is set (required tier still enforced)', () => {
+    it('allows optional runtime tiers without forcing the required network tier in dev/test', () => {
       process.env[PUBKY_RUNTIME_ENV_NAMES.sentryDsn] = RUNTIME_ENV_VALUES.sentryDsn;
-      expect(() => readServerConfig()).toThrow();
+      process.env[PUBKY_RUNTIME_ENV_NAMES.siteName] = 'Runtime Site';
+      const config = readServerConfig();
+
+      expect(config.nexusUrl).toBe(NETWORK_RUNTIME_DEFAULTS.nexusUrl);
+      expect(config.sentryDsn).toBe(RUNTIME_ENV_VALUES.sentryDsn);
+      expect(config.siteName).toBe('Runtime Site');
     });
 
     it('falls back to NEXT_PUBLIC_* defaults in dev/test', () => {

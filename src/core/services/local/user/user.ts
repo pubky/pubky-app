@@ -1,6 +1,6 @@
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
-import { Env } from '@/libs/env/env';
+import { getTtlUserMs } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { TUserCountsParams } from '@/models/user/counts/userCounts.types';
@@ -175,13 +175,13 @@ export class LocalUserService {
    *
    * @param userId - The user ID
    * @param retryDelayMs - Delay in milliseconds before the entity should become stale.
-   *   If retryDelayMs >= NEXT_PUBLIC_TTL_USER_MS, the entity becomes immediately stale
+   *   If retryDelayMs >= the configured user TTL, the entity becomes immediately stale
    *   (triggers immediate refresh on next TTL coordinator tick). This is intentional
    *   and can be useful for forcing immediate refresh.
    * @returns Promise resolving to void
    */
   static async upsertTtlWithDelay(userId: Pubky, retryDelayMs: number): Promise<void> {
-    const lastUpdatedAt = Date.now() - (Env.NEXT_PUBLIC_TTL_USER_MS - retryDelayMs);
+    const lastUpdatedAt = Date.now() - (getTtlUserMs() - retryDelayMs);
     await UserTtlModel.upsert({ id: userId, lastUpdatedAt });
   }
 }

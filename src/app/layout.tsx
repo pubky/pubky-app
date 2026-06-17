@@ -24,11 +24,13 @@ export const viewport: Viewport = {
   themeColor: '#000000',
 };
 
-export const metadata = Metadata({
-  title: 'Pubky App - Unlock the web',
-  description:
-    'Pubky App is a social-media-like experience built over Pubky Core. It serves as a working example on how to build over Pubky Core to create simple or complex applications.',
-});
+export function generateMetadata() {
+  return Metadata({
+    title: 'Pubky App - Unlock the web',
+    description:
+      'Pubky App is a social-media-like experience built over Pubky Core. It serves as a working example on how to build over Pubky Core to create simple or complex applications.',
+  });
+}
 
 // Force dynamic rendering since we use cookies for locale detection
 export const dynamic = 'force-dynamic';
