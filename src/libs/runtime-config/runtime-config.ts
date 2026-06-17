@@ -20,7 +20,7 @@ import {
  * This module must NOT import `Env` (keeps the import graph a leaf, avoids the env<->logger cycle).
  */
 
-export const RUNTIME_CONFIG_WINDOW_KEY = '__PUBKY_CONFIG__' as const;
+export const RUNTIME_CONFIG_WINDOW_KEY = '__PUBKY_CONFIG__';
 
 declare global {
   interface Window {
