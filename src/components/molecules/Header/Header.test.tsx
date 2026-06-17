@@ -128,6 +128,9 @@ vi.mock('@/config/externalLinks', async (importOriginal) => {
     GITHUB_URL: 'https://github.com',
     TWITTER_GETPUBKY_URL: 'https://twitter.com/getpubky',
     TELEGRAM_URL: 'https://t.me/getpubky',
+    getGithubLink: () => 'https://github.com',
+    getTwitterGetpubkyLink: () => 'https://twitter.com/getpubky',
+    getTelegramLink: () => 'https://t.me/getpubky',
   };
 });
 
