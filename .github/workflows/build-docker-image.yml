@@ -118,15 +118,6 @@ jobs:
           registry: ${{ env.registry }}
           gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
 
-      - name: Load Docker build args
-        id: docker_build_args
-        run: |
-          {
-            echo 'build_args<<EOF'
-            sed '/^[[:space:]]*#/d;/^[[:space:]]*$/d' .github/docker-build-args.env
-            echo EOF
-          } >> "$GITHUB_OUTPUT"
-
       - name: Build and push image pubky-app
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
@@ -141,44 +132,34 @@ jobs:
           # supplied at container runtime as PUBKY_RUNTIME_* (see Dockerfile and
           # src/libs/runtime-config). Source-map upload happens in the CI pipeline via sentry-cli,
           # never during the image build, so no Sentry credentials are needed here.
-          build_args: ${{ steps.docker_build_args.outputs.build_args }}
+          build_args: |
+            NEXT_PUBLIC_DB_VERSION=2
+            NEXT_PUBLIC_DB_NAME=franky
+            NEXT_PUBLIC_DEBUG_MODE=false
+            NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS=8888
+            NEXT_PUBLIC_NOTIFICATION_POLL_ON_START=true
+            NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY=true
+            NEXT_PUBLIC_STREAM_POLL_INTERVAL_MS=8888
+            NEXT_PUBLIC_STREAM_POLL_ON_START=false
+            NEXT_PUBLIC_STREAM_RESPECT_PAGE_VISIBILITY=true
+            NEXT_PUBLIC_STREAM_FETCH_LIMIT=10
+            NEXT_PUBLIC_STREAM_CACHE_MAX_AGE_MS=300000
+            NEXT_MAX_STREAM_TAGS=5
+            NEXT_PUBLIC_TTL_POST_MS=120000
+            NEXT_PUBLIC_TTL_USER_MS=300000
+            NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS=10000
+            NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE=20
+            NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE=20
+            NEXT_PUBLIC_TTL_RETRY_DELAY_MS=60000
+            NEXT_PUBLIC_EXCHANGE_RATE_API=https://bitkit.stag0.blocktank.to/fx/rates/btc
+            NEXT_PUBLIC_MODERATION_ID=euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro
+            NEXT_PUBLIC_MODERATED_TAGS=["nudity"]
+            BASE_URL_SUPPORT=https://chatwoot.example.com
+            SUPPORT_API_ACCESS_TOKEN=your_token_here
+            SUPPORT_ACCOUNT_ID=123
+            SUPPORT_FEEDBACK_INBOX_ID=26
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            SENTRY_ORG=synonym-52
+            SENTRY_PROJECT=pubky-app-preview
+            SENTRY_RELEASE=${{ github.sha }}
 
-      - name: Upload Sentry source maps
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: synonym-52
-        run: |
-          if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
-            echo "SENTRY_AUTH_TOKEN is not available; skipping source-map upload."
-            exit 0
-          fi
-
-          if [ "${{ inputs.platforms }}" != "linux/amd64" ]; then
-            echo "Source-map upload currently supports linux/amd64 only; skipping for ${{ inputs.platforms }}."
-            exit 0
-          fi
-
-          if [ -n "${{ inputs.pr_number }}" ]; then
-            SENTRY_PROJECT="pubky-app-preview"
-          else
-            SENTRY_PROJECT="pubky-app"
-          fi
-
-          RELEASE="$(node -p "require('./package.json').version")"
-          rm -rf .sentry-builder
-          mapfile -t DOCKER_BUILD_ARGS < <(
-            sed '/^[[:space:]]*#/d;/^[[:space:]]*$/d;s/^/--build-arg=/' .github/docker-build-args.env
-          )
-
-          docker buildx build \
-            --target builder \
-            --platform "${{ inputs.platforms }}" \
-            --cache-from "type=registry,ref=${{ env.registry }}/${{ needs.check_image.outputs.image_name }}:cache" \
-            --output "type=local,dest=.sentry-builder" \
-            "${DOCKER_BUILD_ARGS[@]}" \
-            .
-
-          npx --yes @sentry/cli sourcemaps upload .sentry-builder/app/.next \
-            --org "$SENTRY_ORG" \
-            --project "$SENTRY_PROJECT" \
-            --release "$RELEASE"
