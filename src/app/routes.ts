@@ -58,6 +58,11 @@ export enum COPYRIGHT_ROUTES {
   COPYRIGHT = '/copyright',
 }
 
+export enum DEV_ROUTES {
+  /** Sentry verification harness — gated to non-production by the page itself. */
+  SENTRY_TEST = '/sentry-test',
+}
+
 export const EXPLORE_ROUTES: string[] = [APP_ROUTES.HOME, APP_ROUTES.HOT, APP_ROUTES.SEARCH];
 
 // Public routes are accessible regardless of authentication status.
@@ -75,6 +80,9 @@ export const PUBLIC_ROUTES: string[] = [
   COPYRIGHT_ROUTES.COPYRIGHT,
   // Language settings page is public to allow language changes without auth issues
   SETTINGS_ROUTES.LANGUAGE,
+  // Sentry verification harness must be reachable without a session on preview deploys.
+  // The page returns 404 in production via isSentryTestHarnessEnabled().
+  DEV_ROUTES.SENTRY_TEST,
 ];
 
 export const ALLOWED_ROUTES = [
