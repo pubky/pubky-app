@@ -72,4 +72,4 @@ This ADR covers the required **network** tier of the runtime config. The optiona
 ## References
 
 - [Next.js — Runtime environment variables](https://nextjs.org/docs/app/guides/environment-variables#runtime-environment-variables)
-- GitHub issue #1939; draft PR #1644
+- GitHub issue #1939; PR #1943
