@@ -62,6 +62,10 @@ describe('runtimeEnvInputSchema', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pkarrRelays: 'not-json' })).toThrow();
   });
 
+  it('throws on invalid TESTNET value', () => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, testnet: 'tru' })).toThrow();
+  });
+
   it('parses WITHOUT the optional Sentry tier (disabled DSN, defaulted rates)', () => {
     const parsed = runtimeEnvInputSchema.parse(VALID_ENV_INPUT);
 
@@ -107,6 +111,11 @@ describe('runtimeEnvInputSchema', () => {
     expect(parsed.exchangeRateApi).toBe('https://rates.example.com/btc');
     expect(parsed.siteName).toBe('Example App');
     expect(parsed.defaultUrl).toBe('https://app.example.com');
+  });
+
+  it('throws on invalid optional boolean values', () => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, notificationPollOnStart: 'tru' })).toThrow();
+    expect(() => runtimeEnvInputSchemaWithDefaults.parse({ streamPollOnStart: 'yes' })).toThrow();
   });
 });
 

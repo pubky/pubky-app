@@ -68,12 +68,22 @@ const pkarrRelaysFromString = z.string().transform((val, ctx) => {
   }
 });
 
-const testnetFromString = z.string().transform((val) => val === 'true');
+const booleanString = z.enum(['true', 'false']);
+
+const testnetFromString = booleanString.transform((val) => val === 'true');
 
 const optionalBooleanFromString = z
   .string()
   .optional()
-  .transform((val) => (val !== undefined && val.trim() !== '' ? val === 'true' : undefined))
+  .transform((val, ctx) => {
+    if (val === undefined || val.trim() === '') return undefined;
+    const parsed = booleanString.safeParse(val);
+    if (!parsed.success) {
+      ctx.addIssue({ code: 'custom', message: 'Expected "true" or "false"' });
+      return z.NEVER;
+    }
+    return parsed.data === 'true';
+  })
   .pipe(z.boolean().optional());
 
 const optionalPositiveIntFromString = z
