@@ -94,6 +94,18 @@ describe('CollectionItems', () => {
 
     const feed = screen.getByTestId('timeline-feed');
     expect(feed).toHaveAttribute('data-variant', 'collection');
+    expect(screen.queryByLabelText('collections.single.addContent')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('collection-items-empty')).not.toBeInTheDocument();
+  });
+
+  it('renders the owner Add Content CTA above the feed for a non-empty envelope', () => {
+    setAuthStore(AUTHOR_PUBKY);
+    setPostDetails(COLLECTION_CONTENT);
+
+    render(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+    expect(screen.getByLabelText('collections.single.addContent')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-variant', 'collection');
     expect(screen.queryByTestId('collection-items-empty')).not.toBeInTheDocument();
   });
 
@@ -106,14 +118,16 @@ describe('CollectionItems', () => {
     expect(screen.queryByTestId('collection-items-empty')).not.toBeInTheDocument();
   });
 
-  it('renders the owner Add Content CTA (and no feed) for an empty envelope owned by the viewer', () => {
+  it('renders the owner Add Content CTA and empty text for an empty envelope owned by the viewer', () => {
     setAuthStore(AUTHOR_PUBKY);
     setPostDetails(COLLECTION_CONTENT_EMPTY);
 
-    render(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    const { container } = render(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
     expect(screen.getByLabelText('collections.single.addContent')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-cy="collection-items-empty"]')).toBeInTheDocument();
+    expect(screen.getByText('collections.single.empty')).toBeInTheDocument();
   });
 
   it('renders plain empty text (and no Add Content CTA) for an empty envelope viewed by a non-owner', () => {
@@ -125,5 +139,16 @@ describe('CollectionItems', () => {
     expect(screen.getByText('collections.single.empty')).toBeInTheDocument();
     expect(screen.queryByLabelText('collections.single.addContent')).not.toBeInTheDocument();
     expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
+  });
+});
+
+describe('CollectionItems - Snapshots', () => {
+  it('matches the owner non-empty snapshot with Add Content CTA above the feed', () => {
+    setAuthStore(AUTHOR_PUBKY);
+    setPostDetails(COLLECTION_CONTENT);
+
+    const { container } = render(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

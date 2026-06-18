@@ -1387,6 +1387,15 @@
         "backToCollections": "Zurück zu Sammlungen",
         "viewProfile": "Profil ansehen"
       }
+    },
+    "addContentDialog": {
+      "title": "Inhalt hinzufügen",
+      "description": "Füge einen Beitrag oder Artikel aus deinem Feed hinzu oder füge direkt eine URL ein.",
+      "fromFeedTitle": "Aus Feed hinzufügen",
+      "fromFeedLead": "Finde einen Beitrag",
+      "fromFeedRest": " den du hinzufügen möchtest und klicke auf die Sammlungen-Schaltfläche.",
+      "pasteTitle": "Beitrags-URL einfügen",
+      "pasteDescription": "Du kannst auch eine Beitrags-URL einfügen, um ihn schnell zu deiner Sammlung hinzuzufügen."
     }
   },
   "postSave": {

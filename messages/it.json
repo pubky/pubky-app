@@ -1385,6 +1385,15 @@
         "backToCollections": "Torna alle raccolte",
         "viewProfile": "Vedi profilo"
       }
+    },
+    "addContentDialog": {
+      "title": "Aggiungi contenuto",
+      "description": "Aggiungi un post o un articolo dal tuo feed oppure incolla direttamente un URL.",
+      "fromFeedTitle": "Aggiungi dal feed",
+      "fromFeedLead": "Trova un post",
+      "fromFeedRest": " che vuoi aggiungere e clicca sul pulsante delle raccolte.",
+      "pasteTitle": "Incolla URL del post",
+      "pasteDescription": "Puoi anche incollare l'URL di un post per aggiungerlo rapidamente alla tua raccolta."
     }
   },
   "postSave": {

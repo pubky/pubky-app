@@ -1385,6 +1385,15 @@
         "backToCollections": "Back to Collections",
         "viewProfile": "View profile"
       }
+    },
+    "addContentDialog": {
+      "title": "Add Content",
+      "description": "Add a post or article from your feed or paste a url directly.",
+      "fromFeedTitle": "Add from feed",
+      "fromFeedLead": "Find a post",
+      "fromFeedRest": " you want to add and click the collections button.",
+      "pasteTitle": "Paste post url",
+      "pasteDescription": "You can also paste a post URL to quickly add it to your collection."
     }
   },
   "postSave": {

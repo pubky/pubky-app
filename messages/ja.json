@@ -1385,6 +1385,15 @@
         "backToCollections": "コレクションに戻る",
         "viewProfile": "プロフィールを見る"
       }
+    },
+    "addContentDialog": {
+      "title": "コンテンツを追加",
+      "description": "フィードから投稿または記事を追加するか、URLを直接貼り付けます。",
+      "fromFeedTitle": "フィードから追加",
+      "fromFeedLead": "投稿を見つけて",
+      "fromFeedRest": "追加したい投稿のコレクションボタンをクリックします。",
+      "pasteTitle": "投稿URLを貼り付け",
+      "pasteDescription": "投稿URLを貼り付けて、すばやくコレクションに追加することもできます。"
     }
   },
   "postSave": {

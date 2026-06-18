@@ -1,13 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`BookmarksItems - Snapshots > matches the snapshot 1`] = `
+exports[`CollectionItems - Snapshots > matches the owner non-empty snapshot with Add Content CTA above the feed 1`] = `
 <div
   class="flex w-full flex-col gap-6"
   data-testid="container"
 >
   <div
     class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-6"
-    data-cy="bookmarks-add-content"
+    data-cy="collection-add-content"
     data-testid="container"
   >
     <button
@@ -53,7 +53,7 @@ exports[`BookmarksItems - Snapshots > matches the snapshot 1`] = `
   </div>
   <div
     data-testid="timeline-feed"
-    data-variant="bookmarks"
+    data-variant="collection"
   />
 </div>
 `;

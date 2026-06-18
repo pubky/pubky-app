@@ -1385,6 +1385,15 @@
         "backToCollections": "Retour aux collections",
         "viewProfile": "Voir le profil"
       }
+    },
+    "addContentDialog": {
+      "title": "Ajouter du contenu",
+      "description": "Ajoutez une publication ou un article depuis votre fil ou collez directement une URL.",
+      "fromFeedTitle": "Ajouter depuis le fil",
+      "fromFeedLead": "Trouvez une publication",
+      "fromFeedRest": " que vous voulez ajouter et cliquez sur le bouton des collections.",
+      "pasteTitle": "Coller l'URL de la publication",
+      "pasteDescription": "Vous pouvez aussi coller l'URL d'une publication pour l'ajouter rapidement à votre collection."
     }
   },
   "postSave": {

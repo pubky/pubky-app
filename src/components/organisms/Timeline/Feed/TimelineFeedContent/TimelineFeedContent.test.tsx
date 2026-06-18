@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -105,18 +104,9 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
 
 vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
   return {
-    TimelineGridPosts: ({
-      postIds,
-      showEndMessage,
-      emptyState,
-    }: {
-      postIds: string[];
-      showEndMessage?: boolean;
-      emptyState?: ReactNode;
-    }) => (
+    TimelineGridPosts: ({ postIds, showEndMessage }: { postIds: string[]; showEndMessage?: boolean }) => (
       <div data-testid="timeline-grid-posts" data-show-end-message={String(showEndMessage)}>
         <span data-testid="grid-post-count">{postIds.length}</span>
-        {emptyState}
       </div>
     ),
   };
@@ -554,20 +544,6 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
     expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
-  });
-
-  it('forwards a custom empty state to the grid renderer', () => {
-    render(
-      <TimelineFeedWithStream
-        streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
-        variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
-        tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
-        emptyState={<div data-testid="bookmarks-empty-state">No bookmarks yet</div>}
-      />,
-    );
-
-    expect(screen.getByTestId('timeline-grid-posts')).toContainElement(screen.getByTestId('bookmarks-empty-state'));
   });
 
   it('falls back to the vertical list when no grid layout resolution is provided', () => {

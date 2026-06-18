@@ -19,12 +19,6 @@ export interface TimelineFeedProps {
    * Children can access prependPosts via TimelineFeedContext
    */
   children?: ReactNode;
-  /**
-   * Optional custom empty state for feed variants that forward one. Currently
-   * used by bookmarks to replace the default "No posts found" copy while keeping
-   * emptiness driven by the resolved bookmarks stream.
-   */
-  emptyState?: ReactNode;
 }
 
 export interface TimelineFeedContextValue {

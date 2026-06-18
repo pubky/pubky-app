@@ -1,8 +1,6 @@
 'use client';
 
-import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS, TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -10,6 +8,7 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { cn } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
+import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { CollectionItemsProps } from './CollectionItems.types';
@@ -27,10 +26,8 @@ import type { CollectionItemsProps } from './CollectionItems.types';
  * once the envelope is confirmed empty, so a populated collection never flashes
  * the placeholder.
  *
- * Empty state:
- *   - owner → a placeholder "+ Add content" CTA (the flow is out of scope this
- *     slice; the button is a no-op `// TODO`).
- *   - other → plain empty text (no CTA).
+ * The owner can add content from the top of the region regardless of whether
+ * the collection currently has items; non-owners only see the feed or empty text.
  */
 export function CollectionItems({ authorPubky, postId }: CollectionItemsProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
@@ -46,47 +43,30 @@ export function CollectionItems({ authorPubky, postId }: CollectionItemsProps) {
   const collection = postDetails ? parseCollectionContent(postDetails.content) : null;
   const isConfirmedEmpty = postDetails != null && (collection?.items?.length ?? 0) === 0;
 
-  if (isConfirmedEmpty) {
-    return <CollectionItemsEmpty isOwner={isOwn} />;
-  }
-
-  return <TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />;
+  return (
+    <Container overrideDefaults className="flex w-full flex-col gap-6">
+      {isOwn && (
+        <Container
+          overrideDefaults
+          data-cy="collection-add-content"
+          className={cn('grid', GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS)}
+        >
+          <AddContentDialog />
+        </Container>
+      )}
+      {isConfirmedEmpty ? <CollectionItemsEmpty /> : <TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />}
+    </Container>
+  );
 }
 
-function CollectionItemsEmpty({ isOwner }: { isOwner: boolean }) {
+function CollectionItemsEmpty() {
   const t = useTranslations('collections.single');
 
-  // Placeholder — the add-content flow itself is out of scope this slice.
-  // TODO: wire in collection add-content (#1866 follow-up).
-  const handleAddContent = () => {};
-
-  if (!isOwner) {
-    return (
-      <Container overrideDefaults data-cy="collection-items-empty" className="w-full">
-        <Typography overrideDefaults className="text-center text-base font-medium text-muted-foreground">
-          {t('empty')}
-        </Typography>
-      </Container>
-    );
-  }
-
   return (
-    <Container
-      overrideDefaults
-      data-cy="collection-items-empty"
-      className={cn('grid', GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS)}
-    >
-      <Button
-        overrideDefaults
-        onClick={handleAddContent}
-        aria-label={t('addContent')}
-        className="flex h-39 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
-      >
-        <Plus className="size-4 shrink-0" />
-        <Typography as="span" overrideDefaults className="text-sm font-bold">
-          {t('addContent')}
-        </Typography>
-      </Button>
+    <Container overrideDefaults data-cy="collection-items-empty" className="w-full">
+      <Typography overrideDefaults className="text-center text-base font-medium text-muted-foreground">
+        {t('empty')}
+      </Typography>
     </Container>
   );
 }
