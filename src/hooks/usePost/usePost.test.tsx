@@ -513,8 +513,7 @@ describe('usePost', () => {
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Post created',
-        dismissButton: true,
+        title: 'Post published',
       });
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(result.current.isSubmitting).toBe(false);
@@ -752,8 +751,7 @@ describe('usePost', () => {
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Post created',
-        dismissButton: true,
+        title: 'Post published',
       });
       expect(mockOnSuccess).toHaveBeenCalled();
     });

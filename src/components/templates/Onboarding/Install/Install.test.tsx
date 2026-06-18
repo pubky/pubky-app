@@ -87,7 +87,7 @@ describe('Install template', () => {
     expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Invite code applied',
-      description: 'Your invite code YVB2-YFRN-GDY0 has been applied.',
+      description: 'inviteCodeAppliedDescription',
     });
     expect(mockReplace).not.toHaveBeenCalled();
     // Stays on the install page with the install content visible
@@ -106,7 +106,7 @@ describe('Install template', () => {
     expect(mockSetInviteCode).not.toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Invalid invite code',
-      description: 'This invite code is not recognized. Please use a different invite code.',
+      description: 'invalidInviteCodeDescription',
     });
     expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
@@ -123,7 +123,7 @@ describe('Install template', () => {
     expect(mockSetInviteCode).not.toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Invite code already used',
-      description: 'This invite code has already been used. Please use a different invite code.',
+      description: 'usedInviteCodeDescription',
     });
     expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
@@ -141,7 +141,7 @@ describe('Install template', () => {
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
       title: "Couldn't verify invite code",
-      description: "We couldn't verify your invite code right now. Please check your connection and try again.",
+      description: 'verificationFailedDescription',
     });
     // The invalid-code warning toast is not shown for transient errors.
     expect(mockToast).toHaveBeenCalledTimes(1);

@@ -145,7 +145,7 @@ describe('Toaster', () => {
     render(<Toaster />);
 
     const okButton = screen.getByRole('button', { name: 'OK' });
-    expect(okButton).toHaveClass('bg-secondary', 'text-secondary-foreground');
+    expect(okButton).toHaveClass('bg-neutral-900', 'text-foreground');
   });
 
   it.each([

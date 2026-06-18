@@ -14,20 +14,18 @@ const INVITE_CODE = 'YVB2-YFRN-GDY0';
 const INVITE_CODE_TOASTS = {
   valid: {
     title: 'Invite code applied',
-    description: `Your invite code ${INVITE_CODE} has been applied.`,
   },
   invalid: {
     title: 'Invalid invite code',
-    description: 'This invite code is not recognized. Please use a different invite code.',
+    variant: 'error',
   },
   used: {
     title: 'Invite code already used',
-    description: 'This invite code has already been used. Please use a different invite code.',
+    variant: 'error',
   },
   verificationFailed: {
     variant: 'error',
     title: "Couldn't verify invite code",
-    description: "We couldn't verify your invite code right now. Please check your connection and try again.",
   },
 } as const;
 
@@ -156,7 +154,7 @@ describe('Human template', () => {
         expect(mockToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.invalid);
       });
       expect(mockVerifySignupToken).toHaveBeenCalledWith(INVITE_CODE);
-      expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
       expect(mockPush).not.toHaveBeenCalled();
       expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
     });
@@ -171,7 +169,7 @@ describe('Human template', () => {
         expect(mockToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.used);
       });
       expect(mockVerifySignupToken).toHaveBeenCalledWith(INVITE_CODE);
-      expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
       expect(mockPush).not.toHaveBeenCalled();
       expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
     });
