@@ -51,9 +51,9 @@ export const toastIconVariants = cva('size-5 shrink-0', {
 });
 
 // Matches Button variant="default" color classes
-const toastActionDefaultButtonColors = 'border-brand bg-brand/16 text-brand hover:!bg-brand/30';
+const toastActionDefaultButtonColors = 'shadow-xs border-brand bg-brand/16 text-brand hover:!bg-brand/30';
 // Matches Button variant="secondary" color classes
-const toastActionSecondaryButtonColors = 'bg-secondary text-secondary-foreground hover:bg-accent';
+const toastActionSecondaryButtonColors = 'shadow-xs bg-neutral-900 text-foreground hover:border-neutral-800';
 
 export const toastActionVariants = cva(
   'inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold  transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50',

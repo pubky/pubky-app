@@ -54,7 +54,6 @@ export function Human() {
       if (status === 'valid') {
         toast({
           title: t('inviteCodeApplied'),
-          description: t('inviteCodeAppliedDescription', { inviteCode }),
         });
         return 'valid';
       }
@@ -62,21 +61,20 @@ export function Human() {
       if (status === 'used') {
         toast({
           title: t('usedInviteCode'),
-          description: t('usedInviteCodeDescription'),
+          variant: 'error',
         });
         return 'used';
       }
 
       toast({
         title: t('invalidInviteCode'),
-        description: t('invalidInviteCodeDescription'),
+        variant: 'error',
       });
       return 'invalid';
     } catch {
       toast({
         variant: 'error',
         title: t('verificationFailed'),
-        description: t('verificationFailedDescription'),
       });
       return 'error';
     }
