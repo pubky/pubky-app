@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SinglePostLeftDrawer, SinglePostLeftSidebar } from './SinglePostLeftSidebar';
+import { SinglePostLeftDrawer, SinglePostLeftDrawerMobile, SinglePostLeftSidebar } from './SinglePostLeftSidebar';
 
 const mockSetLayout = vi.fn();
 const mockUseHomeStore = vi.fn();
@@ -36,7 +36,10 @@ const mockFilterLayout = vi.fn(
 );
 
 vi.mock('@/stores/home/home.store', () => ({
-  useHomeStore: () => mockUseHomeStore(),
+  useHomeStore: (selector?: (state: ReturnType<typeof mockUseHomeStore>) => unknown) => {
+    const state = mockUseHomeStore();
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock('@/atoms/Container/Container', () => ({
@@ -112,7 +115,7 @@ describe('SinglePostLeftSidebar', () => {
 });
 
 describe('SinglePostLeftDrawer', () => {
-  it('renders only the layout filter', () => {
+  it('renders the layout filter outside mobile drawer contexts', () => {
     render(<SinglePostLeftDrawer />);
 
     expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
@@ -140,6 +143,33 @@ describe('SinglePostLeftDrawer', () => {
 
   it('matches snapshot', () => {
     const { container } = render(<SinglePostLeftDrawer />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('SinglePostLeftDrawerMobile', () => {
+  it('renders post filters without the layout filter', () => {
+    render(<SinglePostLeftDrawerMobile />);
+
+    expect(screen.queryByTestId('filter-layout')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('filter-reach')).toBeInTheDocument();
+    expect(screen.queryByTestId('filter-sort')).toBeInTheDocument();
+    expect(screen.queryByTestId('filter-content')).toBeInTheDocument();
+    expect(mockFilterLayout).not.toHaveBeenCalled();
+    expect(mockFilterReach).toHaveBeenCalled();
+    expect(mockFilterSort).toHaveBeenCalled();
+    expect(mockFilterContent).toHaveBeenCalled();
+  });
+
+  it('does not update home layout because layout controls are hidden', () => {
+    render(<SinglePostLeftDrawerMobile />);
+
+    expect(screen.queryByTestId('change-layout')).not.toBeInTheDocument();
+    expect(mockSetLayout).not.toHaveBeenCalled();
+  });
+
+  it('matches snapshot', () => {
+    const { container } = render(<SinglePostLeftDrawerMobile />);
     expect(container).toMatchSnapshot();
   });
 });
