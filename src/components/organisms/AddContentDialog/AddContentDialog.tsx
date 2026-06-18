@@ -17,11 +17,16 @@ import {
 } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useAddContentForm } from '@/hooks/useAddContentForm/useAddContentForm';
-import { ADD_CONTENT_FORM_FIELDS } from '@/hooks/useAddContentForm/useAddContentForm.types';
+import { ADD_CONTENT_FORM_FIELDS, type AddContentTarget } from '@/hooks/useAddContentForm/useAddContentForm.types';
 import { cn } from '@/libs/utils/utils';
 import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
-import type { AddContentDialogProps } from './AddContentDialog.types';
+
+interface AddContentDialogProps {
+  className?: string;
+  dataCy?: string;
+  target?: AddContentTarget;
+}
 
 const AddContentTrigger = React.forwardRef<
   React.ComponentRef<typeof Button>,
