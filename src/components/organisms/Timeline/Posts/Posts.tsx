@@ -1,6 +1,5 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
@@ -19,7 +18,6 @@ interface TimelinePostsProps {
   error: string | null;
   hasMore: boolean;
   loadMore: () => Promise<void>;
-  emptyState?: ReactNode;
 }
 
 /**
@@ -31,15 +29,7 @@ interface TimelinePostsProps {
  * The surface (TimelineFeedContent) wraps this in PostMainLayoutProvider so each
  * PostMain / nested reply inherits the active tags layout via context.
  */
-export function TimelinePosts({
-  postIds,
-  loading,
-  loadingMore,
-  error,
-  hasMore,
-  loadMore,
-  emptyState,
-}: TimelinePostsProps) {
+export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, loadMore }: TimelinePostsProps) {
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
@@ -52,7 +42,7 @@ export function TimelinePosts({
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
 
   return (
-    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0} emptyComponent={emptyState}>
+    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
       <Container data-cy="timeline-container">
         <Container
           data-cy="timeline-posts"

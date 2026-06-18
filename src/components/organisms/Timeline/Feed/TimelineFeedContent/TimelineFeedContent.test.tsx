@@ -85,7 +85,6 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
       postIds,
       loading,
       hasMore,
-      emptyState,
     }: {
       postIds: string[];
       loading: boolean;
@@ -94,13 +93,11 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
       hasMore: boolean;
       loadMore: () => void;
       tagsLayout: string;
-      emptyState?: ReactNode;
     }) => (
       <div data-testid="timeline-posts">
         <span data-testid="post-count">{postIds.length}</span>
         <span data-testid="loading">{loading.toString()}</span>
         <span data-testid="has-more">{hasMore.toString()}</span>
-        {postIds.length === 0 ? emptyState : null}
       </div>
     ),
   };

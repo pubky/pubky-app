@@ -208,7 +208,6 @@ function TimelineFeedContent({
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
-              emptyState={emptyState}
             />
           )}
         </Container>
