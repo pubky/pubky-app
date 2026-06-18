@@ -105,11 +105,37 @@ describe('AddContentDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveClass('outline-none', 'focus:outline-none', 'focus-visible:outline-none');
     expect(screen.getByTestId('dialog-title')).toHaveTextContent('collections.addContentDialog.title');
     expect(screen.getByText('collections.addContentDialog.fromFeedTitle')).toBeInTheDocument();
     expect(screen.getByText('collections.addContentDialog.pasteTitle')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://')).toBeInTheDocument();
+  });
+
+  it('stacks URL validation messages below the input', () => {
+    render(<AddContentDialog />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+
+    const footer = screen.getByPlaceholderText('https://').closest('[data-slot="card-footer"]');
+    expect(footer).toHaveClass('flex-col', 'items-stretch');
+  });
+
+  it('shows a red dashed border when the pasted URL is invalid', async () => {
+    render(<AddContentDialog />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+      clipboardData: {
+        getData: () => 'not a post url',
+      },
+    });
+
+    const errorMessage = await screen.findByText('collections.addContentDialog.errors.invalid');
+    const inputContainer = screen.getByPlaceholderText('https://').closest('[data-testid="container"]');
+
+    expect(errorMessage).toBeInTheDocument();
+    expect(inputContainer).toHaveClass('has-[input[aria-invalid=true]]:border-red-500');
   });
 
   it('adds pasted bookmark content, prepends it, and closes the dialog', async () => {
@@ -146,6 +172,7 @@ describe('AddContentDialog', () => {
     await waitFor(() => {
       const input = screen.getByDisplayValue('collections.addContentDialog.adding');
       expect(input).toBeDisabled();
+      expect(input.closest('[data-testid="container"]')).toHaveClass('gap-2');
     });
 
     resolvePost(livePost());

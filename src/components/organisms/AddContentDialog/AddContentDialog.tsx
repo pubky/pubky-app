@@ -128,7 +128,7 @@ function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof us
           {t('pasteDescription')}
         </Typography>
       </CardContent>
-      <CardFooter className="px-6">
+      <CardFooter className="flex-col items-stretch px-6">
         <ControlledInputField
           name={ADD_CONTENT_FORM_FIELDS.POST_URL}
           control={addContentForm.form.control}
@@ -139,7 +139,7 @@ function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof us
           loading={addContentForm.isPending}
           loadingText={t('adding')}
           onPaste={addContentForm.handlePaste}
-          className="mb-0 h-auto border-input bg-background/10! px-6 py-4 font-medium shadow-xs"
+          className="mb-0 h-auto gap-2 border-input bg-background/10! px-6 py-4 font-medium shadow-xs has-[input[aria-invalid=true]]:border-red-500"
           inputClassName="h-auto p-0 shadow-none"
           dataCy="add-content-url-input"
         />
@@ -199,7 +199,10 @@ export function AddContentDialog({
       <DialogTrigger asChild>
         <AddContentTrigger className={className} dataCy={dataCy} />
       </DialogTrigger>
-      <DialogContent className="flex max-w-xl flex-col overflow-hidden bg-popover shadow-2xl" hiddenTitle={t('title')}>
+      <DialogContent
+        className="flex max-w-xl flex-col overflow-hidden bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
+        hiddenTitle={t('title')}
+      >
         <AddContentDialogBody target={target} onSuccess={handleSuccess} />
       </DialogContent>
     </Dialog>

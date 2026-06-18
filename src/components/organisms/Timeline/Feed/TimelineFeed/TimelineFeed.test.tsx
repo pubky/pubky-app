@@ -36,6 +36,9 @@ vi.mock('next/navigation', () => ({
   }),
   usePathname: () => '/',
   useParams: () => ({ id: '' }),
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
 }));
 
 // Mock dependencies
@@ -390,6 +393,31 @@ describe('TimelineFeed', () => {
           disabled: true,
         }),
       );
+    });
+
+    it('should render the custom bookmarks empty state when the grid is empty', () => {
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: [],
+      });
+      mockUseFeedLayoutResolution.mockReturnValue({
+        requestedLayout: 'columns',
+        effectiveLayout: 'columns',
+        isVisualRequested: false,
+        isVisualActive: false,
+        isGridActive: true,
+        isPhoneViewport: false,
+      });
+
+      render(
+        <TimelineFeed
+          variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+          emptyState={<div data-testid="bookmarks-empty-state">This collection is empty.</div>}
+        />,
+      );
+
+      expect(screen.getByTestId('bookmarks-empty-state')).toBeInTheDocument();
+      expect(screen.queryByText('No posts found')).not.toBeInTheDocument();
     });
 
     it('should persist visual content coercion for bookmarks feeds', async () => {

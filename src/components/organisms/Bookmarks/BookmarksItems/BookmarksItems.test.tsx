@@ -8,8 +8,16 @@ vi.mock('next-intl', () => ({
 }));
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
-  TimelineFeed: ({ variant, children }: { variant: string; children?: ReactNode }) => (
-    <div data-testid="timeline-feed" data-variant={variant}>
+  TimelineFeed: ({
+    variant,
+    children,
+    emptyState,
+  }: {
+    variant: string;
+    children?: ReactNode;
+    emptyState?: ReactNode;
+  }) => (
+    <div data-testid="timeline-feed" data-variant={variant} data-has-empty-state={String(Boolean(emptyState))}>
       {children}
     </div>
   ),
@@ -21,6 +29,7 @@ describe('BookmarksItems', () => {
     render(<BookmarksItems />);
 
     expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-variant', 'bookmarks');
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-empty-state', 'true');
   });
 
   it('renders the add-content CTA above the feed', () => {

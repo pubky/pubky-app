@@ -6,6 +6,7 @@ exports[`CollectionItems - Snapshots > matches the owner non-empty snapshot with
   data-testid="container"
 >
   <div
+    data-has-empty-state="true"
     data-testid="timeline-feed"
     data-variant="collection"
   >

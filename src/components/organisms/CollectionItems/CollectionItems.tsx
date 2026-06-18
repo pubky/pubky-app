@@ -1,8 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
-import { Typography } from '@/atoms/Typography/Typography';
 import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS, TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
@@ -12,6 +10,7 @@ import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog'
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { CollectionItemsProps } from './CollectionItems.types';
+import { CollectionItemsEmpty } from './CollectionItemsEmpty';
 
 /**
  * CollectionItems
@@ -54,7 +53,7 @@ export function CollectionItems({ authorPubky, postId }: CollectionItemsProps) {
 
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-6">
-      <TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} emptyState={isConfirmedEmpty ? emptyState : undefined}>
+      <TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} emptyState={emptyState}>
         {isOwn && (
           <Container
             overrideDefaults
@@ -65,18 +64,6 @@ export function CollectionItems({ authorPubky, postId }: CollectionItemsProps) {
           </Container>
         )}
       </TimelineFeed>
-    </Container>
-  );
-}
-
-function CollectionItemsEmpty() {
-  const t = useTranslations('collections.single');
-
-  return (
-    <Container overrideDefaults data-cy="collection-items-empty" className="w-full">
-      <Typography overrideDefaults className="text-center text-base font-medium text-muted-foreground">
-        {t('empty')}
-      </Typography>
     </Container>
   );
 }

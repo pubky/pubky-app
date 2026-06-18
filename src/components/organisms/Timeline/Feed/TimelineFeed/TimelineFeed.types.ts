@@ -20,20 +20,23 @@ interface TimelineFeedPropsBase {
   children?: ReactNode;
 }
 
-type CollectionTimelineFeedProps = TimelineFeedPropsBase & {
-  variant: typeof TIMELINE_FEED_VARIANT.COLLECTION;
+type CollectionLikeTimelineFeedProps = TimelineFeedPropsBase & {
+  variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION;
   /**
-   * Collection-only empty state for the single collection page.
+   * Empty state for finite collection-like feeds.
    */
   emptyState?: ReactNode;
 };
 
 type StandardTimelineFeedProps = TimelineFeedPropsBase & {
-  variant: Exclude<TimelineFeedVariant, typeof TIMELINE_FEED_VARIANT.COLLECTION>;
+  variant: Exclude<
+    TimelineFeedVariant,
+    typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION
+  >;
   emptyState?: never;
 };
 
-export type TimelineFeedProps = CollectionTimelineFeedProps | StandardTimelineFeedProps;
+export type TimelineFeedProps = CollectionLikeTimelineFeedProps | StandardTimelineFeedProps;
 
 export interface TimelineFeedContextValue {
   /**
