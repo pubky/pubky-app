@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Library, MessageCircle, Plus, Repeat } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Controller, useForm } from 'react-hook-form';
+import type { SyntheticEvent } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -15,11 +15,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
-import { Input } from '@/atoms/Input/Input';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useAddContentForm } from '@/hooks/useAddContentForm/useAddContentForm';
+import { ADD_CONTENT_FORM_FIELDS } from '@/hooks/useAddContentForm/useAddContentForm.types';
 import { cn } from '@/libs/utils/utils';
+import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 import type { AddContentDialogProps } from './AddContentDialog.types';
-import { ADD_CONTENT_FORM_DEFAULT_VALUES, type AddContentFormValues } from './AddContentDialog.types';
 
 const AddContentTrigger = React.forwardRef<
   React.ComponentRef<typeof Button>,
@@ -110,7 +112,7 @@ function FeedInstructionCard() {
   );
 }
 
-function UrlPasteCard({ form }: { form: ReturnType<typeof useForm<AddContentFormValues>> }) {
+function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof useAddContentForm> }) {
   const t = useTranslations('collections.addContentDialog');
 
   return (
@@ -124,29 +126,41 @@ function UrlPasteCard({ form }: { form: ReturnType<typeof useForm<AddContentForm
         </Typography>
       </CardContent>
       <CardFooter className="px-6">
-        <Controller
-          control={form.control}
-          name="postUrl"
-          render={({ field }) => (
-            <Input
-              {...field}
-              placeholder="https://"
-              className="h-14 rounded-md border-dashed border-input bg-black/10 px-6 py-4 text-base font-medium shadow-xs placeholder:text-muted-foreground"
-            />
-          )}
+        <ControlledInputField
+          name={ADD_CONTENT_FORM_FIELDS.POST_URL}
+          control={addContentForm.form.control}
+          placeholder="https://"
+          variant="dashed"
+          size="lg"
+          disabled={addContentForm.isPending}
+          loading={addContentForm.isPending}
+          loadingText={t('adding')}
+          onPaste={addContentForm.handlePaste}
+          className="mb-0 bg-black/10 text-base font-medium shadow-xs"
+          dataCy="add-content-url-input"
         />
       </CardFooter>
     </Card>
   );
 }
 
-function AddContentDialogBody() {
+function AddContentDialogBody({
+  target,
+  onSuccess,
+}: {
+  target: NonNullable<AddContentDialogProps['target']>;
+  onSuccess: (postId: string) => Promise<void>;
+}) {
   const t = useTranslations('collections.addContentDialog');
-  const form = useForm<AddContentFormValues>({
-    defaultValues: ADD_CONTENT_FORM_DEFAULT_VALUES,
+  const addContentForm = useAddContentForm({
+    target,
+    onSuccess,
   });
 
-  const handleSubmit = form.handleSubmit(() => undefined);
+  const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await addContentForm.submit();
+  };
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
@@ -156,15 +170,27 @@ function AddContentDialogBody() {
       </DialogHeader>
       <Container overrideDefaults className="flex w-full flex-col gap-3 lg:flex-row">
         <FeedInstructionCard />
-        <UrlPasteCard form={form} />
+        <UrlPasteCard addContentForm={addContentForm} />
       </Container>
     </form>
   );
 }
 
-export function AddContentDialog({ className, dataCy = 'add-content-cta' }: AddContentDialogProps) {
+export function AddContentDialog({
+  className,
+  dataCy = 'add-content-cta',
+  target = { type: 'bookmarks' },
+}: AddContentDialogProps) {
+  const [open, setOpen] = React.useState(false);
+  const timelineFeed = useTimelineFeedContext();
+
+  const handleSuccess = async (postId: string) => {
+    timelineFeed?.prependOptimisticPosts(postId);
+    setOpen(false);
+  };
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <AddContentTrigger className={className} dataCy={dataCy} />
       </DialogTrigger>
@@ -172,7 +198,7 @@ export function AddContentDialog({ className, dataCy = 'add-content-cta' }: AddC
         overrideDefaults
         className="flex w-full max-w-xl flex-col items-end gap-6 overflow-hidden rounded-xl border border-border bg-popover p-6 shadow-2xl lg:p-8"
       >
-        <AddContentDialogBody />
+        <AddContentDialogBody target={target} onSuccess={handleSuccess} />
       </DialogContent>
     </Dialog>
   );

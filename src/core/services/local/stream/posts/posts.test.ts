@@ -724,6 +724,25 @@ describe('LocalStreamPostsService', () => {
       expect(result?.stream).toEqual([postId('post-3'), postId('post-2'), postId('post-1'), postId('post-4')]);
     });
 
+    it('preserves bookmark stream membership order instead of sorting by post timestamp', async () => {
+      const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL;
+      const initialStream = [postId('saved-newer')];
+      const newChunk = [postId('saved-older')];
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [
+          createMockNexusPost('saved-newer', DEFAULT_AUTHOR, BASE_TIMESTAMP),
+          createMockNexusPost('saved-older', DEFAULT_AUTHOR, BASE_TIMESTAMP + 10),
+        ],
+      });
+
+      await LocalStreamPostsService.upsert({ streamId: bookmarkStreamId, stream: initialStream });
+      await LocalStreamPostsService.persistNewStreamChunk({ streamId: bookmarkStreamId, stream: newChunk });
+
+      const result = await LocalStreamPostsService.read({ streamId: bookmarkStreamId });
+      expect(result?.stream).toEqual([postId('saved-newer'), postId('saved-older')]);
+    });
+
     it('should handle duplicates within new chunk itself', async () => {
       const initialStream = [postId('post-1')];
       const newChunk = [postId('post-2'), postId('post-2'), postId('post-3')];

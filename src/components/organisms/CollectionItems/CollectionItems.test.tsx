@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
@@ -27,7 +28,21 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
-  TimelineFeed: ({ variant }: { variant: string }) => <div data-testid="timeline-feed" data-variant={variant} />,
+  TimelineFeed: ({
+    variant,
+    children,
+    emptyState,
+  }: {
+    variant: string;
+    children?: ReactNode;
+    emptyState?: ReactNode;
+  }) => (
+    <div data-testid="timeline-feed" data-variant={variant}>
+      {children}
+      {emptyState}
+    </div>
+  ),
+  useTimelineFeedContext: () => null,
 }));
 
 // ---------------------------------------------------------------------------
@@ -125,7 +140,7 @@ describe('CollectionItems', () => {
     const { container } = render(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
     expect(screen.getByLabelText('collections.single.addContent')).toBeInTheDocument();
-    expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-variant', 'collection');
     expect(container.querySelector('[data-cy="collection-items-empty"]')).toBeInTheDocument();
     expect(screen.getByText('collections.single.empty')).toBeInTheDocument();
   });

@@ -31,7 +31,7 @@ export { useTimelineFeedContext } from './TimelineFeedContext';
  * Organism that encapsulates stream calculation and pagination logic.
  * Routes to variant-specific wrappers so each only subscribes to its own data sources.
  */
-export function TimelineFeed({ variant, children }: TimelineFeedProps) {
+export function TimelineFeed({ variant, children, emptyState }: TimelineFeedProps) {
   switch (variant) {
     case TIMELINE_FEED_VARIANT.HOME:
       return <HomeTimelineFeed>{children}</HomeTimelineFeed>;
@@ -48,7 +48,7 @@ export function TimelineFeed({ variant, children }: TimelineFeedProps) {
     case TIMELINE_FEED_VARIANT.SEARCH:
       return <SearchTimelineFeed>{children}</SearchTimelineFeed>;
     case TIMELINE_FEED_VARIANT.COLLECTION:
-      return <CollectionTimelineFeed>{children}</CollectionTimelineFeed>;
+      return <CollectionTimelineFeed emptyState={emptyState}>{children}</CollectionTimelineFeed>;
     default:
       return <TimelineLoading />;
   }
@@ -155,7 +155,13 @@ function ProfileCollectionsTimelineFeed({ children }: { children?: TimelineFeedP
   );
 }
 
-function CollectionTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
+function CollectionTimelineFeed({
+  children,
+  emptyState,
+}: {
+  children?: TimelineFeedProps['children'];
+  emptyState?: TimelineFeedProps['emptyState'];
+}) {
   // The single-collection route owns these params (`/collections/[userId]/[postId]`).
   // Reading them here mirrors how `ProfileTimelineFeed` resolves its stream from context.
   const params = useParams<{ userId: string; postId: string }>();
@@ -170,6 +176,7 @@ function CollectionTimelineFeed({ children }: { children?: TimelineFeedProps['ch
       variant={TIMELINE_FEED_VARIANT.COLLECTION}
       tagsLayout="inline"
       layoutResolution={layoutResolution}
+      emptyState={emptyState}
     >
       {children}
     </TimelineFeedWithStream>

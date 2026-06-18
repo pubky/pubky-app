@@ -1397,7 +1397,15 @@
       "fromFeedLead": "Busca una publicación",
       "fromFeedRest": " que quieras añadir y haz clic en el botón de colecciones.",
       "pasteTitle": "Pegar URL de publicación",
-      "pasteDescription": "También puedes pegar una URL de publicación para añadirla rápidamente a tu colección."
+      "pasteDescription": "También puedes pegar una URL de publicación para añadirla rápidamente a tu colección.",
+      "adding": "Añadiendo...",
+      "errors": {
+        "required": "Pega una URL de publicación.",
+        "invalid": "Introduce una URL de publicación válida.",
+        "notFound": "No pudimos encontrar esa publicación.",
+        "alreadyAdded": "Esta publicación ya está añadida.",
+        "failure": "No se pudo añadir esta publicación."
+      }
     }
   },
   "postSave": {

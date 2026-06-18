@@ -87,10 +87,12 @@ vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
 
 // Mock TimelineFeed context
 const mockPrependPosts = vi.fn();
+const mockPrependOptimisticPosts = vi.fn();
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: vi.fn(() => ({
     variant: TIMELINE_FEED_VARIANT.HOME,
     prependPosts: mockPrependPosts,
+    prependOptimisticPosts: mockPrependOptimisticPosts,
     removePosts: vi.fn(),
   })),
 }));

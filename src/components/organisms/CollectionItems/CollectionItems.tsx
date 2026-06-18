@@ -42,19 +42,29 @@ export function CollectionItems({ authorPubky, postId }: CollectionItemsProps) {
   // here stays as a defensive fall-through to the feed's own empty/error state.
   const collection = postDetails ? parseCollectionContent(postDetails.content) : null;
   const isConfirmedEmpty = postDetails != null && (collection?.items?.length ?? 0) === 0;
+  const emptyState = <CollectionItemsEmpty />;
+
+  if (!isOwn && isConfirmedEmpty) {
+    return (
+      <Container overrideDefaults className="flex w-full flex-col gap-6">
+        {emptyState}
+      </Container>
+    );
+  }
 
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-6">
-      {isOwn && (
-        <Container
-          overrideDefaults
-          data-cy="collection-add-content"
-          className={cn('grid', GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS)}
-        >
-          <AddContentDialog />
-        </Container>
-      )}
-      {isConfirmedEmpty ? <CollectionItemsEmpty /> : <TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />}
+      <TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} emptyState={isConfirmedEmpty ? emptyState : undefined}>
+        {isOwn && (
+          <Container
+            overrideDefaults
+            data-cy="collection-add-content"
+            className={cn('grid', GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS)}
+          >
+            <AddContentDialog target={{ type: 'collection', collectionId: compositeId }} />
+          </Container>
+        )}
+      </TimelineFeed>
     </Container>
   );
 }

@@ -439,6 +439,44 @@ describe('useStreamPagination', () => {
         }),
       );
     });
+
+    it('does not count optimistic membership posts in collection offset pagination', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        timestamp: undefined,
+      });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      act(() => {
+        result.current.prependOptimisticPosts('optimistic-c0');
+      });
+
+      expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2', 'c3']);
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5'],
+        timestamp: undefined,
+      });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 3,
+        }),
+      );
+      expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2', 'c3', 'c4', 'c5']);
+    });
   });
 
   describe('Stream Preparation on Initial Load', () => {
@@ -771,6 +809,43 @@ describe('useStreamPagination', () => {
       expect(result.current.postIds.length).toBe(initialPostIds.length + 2);
       expect(result.current.postIds[0]).toBe('new-post-1');
       expect(result.current.postIds[1]).toBe('new-post-2');
+    });
+  });
+
+  describe('prependOptimisticPosts', () => {
+    it('adds membership posts to the top without timestamp sorting', async () => {
+      vi.mocked(sortPostIdsByTimestamp).mockImplementation(async (ids: string[]) => {
+        const timestampMap: Record<string, number> = {
+          'old-membership-post': 100,
+          post1: 3000,
+          post2: 2000,
+          post3: 1000,
+        };
+        return [...ids].sort((a, b) => (timestampMap[b] || 0) - (timestampMap[a] || 0));
+      });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      act(() => {
+        result.current.prependOptimisticPosts('old-membership-post');
+      });
+
+      expect(result.current.postIds).toEqual(['old-membership-post', 'post1', 'post2', 'post3']);
+      expect(sortPostIdsByTimestamp).not.toHaveBeenCalledWith(
+        expect.arrayContaining(['old-membership-post', 'post1', 'post2', 'post3']),
+      );
+    });
+
+    it('dedupes optimistic posts against displayed posts', async () => {
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      act(() => {
+        result.current.prependOptimisticPosts(['optimistic-a', 'post1', 'optimistic-a']);
+      });
+
+      expect(result.current.postIds).toEqual(['optimistic-a', 'post1', 'post2', 'post3']);
     });
   });
 

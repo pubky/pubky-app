@@ -9,14 +9,15 @@ import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFee
 export function BookmarksItems() {
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-6">
-      <Container
-        overrideDefaults
-        data-cy="bookmarks-add-content"
-        className={cn('grid', GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS)}
-      >
-        <AddContentDialog />
-      </Container>
-      <TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
+      <TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS}>
+        <Container
+          overrideDefaults
+          data-cy="bookmarks-add-content"
+          className={cn('grid', GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS)}
+        >
+          <AddContentDialog target={{ type: 'bookmarks' }} />
+        </Container>
+      </TimelineFeed>
     </Container>
   );
 }

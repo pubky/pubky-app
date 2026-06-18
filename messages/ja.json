@@ -1393,7 +1393,15 @@
       "fromFeedLead": "投稿を見つけて",
       "fromFeedRest": "追加したい投稿のコレクションボタンをクリックします。",
       "pasteTitle": "投稿URLを貼り付け",
-      "pasteDescription": "投稿URLを貼り付けて、すばやくコレクションに追加することもできます。"
+      "pasteDescription": "投稿URLを貼り付けて、すばやくコレクションに追加することもできます。",
+      "adding": "追加中...",
+      "errors": {
+        "required": "投稿URLを貼り付けてください。",
+        "invalid": "有効な投稿URLを入力してください。",
+        "notFound": "その投稿が見つかりませんでした。",
+        "alreadyAdded": "この投稿はすでに追加されています。",
+        "failure": "この投稿を追加できませんでした。"
+      }
     }
   },
   "postSave": {

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import type { TimelineFeedVariant } from '@/config/feed';
+import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 
-export interface TimelineFeedProps {
+interface TimelineFeedPropsBase {
   /**
    * Variant determines which stream to fetch
    * - 'home': Uses global filters (sort, reach, content)
@@ -13,13 +13,27 @@ export interface TimelineFeedProps {
    * - 'search': Uses tags from URL query params with sort/content filters
    * - 'collection': Uses a single collection's item stream from route params
    */
-  variant: TimelineFeedVariant;
   /**
    * Optional children to render above the timeline (e.g., PostInput)
    * Children can access prependPosts via TimelineFeedContext
    */
   children?: ReactNode;
 }
+
+type CollectionTimelineFeedProps = TimelineFeedPropsBase & {
+  variant: typeof TIMELINE_FEED_VARIANT.COLLECTION;
+  /**
+   * Collection-only empty state for the single collection page.
+   */
+  emptyState?: ReactNode;
+};
+
+type StandardTimelineFeedProps = TimelineFeedPropsBase & {
+  variant: Exclude<TimelineFeedVariant, typeof TIMELINE_FEED_VARIANT.COLLECTION>;
+  emptyState?: never;
+};
+
+export type TimelineFeedProps = CollectionTimelineFeedProps | StandardTimelineFeedProps;
 
 export interface TimelineFeedContextValue {
   /**
@@ -34,6 +48,11 @@ export interface TimelineFeedContextValue {
    * @param postIds - A single post ID or array of post IDs to add
    */
   prependPosts: (postIds: string | string[]) => Promise<void>;
+  /**
+   * Add post(s) to the top without timestamp sorting.
+   * Use for membership-ordered feeds such as bookmarks and single collections.
+   */
+  prependOptimisticPosts: (postIds: string | string[]) => void;
   /**
    * Remove post(s) from the timeline
    * @param postIds - A single post ID or array of post IDs to remove

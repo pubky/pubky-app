@@ -1393,7 +1393,15 @@
       "fromFeedLead": "Find a post",
       "fromFeedRest": " you want to add and click the collections button.",
       "pasteTitle": "Paste post url",
-      "pasteDescription": "You can also paste a post URL to quickly add it to your collection."
+      "pasteDescription": "You can also paste a post URL to quickly add it to your collection.",
+      "adding": "Adding...",
+      "errors": {
+        "required": "Paste a post URL.",
+        "invalid": "Enter a valid post URL.",
+        "notFound": "We could not find that post.",
+        "alreadyAdded": "This post is already added.",
+        "failure": "Could not add this post."
+      }
     }
   },
   "postSave": {

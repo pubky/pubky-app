@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { useForm } from 'react-hook-form';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ControlledInputField } from './ControlledInputField';
 
 interface TestFormData {
@@ -48,6 +48,32 @@ describe('ControlledInputField', () => {
     );
 
     expect(screen.getByTestId('hint')).toBeInTheDocument();
+  });
+
+  it('forwards paste events to the input', () => {
+    const handlePaste = vi.fn();
+
+    render(
+      <TestWrapper>
+        {(form) => (
+          <ControlledInputField<TestFormData>
+            name="testField"
+            control={form.control}
+            label="Test Label"
+            placeholder="Enter value"
+            onPaste={handlePaste}
+          />
+        )}
+      </TestWrapper>,
+    );
+
+    fireEvent.paste(screen.getByPlaceholderText('Enter value'), {
+      clipboardData: {
+        getData: () => 'pasted value',
+      },
+    });
+
+    expect(handlePaste).toHaveBeenCalled();
   });
 });
 

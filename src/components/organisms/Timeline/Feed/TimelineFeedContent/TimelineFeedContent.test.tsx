@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -84,6 +85,7 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
       postIds,
       loading,
       hasMore,
+      emptyState,
     }: {
       postIds: string[];
       loading: boolean;
@@ -92,11 +94,13 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
       hasMore: boolean;
       loadMore: () => void;
       tagsLayout: string;
+      emptyState?: ReactNode;
     }) => (
       <div data-testid="timeline-posts">
         <span data-testid="post-count">{postIds.length}</span>
         <span data-testid="loading">{loading.toString()}</span>
         <span data-testid="has-more">{hasMore.toString()}</span>
+        {postIds.length === 0 ? emptyState : null}
       </div>
     ),
   };
@@ -104,9 +108,18 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
 
 vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
   return {
-    TimelineGridPosts: ({ postIds, showEndMessage }: { postIds: string[]; showEndMessage?: boolean }) => (
+    TimelineGridPosts: ({
+      postIds,
+      showEndMessage,
+      emptyState,
+    }: {
+      postIds: string[];
+      showEndMessage?: boolean;
+      emptyState?: ReactNode;
+    }) => (
       <div data-testid="timeline-grid-posts" data-show-end-message={String(showEndMessage)}>
         <span data-testid="grid-post-count">{postIds.length}</span>
+        {postIds.length === 0 ? emptyState : null}
       </div>
     ),
   };
@@ -126,6 +139,7 @@ const gridLayoutResolution: FeedLayoutResolution = {
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();
 const mockPrependPosts = vi.fn();
+const mockPrependOptimisticPosts = vi.fn();
 const mockRemovePosts = vi.fn();
 
 const defaultMutedUsersResult = {
@@ -144,6 +158,7 @@ const defaultPaginationResult = {
   loadMore: mockLoadMore,
   refresh: mockRefresh,
   prependPosts: mockPrependPosts,
+  prependOptimisticPosts: mockPrependOptimisticPosts,
   removePosts: mockRemovePosts,
 };
 const mockUseStreamPagination = vi.mocked(useStreamPagination);
@@ -529,6 +544,25 @@ describe('Grid layout variants (decisions D5/D7)', () => {
       />,
     );
     expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+  });
+
+  it('forwards a custom empty state to the grid renderer', () => {
+    mockUseStreamPagination.mockReturnValue({
+      ...defaultPaginationResult,
+      postIds: [],
+    });
+
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+        emptyState={<div data-testid="custom-empty">Collection is empty</div>}
+      />,
+    );
+
+    expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
   });
 
   it('renders the bookmarks variant in the grid and suppresses the end-of-feed message', () => {

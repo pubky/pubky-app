@@ -35,6 +35,7 @@ import type {
   TStreamResult,
 } from '@/services/local/stream/posts/post.types';
 import type { NexusFileDetails, NexusPostCounts, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 
 /**
@@ -360,8 +361,11 @@ export class LocalStreamPostsService {
    * Persist a new chunk of post IDs into a cached stream.
    *
    * Creates the stream when it does not exist yet. Otherwise merges the incoming
-   * IDs with the existing stream, removes duplicates, and re-sorts by post
-   * timestamp in descending order before saving.
+   * IDs with the existing stream and removes duplicates before saving.
+   *
+   * Normal timeline streams are re-sorted by post timestamp. Bookmark streams
+   * preserve membership order because their meaningful ordering is bookmark
+   * creation time, not post creation time.
    *
    * @param stream - Incoming post IDs to merge into the stream cache
    * @param streamId - Stream identifier to create or update
@@ -382,10 +386,19 @@ export class LocalStreamPostsService {
     // Combine existing and new posts
     const combinedStream = [...postStream.stream, ...newPostsToAdd];
 
+    if (this.isBookmarkStream(streamId)) {
+      await PostStreamModel.upsert(streamId, combinedStream);
+      return;
+    }
+
     // Sort by timestamp (indexed_at) in descending order (most recent first)
     const sortedStream = await sortPostIdsByTimestamp(combinedStream);
 
     await PostStreamModel.upsert(streamId, sortedStream);
+  }
+
+  private static isBookmarkStream(streamId: PostStreamId): boolean {
+    return streamId.includes(`:${StreamSource.BOOKMARKS}:`);
   }
 
   /**

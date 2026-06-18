@@ -188,6 +188,7 @@ const mockUseStreamPagination = vi.mocked(useStreamPagination);
 const mockUseFeedLayoutResolution = vi.mocked(useFeedLayoutResolution);
 
 const mockPrependPosts = vi.fn();
+const mockPrependOptimisticPosts = vi.fn();
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();
 const defaultPaginationResult = {
@@ -199,6 +200,7 @@ const defaultPaginationResult = {
   loadMore: mockLoadMore,
   refresh: mockRefresh,
   prependPosts: mockPrependPosts,
+  prependOptimisticPosts: mockPrependOptimisticPosts,
   removePosts: vi.fn(),
 };
 
@@ -657,6 +659,7 @@ describe('TimelineFeed', () => {
         const lastValue = contextValues[contextValues.length - 1];
         expect(lastValue).not.toBeNull();
         expect(lastValue?.prependPosts).toBe(mockPrependPosts);
+        expect(lastValue?.prependOptimisticPosts).toBe(mockPrependOptimisticPosts);
       });
     });
 

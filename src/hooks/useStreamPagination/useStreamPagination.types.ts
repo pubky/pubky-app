@@ -63,6 +63,16 @@ export interface UseStreamPaginationResult {
    */
   prependPosts: (postIds: string | string[]) => Promise<void>;
   /**
+   * Function to show membership-ordered posts at the top without timestamp sorting.
+   * Used by bookmarks and single-collection optimistic inserts where membership
+   * order differs from post creation time.
+   *
+   * This does not affect pagination cursors.
+   *
+   * @param postIds - A single post ID or array of post IDs to add
+   */
+  prependOptimisticPosts: (postIds: string | string[]) => void;
+  /**
    * Function to remove post(s) from the timeline
    * @param postIds - A single post ID or array of post IDs to remove
    */

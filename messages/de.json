@@ -1395,7 +1395,15 @@
       "fromFeedLead": "Finde einen Beitrag",
       "fromFeedRest": " den du hinzufügen möchtest und klicke auf die Sammlungen-Schaltfläche.",
       "pasteTitle": "Beitrags-URL einfügen",
-      "pasteDescription": "Du kannst auch eine Beitrags-URL einfügen, um ihn schnell zu deiner Sammlung hinzuzufügen."
+      "pasteDescription": "Du kannst auch eine Beitrags-URL einfügen, um ihn schnell zu deiner Sammlung hinzuzufügen.",
+      "adding": "Wird hinzugefügt...",
+      "errors": {
+        "required": "Füge eine Beitrags-URL ein.",
+        "invalid": "Gib eine gültige Beitrags-URL ein.",
+        "notFound": "Wir konnten diesen Beitrag nicht finden.",
+        "alreadyAdded": "Dieser Beitrag wurde bereits hinzugefügt.",
+        "failure": "Dieser Beitrag konnte nicht hinzugefügt werden."
+      }
     }
   },
   "postSave": {

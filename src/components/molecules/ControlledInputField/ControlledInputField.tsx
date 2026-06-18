@@ -19,13 +19,20 @@ export function ControlledInputField<T extends FieldValues>({
   icon,
   iconPosition,
   disabled = false,
+  loading = false,
+  loadingText,
+  onPaste,
+  className,
+  dataCy,
 }: ControlledInputFieldProps<T>) {
   return (
     <Container className="gap-2">
-      <Label htmlFor={name} className={FORM_LABEL_CLASSES}>
-        {label}
-        {labelHint}
-      </Label>
+      {label && (
+        <Label htmlFor={name} className={FORM_LABEL_CLASSES}>
+          {label}
+          {labelHint}
+        </Label>
+      )}
       <Controller
         name={name}
         control={control}
@@ -43,7 +50,11 @@ export function ControlledInputField<T extends FieldValues>({
             icon={icon}
             iconPosition={iconPosition}
             disabled={disabled}
-            className="mb-0"
+            loading={loading}
+            loadingText={loadingText}
+            onPaste={onPaste}
+            className={className ?? 'mb-0'}
+            dataCy={dataCy}
             status={fieldState.error ? 'error' : 'default'}
             message={fieldState.error?.message}
             messageType={fieldState.error ? 'error' : 'default'}

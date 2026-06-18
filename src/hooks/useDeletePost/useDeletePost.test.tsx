@@ -28,10 +28,12 @@ vi.mock('@/molecules/Toaster/use-toast', () => {
 // Mock organisms (useTimelineFeedContext)
 const mockRemovePosts = vi.fn();
 const mockPrependPosts = vi.fn();
+const mockPrependOptimisticPosts = vi.fn();
 const mockTimelineFeed = {
   variant: TIMELINE_FEED_VARIANT.HOME,
   removePosts: mockRemovePosts,
   prependPosts: mockPrependPosts,
+  prependOptimisticPosts: mockPrependOptimisticPosts,
 };
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => {

@@ -1,12 +1,78 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddContentDialog } from './AddContentDialog';
+
+const AUTHOR = 'a'.repeat(52);
+const VIEWER = 'v'.repeat(52);
+const POST_ID = '00357R34CQ8Q0';
+const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
+const POST_URI = `pubky://${AUTHOR}/pub/pubky.app/posts/${POST_ID}`;
+const POST_URL = `https://pubky.app/post/${AUTHOR}/${POST_ID}`;
+
+const mocks = vi.hoisted(() => ({
+  currentUserPubky: 'v'.repeat(52) as string | null,
+  bookmarkExists: vi.fn(),
+  commitCreateBookmark: vi.fn(),
+  getOrFetchPost: vi.fn(),
+  prependPosts: vi.fn(),
+  prependOptimisticPosts: vi.fn(),
+}));
 
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
 }));
 
+vi.mock('@/controllers/bookmark/bookmark', () => ({
+  BookmarkController: {
+    exists: (...args: unknown[]) => mocks.bookmarkExists(...args),
+    commitCreate: (...args: unknown[]) => mocks.commitCreateBookmark(...args),
+  },
+}));
+
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    getOrFetch: (...args: unknown[]) => mocks.getOrFetchPost(...args),
+    getDetails: vi.fn(),
+    commitUpdateCollectionItem: vi.fn(),
+  },
+}));
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
+    selector({ currentUserPubky: mocks.currentUserPubky }),
+}));
+
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
+  useTimelineFeedContext: () => ({
+    variant: 'bookmarks',
+    prependPosts: mocks.prependPosts,
+    prependOptimisticPosts: mocks.prependOptimisticPosts,
+    removePosts: vi.fn(),
+  }),
+}));
+
+function livePost() {
+  return {
+    id: COMPOSITE_ID,
+    content: 'hello',
+    kind: 'short',
+    uri: POST_URI,
+    indexed_at: 0,
+    attachments: null,
+  };
+}
+
 describe('AddContentDialog', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.currentUserPubky = VIEWER;
+    mocks.bookmarkExists.mockResolvedValue(false);
+    mocks.commitCreateBookmark.mockResolvedValue(undefined);
+    mocks.getOrFetchPost.mockResolvedValue(livePost());
+    mocks.prependPosts.mockResolvedValue(undefined);
+    mocks.prependOptimisticPosts.mockReturnValue(undefined);
+  });
+
   it('renders the Add Content trigger', () => {
     render(<AddContentDialog />);
 
@@ -23,6 +89,46 @@ describe('AddContentDialog', () => {
     expect(screen.getByText('collections.addContentDialog.fromFeedTitle')).toBeInTheDocument();
     expect(screen.getByText('collections.addContentDialog.pasteTitle')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://')).toBeInTheDocument();
+  });
+
+  it('adds pasted bookmark content, prepends it, and closes the dialog', async () => {
+    render(<AddContentDialog />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+      clipboardData: {
+        getData: () => POST_URL,
+      },
+    });
+
+    await waitFor(() =>
+      expect(mocks.commitCreateBookmark).toHaveBeenCalledWith({ postId: COMPOSITE_ID, userId: VIEWER }),
+    );
+    expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith(COMPOSITE_ID);
+    expect(mocks.prependPosts).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('disables the input and shows loading text while paste processing is pending', async () => {
+    let resolvePost!: (value: ReturnType<typeof livePost>) => void;
+    mocks.getOrFetchPost.mockReturnValue(new Promise((resolve) => (resolvePost = resolve)));
+
+    render(<AddContentDialog />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+      clipboardData: {
+        getData: () => POST_URL,
+      },
+    });
+
+    await waitFor(() => {
+      const input = screen.getByDisplayValue('collections.addContentDialog.adding');
+      expect(input).toBeDisabled();
+    });
+
+    resolvePost(livePost());
+    await waitFor(() => expect(mocks.commitCreateBookmark).toHaveBeenCalled());
   });
 });
 

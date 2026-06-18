@@ -1393,7 +1393,15 @@
       "fromFeedLead": "Encontre uma publicação",
       "fromFeedRest": " que você quer adicionar e clique no botão de coleções.",
       "pasteTitle": "Colar URL da publicação",
-      "pasteDescription": "Você também pode colar a URL de uma publicação para adicioná-la rapidamente à sua coleção."
+      "pasteDescription": "Você também pode colar a URL de uma publicação para adicioná-la rapidamente à sua coleção.",
+      "adding": "Adicionando...",
+      "errors": {
+        "required": "Cole uma URL de publicação.",
+        "invalid": "Insira uma URL de publicação válida.",
+        "notFound": "Não conseguimos encontrar essa publicação.",
+        "alreadyAdded": "Esta publicação já foi adicionada.",
+        "failure": "Não foi possível adicionar esta publicação."
+      }
     }
   },
   "postSave": {

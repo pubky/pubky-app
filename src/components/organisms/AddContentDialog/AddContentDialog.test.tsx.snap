@@ -6,7 +6,7 @@ exports[`AddContentDialog - Snapshots > matches the closed trigger snapshot 1`] 
   aria-expanded="false"
   aria-haspopup="dialog"
   aria-label="collections.single.addContent"
-  class="flex h-39 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-muted-foreground transition-colors outline-none hover:border-foreground hover:text-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+  class="flex h-39 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-muted-foreground transition-colors outline-none hover:border-foreground hover:text-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
   data-as-child="true"
   data-cy="add-content-cta"
   data-slot="dialog-trigger"
@@ -64,7 +64,7 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
       aria-expanded="true"
       aria-haspopup="dialog"
       aria-label="collections.single.addContent"
-      class="flex h-39 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-muted-foreground transition-colors outline-none hover:border-foreground hover:text-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+      class="flex h-39 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-muted-foreground transition-colors outline-none hover:border-foreground hover:text-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
       data-as-child="true"
       data-cy="add-content-cta"
       data-slot="dialog-trigger"
@@ -322,13 +322,27 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
               class="flex items-center [.border-t]:pt-6 px-6"
               data-slot="card-footer"
             >
-              <input
-                class="flex w-full min-w-0 border transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-14 rounded-md border-dashed border-input bg-black/10 px-6 py-4 text-base font-medium shadow-xs placeholder:text-muted-foreground"
-                data-testid="input"
-                name="postUrl"
-                placeholder="https://"
-                value=""
-              />
+              <div
+                class="mx-auto w-full flex-col flex gap-2"
+                data-testid="container"
+              >
+                <div
+                  class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border pl-2 border-dashed h-14 mb-0 bg-black/10 text-base font-medium shadow-xs"
+                  data-testid="container"
+                >
+                  <input
+                    aria-invalid="false"
+                    class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
+                    data-cy="add-content-url-input"
+                    data-testid="input"
+                    id="postUrl"
+                    name="postUrl"
+                    placeholder="https://"
+                    type="text"
+                    value=""
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { BookmarksItems } from './BookmarksItems';
 
@@ -7,7 +8,12 @@ vi.mock('next-intl', () => ({
 }));
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
-  TimelineFeed: ({ variant }: { variant: string }) => <div data-testid="timeline-feed" data-variant={variant} />,
+  TimelineFeed: ({ variant, children }: { variant: string; children?: ReactNode }) => (
+    <div data-testid="timeline-feed" data-variant={variant}>
+      {children}
+    </div>
+  ),
+  useTimelineFeedContext: () => null,
 }));
 
 describe('BookmarksItems', () => {
@@ -20,8 +26,8 @@ describe('BookmarksItems', () => {
   it('renders the add-content CTA above the feed', () => {
     render(<BookmarksItems />);
 
-    expect(screen.getByRole('button', { name: 'collections.single.addContent' })).toBeInTheDocument();
-    expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
+    const feed = screen.getByTestId('timeline-feed');
+    expect(within(feed).getByRole('button', { name: 'collections.single.addContent' })).toBeInTheDocument();
   });
 });
 

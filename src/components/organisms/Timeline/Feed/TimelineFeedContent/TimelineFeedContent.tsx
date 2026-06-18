@@ -26,6 +26,7 @@ interface TimelineFeedContentProps {
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
+  emptyState?: TimelineFeedProps['emptyState'];
 }
 
 interface TimelineFeedWithStreamProps {
@@ -34,6 +35,7 @@ interface TimelineFeedWithStreamProps {
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
+  emptyState?: TimelineFeedProps['emptyState'];
 }
 
 /**
@@ -48,6 +50,7 @@ export function TimelineFeedWithStream({
   tagsLayout,
   layoutResolution,
   children,
+  emptyState,
 }: TimelineFeedWithStreamProps) {
   if (!streamId) {
     return <TimelineLoading />;
@@ -59,6 +62,7 @@ export function TimelineFeedWithStream({
       variant={variant}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+      emptyState={emptyState}
     >
       {children}
     </TimelineFeedContent>
@@ -77,7 +81,14 @@ export function TimelineFeedWithStream({
  * to preserve the same flex-col spacing that children previously inherited as
  * direct descendants of that container.
  */
-function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, children }: TimelineFeedContentProps) {
+function TimelineFeedContent({
+  streamId,
+  variant,
+  tagsLayout,
+  layoutResolution,
+  children,
+  emptyState,
+}: TimelineFeedContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousMutedUserIdSetRef = useRef<Set<string> | null>(null);
 
@@ -92,6 +103,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
     loadMore,
     refresh,
     prependPosts,
+    prependOptimisticPosts,
     removePosts,
   } = useStreamPagination({
     streamId,
@@ -149,6 +161,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
   const contextValue: TimelineFeedContextValue = {
     variant,
     prependPosts,
+    prependOptimisticPosts,
     removePosts,
   };
   const showGridEndMessage =
@@ -177,6 +190,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
               hasMore={hasMore}
               loadMore={loadMore}
               showEndMessage={showGridEndMessage}
+              emptyState={emptyState}
             />
           ) : isVisualActive ? (
             <VisualTimelinePosts
@@ -195,6 +209,7 @@ function TimelineFeedContent({ streamId, variant, tagsLayout, layoutResolution, 
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
+              emptyState={emptyState}
             />
           )}
         </Container>

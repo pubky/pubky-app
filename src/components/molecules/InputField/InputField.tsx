@@ -27,6 +27,7 @@ interface InputFieldProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
   maxLength?: number;
   iconPosition?: 'left' | 'right';
   message?: ReactNode;
@@ -53,6 +54,7 @@ export function InputField({
   onChange,
   onBlur,
   onKeyDown,
+  onPaste,
   maxLength,
   iconPosition = 'left',
   message,
@@ -118,6 +120,7 @@ export function InputField({
           onChange={onChange}
           onBlur={onBlur}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
           maxLength={maxLength}
           aria-invalid={status === 'error'}
           data-cy={dataCy}

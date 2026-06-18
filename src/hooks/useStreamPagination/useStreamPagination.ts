@@ -11,6 +11,16 @@ import { isSkipPaginatedStream } from '@/models/stream/post/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
 
+function resolveDisplayedPostIds(streamPostIds: string[], optimisticPostIds: string[]) {
+  const streamPostIdsSet = new Set(streamPostIds);
+  const filteredOptimisticPostIds = optimisticPostIds.filter((id) => !streamPostIdsSet.has(id));
+
+  return {
+    optimisticPostIds: filteredOptimisticPostIds,
+    displayedPostIds: [...filteredOptimisticPostIds, ...streamPostIds],
+  };
+}
+
 /**
  * useStreamPagination
  *
@@ -33,6 +43,7 @@ export function useStreamPagination({
   const [hasMore, setHasMore] = useState(true);
 
   const postIdsRef = useRef<string[]>([]);
+  const optimisticPostIdsRef = useRef<string[]>([]);
 
   /**
    * Sets the appropriate loading state based on load type
@@ -134,7 +145,9 @@ export function useStreamPagination({
         // Update state with unique posts only
         const updatedPostIds = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
         postIdsRef.current = updatedPostIds;
-        setPostIds(updatedPostIds);
+        const displayedState = resolveDisplayedPostIds(updatedPostIds, optimisticPostIdsRef.current);
+        optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+        setPostIds(displayedState.displayedPostIds);
       } catch (err) {
         const errorMessage = isAppError(err) ? err.message : 'An unknown error occurred.';
         setError(errorMessage);
@@ -153,6 +166,7 @@ export function useStreamPagination({
    */
   const clearState = useCallback(() => {
     postIdsRef.current = [];
+    optimisticPostIdsRef.current = [];
     setPostIds([]);
     setLastPostId(undefined);
     setStreamTail(0);
@@ -199,14 +213,45 @@ export function useStreamPagination({
       // Fetch post details to get timestamps and sort
       const sortedIds = await sortPostIdsByTimestamp(allIds);
       postIdsRef.current = sortedIds;
-      setPostIds(sortedIds);
+      const displayedState = resolveDisplayedPostIds(sortedIds, optimisticPostIdsRef.current);
+      optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+      setPostIds(displayedState.displayedPostIds);
     } catch (err) {
       Logger.error('Failed to prepend posts:', err);
       // Fallback: add without sorting
       postIdsRef.current = allIds;
-      setPostIds(allIds);
+      const displayedState = resolveDisplayedPostIds(allIds, optimisticPostIdsRef.current);
+      optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+      setPostIds(displayedState.displayedPostIds);
     }
   }, []);
+
+  /**
+   * Show membership-ordered posts at the top without changing pagination state.
+   * Bookmarks and single collections have their own membership order, which can
+   * differ from the post's `indexed_at` timestamp used by regular timelines.
+   */
+  const prependOptimisticPosts = (postIds: string | string[]) => {
+    const idsToAdd = Array.isArray(postIds) ? postIds : [postIds];
+    const currentDisplayedIds = new Set([...optimisticPostIdsRef.current, ...postIdsRef.current]);
+    const newIds = idsToAdd.filter((id) => {
+      if (currentDisplayedIds.has(id)) {
+        return false;
+      }
+
+      currentDisplayedIds.add(id);
+      return true;
+    });
+
+    if (newIds.length === 0) {
+      return;
+    }
+
+    const optimisticPostIds = [...newIds, ...optimisticPostIdsRef.current];
+    const displayedState = resolveDisplayedPostIds(postIdsRef.current, optimisticPostIds);
+    optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+    setPostIds(displayedState.displayedPostIds);
+  };
 
   /**
    * Remove post(s) from the timeline
@@ -217,9 +262,12 @@ export function useStreamPagination({
     const idsToRemove = Array.isArray(postIds) ? postIds : [postIds];
     const idsToRemoveSet = new Set(idsToRemove);
 
+    optimisticPostIdsRef.current = optimisticPostIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
     const updatedPostIds = postIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
     postIdsRef.current = updatedPostIds;
-    setPostIds(updatedPostIds);
+    const displayedState = resolveDisplayedPostIds(updatedPostIds, optimisticPostIdsRef.current);
+    optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+    setPostIds(displayedState.displayedPostIds);
   }, []);
 
   // Initial load and reset when streamId changes
@@ -240,6 +288,7 @@ export function useStreamPagination({
     loadMore,
     refresh,
     prependPosts,
+    prependOptimisticPosts,
     removePosts,
   };
 }

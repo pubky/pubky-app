@@ -1,12 +1,7 @@
+import type { AddContentTarget } from '@/hooks/useAddContentForm/useAddContentForm.types';
+
 export interface AddContentDialogProps {
   className?: string;
   dataCy?: string;
+  target?: AddContentTarget;
 }
-
-export interface AddContentFormValues {
-  postUrl: string;
-}
-
-export const ADD_CONTENT_FORM_DEFAULT_VALUES: AddContentFormValues = {
-  postUrl: '',
-};

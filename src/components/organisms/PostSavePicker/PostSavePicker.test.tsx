@@ -190,7 +190,12 @@ describe('PostSavePicker', () => {
   it('removes the post from the bookmarks grid when the picker closes after unbookmarking', async () => {
     const removePosts = vi.fn();
 
-    renderPicker({ variant: TIMELINE_FEED_VARIANT.BOOKMARKS, prependPosts: vi.fn(), removePosts });
+    renderPicker({
+      variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+      prependPosts: vi.fn(),
+      prependOptimisticPosts: vi.fn(),
+      removePosts,
+    });
 
     openPicker();
     await screen.findByText('Bookmarks');
@@ -206,6 +211,7 @@ describe('PostSavePicker', () => {
     const { rerenderPicker } = renderPicker({
       variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
       prependPosts: vi.fn(),
+      prependOptimisticPosts: vi.fn(),
       removePosts,
     });
 
@@ -228,7 +234,12 @@ describe('PostSavePicker', () => {
     const removePosts = vi.fn();
     mockState.isBookmarked = true;
 
-    renderPicker({ variant: TIMELINE_FEED_VARIANT.BOOKMARKS, prependPosts: vi.fn(), removePosts });
+    renderPicker({
+      variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+      prependPosts: vi.fn(),
+      prependOptimisticPosts: vi.fn(),
+      removePosts,
+    });
 
     openPicker();
     await screen.findByText('Bookmarks');
@@ -244,7 +255,12 @@ describe('PostSavePicker', () => {
     mockState.isBookmarked = false;
     mockState.isBookmarkLoading = true;
 
-    renderPicker({ variant: TIMELINE_FEED_VARIANT.BOOKMARKS, prependPosts: vi.fn(), removePosts });
+    renderPicker({
+      variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+      prependPosts: vi.fn(),
+      prependOptimisticPosts: vi.fn(),
+      removePosts,
+    });
 
     openPicker();
     await screen.findByText('Bookmarks');
@@ -258,7 +274,12 @@ describe('PostSavePicker', () => {
     const removePosts = vi.fn();
     mockState.isBookmarked = false;
 
-    renderPicker({ variant: TIMELINE_FEED_VARIANT.HOME, prependPosts: vi.fn(), removePosts });
+    renderPicker({
+      variant: TIMELINE_FEED_VARIANT.HOME,
+      prependPosts: vi.fn(),
+      prependOptimisticPosts: vi.fn(),
+      removePosts,
+    });
 
     openPicker();
     await screen.findByText('Bookmarks');
