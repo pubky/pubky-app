@@ -7,10 +7,10 @@ import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { cn } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog';
+import { CollectionItemsEmpty } from '@/organisms/CollectionItemsEmpty/CollectionItemsEmpty';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { CollectionItemsProps } from './CollectionItems.types';
-import { CollectionItemsEmpty } from './CollectionItemsEmpty';
 
 /**
  * CollectionItems
