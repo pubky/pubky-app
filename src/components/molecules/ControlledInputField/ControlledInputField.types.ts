@@ -32,6 +32,8 @@ export interface ControlledInputFieldProps<T extends FieldValues> {
   onPaste?: (event: React.ClipboardEvent<HTMLInputElement>) => void;
   /** Optional input wrapper class */
   className?: string;
+  /** Optional class applied to the inner input element */
+  inputClassName?: string;
   /** Cypress selector forwarded to the input */
   dataCy?: string;
 }

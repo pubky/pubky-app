@@ -14,9 +14,13 @@ const mocks = vi.hoisted(() => ({
   bookmarkExists: vi.fn(),
   commitCreateBookmark: vi.fn(),
   getOrFetchPost: vi.fn(),
+  getCollectionDetails: vi.fn(),
+  commitUpdateCollectionItem: vi.fn(),
   prependPosts: vi.fn(),
   prependOptimisticPosts: vi.fn(),
 }));
+
+const COLLECTION_ID = `${VIEWER}:collection-1`;
 
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
@@ -32,8 +36,8 @@ vi.mock('@/controllers/bookmark/bookmark', () => ({
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     getOrFetch: (...args: unknown[]) => mocks.getOrFetchPost(...args),
-    getDetails: vi.fn(),
-    commitUpdateCollectionItem: vi.fn(),
+    getDetails: (...args: unknown[]) => mocks.getCollectionDetails(...args),
+    commitUpdateCollectionItem: (...args: unknown[]) => mocks.commitUpdateCollectionItem(...args),
   },
 }));
 
@@ -62,6 +66,21 @@ function livePost() {
   };
 }
 
+function collectionDetails(items: string[] = []) {
+  return {
+    id: COLLECTION_ID,
+    content: JSON.stringify({
+      name: 'Saved',
+      description: '',
+      items,
+    }),
+    kind: 'collection',
+    uri: '',
+    indexed_at: 0,
+    attachments: null,
+  };
+}
+
 describe('AddContentDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,6 +88,8 @@ describe('AddContentDialog', () => {
     mocks.bookmarkExists.mockResolvedValue(false);
     mocks.commitCreateBookmark.mockResolvedValue(undefined);
     mocks.getOrFetchPost.mockResolvedValue(livePost());
+    mocks.getCollectionDetails.mockResolvedValue(collectionDetails());
+    mocks.commitUpdateCollectionItem.mockResolvedValue(undefined);
     mocks.prependPosts.mockResolvedValue(undefined);
     mocks.prependOptimisticPosts.mockReturnValue(undefined);
   });
@@ -85,7 +106,7 @@ describe('AddContentDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('collections.addContentDialog.title')).toBeInTheDocument();
+    expect(screen.getByTestId('dialog-title')).toHaveTextContent('collections.addContentDialog.title');
     expect(screen.getByText('collections.addContentDialog.fromFeedTitle')).toBeInTheDocument();
     expect(screen.getByText('collections.addContentDialog.pasteTitle')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://')).toBeInTheDocument();
@@ -129,6 +150,28 @@ describe('AddContentDialog', () => {
 
     resolvePost(livePost());
     await waitFor(() => expect(mocks.commitCreateBookmark).toHaveBeenCalled());
+  });
+
+  it('adds pasted content to a collection and closes the dialog', async () => {
+    render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+      clipboardData: {
+        getData: () => POST_URL,
+      },
+    });
+
+    await waitFor(() =>
+      expect(mocks.commitUpdateCollectionItem).toHaveBeenCalledWith({
+        collectionId: COLLECTION_ID,
+        postId: COMPOSITE_ID,
+        shouldAdd: true,
+      }),
+    );
+    expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
+    expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith(COMPOSITE_ID);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });
 

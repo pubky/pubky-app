@@ -34,6 +34,7 @@ interface InputFieldProps {
   messageType?: 'default' | 'info' | 'alert' | 'error' | 'success';
   size?: 'sm' | 'md' | 'lg';
   dataCy?: string;
+  inputClassName?: React.HTMLAttributes<HTMLInputElement>['className'];
 }
 export function InputField({
   id,
@@ -61,6 +62,7 @@ export function InputField({
   messageType = 'default',
   size = 'md',
   dataCy,
+  inputClassName,
 }: InputFieldProps) {
   const t = useTranslations('common');
   const resolvedLoadingText = loadingText ?? t('loading');
@@ -111,7 +113,7 @@ export function InputField({
           id={id}
           name={name}
           type="text"
-          className={cn('w-full border-none !bg-transparent')}
+          className={cn('w-full border-none !bg-transparent', inputClassName)}
           value={loading ? resolvedLoadingText : value}
           placeholder={placeholder}
           disabled={disabled || loading}

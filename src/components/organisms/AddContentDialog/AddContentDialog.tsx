@@ -1,9 +1,8 @@
 'use client';
 
-import * as React from 'react';
+import { type ComponentPropsWithoutRef, type ComponentRef, forwardRef, type SyntheticEvent, useState } from 'react';
 import { Library, MessageCircle, Plus, Repeat } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { SyntheticEvent } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -28,10 +27,10 @@ interface AddContentDialogProps {
   target?: AddContentTarget;
 }
 
-const AddContentTrigger = React.forwardRef<
-  React.ComponentRef<typeof Button>,
-  React.ComponentPropsWithoutRef<typeof Button> & AddContentDialogProps
->(({ className, dataCy, ...props }, ref) => {
+const AddContentTrigger = forwardRef<
+  ComponentRef<typeof Button>,
+  ComponentPropsWithoutRef<typeof Button> & AddContentDialogProps
+>(function AddContentTrigger({ className, dataCy, ...props }, ref) {
   const t = useTranslations('collections.single');
 
   return (
@@ -54,7 +53,6 @@ const AddContentTrigger = React.forwardRef<
     </Button>
   );
 });
-AddContentTrigger.displayName = 'AddContentTrigger';
 
 function ActionPill({
   icon: Icon,
@@ -88,7 +86,7 @@ function FeedInstructionCard() {
   const t = useTranslations('collections.addContentDialog');
 
   return (
-    <Card className="min-w-0 flex-1 gap-6 overflow-hidden rounded-md py-6 shadow-sm">
+    <Card className="min-w-0 flex-1 overflow-hidden rounded-md py-6 shadow-sm">
       <CardHeader className="px-6">
         <CardTitle className="text-base leading-none font-bold text-card-foreground lg:text-brand">
           {t('fromFeedTitle')}
@@ -121,7 +119,7 @@ function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof us
   const t = useTranslations('collections.addContentDialog');
 
   return (
-    <Card className="min-w-0 flex-1 gap-6 overflow-hidden rounded-md py-6 shadow-sm">
+    <Card className="min-w-0 flex-1 overflow-hidden rounded-md py-6 shadow-sm">
       <CardHeader className="px-6">
         <CardTitle className="text-base leading-none font-bold text-card-foreground">{t('pasteTitle')}</CardTitle>
       </CardHeader>
@@ -136,12 +134,13 @@ function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof us
           control={addContentForm.form.control}
           placeholder="https://"
           variant="dashed"
-          size="lg"
+          size="md"
           disabled={addContentForm.isPending}
           loading={addContentForm.isPending}
           loadingText={t('adding')}
           onPaste={addContentForm.handlePaste}
-          className="mb-0 bg-black/10 text-base font-medium shadow-xs"
+          className="mb-0 h-auto border-input bg-background/10! px-6 py-4 font-medium shadow-xs"
+          inputClassName="h-auto p-0 shadow-none"
           dataCy="add-content-url-input"
         />
       </CardFooter>
@@ -169,8 +168,8 @@ function AddContentDialogBody({
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
-      <DialogHeader className="gap-1.5 pr-0">
-        <DialogTitle className="text-xl leading-7 font-bold lg:text-2xl lg:leading-8">{t('title')}</DialogTitle>
+      <DialogHeader className="pr-0">
+        <DialogTitle>{t('title')}</DialogTitle>
         <DialogDescription>{t('description')}</DialogDescription>
       </DialogHeader>
       <Container overrideDefaults className="flex w-full flex-col gap-3 lg:flex-row">
@@ -186,7 +185,8 @@ export function AddContentDialog({
   dataCy = 'add-content-cta',
   target = { type: 'bookmarks' },
 }: AddContentDialogProps) {
-  const [open, setOpen] = React.useState(false);
+  const t = useTranslations('collections.addContentDialog');
+  const [open, setOpen] = useState(false);
   const timelineFeed = useTimelineFeedContext();
 
   const handleSuccess = async (postId: string) => {
@@ -199,10 +199,7 @@ export function AddContentDialog({
       <DialogTrigger asChild>
         <AddContentTrigger className={className} dataCy={dataCy} />
       </DialogTrigger>
-      <DialogContent
-        overrideDefaults
-        className="flex w-full max-w-xl flex-col items-end gap-6 overflow-hidden rounded-xl border border-border bg-popover p-6 shadow-2xl lg:p-8"
-      >
+      <DialogContent className="flex max-w-xl flex-col overflow-hidden bg-popover shadow-2xl" hiddenTitle={t('title')}>
         <AddContentDialogBody target={target} onSuccess={handleSuccess} />
       </DialogContent>
     </Dialog>

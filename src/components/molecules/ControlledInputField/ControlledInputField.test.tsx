@@ -75,6 +75,19 @@ describe('ControlledInputField', () => {
 
     expect(handlePaste).toHaveBeenCalled();
   });
+
+  it('renders without a label wrapper', () => {
+    render(
+      <TestWrapper>
+        {(form) => (
+          <ControlledInputField<TestFormData> name="testField" control={form.control} placeholder="Enter value" />
+        )}
+      </TestWrapper>,
+    );
+
+    expect(screen.queryByText('Test Label')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter value')).toBeInTheDocument();
+  });
 });
 
 describe('ControlledInputField - Snapshots', () => {
