@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
@@ -64,12 +65,17 @@ export function Collection({ postId }: CollectionProps) {
  * is safe here.
  */
 function CollectionResolved({ postId }: CollectionProps) {
+  const pullToRefreshContainerRef = useRef<HTMLDivElement>(null);
   const { pubky: authorPubky, id: rawPostId } = parseCompositeId(postId);
 
   return (
-    <>
+    <Container ref={pullToRefreshContainerRef} overrideDefaults className="flex w-full flex-col gap-12">
       <CollectionHero authorPubky={authorPubky} postId={rawPostId} />
-      <CollectionItems authorPubky={authorPubky} postId={rawPostId} />
-    </>
+      <CollectionItems
+        authorPubky={authorPubky}
+        postId={rawPostId}
+        pullToRefreshContainerRef={pullToRefreshContainerRef}
+      />
+    </Container>
   );
 }

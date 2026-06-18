@@ -9,15 +9,21 @@ exports[`Collection (template) > matches the snapshot for the resolved collectio
     data-testid="container"
   >
     <div
-      data-author="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
-      data-post="0034BBBDFK83G"
-      data-testid="collection-hero"
-    />
-    <div
-      data-author="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
-      data-post="0034BBBDFK83G"
-      data-testid="collection-items"
-    />
+      class="flex w-full flex-col gap-12"
+      data-testid="container"
+    >
+      <div
+        data-author="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+        data-post="0034BBBDFK83G"
+        data-testid="collection-hero"
+      />
+      <div
+        data-author="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+        data-has-ptr-ref="true"
+        data-post="0034BBBDFK83G"
+        data-testid="collection-items"
+      />
+    </div>
     <div
       data-testid="collections-sections"
     />

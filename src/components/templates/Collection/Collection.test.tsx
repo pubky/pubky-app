@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
@@ -21,8 +21,17 @@ vi.mock('@/organisms/CollectionHero/CollectionHero', () => ({
 }));
 
 vi.mock('@/organisms/CollectionItems/CollectionItems', () => ({
-  CollectionItems: (p: { authorPubky: string; postId: string }) => (
-    <div data-testid="collection-items" data-author={p.authorPubky} data-post={p.postId} />
+  CollectionItems: (p: {
+    authorPubky: string;
+    postId: string;
+    pullToRefreshContainerRef?: RefObject<HTMLElement | null>;
+  }) => (
+    <div
+      data-testid="collection-items"
+      data-author={p.authorPubky}
+      data-post={p.postId}
+      data-has-ptr-ref={String(Boolean(p.pullToRefreshContainerRef))}
+    />
   ),
 }));
 
@@ -94,6 +103,7 @@ describe('Collection (template)', () => {
     expect(hero).toHaveAttribute('data-post', POST_ID);
     expect(items).toHaveAttribute('data-author', AUTHOR_PUBKY);
     expect(items).toHaveAttribute('data-post', POST_ID);
+    expect(items).toHaveAttribute('data-has-ptr-ref', 'true');
     expect(screen.getByTestId('collections-sections')).toBeInTheDocument();
     expect(screen.queryByTestId('collection-not-found')).not.toBeInTheDocument();
   });

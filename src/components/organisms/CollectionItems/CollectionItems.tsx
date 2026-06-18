@@ -28,7 +28,7 @@ import { CollectionItemsEmpty } from './CollectionItemsEmpty';
  * collections keep the feed mounted so `AddContentDialog` can use the timeline
  * context for optimistic inserts.
  */
-export function CollectionItems({ authorPubky, postId }: CollectionItemsProps) {
+export function CollectionItems({ authorPubky, postId, pullToRefreshContainerRef }: CollectionItemsProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
   const { postDetails } = usePostDetails(compositeId);
 
@@ -53,7 +53,11 @@ export function CollectionItems({ authorPubky, postId }: CollectionItemsProps) {
 
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-6">
-      <TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} emptyState={emptyState}>
+      <TimelineFeed
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        emptyState={emptyState}
+        pullToRefreshContainerRef={pullToRefreshContainerRef}
+      >
         {isOwn && (
           <Container
             overrideDefaults

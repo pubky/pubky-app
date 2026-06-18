@@ -1,5 +1,5 @@
+import { createRef, type ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -13,6 +13,7 @@ import {
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
 import { LAYOUT } from '@/stores/home/home.types';
+import { useTimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
@@ -161,6 +162,12 @@ const defaultPaginationResult = {
 const mockUseStreamPagination = vi.mocked(useStreamPagination);
 const mockUseMutedUsers = vi.mocked(useMutedUsers);
 
+function ContextProbe() {
+  const context = useTimelineFeedContext();
+
+  return <div data-testid="timeline-context-collection-id">{context?.collectionId ?? 'none'}</div>;
+}
+
 describe('TimelineFeedContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -241,6 +248,20 @@ describe('TimelineFeedContent', () => {
         />,
       );
       expect(screen.getByTestId('post-count')).toHaveTextContent('3');
+    });
+
+    it('provides collection id in the timeline feed context when passed', () => {
+      render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+        >
+          <ContextProbe />
+        </TimelineFeedWithStream>,
+      );
+      expect(screen.getByTestId('timeline-context-collection-id')).toHaveTextContent('author-pubky:collection-post');
     });
   });
 
@@ -589,7 +610,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     expect(screen.queryByTestId('timeline-grid-posts')).not.toBeInTheDocument();
   });
 
-  it('disables pull-to-refresh for the collection variant', () => {
+  it('enables pull-to-refresh for the collection variant', () => {
     render(
       <TimelineFeedWithStream
         streamId={COLLECTION_STREAM_ID}
@@ -598,7 +619,36 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         layoutResolution={gridLayoutResolution}
       />,
     );
-    expect(mockUsePullToRefresh).toHaveBeenCalledWith(expect.objectContaining({ disabled: true }));
+    expect(mockUsePullToRefresh).toHaveBeenCalledWith(expect.objectContaining({ disabled: false }));
+  });
+
+  it('uses an external pull-to-refresh container ref when provided', () => {
+    const pullToRefreshContainerRef = createRef<HTMLElement>();
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+        pullToRefreshContainerRef={pullToRefreshContainerRef}
+      />,
+    );
+    expect(mockUsePullToRefresh).toHaveBeenCalledWith(
+      expect.objectContaining({ containerRef: pullToRefreshContainerRef }),
+    );
+  });
+
+  it('shows pull-to-refresh indicator for the collection variant when pulling', () => {
+    mockUsePullToRefresh.mockReturnValue({ state: 'pulling' as const, pullDistance: 50 });
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+    expect(screen.getByTestId('pull-to-refresh')).toBeInTheDocument();
   });
 
   it('applies muting for the collection variant (not in the mute skip list, D7)', () => {

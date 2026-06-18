@@ -7,7 +7,7 @@ import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
-import { isSkipPaginatedStream } from '@/models/stream/post/postStream.types';
+import { isCollectionItemsStream, isSkipPaginatedStream } from '@/models/stream/post/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
 
@@ -164,10 +164,12 @@ export function useStreamPagination({
   /**
    * Clears all state
    */
-  const clearState = useCallback(() => {
+  const clearState = useCallback(({ preserveOptimisticPostIds = false } = {}) => {
     postIdsRef.current = [];
-    optimisticPostIdsRef.current = [];
-    setPostIds([]);
+    if (!preserveOptimisticPostIds) {
+      optimisticPostIdsRef.current = [];
+    }
+    setPostIds(optimisticPostIdsRef.current);
     setLastPostId(undefined);
     setStreamTail(0);
     setHasMore(true);
@@ -178,9 +180,9 @@ export function useStreamPagination({
    * Refresh function - clears state and fetches from beginning
    */
   const refresh = useCallback(async () => {
-    clearState();
+    clearState({ preserveOptimisticPostIds: isCollectionItemsStream(streamId) });
     await fetchStreamSlice(true);
-  }, [clearState, fetchStreamSlice]);
+  }, [clearState, fetchStreamSlice, streamId]);
 
   /**
    * Load more function - fetches next page

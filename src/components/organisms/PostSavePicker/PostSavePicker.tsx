@@ -243,6 +243,7 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const { requireAuth } = useRequireAuth();
   const feed = useTimelineFeedContext();
   const feedVariant = feed?.variant;
+  const feedCollectionId = feed?.collectionId;
   const removePosts = feed?.removePosts;
   const [open, setOpen] = useState(false);
   const saveTargets = usePostSaveTargets(postId);
@@ -250,16 +251,26 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const isBookmarkResolved = !saveTargets.isBookmarkLoading && !saveTargets.isBookmarkToggling;
   const shouldRemoveFromBookmarksFeed =
     feedVariant === TIMELINE_FEED_VARIANT.BOOKMARKS && !open && isBookmarkResolved && !saveTargets.isBookmarked;
+  const currentCollectionTarget =
+    feedVariant === TIMELINE_FEED_VARIANT.COLLECTION && feedCollectionId
+      ? saveTargets.collections.find((collection) => collection.id === feedCollectionId)
+      : undefined;
+  const shouldRemoveFromCollectionFeed =
+    feedVariant === TIMELINE_FEED_VARIANT.COLLECTION &&
+    !open &&
+    !saveTargets.isCollectionsLoading &&
+    currentCollectionTarget !== undefined &&
+    !currentCollectionTarget.isUpdating &&
+    !currentCollectionTarget.isSaved;
 
-  // Closing the picker commits the save session. On the bookmarks feed, a post
-  // that is no longer bookmarked should leave the grid so the visible list
-  // matches the live bookmark count. While the picker stays open, the user can
-  // freely toggle targets without the card shifting under them. Waiting for the
-  // resolved bookmark state also covers closing while an unbookmark is in flight.
+  // Closing the picker commits the save session. On finite library feeds, a post
+  // that no longer belongs to the current target should leave the grid so the
+  // visible list matches the live membership. While the picker stays open, the
+  // user can freely toggle targets without the card shifting under them.
   useEffect(() => {
-    if (!shouldRemoveFromBookmarksFeed || !removePosts) return;
+    if ((!shouldRemoveFromBookmarksFeed && !shouldRemoveFromCollectionFeed) || !removePosts) return;
     removePosts(postId);
-  }, [postId, removePosts, shouldRemoveFromBookmarksFeed]);
+  }, [postId, removePosts, shouldRemoveFromBookmarksFeed, shouldRemoveFromCollectionFeed]);
 
   const trigger = (
     <Button

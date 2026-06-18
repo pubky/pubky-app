@@ -477,6 +477,63 @@ describe('useStreamPagination', () => {
       );
       expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2', 'c3', 'c4', 'c5']);
     });
+
+    it('preserves optimistic membership posts across collection refresh without changing the next offset', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2'],
+        timestamp: undefined,
+      });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      act(() => {
+        result.current.prependOptimisticPosts('optimistic-c0');
+      });
+
+      expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2']);
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2'],
+        timestamp: undefined,
+      });
+
+      await act(async () => {
+        await result.current.refresh();
+      });
+
+      expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2']);
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 0,
+          lastPostId: undefined,
+        }),
+      );
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c3'],
+        timestamp: undefined,
+      });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 2,
+        }),
+      );
+      expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2', 'c3']);
+    });
   });
 
   describe('Stream Preparation on Initial Load', () => {

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 
 interface TimelineFeedPropsBase {
@@ -20,12 +20,28 @@ interface TimelineFeedPropsBase {
   children?: ReactNode;
 }
 
-type CollectionLikeTimelineFeedProps = TimelineFeedPropsBase & {
-  variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION;
+type TimelineFeedPullToRefreshContainerRef = RefObject<HTMLElement | null>;
+
+type BookmarksTimelineFeedProps = TimelineFeedPropsBase & {
+  variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS;
   /**
    * Empty state for finite collection-like feeds.
    */
   emptyState?: ReactNode;
+  pullToRefreshContainerRef?: never;
+};
+
+type CollectionTimelineFeedProps = TimelineFeedPropsBase & {
+  variant: typeof TIMELINE_FEED_VARIANT.COLLECTION;
+  /**
+   * Empty state for finite collection-like feeds.
+   */
+  emptyState?: ReactNode;
+  /**
+   * Optional element that should own pull-to-refresh touch events. Defaults to
+   * the feed container.
+   */
+  pullToRefreshContainerRef?: TimelineFeedPullToRefreshContainerRef;
 };
 
 type StandardTimelineFeedProps = TimelineFeedPropsBase & {
@@ -34,9 +50,10 @@ type StandardTimelineFeedProps = TimelineFeedPropsBase & {
     typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION
   >;
   emptyState?: never;
+  pullToRefreshContainerRef?: never;
 };
 
-export type TimelineFeedProps = CollectionLikeTimelineFeedProps | StandardTimelineFeedProps;
+export type TimelineFeedProps = BookmarksTimelineFeedProps | CollectionTimelineFeedProps | StandardTimelineFeedProps;
 
 export interface TimelineFeedContextValue {
   /**
@@ -46,6 +63,11 @@ export interface TimelineFeedContextValue {
    * feed.
    */
   variant: TimelineFeedVariant;
+  /**
+   * Current collection composite id when this context belongs to a single
+   * collection feed.
+   */
+  collectionId?: string;
   /**
    * Add post(s) to the timeline, sorted by timestamp
    * @param postIds - A single post ID or array of post IDs to add

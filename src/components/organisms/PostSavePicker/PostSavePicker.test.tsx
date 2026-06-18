@@ -10,6 +10,9 @@ const mockState = vi.hoisted(() => ({
   isBookmarked: true,
   isBookmarkLoading: false,
   isBookmarkToggling: false,
+  isCollectionsLoading: false,
+  collection1Saved: true,
+  collection1Updating: false,
   toggleBookmark: vi.fn(),
   toggleCollection: vi.fn(),
   createCollectionWithPost: vi.fn(),
@@ -38,8 +41,8 @@ vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => ({
         id: 'author:collection1',
         name: 'Proof of Work',
         description: 'Bitcoin writing',
-        isSaved: true,
-        isUpdating: false,
+        isSaved: mockState.collection1Saved,
+        isUpdating: mockState.collection1Updating,
       },
       {
         id: 'author:collection2',
@@ -49,7 +52,7 @@ vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => ({
         isUpdating: false,
       },
     ],
-    isCollectionsLoading: false,
+    isCollectionsLoading: mockState.isCollectionsLoading,
     isCreatingCollection: false,
     toggleBookmark: mockState.toggleBookmark,
     toggleCollection: mockState.toggleCollection,
@@ -91,6 +94,9 @@ describe('PostSavePicker', () => {
     mockState.isBookmarked = true;
     mockState.isBookmarkLoading = false;
     mockState.isBookmarkToggling = false;
+    mockState.isCollectionsLoading = false;
+    mockState.collection1Saved = true;
+    mockState.collection1Updating = false;
   });
 
   const renderPicker = (feedContext?: TimelineFeedContextValue) => {
@@ -243,6 +249,70 @@ describe('PostSavePicker', () => {
 
     openPicker();
     await screen.findByText('Bookmarks');
+
+    closePicker();
+
+    expect(removePosts).not.toHaveBeenCalled();
+  });
+
+  it('removes the post from the collection grid when the picker closes after removing it from the current collection', async () => {
+    const removePosts = vi.fn();
+
+    renderPicker({
+      variant: TIMELINE_FEED_VARIANT.COLLECTION,
+      collectionId: 'author:collection1',
+      prependPosts: vi.fn(),
+      prependOptimisticPosts: vi.fn(),
+      removePosts,
+    });
+
+    openPicker();
+    await screen.findByText('Proof of Work');
+
+    mockState.collection1Saved = false;
+    closePicker();
+
+    expect(removePosts).toHaveBeenCalledWith('author:post1');
+  });
+
+  it('removes the post from the collection grid after an in-flight collection removal resolves', async () => {
+    const removePosts = vi.fn();
+    const { rerenderPicker } = renderPicker({
+      variant: TIMELINE_FEED_VARIANT.COLLECTION,
+      collectionId: 'author:collection1',
+      prependPosts: vi.fn(),
+      prependOptimisticPosts: vi.fn(),
+      removePosts,
+    });
+
+    openPicker();
+    await screen.findByText('Proof of Work');
+
+    mockState.collection1Saved = false;
+    mockState.collection1Updating = true;
+    closePicker();
+
+    expect(removePosts).not.toHaveBeenCalled();
+
+    mockState.collection1Updating = false;
+    rerenderPicker();
+
+    expect(removePosts).toHaveBeenCalledWith('author:post1');
+  });
+
+  it('keeps the post in the collection grid when it still belongs to the current collection on close', async () => {
+    const removePosts = vi.fn();
+
+    renderPicker({
+      variant: TIMELINE_FEED_VARIANT.COLLECTION,
+      collectionId: 'author:collection1',
+      prependPosts: vi.fn(),
+      prependOptimisticPosts: vi.fn(),
+      removePosts,
+    });
+
+    openPicker();
+    await screen.findByText('Proof of Work');
 
     closePicker();
 

@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { buildCompositeId } from '@/models/models.utils';
 import { buildCollectionItemsStreamId } from '@/models/stream/post/postStream.types';
 import { TimelineFeed } from './TimelineFeed';
 
@@ -35,6 +36,7 @@ interface CapturedStreamProps {
   variant: string;
   tagsLayout: string;
   layoutResolution?: FeedLayoutResolution;
+  collectionId?: string;
 }
 
 const capturedProps: CapturedStreamProps[] = [];
@@ -61,6 +63,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
 
     const props = lastProps();
     expect(props.streamId).toBe(buildCollectionItemsStreamId('author-1', 'post-1'));
+    expect(props.collectionId).toBe(buildCompositeId({ pubky: 'author-1', id: 'post-1' }));
     expect(props.variant).toBe(TIMELINE_FEED_VARIANT.COLLECTION);
     expect(props.tagsLayout).toBe('inline');
     expect(props.layoutResolution?.isGridActive).toBe(true);

@@ -1,5 +1,5 @@
+import { createRef, type ReactNode, type RefObject } from 'react';
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
@@ -11,6 +11,7 @@ import { CollectionItems } from './CollectionItems';
 // ---------------------------------------------------------------------------
 
 const mockUseAuthStore = vi.fn();
+const mockTimelineFeedProps = vi.hoisted(() => vi.fn());
 
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
@@ -28,19 +29,21 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
-  TimelineFeed: ({
-    variant,
-    children,
-    emptyState,
-  }: {
+  TimelineFeed: (props: {
     variant: string;
     children?: ReactNode;
     emptyState?: ReactNode;
-  }) => (
-    <div data-testid="timeline-feed" data-variant={variant} data-has-empty-state={String(Boolean(emptyState))}>
-      {children}
-    </div>
-  ),
+    pullToRefreshContainerRef?: RefObject<HTMLElement | null>;
+  }) => {
+    const { variant, children, emptyState, pullToRefreshContainerRef } = props;
+    mockTimelineFeedProps({ pullToRefreshContainerRef });
+
+    return (
+      <div data-testid="timeline-feed" data-variant={variant} data-has-empty-state={String(Boolean(emptyState))}>
+        {children}
+      </div>
+    );
+  },
   useTimelineFeedContext: () => null,
 }));
 
@@ -92,6 +95,7 @@ function setPostDetails(content: string | null) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockTimelineFeedProps.mockClear();
   setAuthStore(null);
   setPostDetails(COLLECTION_CONTENT);
 });
@@ -111,6 +115,21 @@ describe('CollectionItems', () => {
     expect(feed).toHaveAttribute('data-has-empty-state', 'true');
     expect(screen.queryByLabelText('collections.single.addContent')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collection-items-empty')).not.toBeInTheDocument();
+  });
+
+  it('passes the page-level pull-to-refresh ref to the timeline feed', () => {
+    setPostDetails(COLLECTION_CONTENT);
+    const pullToRefreshContainerRef = createRef<HTMLElement>();
+
+    render(
+      <CollectionItems
+        authorPubky={AUTHOR_PUBKY}
+        postId={POST_ID}
+        pullToRefreshContainerRef={pullToRefreshContainerRef}
+      />,
+    );
+
+    expect(mockTimelineFeedProps).toHaveBeenCalledWith({ pullToRefreshContainerRef });
   });
 
   it('renders the owner Add Content CTA above the feed for a non-empty envelope', () => {

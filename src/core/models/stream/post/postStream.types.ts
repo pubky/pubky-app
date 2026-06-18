@@ -169,6 +169,10 @@ export function buildCollectionItemsStreamId(authorPubky: Pubky, postId: string)
   return `${StreamSource.COLLECTION}:${authorPubky}:${postId}`;
 }
 
+export function isCollectionItemsStream(streamId: string): streamId is CollectionItemsStreamCompositeId {
+  return streamId.startsWith(`${StreamSource.COLLECTION}:`);
+}
+
 export type PostStreamId =
   | PostStreamTypes
   | ReplyStreamCompositeId
@@ -190,5 +194,5 @@ export type PostStreamId =
  */
 export function isSkipPaginatedStream(streamId: string): boolean {
   const head = streamId.split(':')[0];
-  return head === StreamSorting.ENGAGEMENT || head === StreamSource.COLLECTION;
+  return head === StreamSorting.ENGAGEMENT || isCollectionItemsStream(streamId);
 }

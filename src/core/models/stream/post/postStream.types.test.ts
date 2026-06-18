@@ -7,6 +7,7 @@ import {
   buildFollowedCollectionsStreamId,
   buildPostReplyStreamId,
   isAuthorStreamSkippingMuteFilter,
+  isCollectionItemsStream,
   isSkipPaginatedStream,
 } from '@/models/stream/post/postStream.types';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
@@ -86,6 +87,14 @@ describe('isSkipPaginatedStream', () => {
     expect(isSkipPaginatedStream('timeline:bookmarks:collection')).toBe(false);
     expect(isSkipPaginatedStream(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(false);
     expect(isSkipPaginatedStream(`${TEST_PUBKY}:author`)).toBe(false);
+  });
+});
+
+describe('isCollectionItemsStream', () => {
+  it('returns true only for single-collection item streams', () => {
+    expect(isCollectionItemsStream(buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(true);
+    expect(isCollectionItemsStream(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(false);
+    expect(isCollectionItemsStream('timeline:bookmarks:collection')).toBe(false);
   });
 });
 
