@@ -8,13 +8,13 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
   env: {
-    NEXT_PUBLIC_APP_VERSION: packageJson.version,
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION ?? packageJson.version,
   },
   reactCompiler: true,
-  // Source maps are generated for every build (browser + server) but NEVER uploaded here:
-  // the Sentry plugin upload is disabled below so the Docker image build needs no Sentry
-  // credentials. The CI pipeline injects Debug IDs (sentry-cli sourcemaps inject) and uploads
-  // the maps separately; the runner image strips browser maps. See docs/sentry.md + ADR 0018.
+  // Source maps are generated for every build (browser + server), but the Sentry plugin upload
+  // is disabled below. Docker builds inject Debug IDs and optionally upload maps when Sentry
+  // build credentials are provided; public builds without those credentials skip upload.
+  // See docs/sentry.md + ADR 0018.
   productionBrowserSourceMaps: true,
   experimental: {
     serverSourceMaps: true,
@@ -66,16 +66,15 @@ const composedConfig = withNextIntl(withSerwist(nextConfig));
 export default withSentryConfig(composedConfig, {
   silent: !process.env.CI,
   disableLogger: true,
-  // The build NEVER uploads source maps (and needs no SENTRY_AUTH_TOKEN/ORG/PROJECT): the
-  // single public image must be buildable without Synonym credentials. Debug-ID injection
-  // and the upload happen in the CI pipeline via sentry-cli (see Dockerfile + ADR 0018).
+  // Disable the Sentry plugin upload. Docker builds handle Debug-ID injection and optional
+  // source-map upload via sentry-cli, while public builds without Sentry credentials skip upload.
   sourcemaps: {
     disable: true,
   },
-  // Release identification comes from Sentry.init({ release }) at runtime (single source of
-  // truth: package.json version, which always wins over any build-injected value). Without
-  // credentials the plugin cannot create releases anyway — disable it explicitly so builds
-  // never attempt Sentry API calls.
+  // Release identification comes from Sentry.init({ release }) at runtime. Local builds use the
+  // package version; Docker CI overrides NEXT_PUBLIC_APP_VERSION with the commit SHA so events
+  // and uploaded maps share one release value. Disable release creation here so the plugin never
+  // attempts Sentry API calls.
   release: {
     create: false,
   },

@@ -28,17 +28,17 @@ The resolver exposes five new lazy getters (`getSentryDsn`, …). `JSON.stringif
 
 - `shouldEnableSentry()` gates on runtime `getTestnet()` and `getSentryDsn()` — wrapped in try/catch returning `false`, because the error-capture funnel must never throw and must not mask a boot-time config failure with its own. A prod image switched to testnet at runtime now correctly disables Sentry.
 - `getSentryInitBase()` takes dsn/environment/tracesSampleRate from runtime getters; `instrumentation-client.ts` takes the replay rates from runtime getters. This is safe on the client because the inline `window.__PUBKY_CONFIG__` script in `ContainerRoot`'s `<head>` executes before any Next.js bundle. On the server, `register()` in `src/instrumentation.ts` resolves the config before the Sentry server init is imported (this is also ADR 0017's boot-time fail-fast), so no runtime races the config.
-- `release` stays build-time (`Env.NEXT_PUBLIC_APP_VERSION`): the version is intrinsic to the built artifact and must match the maps uploaded for it.
+- `release` stays build-time (`Env.NEXT_PUBLIC_APP_VERSION`): the release is intrinsic to the built artifact and must match the maps uploaded for it. Local builds use the package version; Docker CI sets `NEXT_PUBLIC_APP_VERSION` to the commit SHA.
 - The five `NEXT_PUBLIC_SENTRY_*` entries and the three upload secrets left `env.ts`; the ESLint `no-restricted-syntax` guard now also bans direct reads of the Sentry names. In dev/test, `.env.local` `NEXT_PUBLIC_SENTRY_*` values are still honored through the runtime-config fallback.
 
-### 3. Source maps: build once with Debug IDs, upload out-of-band
+### 3. Source maps: build once with Debug IDs, upload only when credentials exist
 
-The single public image cannot upload source maps at build time (that would require our credentials and bind the artifact to our Sentry org). Instead:
+The single public image must remain buildable without Sentry credentials. Instead:
 
 - `next.config.ts` enables `productionBrowserSourceMaps` and `experimental.serverSourceMaps`, and disables the Sentry plugin's upload unconditionally (`sourcemaps.disable: true`, `release.create: false`, no org/project/authToken).
 - The Dockerfile builder stage runs `npx sentry-cli sourcemaps inject` after the build (once over `.next`, once over the nested `.next/standalone/.next`, which the walker would otherwise skip as a hidden directory) — a deterministic, offline, credential-free step that stamps matching **Debug IDs** into chunks and maps. The IDs are content-derived, so the standalone copies get identical IDs to the originals.
+- If `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are present, the Dockerfile uploads `.next` source maps with `--release="$NEXT_PUBLIC_APP_VERSION"`. If they are absent, upload is skipped and the public image still builds.
 - The runner stage strips `*.map` from `.next/static` (browser maps must not be publicly served). Server-side maps stay in the standalone output — they are never exposed over HTTP and make Node stack traces readable.
-- The CI pipeline (owned separately) extracts the maps from the **builder stage** (`docker build --target builder`) and uploads them with our token, release = package.json version. It must **not** re-inject — injection already happened in-image, and a second injection on a side copy would diverge the IDs.
 
 ## Consequences
 
@@ -46,12 +46,12 @@ The single public image cannot upload source maps at build time (that would requ
 
 - The published image is fully plug-and-play: third parties set eight required + up to five optional env vars and run — their own infra, their own Sentry org (or none), no Synonym credentials anywhere.
 - Sentry's testnet gate is runtime-correct: switching an image to testnet disables Sentry without a rebuild.
-- Image builds need no secrets, so the build is reproducible and PR/fork-safe.
+- Public image builds need no secrets; Synonym CI can provide Sentry build credentials to upload maps during the Docker build.
 
 ### Negative ❌
 
 - Sentry events from third-party deployments are **unsymbolicated** unless those deployers obtain the maps. Recommended follow-up: publish the maps as a release artifact so anyone can upload them to their own Sentry org.
-- The upload moves to the CI pipeline — symbolication now depends on a pipeline step outside this repo (coordination contract above).
+- The optional upload is coupled to Docker build when credentials are provided; third-party deployers need maps/credentials for symbolication in their own Sentry org.
 
 ### Neutral ⚠️
 
@@ -77,7 +77,7 @@ Runtime env exposure via a maintained library. **Why not chosen**: duplicates AD
 - Schema/tiers/defaults: `src/libs/runtime-config/runtime-config.schema.ts`
 - Getters: `src/libs/runtime-config/runtime-config.ts`
 - Sentry gates/init: `src/libs/observability/sentry.ts`, `src/instrumentation-client.ts`, `src/instrumentation.ts` (server init ordering)
-- Build/upload decoupling: `next.config.ts`, `Dockerfile`, `.github/workflows/build-docker-image.yml`
+- Build/upload wiring: `next.config.ts`, `Dockerfile`, `.github/workflows/build-docker-image.yml`
 - Preview runtime values: `preview-deploy-service-file.yml`
 - Docs: `docs/sentry.md`, `docs/environment.md`, `.env.example`
 

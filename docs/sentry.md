@@ -70,16 +70,16 @@ All Sentry values are part of the **optional runtime-config tier** ([ADR 0018](a
 | `PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`   | browser                 | Optional. Default `0.0` (record only on error).            |
 | `PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | browser                 | Optional. Default `1.0`.                                   |
 
-There are **no build-time Sentry variables**: `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` are CI-pipeline-only secrets and are no longer read by the app or the image build. The release tag comes from `NEXT_PUBLIC_APP_VERSION` (package.json version, injected by `next.config.ts`) — intrinsic to the artifact, deliberately not runtime-configurable.
+`SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` are optional Docker build inputs used only for source-map upload. They are never app runtime config and are not required to build or run the public image. The release tag comes from `NEXT_PUBLIC_APP_VERSION`: local builds fall back to the package version, while Docker CI sets it to the commit SHA so SDK events and uploaded maps use the same release.
 
-## Source maps (decoupled from the image build)
+## Source maps
 
-The public Docker image is built **without** Sentry credentials, so the build never uploads source maps. Instead ([ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md)):
+The public Docker image remains buildable **without** Sentry credentials. Docker builds always inject Debug IDs, and upload source maps only when Sentry build credentials are provided ([ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md)):
 
 1. `next.config.ts` generates maps for every build (`productionBrowserSourceMaps` + `experimental.serverSourceMaps`) and disables the plugin upload (`sourcemaps.disable: true`, `release.create: false`).
 2. The Dockerfile builder stage runs `npx sentry-cli sourcemaps inject` over `.next` and over the nested `.next/standalone/.next` (hidden directories are skipped by the walker) — offline, deterministic Debug-ID stamping of chunks and maps.
-3. The runner stage deletes `*.map` under `.next/static` (browser maps must not be publicly served); standalone server maps stay for readable Node stack traces.
-4. The CI pipeline extracts the maps from the builder stage (`docker build --target builder`) and uploads them with the org token, release = package.json version. It must not re-inject.
+3. If `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are present, the Dockerfile uploads `.next` source maps with `--release="$NEXT_PUBLIC_APP_VERSION"`.
+4. The runner stage deletes `*.map` under `.next/static` (browser maps must not be publicly served); standalone server maps stay for readable Node stack traces.
 
 Third-party deployers get unsymbolicated events unless they obtain the maps for their image version and upload them to their own org (publishing maps as a release artifact is the recommended follow-up).
 

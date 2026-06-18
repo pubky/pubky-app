@@ -98,6 +98,22 @@ describe('runtimeEnvInputSchema', () => {
   it('throws on out-of-range sample rates', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, sentryTracesSampleRate: '1.5' })).toThrow();
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, sentryTracesSampleRate: 'abc' })).toThrow();
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, sentryTracesSampleRate: '0.5abc' })).toThrow();
+  });
+
+  it('accepts valid sample-rate boundaries', () => {
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, sentryTracesSampleRate: '0' }).sentryTracesSampleRate,
+    ).toBe(0);
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, sentryTracesSampleRate: '0.5' }).sentryTracesSampleRate,
+    ).toBe(0.5);
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, sentryTracesSampleRate: '1' }).sentryTracesSampleRate,
+    ).toBe(1);
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, sentryTracesSampleRate: '1.0' }).sentryTracesSampleRate,
+    ).toBe(1);
   });
 
   it('parses defaulted app/deployer values when provided', () => {
@@ -116,6 +132,11 @@ describe('runtimeEnvInputSchema', () => {
   it('throws on invalid optional boolean values', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, notificationPollOnStart: 'tru' })).toThrow();
     expect(() => runtimeEnvInputSchemaWithDefaults.parse({ streamPollOnStart: 'yes' })).toThrow();
+  });
+
+  it('throws on invalid optional integer values', () => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, ttlPostMs: '123abc' })).toThrow();
+    expect(() => runtimeEnvInputSchemaWithDefaults.parse({ maxStreamTags: '0' })).toThrow();
   });
 });
 

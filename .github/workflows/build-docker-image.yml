@@ -130,8 +130,8 @@ jobs:
           # DEFAULT_HTTP_RELAY, PKARR_RELAYS, TESTNET) and Sentry values (SENTRY_DSN,
           # SENTRY_ENVIRONMENT, SENTRY_*_SAMPLE_RATE) are intentionally NOT build args. They are
           # supplied at container runtime as PUBKY_RUNTIME_* (see Dockerfile and
-          # src/libs/runtime-config). Source-map upload happens in the CI pipeline via sentry-cli,
-          # never during the image build, so no Sentry credentials are needed here.
+          # src/libs/runtime-config). Sentry build args are optional and used only by the
+          # Dockerfile source-map upload step; public builds without them skip upload.
           build_args: |
             NEXT_PUBLIC_DB_VERSION=2
             NEXT_PUBLIC_DB_NAME=franky

@@ -28,12 +28,16 @@ export function RootContainer({ children, locale = 'en' }: RootContainerProps) {
     <Container as="html" lang={locale} dir={dir}>
       <Container as="body" className={`${interTight.variable} antialiased`}>
         {/*
-          Publish runtime config to the browser synchronously, before any app code runs.
-          The root layout is force-dynamic, so this is re-rendered per request with the
-          container's PUBKY_RUNTIME_* values (see @/libs/runtime-config).
+          Publish runtime config before any Next.js bundle executes. Next injects
+          beforeInteractive scripts into <head>, even when declared in the body.
           NOTE: if a Content-Security-Policy is added later, this inline script needs a nonce.
         */}
-        <script id="pubky-runtime-config" dangerouslySetInnerHTML={{ __html: serializeRuntimeConfig() }} />
+        {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
+        <Script
+          id="pubky-runtime-config"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: serializeRuntimeConfig() }}
+        />
         {plausibleDomain && plausibleScriptUrl && (
           <Script data-domain={plausibleDomain} src={plausibleScriptUrl} strategy="afterInteractive" />
         )}

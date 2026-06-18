@@ -91,12 +91,11 @@ const optionalPositiveIntFromString = z
   .optional()
   .transform((val, ctx) => {
     if (val === undefined || val.trim() === '') return undefined;
-    const parsed = Number.parseInt(val, 10);
-    if (!Number.isInteger(parsed)) {
+    if (!/^[1-9]\d*$/.test(val)) {
       ctx.addIssue({ code: 'custom', message: 'Expected a positive integer' });
       return z.NEVER;
     }
-    return parsed;
+    return Number(val);
   })
   .pipe(positiveIntValue.optional());
 
@@ -131,7 +130,8 @@ const optionalUrlFromString = optionalTrimmedString.pipe(urlValue.optional());
 /** Rates validate eagerly (bad number/range throws here); the default applies in the value schema. */
 const sampleRateFromString = z
   .string()
-  .transform((val) => parseFloat(val))
+  .regex(/^(?:0(?:\.\d+)?|1(?:\.0+)?)$/, 'Expected a number between 0 and 1')
+  .transform((val) => Number(val))
   .pipe(sampleRateValue)
   .optional();
 

@@ -5,8 +5,8 @@ import {
   getSentryReplaysSessionSampleRate,
 } from '@/libs/runtime-config/runtime-config';
 
-// Safe to read runtime config here: the inline `window.__PUBKY_CONFIG__` script in
-// ContainerRoot's <head> executes before any Next.js bundle (script tags are emitted after it).
+// Safe to read runtime config here: ContainerRoot emits `window.__PUBKY_CONFIG__` with
+// next/script strategy="beforeInteractive", which Next injects into <head> before app bundles.
 if (shouldEnableSentry()) {
   Sentry.init({
     ...getSentryInitBase(),
