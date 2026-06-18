@@ -122,7 +122,8 @@ describe('runtime-config resolver', () => {
     it('throws on partial PUBKY_RUNTIME_* config', () => {
       setAllRuntimeEnv();
       delete process.env[PUBKY_RUNTIME_ENV_NAMES.testnet];
-      expect(() => readServerConfig()).toThrow();
+      expect(() => readServerConfig()).toThrow(/Runtime config is incomplete or invalid/);
+      expect(() => readServerConfig()).toThrow(/required PUBKY_RUNTIME_\* network variables/);
     });
 
     it('allows optional runtime tiers without forcing the required network tier in dev/test', () => {
@@ -145,7 +146,7 @@ describe('runtime-config resolver', () => {
 
     it('throws when required and no PUBKY_RUNTIME_* present', () => {
       simulateDeployedEnv();
-      expect(() => readServerConfig()).toThrow(/Runtime config is required/);
+      expect(() => readServerConfig()).toThrow(/no required PUBKY_RUNTIME_\* network variables are set/);
     });
 
     it('does not throw during the production build phase', () => {

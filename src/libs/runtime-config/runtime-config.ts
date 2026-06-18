@@ -30,6 +30,13 @@ declare global {
 
 let memoizedConfig: RuntimeConfig | null = null;
 
+const REQUIRED_NETWORK_ENV_MESSAGE =
+  'Set all required PUBKY_RUNTIME_* network variables: ' +
+  'PUBKY_RUNTIME_NEXUS_URL, PUBKY_RUNTIME_CDN_URL, PUBKY_RUNTIME_HOMESERVER, ' +
+  'PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, ' +
+  'PUBKY_RUNTIME_PKARR_RELAYS, and PUBKY_RUNTIME_TESTNET. ' +
+  'Optional/defaulted PUBKY_RUNTIME_* values may be set independently.';
+
 /**
  * Whether a valid runtime config MUST be present (fail loud instead of falling back).
  * True for deployed environments (incl. staging, which runs NODE_ENV=production) and when
@@ -85,16 +92,18 @@ export function readServerConfig(): RuntimeConfig {
   // Any required network PUBKY_RUNTIME_* present means we require the whole network tier.
   // Optional/defaulted runtime values can be set independently and must not trigger this rule.
   if (anyRequiredNetworkPresent) {
-    return runtimeEnvInputSchema.parse(input);
+    const result = runtimeEnvInputSchema.safeParse(input);
+    if (!result.success) {
+      throw new Error(`Runtime config is incomplete or invalid. ${REQUIRED_NETWORK_ENV_MESSAGE}`, {
+        cause: result.error,
+      });
+    }
+    return result.data;
   }
 
   if (isRuntimeConfigRequired() && !isProductionBuildPhase()) {
     throw new Error(
-      'Runtime config is required but no PUBKY_RUNTIME_* environment variables are set. ' +
-        'Set PUBKY_RUNTIME_NEXUS_URL, PUBKY_RUNTIME_CDN_URL, PUBKY_RUNTIME_HOMESERVER, ' +
-        'PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, ' +
-        'PUBKY_RUNTIME_PKARR_RELAYS, and PUBKY_RUNTIME_TESTNET on the container. ' +
-        'The PUBKY_RUNTIME_SENTRY_* variables are optional (absent disables Sentry).',
+      `Runtime config is required but no required PUBKY_RUNTIME_* network variables are set. ${REQUIRED_NETWORK_ENV_MESSAGE}`,
     );
   }
 

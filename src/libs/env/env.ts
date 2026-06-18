@@ -12,10 +12,11 @@ import {
 } from '@/libs/runtime-config/runtime-config.schema';
 
 /**
- * Environment Variables Schema with Zod validation
+ * Build-time and local fallback environment schema.
  *
- * This file validates all environment variables and provides type-safe defaults.
- * All variables are validated at startup to catch configuration errors early.
+ * Deployed/public Docker configuration is resolved through `PUBKY_RUNTIME_*`
+ * in `@/libs/runtime-config`. The `NEXT_PUBLIC_*` values below are retained
+ * only for build-intrinsic values and local dev/test fallback inputs.
  */
 
 // Schema for environment variables
@@ -23,7 +24,7 @@ const envSchema = z.object({
   // Node.js environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  // Next.js public environment variables
+  // Build-intrinsic public values. These are intentionally baked into the artifact.
   NEXT_PUBLIC_DB_NAME: z.string().default('franky'),
   NEXT_PUBLIC_DB_VERSION: z
     .string()
@@ -38,15 +39,11 @@ const envSchema = z.object({
     .pipe(z.boolean()),
 
   // =============================================================================
-  // NETWORK CONFIGURATION (defaults to staging for dev/CI convenience)
+  // RUNTIME-CONFIG FALLBACKS (local dev/test only)
   // =============================================================================
-  // These variables have staging defaults for development and CI/CD.
-  // For production, override these with your production URLs.
-
-  // NOTE: NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL, DEFAULT_HTTP_RELAY,
-  // PKARR_RELAYS and TESTNET are runtime-configurable. These NEXT_PUBLIC_ entries are build/dev/test
-  // DEFAULTS only; deployed environments must supply PUBKY_RUNTIME_* (see @/libs/runtime-config).
-  // They reuse the shared field validators so the notion of "valid" cannot drift from the runtime config.
+  // These NEXT_PUBLIC_* names feed the runtime-config fallback used by local dev/tests.
+  // Deployed containers must use PUBKY_RUNTIME_* instead. Keep validation/defaults aligned
+  // with `src/libs/runtime-config/runtime-config.schema.ts`.
   /** Main API endpoint */
   NEXT_PUBLIC_NEXUS_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.nexusUrl),
   /** CDN URL for static assets */
@@ -100,7 +97,6 @@ const envSchema = z.object({
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().int().positive()),
 
-  // TTL Coordinator configuration
   NEXT_PUBLIC_TTL_POST_MS: z
     .string()
     .default('300000') // 5 minutes in milliseconds
@@ -131,7 +127,6 @@ const envSchema = z.object({
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().int().positive()),
 
-  // TTL retry delay for entities not yet indexed in Nexus (e.g., new users)
   NEXT_PUBLIC_TTL_RETRY_DELAY_MS: z
     .string()
     .default('60000') // 1 minute in milliseconds
@@ -158,10 +153,8 @@ const envSchema = z.object({
     .transform(parsePkarrRelays)
     .pipe(pkarrRelaysValue),
 
-  /** Homeserver public key */
   NEXT_PUBLIC_HOMESERVER: homeserverValue.default(NETWORK_RUNTIME_DEFAULTS.homeserver),
 
-  /** Homeserver HTTP base URL (the homeserver pubkey has no resolvable HTTPS PKARR endpoint) */
   NEXT_PUBLIC_HOMESERVER_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.homeserverUrl),
 
   // Server-side only admin credentials for signup token generation (dev/test only)
@@ -169,7 +162,6 @@ const envSchema = z.object({
   HOMESERVER_ADMIN_URL: z.url().default('http://localhost:6288/generate_signup_token'),
   HOMESERVER_ADMIN_PASSWORD: z.string().default('admin'),
 
-  /** HTTP relay for pubky protocol (auth uses `/inbox` with Pubky SDK 0.7+) */
   NEXT_PUBLIC_DEFAULT_HTTP_RELAY: urlValue.default(NETWORK_RUNTIME_DEFAULTS.defaultHttpRelay),
   NEXT_PUBLIC_MODERATION_ID: z.string().default('euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro'),
   NEXT_PUBLIC_MODERATED_TAGS: z
@@ -180,16 +172,10 @@ const envSchema = z.object({
     .transform((val) => JSON.parse(val))
     .pipe(z.array(z.string().min(1)).min(1)),
   NEXT_PUBLIC_EXCHANGE_RATE_API: z.url().default('https://api1.blocktank.to/api/fx/rates/btc'),
-  /** Homegate authentication service URL */
   NEXT_PUBLIC_HOMEGATE_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.homegateUrl),
 
-  // Prelude SDK key for collecting client browser signals for SMS fraud prevention.
-  // This is a public/publishable key (distinct from the secret Prelude API key used server-side).
-  // It is safe to expose in client-side bundles.
-  // Optional: if not set, signals are not dispatched.
   NEXT_PUBLIC_PRELUDE_SDK_KEY: z.string().optional(),
 
-  /** Prelude SDK signal dispatch timeout in milliseconds (default: 5000) */
   NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS: z
     .string()
     .default('5000')
@@ -212,9 +198,6 @@ const envSchema = z.object({
     .default('26')
     .transform((val) => parseInt(val, 10)),
 
-  // =============================================================================
-  // ANALYTICS (Plausible)
-  // =============================================================================
   NEXT_PUBLIC_PLAUSIBLE_DOMAIN: z.string().optional(),
   NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL: z.url().optional(),
 
@@ -227,7 +210,6 @@ const envSchema = z.object({
   NEXT_PUBLIC_CREATOR: z.string().optional().default('@getpubky'),
   NEXT_PUBLIC_DEFAULT_URL: z.string().optional().default('https://pubky.app'),
 
-  // external links
   NEXT_PUBLIC_PUBKY_RING_URL: z.string().optional().default('https://pubkyring.app/'),
   NEXT_PUBLIC_PUBKY_CORE_URL: z.string().optional().default('https://pubky.org'),
   NEXT_PUBLIC_TWITTER_URL: z.string().optional().default('https://x.com/pubky'),
@@ -241,13 +223,10 @@ const envSchema = z.object({
     .optional()
     .default('https://play.google.com/store/apps/details?id=to.pubky.ring&pcampaignid=web_share'),
 
-  // App version (injected from package.json via next.config.ts)
+  // Build-intrinsic release value (package version locally; Git SHA in Docker CI).
   NEXT_PUBLIC_APP_VERSION: z.string(),
 
-  // NOTE: Sentry (NEXT_PUBLIC_SENTRY_*) is runtime-configurable via PUBKY_RUNTIME_SENTRY_*
-  // and intentionally NOT part of this build-time schema. In dev/test, NEXT_PUBLIC_SENTRY_*
-  // values from .env.local are honored through the runtime-config fallback.
-  // See src/libs/runtime-config/runtime-config.schema.ts.
+  // Sentry fallback names are intentionally handled in runtime-config.schema.ts, not here.
 });
 
 /**

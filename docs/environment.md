@@ -58,7 +58,7 @@ const cdnUrl = Env.NEXT_PUBLIC_CDN_URL; // string (validated URL)
 
 ## Runtime configuration (`PUBKY_RUNTIME_*`)
 
-A set of **environment-specific and deployer-facing public values** are configured at **runtime**, not build time, so a single Docker image can be promoted across staging / prod / testnet — and deployed by third parties against their own infrastructure — without rebuilding. See [ADR 0017](adr/0017-runtime-config-injection.md), [ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md), and [ADR 0019](adr/0019-runtime-public-config-tiers.md).
+A set of **environment-specific and deployer-facing public values** are configured at **runtime**, not build time, so a single Docker image can be promoted across staging / prod / testnet — and deployed by third parties against their own infrastructure — without rebuilding. See [ADR 0017](adr/0017-runtime-config-injection.md) and [ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md).
 
 The contract has three tiers:
 
