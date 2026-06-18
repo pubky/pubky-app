@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { getCollectionRoute } from '@/app/routes';
 import { useCreateCollection } from '@/hooks/useCreateCollection/useCreateCollection';
 import { parseCompositeId } from '@/models/models.utils';
-import { CollectionFormDialog } from '@/organisms/CollectionFormDialog/CollectionFormDialog';
+import { CollectionFormDialog } from '@/organisms/Collections/CollectionFormDialog/CollectionFormDialog';
 
 type NewCollectionDialogProps = {
   children: ReactNode;

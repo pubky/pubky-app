@@ -14,13 +14,13 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
 }));
 
-vi.mock('@/organisms/CollectionHero/CollectionHero', () => ({
+vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
   CollectionHero: (p: { authorPubky: string; postId: string }) => (
     <div data-testid="collection-hero" data-author={p.authorPubky} data-post={p.postId} />
   ),
 }));
 
-vi.mock('@/organisms/CollectionItems/CollectionItems', () => ({
+vi.mock('@/organisms/Collections/CollectionItems/CollectionItems', () => ({
   CollectionItems: (p: {
     authorPubky: string;
     postId: string;
@@ -35,7 +35,7 @@ vi.mock('@/organisms/CollectionItems/CollectionItems', () => ({
   ),
 }));
 
-vi.mock('@/organisms/CollectionNotFound/CollectionNotFound', () => ({
+vi.mock('@/organisms/Collections/CollectionNotFound/CollectionNotFound', () => ({
   CollectionNotFound: (p: { postId: string }) => <div data-testid="collection-not-found" data-post={p.postId} />,
 }));
 

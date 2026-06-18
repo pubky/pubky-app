@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { useEditCollection } from '@/hooks/useEditCollection/useEditCollection';
-import { CollectionFormDialog } from '@/organisms/CollectionFormDialog/CollectionFormDialog';
+import { CollectionFormDialog } from '@/organisms/Collections/CollectionFormDialog/CollectionFormDialog';
 
 type EditCollectionDialogProps = {
   open: boolean;

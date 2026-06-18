@@ -21,7 +21,7 @@ import { buildCompositeId } from '@/models/models.utils';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
-import { CollectionHeroSkeleton } from '@/organisms/CollectionHero/CollectionHero.skeleton';
+import { CollectionHeroSkeleton } from '@/organisms/Collections/CollectionHero/CollectionHero.skeleton';
 import { EditCollectionDialog } from '@/organisms/EditCollectionDialog/EditCollectionDialog';
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 import { FileVariant } from '@/services/nexus/file/file.types';

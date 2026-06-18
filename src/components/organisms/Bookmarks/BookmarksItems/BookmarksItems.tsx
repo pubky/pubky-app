@@ -4,7 +4,7 @@ import { Container } from '@/atoms/Container/Container';
 import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS, TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { cn } from '@/libs/utils/utils';
 import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog';
-import { CollectionItemsEmpty } from '@/organisms/CollectionItemsEmpty/CollectionItemsEmpty';
+import { CollectionItemsEmpty } from '@/organisms/Collections/CollectionItemsEmpty/CollectionItemsEmpty';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 
 export function BookmarksItems() {
