@@ -208,7 +208,7 @@ export class CollectionPostContent {
 
     return this.normalize({
       ...collection,
-      items: [...items, trimmedUri],
+      items: [trimmedUri, ...items],
       coverImage: collection.cover_image,
     });
   }

@@ -209,6 +209,13 @@ describe('CollectionPostContent', () => {
       expect(CollectionPostContent.addItem(collection, VALID_ITEM_URI).items).toEqual([VALID_ITEM_URI]);
     });
 
+    it('prepends a new item', () => {
+      const existingUri = 'https://example.com/post';
+      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [existingUri] });
+
+      expect(CollectionPostContent.addItem(collection, VALID_ITEM_URI).items).toEqual([VALID_ITEM_URI, existingUri]);
+    });
+
     it('removes an item', () => {
       const collection = CollectionPostContent.normalize({
         name: 'Saved',

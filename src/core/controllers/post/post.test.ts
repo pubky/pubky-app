@@ -733,6 +733,38 @@ describe('PostController', () => {
       }
     });
 
+    it('prepends a new post URI before existing collection items', async () => {
+      setupAuthUser(testData.authorPubky);
+      const existingItemUri = 'pubky://existing_author/pub/pubky.app/posts/existing123';
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([existingItemUri]));
+      const toEditSpy = vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
+        post: { toJson: () => ({}) },
+        meta: { url: 'pubky://author/pub/pubky.app/posts/collection123' },
+      } as never);
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitUpdateCollectionItem({
+          collectionId: collectionPostId,
+          postId: targetPostId,
+          shouldAdd: true,
+        });
+
+        expect(toEditSpy).toHaveBeenCalledWith({
+          compositePostId: collectionPostId,
+          content: JSON.stringify({
+            name: 'Saved posts',
+            description: '',
+            items: [targetPostUri, existingItemUri],
+          }),
+          currentUserPubky: testData.authorPubky,
+        });
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
     it('removes a post URI from a collection', async () => {
       setupAuthUser(testData.authorPubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([targetPostUri]));
