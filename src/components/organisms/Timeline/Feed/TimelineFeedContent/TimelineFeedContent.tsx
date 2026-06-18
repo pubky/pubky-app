@@ -116,8 +116,7 @@ function TimelineFeedContent({
   const enablePullToRefresh =
     variant === TIMELINE_FEED_VARIANT.HOME ||
     variant === TIMELINE_FEED_VARIANT.CUSTOM ||
-    variant === TIMELINE_FEED_VARIANT.HOT ||
-    variant === TIMELINE_FEED_VARIANT.COLLECTION;
+    variant === TIMELINE_FEED_VARIANT.HOT;
   const { state: pullState, pullDistance } = usePullToRefresh({
     containerRef,
     onRefresh: refresh,

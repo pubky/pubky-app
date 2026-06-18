@@ -16,18 +16,18 @@ import type { CollectionItemsProps } from './CollectionItems.types';
 /**
  * CollectionItems
  *
- * Middle region of the single-collection view: either the infinite-scroll grid
- * of the collection's items (`TimelineFeed` with the `COLLECTION` variant) or,
- * when the collection has no items, a variant-specific empty state.
+ * Middle region of the single-collection view: renders the collection item feed
+ * and, for owners, the persistent Add Content CTA above it.
  *
- * Item membership is read from the parsed envelope (`items.length`), the source
- * of truth for the collection. While the envelope is still resolving we render
- * the feed (which shows its own grid skeleton); the empty state appears only
- * once the envelope is confirmed empty, so a populated collection never flashes
- * the placeholder.
+ * The collection envelope is used only to confirm whether the collection is
+ * empty. The grid itself is still driven by the `COLLECTION` stream, while
+ * optimistic inserts bridge the gap until Nexus reflects local membership
+ * changes. While the envelope is still resolving, we render the feed so the grid
+ * can show its normal loading state instead of flashing the empty placeholder.
  *
- * The owner can add content from the top of the region regardless of whether
- * the collection currently has items; non-owners only see the feed or empty text.
+ * Empty non-owner collections can skip the feed entirely. Empty owner
+ * collections keep the feed mounted so `AddContentDialog` can use the timeline
+ * context for optimistic inserts.
  */
 export function CollectionItems({ authorPubky, postId }: CollectionItemsProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });

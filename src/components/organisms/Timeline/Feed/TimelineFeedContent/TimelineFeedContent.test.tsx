@@ -592,7 +592,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     expect(screen.queryByTestId('timeline-grid-posts')).not.toBeInTheDocument();
   });
 
-  it('enables pull-to-refresh for the collection variant (D7)', () => {
+  it('disables pull-to-refresh for the collection variant', () => {
     render(
       <TimelineFeedWithStream
         streamId={COLLECTION_STREAM_ID}
@@ -601,7 +601,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         layoutResolution={gridLayoutResolution}
       />,
     );
-    expect(mockUsePullToRefresh).toHaveBeenCalledWith(expect.objectContaining({ disabled: false }));
+    expect(mockUsePullToRefresh).toHaveBeenCalledWith(expect.objectContaining({ disabled: true }));
   });
 
   it('applies muting for the collection variant (not in the mute skip list, D7)', () => {
