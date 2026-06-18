@@ -6,6 +6,7 @@ import { PostMentions } from './PostMentions';
 const validPubkyKey = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
 const mockUseUserProfile = vi.fn();
+const mockCurrentUserPubky = vi.fn();
 
 vi.mock('@/atoms/Link/Link', () => {
   return {
@@ -32,6 +33,13 @@ vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: (userId: string) => mockUseUserProfile(userId),
 }));
 
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector?: (state: { currentUserPubky: string | null }) => unknown) => {
+    const state = { currentUserPubky: mockCurrentUserPubky() };
+    return typeof selector === 'function' ? selector(state) : state;
+  },
+}));
+
 vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => {
   return {
     UserInfoPopover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -42,6 +50,7 @@ describe('PostMentions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseUserProfile.mockReturnValue({ profile: null, isLoading: false });
+    mockCurrentUserPubky.mockReturnValue(null);
   });
 
   describe('Basic rendering', () => {
@@ -53,7 +62,7 @@ describe('PostMentions', () => {
       expect(screen.getByText('@TestUser')).toBeInTheDocument();
     });
 
-    it('renders as a link with correct href', () => {
+    it('renders as a link with the self-aware profile href', () => {
       mockUseUserProfile.mockReturnValue({ profile: { name: 'TestUser' }, isLoading: false });
 
       render(<PostMentions href={`/profile/${validPubkyKey}`}>{`pk:${validPubkyKey}`}</PostMentions>);
@@ -62,13 +71,23 @@ describe('PostMentions', () => {
       expect(link).toHaveAttribute('href', `/profile/${validPubkyKey}`);
     });
 
-    it('renders with empty href when href is not provided', () => {
+    it('derives the href from the mention pubky regardless of the href prop', () => {
       mockUseUserProfile.mockReturnValue({ profile: { name: 'TestUser' }, isLoading: false });
 
       render(<PostMentions>{`pk:${validPubkyKey}`}</PostMentions>);
 
       const link = screen.getByTestId('link');
-      expect(link).toHaveAttribute('href', '');
+      expect(link).toHaveAttribute('href', `/profile/${validPubkyKey}`);
+    });
+
+    it('resolves a self-mention to the canonical own-profile route', () => {
+      mockUseUserProfile.mockReturnValue({ profile: { name: 'Me' }, isLoading: false });
+      mockCurrentUserPubky.mockReturnValue(validPubkyKey);
+
+      render(<PostMentions href={`/profile/${validPubkyKey}`}>{`pk:${validPubkyKey}`}</PostMentions>);
+
+      const link = screen.getByTestId('link');
+      expect(link).toHaveAttribute('href', '/profile');
     });
 
     it('applies custom className', () => {
@@ -206,6 +225,7 @@ describe('PostMentions - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseUserProfile.mockReturnValue({ profile: null, isLoading: false });
+    mockCurrentUserPubky.mockReturnValue(null);
   });
 
   it('matches snapshot for mention with username', () => {

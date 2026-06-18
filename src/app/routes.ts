@@ -211,3 +211,28 @@ export function getProfileRoute(route: PROFILE_ROUTES, pubky?: string): string {
 
   return `/profile/${pubky}${subPath}`;
 }
+
+/**
+ * Returns the canonical profile URL for a given user.
+ *
+ * When the target pubky belongs to the logged-in user, the static own-profile
+ * route (`/profile`) is returned. That route renders the Notifications-first
+ * own-profile view, keeping the highlighted tab and the rendered content in
+ * sync. For every other user the dynamic `/profile/{pubky}` route is used.
+ *
+ * Prefer this over hardcoding `/profile/${pubky}` for any link that might point
+ * at the current user (post headers, mentions, search results, etc.) to avoid
+ * the own-profile tab/content mismatch where `/profile/{ownPubky}` renders Posts
+ * while the Notifications tab is highlighted.
+ *
+ * @param pubky - The target user's (prefix-stripped) pubky
+ * @param currentUserPubky - The logged-in user's pubky, if any
+ * @returns `/profile` for the logged-in user, otherwise `/profile/{pubky}`
+ */
+export function getUserProfileUrl(pubky: string, currentUserPubky?: string | null): string {
+  if (currentUserPubky && pubky === currentUserPubky) {
+    return APP_ROUTES.PROFILE;
+  }
+
+  return `/profile/${pubky}`;
+}

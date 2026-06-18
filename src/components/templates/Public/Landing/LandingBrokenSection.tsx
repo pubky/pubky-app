@@ -1,13 +1,14 @@
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
-import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
 import { LANDING_NEXT_SECTION_ID } from './Landing.constants';
+import { LandingBrokenPoster } from './LandingBrokenPoster';
 
 const FEATURES: Array<{
   key: 'identity' | 'data' | 'reach';
   image: string;
+  video: string;
   hoverClassName: string;
   bubbleClassName: string;
   tipClassName: string;
@@ -15,6 +16,7 @@ const FEATURES: Array<{
   {
     key: 'identity',
     image: '/images/landing-webbroken1.png',
+    video: '/images/landing-webbroken1.mp4',
     hoverClassName: 'group-hover:rotate-[12deg]',
     bubbleClassName: 'top-8 right-8',
     tipClassName: 'right-8 -bottom-2.5',
@@ -22,6 +24,7 @@ const FEATURES: Array<{
   {
     key: 'data',
     image: '/images/landing-webbroken2.png',
+    video: '/images/landing-webbroken2.mp4',
     hoverClassName: 'group-hover:rotate-[12deg]',
     bubbleClassName: 'right-8 bottom-8',
     tipClassName: 'right-8 -top-2.5',
@@ -29,6 +32,7 @@ const FEATURES: Array<{
   {
     key: 'reach',
     image: '/images/landing-webbroken3.png',
+    video: '/images/landing-webbroken3.mp4',
     hoverClassName: 'group-hover:-rotate-[12deg]',
     bubbleClassName: 'right-8 bottom-8',
     tipClassName: 'right-8 -top-2.5',
@@ -55,16 +59,15 @@ export function LandingBrokenSection() {
           </Typography>
         </Container>
         <div className="grid gap-4 md:grid-cols-3 lg:[&:has(article:hover)>article:not(:hover)]:opacity-[0.32]">
-          {FEATURES.map(({ key, image, hoverClassName, bubbleClassName, tipClassName }) => (
+          {FEATURES.map(({ key, image, video, hoverClassName, bubbleClassName, tipClassName }) => (
             <article
               key={key}
               className="group relative rounded-md bg-card/80 p-6 shadow-sm backdrop-blur-sm transition-opacity duration-300 ease-out lg:hover:z-10"
             >
-              <Image
-                src={image}
+              <LandingBrokenPoster
+                image={image}
+                video={video}
                 alt={t(`features.${key}.title`)}
-                width={1516}
-                height={1516}
                 className={`aspect-square w-full rounded-md object-cover transition-all duration-300 ease-out group-hover:scale-120 group-hover:drop-shadow-[0_50px_100px_rgba(0,0,0,1)] ${hoverClassName}`}
               />
               <div

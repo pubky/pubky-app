@@ -3,10 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, FileQuestion, Tag, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { APP_ROUTES, getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
+import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { getValidAuthorPubkyFromPostCompositeId } from '@/libs/utils/utils';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmptyState';
 
 interface PostNotFoundProps {
@@ -19,6 +20,7 @@ interface PostNotFoundProps {
 export function PostNotFound({ postId }: PostNotFoundProps) {
   const t = useTranslations('post.notFound');
   const router = useRouter();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const viewProfilePubky = getValidAuthorPubkyFromPostCompositeId(postId);
 
   return (
@@ -44,7 +46,7 @@ export function PostNotFound({ postId }: PostNotFoundProps) {
           <Button
             type="button"
             variant={ButtonVariant.SECONDARY}
-            onClick={() => router.push(getProfileRoute(PROFILE_ROUTES.PROFILE, viewProfilePubky))}
+            onClick={() => router.push(getUserProfileUrl(viewProfilePubky, currentUserPubky))}
           >
             <UserRound className="size-4 shrink-0" />
             {t('viewProfile')}
