@@ -98,3 +98,18 @@ that fails on your Mac with the code reverted) is not yours to re-baseline.
 
 Prove a hypothesis on one test before regenerating many. If a shared helper
 (`vrt.tsx` / `vrt.setup.ts`) changes, re-run one image and eyeball it first.
+
+## CI baseline update workflow
+
+Actions → **VRT Update Baselines** → run on the branch whose code you want
+baselined.
+
+| Triggered from | Commit target                                    | Pull request                    |
+| -------------- | ------------------------------------------------ | ------------------------------- |
+| `dev`          | `vrt-update-baselines` (reset from latest `dev`) | Opens PR → `dev` if none exists |
+| Feature branch | Same feature branch                              | None                            |
+| `master`       | —                                                | Workflow fails (do not use)     |
+
+The workflow never commits directly to `dev` or `master`. It regenerates on both
+`ubuntu-latest` and `macos-latest`, merges `*-linux.png` and `*-darwin.png`
+artifacts, then commits the combined result.
