@@ -3,15 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod } from '@/libs/http/http.types';
 import { useFollowUser } from './useFollowUser';
 
-const {
-  mockUseAuthStore,
-  mockCommitFollow,
-  mockGetDetails,
-  mockLogger,
-  mockToast,
-  mockIsAppError,
-  mockIsNetworkError,
-} = vi.hoisted(() => ({
+const { mockUseAuthStore, mockCommitFollow, mockGetDetails, mockLogger, mockToast } = vi.hoisted(() => ({
   mockUseAuthStore: vi.fn(),
   mockCommitFollow: vi.fn(),
   mockGetDetails: vi.fn(),
@@ -20,13 +12,6 @@ const {
     error: vi.fn(),
   },
   mockToast: vi.fn(),
-  mockIsAppError: vi.fn(),
-  mockIsNetworkError: vi.fn(),
-}));
-
-vi.mock('@/libs/error/error.utils', () => ({
-  isAppError: (...args: unknown[]) => mockIsAppError(...args),
-  isNetworkError: (...args: unknown[]) => mockIsNetworkError(...args),
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -52,7 +37,8 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, values?: { username?: string }) => {
     if (key === 'followed') return `Following ${values?.username ?? ''}`;
     if (key === 'unfollowed') return `Unfollowed ${values?.username ?? ''}`;
-    if (key === 'failed') return 'Could not update follow status';
+    if (key === 'followFailed') return `Failed to follow ${values?.username ?? ''}`;
+    if (key === 'unfollowFailed') return `Failed to unfollow ${values?.username ?? ''}`;
     return key;
   },
 }));
@@ -63,8 +49,6 @@ describe('useFollowUser', () => {
     mockUseAuthStore.mockReturnValue({ currentUserPubky: 'current-user' });
     mockCommitFollow.mockResolvedValue(undefined);
     mockGetDetails.mockResolvedValue(null);
-    mockIsAppError.mockReturnValue(false);
-    mockIsNetworkError.mockReturnValue(false);
   });
 
   it('sets error when user not authenticated', async () => {
@@ -140,8 +124,9 @@ describe('useFollowUser', () => {
     });
   });
 
-  it('shows generic error toast and resolves false on a non-AppError failure', async () => {
-    const error = new Error('Follow failed');
+  it('shows a friendly named error toast and resolves false when following fails', async () => {
+    // A raw transport error must never reach the user.
+    const error = new Error('Request failed: HTTP transport error: error sending request');
     mockCommitFollow.mockRejectedValue(error);
 
     const { result } = renderHook(() => useFollowUser());
@@ -153,55 +138,29 @@ describe('useFollowUser', () => {
 
     expect(returned).toBe(false);
     await waitFor(() => {
-      expect(result.current.error).toBe('Could not update follow status');
+      expect(result.current.error).toBe('Failed to follow Alice');
     });
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Could not update follow status',
+      description: 'Failed to follow Alice',
     });
     expect(mockLogger.error).toHaveBeenCalledWith('[useFollowUser] Failed to toggle follow:', error);
   });
 
-  it('surfaces the real message for a non-network AppError', async () => {
-    const error = new Error('Homeserver rejected the request');
-    mockCommitFollow.mockRejectedValue(error);
-    mockIsAppError.mockReturnValue(true);
-    mockIsNetworkError.mockReturnValue(false);
+  it('shows the unfollow-specific friendly error when unfollowing fails', async () => {
+    mockCommitFollow.mockRejectedValue(new Error('boom'));
 
     const { result } = renderHook(() => useFollowUser());
 
     let returned: boolean | undefined;
     await act(async () => {
-      returned = await result.current.toggleFollow('user-1', false, 'Alice');
-    });
-
-    expect(returned).toBe(false);
-    await waitFor(() => {
-      expect(result.current.error).toBe('Homeserver rejected the request');
-    });
-    expect(mockToast).toHaveBeenCalledWith({
-      variant: 'error',
-      description: 'Homeserver rejected the request',
-    });
-  });
-
-  it('falls back to the generic message for a network AppError', async () => {
-    const error = new Error('fetch failed: ECONNREFUSED');
-    mockCommitFollow.mockRejectedValue(error);
-    mockIsAppError.mockReturnValue(true);
-    mockIsNetworkError.mockReturnValue(true);
-
-    const { result } = renderHook(() => useFollowUser());
-
-    let returned: boolean | undefined;
-    await act(async () => {
-      returned = await result.current.toggleFollow('user-1', false, 'Alice');
+      returned = await result.current.toggleFollow('user-1', true, 'Alice');
     });
 
     expect(returned).toBe(false);
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Could not update follow status',
+      description: 'Failed to unfollow Alice',
     });
   });
 });

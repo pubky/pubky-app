@@ -3,7 +3,6 @@
 import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { UserController } from '@/controllers/user/user';
-import { isAppError, isNetworkError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
@@ -58,6 +57,9 @@ export function useFollowUser(): UseFollowUserResult {
       setLoadingUserId(userId);
       setError(null);
 
+      // Resolved up front so the failure toast can name the user too.
+      const username = await resolveFollowToastDisplayName(userId, displayName);
+
       try {
         const action = isCurrentlyFollowing ? HttpMethod.DELETE : HttpMethod.PUT;
 
@@ -66,7 +68,6 @@ export function useFollowUser(): UseFollowUserResult {
           followee: userId,
         });
 
-        const username = await resolveFollowToastDisplayName(userId, displayName);
         toast({
           title: isCurrentlyFollowing ? t('unfollowed', { username }) : t('followed', { username }),
         });
@@ -77,9 +78,8 @@ export function useFollowUser(): UseFollowUserResult {
 
         return true;
       } catch (err) {
-        // Network errors are noisy/transient — show a neutral message, not the raw network text.
-        // Any other AppError carries a meaningful message worth surfacing.
-        const message = isAppError(err) && !isNetworkError(err) ? err.message : t('failed');
+        // Always a friendly, named message — raw transport/server text never reaches the user.
+        const message = isCurrentlyFollowing ? t('unfollowFailed', { username }) : t('followFailed', { username });
         setError(message);
         toast({
           variant: 'error',
