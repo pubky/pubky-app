@@ -165,6 +165,22 @@ describe('stripImageMetadata', () => {
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
+  it('keeps animated WebP out of the canvas path to preserve all frames', async () => {
+    // RIFF....WEBPVP8X........ANIM — minimal animated WebP header
+    const animatedWebp = new Uint8Array([
+      0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x58, 0x0a, 0x00, 0x00,
+      0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x41, 0x4e, 0x49, 0x4d,
+    ]);
+    const inputFile = new File([animatedWebp], 'loop.webp', { type: 'image/webp' });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result).not.toBe(inputFile);
+    expect(result.type).toBe('image/webp');
+    expect(result.name).toMatch(/^[a-z0-9]+\.webp$/);
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
   it('keeps safe SVG uploads while obfuscating filename', async () => {
     const inputFile = new File(
       ['<svg xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="4"/></svg>'],

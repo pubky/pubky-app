@@ -94,6 +94,20 @@ function isWebpSignature(bytes: Uint8Array): boolean {
   );
 }
 
+function hasAnimChunk(bytes: Uint8Array): boolean {
+  for (let i = 12; i + 4 <= bytes.length; i += 1) {
+    if (bytes[i] === 0x41 && bytes[i + 1] === 0x4e && bytes[i + 2] === 0x49 && bytes[i + 3] === 0x4d) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function isAnimatedWebp(file: File): Promise<boolean> {
+  const header = new Uint8Array(await file.slice(0, FILE_HEADER_BYTES_LENGTH).arrayBuffer());
+  return isWebpSignature(header) && hasAnimChunk(header);
+}
+
 function isSvgSignature(bytes: Uint8Array): boolean {
   const text = TEXT_DECODER.decode(bytes);
   const normalized = text
@@ -350,7 +364,7 @@ export async function stripImageMetadata(file: File): Promise<File> {
     });
   }
 
-  if (!MIME_TYPES_WITH_CANVAS_SANITIZATION.has(imageMimeType)) {
+  if (!MIME_TYPES_WITH_CANVAS_SANITIZATION.has(imageMimeType) || (await isAnimatedWebp(file))) {
     return new File([file], obfuscatedName, {
       type: imageMimeType,
       lastModified: file.lastModified,
