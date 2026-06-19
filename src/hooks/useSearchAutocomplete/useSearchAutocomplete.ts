@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { debounce } from 'lodash-es';
-import { TAG_MAX_LENGTH } from '@/config/posts';
 import { SearchController } from '@/controllers/search/search';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import { Logger } from '@/libs/logger/logger';
@@ -11,14 +10,13 @@ import {
   AUTOCOMPLETE_DEBOUNCE_MS,
   AUTOCOMPLETE_TAG_LIMIT,
   AUTOCOMPLETE_USER_LIMIT,
-  MIN_USER_ID_SEARCH_LENGTH,
-  USER_ID_PREFIXES,
 } from './useSearchAutocomplete.constants';
 import type {
   AutocompleteTag,
   UseSearchAutocompleteParams,
   UseSearchAutocompleteResult,
 } from './useSearchAutocomplete.types';
+import { resolveSearchAutocompletePlan } from './useSearchAutocomplete.utils';
 
 export function useSearchAutocomplete({
   query,
@@ -40,24 +38,16 @@ export function useSearchAutocomplete({
       setIsSearching(true);
 
       try {
-        // Determine if this is an explicit user ID search (has pk: or pubky prefix)
-        const matchedPrefix = USER_ID_PREFIXES.find((prefix) => searchQuery.startsWith(prefix));
-        const isExplicitIdSearch = Boolean(matchedPrefix);
-        const userIdPrefix = matchedPrefix ? searchQuery.slice(matchedPrefix.length) : searchQuery;
-
-        // Search by user ID if the query (stripped of prefix) is long enough
-        // This works for both explicit prefix searches AND raw pubky input
-        const shouldSearchUserId = userIdPrefix.length >= MIN_USER_ID_SEARCH_LENGTH;
+        const { tagPrefix, userNamePrefix, userIdPrefix } = resolveSearchAutocompletePlan(searchQuery);
 
         // Prepare parallel API calls
         let tagPromise: Promise<string[]> | null = null;
         let userByNamePromise: Promise<string[]> | null = null;
         let userByIdPromise: Promise<string[]> | null = null;
 
-        // Search tags (skip for explicit user ID searches and over-length queries)
-        if (!isExplicitIdSearch && searchQuery.length <= TAG_MAX_LENGTH) {
+        if (tagPrefix !== null) {
           tagPromise = SearchController.getTagsByPrefix({
-            prefix: searchQuery,
+            prefix: tagPrefix,
             limit: AUTOCOMPLETE_TAG_LIMIT,
           }).catch((error) => {
             Logger.error('[useSearchAutocomplete] Failed to fetch tags:', error);
@@ -65,10 +55,9 @@ export function useSearchAutocomplete({
           });
         }
 
-        // Search users by name (skip for explicit user ID searches)
-        if (!isExplicitIdSearch) {
+        if (userNamePrefix !== null) {
           userByNamePromise = SearchController.getUsersByName({
-            prefix: searchQuery,
+            prefix: userNamePrefix,
             limit: AUTOCOMPLETE_USER_LIMIT,
           }).catch((error) => {
             Logger.error('[useSearchAutocomplete] Failed to fetch users by name:', error);
@@ -76,8 +65,7 @@ export function useSearchAutocomplete({
           });
         }
 
-        // Search users by ID (works for explicit prefix or raw pubky input)
-        if (shouldSearchUserId) {
+        if (userIdPrefix !== null) {
           userByIdPromise = SearchController.fetchUsersById({
             prefix: userIdPrefix,
             limit: AUTOCOMPLETE_USER_LIMIT,
