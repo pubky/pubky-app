@@ -3,7 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod } from '@/libs/http/http.types';
 import { useFollowUser } from './useFollowUser';
 
-const { mockUseAuthStore, mockCommitFollow, mockGetDetails, mockLogger, mockToast } = vi.hoisted(() => ({
+const {
+  mockUseAuthStore,
+  mockCommitFollow,
+  mockGetDetails,
+  mockLogger,
+  mockToast,
+  mockIsAppError,
+  mockIsNetworkError,
+} = vi.hoisted(() => ({
   mockUseAuthStore: vi.fn(),
   mockCommitFollow: vi.fn(),
   mockGetDetails: vi.fn(),
@@ -12,6 +20,13 @@ const { mockUseAuthStore, mockCommitFollow, mockGetDetails, mockLogger, mockToas
     error: vi.fn(),
   },
   mockToast: vi.fn(),
+  mockIsAppError: vi.fn(),
+  mockIsNetworkError: vi.fn(),
+}));
+
+vi.mock('@/libs/error/error.utils', () => ({
+  isAppError: (...args: unknown[]) => mockIsAppError(...args),
+  isNetworkError: (...args: unknown[]) => mockIsNetworkError(...args),
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -48,6 +63,8 @@ describe('useFollowUser', () => {
     mockUseAuthStore.mockReturnValue({ currentUserPubky: 'current-user' });
     mockCommitFollow.mockResolvedValue(undefined);
     mockGetDetails.mockResolvedValue(null);
+    mockIsAppError.mockReturnValue(false);
+    mockIsNetworkError.mockReturnValue(false);
   });
 
   it('sets error when user not authenticated', async () => {
@@ -123,20 +140,18 @@ describe('useFollowUser', () => {
     });
   });
 
-  it('shows error toast and rethrows on failure', async () => {
+  it('shows generic error toast and resolves false on a non-AppError failure', async () => {
     const error = new Error('Follow failed');
     mockCommitFollow.mockRejectedValue(error);
 
     const { result } = renderHook(() => useFollowUser());
 
+    let returned: boolean | undefined;
     await act(async () => {
-      try {
-        await result.current.toggleFollow('user-1', false, 'Alice');
-      } catch {
-        // swallow to allow state update assertions
-      }
+      returned = await result.current.toggleFollow('user-1', false, 'Alice');
     });
 
+    expect(returned).toBe(false);
     await waitFor(() => {
       expect(result.current.error).toBe('Could not update follow status');
     });
@@ -145,5 +160,48 @@ describe('useFollowUser', () => {
       description: 'Could not update follow status',
     });
     expect(mockLogger.error).toHaveBeenCalledWith('[useFollowUser] Failed to toggle follow:', error);
+  });
+
+  it('surfaces the real message for a non-network AppError', async () => {
+    const error = new Error('Homeserver rejected the request');
+    mockCommitFollow.mockRejectedValue(error);
+    mockIsAppError.mockReturnValue(true);
+    mockIsNetworkError.mockReturnValue(false);
+
+    const { result } = renderHook(() => useFollowUser());
+
+    let returned: boolean | undefined;
+    await act(async () => {
+      returned = await result.current.toggleFollow('user-1', false, 'Alice');
+    });
+
+    expect(returned).toBe(false);
+    await waitFor(() => {
+      expect(result.current.error).toBe('Homeserver rejected the request');
+    });
+    expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Homeserver rejected the request',
+    });
+  });
+
+  it('falls back to the generic message for a network AppError', async () => {
+    const error = new Error('fetch failed: ECONNREFUSED');
+    mockCommitFollow.mockRejectedValue(error);
+    mockIsAppError.mockReturnValue(true);
+    mockIsNetworkError.mockReturnValue(true);
+
+    const { result } = renderHook(() => useFollowUser());
+
+    let returned: boolean | undefined;
+    await act(async () => {
+      returned = await result.current.toggleFollow('user-1', false, 'Alice');
+    });
+
+    expect(returned).toBe(false);
+    expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Could not update follow status',
+    });
   });
 });

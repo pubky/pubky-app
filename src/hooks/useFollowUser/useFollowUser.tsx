@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { UserController } from '@/controllers/user/user';
+import { isAppError, isNetworkError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
@@ -44,12 +45,12 @@ export function useFollowUser(): UseFollowUserResult {
     async (userId: Pubky, isCurrentlyFollowing: boolean, displayName?: string) => {
       if (!currentUserPubky) {
         setError('User not authenticated');
-        return;
+        return false;
       }
 
       if (userId === currentUserPubky) {
         setError('Cannot follow yourself');
-        return;
+        return false;
       }
 
       setLoadingAction(isCurrentlyFollowing ? 'unfollow' : 'follow');
@@ -73,15 +74,19 @@ export function useFollowUser(): UseFollowUserResult {
         Logger.debug(`[useFollowUser] Successfully ${isCurrentlyFollowing ? 'unfollowed' : 'followed'} user`, {
           userId,
         });
+
+        return true;
       } catch (err) {
-        const friendlyMessage = t('failed');
-        setError(friendlyMessage);
+        // Network errors are noisy/transient — show a neutral message, not the raw network text.
+        // Any other AppError carries a meaningful message worth surfacing.
+        const message = isAppError(err) && !isNetworkError(err) ? err.message : t('failed');
+        setError(message);
         toast({
           variant: 'error',
-          description: friendlyMessage,
+          description: message,
         });
         Logger.error('[useFollowUser] Failed to toggle follow:', err);
-        throw err;
+        return false;
       } finally {
         setIsLoading(false);
         setLoadingAction(null);
