@@ -170,6 +170,58 @@ describe('useAddContentForm', () => {
     expect(result.current.form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL)).toBe('');
   });
 
+  it('rejects collection posts when adding to a collection', async () => {
+    mocks.getOrFetchPost.mockResolvedValue({
+      ...livePost(),
+      kind: 'collection',
+      content: JSON.stringify({ name: 'Nested', description: '', items: [] }),
+    });
+    const { result } = renderHook(() =>
+      useAddContentForm({
+        target: { type: 'collection', collectionId: COLLECTION_ID },
+        onSuccess: mocks.onSuccess,
+      }),
+    );
+
+    let saved = true;
+    await act(async () => {
+      saved = await result.current.submit(POST_URL);
+    });
+
+    expect(saved).toBe(false);
+    expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
+    expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
+      'collections.addContentDialog.errors.collectionNotAllowed',
+    );
+  });
+
+  it('rejects adding the current collection to itself', async () => {
+    const selfUrl = `https://pubky.app/post/${VIEWER}/collection-1`;
+    mocks.getOrFetchPost.mockResolvedValue({
+      ...livePost(),
+      id: COLLECTION_ID,
+      kind: 'collection',
+      content: JSON.stringify({ name: 'Saved', description: '', items: [] }),
+    });
+    const { result } = renderHook(() =>
+      useAddContentForm({
+        target: { type: 'collection', collectionId: COLLECTION_ID },
+        onSuccess: mocks.onSuccess,
+      }),
+    );
+
+    let saved = true;
+    await act(async () => {
+      saved = await result.current.submit(selfUrl);
+    });
+
+    expect(saved).toBe(false);
+    expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
+    expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
+      'collections.addContentDialog.errors.collectionNotAllowed',
+    );
+  });
+
   it('rejects posts already in the collection', async () => {
     mocks.getCollectionDetails.mockResolvedValue(collectionDetails([POST_URI]));
     const { result } = renderHook(() =>

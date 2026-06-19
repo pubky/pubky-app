@@ -396,6 +396,30 @@ export class PostController {
 
     const { pubky: postAuthorId, id: rawPostId } = parseCompositeId(postId);
     const itemUri = postUriBuilder(postAuthorId, rawPostId);
+
+    if (shouldAdd && !currentContent.items?.includes(itemUri)) {
+      let itemPost: PostDetailsModelSchema | null = await PostApplication.getDetails({ compositeId: postId });
+      if (!itemPost) {
+        itemPost = await PostApplication.getOrFetch({ compositeId: postId, viewerId: currentUserPubky });
+      }
+
+      if (!itemPost || isPostDeleted(itemPost.content)) {
+        throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
+          service: ErrorService.Local,
+          operation: 'commitUpdateCollectionItem',
+          context: { collectionId, postId },
+        });
+      }
+
+      if (itemPost.kind === 'collection') {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Collections cannot be added to a collection', {
+          service: ErrorService.Local,
+          operation: 'commitUpdateCollectionItem',
+          context: { collectionId, postId },
+        });
+      }
+    }
+
     const nextContent = shouldAdd
       ? CollectionPostContent.addItem(currentContent, itemUri)
       : CollectionPostContent.removeItem(currentContent, itemUri);

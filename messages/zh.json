@@ -1396,6 +1396,7 @@
         "invalid": "输入有效的帖子 URL。",
         "notFound": "找不到该帖子。",
         "alreadyAdded": "此帖子已添加。",
+        "collectionNotAllowed": "无法将合集添加到合集中。",
         "failure": "无法添加此帖子。"
       }
     }

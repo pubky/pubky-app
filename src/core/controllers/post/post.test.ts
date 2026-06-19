@@ -695,9 +695,32 @@ describe('PostController', () => {
         ...overrides,
       }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
 
+    const createItemDetails = (kind: 'short' | 'collection' = 'short') =>
+      ({
+        id: targetPostId,
+        content:
+          kind === 'collection' ? JSON.stringify({ name: 'Nested collection', description: '', items: [] }) : 'hello',
+        indexed_at: Date.now(),
+        kind,
+        uri: targetPostUri,
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+      }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
+
+    const mockCollectionItemDetails = (
+      collection: Awaited<ReturnType<typeof PostApplication.getDetails>>,
+      itemKind: 'short' | 'collection' = 'short',
+    ) =>
+      vi.spyOn(PostApplication, 'getDetails').mockImplementation(async ({ compositeId }) => {
+        if (compositeId === collectionPostId) return collection;
+        if (compositeId === targetPostId) return createItemDetails(itemKind);
+        return null;
+      });
+
     it('adds a post URI to a collection', async () => {
       setupAuthUser(testData.authorPubky);
-      const getDetailsSpy = vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const getDetailsSpy = mockCollectionItemDetails(createCollectionDetails());
       const toEditSpy = vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
         post: { toJson: () => ({}) },
         meta: { url: 'pubky://author/pub/pubky.app/posts/collection123' },
@@ -713,6 +736,7 @@ describe('PostController', () => {
         });
 
         expect(getDetailsSpy).toHaveBeenCalledWith({ compositeId: collectionPostId });
+        expect(getDetailsSpy).toHaveBeenCalledWith({ compositeId: targetPostId });
         expect(toEditSpy).toHaveBeenCalledWith({
           compositePostId: collectionPostId,
           content: JSON.stringify({
@@ -736,7 +760,7 @@ describe('PostController', () => {
     it('prepends a new post URI before existing collection items', async () => {
       setupAuthUser(testData.authorPubky);
       const existingItemUri = 'pubky://existing_author/pub/pubky.app/posts/existing123';
-      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([existingItemUri]));
+      mockCollectionItemDetails(createCollectionDetails([existingItemUri]));
       const toEditSpy = vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
         post: { toJson: () => ({}) },
         meta: { url: 'pubky://author/pub/pubky.app/posts/collection123' },
@@ -821,6 +845,42 @@ describe('PostController', () => {
       }
     });
 
+    it('rejects adding a collection post to a collection', async () => {
+      setupAuthUser(testData.authorPubky);
+      mockCollectionItemDetails(createCollectionDetails(), 'collection');
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitUpdateCollectionItem({
+            collectionId: collectionPostId,
+            postId: targetPostId,
+            shouldAdd: true,
+          }),
+        ).rejects.toThrow('Collections cannot be added to a collection');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects adding a collection to itself', async () => {
+      setupAuthUser(testData.authorPubky);
+      mockCollectionItemDetails(createCollectionDetails());
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitUpdateCollectionItem({
+            collectionId: collectionPostId,
+            postId: collectionPostId,
+            shouldAdd: true,
+          }),
+        ).rejects.toThrow('Collections cannot be added to a collection');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
     it('rejects missing collections', async () => {
       setupAuthUser(testData.authorPubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(null);
@@ -880,7 +940,7 @@ describe('PostController', () => {
 
     it('rejects edits when the current user is not the collection author', async () => {
       setupAuthUser('different_user_pubky' as Pubky);
-      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      mockCollectionItemDetails(createCollectionDetails());
 
       try {
         const { PostController } = await import('./post');

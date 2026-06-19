@@ -1406,6 +1406,7 @@
         "invalid": "Introduce una URL de publicación válida.",
         "notFound": "No pudimos encontrar esa publicación.",
         "alreadyAdded": "Esta publicación ya está añadida.",
+        "collectionNotAllowed": "No se pueden añadir colecciones a una colección.",
         "failure": "No se pudo añadir esta publicación."
       }
     }
