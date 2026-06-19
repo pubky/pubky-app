@@ -34,12 +34,6 @@ function parseTranslateY(transform: string): number {
     return values[13] || 0;
   }
 
-  const translateY = transform.match(/^translateY\(([-\d.]+)px\)$/);
-  if (translateY?.[1]) return Number.parseFloat(translateY[1]);
-
-  const translate3d = transform.match(/^translate3d\([^,]+,\s*([-\d.]+)px,/);
-  if (translate3d?.[1]) return Number.parseFloat(translate3d[1]);
-
   return 0;
 }
 
