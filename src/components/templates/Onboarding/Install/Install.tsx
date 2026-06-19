@@ -46,11 +46,13 @@ export function Install() {
 
         if (status === 'used') {
           toast({
+            variant: 'error',
             title: t('usedInviteCode'),
             description: t('usedInviteCodeDescription'),
           });
         } else {
           toast({
+            variant: 'error',
             title: t('invalidInviteCode'),
             description: t('invalidInviteCodeDescription'),
           });

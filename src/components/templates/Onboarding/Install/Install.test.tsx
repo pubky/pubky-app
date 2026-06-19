@@ -105,10 +105,10 @@ describe('Install template', () => {
     expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     expect(mockSetInviteCode).not.toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
       title: 'Invalid invite code',
       description: 'invalidInviteCodeDescription',
     });
-    expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
 
   it('does not apply the invite code and redirects home when the code has already been used', async () => {
@@ -122,10 +122,10 @@ describe('Install template', () => {
     expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     expect(mockSetInviteCode).not.toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
       title: 'Invite code already used',
       description: 'usedInviteCodeDescription',
     });
-    expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
 
   it('shows an error toast and redirects home when verification fails to reach the homeserver', async () => {
