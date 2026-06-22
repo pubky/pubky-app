@@ -78,6 +78,31 @@ describe('stripImageMetadata', () => {
     });
   }
 
+  function asciiBytes(value: string): number[] {
+    return Array.from(value, (character) => character.charCodeAt(0));
+  }
+
+  function uint32LittleEndianBytes(value: number): number[] {
+    return [value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff];
+  }
+
+  function buildWebpBytes(chunks: { type: string; payload: Uint8Array }[]): ArrayBuffer {
+    const chunkBytes = chunks.flatMap(({ type, payload }) => [
+      ...asciiBytes(type),
+      ...uint32LittleEndianBytes(payload.length),
+      ...Array.from(payload),
+      ...(payload.length % 2 === 1 ? [0] : []),
+    ]);
+
+    const bytes = new Uint8Array([
+      ...asciiBytes('RIFF'),
+      ...uint32LittleEndianBytes(4 + chunkBytes.length),
+      ...asciiBytes('WEBP'),
+      ...chunkBytes,
+    ]);
+    return bytes.buffer as ArrayBuffer;
+  }
+
   it('sanitizes supported image types and returns a new file', async () => {
     const inputFile = new File(['raw-image-bytes'], 'photo.jpg', { type: 'image/jpeg' });
 
@@ -166,10 +191,9 @@ describe('stripImageMetadata', () => {
   });
 
   it('keeps animated WebP out of the canvas path to preserve all frames', async () => {
-    // RIFF....WEBPVP8X........ANIM — minimal animated WebP header
-    const animatedWebp = new Uint8Array([
-      0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x58, 0x0a, 0x00, 0x00,
-      0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x41, 0x4e, 0x49, 0x4d,
+    const animatedWebp = buildWebpBytes([
+      { type: 'XMP ', payload: new Uint8Array(600) },
+      { type: 'ANIM', payload: new Uint8Array([0, 0, 0, 0, 0, 0]) },
     ]);
     const inputFile = new File([animatedWebp], 'loop.webp', { type: 'image/webp' });
 
@@ -179,6 +203,17 @@ describe('stripImageMetadata', () => {
     expect(result.type).toBe('image/webp');
     expect(result.name).toMatch(/^[a-z0-9]+\.webp$/);
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('sanitizes static WebP when ANIM appears only inside chunk data', async () => {
+    const staticWebp = buildWebpBytes([{ type: 'EXIF', payload: new Uint8Array(asciiBytes('ANIM')) }]);
+    const inputFile = new File([staticWebp], 'still.webp', { type: 'image/webp' });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result.type).toBe('image/webp');
+    expect(result.name).toMatch(/^[a-z0-9]+\.webp$/);
+    expect(mockCanvas.toBlob).toHaveBeenCalled();
   });
 
   it('keeps safe SVG uploads while obfuscating filename', async () => {

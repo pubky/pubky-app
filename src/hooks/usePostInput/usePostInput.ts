@@ -9,7 +9,6 @@ import {
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_SUPPORTED_FILE_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
-  ATTACHMENT_MAX_IMAGE_SIZE,
   ATTACHMENT_MAX_OTHER_SIZE,
   POST_ATTACHMENT_MAX_FILES,
   POST_MAX_CHARACTER_LENGTH,
@@ -331,13 +330,10 @@ export function usePostInput({
           continue;
         }
 
-        const isImage = file.type.startsWith('image/');
-        const maxSize = isImage ? ATTACHMENT_MAX_IMAGE_SIZE : ATTACHMENT_MAX_OTHER_SIZE;
         const maxOtherSizeLabel = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
-        const maxSizeLabel = isImage ? '5MB' : maxOtherSizeLabel;
 
-        if (file.size > maxSize) {
-          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxSizeLabel }));
+        if (!file.type.startsWith('image/') && file.size > ATTACHMENT_MAX_OTHER_SIZE) {
+          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxOtherSizeLabel }));
           continue;
         }
 

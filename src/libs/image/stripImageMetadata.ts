@@ -21,6 +21,7 @@ const MIME_TYPES_WITH_CANVAS_SANITIZATION = new Set(['image/jpeg', 'image/png', 
 const MIME_TYPES_WITH_LOSSY_REENCODING = new Set(['image/jpeg', 'image/webp']);
 const SVG_MIME_TYPE = 'image/svg+xml';
 const FILE_HEADER_BYTES_LENGTH = 512;
+const WEBP_ANIMATION_FLAG = 0x02;
 const TEXT_DECODER = new TextDecoder();
 const SVG_ACTIVE_ELEMENT_NAMES = new Set([
   'animate',
@@ -94,20 +95,6 @@ function isWebpSignature(bytes: Uint8Array): boolean {
   );
 }
 
-function hasAnimChunk(bytes: Uint8Array): boolean {
-  for (let i = 12; i + 4 <= bytes.length; i += 1) {
-    if (bytes[i] === 0x41 && bytes[i + 1] === 0x4e && bytes[i + 2] === 0x49 && bytes[i + 3] === 0x4d) {
-      return true;
-    }
-  }
-  return false;
-}
-
-async function isAnimatedWebp(file: File): Promise<boolean> {
-  const header = new Uint8Array(await file.slice(0, FILE_HEADER_BYTES_LENGTH).arrayBuffer());
-  return isWebpSignature(header) && hasAnimChunk(header);
-}
-
 function isSvgSignature(bytes: Uint8Array): boolean {
   const text = TEXT_DECODER.decode(bytes);
   const normalized = text
@@ -149,6 +136,59 @@ async function detectImageMimeType(file: File): Promise<string | null> {
   }
 
   return getImageMimeTypeFromExtension(file);
+}
+
+function readUint32LittleEndian(bytes: Uint8Array, offset: number): number {
+  return (bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24)) >>> 0;
+}
+
+function isChunkType(bytes: Uint8Array, offset: number, type: string): boolean {
+  return (
+    bytes[offset] === type.charCodeAt(0) &&
+    bytes[offset + 1] === type.charCodeAt(1) &&
+    bytes[offset + 2] === type.charCodeAt(2) &&
+    bytes[offset + 3] === type.charCodeAt(3)
+  );
+}
+
+function hasAnimatedWebpChunk(bytes: Uint8Array): boolean {
+  if (!isWebpSignature(bytes)) {
+    return false;
+  }
+
+  let offset = 12;
+  while (offset + 8 <= bytes.length) {
+    const chunkSize = readUint32LittleEndian(bytes, offset + 4);
+    const dataOffset = offset + 8;
+
+    if (isChunkType(bytes, offset, 'ANIM')) {
+      return true;
+    }
+
+    if (
+      isChunkType(bytes, offset, 'VP8X') &&
+      chunkSize >= 1 &&
+      dataOffset < bytes.length &&
+      (bytes[dataOffset] & WEBP_ANIMATION_FLAG) !== 0
+    ) {
+      return true;
+    }
+
+    const paddedChunkSize = chunkSize + (chunkSize % 2);
+    const nextOffset = dataOffset + paddedChunkSize;
+    if (nextOffset <= offset || nextOffset > bytes.length) {
+      break;
+    }
+
+    offset = nextOffset;
+  }
+
+  return false;
+}
+
+async function isAnimatedWebp(file: File): Promise<boolean> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return hasAnimatedWebpChunk(bytes);
 }
 
 function getImageFileExtension(file: File, mimeType: string): string {

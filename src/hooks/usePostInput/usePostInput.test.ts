@@ -1651,7 +1651,7 @@ describe('usePostInput', () => {
       });
     });
 
-    it('rejects images exceeding 5MB and shows toast', () => {
+    it('accepts images exceeding 5MB so upload sanitization can compress them', () => {
       const { result } = renderHook(() =>
         usePostInput({
           variant: 'post',
@@ -1666,11 +1666,8 @@ describe('usePostInput', () => {
         result.current.handleFilesAdded([largeFile]);
       });
 
-      expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
-        variant: 'error',
-        description: expect.stringContaining('exceeds the 5MB limit'),
-      });
+      expect(mockSetAttachments).toHaveBeenCalled();
+      expect(mockToast).not.toHaveBeenCalled();
     });
 
     it('rejects non-image files exceeding the max size and shows toast', () => {
