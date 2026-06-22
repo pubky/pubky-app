@@ -156,6 +156,7 @@ function toast({ ...props }: Toast) {
     type: 'ADD_TOAST',
     toast: {
       ...props,
+      dismissButton: props.dismissButton ?? false,
       id,
       open: true,
       onOpenChange: (open) => {

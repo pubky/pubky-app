@@ -49,10 +49,10 @@ export const PostAttachmentsImagesAndVideos = ({
   const handleFullscreen = () => {
     const currentMedia = document.getElementById(`media-item-${currentIndex}`);
     if (currentMedia) {
-      currentMedia.requestFullscreen().catch((error) => {
+      currentMedia.requestFullscreen().catch((error: unknown) => {
         toast({
-          title: tFullscreen('error'),
-          description: error,
+          variant: 'error',
+          description: error instanceof Error ? error.message : tFullscreen('error'),
         });
       });
     }

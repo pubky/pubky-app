@@ -17,12 +17,12 @@ const mockInitializeAuthenticatedSession = vi.fn();
 const mockCancelActiveAuthFlow = vi.fn();
 const mockTranslations = vi.fn((key: string) => {
   const t: Record<string, string> = {
-    authInitFailedTitle: 'Sign in failed. Please try again.',
-    authInitFailedDescription: 'Unable to complete authorization with Pubky Ring. Please try again.',
+    authInitFailedTitle: 'Sign in failed. Try again.',
+    authInitFailedDescription: 'Sign in failed. Try again.',
     authNotCompletedTitle: 'Authorization was not completed',
-    authNotCompletedDescription: 'The signer did not complete authorization. Please try again.',
+    authNotCompletedDescription: 'Authorization failed. Try again.',
     qrGenerationFailedTitle: 'QR code generation failed',
-    qrGenerationFailedDescription: 'Unable to generate sign-in QR code. Please refresh and try again.',
+    qrGenerationFailedDescription: 'Could not generate QR. Refresh and try again.',
   };
   return t[key] ?? key;
 });
@@ -179,8 +179,8 @@ describe('useAuthUrl', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Authorization was not completed',
-        description: 'The signer did not complete authorization. Please try again.',
+        variant: 'error',
+        description: 'Authorization failed. Try again.',
       });
     });
   });
@@ -307,8 +307,8 @@ describe('useAuthUrl', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Sign in failed. Please try again.',
-        description: 'Unable to complete authorization with Pubky Ring. Please try again.',
+        variant: 'error',
+        description: 'Sign in failed. Try again.',
       });
     });
   });
@@ -320,8 +320,8 @@ describe('useAuthUrl', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'QR code generation failed',
-        description: 'Unable to generate sign-in QR code. Please refresh and try again.',
+        variant: 'error',
+        description: 'Could not generate QR. Refresh and try again.',
       });
     });
   });

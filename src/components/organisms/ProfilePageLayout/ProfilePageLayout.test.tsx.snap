@@ -1,31 +1,299 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`ProfilePageLayout > matches snapshot when loading 1`] = `
-<div
-  data-left="false"
-  data-right="false"
-  data-testid="mobile-header"
->
-  Mobile Header
+exports[`ProfilePageLayout - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div>
+  <div
+    data-left="false"
+    data-right="false"
+    data-testid="mobile-header"
+  >
+    Mobile Header
+  </div>
+  <div
+    data-active="posts"
+    data-testid="profile-page-mobile-menu"
+  >
+    Profile Mobile Menu
+  </div>
+  <div
+    data-testid="profile-page-layout-wrapper"
+  >
+    <div
+      class="mb-6 flex min-w-0 flex-col overflow-hidden bg-transparent pb-0 shadow-none lg:mb-0 lg:block lg:bg-background lg:pb-12 lg:shadow-sm"
+      data-override="true"
+      data-testid="container"
+    >
+      <div
+        data-actions="[\\"onEdit\\",\\"onCopyPublicKey\\",\\"onCopyLink\\",\\"onSignOut\\",\\"onStatusChange\\",\\"followLoadingAction\\",\\"onAvatarClick\\"]"
+        data-profile="{\\"name\\":\\"Test User\\",\\"bio\\":\\"Test bio\\",\\"publicKey\\":\\"pk:test123\\",\\"emoji\\":\\"🌴\\",\\"status\\":\\"Available\\",\\"avatarUrl\\":\\"https://example.com/avatar.jpg\\",\\"link\\":\\"https://example.com/profile/test123\\"}"
+        data-testid="profile-page-header"
+      >
+        <button
+          data-testid="avatar-button"
+        >
+          Click Avatar
+        </button>
+        Profile Header
+      </div>
+    </div>
+    <div
+      class="flex gap-6"
+      data-override="true"
+      data-testid="container"
+    >
+      <div
+        data-active="posts"
+        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"uniqueTags\\":12}"
+        data-testid="profile-filter-bar"
+      >
+        Filter Bar
+      </div>
+      <div
+        class="min-w-0 flex-1"
+        data-cy="profile-tab-content"
+        data-override="true"
+        data-testid="container"
+      >
+        <div
+          class="min-h-[calc(100dvh-var(--header-height-mobile))] min-w-0 lg:contents"
+          data-cy="profile-posts-feed"
+          data-override="true"
+          data-testid="container"
+          style="scroll-margin-top: 144px;"
+        >
+          <div
+            data-testid="posts-content"
+          >
+            Posts Content
+          </div>
+        </div>
+      </div>
+      <div
+        data-testid="profile-sidebar"
+      >
+        Sidebar
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Footer
+  </div>
 </div>
 `;
 
-exports[`ProfilePageLayout > matches snapshot with default props 1`] = `
-<div
-  data-left="false"
-  data-right="false"
-  data-testid="mobile-header"
->
-  Mobile Header
+exports[`ProfilePageLayout - Snapshots > matches snapshot for other-user posts on desktop 1`] = `
+<div>
+  <div
+    data-left="false"
+    data-right="false"
+    data-testid="mobile-header"
+  >
+    Mobile Header
+  </div>
+  <div
+    data-active="posts"
+    data-testid="profile-page-mobile-menu"
+  >
+    Profile Mobile Menu
+  </div>
+  <div
+    data-testid="profile-page-layout-wrapper"
+  >
+    <div
+      class="mb-6 flex min-w-0 flex-col overflow-hidden bg-transparent pb-0 shadow-none lg:mb-0 lg:block lg:bg-background lg:pb-12 lg:shadow-sm"
+      data-override="true"
+      data-testid="container"
+    >
+      <div
+        data-actions="[\\"onEdit\\",\\"onCopyPublicKey\\",\\"onCopyLink\\",\\"onSignOut\\",\\"onStatusChange\\",\\"followLoadingAction\\",\\"onAvatarClick\\"]"
+        data-profile="{\\"name\\":\\"Test User\\",\\"bio\\":\\"Test bio\\",\\"publicKey\\":\\"pk:test123\\",\\"emoji\\":\\"🌴\\",\\"status\\":\\"Available\\",\\"avatarUrl\\":\\"https://example.com/avatar.jpg\\",\\"link\\":\\"https://example.com/profile/test123\\"}"
+        data-testid="profile-page-header"
+      >
+        <button
+          data-testid="avatar-button"
+        >
+          Click Avatar
+        </button>
+        Profile Header
+      </div>
+    </div>
+    <div
+      class="flex gap-6"
+      data-override="true"
+      data-testid="container"
+    >
+      <div
+        data-active="posts"
+        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"uniqueTags\\":12}"
+        data-testid="profile-filter-bar"
+      >
+        Filter Bar
+      </div>
+      <div
+        class="min-w-0 flex-1"
+        data-cy="profile-tab-content"
+        data-override="true"
+        data-testid="container"
+      >
+        <div
+          class="min-h-[calc(100dvh-var(--header-height-mobile))] min-w-0 lg:contents"
+          data-cy="profile-posts-feed"
+          data-override="true"
+          data-testid="container"
+        >
+          <div
+            data-testid="posts-content"
+          >
+            Posts Content
+          </div>
+        </div>
+      </div>
+      <div
+        data-testid="profile-sidebar"
+      >
+        Sidebar
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Footer
+  </div>
 </div>
 `;
 
-exports[`ProfilePageLayout > matches snapshot with different active pages 1`] = `
-<div
-  data-left="false"
-  data-right="false"
-  data-testid="mobile-header"
->
-  Mobile Header
+exports[`ProfilePageLayout - Snapshots > matches snapshot when loading 1`] = `
+<div>
+  <div
+    data-left="false"
+    data-right="false"
+    data-testid="mobile-header"
+  >
+    Mobile Header
+  </div>
+  <div
+    data-active="notifications"
+    data-testid="profile-page-mobile-menu"
+  >
+    Profile Mobile Menu
+  </div>
+  <div
+    data-testid="profile-page-layout-wrapper"
+  >
+    <div
+      class="hidden overflow-hidden bg-background pb-12 shadow-sm lg:block"
+      data-override="true"
+      data-testid="container"
+    />
+    <div
+      class="flex gap-6"
+      data-override="true"
+      data-testid="container"
+    >
+      <div
+        data-active="notifications"
+        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"uniqueTags\\":12}"
+        data-testid="profile-filter-bar"
+      >
+        Filter Bar
+      </div>
+      <div
+        class="min-w-0 flex-1"
+        data-cy="profile-tab-content"
+        data-override="true"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+      <div
+        data-testid="profile-sidebar"
+      >
+        Sidebar
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Footer
+  </div>
+</div>
+`;
+
+exports[`ProfilePageLayout - Snapshots > matches snapshot with different active pages 1`] = `
+<div>
+  <div
+    data-left="false"
+    data-right="false"
+    data-testid="mobile-header"
+  >
+    Mobile Header
+  </div>
+  <div
+    data-active="posts"
+    data-testid="profile-page-mobile-menu"
+  >
+    Profile Mobile Menu
+  </div>
+  <div
+    data-testid="profile-page-layout-wrapper"
+  >
+    <div
+      class="hidden overflow-hidden bg-background pb-12 shadow-sm lg:block"
+      data-override="true"
+      data-testid="container"
+    >
+      <div
+        data-actions="[\\"onEdit\\",\\"onCopyPublicKey\\",\\"onCopyLink\\",\\"onSignOut\\",\\"onStatusChange\\",\\"followLoadingAction\\",\\"onAvatarClick\\"]"
+        data-profile="{\\"name\\":\\"Test User\\",\\"bio\\":\\"Test bio\\",\\"publicKey\\":\\"pk:test123\\",\\"emoji\\":\\"🌴\\",\\"status\\":\\"Available\\",\\"avatarUrl\\":\\"https://example.com/avatar.jpg\\",\\"link\\":\\"https://example.com/profile/test123\\"}"
+        data-testid="profile-page-header"
+      >
+        <button
+          data-testid="avatar-button"
+        >
+          Click Avatar
+        </button>
+        Profile Header
+      </div>
+    </div>
+    <div
+      class="flex gap-6"
+      data-override="true"
+      data-testid="container"
+    >
+      <div
+        data-active="posts"
+        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"uniqueTags\\":12}"
+        data-testid="profile-filter-bar"
+      >
+        Filter Bar
+      </div>
+      <div
+        class="min-w-0 flex-1"
+        data-cy="profile-tab-content"
+        data-override="true"
+        data-testid="container"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+      <div
+        data-testid="profile-sidebar"
+      >
+        Sidebar
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="mobile-footer"
+  >
+    Footer
+  </div>
 </div>
 `;

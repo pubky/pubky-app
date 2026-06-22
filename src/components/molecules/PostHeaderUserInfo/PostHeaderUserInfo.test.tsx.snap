@@ -17,7 +17,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot for current user (no 
       <a
         class="shrink-0"
         data-testid="profile-link"
-        href="/profile/snapshotUserKey"
+        href="/profile"
       >
         <div
           data-size="default"
@@ -38,7 +38,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot for current user (no 
         <a
           class="block w-fit max-w-full min-w-0"
           data-testid="profile-link"
-          href="/profile/snapshotUserKey"
+          href="/profile"
         >
           <p
             class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"

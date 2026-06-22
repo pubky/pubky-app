@@ -5,13 +5,6 @@ import { useCopyrightForm } from './useCopyrightForm';
 import { COPYRIGHT_ROLES } from './useCopyrightForm.constants';
 
 const mockToast = vi.fn();
-const mockShowErrorToast = vi.fn();
-vi.mock('@/molecules/Toaster/showErrorToast', () => {
-  return {
-    showErrorToast: (params: { title?: string; description: string }) => mockShowErrorToast(params),
-  };
-});
-
 vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     toast: (...args: unknown[]) => mockToast(...args),
@@ -167,8 +160,7 @@ describe('useCopyrightForm', () => {
       });
 
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Request sent successfully',
+        title: 'Request sent',
       });
     });
 
@@ -190,7 +182,8 @@ describe('useCopyrightForm', () => {
         await result.current.onSubmit();
       });
 
-      expect(mockShowErrorToast).toHaveBeenCalledWith({
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
         description: 'Validation failed',
       });
     });
@@ -230,7 +223,8 @@ describe('useCopyrightForm', () => {
         await result.current.onSubmit();
       });
 
-      expect(mockShowErrorToast).toHaveBeenCalledWith({
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
         description: 'Network error',
       });
     });

@@ -9,7 +9,7 @@ import { ProfileController } from '@/controllers/profile/profile';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { Logger } from '@/libs/logger/logger';
 import { withPubkyPrefix } from '@/libs/utils/utils';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { toast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export interface ProfileActions {
@@ -61,7 +61,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
       router.push(AUTH_ROUTES.LOGOUT);
     } catch (error) {
       Logger.error('Failed to logout:', error);
-      showErrorToast({ description: tLogout('failed') });
+      toast({ variant: 'error', description: tLogout('failed') });
       setIsLoggingOut(false);
     }
   }, [router, tLogout]);
@@ -71,7 +71,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
       const currentUserPubky = authStore.currentUserPubky;
       if (!currentUserPubky) {
         Logger.error('No authenticated user found');
-        showErrorToast({ description: tStatus('userNotLoaded') });
+        toast({ variant: 'error', description: tStatus('userNotLoaded') });
         return;
       }
 
@@ -79,7 +79,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
         await ProfileController.commitUpdateStatus({ pubky: currentUserPubky, status });
       } catch (error) {
         Logger.error('Failed to update status:', error);
-        showErrorToast({ description: tStatus('updateFailed') });
+        toast({ variant: 'error', description: tStatus('updateFailed') });
       }
     },
     [authStore, tStatus],

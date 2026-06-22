@@ -16,16 +16,51 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with multiple toasts
     tabindex="-1"
   >
     <li
-      class="group pointer-events-auto relative w-full space-x-4 overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full flex items-start justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-brand/32 bg-brand/8"
       data-cy="toast"
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
+      data-variant="default"
       style="user-select: none; touch-action: none;"
       tabindex="0"
     >
+      <svg
+        aria-hidden="true"
+        class="size-5 shrink-0 text-brand"
+        fill="none"
+        height="24"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <mask
+          id="radix-normalized"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            fill="white"
+            r="10"
+          />
+          <path
+            d="M8 12.5 10.5 15 16 9"
+            stroke="black"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.5"
+          />
+        </mask>
+        <circle
+          cx="12"
+          cy="12"
+          fill="currentColor"
+          mask="url(#radix-normalized)"
+          r="10"
+        />
+      </svg>
       <div
-        class="flex max-h-32 min-w-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-y-contain"
+        class="flex max-h-32 min-w-0 flex-1 flex-col items-start justify-center gap-0.5 overflow-y-auto overscroll-y-contain"
       >
         <div
           class="min-w-0 text-sm leading-normal font-bold break-words text-popover-foreground"
@@ -43,16 +78,51 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with multiple toasts
       />
     </li>
     <li
-      class="group pointer-events-auto relative w-full space-x-4 overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full flex items-start justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-brand/32 bg-brand/8"
       data-cy="toast"
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
+      data-variant="default"
       style="user-select: none; touch-action: none;"
       tabindex="0"
     >
+      <svg
+        aria-hidden="true"
+        class="size-5 shrink-0 text-brand"
+        fill="none"
+        height="24"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <mask
+          id="radix-normalized"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            fill="white"
+            r="10"
+          />
+          <path
+            d="M8 12.5 10.5 15 16 9"
+            stroke="black"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.5"
+          />
+        </mask>
+        <circle
+          cx="12"
+          cy="12"
+          fill="currentColor"
+          mask="url(#radix-normalized)"
+          r="10"
+        />
+      </svg>
       <div
-        class="flex max-h-32 min-w-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-y-contain"
+        class="flex max-h-32 min-w-0 flex-1 flex-col items-start justify-center gap-0.5 overflow-y-auto overscroll-y-contain"
       >
         <div
           class="min-w-0 text-sm leading-normal font-bold break-words text-popover-foreground"
@@ -93,16 +163,51 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with single toast 1`
     tabindex="-1"
   >
     <li
-      class="group pointer-events-auto relative w-full space-x-4 overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full flex items-start justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-brand/32 bg-brand/8"
       data-cy="toast"
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
+      data-variant="default"
       style="user-select: none; touch-action: none;"
       tabindex="0"
     >
+      <svg
+        aria-hidden="true"
+        class="size-5 shrink-0 text-brand"
+        fill="none"
+        height="24"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <mask
+          id="radix-normalized"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            fill="white"
+            r="10"
+          />
+          <path
+            d="M8 12.5 10.5 15 16 9"
+            stroke="black"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.5"
+          />
+        </mask>
+        <circle
+          cx="12"
+          cy="12"
+          fill="currentColor"
+          mask="url(#radix-normalized)"
+          r="10"
+        />
+      </svg>
       <div
-        class="flex max-h-32 min-w-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-y-contain"
+        class="flex max-h-32 min-w-0 flex-1 flex-col items-start justify-center gap-0.5 overflow-y-auto overscroll-y-contain"
       >
         <div
           class="min-w-0 text-sm leading-normal font-bold break-words text-popover-foreground"
@@ -143,16 +248,51 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with title-only toas
     tabindex="-1"
   >
     <li
-      class="group pointer-events-auto relative w-full space-x-4 overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full flex items-start justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-brand/32 bg-brand/8"
       data-cy="toast"
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
+      data-variant="default"
       style="user-select: none; touch-action: none;"
       tabindex="0"
     >
+      <svg
+        aria-hidden="true"
+        class="size-5 shrink-0 text-brand"
+        fill="none"
+        height="24"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <mask
+          id="radix-normalized"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            fill="white"
+            r="10"
+          />
+          <path
+            d="M8 12.5 10.5 15 16 9"
+            stroke="black"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.5"
+          />
+        </mask>
+        <circle
+          cx="12"
+          cy="12"
+          fill="currentColor"
+          mask="url(#radix-normalized)"
+          r="10"
+        />
+      </svg>
       <div
-        class="flex max-h-32 min-w-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-y-contain"
+        class="flex max-h-32 min-w-0 flex-1 flex-col items-start justify-center gap-0.5 overflow-y-auto overscroll-y-contain"
       >
         <div
           class="min-w-0 text-sm leading-normal font-bold break-words text-popover-foreground"
@@ -188,16 +328,51 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast action 1`
     tabindex="-1"
   >
     <li
-      class="group pointer-events-auto relative w-full space-x-4 overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full flex items-start justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-brand/32 bg-brand/8"
       data-cy="toast"
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
+      data-variant="default"
       style="user-select: none; touch-action: none;"
       tabindex="0"
     >
+      <svg
+        aria-hidden="true"
+        class="size-5 shrink-0 text-brand"
+        fill="none"
+        height="24"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <mask
+          id="radix-normalized"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            fill="white"
+            r="10"
+          />
+          <path
+            d="M8 12.5 10.5 15 16 9"
+            stroke="black"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.5"
+          />
+        </mask>
+        <circle
+          cx="12"
+          cy="12"
+          fill="currentColor"
+          mask="url(#radix-normalized)"
+          r="10"
+        />
+      </svg>
       <div
-        class="flex max-h-32 min-w-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-y-contain"
+        class="flex max-h-32 min-w-0 flex-1 flex-col items-start justify-center gap-0.5 overflow-y-auto overscroll-y-contain"
       >
         <div
           class="min-w-0 text-sm leading-normal font-bold break-words text-popover-foreground"
@@ -242,16 +417,51 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast with acti
     tabindex="-1"
   >
     <li
-      class="group pointer-events-auto relative w-full space-x-4 overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full flex items-start justify-between gap-2 rounded-lg border border-brand/32 bg-brand/8 p-6 shadow-lg backdrop-blur-[10px]"
+      class="group pointer-events-auto relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border p-6 shadow-lg backdrop-blur-[10px] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full data-[state=open]:sm:slide-in-from-bottom-full border-brand/32 bg-brand/8"
       data-cy="toast"
       data-radix-collection-item=""
       data-state="open"
       data-swipe-direction="right"
+      data-variant="default"
       style="user-select: none; touch-action: none;"
       tabindex="0"
     >
+      <svg
+        aria-hidden="true"
+        class="size-5 shrink-0 text-brand"
+        fill="none"
+        height="24"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <mask
+          id="radix-normalized"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            fill="white"
+            r="10"
+          />
+          <path
+            d="M8 12.5 10.5 15 16 9"
+            stroke="black"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.5"
+          />
+        </mask>
+        <circle
+          cx="12"
+          cy="12"
+          fill="currentColor"
+          mask="url(#radix-normalized)"
+          r="10"
+        />
+      </svg>
       <div
-        class="flex max-h-32 min-w-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-y-contain"
+        class="flex max-h-32 min-w-0 flex-1 flex-col items-start justify-center gap-0.5 overflow-y-auto overscroll-y-contain"
       >
         <div
           class="min-w-0 text-sm leading-normal font-bold break-words text-popover-foreground"

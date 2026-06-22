@@ -344,7 +344,6 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         }
         toast({
           title: tProfile('updated'),
-          description: tProfile('updatedDesc'),
         });
         router.push(PROFILE_ROUTES.PROFILE);
       }
@@ -355,7 +354,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           Logger.error('Session expired while saving profile', error);
           setSubmitTextKey('tryAgain');
           toast({
-            title: tProfile('sessionExpired'),
+            variant: 'error',
             description: tProfile('sessionExpiredDesc'),
           });
           return;
@@ -366,8 +365,8 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           Logger.error('Failed to save profile in Homeserver', error);
           setSubmitTextKey('tryAgain');
           toast({
-            title: tProfile('saveFailed'),
-            description: tProfile('saveFailedDesc'),
+            variant: 'error',
+            description: tProfile('saveFailed'),
           });
           return;
         }
@@ -375,7 +374,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
       setSubmitTextKey('tryAgain');
       toast({
-        title: tProfile('fetchFailed'),
+        variant: 'error',
         description: mode === 'create' ? tProfile('fetchFailedDesc') : tProfile('updateFailed'),
       });
     } finally {

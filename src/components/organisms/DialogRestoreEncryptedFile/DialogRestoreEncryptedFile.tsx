@@ -50,7 +50,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
   const handleRestore = async () => {
     // Guard against double-submit race condition
     if (isRestoring) return;
-    if (!selectedFile || !password) {
+    if (!selectedFile) {
       setError(tRestore('missingFields'));
       return;
     }
@@ -97,7 +97,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
     }
   };
   const isFormValid = () => {
-    return Boolean(selectedFile && password && !isRestoring);
+    return Boolean(selectedFile && !isRestoring);
   };
   const handleKeyDown = useEnterSubmit(isFormValid, handleRestore);
   const selectedFileDisplayName = selectedFile ? formatFileName(selectedFile.name) : 'encryptedfile.pkarr';

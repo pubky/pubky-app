@@ -93,6 +93,7 @@ const SignInProgress = () => {
 };
 export const SignInContent = () => {
   const t = useTranslations('onboarding.signIn');
+  const tCopy = useTranslations('toast.copy');
   const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth();
   const authUrlResolved = useSignInStore((state) => state.authUrlResolved);
   useEffect(() => {
@@ -104,11 +105,15 @@ export const SignInContent = () => {
     try {
       await copyAuthUrl();
       toast({
+        variant: 'info',
         title: t('linkCopied'),
-        description: t('linkCopiedDescription'),
       });
     } catch (error) {
       Logger.error('Failed to copy auth URL to clipboard:', error);
+      toast({
+        variant: 'error',
+        description: tCopy('copyFailedDesc'),
+      });
     }
   };
   const isMobileLaunching = isLoading || isOpeningRing;

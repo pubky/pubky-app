@@ -12,17 +12,8 @@ import type { UseSignOutResult } from './useSignOut.types';
 export function useSignOut(): UseSignOutResult {
   const router = useRouter();
   const { toast } = useToast();
-  const tCommon = useTranslations('common');
   const tErrors = useTranslations('errors');
   const [isLoading, setIsLoading] = useState(false);
-
-  const showErrorToast = (description: string) => {
-    toast({
-      title: tCommon('error'),
-      description,
-      className: 'destructive border-destructive bg-destructive text-destructive-foreground',
-    });
-  };
 
   const handleSignOut = async () => {
     setIsLoading(true);
@@ -31,7 +22,7 @@ export function useSignOut(): UseSignOutResult {
       router.push(AUTH_ROUTES.LOGOUT);
     } catch (error) {
       Logger.error('Failed to sign out:', { error });
-      showErrorToast(tErrors('signOutFailed'));
+      toast({ variant: 'error', description: tErrors('signOutFailed') });
       setIsLoading(false);
     }
   };

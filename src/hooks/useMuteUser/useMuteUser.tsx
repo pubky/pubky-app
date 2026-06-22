@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { MuteController } from '@/controllers/mute/mute';
 import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -17,6 +18,7 @@ import type { UseMuteUserResult } from './useMuteUser.types';
  * local database updates and homeserver sync.
  */
 export function useMuteUser(): UseMuteUserResult {
+  const tMute = useTranslations('toast.mute');
   const { currentUserPubky } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingUserId, setLoadingUserId] = useState<Pubky | null>(null);
@@ -50,7 +52,7 @@ export function useMuteUser(): UseMuteUserResult {
           userId,
         });
       } catch (err) {
-        const errorMessage = isAppError(err) ? err.message : 'Failed to update mute status';
+        const errorMessage = isAppError(err) ? err.message : tMute('failed');
         setError(errorMessage);
         Logger.error('[useMuteUser] Failed to toggle mute:', err);
         throw err;
@@ -59,7 +61,7 @@ export function useMuteUser(): UseMuteUserResult {
         setLoadingUserId(null);
       }
     },
-    [currentUserPubky],
+    [currentUserPubky, tMute],
   );
 
   const isUserLoading = useCallback(

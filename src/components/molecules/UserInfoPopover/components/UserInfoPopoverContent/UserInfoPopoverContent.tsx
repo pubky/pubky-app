@@ -59,6 +59,7 @@ export function UserInfoPopoverContent({
     onFollowClick,
   } = useUserInfoPopoverActions({
     userId,
+    userName,
     isCurrentUser,
     isFollowing,
     isFollowingStatusLoading,

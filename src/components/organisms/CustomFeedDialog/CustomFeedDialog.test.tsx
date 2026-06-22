@@ -930,8 +930,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Feed My Feed created!',
+        title: 'Feed created: My Feed',
       });
       expect(mockPush).toHaveBeenCalledWith('/feed/new-feed-123');
     });
@@ -952,8 +951,8 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Could not create feed, please try again or reach out to support.',
+        variant: 'error',
+        description: 'Could not create feed. Try again.',
       });
     });
   });
@@ -1068,8 +1067,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Feed Bitcoin News edited!',
+        title: 'Feed updated: Bitcoin News',
       });
       expect(mockPush).toHaveBeenCalledWith('/feed/feed-abc123');
     });
@@ -1091,8 +1089,8 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Could not edit feed, please try again or reach out to support.',
+        variant: 'error',
+        description: 'Could not update feed. Try again.',
       });
     });
   });
@@ -1157,8 +1155,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Feed Bitcoin News deleted!',
+        title: 'Feed deleted: Bitcoin News',
       });
       expect(mockPush).toHaveBeenCalledWith('/home');
     });
@@ -1179,8 +1176,8 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Could not delete feed, please try again or reach out to support.',
+        variant: 'error',
+        description: 'Could not delete feed. Try again.',
       });
     });
   });

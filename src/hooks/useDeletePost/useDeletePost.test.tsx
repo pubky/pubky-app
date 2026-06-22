@@ -98,7 +98,6 @@ describe('useDeletePost', () => {
 
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Post deleted',
-      description: 'Your post has been deleted',
       dismissButton: true,
     });
   });
@@ -173,9 +172,8 @@ describe('useDeletePost', () => {
     });
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
-      description: 'Failed to delete post. Please try again.',
-      className: 'destructive border-destructive bg-destructive text-destructive-foreground',
+      variant: 'error',
+      description: 'Could not delete post. Try again.',
     });
   });
 
@@ -234,7 +232,6 @@ describe('useDeletePost', () => {
     expect(mockPrependPosts).not.toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Post deleted',
-      description: 'Your post has been deleted',
       dismissButton: true,
     });
   });

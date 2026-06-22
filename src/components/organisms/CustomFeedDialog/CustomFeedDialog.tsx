@@ -52,7 +52,6 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const customFeed = useCustomFeed();
   const tFilter = useTranslations('filters');
   const tDialog = useTranslations('dialogs.customFeed');
-  const tToast = useTranslations('toast');
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [reach, setReach] = useState<PubkyAppFeedReach | undefined>(
@@ -213,15 +212,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         });
         setOpen(false);
         toast({
-          title: tToast('success'),
-          description: tDialog('feedCreated', {
+          title: tDialog('feedCreated', {
             name: feed.name,
           }),
         });
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tDialog('feedCreateError'),
         });
       } finally {
@@ -244,15 +242,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         });
         setOpen(false);
         toast({
-          title: tToast('success'),
-          description: tDialog('feedEdited', {
+          title: tDialog('feedEdited', {
             name: feed.name,
           }),
         });
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tDialog('feedEditError'),
         });
       } finally {
@@ -269,15 +266,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       });
       setOpen(false);
       toast({
-        title: tToast('success'),
-        description: tDialog('feedDeleted', {
+        title: tDialog('feedDeleted', {
           name: customFeed.name,
         }),
       });
       router.push(APP_ROUTES.HOME);
     } catch {
       toast({
-        title: tToast('error'),
+        variant: 'error',
         description: tDialog('feedDeleteError'),
       });
     } finally {
