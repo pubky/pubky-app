@@ -100,8 +100,16 @@ vi.mock('@/molecules/NotificationIcon/NotificationIcon', () => {
 
 vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
-    PostTag: ({ label, onClick }: { label: string; onClick?: (e: React.MouseEvent) => void }) => (
-      <span data-testid="post-tag" onClick={onClick}>
+    PostTag: ({
+      label,
+      className,
+      onClick,
+    }: {
+      label: string;
+      className?: string;
+      onClick?: (e: React.MouseEvent) => void;
+    }) => (
+      <span data-testid="post-tag" className={className} onClick={onClick}>
         {label}
       </span>
     ),
@@ -212,18 +220,37 @@ describe('NotificationItem', () => {
     expect(icon).toHaveAttribute('data-badge', 'false');
   });
 
-  it('renders tag badge for TagPost notifications', () => {
+  it('hides the tag badge on mobile and keeps it visible on desktop for TagPost notifications', () => {
     const tagNotification = {
       id: 'tagpost:123:user1',
       type: NotificationType.TagPost,
       timestamp: Date.now() - 1000 * 60 * 30,
       tagged_by: 'user1',
-      tag_label: 'bitcoin',
+      tag_label: 'first-world-problem',
       post_uri: 'user1:post123',
     } as FlatNotification;
     render(<NotificationItem notification={tagNotification} isUnread={false} />);
-    expect(screen.getByTestId('post-tag')).toBeInTheDocument();
-    expect(screen.getByText('bitcoin')).toBeInTheDocument();
+
+    const tag = screen.getByTestId('post-tag');
+    expect(tag).toHaveTextContent('first-world-problem');
+    expect(tag).toHaveClass('hidden', 'shrink-0', 'lg:inline-flex');
+  });
+
+  it('allows long tagged-post copy to wrap on mobile and truncates only on desktop', () => {
+    const tagNotification = {
+      id: 'tagpost:123:user1',
+      type: NotificationType.TagPost,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      tagged_by: 'user1',
+      tag_label: 'first-world-problem',
+      post_uri: 'user1:post123',
+    } as FlatNotification;
+    render(<NotificationItem notification={tagNotification} isUnread={false} />);
+
+    const notificationCopy = screen.getByText('tagged your post').closest('p');
+    expect(notificationCopy).toHaveClass('whitespace-normal', 'leading-normal', 'lg:truncate');
+    expect(notificationCopy).not.toHaveClass('truncate');
+    expect(notificationCopy).not.toHaveClass('leading-none');
   });
 
   it('renders Mention notification without preview when post not loaded', () => {
@@ -285,6 +312,9 @@ describe('NotificationItem', () => {
     fireEvent.click(tag);
 
     expect(mockPush).toHaveBeenCalledWith('/search?tags=developer');
+    expect(tag).toHaveClass('hidden', 'shrink-0', 'lg:inline-flex');
+    expect(screen.getByText('tagged your profile').closest('a')).toHaveAttribute('href', '/profile/tagged');
+    expect(screen.getByText('User').closest('a')).toHaveAttribute('href', '/profile/user1');
   });
 
   it('encodes special characters in tag when navigating to search', () => {
@@ -439,6 +469,25 @@ describe('NotificationItem', () => {
 
     // Follow notification links to user profile
     expect(mockPush).toHaveBeenCalledWith('/profile/user1');
+  });
+
+  it('navigates to the tagged post from its action or empty row space', () => {
+    const tagNotification = {
+      id: 'tagpost:123:user1',
+      type: NotificationType.TagPost,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      tagged_by: 'user1',
+      tag_label: 'first-world-problem',
+      post_uri: 'user1:post123',
+    } as FlatNotification;
+    render(<NotificationItem notification={tagNotification} isUnread={false} />);
+
+    expect(screen.getByText('tagged your post').closest('a')).toHaveAttribute('href', '/post/user1/post123');
+    expect(screen.getByText('User').closest('a')).toHaveAttribute('href', '/profile/user1');
+
+    fireEvent.click(screen.getAllByTestId('container')[0]);
+
+    expect(mockPush).toHaveBeenCalledWith('/post/user1/post123');
   });
 
   it('does not navigate when clicking on a link inside the row', () => {

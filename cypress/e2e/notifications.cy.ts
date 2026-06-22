@@ -150,7 +150,7 @@ describe('notifications', () => {
     // click Posts tab to show profile 1's posts
     cy.get('[data-cy="profile-filter-item-posts"]').click();
     cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
-    const postTag = 'ilike';
+    const postTag = 'first-world-problem';
     // tag the first post on profile 1's profile
     fastTagPostInFeed([postTag], postContent);
 
@@ -167,6 +167,27 @@ describe('notifications', () => {
     causeNotificationsToBeRead();
     verifyNotificationCounter(0);
     checkLatestNotification([profile2.username, 'tagged your post', postTag], LatestNotificationReadState.Read);
+
+    cy.get('[data-cy="notifications-list"]')
+      .children()
+      .first()
+      .within(() => {
+        cy.contains('a', 'tagged your post')
+          .should('be.visible')
+          .parent()
+          .should('have.css', 'white-space', Cypress.expose('isMobile') ? 'normal' : 'nowrap');
+
+        cy.get('[data-cy="post-tag"]').should(Cypress.expose('isMobile') ? 'not.be.visible' : 'be.visible');
+      });
+
+    if (Cypress.expose('isMobile')) {
+      cy.get('[data-cy="notifications-list"]').children().first().contains('a', 'tagged your post').click();
+      cy.location('pathname').should('match', /^\/post\/[^/]+\/[^/]+$/);
+    } else {
+      cy.get('[data-cy="notifications-list"]').children().first().find('[data-cy="post-tag"]').click();
+      cy.location('pathname').should('eq', '/search');
+      cy.location('search').should('eq', '?tags=first-world-problem');
+    }
 
     // TODO: add checks for disabled notifications
     // * profile 1 disables notifications for tagged profile
