@@ -1,6 +1,31 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`HumanLightningPayment > matches snapshot 1`] = `
+exports[`HumanLightningPayment - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
+  data-testid="container"
+>
+  <h1
+    class="font-bold text-foreground text-5xl lg:text-6xl"
+    data-testid="heading-1"
+  >
+    Tap to 
+    <span
+      class="text-brand"
+      data-testid="typography"
+    >
+      Pay.
+    </span>
+  </h1>
+  <h2
+    class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
+  >
+    Scan the QR code with your favorite wallet.
+  </h2>
+</div>
+`;
+
+exports[`HumanLightningPayment - Snapshots > matches snapshot 1`] = `
 <div
   class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
   data-testid="container"

@@ -1,5 +1,5 @@
 import { Container } from '@/atoms/Container/Container';
-import { HomeActions, HomeBrandFooter, HomeFooter, HomePageHeading, HomeSectionTitle } from '@/molecules/Home/Home';
+import { HomeActions, HomeFooter, HomePageHeading, HomeSectionTitle } from '@/molecules/Home/Home';
 import { PageContainer } from '@/molecules/Page/Page';
 import { LANDING_HERO_SECTION_ID } from './Landing.constants';
 import { LandingBrokenSection } from './LandingBrokenSection';
@@ -29,7 +29,6 @@ export function Landing() {
           </PageContainer>
           <LandingVideo />
         </div>
-        <HomeBrandFooter className="landing-hero-brand-footer fixed bottom-6 left-6 z-20" />
       </Container>
       <LandingBrokenSection />
       <LandingHowItWorksSection />

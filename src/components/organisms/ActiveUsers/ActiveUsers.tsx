@@ -3,13 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { UsersRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { APP_ROUTES } from '@/app/routes';
+import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { CompactUserListItemSkeleton } from '../CompactUserListItemSkeleton/CompactUserListItemSkeleton';
 import { UserListItem } from '../UserListItem/UserListItem';
 
@@ -27,6 +28,7 @@ export function ActiveUsers() {
   const t = useTranslations('sidebar');
   const tCommon = useTranslations('common');
   const router = useRouter();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { users, isLoading: isStreamLoading } = useUserStream({
     streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL,
     limit: USERS_LIMIT,
@@ -35,7 +37,7 @@ export function ActiveUsers() {
   });
   const { toggleFollow, isUserLoading } = useFollowUser();
   const handleUserClick = (pubky: Pubky) => {
-    router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
+    router.push(getUserProfileUrl(pubky, currentUserPubky));
   };
   const handleFollowClick = async (userId: Pubky, isFollowing: boolean, displayName: string) => {
     await toggleFollow(userId, isFollowing, displayName);

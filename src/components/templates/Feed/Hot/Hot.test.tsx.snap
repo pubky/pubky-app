@@ -1,5 +1,70 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`Hot - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div>
+  <div
+    class="pb-24 lg:pb-12"
+    data-disable-wide-shell-layout="true"
+    data-has-gradient-background="false"
+    data-testid="content-layout"
+  >
+    <div
+      data-active-section="tags"
+      data-testid="hot-mobile-menu"
+    >
+      <button
+        data-testid="tab-tags"
+      >
+        Tags
+      </button>
+      <button
+        data-testid="tab-users"
+      >
+        Users
+      </button>
+      <button
+        data-testid="tab-posts"
+      >
+        Posts
+      </button>
+    </div>
+    <div
+      class=""
+      data-testid="hot-tags-cards-section"
+    >
+      HotTagsCardsSection
+    </div>
+    <div
+      class=""
+      data-testid="hot-tags-overview"
+    >
+      HotTagsOverview
+    </div>
+    <div
+      class="hidden"
+      data-testid="hot-active-users"
+    >
+      HotActiveUsers
+    </div>
+    <div
+      class="flex-col gap-2 hidden"
+      data-testid="container"
+    >
+      <div
+        data-testid="heading-5"
+      >
+        Trending posts
+      </div>
+      <div
+        data-testid="timeline-feed"
+      >
+        TimelineFeed
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`Hot - Snapshots > matches snapshot 1`] = `
 <div>
   <div

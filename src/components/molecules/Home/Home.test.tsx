@@ -205,6 +205,13 @@ describe('HomeFooter', () => {
     expect(screen.getByTestId('dialog-privacy')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-age')).toBeInTheDocument();
   });
+
+  it('renders Synonym and Tether branding below the agreement text', () => {
+    render(<HomeFooter />);
+
+    expect(screen.getByAltText('Synonym')).toBeInTheDocument();
+    expect(screen.getByAltText('a tether. company')).toBeInTheDocument();
+  });
 });
 
 describe('HomeBrandFooter', () => {

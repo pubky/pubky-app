@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { APP_ROUTES } from '@/app/routes';
+import { getUserProfileUrl } from '@/app/routes';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { usePostParticipants } from '@/hooks/usePostParticipants/usePostParticipants';
@@ -62,7 +62,7 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
   const { toggleFollow, isUserLoading } = useFollowUser();
 
   const handleUserClick = (pubky: string) => {
-    router.push(`${APP_ROUTES.PROFILE}/${pubky}`);
+    router.push(getUserProfileUrl(pubky, currentUserId));
   };
 
   const handleFollowClick = async (userId: string, isFollowing: boolean, displayName: string) => {

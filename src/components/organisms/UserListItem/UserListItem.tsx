@@ -2,6 +2,7 @@
 
 import { Check, Loader2, StickyNote, Tag, UserMinus, UserRound, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { getUserProfileUrl } from '@/app/routes';
 import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -12,6 +13,7 @@ import { resolveFollowDisplayName } from '@/hooks/useFollowUser/useFollowUser.ut
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '../ClickableTagsList/ClickableTagsList';
 import type {
@@ -310,6 +312,9 @@ function FullVariant({
   onFollowClick,
   ttlRef,
 }: VariantProps) {
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const profileUrl = getUserProfileUrl(user.id, currentUserPubky);
+
   return (
     <Container
       ref={ttlRef}
@@ -319,7 +324,7 @@ function FullVariant({
       {/* Main row */}
       <Container overrideDefaults className="flex flex-wrap items-center justify-between gap-6 lg:flex-nowrap">
         {/* User info */}
-        <Link href={`/profile/${user.id}`} className="flex min-w-0 flex-1 items-center gap-2">
+        <Link href={profileUrl} className="flex min-w-0 flex-1 items-center gap-2">
           <AvatarWithFallback avatarUrl={avatarUrl} name={displayName} fallbackSeed={user.id} size="md" />
           <Container overrideDefaults className="min-w-0 flex-1 truncate">
             <Typography data-cy="profile-follower-item-name" size="sm" className="truncate font-bold">

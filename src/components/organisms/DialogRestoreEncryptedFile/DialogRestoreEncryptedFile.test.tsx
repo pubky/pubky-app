@@ -264,7 +264,7 @@ describe('DialogRestoreEncryptedFile', () => {
     expect(screen.getByText('Restore')).toBeInTheDocument();
   });
 
-  it('has restore button disabled when no file or password', () => {
+  it('has restore button disabled when no file is selected', () => {
     render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
 
     const restoreButton = screen.getByText('Restore').closest('button');
@@ -345,19 +345,39 @@ describe('DialogRestoreEncryptedFile', () => {
     });
   });
 
-  it('enables restore button when both file and password are provided', async () => {
+  it('enables restore button when a file is selected', async () => {
     render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
 
     const fileInput = screen.getByLabelText('Select file');
-    const passwordInput = screen.getByTestId('input');
     const testFile = mockFile('test.pkarr');
 
     fireEvent.change(fileInput, { target: { files: [testFile] } });
-    fireEvent.change(passwordInput, { target: { value: 'testpassword' } });
 
     await waitFor(() => {
       const restoreButton = screen.getByText('Restore').closest('button');
       expect(restoreButton).not.toBeDisabled();
+    });
+  });
+
+  it('handles successful restore without password', async () => {
+    mockLoginWithEncryptedFile.mockResolvedValue(true);
+
+    render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
+
+    const fileInput = screen.getByLabelText('Select file');
+    const testFile = mockFile('test.pkarr');
+
+    fireEvent.change(fileInput, { target: { files: [testFile] } });
+
+    const restoreButton = screen.getByText('Restore').closest('button');
+    fireEvent.click(restoreButton!);
+
+    await waitFor(() => {
+      expect(mockLoginWithEncryptedFile).toHaveBeenCalledWith({ encryptedFile: testFile, password: '' });
+    });
+
+    await waitFor(() => {
+      expect(mockOnRestore).toHaveBeenCalled();
     });
   });
 

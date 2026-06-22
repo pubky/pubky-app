@@ -1,6 +1,6 @@
 import { createRef } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
@@ -989,6 +990,7 @@ describe('PostInput - autoFocusTextarea', () => {
 describe('PostInput - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useIsMobile).mockReturnValue(false);
     mockIsAuthenticated = true;
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePostReturn.content = '';
@@ -1001,7 +1003,11 @@ describe('PostInput - Snapshots', () => {
   });
 
   it('matches snapshot for post variant without content or attachments', () => {
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostInput variant={POST_INPUT_VARIANT.POST} />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -1090,6 +1096,36 @@ describe('PostInput - Snapshots', () => {
         editContent='{"title":"Existing Article Title","body":"Existing article body"}'
         editIsArticle={true}
       />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostInput - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsAuthenticated = true;
+    mockRequireAuth.mockImplementation((action: () => unknown) => action());
+    mockUsePostReturn.content = '';
+    mockUsePostReturn.tags = [];
+    mockUsePostReturn.attachments = [];
+    mockUsePostReturn.isDragging = false;
+    mockUsePostReturn.isSubmitting = false;
+    mockUsePostReturn.isArticle = false;
+    mockUsePostReturn.articleTitle = '';
+    vi.mocked(useIsMobile).mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostInput variant={POST_INPUT_VARIANT.POST} />
+      </PostMainLayoutProvider>,
     );
     expect(container.firstChild).toMatchSnapshot();
   });

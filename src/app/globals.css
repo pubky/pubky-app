@@ -828,7 +828,7 @@ body {
   }
 
   :root[data-landing-swirl='final'] .landing-swirl-background__graphic {
-    --landing-swirl-size: min(2500vw, 110rem);
+    --landing-swirl-size: min(320vw, 80rem);
     --landing-swirl-clip: circle(75% at 50% 50%);
     --landing-swirl-mask-hole: 35%;
     --landing-swirl-mask-ring-start: 36%;
@@ -843,14 +843,6 @@ body {
   .landing-scroll-cue__icon {
     animation: landing-scroll-cue-bounce 1.4s ease-in-out infinite;
     will-change: transform;
-  }
-
-  :root[data-landing-swirl='broken'] .landing-hero-brand-footer,
-  :root[data-landing-swirl='how'] .landing-hero-brand-footer,
-  :root[data-landing-swirl='freedom'] .landing-hero-brand-footer,
-  :root[data-landing-swirl='final'] .landing-hero-brand-footer {
-    pointer-events: none;
-    opacity: 0;
   }
 
   @media (min-width: 1024px) {

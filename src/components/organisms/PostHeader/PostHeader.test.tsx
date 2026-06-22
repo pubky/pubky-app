@@ -1,10 +1,13 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactElement } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostHeader } from './PostHeader';
 
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
@@ -23,6 +26,12 @@ vi.mock('@/hooks/useRelativeTime/useRelativeTime', () => ({
   useRelativeTime: vi.fn(() => ({
     formatRelativeTime: vi.fn(() => '2h'),
   })),
+}));
+
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: () => mockUseIsMobile(),
 }));
 
 vi.mock('@/atoms/Container/Container', () => {
@@ -67,15 +76,9 @@ vi.mock('@/atoms/Typography/Typography', () => {
   };
 });
 
-vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => {
-  return {
-    PostHeaderTimestamp: vi.fn(({ timeAgo }: { timeAgo: string; indexedAt: Date }) => (
-      <div data-testid="post-header-timestamp">
-        <svg data-testid="clock-icon" />
-        <span>{timeAgo}</span>
-      </div>
-    )),
-  };
+vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp')>();
+  return actual;
 });
 
 vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
@@ -116,9 +119,14 @@ const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseUserDetails = vi.mocked(useUserDetails);
 const mockUseAvatarUrl = vi.mocked(useAvatarUrl);
 
+function renderPostHeader(ui: ReactElement) {
+  return render(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
+}
+
 describe('PostHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseIsMobile.mockReturnValue(false);
   });
 
   it('shows skeleton when details are unavailable', () => {
@@ -126,7 +134,7 @@ describe('PostHeader', () => {
     mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: false });
     mockUseAvatarUrl.mockReturnValue(undefined);
 
-    render(<PostHeader postId="user123:post456" />);
+    renderPostHeader(<PostHeader postId="user123:post456" />);
     expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
   });
 
@@ -150,7 +158,7 @@ describe('PostHeader', () => {
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
 
-    render(<PostHeader postId="userpubkykey:post456" />);
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" />);
 
     expect(screen.getByTestId('avatar')).toBeInTheDocument();
     expect(screen.getByText('Test User')).toBeInTheDocument();
@@ -166,12 +174,12 @@ describe('PostHeader', () => {
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
 
-    const { container } = render(<PostHeader postId="userpubkykey:post456" isReplyInput={true} />);
+    const { container } = renderPostHeader(<PostHeader postId="userpubkykey:post456" isReplyInput={true} />);
 
     expect(screen.getByTestId('avatar')).toBeInTheDocument();
     expect(screen.getByText('Test User')).toBeInTheDocument();
-    // Verify that time section is not rendered (no Clock icon)
-    expect(container.querySelector('[data-testid="clock-icon"]')).not.toBeInTheDocument();
+    // Verify that time section is not rendered
+    expect(container.querySelector('.lucide-clock')).not.toBeInTheDocument();
   });
 
   it('shows skeleton when user details are not available and isReplyInput is true', () => {
@@ -179,7 +187,7 @@ describe('PostHeader', () => {
     mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: false });
     mockUseAvatarUrl.mockReturnValue(undefined);
 
-    render(<PostHeader postId="userpubkykey:post456" isReplyInput={true} />);
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" isReplyInput={true} />);
 
     expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
   });
@@ -204,7 +212,7 @@ describe('PostHeader', () => {
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
 
-    render(<PostHeader postId="userpubkykey:post456" size="large" />);
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" size="large" />);
 
     expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-size', 'large');
   });
@@ -229,9 +237,9 @@ describe('PostHeader', () => {
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
 
-    render(<PostHeader postId="userpubkykey:post456" />);
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" />);
 
-    expect(screen.getByTestId('post-header-timestamp')).toBeInTheDocument();
+    expect(screen.getByText('2h')).toBeInTheDocument();
     expect(screen.queryByTestId('bottom-left-time')).not.toBeInTheDocument();
   });
 
@@ -255,9 +263,9 @@ describe('PostHeader', () => {
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
 
-    render(<PostHeader postId="userpubkykey:post456" timeAgoPlacement="bottom-left" />);
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" timeAgoPlacement="bottom-left" />);
 
-    expect(screen.queryByTestId('post-header-timestamp')).not.toBeInTheDocument();
+    expect(screen.getAllByText('2h')).toHaveLength(1);
     expect(screen.getByTestId('bottom-left-time')).toHaveTextContent('2h');
   });
 });
@@ -265,6 +273,7 @@ describe('PostHeader', () => {
 describe('PostHeader - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseIsMobile.mockReturnValue(false);
   });
 
   it('matches snapshot in loaded state', () => {
@@ -291,7 +300,7 @@ describe('PostHeader - Snapshots', () => {
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/snapshotUserKey.png');
 
-    const { container } = render(<PostHeader postId="snapshotUserKey:post789" />);
+    const { container } = renderPostHeader(<PostHeader postId="snapshotUserKey:post789" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -300,7 +309,46 @@ describe('PostHeader - Snapshots', () => {
     mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: false });
     mockUseAvatarUrl.mockReturnValue(undefined);
 
-    const { container } = render(<PostHeader postId="user123:post456" />);
+    const { container } = renderPostHeader(<PostHeader postId="user123:post456" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostHeader - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+    mockUsePostDetails.mockReturnValue({
+      postDetails: {
+        id: 'userpubkykey:post456',
+        indexed_at: Date.now(),
+        kind: 'short' as const,
+        uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
+        content: '',
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+      } as EnrichedPostDetails,
+      isLoading: false,
+    });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: {
+        id: 'snapshotUserKey',
+        name: 'Snapshot User',
+        image: 'snapshot-image-id',
+      } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/snapshotUserKey.png');
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = renderPostHeader(<PostHeader postId="snapshotUserKey:post789" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

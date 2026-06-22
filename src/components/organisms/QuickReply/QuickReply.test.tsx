@@ -1,8 +1,9 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { QuickReply } from './QuickReply';
 import { QUICK_REPLY_PROMPTS_COUNT } from './QuickReply.constants';
 
@@ -357,5 +358,56 @@ describe('QuickReply', () => {
       expect(screen.getByTestId('avatar')).toHaveAttribute('data-size', 'default');
       expect(screen.getByTestId('quick-reply-textarea')).not.toHaveAttribute('class');
     });
+  });
+});
+
+describe('QuickReply - Snapshots', () => {
+  const mockUseIsMobile = vi.mocked(useIsMobile);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseIsMobile.mockReturnValue(false);
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    mockIsAuthenticated = true;
+    mockRequireAuth.mockImplementation(<T,>(action: () => T) => action());
+    mockUseEnterSubmit.mockReturnValue(() => undefined);
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options));
+  });
+
+  it('matches snapshot with default props', () => {
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <QuickReply parentPostId="author:post1" />
+      </PostMainLayoutProvider>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('QuickReply - Mobile Snapshots', () => {
+  const mockUseIsMobile = vi.mocked(useIsMobile);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    mockIsAuthenticated = true;
+    mockRequireAuth.mockImplementation(<T,>(action: () => T) => action());
+    mockUseEnterSubmit.mockReturnValue(() => undefined);
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options));
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <QuickReply parentPostId="author:post1" />
+      </PostMainLayoutProvider>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
