@@ -17,11 +17,8 @@ export const AUTOCOMPLETE_USER_LIMIT = 10;
 /** Minimum character length for user ID searches after "pubky" prefix */
 export const MIN_USER_ID_SEARCH_LENGTH = 3;
 
-/**
- * Prefixes for user ID searches
- * Order matters - longer prefixes should come first to match correctly
- * - pubky: legacy format with colon
- * - pk: legacy format
- * - pubky: new format without colon (must be last to not match 'pubky:' first)
- */
-export const USER_ID_PREFIXES = ['pubky:', 'pk:', 'pubky'] as const;
+/** New compact user ID prefix. It is also valid text in tags and usernames. */
+export const COMPACT_USER_ID_PREFIX = 'pubky';
+
+/** Legacy, unambiguous user ID prefixes that remain ID-only searches. */
+export const DELIMITED_USER_ID_PREFIXES = ['pubky:', 'pk:'] as const;
