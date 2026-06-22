@@ -47,44 +47,51 @@ exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] 
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="flex flex-col gap-6"
+          data-override-defaults="true"
           data-testid="container"
         >
           <div
-            data-disabled="false"
-            data-testid="post-input-tags"
-          />
-          <div
-            data-character-count="0"
-            data-character-max="2000"
-            data-post-disabled="true"
-            data-testid="post-input-action-bar"
+            class="justify-between gap-4 md:flex-row md:gap-0"
+            data-override-defaults="false"
+            data-testid="container"
           >
-            <button
-              aria-label="Add emoji"
-              data-testid="emoji-button"
+            <div
+              data-disabled="false"
+              data-testid="post-input-tags"
+            />
+            <div
+              data-character-count="0"
+              data-character-max="2000"
+              data-post-disabled="true"
+              data-testid="post-input-action-bar"
             >
-              Emoji
-            </button>
-            <button
-              aria-label="Add image"
-              data-testid="image-button"
-            >
-              Image
-            </button>
-            <button
-              aria-label="Add article"
-              data-testid="article-button"
-            >
-              Article
-            </button>
-            <button
-              aria-label="Post"
-              data-testid="post-button"
-              disabled=""
-            >
-              Post
-            </button>
+              <button
+                aria-label="Add emoji"
+                data-testid="emoji-button"
+              >
+                Emoji
+              </button>
+              <button
+                aria-label="Add image"
+                data-testid="image-button"
+              >
+                Image
+              </button>
+              <button
+                aria-label="Add article"
+                data-testid="article-button"
+              >
+                Article
+              </button>
+              <button
+                aria-label="Post"
+                data-testid="post-button"
+                disabled=""
+              >
+                Post
+              </button>
+            </div>
           </div>
         </div>
       </div>
