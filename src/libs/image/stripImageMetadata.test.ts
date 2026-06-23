@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  IMAGE_ENCODE_QUALITY,
-  IMAGE_MAX_DIMENSION,
-  IMAGE_MAX_RAW_SIZE,
-  IMAGE_MAX_SOURCE_PIXELS,
-} from '@/config/images';
+import { IMAGE_ENCODE_QUALITY, IMAGE_MAX_DIMENSION, IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { stripImageMetadata } from './stripImageMetadata';
 
@@ -13,9 +8,17 @@ describe('stripImageMetadata', () => {
   let mockContext: CanvasRenderingContext2D;
   let mockImage: HTMLImageElement;
   let originalImageConstructor: typeof Image;
+  let originalCreateImageBitmap: typeof createImageBitmap | undefined;
 
   beforeEach(() => {
     originalImageConstructor = global.Image;
+    originalCreateImageBitmap = globalThis.createImageBitmap;
+
+    Object.defineProperty(globalThis, 'createImageBitmap', {
+      configurable: true,
+      value: undefined,
+      writable: true,
+    });
 
     mockContext = asOpaque<CanvasRenderingContext2D>({
       drawImage: vi.fn(),
@@ -72,6 +75,15 @@ describe('stripImageMetadata', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     global.Image = originalImageConstructor;
+    if (originalCreateImageBitmap) {
+      Object.defineProperty(globalThis, 'createImageBitmap', {
+        configurable: true,
+        value: originalCreateImageBitmap,
+        writable: true,
+      });
+    } else {
+      delete (globalThis as { createImageBitmap?: typeof createImageBitmap }).createImageBitmap;
+    }
   });
 
   function setMockImageDimensions(width: number, height: number): void {
@@ -89,6 +101,63 @@ describe('stripImageMetadata', () => {
 
   function uint32LittleEndianBytes(value: number): number[] {
     return [value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff];
+  }
+
+  function uint16BigEndianBytes(value: number): number[] {
+    return [(value >> 8) & 0xff, value & 0xff];
+  }
+
+  function buildJpegBytes(width: number, height: number): ArrayBuffer {
+    const bytes = new Uint8Array([
+      0xff,
+      0xd8,
+      0xff,
+      0xe0,
+      0x00,
+      0x10,
+      ...asciiBytes('JFIF\0'),
+      0x01,
+      0x01,
+      0x00,
+      0x00,
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0xff,
+      0xc0,
+      0x00,
+      0x11,
+      0x08,
+      ...uint16BigEndianBytes(height),
+      ...uint16BigEndianBytes(width),
+      0x03,
+      0x01,
+      0x11,
+      0x00,
+      0x02,
+      0x11,
+      0x00,
+      0x03,
+      0x11,
+      0x00,
+    ]);
+    return bytes.buffer as ArrayBuffer;
+  }
+
+  const WEBP_ANIM_FLAG = 0x02;
+  const WEBP_XMP_FLAG = 0x04;
+  const WEBP_EXIF_FLAG = 0x08;
+
+  function containsFourCc(bytes: Uint8Array, fourCc: string): boolean {
+    const target = asciiBytes(fourCc);
+    for (let i = 0; i + target.length <= bytes.length; i += 1) {
+      if (target.every((byte, j) => bytes[i + j] === byte)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   function buildWebpBytes(chunks: { type: string; payload: Uint8Array }[]): ArrayBuffer {
@@ -142,22 +211,44 @@ describe('stripImageMetadata', () => {
     expect(mockContext.imageSmoothingQuality).toBe('high');
   });
 
+  it('uses resized createImageBitmap for high-resolution photos instead of rejecting source pixels', async () => {
+    const bitmapClose = vi.fn();
+    const bitmap = asOpaque<ImageBitmap>({
+      close: bitmapClose,
+      height: 1536,
+      width: IMAGE_MAX_DIMENSION,
+    });
+    const createImageBitmapMock = vi.fn().mockResolvedValue(bitmap);
+    Object.defineProperty(globalThis, 'createImageBitmap', {
+      configurable: true,
+      value: createImageBitmapMock,
+      writable: true,
+    });
+    const inputFile = new File([buildJpegBytes(8160, 6120)], 'pixel-high-res.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(inputFile, 'size', { value: IMAGE_MAX_RAW_SIZE - 1 });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result.type).toBe('image/jpeg');
+    expect(createImageBitmapMock).toHaveBeenCalledWith(inputFile, {
+      imageOrientation: 'from-image',
+      resizeWidth: IMAGE_MAX_DIMENSION,
+      resizeHeight: 1536,
+      resizeQuality: 'high',
+    });
+    expect(mockCanvas.width).toBe(IMAGE_MAX_DIMENSION);
+    expect(mockCanvas.height).toBe(1536);
+    expect(mockContext.drawImage).toHaveBeenCalledWith(bitmap, 0, 0, IMAGE_MAX_DIMENSION, 1536);
+    expect(bitmapClose).toHaveBeenCalled();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
   it('rejects image files exceeding the raw image cap before decoding', async () => {
     const inputFile = new File(['raw-image-bytes'], 'huge-photo.jpg', { type: 'image/jpeg' });
     Object.defineProperty(inputFile, 'size', { value: IMAGE_MAX_RAW_SIZE + 1 });
 
     await expect(stripImageMetadata(inputFile)).rejects.toThrow('Image file size exceeds upload limits');
     expect(URL.createObjectURL).not.toHaveBeenCalled();
-    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
-  });
-
-  it('rejects raster images exceeding the source pixel cap before canvas processing', async () => {
-    const width = Math.floor(Math.sqrt(IMAGE_MAX_SOURCE_PIXELS)) + 1;
-    setMockImageDimensions(width, width);
-    const inputFile = new File(['raw-image-bytes'], 'oversized-dimensions.jpg', { type: 'image/jpeg' });
-
-    await expect(stripImageMetadata(inputFile)).rejects.toThrow('Source image dimensions exceed upload limits');
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:input-image');
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
@@ -229,6 +320,33 @@ describe('stripImageMetadata', () => {
     expect(result.type).toBe('image/webp');
     expect(result.name).toMatch(/^[a-z0-9]+\.webp$/);
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('strips EXIF/XMP chunks from animated WebP while preserving animation frames', async () => {
+    const animatedWebp = buildWebpBytes([
+      {
+        type: 'VP8X',
+        payload: new Uint8Array([WEBP_EXIF_FLAG | WEBP_XMP_FLAG | WEBP_ANIM_FLAG, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+      },
+      { type: 'ANIM', payload: new Uint8Array([0, 0, 0, 0, 0, 0]) },
+      { type: 'EXIF', payload: new Uint8Array(120) },
+      { type: 'XMP ', payload: new Uint8Array(600) },
+    ]);
+    const inputFile = new File([animatedWebp], 'loop.webp', { type: 'image/webp' });
+
+    const result = await stripImageMetadata(inputFile);
+    const bytes = new Uint8Array(await result.arrayBuffer());
+
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+    expect(containsFourCc(bytes, 'EXIF')).toBe(false);
+    expect(containsFourCc(bytes, 'XMP ')).toBe(false);
+    expect(containsFourCc(bytes, 'ANIM')).toBe(true);
+    // VP8X flags byte (offset 12 + 8) should have EXIF/XMP bits cleared, ANIM kept.
+    expect(bytes[20] & (WEBP_EXIF_FLAG | WEBP_XMP_FLAG)).toBe(0);
+    expect(bytes[20] & WEBP_ANIM_FLAG).toBe(WEBP_ANIM_FLAG);
+    // RIFF size field stays consistent with the rebuilt container.
+    const riffSize = bytes[4] | (bytes[5] << 8) | (bytes[6] << 16) | (bytes[7] << 24);
+    expect(riffSize).toBe(bytes.length - 8);
   });
 
   it('sanitizes static WebP when ANIM appears only inside chunk data', async () => {
