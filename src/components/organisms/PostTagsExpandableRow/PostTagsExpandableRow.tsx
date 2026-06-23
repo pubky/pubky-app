@@ -33,7 +33,7 @@ export function PostTagsExpandableRow({
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const { postCounts, isLoading: isCountsLoading } = usePostCounts(postId);
   const tagCount = postCounts?.unique_tags ?? 0;
-  const isTagCountLoading = isCountsLoading || !postCounts;
+  const isTagCountLoading = isCountsLoading;
 
   const suppressParentInteraction = (event: MouseEvent) => {
     if (preventDefaultOnClick) event.preventDefault();

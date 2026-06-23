@@ -171,6 +171,18 @@ describe('PostTagsExpandableRow', () => {
     expect(screen.queryByLabelText(/Tag post/)).not.toBeInTheDocument();
   });
 
+  it('renders a zero-count tag CTA when counts are unavailable after loading', () => {
+    mockUsePostCounts.mockReturnValue({
+      postCounts: undefined,
+      isLoading: false,
+    });
+
+    const { container } = render(<PostTagsExpandableRow postId={POST_ID} />);
+
+    expect(container.querySelector('[data-cy="post-tag-btn-skeleton"]')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Tag post (0)')).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('renders extra actions after the tag CTA', () => {
     render(
       <PostTagsExpandableRow postId={POST_ID}>
