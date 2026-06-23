@@ -22,6 +22,7 @@ import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import {
   isAuthorStreamSkippingMuteFilter,
+  isDeletedRetainingStream,
   isSkipPaginatedStream,
   type PostStreamId,
 } from '@/models/stream/post/postStream.types';
@@ -125,8 +126,12 @@ export class PostStreamApplication {
     streamId: PostStreamId;
     postIds: string[];
   }): Promise<string[]> {
-    const notDeletedPostIds = await LocalPostService.filterDeletedPosts(postIds);
-    return await this.filterCollectionsFromStream({ streamId, postIds: notDeletedPostIds });
+    // Bookmark and single-collection item feeds keep deleted posts so the post
+    // component can render its deleted-state placeholder; all other streams drop them.
+    const visiblePostIds = isDeletedRetainingStream(streamId)
+      ? postIds
+      : await LocalPostService.filterDeletedPosts(postIds);
+    return await this.filterCollectionsFromStream({ streamId, postIds: visiblePostIds });
   }
 
   /**

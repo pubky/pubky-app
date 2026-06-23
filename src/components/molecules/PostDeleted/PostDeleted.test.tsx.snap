@@ -2,7 +2,7 @@
 
 exports[`PostDeleted - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="py-2"
+  class="flex flex-1 items-center justify-center py-2"
   data-testid="card-content"
 >
   <p

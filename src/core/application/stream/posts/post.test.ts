@@ -293,6 +293,74 @@ describe('PostStreamApplication', () => {
 
       expect(result).toEqual([missingPostId]);
     });
+
+    const createDeletedPostDetail = async (postId: string) => {
+      await PostDetailsModel.create({
+        id: postId,
+        content: DELETED,
+        kind: 'short',
+        indexed_at: BASE_TIMESTAMP,
+        uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${postId}`,
+        attachments: null,
+      });
+    };
+
+    it('removes deleted posts from timeline streams', async () => {
+      const livePostId = `${DEFAULT_AUTHOR}:live-post`;
+      const deletedPostId = `${DEFAULT_AUTHOR}:deleted-post`;
+      await createPostDetailWithKind(livePostId, 'short');
+      await createDeletedPostDetail(deletedPostId);
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
+        postIds: [livePostId, deletedPostId],
+      });
+
+      expect(result).toEqual([livePostId]);
+    });
+
+    it('keeps deleted posts in bookmark streams so they render their deleted state', async () => {
+      const livePostId = `${DEFAULT_AUTHOR}:live-post`;
+      const deletedPostId = `${DEFAULT_AUTHOR}:deleted-post`;
+      await createPostDetailWithKind(livePostId, 'short');
+      await createDeletedPostDetail(deletedPostId);
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
+        postIds: [livePostId, deletedPostId],
+      });
+
+      expect(result).toEqual([livePostId, deletedPostId]);
+    });
+
+    it('removes deleted posts from the collection-kind bookmark stream (FollowedCollections seed)', async () => {
+      const livePostId = `${DEFAULT_AUTHOR}:live-post`;
+      const deletedPostId = `${DEFAULT_AUTHOR}:deleted-post`;
+      await createPostDetailWithKind(livePostId, 'collection');
+      await createDeletedPostDetail(deletedPostId);
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION,
+        postIds: [livePostId, deletedPostId],
+      });
+
+      expect(result).toEqual([livePostId]);
+    });
+
+    it('keeps deleted posts in single-collection item streams', async () => {
+      const collectionItemsStreamId = `collection:${DEFAULT_AUTHOR}:my-collection` as PostStreamId;
+      const livePostId = `${DEFAULT_AUTHOR}:live-post`;
+      const deletedPostId = `${DEFAULT_AUTHOR}:deleted-post`;
+      await createPostDetailWithKind(livePostId, 'short');
+      await createDeletedPostDetail(deletedPostId);
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: collectionItemsStreamId,
+        postIds: [livePostId, deletedPostId],
+      });
+
+      expect(result).toEqual([livePostId, deletedPostId]);
+    });
   });
 
   describe('getOrFetchStreamSlice', () => {
