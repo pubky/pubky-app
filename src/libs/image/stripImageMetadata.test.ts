@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { IMAGE_ENCODE_QUALITY, IMAGE_MAX_DIMENSION } from '@/config/images';
+import {
+  IMAGE_ENCODE_QUALITY,
+  IMAGE_MAX_DIMENSION,
+  IMAGE_MAX_RAW_SIZE,
+  IMAGE_MAX_SOURCE_PIXELS,
+} from '@/config/images';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { stripImageMetadata } from './stripImageMetadata';
 
@@ -105,6 +110,7 @@ describe('stripImageMetadata', () => {
 
   it('sanitizes supported image types and returns a new file', async () => {
     const inputFile = new File(['raw-image-bytes'], 'photo.jpg', { type: 'image/jpeg' });
+    const arrayBufferSpy = vi.spyOn(inputFile, 'arrayBuffer');
 
     const result = await stripImageMetadata(inputFile);
 
@@ -119,6 +125,7 @@ describe('stripImageMetadata', () => {
     expect(mockCanvas.toBlob).toHaveBeenCalled();
     expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][1]).toBe('image/jpeg');
     expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][2]).toBe(IMAGE_ENCODE_QUALITY);
+    expect(arrayBufferSpy).not.toHaveBeenCalled();
     expect(URL.createObjectURL).toHaveBeenCalledWith(inputFile);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:input-image');
   });
@@ -133,6 +140,25 @@ describe('stripImageMetadata', () => {
     expect(mockCanvas.height).toBe(1024);
     expect(mockContext.drawImage).toHaveBeenCalledWith(mockImage, 0, 0, IMAGE_MAX_DIMENSION, 1024);
     expect(mockContext.imageSmoothingQuality).toBe('high');
+  });
+
+  it('rejects image files exceeding the raw image cap before decoding', async () => {
+    const inputFile = new File(['raw-image-bytes'], 'huge-photo.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(inputFile, 'size', { value: IMAGE_MAX_RAW_SIZE + 1 });
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('Image file size exceeds upload limits');
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('rejects raster images exceeding the source pixel cap before canvas processing', async () => {
+    const width = Math.floor(Math.sqrt(IMAGE_MAX_SOURCE_PIXELS)) + 1;
+    setMockImageDimensions(width, width);
+    const inputFile = new File(['raw-image-bytes'], 'oversized-dimensions.jpg', { type: 'image/jpeg' });
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('Source image dimensions exceed upload limits');
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:input-image');
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
   it('detects PNG files from magic bytes when file.type is empty', async () => {

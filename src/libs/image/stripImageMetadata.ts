@@ -1,4 +1,9 @@
-import { IMAGE_ENCODE_QUALITY, IMAGE_MAX_DIMENSION } from '@/config/images';
+import {
+  IMAGE_ENCODE_QUALITY,
+  IMAGE_MAX_DIMENSION,
+  IMAGE_MAX_RAW_SIZE,
+  IMAGE_MAX_SOURCE_PIXELS,
+} from '@/config/images';
 
 const IMAGE_MIME_TYPE_TO_EXTENSION: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -20,6 +25,7 @@ const IMAGE_EXTENSION_TO_MIME_TYPE: Record<string, string> = {
 const MIME_TYPES_WITH_CANVAS_SANITIZATION = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MIME_TYPES_WITH_LOSSY_REENCODING = new Set(['image/jpeg', 'image/webp']);
 const SVG_MIME_TYPE = 'image/svg+xml';
+const WEBP_MIME_TYPE = 'image/webp';
 const FILE_HEADER_BYTES_LENGTH = 512;
 const WEBP_ANIMATION_FLAG = 0x02;
 const TEXT_DECODER = new TextDecoder();
@@ -266,6 +272,10 @@ async function sanitizeRasterImage(file: File, mimeType: string): Promise<Blob> 
     const image = await loadImage(objectUrl);
     const naturalWidth = image.naturalWidth || image.width;
     const naturalHeight = image.naturalHeight || image.height;
+    if (naturalWidth * naturalHeight > IMAGE_MAX_SOURCE_PIXELS) {
+      throw new Error('Source image dimensions exceed upload limits');
+    }
+
     const { width, height } = getScaledDimensions(naturalWidth, naturalHeight, IMAGE_MAX_DIMENSION);
 
     const canvas = document.createElement('canvas');
@@ -393,6 +403,10 @@ export async function stripImageMetadata(file: File): Promise<File> {
     return file;
   }
 
+  if (file.size > IMAGE_MAX_RAW_SIZE) {
+    throw new Error('Image file size exceeds upload limits');
+  }
+
   const obfuscatedName = generateObfuscatedImageFileName(file, imageMimeType);
 
   if (imageMimeType === SVG_MIME_TYPE) {
@@ -404,7 +418,8 @@ export async function stripImageMetadata(file: File): Promise<File> {
     });
   }
 
-  if (!MIME_TYPES_WITH_CANVAS_SANITIZATION.has(imageMimeType) || (await isAnimatedWebp(file))) {
+  const isAnimatedWebpUpload = imageMimeType === WEBP_MIME_TYPE && (await isAnimatedWebp(file));
+  if (!MIME_TYPES_WITH_CANVAS_SANITIZATION.has(imageMimeType) || isAnimatedWebpUpload) {
     return new File([file], obfuscatedName, {
       type: imageMimeType,
       lastModified: file.lastModified,

@@ -12,6 +12,19 @@
 export const IMAGE_MAX_DIMENSION = 2048;
 
 /**
+ * Maximum raw file size accepted for image uploads before any browser decode
+ * or canvas work. This stays below the protocol file-size ceiling to avoid
+ * pathological images exhausting tab memory before downscaling can run.
+ */
+export const IMAGE_MAX_RAW_SIZE = 20 * 1024 * 1024;
+
+/**
+ * Maximum source pixel count accepted for raster images before canvas
+ * processing. Larger images are rejected instead of allocating a huge bitmap.
+ */
+export const IMAGE_MAX_SOURCE_PIXELS = 4096 * 4096;
+
+/**
  * Encode quality (0..1) for lossy raster re-encoding (JPEG/WebP) during
  * upload sanitization. 0.82 is near-visually-lossless for photos while
  * substantially smaller than quality 1.0.

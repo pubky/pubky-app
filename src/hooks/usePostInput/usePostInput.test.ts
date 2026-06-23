@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
@@ -1651,7 +1652,7 @@ describe('usePostInput', () => {
       });
     });
 
-    it('accepts images exceeding 5MB so upload sanitization can compress them', () => {
+    it('accepts images exceeding 5MB but within the raw image cap so upload sanitization can compress them', () => {
       const { result } = renderHook(() =>
         usePostInput({
           variant: 'post',
@@ -1668,6 +1669,29 @@ describe('usePostInput', () => {
 
       expect(mockSetAttachments).toHaveBeenCalled();
       expect(mockToast).not.toHaveBeenCalled();
+    });
+
+    it('rejects image files exceeding the raw image cap and shows toast', () => {
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+
+      const maxImageSizeMb = Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024));
+      const maxImageSizeLabel = `${maxImageSizeMb}MB`;
+      const largeFile = new File(['test'], 'huge.png', { type: 'image/png' });
+      Object.defineProperty(largeFile, 'size', { value: IMAGE_MAX_RAW_SIZE + 1 });
+
+      act(() => {
+        result.current.handleFilesAdded([largeFile]);
+      });
+
+      expect(mockSetAttachments).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: expect.stringContaining(`exceeds the ${maxImageSizeLabel} limit`),
+      });
     });
 
     it('rejects non-image files exceeding the max size and shows toast', () => {

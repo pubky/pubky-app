@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import { useTranslations } from 'next-intl';
 import { useDebounceCallback } from 'usehooks-ts';
+import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
@@ -330,9 +331,16 @@ export function usePostInput({
           continue;
         }
 
+        const isImage = file.type.startsWith('image/');
+        const maxImageSizeLabel = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
         const maxOtherSizeLabel = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
 
-        if (!file.type.startsWith('image/') && file.size > ATTACHMENT_MAX_OTHER_SIZE) {
+        if (isImage && file.size > IMAGE_MAX_RAW_SIZE) {
+          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxImageSizeLabel }));
+          continue;
+        }
+
+        if (!isImage && file.size > ATTACHMENT_MAX_OTHER_SIZE) {
           errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxOtherSizeLabel }));
           continue;
         }
