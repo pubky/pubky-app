@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Minus, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
-import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -20,10 +19,10 @@ import { cn } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
-import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionHeroSkeleton } from '@/organisms/Collections/CollectionHero/CollectionHero.skeleton';
 import { EditCollectionDialog } from '@/organisms/EditCollectionDialog/EditCollectionDialog';
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
+import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -193,14 +192,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         )}
 
         {/* Tags */}
-        <ClickableTagsList
-          taggedId={compositeId}
-          taggedKind={TagKind.POST}
-          showCount={true}
-          showInput={false}
-          showAddButton={true}
-          addMode={true}
-        />
+        <PostTagsExpandableRow postId={compositeId} />
 
         {/* Actions */}
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">

@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { type MouseEvent, useState } from 'react';
 import { Library, Minus, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getCollectionRoute } from '@/app/routes';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -23,8 +22,8 @@ import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/Collectio
 import { CollectionDeleted } from '@/molecules/CollectionDeleted/CollectionDeleted';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
+import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
@@ -175,12 +174,12 @@ function CollectionCardContent({
   // Both calls are required: `preventDefault` blocks the native `<a>` default
   // action; `stopPropagation` keeps the event from reaching any parent React
   // handlers (and is harmless when called on a leaf handler).
-  const suppressCardNavigation = (event: React.MouseEvent) => {
+  const suppressCardNavigation = (event: MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
   };
 
-  const handleFollowToggle = (event: React.MouseEvent) => {
+  const handleFollowToggle = (event: MouseEvent) => {
     suppressCardNavigation(event);
     if (isToggling) return;
     void toggle();
@@ -200,7 +199,7 @@ function CollectionCardContent({
   });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
-  const handleDelete = (event: React.MouseEvent) => {
+  const handleDelete = (event: MouseEvent) => {
     suppressCardNavigation(event);
     setDeleteConfirmOpen(true);
   };
@@ -289,20 +288,9 @@ function CollectionCardContent({
                 overrideDefaults
                 onClick={suppressCardNavigation}
                 onAuxClick={suppressCardNavigation}
-                className="flex w-full flex-wrap items-center justify-between gap-3 sm:flex-nowrap"
+                className="mt-auto w-full"
               >
-                <Container overrideDefaults className="min-w-0 flex-1">
-                  <ClickableTagsList
-                    taggedId={compositeId}
-                    taggedKind={TagKind.POST}
-                    showCount={true}
-                    showInput={false}
-                    showAddButton={true}
-                    addMode={true}
-                  />
-                </Container>
-
-                <Container overrideDefaults className="flex shrink-0 items-center gap-2">
+                <PostTagsExpandableRow postId={compositeId} preventDefaultOnClick>
                   {isOwn ? (
                     <Button
                       variant="secondary"
@@ -313,7 +301,6 @@ function CollectionCardContent({
                       className="gap-2 text-xs"
                     >
                       <Trash2 className="size-4" />
-                      {t('delete')}
                     </Button>
                   ) : (
                     <Button
@@ -328,7 +315,7 @@ function CollectionCardContent({
                       {isBookmarked ? t('unfollow') : t('follow')}
                     </Button>
                   )}
-                </Container>
+                </PostTagsExpandableRow>
               </Container>
             )}
           </CardContent>
