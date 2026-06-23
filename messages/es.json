@@ -1338,13 +1338,13 @@
       "cancel": "Cancelar",
       "save": "Guardar cambios",
       "saving": "Guardando...",
-      "created": "Colección {name} creada",
+      "created": "Colección creada",
       "createFailed": "No se pudo crear la colección."
     },
     "edit": {
       "title": "Editar colección",
       "save": "Guardar cambios",
-      "updated": "Colección {name} actualizada",
+      "updated": "Colección actualizada",
       "updateFailed": "No se pudo actualizar la colección."
     },
     "showMore": "Mostrar más",

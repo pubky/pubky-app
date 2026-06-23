@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
 
 const translations: Record<string, string> = {
   'collections.new.nameRequired': 'Collection title is required.',
-  'collections.new.created': 'Collection {name} created',
+  'collections.new.created': 'Collection created',
   'collections.new.createFailed': 'Failed to create collection.',
   'toast.success': 'Success',
   'toast.error': 'Error',
@@ -128,7 +128,7 @@ describe('useCreateCollection', () => {
     });
     expect(mocks.toast).toHaveBeenCalledWith({
       title: 'Success',
-      description: 'Collection Proof of Work created',
+      description: 'Collection created',
     });
   });
 

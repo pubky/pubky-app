@@ -86,7 +86,7 @@ export function useCreateCollection(): UseCreateCollectionResult {
         }
         toast({
           title: tToast('success'),
-          description: t('created', { name: name.trim() }),
+          description: t('created'),
         });
         createdCollectionId = compositeId;
       } catch (error) {
