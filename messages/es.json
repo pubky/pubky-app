@@ -1425,5 +1425,9 @@
     "updateCollectionFailed": "No se pudo actualizar la colección.",
     "collectionCreated": "Colección creada y publicación guardada.",
     "createCollectionFailed": "No se pudo crear la colección."
+  },
+  "moderation": {
+    "postContentModerated": "Contenido de la publicación censurado.",
+    "collectionContentModerated": "Contenido de la colección censurado."
   }
 }

@@ -25,6 +25,7 @@ import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfi
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
+import { CollectionCardBlurred } from '@/organisms/Collections/CollectionCard/CollectionCardBlurred';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
@@ -95,6 +96,14 @@ export function CollectionCard({
   // `CollectionDeleted` owns its full card shell — no wrappers needed here.
   if (isPostDeleted(postDetails.content)) {
     return <CollectionDeleted className={className} />;
+  }
+
+  // Moderated collections render a blurred, same-footprint placeholder instead
+  // of their content. Checked after the deleted guard (a deleted collection
+  // wins) and mirrors `PostContentBase`'s blur intercept — direct-render
+  // surfaces (landing sections) need their own check since they bypass it.
+  if (postDetails.is_blurred) {
+    return <CollectionCardBlurred compositeId={compositeId} className={className} />;
   }
 
   return (

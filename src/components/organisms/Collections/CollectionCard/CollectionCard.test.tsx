@@ -63,6 +63,13 @@ vi.mock('@/molecules/CollectionDeleted/CollectionDeleted', () => ({
   CollectionDeleted: () => <div data-testid="collection-deleted" />,
 }));
 
+const mockUnBlur = vi.fn();
+vi.mock('@/controllers/moderation/moderation', () => ({
+  ModerationController: {
+    unBlur: (...args: unknown[]) => mockUnBlur(...args),
+  },
+}));
+
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => mockUseAuthStore(selector),
 }));
@@ -149,7 +156,7 @@ function setAuthStore(currentUserPubky: string | null) {
   );
 }
 
-function setPostDetails(content: string | null) {
+function setPostDetails(content: string | null, { isBlurred = false }: { isBlurred?: boolean } = {}) {
   mockUsePostDetails.mockReturnValue({
     postDetails: content
       ? asOpaque<EnrichedPostDetails>({
@@ -159,8 +166,8 @@ function setPostDetails(content: string | null) {
           indexed_at: 0,
           uri: '',
           attachments: null,
-          is_moderated: false,
-          is_blurred: false,
+          is_moderated: isBlurred,
+          is_blurred: isBlurred,
         })
       : null,
     isLoading: false,
@@ -407,6 +414,45 @@ describe('CollectionCard', () => {
       expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.unfollow')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('moderation — blurred state', () => {
+    it('renders the blurred placeholder instead of the card when the collection is moderated', () => {
+      setPostDetails(COLLECTION_CONTENT, { isBlurred: true });
+
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      // Overlay copy is shown; the real title / navigable link are not rendered.
+      expect(screen.getByText('moderation.collectionContentModerated')).toBeInTheDocument();
+      expect(screen.queryByText('Based Bitcoin')).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Based Bitcoin' })).not.toBeInTheDocument();
+    });
+
+    it('unblurs (via the composite id) and stops propagation when the placeholder is clicked', () => {
+      setPostDetails(COLLECTION_CONTENT, { isBlurred: true });
+      const parentClick = vi.fn();
+
+      render(
+        <div onClick={parentClick}>
+          <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
+        </div>,
+      );
+
+      fireEvent.click(screen.getByText('moderation.collectionContentModerated'));
+
+      expect(mockUnBlur).toHaveBeenCalledTimes(1);
+      expect(mockUnBlur).toHaveBeenCalledWith(COMPOSITE_ID);
+      expect(parentClick).not.toHaveBeenCalled();
+    });
+
+    it('renders the deleted fallback (not the blur placeholder) when a moderated collection is also deleted', () => {
+      setPostDetails('[DELETED]', { isBlurred: true });
+
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      expect(screen.getByTestId('collection-deleted')).toBeInTheDocument();
+      expect(screen.queryByText('moderation.collectionContentModerated')).not.toBeInTheDocument();
     });
   });
 

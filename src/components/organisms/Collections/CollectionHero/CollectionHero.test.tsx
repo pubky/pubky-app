@@ -69,6 +69,13 @@ vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
     ) : null,
 }));
 
+const mockUnBlur = vi.fn();
+vi.mock('@/controllers/moderation/moderation', () => ({
+  ModerationController: {
+    unBlur: (...args: unknown[]) => mockUnBlur(...args),
+  },
+}));
+
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => mockUseAuthStore(selector),
 }));
@@ -173,7 +180,7 @@ function setAuthStore(currentUserPubky: string | null) {
   );
 }
 
-function setPostDetails(content: string | null) {
+function setPostDetails(content: string | null, { isBlurred = false }: { isBlurred?: boolean } = {}) {
   mockUsePostDetails.mockReturnValue({
     postDetails: content
       ? asOpaque<EnrichedPostDetails>({
@@ -183,8 +190,8 @@ function setPostDetails(content: string | null) {
           indexed_at: 0,
           uri: '',
           attachments: null,
-          is_moderated: false,
-          is_blurred: false,
+          is_moderated: isBlurred,
+          is_blurred: isBlurred,
         })
       : null,
     isLoading: false,
@@ -297,6 +304,30 @@ describe('CollectionHero', () => {
     const matches = screen.getAllByText(AUTHOR_PUBKY);
     expect(matches).toHaveLength(1);
     expect(matches[0]).toHaveAttribute('data-testid', 'avatar-with-fallback');
+  });
+
+  describe('moderation — blurred state', () => {
+    it('renders the blurred placeholder instead of the hero when the collection is moderated', () => {
+      setPostDetails(COLLECTION_CONTENT, { isBlurred: true });
+
+      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      expect(screen.getByText('moderation.collectionContentModerated')).toBeInTheDocument();
+      expect(screen.queryByText('Based Bitcoin')).not.toBeInTheDocument();
+      // Action buttons belong to the real hero, not the placeholder.
+      expect(screen.queryByLabelText('collections.single.follow')).not.toBeInTheDocument();
+    });
+
+    it('unblurs (via the composite id) when the placeholder is clicked', () => {
+      setPostDetails(COLLECTION_CONTENT, { isBlurred: true });
+
+      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      fireEvent.click(screen.getByText('moderation.collectionContentModerated'));
+
+      expect(mockUnBlur).toHaveBeenCalledTimes(1);
+      expect(mockUnBlur).toHaveBeenCalledWith(COMPOSITE_ID);
+    });
   });
 
   describe('CTA — owner', () => {

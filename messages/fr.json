@@ -1421,5 +1421,9 @@
     "updateCollectionFailed": "Échec de la mise à jour de la collection.",
     "collectionCreated": "Collection créée et publication enregistrée.",
     "createCollectionFailed": "Échec de la création de la collection."
+  },
+  "moderation": {
+    "postContentModerated": "Contenu de la publication censuré.",
+    "collectionContentModerated": "Contenu de la collection censuré."
   }
 }
