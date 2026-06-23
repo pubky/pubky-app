@@ -369,6 +369,16 @@ describe('PostAttachmentsImagesAndVideos', () => {
       expect(images).toHaveLength(3);
     });
 
+    it('uses compact media item height when size is compact', () => {
+      const imagesAndVideos = [createMockVideo()];
+      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} size="compact" />);
+
+      const video = screen.getByTestId('video');
+      expect(video).toHaveClass('h-28');
+      expect(video).toHaveClass('only:max-h-56');
+      expect(video).not.toHaveClass('h-52');
+    });
+
     it('renders a single video', () => {
       const imagesAndVideos = [createMockVideo({ urls: { main: 'https://example.com/clip.mp4' } })];
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);

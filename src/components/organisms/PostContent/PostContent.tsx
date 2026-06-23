@@ -13,7 +13,7 @@ import type { PostContentOrganismProps } from './PostContent.types';
  * - **Repost with content (quote)**: Renders PostContentBase (quote text) + PostPreviewCard (original post)
  * - **Repost without content (plain repost)**: PostContentBase returns null + PostPreviewCard (original post)
  */
-export function PostContent({ postId, className, textClassName }: PostContentOrganismProps) {
+export function PostContent({ postId, className, textClassName, contentLayout }: PostContentOrganismProps) {
   // Get repost information
   const { isRepost, originalPostId } = useRepostInfo(postId);
 
@@ -23,7 +23,12 @@ export function PostContent({ postId, className, textClassName }: PostContentOrg
   return (
     <>
       {/* Always render PostContentBase - it's a structural wrapper for content elements */}
-      <PostContentBase postId={postId} className={className} textClassName={textClassName} />
+      <PostContentBase
+        postId={postId}
+        className={className}
+        textClassName={textClassName}
+        contentLayout={contentLayout}
+      />
 
       {/* Show original post preview for reposts */}
       {shouldRenderRepostPreview && <PostPreviewCard postId={originalPostId} className={'bg-muted'} />}

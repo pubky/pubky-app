@@ -27,11 +27,18 @@ vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
 });
 
 vi.mock('../PostContentBase/PostContentBase', () => ({
-  PostContentBase: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
-    <div data-testid="post-content-base" data-post-id={postId} className={className}>
-      PostContentBase {postId}
-    </div>
-  )),
+  PostContentBase: vi.fn(
+    ({ postId, className, contentLayout }: { postId: string; className?: string; contentLayout?: string }) => (
+      <div
+        data-testid="post-content-base"
+        data-post-id={postId}
+        data-content-layout={contentLayout}
+        className={className}
+      >
+        PostContentBase {postId}
+      </div>
+    ),
+  ),
 }));
 
 const mockUsePostDetails = vi.mocked(usePostDetails);
@@ -74,6 +81,12 @@ describe('PostContent', () => {
 
     expect(screen.getByTestId('post-content-base')).toBeInTheDocument();
     expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-post-id', 'post-123');
+  });
+
+  it('passes content layout to PostContentBase', () => {
+    render(<PostContent postId="post-123" contentLayout="media-side" />);
+
+    expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-content-layout', 'media-side');
   });
 
   it('calls useRepostInfo with correct id', () => {

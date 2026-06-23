@@ -9,6 +9,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
@@ -49,8 +50,8 @@ interface PostMainListRowProps {
   postId: string;
   showFullContent: boolean;
   shouldShowPostHeader: boolean;
-  onReplyClick: () => void;
-  onRepostClick: () => void;
+  onReplyClick: (postId: string) => void;
+  onRepostClick: (postId: string) => void;
 }
 
 export function PostMainListRow({
@@ -60,24 +61,39 @@ export function PostMainListRow({
   onReplyClick,
   onRepostClick,
 }: PostMainListRowProps) {
-  const userId = postId.split(':')[0];
   const { postDetails } = usePostDetails(postId);
-  const { userDetails } = useUserDetails(userId);
+  const { isRepost, originalPostId } = useRepostInfo(postId);
+  const { postDetails: originalPostDetails } = usePostDetails(originalPostId);
+  const ownContentSnippet = getListPostSnippet(postDetails?.content ?? '', postDetails?.kind ?? '');
+  const hasOwnAttachments = (postDetails?.attachments?.length ?? 0) > 0;
+  const shouldUseOriginalPost =
+    !showFullContent &&
+    isRepost &&
+    !ownContentSnippet &&
+    !hasOwnAttachments &&
+    !!originalPostId &&
+    !!originalPostDetails;
+  const displayPostId = shouldUseOriginalPost ? originalPostId : postId;
+  const displayUserId = displayPostId.split(':')[0];
+  const { userDetails } = useUserDetails(displayUserId);
   const avatarUrl = useAvatarUrl(userDetails);
   const { formatRelativeTime } = useRelativeTime();
   const tagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const [tagsExpanded, setTagsExpanded] = useState(false);
 
-  if (!postDetails || !userDetails) {
+  const displayPostDetails = shouldUseOriginalPost ? originalPostDetails : postDetails;
+
+  if (!postDetails || !displayPostDetails || !userDetails) {
     return <PostMainListRowSkeleton />;
   }
 
-  const indexedAt = new Date(postDetails.indexed_at);
+  const indexedAt = new Date(displayPostDetails.indexed_at);
   const timeAgo = formatRelativeTime(indexedAt);
-  const formattedPublicKey = formatPublicKey({ key: userId });
-  const contentSnippet = getListPostSnippet(postDetails.content, postDetails.kind);
+  const formattedPublicKey = formatPublicKey({ key: displayUserId });
+  const contentSnippet = getListPostSnippet(displayPostDetails.content, displayPostDetails.kind);
   const snippet = showFullContent ? '' : truncateAtWordBoundary(contentSnippet, LIST_SNIPPET_MAX_CHARS);
-  const profileUrl = `/profile/${userId}`;
+  const profileUrl = `/profile/${displayUserId}`;
+  const shouldShowDisplayHeader = shouldShowPostHeader || shouldUseOriginalPost;
 
   const handleTagClick = () => {
     setTagsExpanded((previousValue) => !previousValue);
@@ -87,15 +103,20 @@ export function PostMainListRow({
   return (
     <CardContent className="flex min-w-0 flex-col gap-4 p-6">
       <Container overrideDefaults className="flex min-w-0 items-center gap-6">
-        {shouldShowPostHeader ? (
+        {shouldShowDisplayHeader ? (
           <Link href={profileUrl} onClick={stopCardPropagation} className="shrink-0">
-            <AvatarWithFallback avatarUrl={avatarUrl} name={userDetails.name || ''} fallbackSeed={userId} size="md" />
+            <AvatarWithFallback
+              avatarUrl={avatarUrl}
+              name={userDetails.name || ''}
+              fallbackSeed={displayUserId}
+              size="md"
+            />
           </Link>
         ) : null}
 
         <Container overrideDefaults className="min-w-0 flex-1">
           <Container overrideDefaults className="flex min-w-0 items-center gap-2">
-            {shouldShowPostHeader ? (
+            {shouldShowDisplayHeader ? (
               <Link
                 href={profileUrl}
                 onClick={stopCardPropagation}
@@ -116,7 +137,7 @@ export function PostMainListRow({
             ) : null}
           </Container>
 
-          {shouldShowPostHeader ? (
+          {shouldShowDisplayHeader ? (
             <Container overrideDefaults className="flex min-w-0 items-center gap-2">
               <Typography
                 className="truncate text-xs font-medium tracking-[0.075rem] text-muted-foreground uppercase"
@@ -137,7 +158,7 @@ export function PostMainListRow({
         >
           {!tagsExpanded ? (
             <ClickableTagsList
-              taggedId={postId}
+              taggedId={displayPostId}
               taggedKind={TagKind.POST}
               maxTags={1}
               showCount={true}
@@ -148,17 +169,17 @@ export function PostMainListRow({
             />
           ) : null}
           <PostActionsBar
-            postId={postId}
+            postId={displayPostId}
             onTagClick={handleTagClick}
-            onReplyClick={onReplyClick}
-            onRepostClick={onRepostClick}
+            onReplyClick={() => onReplyClick(displayPostId)}
+            onRepostClick={() => onRepostClick(displayPostId)}
             className="shrink-0"
           />
         </Container>
 
         {!showFullContent ? (
           <PostListMediaThumbnail
-            postId={postId}
+            postId={displayPostId}
             className={cn('hidden rounded-sm md:block', LIST_POST_MEDIA_THUMBNAIL_CLASS)}
             onClick={stopCardPropagation}
           />
@@ -166,8 +187,8 @@ export function PostMainListRow({
       </Container>
 
       {showFullContent ? (
-        <Container overrideDefaults className={cn('min-w-0', shouldShowPostHeader && 'ml-14')}>
-          <PostContent postId={postId} textClassName={LIST_POST_BODY_TEXT_CLASS} />
+        <Container overrideDefaults className={cn('min-w-0', shouldShowDisplayHeader && 'ml-14')}>
+          <PostContent postId={postId} textClassName={LIST_POST_BODY_TEXT_CLASS} contentLayout="media-side" />
         </Container>
       ) : null}
 
@@ -175,7 +196,7 @@ export function PostMainListRow({
         <Container overrideDefaults onClick={stopCardPropagation} onAuxClick={stopCardPropagation}>
           <PostTagsPanel
             ref={tagsPanelRef}
-            postId={postId}
+            postId={displayPostId}
             widthMode="fit"
             autoFocusInput
             enableLoadingSkeleton={false}

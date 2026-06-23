@@ -10,7 +10,7 @@ import { useToast } from '@/molecules/Toaster/use-toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { AttachmentConstructed, PostAttachmentsProps } from './PostAttachments.types';
 
-export const PostAttachments = ({ attachments, localAttachments }: PostAttachmentsProps) => {
+export const PostAttachments = ({ attachments, localAttachments, mediaSize = 'default' }: PostAttachmentsProps) => {
   const [imagesAndVideos, setImagesAndVideos] = useState<AttachmentConstructed[]>([]);
   const [audios, setAudios] = useState<AttachmentConstructed[]>([]);
   const [genericFiles, setGenericFiles] = useState<AttachmentConstructed[]>([]);
@@ -109,7 +109,12 @@ export const PostAttachments = ({ attachments, localAttachments }: PostAttachmen
 
   return (
     <Container className="gap-3">
-      {imagesAndVideos.length ? <PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} /> : null}
+      {imagesAndVideos.length ? (
+        <PostAttachmentsImagesAndVideos
+          imagesAndVideos={imagesAndVideos}
+          {...(mediaSize === 'compact' ? { size: mediaSize } : {})}
+        />
+      ) : null}
       {audios.length ? <PostAttachmentsAudios audios={audios} /> : null}
       {genericFiles.length ? <PostAttachmentsGenericFiles genericFiles={genericFiles} /> : null}
     </Container>

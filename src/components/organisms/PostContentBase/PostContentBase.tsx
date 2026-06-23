@@ -18,7 +18,7 @@ import type { PostContentBaseProps } from './PostContentBase.types';
  * This component is used internally by PostContent and PostPreviewCard.
  * It only renders the content elements: text, link embeds, and attachments.
  */
-export function PostContentBase({ postId, className, textClassName }: PostContentBaseProps) {
+export function PostContentBase({ postId, className, textClassName, contentLayout = 'default' }: PostContentBaseProps) {
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
@@ -32,6 +32,7 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
   const hasContent = postDetails.content.trim().length > 0;
   const isBlurred = postDetails.is_blurred;
   const isArticle = postDetails.kind === 'long';
+  const hasAttachments = (postDetails.attachments?.length ?? 0) > 0 || (localAttachments?.length ?? 0) > 0;
 
   if (isDeleted) return <PostDeleted />;
 
@@ -47,7 +48,37 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
       />
     );
 
-  if (!hasContent && !postDetails.attachments?.length && !localAttachments) return null;
+  if (!hasContent && !hasAttachments) return null;
+
+  if (contentLayout === 'media-side' && hasAttachments) {
+    if (!hasContent) {
+      return (
+        <Container className={cn('min-w-0 gap-3', className)}>
+          {/* Attachments on this post */}
+          <PostAttachments attachments={postDetails.attachments} localAttachments={localAttachments} />
+        </Container>
+      );
+    }
+
+    return (
+      <Container display="grid" className={cn('min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_40%]', className)}>
+        <Container className="min-w-0 gap-3">
+          {/* Post text */}
+          {hasContent && <PostText content={postDetails.content} className={textClassName} />}
+
+          {/* Link previews from text */}
+          {hasContent && <PostLinkEmbeds content={postDetails.content} />}
+        </Container>
+
+        {/* Attachments on this post */}
+        <PostAttachments
+          attachments={postDetails.attachments}
+          localAttachments={localAttachments}
+          mediaSize="compact"
+        />
+      </Container>
+    );
+  }
 
   return (
     <Container className={cn('min-w-0 gap-3', className)}>

@@ -23,6 +23,7 @@ import { useToast } from '../Toaster/use-toast';
 
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
+  size?: 'default' | 'compact';
   renderTrigger?: (props: {
     imagesAndVideos: AttachmentConstructed[];
     openPreview: (index: number, event?: MouseEvent) => void;
@@ -30,6 +31,7 @@ type PostAttachmentsImagesAndVideosProps = {
 };
 export const PostAttachmentsImagesAndVideos = ({
   imagesAndVideos,
+  size = 'default',
   renderTrigger,
 }: PostAttachmentsImagesAndVideosProps) => {
   const total = imagesAndVideos.length;
@@ -77,6 +79,9 @@ export const PostAttachmentsImagesAndVideos = ({
     };
   }, []);
   const isOnlyMedia = imagesAndVideos.length === 1;
+  const itemClassName = size === 'compact' ? 'h-28' : 'h-52';
+  const singleMediaClassName = size === 'compact' ? 'max-h-56' : 'max-h-96';
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {renderTrigger ? (
@@ -89,7 +94,10 @@ export const PostAttachmentsImagesAndVideos = ({
               <DialogTrigger
                 key={i}
                 asChild
-                className="relative h-52 w-full cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+                className={cn(
+                  itemClassName,
+                  'relative w-full cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2',
+                )}
               >
                 <Button overrideDefaults onClick={(e) => openPreview(i, e)}>
                   <Image
@@ -98,7 +106,7 @@ export const PostAttachmentsImagesAndVideos = ({
                     fill={!isOnlyMedia}
                     className={cn(
                       'rounded-md',
-                      isOnlyMedia ? 'max-h-96 w-fit object-contain' : 'object-cover object-center',
+                      isOnlyMedia ? `${singleMediaClassName} w-fit object-contain` : 'object-cover object-center',
                     )}
                   />
                 </Button>
@@ -111,7 +119,11 @@ export const PostAttachmentsImagesAndVideos = ({
                 }}
                 src={media.urls.main}
                 pauseVideo={open}
-                className="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+                className={cn(
+                  size === 'compact'
+                    ? 'h-28 w-full cursor-auto only:h-auto only:max-h-56 only:w-fit sm:last:odd:col-span-2'
+                    : 'h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2',
+                )}
               />
             ),
           )}

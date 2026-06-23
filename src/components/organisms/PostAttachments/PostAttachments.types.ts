@@ -3,6 +3,7 @@ import type { PostDetailsModel } from '@/models/post/details/postDetails';
 export type PostAttachmentsProps = {
   attachments: PostDetailsModel['attachments'];
   localAttachments: AttachmentConstructed[] | undefined;
+  mediaSize?: 'default' | 'compact';
 };
 
 export type AttachmentConstructed = {
