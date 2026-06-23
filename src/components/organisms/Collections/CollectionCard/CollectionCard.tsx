@@ -296,10 +296,13 @@ function CollectionCardContent({
             {!isPreview && (
               <Container
                 overrideDefaults
-                onClick={suppressCardNavigation}
-                onAuxClick={suppressCardNavigation}
                 className="flex w-full flex-wrap items-center justify-between gap-3 sm:flex-nowrap"
               >
+                {/* No suppression on this row (or the tag column): the tag chips,
+                  add button and input each suppress navigation themselves, so
+                  clicks in the gaps between chips — which wrap to several rows on
+                  narrow cards — fall through to the wrapping `Link` and navigate.
+                  That keeps the dead zone at zero. */}
                 <Container overrideDefaults className="min-w-0 flex-1">
                   <ClickableTagsList
                     taggedId={compositeId}
@@ -311,7 +314,16 @@ function CollectionCardContent({
                   />
                 </Container>
 
-                <Container overrideDefaults className="flex shrink-0 items-center gap-2">
+                {/* The action button suppresses navigation in its own `onClick`
+                  (see `handleFollowToggle` / `handleDelete`); this wrapper hugs
+                  the button (`shrink-0`) and adds `onAuxClick` so middle-clicks
+                  are caught too without widening the suppression surface. */}
+                <Container
+                  overrideDefaults
+                  onClick={suppressCardNavigation}
+                  onAuxClick={suppressCardNavigation}
+                  className="flex shrink-0 items-center gap-2"
+                >
                   {isOwn ? (
                     <Button
                       variant="secondary"

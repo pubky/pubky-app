@@ -164,7 +164,16 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               isAtLimit && 'w-40',
             )}
             style={style}
-            onClick={onClick}
+            // Adding / typing a tag is the only intent here — never navigation.
+            // Suppress the native default + propagation (focus still happens on
+            // mousedown, so this is safe) so the input works inside a clickable /
+            // linked surface without bubbling into navigation. `cursor-pointer`
+            // stays keyed on the caller `onClick` so standalone styling is intact.
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClick?.(e);
+            }}
           >
             <Input
               data-cy="add-tag-input"
@@ -247,6 +256,11 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
             onCloseAutoFocus={(e) => e.preventDefault()}
             onFocusOutside={(e) => e.preventDefault()}
             onInteractOutside={(e) => e.preventDefault()}
+            // Portaled to <body>, but React events bubble up the React tree, so
+            // a suggestion click would otherwise reach a clickable/linked
+            // ancestor (e.g. a collection card's `Link`) and navigate. Keep
+            // clicks contained to the dropdown.
+            onClick={(e) => e.stopPropagation()}
           >
             <TagSuggestionsDropdown
               suggestions={displaySuggestions}

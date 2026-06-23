@@ -16,8 +16,16 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
         {open && children}
       </div>
     ),
-    DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="dialog-content" className={className}>
+    DialogContent: ({
+      children,
+      className,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      onClick?: (e: React.MouseEvent) => void;
+    }) => (
+      <div data-testid="dialog-content" className={className} onClick={onClick}>
         {children}
       </div>
     ),
@@ -126,6 +134,23 @@ describe('EmojiPickerDialog', () => {
       expect(mockOnEmojiSelect).toHaveBeenCalledWith({ native: '😊' });
       expect(mockOnOpenChange).toHaveBeenCalledWith(false);
     });
+  });
+
+  it('contains clicks within the dialog so they do not reach a clickable ancestor', () => {
+    // Regression: the dialog is portaled, but React events bubble up the React
+    // tree — without stopPropagation an emoji click reaches an ancestor (e.g. a
+    // collection card's Link) and triggers navigation.
+    const ancestorClick = vi.fn();
+    render(
+      <div onClick={ancestorClick}>
+        <EmojiPickerDialog open={true} onOpenChange={mockOnOpenChange} onEmojiSelect={mockOnEmojiSelect} />
+      </div>,
+    );
+
+    screen.getByTestId('test-emoji-select').click();
+
+    expect(mockOnEmojiSelect).toHaveBeenCalledWith({ native: '😊' });
+    expect(ancestorClick).not.toHaveBeenCalled();
   });
 
   it('renders with correct dialog classes', () => {
