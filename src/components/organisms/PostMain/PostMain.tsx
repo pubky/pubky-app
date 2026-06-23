@@ -38,6 +38,7 @@ export function PostMain({
   isLastReply = false,
   pinActionsToBottom = false,
   isNavigable = true,
+  showFullContentInListLayout = false,
 }: PostMainProps) {
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
@@ -91,6 +92,7 @@ export function PostMain({
                 {isListLayout ? (
                   <PostMainListRow
                     postId={postId}
+                    showFullContent={!isReply && showFullContentInListLayout}
                     shouldShowPostHeader={shouldShowPostHeader}
                     onReplyClick={openReplyDialog}
                     onRepostClick={openRepostDialog}

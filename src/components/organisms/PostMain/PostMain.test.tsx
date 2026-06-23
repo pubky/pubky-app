@@ -179,7 +179,11 @@ vi.mock('@/organisms/PostContent/PostContent', () => {
 
 vi.mock('./PostMainListRow', () => {
   return {
-    PostMainListRow: ({ postId }: { postId: string }) => <div data-testid="post-main-list-row">{postId}</div>,
+    PostMainListRow: ({ postId, showFullContent }: { postId: string; showFullContent: boolean }) => (
+      <div data-testid="post-main-list-row" data-show-full-content={String(showFullContent)}>
+        {postId}
+      </div>
+    ),
   };
 });
 
@@ -661,8 +665,29 @@ describe('PostMain', () => {
     );
 
     expect(screen.getByTestId('post-main-list-row')).toHaveTextContent('post-list-1');
+    expect(screen.getByTestId('post-main-list-row')).toHaveAttribute('data-show-full-content', 'false');
     expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
     expect(mockPostHeader).not.toHaveBeenCalled();
+  });
+
+  it('passes full content mode to the list row only for non-reply posts', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-list-full-1" showFullContentInListLayout />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-main-list-row')).toHaveAttribute('data-show-full-content', 'true');
+  });
+
+  it('keeps reply rows compact even when full list content is enabled', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-list-reply-1" isReply showFullContentInListLayout />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-main-list-row')).toHaveAttribute('data-show-full-content', 'false');
   });
 });
 
@@ -727,6 +752,13 @@ describe('PostMain - Snapshots', () => {
     // Reset mocked hook return values that are overridden in earlier (non-snapshot) tests.
     // Without this, running the full suite (e.g. CI `test:coverage`) can leak mocked
     // implementations into snapshot tests and cause snapshot drift.
+    vi.mocked(usePostNavigation).mockReturnValue({
+      getPostHref: vi.fn(() => '/post/author/post-abc'),
+      navigateToPost: vi.fn(),
+      handlePostClick: vi.fn(),
+      handlePostAuxClick: vi.fn(),
+      handlePostKeyDown: vi.fn(),
+    });
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,

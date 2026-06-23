@@ -7,4 +7,5 @@ export interface PostMainProps {
   isLastReply?: boolean;
   pinActionsToBottom?: boolean;
   isNavigable?: boolean;
+  showFullContentInListLayout?: boolean;
 }

@@ -17,6 +17,7 @@ import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { ClickableTagsList } from '../ClickableTagsList/ClickableTagsList';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
+import { PostContent } from '../PostContent/PostContent';
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import { PostMainListRowSkeleton } from './PostMainListRow.skeleton';
@@ -46,12 +47,19 @@ function getListPostSnippet(content: string, kind: string): string {
 
 interface PostMainListRowProps {
   postId: string;
+  showFullContent: boolean;
   shouldShowPostHeader: boolean;
   onReplyClick: () => void;
   onRepostClick: () => void;
 }
 
-export function PostMainListRow({ postId, shouldShowPostHeader, onReplyClick, onRepostClick }: PostMainListRowProps) {
+export function PostMainListRow({
+  postId,
+  showFullContent,
+  shouldShowPostHeader,
+  onReplyClick,
+  onRepostClick,
+}: PostMainListRowProps) {
   const userId = postId.split(':')[0];
   const { postDetails } = usePostDetails(postId);
   const { userDetails } = useUserDetails(userId);
@@ -67,10 +75,8 @@ export function PostMainListRow({ postId, shouldShowPostHeader, onReplyClick, on
   const indexedAt = new Date(postDetails.indexed_at);
   const timeAgo = formatRelativeTime(indexedAt);
   const formattedPublicKey = formatPublicKey({ key: userId });
-  const snippet = truncateAtWordBoundary(
-    getListPostSnippet(postDetails.content, postDetails.kind),
-    LIST_SNIPPET_MAX_CHARS,
-  );
+  const contentSnippet = getListPostSnippet(postDetails.content, postDetails.kind);
+  const snippet = showFullContent ? '' : truncateAtWordBoundary(contentSnippet, LIST_SNIPPET_MAX_CHARS);
   const profileUrl = `/profile/${userId}`;
 
   const handleTagClick = () => {
@@ -90,7 +96,11 @@ export function PostMainListRow({ postId, shouldShowPostHeader, onReplyClick, on
         <Container overrideDefaults className="min-w-0 flex-1">
           <Container overrideDefaults className="flex min-w-0 items-center gap-2">
             {shouldShowPostHeader ? (
-              <Link href={profileUrl} onClick={stopCardPropagation} className="max-w-[40%] shrink-0">
+              <Link
+                href={profileUrl}
+                onClick={stopCardPropagation}
+                className={cn(showFullContent ? 'max-w-full' : 'max-w-[40%]', 'shrink-0')}
+              >
                 <Typography className="truncate text-base font-bold text-foreground" overrideDefaults>
                   {userDetails.name}
                 </Typography>
@@ -146,12 +156,20 @@ export function PostMainListRow({ postId, shouldShowPostHeader, onReplyClick, on
           />
         </Container>
 
-        <PostListMediaThumbnail
-          postId={postId}
-          className={cn('hidden rounded-sm md:block', LIST_POST_MEDIA_THUMBNAIL_CLASS)}
-          onClick={stopCardPropagation}
-        />
+        {!showFullContent ? (
+          <PostListMediaThumbnail
+            postId={postId}
+            className={cn('hidden rounded-sm md:block', LIST_POST_MEDIA_THUMBNAIL_CLASS)}
+            onClick={stopCardPropagation}
+          />
+        ) : null}
       </Container>
+
+      {showFullContent ? (
+        <Container overrideDefaults className={cn('min-w-0', shouldShowPostHeader && 'ml-14')}>
+          <PostContent postId={postId} textClassName={LIST_POST_BODY_TEXT_CLASS} />
+        </Container>
+      ) : null}
 
       {tagsExpanded ? (
         <Container overrideDefaults onClick={stopCardPropagation} onAuxClick={stopCardPropagation}>

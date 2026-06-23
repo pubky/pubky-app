@@ -78,7 +78,7 @@ vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => ({
 }));
 
 vi.mock('@/molecules/PostListMediaThumbnail/PostListMediaThumbnail', () => ({
-  PostListMediaThumbnail: () => null,
+  PostListMediaThumbnail: () => <div data-testid="post-list-media-thumbnail" />,
 }));
 
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
@@ -93,6 +93,14 @@ vi.mock('../PostActionsBar/PostActionsBar', () => ({
   PostActionsBar: () => <div data-testid="post-actions-bar" />,
 }));
 
+vi.mock('../PostContent/PostContent', () => ({
+  PostContent: ({ postId, textClassName }: { postId: string; textClassName?: string }) => (
+    <div data-testid="post-content" data-post-id={postId} data-text-class-name={textClassName}>
+      PostContent {postId}
+    </div>
+  ),
+}));
+
 vi.mock('../PostTagsPanel/PostTagsPanel', () => {
   const PostTagsPanel = React.forwardRef<HTMLDivElement>((_props, ref) => (
     <div ref={ref} data-testid="post-tags-panel" />
@@ -102,7 +110,7 @@ vi.mock('../PostTagsPanel/PostTagsPanel', () => {
 });
 
 describe('PostMainListRow', () => {
-  it('uses secondary foreground color for the post content snippet', () => {
+  const mockPostDetails = (content: string) => {
     vi.mocked(useAvatarUrl).mockReturnValue('https://example.com/avatar.png');
     vi.mocked(useRelativeTime).mockReturnValue({ formatRelativeTime: () => '1m' });
     vi.mocked(useUserDetails).mockReturnValue({
@@ -123,17 +131,21 @@ describe('PostMainListRow', () => {
         indexed_at: Date.now(),
         kind: 'short',
         uri: 'pubky://author/pub/pubky.app/posts/post',
-        content: 'Some post content',
+        content,
         attachments: [],
         is_moderated: false,
         is_blurred: false,
       },
       isLoading: false,
     });
+  };
 
+  it('uses secondary foreground color for the post content snippet', () => {
+    mockPostDetails('Some post content');
     render(
       <PostMainListRow
         postId="author:post"
+        showFullContent={false}
         shouldShowPostHeader={true}
         onReplyClick={vi.fn()}
         onRepostClick={vi.fn()}
@@ -141,5 +153,51 @@ describe('PostMainListRow', () => {
     );
 
     expect(screen.getByText('Some post content')).toHaveClass('text-secondary-foreground');
+    expect(screen.getByTestId('post-list-media-thumbnail')).toBeInTheDocument();
+  });
+
+  it('renders full post content below the header row when full content is enabled', () => {
+    const longContent =
+      'We did it! Pubky Hackathon Champions in Lugano! This is the main post text that should remain visible in full on the single post page list layout.';
+    mockPostDetails(longContent);
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={true}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(longContent)).not.toBeInTheDocument();
+    expect(screen.getByTestId('post-content')).toHaveAttribute('data-post-id', 'author:post');
+    expect(screen.getByTestId('post-content')).toHaveAttribute(
+      'data-text-class-name',
+      'text-base font-medium leading-5',
+    );
+    expect(screen.getByTestId('post-content').parentElement).toHaveClass('ml-14');
+    expect(screen.queryByTestId('post-list-media-thumbnail')).not.toBeInTheDocument();
+  });
+
+  it('keeps compact list row content truncated', () => {
+    const longContent =
+      'This reply is intentionally long enough to exceed the compact list row snippet limit so it should keep the ellipsis behavior for replies.';
+    mockPostDetails(longContent);
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    const truncatedText = screen.getByText(/This reply is intentionally long enough/);
+    expect(truncatedText).toHaveTextContent('...');
+    expect(truncatedText).toHaveClass('truncate');
   });
 });

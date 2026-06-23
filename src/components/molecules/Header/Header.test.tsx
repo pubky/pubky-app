@@ -580,6 +580,7 @@ describe('Header Components - Snapshots', () => {
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
+    vi.mocked(usePathname).mockReturnValue('/home');
     vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
     vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
     vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
