@@ -79,7 +79,7 @@ export const PostAttachmentsImagesAndVideos = ({
     };
   }, []);
   const isOnlyMedia = imagesAndVideos.length === 1;
-  const itemClassName = size === 'compact' ? 'h-28' : 'h-52';
+
   const singleMediaClassName = size === 'compact' ? 'max-h-56' : 'max-h-96';
 
   return (
@@ -95,7 +95,7 @@ export const PostAttachmentsImagesAndVideos = ({
                 key={i}
                 asChild
                 className={cn(
-                  itemClassName,
+                  size === 'compact' ? 'h-28' : 'h-52',
                   'relative w-full cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2',
                 )}
               >
