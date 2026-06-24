@@ -96,7 +96,7 @@ export function LandingFreedomSection() {
               className={`absolute inset-x-0 bottom-0 h-[58%] bg-[length:auto_100%] bg-no-repeat opacity-0 transition-opacity duration-500 ease-in-out [background-position:calc(50%+100px)_100%] md:inset-0 md:h-auto md:bg-cover md:bg-center ${
                 activeSlide === index ? 'opacity-100' : ''
               }`}
-              style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : undefined}
+              style={{ backgroundImage: `url(${backgroundImage})` }}
               aria-hidden
             />
           ))}
