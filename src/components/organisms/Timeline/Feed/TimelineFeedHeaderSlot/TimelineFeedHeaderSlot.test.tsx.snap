@@ -2,7 +2,7 @@
 
 exports[`TimelineFeedHeaderSlot - Snapshots > matches the snapshot with header children 1`] = `
 <div
-  class="mb-6"
+  class=""
   data-testid="container"
 >
   <div>

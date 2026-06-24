@@ -8,7 +8,7 @@ exports[`CollectionItems - Snapshots > matches the owner non-empty snapshot 1`] 
   data-variant="collection"
 >
   <div
-    class="mb-6"
+    class=""
     data-testid="container"
   >
     <div

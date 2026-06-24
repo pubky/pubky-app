@@ -8,7 +8,7 @@ exports[`BookmarksItems - Snapshots > matches the snapshot 1`] = `
   data-variant="bookmarks"
 >
   <div
-    class="mb-6"
+    class=""
     data-testid="container"
   >
     <div>

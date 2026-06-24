@@ -23,54 +23,54 @@ import { GRID_DASHED_CTA_TRIGGER_CLASS } from '@/organisms/Collections/gridDashe
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 import type { AddContentDialogProps } from './AddContentDialog.types';
 
-const AddContentHeroTrigger = forwardRef<
-  ComponentRef<typeof Button>,
-  ComponentPropsWithoutRef<typeof Button> & Pick<AddContentDialogProps, 'dataCy'>
->(function AddContentHeroTrigger({ className, dataCy, ...props }, ref) {
-  const t = useTranslations('collections.single');
+type AddContentTriggerProps = ComponentPropsWithoutRef<typeof Button> & Pick<AddContentDialogProps, 'dataCy'>;
 
-  return (
-    <Button
-      ref={ref}
-      variant="secondary"
-      size="icon"
-      type="button"
-      aria-label={t('content')}
-      data-cy={dataCy}
-      className={cn('lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs', className)}
-      {...props}
-    >
-      <SquarePlus className="size-4" />
-      <Typography as="span" overrideDefaults className="hidden lg:inline">
-        {t('content')}
-      </Typography>
-    </Button>
-  );
-});
+const AddContentHeroTrigger = forwardRef<ComponentRef<typeof Button>, AddContentTriggerProps>(
+  function AddContentHeroTrigger({ dataCy, ...props }, ref) {
+    const t = useTranslations('collections.single');
 
-const AddContentGridTrigger = forwardRef<
-  ComponentRef<typeof Button>,
-  ComponentPropsWithoutRef<typeof Button> & Pick<AddContentDialogProps, 'dataCy'>
->(function AddContentGridTrigger({ className, dataCy, ...props }, ref) {
-  const t = useTranslations('collections.single');
+    return (
+      <Button
+        ref={ref}
+        variant="secondary"
+        size="icon"
+        type="button"
+        aria-label={t('content')}
+        data-cy={dataCy}
+        className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+        {...props}
+      >
+        <SquarePlus className="size-4" />
+        <Typography as="span" overrideDefaults className="hidden lg:inline">
+          {t('content')}
+        </Typography>
+      </Button>
+    );
+  },
+);
 
-  return (
-    <Button
-      ref={ref}
-      overrideDefaults
-      type="button"
-      aria-label={t('addContent')}
-      data-cy={dataCy}
-      className={cn(GRID_DASHED_CTA_TRIGGER_CLASS, className)}
-      {...props}
-    >
-      <Plus className="size-3 shrink-0" />
-      <Typography as="span" overrideDefaults className="text-sm font-bold">
-        {t('addContent')}
-      </Typography>
-    </Button>
-  );
-});
+const AddContentGridTrigger = forwardRef<ComponentRef<typeof Button>, AddContentTriggerProps>(
+  function AddContentGridTrigger({ dataCy, ...props }, ref) {
+    const t = useTranslations('collections.single');
+
+    return (
+      <Button
+        ref={ref}
+        overrideDefaults
+        type="button"
+        aria-label={t('addContent')}
+        data-cy={dataCy}
+        className={GRID_DASHED_CTA_TRIGGER_CLASS}
+        {...props}
+      >
+        <Plus className="size-3 shrink-0" />
+        <Typography as="span" overrideDefaults className="text-sm font-bold">
+          {t('addContent')}
+        </Typography>
+      </Button>
+    );
+  },
+);
 
 function ActionPill({
   icon: Icon,

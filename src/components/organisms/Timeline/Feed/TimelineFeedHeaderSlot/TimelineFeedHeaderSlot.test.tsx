@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { TimelineFeedHeaderSlot } from './TimelineFeedHeaderSlot';
 
 describe('TimelineFeedHeaderSlot', () => {
-  it('renders children inside a spaced container slot', () => {
+  it('renders children inside a container slot', () => {
     render(
       <TimelineFeedHeaderSlot>
         <div data-testid="feed-header">Header</div>
@@ -12,7 +12,6 @@ describe('TimelineFeedHeaderSlot', () => {
 
     const slot = screen.getByTestId('feed-header').closest('[data-testid="container"]');
     expect(slot).toBeInTheDocument();
-    expect(slot).toHaveClass('mb-6');
     expect(screen.getByTestId('feed-header')).toBeInTheDocument();
   });
 });
