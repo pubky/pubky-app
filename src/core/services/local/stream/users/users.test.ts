@@ -43,6 +43,7 @@ describe('LocalStreamUsersService', () => {
       following: 20,
       followers: 30,
       friends: 15,
+      collections: 0,
       bookmarks: 8,
       ...overrides?.counts,
     },
@@ -362,6 +363,7 @@ describe('LocalStreamUsersService', () => {
           following: 200,
           followers: 300,
           friends: 150,
+          collections: 0,
           bookmarks: 25,
         },
       });

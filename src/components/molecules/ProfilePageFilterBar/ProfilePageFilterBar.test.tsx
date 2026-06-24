@@ -9,6 +9,7 @@ const mockStats: ProfileStats = {
   notifications: 2,
   posts: 4,
   replies: 7,
+  collections: 3,
   followers: 115,
   following: 27,
   friends: 10,
@@ -38,7 +39,8 @@ describe('ProfilePageFilterBar', () => {
     // Check that counts are rendered
     expect(screen.getByText('2')).toBeInTheDocument(); // notifications
     expect(screen.getByText('4')).toBeInTheDocument(); // posts
-    expect(container.querySelector('[data-cy="profile-filter-item-collections-count"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-cy="profile-filter-item-collections-count"]')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument(); // collections
   });
 
   it('has correct structure with sticky positioning', () => {
@@ -75,7 +77,7 @@ describe('ProfilePageFilterBar', () => {
     expect(screen.getByText('Notifications')).toBeInTheDocument();
     // Should show loading spinners when stats are undefined
     const spinners = screen.getAllByTestId('spinner');
-    expect(spinners.length).toBe(7); // One for each filter item with a count
+    expect(spinners.length).toBe(8); // One for each filter item with a count
   });
 
   it('renders with zero counts when stats are provided but individual values are zero', () => {
@@ -83,6 +85,7 @@ describe('ProfilePageFilterBar', () => {
       notifications: 0,
       posts: 0,
       replies: 0,
+      collections: 0,
       followers: 0,
       following: 0,
       friends: 0,
@@ -98,7 +101,7 @@ describe('ProfilePageFilterBar', () => {
     expect(screen.getByText('Notifications')).toBeInTheDocument();
     // Should show 0 for all counts when stats are provided with zero values
     const counts = screen.getAllByText('0');
-    expect(counts.length).toBe(7);
+    expect(counts.length).toBe(8);
   });
 
   it('marks active item correctly', () => {
@@ -175,7 +178,7 @@ describe('ProfilePageFilterBar', () => {
 
     // Initially should show spinners
     let spinners = screen.getAllByTestId('spinner');
-    expect(spinners.length).toBe(7);
+    expect(spinners.length).toBe(8);
 
     // After stats are provided, should show counts
     rerender(
@@ -217,6 +220,7 @@ describe('ProfilePageFilterBar - Snapshots', () => {
       notifications: 0,
       posts: 0,
       replies: 0,
+      collections: 0,
       followers: 0,
       following: 0,
       friends: 0,

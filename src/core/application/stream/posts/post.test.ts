@@ -124,6 +124,7 @@ describe('PostStreamApplication', () => {
       unique_tags: 0,
       posts: 0,
       replies: 0,
+      collections: 0,
       following: 0,
       followers: 0,
       friends: 0,

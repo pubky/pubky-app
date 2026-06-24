@@ -265,11 +265,18 @@ export class LocalPostService {
           // Touch TTL for the new post
           ops.push(PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }));
 
-          // Update author's user counts in a single operation
+          // Update author's user counts in a single operation.
+          // A collection is a collection-kind post, so it bumps both the total
+          // `posts` count and the dedicated `collections` count (the profile
+          // sidebar subtracts collections back out of posts).
           ops.push(
             UserCountsModel.updateCounts({
               userId: authorId,
-              countChanges: { posts: 1, replies: parentUri ? 1 : 0 },
+              countChanges: {
+                posts: 1,
+                replies: parentUri ? 1 : 0,
+                collections: normalizedKind === 'collection' ? 1 : 0,
+              },
             }),
           );
 
@@ -399,11 +406,16 @@ export class LocalPostService {
             }
           }
 
-          // Update author's user counts in a single operation
+          // Update author's user counts in a single operation. Mirror the create
+          // path: a collection-kind post decrements both `posts` and `collections`.
           ops.push(
             UserCountsModel.updateCounts({
               userId: authorId,
-              countChanges: { posts: -1, replies: parentUri ? -1 : 0 },
+              countChanges: {
+                posts: -1,
+                replies: parentUri ? -1 : 0,
+                collections: kind === 'collection' ? -1 : 0,
+              },
             }),
           );
 
