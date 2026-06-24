@@ -7,7 +7,10 @@ import { cn } from '@/libs/utils/utils';
 
 type DialogContentStyle = React.CSSProperties & {
   '--dialog-ios-keyboard-background-offset'?: string;
+  '--dialog-ios-keyboard-background-offset-negative'?: string;
 };
+
+const IOS_KEYBOARD_BACKGROUND_EXTRA_BLEED = 48;
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" data-testid="dialog" {...props} />;
@@ -90,8 +93,12 @@ function DialogContent({
   );
   const shouldExtendIOSKeyboardBackground =
     avoidKeyboard && isIOSBrowser() && isKeyboardVisible && keyboardAvoidanceOffset > 0;
+  const iosKeyboardBackgroundOffset = keyboardAvoidanceOffset + IOS_KEYBOARD_BACKGROUND_EXTRA_BLEED;
   const iosKeyboardBackgroundStyle: DialogContentStyle | undefined = shouldExtendIOSKeyboardBackground
-    ? { '--dialog-ios-keyboard-background-offset': `${keyboardAvoidanceOffset}px` }
+    ? {
+        '--dialog-ios-keyboard-background-offset': `${iosKeyboardBackgroundOffset}px`,
+        '--dialog-ios-keyboard-background-offset-negative': `-${iosKeyboardBackgroundOffset}px`,
+      }
     : undefined;
   const contentStyle: DialogContentStyle | undefined =
     style || (avoidKeyboard && keyboardAvoidanceStyle) || iosKeyboardBackgroundStyle
@@ -125,7 +132,7 @@ function DialogContent({
               ? ''
               : 'max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8',
             shouldExtendIOSKeyboardBackground &&
-              'max-sm:[margin-bottom:calc(var(--dialog-ios-keyboard-background-offset)*-1)] max-sm:[border-bottom-width:var(--dialog-ios-keyboard-background-offset)] max-sm:[border-bottom-color:hsl(var(--background))]',
+              'max-sm:[margin-bottom:var(--dialog-ios-keyboard-background-offset-negative)] max-sm:[border-bottom-width:var(--dialog-ios-keyboard-background-offset)] max-sm:[border-bottom-color:transparent] max-sm:[background-clip:border-box]',
             className,
           )}
           style={contentStyle}

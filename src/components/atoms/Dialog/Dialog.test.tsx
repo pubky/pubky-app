@@ -137,11 +137,13 @@ describe('Dialog', () => {
     const dialogContent = screen.getByTestId('dialog-content');
 
     await waitFor(() => {
-      expect(dialogContent.style.getPropertyValue('--dialog-ios-keyboard-background-offset')).toBe('120px');
+      expect(dialogContent.style.getPropertyValue('--dialog-ios-keyboard-background-offset')).toBe('168px');
     });
+    expect(dialogContent.style.getPropertyValue('--dialog-ios-keyboard-background-offset-negative')).toBe('-168px');
     expect(dialogContent).toHaveStyle({ transform: 'translateY(-120px)' });
     expect(dialogContent).toHaveClass('max-sm:[border-bottom-width:var(--dialog-ios-keyboard-background-offset)]');
-    expect(dialogContent).toHaveClass('max-sm:[margin-bottom:calc(var(--dialog-ios-keyboard-background-offset)*-1)]');
+    expect(dialogContent).toHaveClass('max-sm:[margin-bottom:var(--dialog-ios-keyboard-background-offset-negative)]');
+    expect(dialogContent).toHaveClass('max-sm:[border-bottom-color:transparent]');
   });
 
   it('does not extend the dialog background for non-iOS browsers', () => {
@@ -161,6 +163,7 @@ describe('Dialog', () => {
 
     const dialogContent = screen.getByTestId('dialog-content');
     expect(dialogContent.style.getPropertyValue('--dialog-ios-keyboard-background-offset')).toBe('');
+    expect(dialogContent.style.getPropertyValue('--dialog-ios-keyboard-background-offset-negative')).toBe('');
     expect(dialogContent).not.toHaveClass('max-sm:[border-bottom-width:var(--dialog-ios-keyboard-background-offset)]');
   });
 });
