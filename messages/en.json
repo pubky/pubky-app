@@ -1008,7 +1008,8 @@
     "follow": {
       "followed": "Following {username}",
       "unfollowed": "Unfollowed {username}",
-      "failed": "Could not update follow status"
+      "followFailed": "Failed to follow {username}",
+      "unfollowFailed": "Failed to unfollow {username}"
     },
     "mute": {
       "muted": "{username} muted",

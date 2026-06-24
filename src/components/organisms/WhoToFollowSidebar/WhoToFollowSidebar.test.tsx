@@ -129,7 +129,7 @@ describe('WhoToFollowSidebar', () => {
   });
 
   it('rolls back preserved users when follow fails', async () => {
-    hooksMocks.toggleFollow.mockRejectedValue(new Error('follow failed'));
+    hooksMocks.toggleFollow.mockResolvedValue(false);
     hooksMocks.useUserStream.mockReturnValue({
       users: [{ id: 'user-1', name: 'User One', image: null, avatarUrl: null, isFollowing: false }],
       userIds: ['user-1'],
