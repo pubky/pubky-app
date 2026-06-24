@@ -58,6 +58,7 @@ type StandardTimelineFeedProps = TimelineFeedPropsBase & {
     typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION
   >;
   emptyState?: never;
+  gridTrailingSlot?: never;
   pullToRefreshContainerRef?: never;
 };
 
