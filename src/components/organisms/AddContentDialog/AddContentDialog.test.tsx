@@ -104,12 +104,29 @@ describe('AddContentDialog', () => {
     );
   });
 
+  it('disables the Content trigger and does not open the dialog when disabled', () => {
+    render(<AddContentDialog disabled />);
+
+    const trigger = screen.getByRole('button', { name: 'collections.single.content' });
+    expect(trigger).toBeDisabled();
+
+    fireEvent.click(trigger);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('renders the Add Content grid trigger when triggerVariant is grid', () => {
     render(<AddContentDialog triggerVariant="grid" dataCy="bookmarks-add-content-grid" />);
 
     const trigger = screen.getByRole('button', { name: 'collections.single.addContent' });
     expect(trigger).toBeInTheDocument();
     expect(trigger).toHaveAttribute('data-cy', 'bookmarks-add-content-grid');
+  });
+
+  it('disables the Add Content grid trigger when disabled', () => {
+    render(<AddContentDialog triggerVariant="grid" disabled />);
+
+    expect(screen.getByRole('button', { name: 'collections.single.addContent' })).toBeDisabled();
   });
 
   it('opens the desktop dialog with feed and URL placeholder options', () => {

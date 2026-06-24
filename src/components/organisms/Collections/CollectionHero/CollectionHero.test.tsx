@@ -40,9 +40,13 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockRouterReplace, push: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
 }));
 
-const mockDeletePost = vi.fn().mockResolvedValue(undefined);
+const mockDeleteState = vi.hoisted(() => ({
+  deletePost: vi.fn().mockResolvedValue(undefined),
+  isDeleting: false,
+}));
+const mockDeletePost = mockDeleteState.deletePost;
 vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
-  useDeletePost: () => ({ deletePost: mockDeletePost, isDeleting: false }),
+  useDeletePost: () => ({ deletePost: mockDeleteState.deletePost, isDeleting: mockDeleteState.isDeleting }),
 }));
 
 vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
@@ -98,8 +102,20 @@ vi.mock('@/organisms/EditCollectionDialog/EditCollectionDialog', () => ({
 }));
 
 vi.mock('@/organisms/AddContentDialog/AddContentDialog', () => ({
-  AddContentDialog: ({ dataCy }: { dataCy?: string; target?: { type: string; collectionId?: string } }) => (
-    <button type="button" data-testid={dataCy ?? 'add-content-dialog'} aria-label="collections.single.content">
+  AddContentDialog: ({
+    dataCy,
+    disabled,
+  }: {
+    dataCy?: string;
+    disabled?: boolean;
+    target?: { type: string; collectionId?: string };
+  }) => (
+    <button
+      type="button"
+      data-testid={dataCy ?? 'add-content-dialog'}
+      aria-label="collections.single.content"
+      disabled={disabled}
+    >
       collections.single.content
     </button>
   ),
@@ -255,6 +271,7 @@ function setRepostDialogs() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockDeleteState.isDeleting = false;
   for (const key of Object.keys(mockLocalCollections)) delete mockLocalCollections[key];
   setAuthStore(null);
   setPostDetails(COLLECTION_CONTENT);
@@ -371,6 +388,18 @@ describe('CollectionHero', () => {
       fireEvent.click(screen.getByLabelText('collections.single.delete'));
 
       expect(toggle).not.toHaveBeenCalled();
+    });
+
+    it('disables the Content action while collection delete is in flight', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      mockDeleteState.isDeleting = true;
+
+      renderHero();
+
+      expect(screen.getByLabelText('collections.single.content')).toBeDisabled();
+      expect(screen.getByLabelText('collections.single.share')).toBeDisabled();
+      expect(screen.getByLabelText('collections.single.edit')).toBeDisabled();
+      expect(screen.getByLabelText('collections.single.delete')).toBeDisabled();
     });
 
     it('opens the EditCollectionDialog (controlled, with the composite id) when the owner clicks Edit', () => {

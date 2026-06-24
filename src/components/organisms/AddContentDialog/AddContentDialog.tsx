@@ -200,6 +200,7 @@ function AddContentDialogBody({
 
 export function AddContentDialog({
   dataCy = 'add-content',
+  disabled = false,
   target = { type: 'bookmarks' },
   triggerVariant = 'hero',
 }: AddContentDialogProps) {
@@ -213,7 +214,11 @@ export function AddContentDialog({
   };
 
   const trigger =
-    triggerVariant === 'grid' ? <AddContentGridTrigger dataCy={dataCy} /> : <AddContentHeroTrigger dataCy={dataCy} />;
+    triggerVariant === 'grid' ? (
+      <AddContentGridTrigger dataCy={dataCy} disabled={disabled} />
+    ) : (
+      <AddContentHeroTrigger dataCy={dataCy} disabled={disabled} />
+    );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

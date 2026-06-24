@@ -4,6 +4,7 @@ export type AddContentTriggerVariant = 'hero' | 'grid';
 
 export interface AddContentDialogProps {
   dataCy?: string;
+  disabled?: boolean;
   target?: AddContentTarget;
   /**
    * `hero` — pill button for collection/bookmarks hero actions.

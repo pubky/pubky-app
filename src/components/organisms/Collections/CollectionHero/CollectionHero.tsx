@@ -216,8 +216,9 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
               <AddContentDialog
                 target={{ type: 'collection', collectionId: compositeId }}
                 dataCy="collection-add-content"
+                disabled={isDeleting}
               />
-              {/* While a delete is in flight, disable Share / Edit / Delete so the
+              {/* While a delete is in flight, disable owner actions so the
                   user knows something is happening and those actions cannot race
                   an imminent route replace. */}
               <Button
