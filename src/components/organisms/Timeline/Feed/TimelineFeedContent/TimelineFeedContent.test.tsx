@@ -141,6 +141,14 @@ const gridLayoutResolution: FeedLayoutResolution = {
   isPhoneViewport: false,
 };
 
+const visualGridLayoutResolution: FeedLayoutResolution = {
+  ...gridLayoutResolution,
+  requestedLayout: LAYOUT.VISUAL,
+  effectiveLayout: LAYOUT.VISUAL,
+  isVisualRequested: true,
+  isVisualActive: true,
+};
+
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();
 const mockPrependPosts = vi.fn();
@@ -618,6 +626,23 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
     expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+  });
+
+  it('keeps header children visible for bookmarks when visual layout still resolves to the grid', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+        variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+        tagsLayout="inline"
+        layoutResolution={visualGridLayoutResolution}
+      >
+        <div data-testid="bookmarks-header">Bookmarks hero</div>
+      </TimelineFeedWithStream>,
+    );
+
+    expect(screen.getByTestId('bookmarks-header')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.queryByTestId('visual-timeline-posts')).not.toBeInTheDocument();
   });
 
   it('falls back to the vertical list when no grid layout resolution is provided', () => {

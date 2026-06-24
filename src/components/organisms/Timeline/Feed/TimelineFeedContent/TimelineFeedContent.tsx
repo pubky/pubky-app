@@ -189,13 +189,14 @@ function TimelineFeedContent({
   };
   const showGridEndMessage =
     variant !== TIMELINE_FEED_VARIANT.COLLECTION && variant !== TIMELINE_FEED_VARIANT.BOOKMARKS;
+  const shouldRenderChildren = !isVisualActive || isGridActive;
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
       <PostMainLayoutProvider tagsLayout={tagsLayout}>
         <Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
           {enablePullToRefresh && <PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
-          {!isVisualActive ? children : null}
+          {shouldRenderChildren ? children : null}
           <NewPostsSection
             streamId={streamId}
             variant={variant}
