@@ -87,7 +87,6 @@ describe('Install template', () => {
     expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Invite code applied',
-      description: 'inviteCodeAppliedDescription',
     });
     expect(mockReplace).not.toHaveBeenCalled();
     // Stays on the install page with the install content visible
@@ -107,7 +106,6 @@ describe('Install template', () => {
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
       title: 'Invalid invite code',
-      description: 'invalidInviteCodeDescription',
     });
   });
 
@@ -124,7 +122,6 @@ describe('Install template', () => {
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
       title: 'Invite code already used',
-      description: 'usedInviteCodeDescription',
     });
   });
 
@@ -141,7 +138,6 @@ describe('Install template', () => {
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
       title: "Couldn't verify invite code",
-      description: 'verificationFailedDescription',
     });
     // The invalid-code warning toast is not shown for transient errors.
     expect(mockToast).toHaveBeenCalledTimes(1);
