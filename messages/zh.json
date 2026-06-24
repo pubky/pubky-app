@@ -1415,5 +1415,9 @@
     "updateCollectionFailed": "更新收藏集失败。",
     "collectionCreated": "收藏集已创建并保存帖子。",
     "createCollectionFailed": "创建收藏集失败。"
+  },
+  "moderation": {
+    "postContentModerated": "帖子内容已被审核。",
+    "collectionContentModerated": "收藏集内容已被审核。"
   }
 }

@@ -1421,5 +1421,9 @@
     "updateCollectionFailed": "Failed to update collection.",
     "collectionCreated": "Collection created and post saved.",
     "createCollectionFailed": "Failed to create collection."
+  },
+  "moderation": {
+    "postContentModerated": "Post content moderated.",
+    "collectionContentModerated": "Collection content moderated."
   }
 }

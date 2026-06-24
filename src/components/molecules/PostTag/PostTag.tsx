@@ -18,7 +18,12 @@ export function PostTag({
 }: PostTagProps) {
   const tagColor = color || generateRandomColor(label);
   const backgroundGradient = `linear-gradient(90deg, ${hexToRgba(COLORS.background, 0.7)} 0%, ${hexToRgba(COLORS.background, 0.7)} 100%), linear-gradient(90deg, ${tagColor} 0%, ${tagColor} 100%)`;
+  // A tag chip's only jobs are toggle / close — never navigation. Suppressing
+  // both the native default and propagation lets it sit inside a clickable or
+  // linked surface (e.g. a collection card wrapped in a `Link`) without the
+  // click bubbling into navigation; harmless everywhere else.
   const handleClose = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     onClose?.(e);
   };
@@ -27,6 +32,7 @@ export function PostTag({
       {...rest}
       pressed={selected}
       onClick={(e) => {
+        e.preventDefault();
         e.stopPropagation();
         onClick?.(e);
       }}

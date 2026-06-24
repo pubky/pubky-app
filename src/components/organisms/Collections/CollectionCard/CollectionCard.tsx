@@ -23,6 +23,7 @@ import { CollectionDeleted } from '@/molecules/CollectionDeleted/CollectionDelet
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
+import { CollectionCardBlurred } from '@/organisms/Collections/CollectionCard/CollectionCardBlurred';
 import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -94,6 +95,14 @@ export function CollectionCard({
   // `CollectionDeleted` owns its full card shell — no wrappers needed here.
   if (isPostDeleted(postDetails.content)) {
     return <CollectionDeleted className={className} />;
+  }
+
+  // Moderated collections render a blurred, same-footprint placeholder instead
+  // of their content. Checked after the deleted guard (a deleted collection
+  // wins) and mirrors `PostContentBase`'s blur intercept — direct-render
+  // surfaces (landing sections) need their own check since they bypass it.
+  if (postDetails.is_blurred) {
+    return <CollectionCardBlurred compositeId={compositeId} className={className} />;
   }
 
   return (
@@ -284,12 +293,7 @@ function CollectionCardContent({
               previews) match how normal reposts render — no inline tags, no
               actions on the previewed post. */}
             {!isPreview && (
-              <Container
-                overrideDefaults
-                onClick={suppressCardNavigation}
-                onAuxClick={suppressCardNavigation}
-                className="mt-auto w-full"
-              >
+              <Container overrideDefaults className="mt-auto w-full">
                 <PostTagsExpandableRow postId={compositeId} preventDefaultOnClick>
                   {isOwn ? (
                     <Button

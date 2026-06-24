@@ -41,7 +41,10 @@ export function PostTagsExpandableRow({
   };
 
   const handleTagToggle = (event: MouseEvent<HTMLButtonElement>) => {
-    if (preventDefaultOnClick) event.preventDefault();
+    if (preventDefaultOnClick) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     setTagsExpanded((prev) => !prev);
   };
 
@@ -49,8 +52,6 @@ export function PostTagsExpandableRow({
     <Container
       overrideDefaults
       data-cy="post-tags-expandable-row"
-      onClick={suppressParentInteraction}
-      onAuxClick={suppressParentInteraction}
       className={cn(
         'flex w-full flex-wrap justify-between gap-3 sm:flex-nowrap',
         tagsExpanded ? 'items-end' : 'items-center',
@@ -59,13 +60,20 @@ export function PostTagsExpandableRow({
     >
       <Container overrideDefaults className={cn('min-w-0 flex-1', tagsClassName)}>
         {tagsExpanded ? (
-          <PostTagsPanel
-            postId={postId}
-            widthMode="fit"
-            autoFocusInput
-            enableLoadingSkeleton={false}
+          <Container
+            overrideDefaults
+            onClick={suppressParentInteraction}
+            onAuxClick={suppressParentInteraction}
             className="flex-1"
-          />
+          >
+            <PostTagsPanel
+              postId={postId}
+              widthMode="fit"
+              autoFocusInput
+              enableLoadingSkeleton={false}
+              className="flex-1"
+            />
+          </Container>
         ) : (
           <ClickableTagsList
             taggedId={postId}
@@ -83,6 +91,8 @@ export function PostTagsExpandableRow({
       <Container
         overrideDefaults
         data-cy="post-tags-expandable-row-actions"
+        onClick={suppressParentInteraction}
+        onAuxClick={suppressParentInteraction}
         className={cn('flex shrink-0 items-center gap-2', tagsExpanded && 'self-end', actionsClassName)}
       >
         {isTagCountLoading ? (

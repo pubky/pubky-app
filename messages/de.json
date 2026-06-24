@@ -1423,5 +1423,9 @@
     "updateCollectionFailed": "Sammlung konnte nicht aktualisiert werden.",
     "collectionCreated": "Sammlung erstellt und Beitrag gespeichert.",
     "createCollectionFailed": "Sammlung konnte nicht erstellt werden."
+  },
+  "moderation": {
+    "postContentModerated": "Beitragsinhalt zensiert.",
+    "collectionContentModerated": "Sammlungsinhalt zensiert."
   }
 }

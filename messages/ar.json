@@ -1417,5 +1417,9 @@
     "updateCollectionFailed": "فشل تحديث المجموعة.",
     "collectionCreated": "تم إنشاء المجموعة وحفظ المنشور.",
     "createCollectionFailed": "فشل إنشاء المجموعة."
+  },
+  "moderation": {
+    "postContentModerated": "تم حظر محتوى المنشور.",
+    "collectionContentModerated": "تم حظر محتوى المجموعة."
   }
 }

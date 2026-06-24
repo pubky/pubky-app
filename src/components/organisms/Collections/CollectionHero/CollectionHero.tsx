@@ -20,6 +20,7 @@ import { buildCompositeId } from '@/models/models.utils';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { CollectionHeroSkeleton } from '@/organisms/Collections/CollectionHero/CollectionHero.skeleton';
+import { CollectionHeroBlurred } from '@/organisms/Collections/CollectionHero/CollectionHeroBlurred';
 import { EditCollectionDialog } from '@/organisms/EditCollectionDialog/EditCollectionDialog';
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
@@ -48,6 +49,13 @@ export function CollectionHero({ authorPubky, postId, className }: CollectionHer
 
   if (!postDetails) {
     return <CollectionHeroSkeleton className={className} />;
+  }
+
+  // Moderated collections render a blurred, same-footprint placeholder instead
+  // of their content. Mirrors `PostContentBase`'s blur intercept; the single
+  // collection page renders the hero directly so it needs its own check.
+  if (postDetails.is_blurred) {
+    return <CollectionHeroBlurred compositeId={compositeId} className={className} />;
   }
 
   return (

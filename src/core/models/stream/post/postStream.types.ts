@@ -173,6 +173,24 @@ export function isCollectionItemsStream(streamId: string): streamId is Collectio
   return streamId.startsWith(`${StreamSource.COLLECTION}:`);
 }
 
+/**
+ * Single-collection item feeds (`collection:<author>:<postId>`) and the
+ * bookmarks post feeds (`<sorting>:bookmarks:<kind>`) intentionally keep deleted
+ * posts in the stream so the feed still renders the saved/collected slot with the
+ * post component's deleted-state placeholder, rather than silently dropping it.
+ * Every other stream filters deleted posts out entirely.
+ *
+ * The collection-kind bookmark stream (`<sorting>:bookmarks:collection`) is
+ * excluded: it is not a bookmarks post feed but the seed for the
+ * `FollowedCollections` section, which deliberately hides deleted collections
+ * (its live query filters them out). Keeping stream-level filtering here stays
+ * consistent with that, rather than surfacing deleted collections in that section.
+ */
+export function isDeletedRetainingStream(streamId: string): boolean {
+  if (isCollectionItemsStream(streamId)) return true;
+  return streamId.includes(`:${StreamSource.BOOKMARKS}:`) && !streamId.endsWith(`:${StreamKind.COLLECTION}`);
+}
+
 export type PostStreamId =
   | PostStreamTypes
   | ReplyStreamCompositeId

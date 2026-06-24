@@ -1421,5 +1421,9 @@
     "updateCollectionFailed": "コレクションの更新に失敗しました。",
     "collectionCreated": "コレクションを作成し、投稿を保存しました。",
     "createCollectionFailed": "コレクションの作成に失敗しました。"
+  },
+  "moderation": {
+    "postContentModerated": "投稿内容は検閲されました。",
+    "collectionContentModerated": "コレクションの内容は検閲されました。"
   }
 }
