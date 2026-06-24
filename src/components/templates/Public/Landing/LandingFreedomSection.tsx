@@ -10,11 +10,14 @@ import { LANDING_FREEDOM_SECTION_ID } from './Landing.constants';
 
 const SLIDE_DURATION_MS = 6000;
 
-const FEATURES: Array<{ key: 'creation' | 'browsing' | 'feeds' | 'tagging'; backgroundImage?: string }> = [
+type FeatureKey = 'creation' | 'browsing' | 'feeds' | 'tagging' | 'collections';
+
+const FEATURES: Array<{ key: FeatureKey; backgroundImage: string }> = [
   { key: 'creation', backgroundImage: '/images/landing-experience1.png' },
   { key: 'browsing', backgroundImage: '/images/landing-experience2.png' },
   { key: 'feeds', backgroundImage: '/images/landing-experience3.png' },
   { key: 'tagging', backgroundImage: '/images/landing-experience4.png' },
+  { key: 'collections', backgroundImage: '/images/landing-experience5.png' },
 ];
 
 export function LandingFreedomSection() {

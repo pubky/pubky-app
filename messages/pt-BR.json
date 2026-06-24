@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Etiquete tudo",
           "description": "Etiquete posts, mídia e perfis para adicionar contexto, encontrar conteúdo melhor, descobrir pessoas e reagir rapidamente."
+        },
+        "collections": {
+          "title": "Colete o que importa",
+          "description": "Salve posts que valem guardar, faça curadoria das suas próprias ideias e compartilhe suas coleções com outras pessoas."
         }
       }
     },
