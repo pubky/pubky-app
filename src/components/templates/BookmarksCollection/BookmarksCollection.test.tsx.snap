@@ -14,21 +14,16 @@ exports[`BookmarksCollection - Snapshots > matches the snapshot for the resolved
     data-testid="container"
   >
     <div
+      data-avatar-name="Alice"
+      data-avatar-seed="alice-pubky"
+      data-avatar-url="https://example.com/avatar.png"
+      data-bookmark-count="4"
+      data-is-profile-resolved="true"
+      data-testid="bookmarks-hero"
+    />
+    <div
       data-testid="bookmarks-items"
-    >
-      <div
-        data-testid="bookmarks-items-header"
-      >
-        <div
-          data-avatar-name="Alice"
-          data-avatar-seed="alice-pubky"
-          data-avatar-url="https://example.com/avatar.png"
-          data-bookmark-count="4"
-          data-is-profile-resolved="true"
-          data-testid="bookmarks-hero"
-        />
-      </div>
-    </div>
+    />
     <div
       data-testid="collections-sections"
     />

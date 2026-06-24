@@ -6,8 +6,6 @@ export interface CollectionHeroProps {
   authorPubky: Pubky;
   /** Collection post id (raw, not composite). */
   postId: string;
-  /** Loaded collection envelope from the page shell (avoids a duplicate `usePostDetails` fetch). */
-  postDetails: EnrichedPostDetails | null | undefined;
   className?: string;
 }
 
