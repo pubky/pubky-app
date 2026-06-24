@@ -32,14 +32,20 @@ export { useTimelineFeedContext } from './TimelineFeedContext';
  * Organism that encapsulates stream calculation and pagination logic.
  * Routes to variant-specific wrappers so each only subscribes to its own data sources.
  */
-export function TimelineFeed({ variant, children, emptyState, pullToRefreshContainerRef }: TimelineFeedProps) {
+export function TimelineFeed(props: TimelineFeedProps) {
+  const { variant, children } = props;
+
   switch (variant) {
     case TIMELINE_FEED_VARIANT.HOME:
       return <HomeTimelineFeed>{children}</HomeTimelineFeed>;
     case TIMELINE_FEED_VARIANT.CUSTOM:
       return <CustomTimelineFeed>{children}</CustomTimelineFeed>;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
-      return <BookmarksTimelineFeed emptyState={emptyState}>{children}</BookmarksTimelineFeed>;
+      return (
+        <BookmarksTimelineFeed emptyState={props.emptyState} gridTrailingSlot={props.gridTrailingSlot}>
+          {children}
+        </BookmarksTimelineFeed>
+      );
     case TIMELINE_FEED_VARIANT.PROFILE:
       return <ProfileTimelineFeed>{children}</ProfileTimelineFeed>;
     case TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS:
@@ -50,7 +56,11 @@ export function TimelineFeed({ variant, children, emptyState, pullToRefreshConta
       return <SearchTimelineFeed>{children}</SearchTimelineFeed>;
     case TIMELINE_FEED_VARIANT.COLLECTION:
       return (
-        <CollectionTimelineFeed emptyState={emptyState} pullToRefreshContainerRef={pullToRefreshContainerRef}>
+        <CollectionTimelineFeed
+          emptyState={props.emptyState}
+          pullToRefreshContainerRef={props.pullToRefreshContainerRef}
+          gridTrailingSlot={props.gridTrailingSlot}
+        >
           {children}
         </CollectionTimelineFeed>
       );
@@ -103,9 +113,14 @@ function CustomTimelineFeed({ children }: { children?: TimelineFeedProps['childr
 function BookmarksTimelineFeed({
   children,
   emptyState,
+  gridTrailingSlot,
 }: {
   children?: TimelineFeedProps['children'];
-  emptyState?: TimelineFeedProps['emptyState'];
+  emptyState?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }>['emptyState'];
+  gridTrailingSlot?: Extract<
+    TimelineFeedProps,
+    { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }
+  >['gridTrailingSlot'];
 }) {
   const content = useHomeStore((state) => state.content);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.BOOKMARKS);
@@ -125,6 +140,7 @@ function BookmarksTimelineFeed({
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
       emptyState={emptyState}
+      gridTrailingSlot={gridTrailingSlot}
     >
       {children}
     </TimelineFeedWithStream>
@@ -171,10 +187,18 @@ function CollectionTimelineFeed({
   children,
   emptyState,
   pullToRefreshContainerRef,
+  gridTrailingSlot,
 }: {
   children?: TimelineFeedProps['children'];
-  emptyState?: TimelineFeedProps['emptyState'];
-  pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
+  emptyState?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }>['emptyState'];
+  pullToRefreshContainerRef?: Extract<
+    TimelineFeedProps,
+    { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }
+  >['pullToRefreshContainerRef'];
+  gridTrailingSlot?: Extract<
+    TimelineFeedProps,
+    { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }
+  >['gridTrailingSlot'];
 }) {
   // The single-collection route owns these params (`/collections/[userId]/[postId]`).
   // Reading them here mirrors how `ProfileTimelineFeed` resolves its stream from context.
@@ -194,6 +218,7 @@ function CollectionTimelineFeed({
       emptyState={emptyState}
       collectionId={collectionId}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
+      gridTrailingSlot={gridTrailingSlot}
     >
       {children}
     </TimelineFeedWithStream>

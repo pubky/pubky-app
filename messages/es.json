@@ -1381,6 +1381,7 @@
       "delete": "Eliminar",
       "follow": "Seguir",
       "unfollow": "Dejar de seguir",
+      "content": "Contenido",
       "addContent": "Añadir contenido",
       "empty": "Esta colección está vacía.",
       "notFound": {
@@ -1393,7 +1394,7 @@
       }
     },
     "addContentDialog": {
-      "title": "Añadir contenido",
+      "title": "Contenido",
       "description": "Añade una publicación o artículo desde tu feed o pega una URL directamente.",
       "fromFeedTitle": "Añadir desde el feed",
       "fromFeedLead": "Busca una publicación",

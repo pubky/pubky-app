@@ -110,14 +110,21 @@ vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
       postIds,
       showEndMessage,
       emptyState,
+      trailingSlot,
     }: {
       postIds: string[];
       showEndMessage?: boolean;
       emptyState?: ReactNode;
+      trailingSlot?: ReactNode;
     }) => (
-      <div data-testid="timeline-grid-posts" data-show-end-message={String(showEndMessage)}>
+      <div
+        data-testid="timeline-grid-posts"
+        data-show-end-message={String(showEndMessage)}
+        data-has-trailing-slot={String(Boolean(trailingSlot))}
+      >
         <span data-testid="grid-post-count">{postIds.length}</span>
         {postIds.length === 0 ? emptyState : null}
+        {trailingSlot}
       </div>
     ),
   };
@@ -581,6 +588,21 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     );
 
     expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
+  });
+
+  it('forwards gridTrailingSlot to the grid renderer', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+        gridTrailingSlot={<div data-testid="grid-trailing-slot">Add content</div>}
+      />,
+    );
+
+    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(screen.getByTestId('grid-trailing-slot')).toBeInTheDocument();
   });
 
   it('renders the bookmarks variant in the grid and suppresses the end-of-feed message', () => {

@@ -1377,6 +1377,7 @@
       "delete": "削除",
       "follow": "フォロー",
       "unfollow": "フォロー解除",
+      "content": "コンテンツ",
       "addContent": "コンテンツを追加",
       "empty": "このコレクションは空です。",
       "notFound": {
@@ -1389,7 +1390,7 @@
       }
     },
     "addContentDialog": {
-      "title": "コンテンツを追加",
+      "title": "コンテンツ",
       "description": "フィードから投稿または記事を追加するか、URLを直接貼り付けます。",
       "fromFeedTitle": "フィードから追加",
       "fromFeedLead": "投稿を見つけて",

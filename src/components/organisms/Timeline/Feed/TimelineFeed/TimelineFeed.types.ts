@@ -28,6 +28,10 @@ type BookmarksTimelineFeedProps = TimelineFeedPropsBase & {
    * Empty state for finite collection-like feeds.
    */
   emptyState?: ReactNode;
+  /**
+   * Last grid cell on the bookmarks feed (Add Content CTA for the signed-in user).
+   */
+  gridTrailingSlot?: ReactNode;
   pullToRefreshContainerRef?: never;
 };
 
@@ -37,6 +41,10 @@ type CollectionTimelineFeedProps = TimelineFeedPropsBase & {
    * Empty state for finite collection-like feeds.
    */
   emptyState?: ReactNode;
+  /**
+   * Last grid cell on the collection feed (owner-only Add Content CTA).
+   */
+  gridTrailingSlot?: ReactNode;
   /**
    * Optional element that should own pull-to-refresh touch events. Defaults to
    * the feed container.

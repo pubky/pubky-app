@@ -174,6 +174,46 @@ describe('TimelineGridPosts', () => {
       });
     });
 
+    it('should render the trailing slot when the feed is empty', async () => {
+      render(
+        <TimelineGridPosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          trailingSlot={<div data-testid="grid-trailing-slot">Add content</div>}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('grid-trailing-slot')).toBeInTheDocument();
+        expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should render the empty state above the trailing slot when there are no posts', async () => {
+      render(
+        <TimelineGridPosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          emptyState={<div data-testid="custom-empty">Collection is empty</div>}
+          trailingSlot={<div data-testid="grid-trailing-slot">Add content</div>}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
+        expect(screen.getByTestId('grid-trailing-slot')).toBeInTheDocument();
+        expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+      });
+    });
+
     it('should render end message when no more posts to load', async () => {
       render(
         <TimelineGridPosts
@@ -274,6 +314,27 @@ describe('TimelineGridPosts', () => {
         mockPostIds.forEach((postId) => {
           expect(screen.getByTestId(`post-${postId}`)).toBeInTheDocument();
         });
+      });
+
+      const postContainers = screen.getAllByTestId(/^post-/);
+      expect(postContainers).toHaveLength(mockPostIds.length);
+    });
+
+    it('should render the trailing slot as the last grid cell', async () => {
+      render(
+        <TimelineGridPosts
+          postIds={mockPostIds}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+          trailingSlot={<div data-testid="grid-trailing-slot">Add content</div>}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('grid-trailing-slot')).toBeInTheDocument();
       });
 
       const postContainers = screen.getAllByTestId(/^post-/);
