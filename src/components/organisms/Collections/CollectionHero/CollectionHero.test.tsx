@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
-import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { CollectionHero } from './CollectionHero';
+import type { CollectionHeroProps } from './CollectionHero.types';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -21,10 +21,6 @@ vi.mock('next-intl', () => ({
   useFormatter: () => ({
     number: (value: number, _options?: Intl.NumberFormatOptions) => String(value),
   }),
-}));
-
-vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
-  usePostDetails: vi.fn(),
 }));
 
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
@@ -101,6 +97,14 @@ vi.mock('@/organisms/EditCollectionDialog/EditCollectionDialog', () => ({
     ) : null,
 }));
 
+vi.mock('@/organisms/AddContentDialog/AddContentDialog', () => ({
+  AddContentDialog: ({ dataCy }: { dataCy?: string; target?: { type: string; collectionId?: string } }) => (
+    <button type="button" data-testid={dataCy ?? 'add-content-dialog'} aria-label="collections.single.content">
+      collections.single.content
+    </button>
+  ),
+}));
+
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
   AvatarWithFallback: ({
     avatarUrl,
@@ -169,10 +173,24 @@ const COLLECTION_CONTENT_NO_COVER = JSON.stringify({
   items: [],
 });
 
-const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseUserProfile = vi.mocked(useUserProfile);
 const mockUseBookmark = vi.mocked(useBookmark);
 const mockUsePostReplyRepostDialogs = vi.mocked(usePostReplyRepostDialogs);
+
+let currentPostDetails: EnrichedPostDetails | null | undefined;
+
+function buildPostDetails(content: string, isBlurred = false): EnrichedPostDetails {
+  return asOpaque<EnrichedPostDetails>({
+    id: COMPOSITE_ID,
+    content,
+    kind: 'collection',
+    indexed_at: 0,
+    uri: '',
+    attachments: null,
+    is_moderated: isBlurred,
+    is_blurred: isBlurred,
+  });
+}
 
 function setAuthStore(currentUserPubky: string | null) {
   mockUseAuthStore.mockImplementation((selector: (state: { currentUserPubky: string | null }) => unknown) =>
@@ -181,21 +199,18 @@ function setAuthStore(currentUserPubky: string | null) {
 }
 
 function setPostDetails(content: string | null, { isBlurred = false }: { isBlurred?: boolean } = {}) {
-  mockUsePostDetails.mockReturnValue({
-    postDetails: content
-      ? asOpaque<EnrichedPostDetails>({
-          id: COMPOSITE_ID,
-          content,
-          kind: 'collection',
-          indexed_at: 0,
-          uri: '',
-          attachments: null,
-          is_moderated: isBlurred,
-          is_blurred: isBlurred,
-        })
-      : null,
-    isLoading: false,
-  });
+  currentPostDetails = content ? buildPostDetails(content, isBlurred) : null;
+}
+
+function renderHero(overrides: Partial<CollectionHeroProps> = {}) {
+  return render(
+    <CollectionHero
+      authorPubky={AUTHOR_PUBKY}
+      postId={POST_ID}
+      postDetails={overrides.postDetails ?? currentPostDetails}
+      {...overrides}
+    />,
+  );
 }
 
 function setOwnerProfile(name: string | null, avatarUrl?: string) {
@@ -254,7 +269,7 @@ beforeEach(() => {
 
 describe('CollectionHero', () => {
   it('renders title, description, item count, and owner avatar from the parsed envelope', () => {
-    render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    renderHero();
 
     expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
@@ -266,7 +281,7 @@ describe('CollectionHero', () => {
   });
 
   it('wires ClickableTagsList to the composite id with POST kind and the add button enabled', () => {
-    render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    renderHero();
 
     const tags = screen.getByTestId('clickable-tags-list');
     expect(tags).toHaveAttribute('data-tagged-id', COMPOSITE_ID);
@@ -277,16 +292,14 @@ describe('CollectionHero', () => {
   it('omits the description block when the envelope description is empty / nullish', () => {
     setPostDetails(COLLECTION_CONTENT_NO_COVER);
 
-    render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    renderHero();
 
     expect(screen.queryByText('A bit of Bitcoin purity amidst all of the madness.')).not.toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument(); // empty items count still renders
   });
 
   it('renders the hero skeleton while post details have not loaded yet', () => {
-    mockUsePostDetails.mockReturnValue({ postDetails: undefined, isLoading: true });
-
-    render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    renderHero({ postDetails: undefined });
 
     expect(screen.getByTestId('collection-hero-skeleton')).toBeInTheDocument();
     expect(screen.queryByText('Based Bitcoin')).not.toBeInTheDocument();
@@ -295,7 +308,7 @@ describe('CollectionHero', () => {
   it('shows a skeleton (not the raw pubky) for the owner name while the profile is null', () => {
     setOwnerProfile(null);
 
-    render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    renderHero();
 
     // The owner name is gated on the resolved profile: while it's null the hero
     // renders a Skeleton rather than flashing the raw pubky as a visible name.
@@ -310,7 +323,7 @@ describe('CollectionHero', () => {
     it('renders the blurred placeholder instead of the hero when the collection is moderated', () => {
       setPostDetails(COLLECTION_CONTENT, { isBlurred: true });
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       expect(screen.getByText('moderation.collectionContentModerated')).toBeInTheDocument();
       expect(screen.queryByText('Based Bitcoin')).not.toBeInTheDocument();
@@ -321,7 +334,7 @@ describe('CollectionHero', () => {
     it('unblurs (via the composite id) when the placeholder is clicked', () => {
       setPostDetails(COLLECTION_CONTENT, { isBlurred: true });
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       fireEvent.click(screen.getByText('moderation.collectionContentModerated'));
 
@@ -331,11 +344,13 @@ describe('CollectionHero', () => {
   });
 
   describe('CTA — owner', () => {
-    it('renders Share / Edit / Delete and no Follow / Unfollow', () => {
+    it('renders Content / Share / Edit / Delete and no Follow / Unfollow', () => {
       setAuthStore(AUTHOR_PUBKY);
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
+      expect(screen.getByLabelText('collections.single.content')).toBeInTheDocument();
+      expect(screen.getByTestId('collection-add-content')).toBeInTheDocument();
       expect(screen.getByLabelText('collections.single.share')).toBeInTheDocument();
       expect(screen.getByLabelText('collections.single.edit')).toBeInTheDocument();
       expect(screen.getByLabelText('collections.single.delete')).toBeInTheDocument();
@@ -350,7 +365,7 @@ describe('CollectionHero', () => {
       setAuthStore(AUTHOR_PUBKY);
       const toggle = setBookmark({ isBookmarked: false });
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       fireEvent.click(screen.getByLabelText('collections.single.edit'));
       fireEvent.click(screen.getByLabelText('collections.single.delete'));
@@ -361,7 +376,7 @@ describe('CollectionHero', () => {
     it('opens the EditCollectionDialog (controlled, with the composite id) when the owner clicks Edit', () => {
       setAuthStore(AUTHOR_PUBKY);
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       // Dialog is mounted but `open=false` until the user clicks Edit.
       expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
@@ -376,7 +391,7 @@ describe('CollectionHero', () => {
     it("does not mount the EditCollectionDialog for non-owners (the Edit button isn't shown either)", () => {
       setAuthStore('some-other-user');
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       expect(screen.queryByLabelText('collections.single.edit')).not.toBeInTheDocument();
       expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
@@ -386,7 +401,7 @@ describe('CollectionHero', () => {
       setAuthStore(AUTHOR_PUBKY);
       const { openRepostDialog } = setRepostDialogs();
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       fireEvent.click(screen.getByLabelText('collections.single.share'));
 
@@ -398,7 +413,7 @@ describe('CollectionHero', () => {
     describe('delete flow', () => {
       it('opens the confirmation dialog with the collection-specific i18n namespace on Delete click', () => {
         setAuthStore(AUTHOR_PUBKY);
-        render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+        renderHero();
 
         // Dialog mounts in closed state.
         expect(screen.queryByTestId('dialog-confirm-delete')).not.toBeInTheDocument();
@@ -415,7 +430,7 @@ describe('CollectionHero', () => {
         setAuthStore(AUTHOR_PUBKY);
         mockDeletePost.mockClear();
         mockRouterReplace.mockClear();
-        render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+        renderHero();
 
         fireEvent.click(screen.getByLabelText('collections.single.delete'));
         fireEvent.click(screen.getByTestId('dialog-confirm-delete-btn'));
@@ -433,7 +448,7 @@ describe('CollectionHero', () => {
 
       it('does not mount the confirm dialog for non-owners (Delete button absent)', () => {
         setAuthStore('some-other-user');
-        render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+        renderHero();
 
         expect(screen.queryByLabelText('collections.single.delete')).not.toBeInTheDocument();
         expect(screen.queryByTestId('dialog-confirm-delete')).not.toBeInTheDocument();
@@ -446,7 +461,7 @@ describe('CollectionHero', () => {
       setAuthStore('some-other-user');
       setBookmark({ isBookmarked: false });
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       expect(screen.getByLabelText('collections.single.follow')).toBeInTheDocument();
       expect(screen.queryByLabelText('collections.single.unfollow')).not.toBeInTheDocument();
@@ -456,7 +471,7 @@ describe('CollectionHero', () => {
       setAuthStore('some-other-user');
       setBookmark({ isBookmarked: true });
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       expect(screen.getByLabelText('collections.single.unfollow')).toBeInTheDocument();
     });
@@ -465,7 +480,7 @@ describe('CollectionHero', () => {
       setAuthStore('some-other-user');
       const toggle = setBookmark({ isBookmarked: false });
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       fireEvent.click(screen.getByLabelText('collections.single.follow'));
 
@@ -476,7 +491,7 @@ describe('CollectionHero', () => {
       setAuthStore('some-other-user');
       const toggle = setBookmark({ isBookmarked: false, isToggling: true });
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       const button = screen.getByLabelText('collections.single.follow') as HTMLButtonElement;
       expect(button).toBeDisabled();
@@ -488,7 +503,7 @@ describe('CollectionHero', () => {
       setAuthStore('some-other-user');
       const { openRepostDialog } = setRepostDialogs();
 
-      render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      renderHero();
 
       expect(screen.getByText('collections.single.share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
       fireEvent.click(screen.getByLabelText('collections.single.share'));
@@ -500,7 +515,7 @@ describe('CollectionHero', () => {
   it('passes the collection-flavored toast copy to useBookmark', () => {
     setAuthStore('some-other-user');
 
-    render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    renderHero();
 
     expect(mockUseBookmark).toHaveBeenCalledWith(
       COMPOSITE_ID,
@@ -512,7 +527,7 @@ describe('CollectionHero', () => {
 
   describe('cover image', () => {
     it('renders a background-image element when an absolute cover URL is present', () => {
-      const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      const { container } = renderHero();
 
       expect(container.querySelector(`[style*="${COVER_URL}"]`)).not.toBeNull();
     });
@@ -520,7 +535,7 @@ describe('CollectionHero', () => {
     it('does not render a cover background when the envelope has no cover_image', () => {
       setPostDetails(COLLECTION_CONTENT_NO_COVER);
 
-      const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      const { container } = renderHero();
 
       expect(container.querySelector(`[style*="${COVER_URL}"]`)).toBeNull();
     });
@@ -528,7 +543,7 @@ describe('CollectionHero', () => {
     it('prefers a recently-uploaded blob URL from the local-files store over the envelope cover', () => {
       mockLocalCollections[COMPOSITE_ID] = 'blob:mock-fresh-cover';
 
-      const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      const { container } = renderHero();
 
       expect(container.querySelector('[style*="blob:mock-fresh-cover"]')).not.toBeNull();
       expect(container.querySelector(`[style*="${COVER_URL}"]`)).toBeNull();
@@ -538,7 +553,7 @@ describe('CollectionHero', () => {
       setPostDetails(COLLECTION_CONTENT_NO_COVER);
       mockLocalCollections[COMPOSITE_ID] = 'blob:mock-fresh-cover';
 
-      const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      const { container } = renderHero();
 
       expect(container.querySelector('[style*="blob:mock-fresh-cover"]')).not.toBeNull();
     });
@@ -549,7 +564,7 @@ describe('CollectionHero - Snapshots', () => {
   it('matches the snapshot for the owner state', () => {
     setAuthStore(AUTHOR_PUBKY);
 
-    const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    const { container } = renderHero();
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -557,7 +572,7 @@ describe('CollectionHero - Snapshots', () => {
     setAuthStore('viewer-pubky');
     setBookmark({ isBookmarked: false });
 
-    const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    const { container } = renderHero();
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -565,7 +580,7 @@ describe('CollectionHero - Snapshots', () => {
     setPostDetails(COLLECTION_CONTENT_NO_COVER);
     setAuthStore('viewer-pubky');
 
-    const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    const { container } = renderHero();
     expect(container.firstChild).toMatchSnapshot();
   });
 });
