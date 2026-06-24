@@ -28,7 +28,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Follow notification
       data-testid="container"
     >
       <p
-        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:whitespace-nowrap lg:text-base"
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
         data-testid="typography"
       >
         <a
@@ -102,7 +102,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Mention notificatio
       data-testid="container"
     >
       <p
-        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:whitespace-nowrap lg:text-base"
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
         data-testid="typography"
       >
         <a
@@ -176,7 +176,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for TagPost notificatio
       data-testid="container"
     >
       <p
-        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:whitespace-nowrap lg:text-base"
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
         data-testid="typography"
       >
         <a
