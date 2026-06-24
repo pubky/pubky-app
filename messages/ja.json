@@ -1006,9 +1006,10 @@
       "copyFailedDesc": "クリップボードにコピーできませんでした"
     },
     "follow": {
-      "failed": "フォロー状態を更新できませんでした",
       "followed": "{username}をフォロー中",
-      "unfollowed": "{username}のフォローを解除しました"
+      "unfollowed": "{username}のフォローを解除しました",
+      "followFailed": "{username}をフォローできませんでした",
+      "unfollowFailed": "{username}のフォローを解除できませんでした"
     },
     "mute": {
       "muted": "{username}をミュートしました",

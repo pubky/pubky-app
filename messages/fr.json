@@ -1006,9 +1006,10 @@
       "copyFailedDesc": "Impossible de copier dans le presse-papiers"
     },
     "follow": {
-      "failed": "Impossible de mettre à jour le statut d'abonnement",
       "followed": "Vous suivez {username}",
-      "unfollowed": "Vous ne suivez plus {username}"
+      "unfollowed": "Vous ne suivez plus {username}",
+      "followFailed": "Impossible de suivre {username}",
+      "unfollowFailed": "Impossible de ne plus suivre {username}"
     },
     "mute": {
       "muted": "{username} masqué",

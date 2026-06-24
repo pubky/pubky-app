@@ -1008,9 +1008,10 @@
       "copyFailedDesc": "تعذر النسخ إلى الحافظة"
     },
     "follow": {
-      "failed": "تعذر تحديث حالة المتابعة",
       "followed": "تتابع {username}",
-      "unfollowed": "ألغيت متابعة {username}"
+      "unfollowed": "ألغيت متابعة {username}",
+      "followFailed": "تعذر متابعة {username}",
+      "unfollowFailed": "تعذر إلغاء متابعة {username}"
     },
     "mute": {
       "muted": "تم كتم {username}",
