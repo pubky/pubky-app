@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UseElementKeyboardAvoidanceResult } from '@/hooks/useElementKeyboardAvoidance/useElementKeyboardAvoidance.types';
@@ -19,9 +19,13 @@ const mockUseElementKeyboardAvoidance = vi.hoisted(() =>
     keyboardAvoidanceStyle: undefined,
   })),
 );
+const mockIsIOSBrowser = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock('@/hooks/useElementKeyboardAvoidance/useElementKeyboardAvoidance', () => ({
   useElementKeyboardAvoidance: mockUseElementKeyboardAvoidance,
+}));
+vi.mock('@/libs/utils/browser', () => ({
+  isIOSBrowser: mockIsIOSBrowser,
 }));
 
 beforeEach(() => {
@@ -30,6 +34,7 @@ beforeEach(() => {
     keyboardAvoidanceOffset: 0,
     keyboardAvoidanceStyle: undefined,
   });
+  mockIsIOSBrowser.mockReturnValue(false);
 });
 
 describe('Dialog', () => {
@@ -111,6 +116,52 @@ describe('Dialog', () => {
     const dialogContent = screen.getByTestId('dialog-content');
     expect(dialogContent).toHaveClass('will-change-transform');
     expect(dialogContent).toHaveStyle({ transform: 'translateY(-120px)' });
+  });
+
+  it('extends the mobile dialog background on iOS without changing the content offset', async () => {
+    mockIsIOSBrowser.mockReturnValue(true);
+    mockUseElementKeyboardAvoidance.mockReturnValue({
+      isKeyboardVisible: true,
+      keyboardAvoidanceOffset: 120,
+      keyboardAvoidanceStyle: { transform: 'translateY(-120px)' },
+    });
+
+    render(
+      <Dialog open={true}>
+        <DialogContent avoidKeyboard>
+          <div>Dialog Content</div>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const dialogContent = screen.getByTestId('dialog-content');
+
+    await waitFor(() => {
+      expect(dialogContent.style.getPropertyValue('--dialog-ios-keyboard-background-offset')).toBe('120px');
+    });
+    expect(dialogContent).toHaveStyle({ transform: 'translateY(-120px)' });
+    expect(dialogContent).toHaveClass('max-sm:[border-bottom-width:var(--dialog-ios-keyboard-background-offset)]');
+    expect(dialogContent).toHaveClass('max-sm:[margin-bottom:calc(var(--dialog-ios-keyboard-background-offset)*-1)]');
+  });
+
+  it('does not extend the dialog background for non-iOS browsers', () => {
+    mockUseElementKeyboardAvoidance.mockReturnValue({
+      isKeyboardVisible: true,
+      keyboardAvoidanceOffset: 120,
+      keyboardAvoidanceStyle: { transform: 'translateY(-120px)' },
+    });
+
+    render(
+      <Dialog open={true}>
+        <DialogContent avoidKeyboard>
+          <div>Dialog Content</div>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent.style.getPropertyValue('--dialog-ios-keyboard-background-offset')).toBe('');
+    expect(dialogContent).not.toHaveClass('max-sm:[border-bottom-width:var(--dialog-ios-keyboard-background-offset)]');
   });
 });
 
