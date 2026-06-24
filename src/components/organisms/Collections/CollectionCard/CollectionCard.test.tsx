@@ -458,6 +458,41 @@ describe('CollectionCard', () => {
       expect(onParentClick).not.toHaveBeenCalled();
     });
 
+    it('lets clicks in expanded tag panel gaps bubble to the card link', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const onParentClick = vi.fn();
+
+      render(
+        <div onClick={onParentClick}>
+          <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
+        </div>,
+      );
+
+      fireEvent.click(screen.getByLabelText('Tag post (3)'));
+
+      const tagsColumn = document.querySelector('[data-cy="post-tags-expandable-row"]')?.firstElementChild;
+      expect(tagsColumn).toBeTruthy();
+      fireEvent.click(tagsColumn!);
+
+      expect(onParentClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('suppresses navigation when clicking inside the expanded tag panel', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const onParentClick = vi.fn();
+
+      render(
+        <div onClick={onParentClick}>
+          <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
+        </div>,
+      );
+
+      fireEvent.click(screen.getByLabelText('Tag post (3)'));
+      fireEvent.click(screen.getByTestId('post-tags-panel'));
+
+      expect(onParentClick).not.toHaveBeenCalled();
+    });
+
     it('renders Delete as an icon-only button (aria-label, no visible label text)', () => {
       setAuthStore(AUTHOR_PUBKY);
 

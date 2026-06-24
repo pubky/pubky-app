@@ -497,11 +497,11 @@ exports[`PostTagsExpandableRow - Snapshots > matches the expanded snapshot 1`] =
     data-testid="container"
   >
     <div
-      class="flex-1"
+      class="w-fit max-w-full"
+      data-cy="post-tags-expandable-panel"
       data-testid="container"
     >
       <div
-        class="flex-1"
         data-auto-focus-input="true"
         data-enable-loading-skeleton="false"
         data-post-id="author:post-1"

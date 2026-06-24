@@ -228,6 +228,47 @@ describe('PostTagsExpandableRow', () => {
     expect(preventDefault).toHaveBeenCalled();
   });
 
+  it('lets expanded panel gaps bubble to parent navigable surfaces', () => {
+    const onParentClick = vi.fn();
+
+    render(
+      <div onClick={onParentClick}>
+        <PostTagsExpandableRow postId={POST_ID} preventDefaultOnClick />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByLabelText('Tag post (3)'));
+
+    const tagsColumn = document.querySelector('[data-cy="post-tags-expandable-row"]')?.firstElementChild;
+    expect(tagsColumn).toBeTruthy();
+    fireEvent.click(tagsColumn!);
+
+    expect(onParentClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('suppresses navigation when clicking the expanded panel content area', () => {
+    const onParentClick = vi.fn();
+
+    render(
+      <div onClick={onParentClick}>
+        <PostTagsExpandableRow postId={POST_ID} preventDefaultOnClick />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByLabelText('Tag post (3)'));
+    fireEvent.click(screen.getByTestId('post-tags-panel'));
+
+    expect(onParentClick).not.toHaveBeenCalled();
+  });
+
+  it('sizes the expanded panel wrapper to its content instead of stretching', () => {
+    render(<PostTagsExpandableRow postId={POST_ID} preventDefaultOnClick />);
+
+    fireEvent.click(screen.getByLabelText('Tag post (3)'));
+
+    expect(document.querySelector('[data-cy="post-tags-expandable-panel"]')).toHaveClass('w-fit', 'max-w-full');
+  });
+
   it('aligns the row and actions to the bottom when expanded', () => {
     const { container } = render(<PostTagsExpandableRow postId={POST_ID} />);
 

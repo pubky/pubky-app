@@ -62,17 +62,12 @@ export function PostTagsExpandableRow({
         {tagsExpanded ? (
           <Container
             overrideDefaults
-            onClick={suppressParentInteraction}
-            onAuxClick={suppressParentInteraction}
-            className="flex-1"
+            data-cy="post-tags-expandable-panel"
+            onClick={preventDefaultOnClick ? suppressParentInteraction : undefined}
+            onAuxClick={preventDefaultOnClick ? suppressParentInteraction : undefined}
+            className="w-fit max-w-full"
           >
-            <PostTagsPanel
-              postId={postId}
-              widthMode="fit"
-              autoFocusInput
-              enableLoadingSkeleton={false}
-              className="flex-1"
-            />
+            <PostTagsPanel postId={postId} widthMode="fit" autoFocusInput enableLoadingSkeleton={false} />
           </Container>
         ) : (
           <ClickableTagsList
