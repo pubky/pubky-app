@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { ActiveUsers } from './ActiveUsers';
 
 const hooksMocks = vi.hoisted(() => ({
@@ -28,6 +29,7 @@ describe('ActiveUsers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hooksMocks.useUserStream.mockReset();
+    useAuthStore.setState({ currentUserPubky: null });
   });
 
   describe('Data Flow - Issue #967', () => {
@@ -130,12 +132,36 @@ describe('ActiveUsers', () => {
       expect(screen.getByText('No users to show')).toBeInTheDocument();
     });
   });
+
+  it('shows the current user indicator instead of allowing self-follow', () => {
+    useAuthStore.setState({ currentUserPubky: 'user-1' });
+    hooksMocks.useUserStream.mockReturnValue({
+      users: [
+        { id: 'user-1', name: 'User One', image: null, avatarUrl: null, isFollowing: false },
+        { id: 'user-2', name: 'User Two', image: null, avatarUrl: null, isFollowing: false },
+      ],
+      userIds: ['user-1', 'user-2'],
+      isLoading: false,
+      isLoadingMore: false,
+      hasMore: false,
+      error: null,
+      loadMore: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    render(<ActiveUsers />);
+
+    expect(screen.getByRole('button', { name: 'This is you' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Follow User One' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Follow User Two' })).toBeInTheDocument();
+  });
 });
 
 describe('ActiveUsers - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hooksMocks.useUserStream.mockReset();
+    useAuthStore.setState({ currentUserPubky: null });
   });
 
   it('matches snapshot when loading', () => {
