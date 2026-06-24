@@ -32,9 +32,13 @@ export { useTimelineFeedContext } from './TimelineFeedContext';
  * Organism that encapsulates stream calculation and pagination logic.
  * Routes to variant-specific wrappers so each only subscribes to its own data sources.
  */
-export function TimelineFeed(props: TimelineFeedProps) {
-  const { variant, children } = props;
-
+export function TimelineFeed({
+  variant,
+  children,
+  emptyState,
+  pullToRefreshContainerRef,
+  gridTrailingSlot,
+}: TimelineFeedProps) {
   switch (variant) {
     case TIMELINE_FEED_VARIANT.HOME:
       return <HomeTimelineFeed>{children}</HomeTimelineFeed>;
@@ -42,7 +46,7 @@ export function TimelineFeed(props: TimelineFeedProps) {
       return <CustomTimelineFeed>{children}</CustomTimelineFeed>;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
       return (
-        <BookmarksTimelineFeed emptyState={props.emptyState} gridTrailingSlot={props.gridTrailingSlot}>
+        <BookmarksTimelineFeed emptyState={emptyState} gridTrailingSlot={gridTrailingSlot}>
           {children}
         </BookmarksTimelineFeed>
       );
@@ -57,9 +61,9 @@ export function TimelineFeed(props: TimelineFeedProps) {
     case TIMELINE_FEED_VARIANT.COLLECTION:
       return (
         <CollectionTimelineFeed
-          emptyState={props.emptyState}
-          pullToRefreshContainerRef={props.pullToRefreshContainerRef}
-          gridTrailingSlot={props.gridTrailingSlot}
+          emptyState={emptyState}
+          pullToRefreshContainerRef={pullToRefreshContainerRef}
+          gridTrailingSlot={gridTrailingSlot}
         >
           {children}
         </CollectionTimelineFeed>

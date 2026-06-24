@@ -1,11 +1,11 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog';
 import { CollectionItemsEmpty } from '@/organisms/Collections/CollectionItemsEmpty/CollectionItemsEmpty';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
-import { TimelineFeedHeaderSlot } from '@/organisms/Timeline/Feed/TimelineFeedHeaderSlot/TimelineFeedHeaderSlot';
 
 interface BookmarksItemsProps {
   header: ReactNode;
@@ -22,7 +22,7 @@ export function BookmarksItems({ header }: BookmarksItemsProps) {
         <AddContentDialog triggerVariant="grid" target={{ type: 'bookmarks' }} dataCy="bookmarks-add-content-grid" />
       }
     >
-      <TimelineFeedHeaderSlot>{header}</TimelineFeedHeaderSlot>
+      <Container overrideDefaults>{header}</Container>
     </TimelineFeed>
   );
 }

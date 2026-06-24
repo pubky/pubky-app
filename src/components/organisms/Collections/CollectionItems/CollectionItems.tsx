@@ -8,7 +8,6 @@ import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog'
 import { CollectionHero } from '@/organisms/Collections/CollectionHero/CollectionHero';
 import { CollectionItemsEmpty } from '@/organisms/Collections/CollectionItemsEmpty/CollectionItemsEmpty';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
-import { TimelineFeedHeaderSlot } from '@/organisms/Timeline/Feed/TimelineFeedHeaderSlot/TimelineFeedHeaderSlot';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { CollectionItemsProps } from './CollectionItems.types';
 
@@ -66,7 +65,7 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
         ) : undefined
       }
     >
-      <TimelineFeedHeaderSlot>{hero}</TimelineFeedHeaderSlot>
+      <Container overrideDefaults>{hero}</Container>
     </TimelineFeed>
   );
 }
