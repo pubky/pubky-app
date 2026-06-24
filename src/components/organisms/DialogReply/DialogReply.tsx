@@ -50,6 +50,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
               dataCy="reply-post-input"
               id="reply-post-input"
               key={resetKey}
+              autoFocusTextarea
               variant={POST_INPUT_VARIANT.REPLY}
               postId={postId}
               onSuccess={() => {
