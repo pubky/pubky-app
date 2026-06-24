@@ -186,40 +186,15 @@ describe('PostContentBase', () => {
     );
   });
 
-  it('uses a side media grid when media-side layout has attachments', () => {
-    const mockAttachments = ['file-id-1', 'file-id-2'];
-    mockUsePostDetails.mockReturnValue({
-      postDetails: createMockPostDetails({ content: 'Test content', attachments: mockAttachments }),
-      isLoading: false,
-    });
-
-    render(<PostContentBase postId="post-123" contentLayout="media-side" />);
-
-    const mediaSideContainer = screen
-      .getAllByTestId('container')
-      .find((element) => element.className.includes('lg:grid-cols-[minmax(0,1fr)_40%]'));
-
-    expect(mediaSideContainer).toBeInTheDocument();
-    expect(mockPostAttachments).toHaveBeenCalledWith(
-      { attachments: mockAttachments, localAttachments: undefined, mediaSize: 'compact' },
-      undefined,
-    );
-  });
-
-  it('keeps attachments aligned left when media-side layout has no text content', () => {
+  it('renders attachments in the default content stack when there is no text content', () => {
     const mockAttachments = ['file-id-1', 'file-id-2'];
     mockUsePostDetails.mockReturnValue({
       postDetails: createMockPostDetails({ content: '', attachments: mockAttachments }),
       isLoading: false,
     });
 
-    render(<PostContentBase postId="post-123" contentLayout="media-side" />);
+    render(<PostContentBase postId="post-123" />);
 
-    const mediaSideContainer = screen
-      .getAllByTestId('container')
-      .find((element) => element.className.includes('lg:grid-cols-[minmax(0,1fr)_40%]'));
-
-    expect(mediaSideContainer).toBeUndefined();
     expect(mockPostAttachments).toHaveBeenCalledWith(
       { attachments: mockAttachments, localAttachments: undefined },
       undefined,

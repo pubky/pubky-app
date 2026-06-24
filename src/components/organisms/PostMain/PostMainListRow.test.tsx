@@ -22,13 +22,15 @@ vi.mock('@/atoms/Container/Container', () => ({
     className,
     onClick,
     onAuxClick,
+    'data-testid': dataTestId,
   }: {
     children: React.ReactNode;
     className?: string;
     onClick?: React.MouseEventHandler<HTMLDivElement>;
     onAuxClick?: React.MouseEventHandler<HTMLDivElement>;
+    'data-testid'?: string;
   }) => (
-    <div className={className} onClick={onClick} onAuxClick={onAuxClick}>
+    <div data-testid={dataTestId} className={className} onClick={onClick} onAuxClick={onAuxClick}>
       {children}
     </div>
   ),
@@ -128,17 +130,17 @@ vi.mock('../PostContent/PostContent', () => ({
   PostContent: ({
     postId,
     textClassName,
-    contentLayout,
+    mediaVariant,
   }: {
     postId: string;
     textClassName?: string;
-    contentLayout?: string;
+    mediaVariant?: string;
   }) => (
     <div
       data-testid="post-content"
       data-post-id={postId}
       data-text-class-name={textClassName}
-      data-content-layout={contentLayout}
+      data-media-variant={mediaVariant}
     >
       PostContent {postId}
     </div>
@@ -207,6 +209,8 @@ describe('PostMainListRow', () => {
     );
 
     expect(screen.getByText('Some post content')).toHaveClass('text-secondary-foreground');
+    expect(screen.getByTestId('post-main-list-row-header')).toHaveClass('gap-3');
+    expect(screen.getByTestId('post-main-list-row-header')).not.toHaveClass('gap-6');
     expect(screen.getByTestId('post-list-media-thumbnail')).toBeInTheDocument();
   });
 
@@ -231,8 +235,7 @@ describe('PostMainListRow', () => {
       'data-text-class-name',
       'text-base font-medium leading-5',
     );
-    expect(screen.getByTestId('post-content')).toHaveAttribute('data-content-layout', 'media-side');
-    expect(screen.getByTestId('post-content').parentElement).toHaveClass('ml-14');
+    expect(screen.getByTestId('post-content')).toHaveAttribute('data-media-variant', 'list');
     expect(screen.queryByTestId('post-list-media-thumbnail')).not.toBeInTheDocument();
   });
 

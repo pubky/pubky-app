@@ -36,8 +36,8 @@ vi.mock('@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVide
     await importOriginal<typeof import('@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos')>();
   return {
     ...actual,
-    PostAttachmentsImagesAndVideos: vi.fn(({ imagesAndVideos, size }) => (
-      <div data-testid="post-attachments-images-and-videos" data-count={imagesAndVideos.length} data-size={size}>
+    PostAttachmentsImagesAndVideos: vi.fn(({ imagesAndVideos, variant }) => (
+      <div data-testid="post-attachments-images-and-videos" data-count={imagesAndVideos.length} data-variant={variant}>
         ImagesAndVideos
       </div>
     )),
@@ -200,14 +200,14 @@ describe('PostAttachments', () => {
       });
     });
 
-    it('passes compact size to PostAttachmentsImagesAndVideos when requested', async () => {
+    it('passes list media variant to PostAttachmentsImagesAndVideos when requested', async () => {
       const attachments = ['pubky://user1/pub/pubky.app/files/image1'];
       mockGetMetadata.mockResolvedValue([createMockImageMetadata('user1:image1')]);
 
-      render(<PostAttachments attachments={attachments} localAttachments={undefined} mediaSize="compact" />);
+      render(<PostAttachments attachments={attachments} localAttachments={undefined} mediaVariant="list" />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('post-attachments-images-and-videos')).toHaveAttribute('data-size', 'compact');
+        expect(screen.getByTestId('post-attachments-images-and-videos')).toHaveAttribute('data-variant', 'list');
       });
     });
 

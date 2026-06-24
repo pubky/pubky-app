@@ -102,7 +102,7 @@ export function PostMainListRow({
 
   return (
     <CardContent className="flex min-w-0 flex-col gap-4 p-6">
-      <Container overrideDefaults className="flex min-w-0 items-center gap-6">
+      <Container overrideDefaults data-testid="post-main-list-row-header" className="flex min-w-0 items-center gap-3">
         {shouldShowDisplayHeader ? (
           <Link href={profileUrl} onClick={stopCardPropagation} className="shrink-0">
             <AvatarWithFallback
@@ -187,8 +187,8 @@ export function PostMainListRow({
       </Container>
 
       {showFullContent ? (
-        <Container overrideDefaults className={cn('min-w-0', shouldShowDisplayHeader && 'ml-14')}>
-          <PostContent postId={postId} textClassName={LIST_POST_BODY_TEXT_CLASS} contentLayout="media-side" />
+        <Container overrideDefaults className="min-w-0">
+          <PostContent postId={postId} textClassName={LIST_POST_BODY_TEXT_CLASS} mediaVariant="list" />
         </Container>
       ) : null}
 

@@ -21,9 +21,11 @@ import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAtta
 import { PostAttachmentsCarouselImage } from '../PostAttachmentsCarouselImage/PostAttachmentsCarouselImage';
 import { useToast } from '../Toaster/use-toast';
 
+const MAX_VISIBLE_MEDIA = 4;
+
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
-  size?: 'default' | 'compact';
+  variant?: 'default' | 'list';
   renderTrigger?: (props: {
     imagesAndVideos: AttachmentConstructed[];
     openPreview: (index: number, event?: MouseEvent) => void;
@@ -31,7 +33,7 @@ type PostAttachmentsImagesAndVideosProps = {
 };
 export const PostAttachmentsImagesAndVideos = ({
   imagesAndVideos,
-  size = 'default',
+  variant = 'default',
   renderTrigger,
 }: PostAttachmentsImagesAndVideosProps) => {
   const total = imagesAndVideos.length;
@@ -79,8 +81,17 @@ export const PostAttachmentsImagesAndVideos = ({
     };
   }, []);
   const isOnlyMedia = imagesAndVideos.length === 1;
+  const isListVariant = variant === 'list';
+  const visibleMedia = isListVariant ? imagesAndVideos.slice(0, MAX_VISIBLE_MEDIA) : imagesAndVideos;
+  const remainingMediaCount = isListVariant ? Math.max(0, imagesAndVideos.length - visibleMedia.length) : 0;
+  const remainingOverlayIndex = remainingMediaCount > 0 ? visibleMedia.length - 1 : -1;
 
-  const singleMediaClassName = size === 'compact' ? 'max-h-56' : 'max-h-96';
+  const renderRemainingOverlay = (index: number) =>
+    index === remainingOverlayIndex ? (
+      <Typography className="absolute right-3 bottom-3 z-10 flex size-10 items-center justify-center rounded-full border border-secondary-foreground/40 bg-black/80 text-base font-bold text-white shadow-md">
+        +{remainingMediaCount}
+      </Typography>
+    ) : null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -88,15 +99,23 @@ export const PostAttachmentsImagesAndVideos = ({
         renderTrigger({ imagesAndVideos, openPreview })
       ) : (
         /* Grid layout */
-        <Container display="grid" className="gap-3 sm:grid-cols-2">
-          {imagesAndVideos.map((media, i) =>
+        <Container
+          display={isListVariant ? undefined : 'grid'}
+          overrideDefaults={isListVariant}
+          className={
+            isListVariant
+              ? 'grid w-fit max-w-full grid-cols-[minmax(0,192px)] gap-3 self-start justify-self-start sm:grid-cols-[repeat(2,192px)]'
+              : 'gap-3 sm:grid-cols-2'
+          }
+        >
+          {visibleMedia.map((media, i) =>
             media.type.startsWith('image') ? (
               <DialogTrigger
                 key={i}
                 asChild
                 className={cn(
-                  size === 'compact' ? 'h-28' : 'h-52',
-                  'relative w-full cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2',
+                  isListVariant ? 'aspect-video h-[108px] max-w-full' : 'h-52 w-full',
+                  'relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2',
                 )}
               >
                 <Button overrideDefaults onClick={(e) => openPreview(i, e)}>
@@ -106,11 +125,40 @@ export const PostAttachmentsImagesAndVideos = ({
                     fill={!isOnlyMedia}
                     className={cn(
                       'rounded-md',
-                      isOnlyMedia ? `${singleMediaClassName} w-fit object-contain` : 'object-cover object-center',
+                      isOnlyMedia
+                        ? cn(isListVariant ? 'max-h-[108px]' : 'max-h-96', 'w-fit object-contain')
+                        : 'object-cover object-center',
                     )}
                   />
+                  {renderRemainingOverlay(i)}
                 </Button>
               </DialogTrigger>
+            ) : isListVariant ? (
+              <Container
+                key={i}
+                overrideDefaults
+                className="relative aspect-video h-[108px] max-w-full only:h-auto only:max-h-[108px] only:w-fit sm:last:odd:col-span-2"
+              >
+                <Video
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                  src={media.urls.main}
+                  pauseVideo={open}
+                  className="h-full w-full cursor-auto object-cover"
+                />
+                {remainingMediaCount > 0 && i === remainingOverlayIndex ? (
+                  <Button
+                    overrideDefaults
+                    type="button"
+                    aria-label={`Open media carousel with ${remainingMediaCount} more items`}
+                    onClick={(e) => openPreview(i, e)}
+                    className="absolute right-3 bottom-3 z-10 flex size-10 items-center justify-center rounded-full border border-secondary-foreground/40 bg-black/80 text-base font-bold text-white shadow-md"
+                  >
+                    +{remainingMediaCount}
+                  </Button>
+                ) : null}
+              </Container>
             ) : (
               <Video
                 key={i}
@@ -119,11 +167,7 @@ export const PostAttachmentsImagesAndVideos = ({
                 }}
                 src={media.urls.main}
                 pauseVideo={open}
-                className={cn(
-                  size === 'compact'
-                    ? 'h-28 w-full cursor-auto only:h-auto only:max-h-56 only:w-fit sm:last:odd:col-span-2'
-                    : 'h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2',
-                )}
+                className="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
               />
             ),
           )}

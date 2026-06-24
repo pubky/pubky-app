@@ -18,7 +18,7 @@ import type { PostContentBaseProps } from './PostContentBase.types';
  * This component is used internally by PostContent and PostPreviewCard.
  * It only renders the content elements: text, link embeds, and attachments.
  */
-export function PostContentBase({ postId, className, textClassName, contentLayout = 'default' }: PostContentBaseProps) {
+export function PostContentBase({ postId, className, textClassName, mediaVariant = 'default' }: PostContentBaseProps) {
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
@@ -50,36 +50,6 @@ export function PostContentBase({ postId, className, textClassName, contentLayou
 
   if (!hasContent && !hasAttachments) return null;
 
-  if (contentLayout === 'media-side' && hasAttachments) {
-    if (!hasContent) {
-      return (
-        <Container className={cn('min-w-0 gap-3', className)}>
-          {/* Attachments on this post */}
-          <PostAttachments attachments={postDetails.attachments} localAttachments={localAttachments} />
-        </Container>
-      );
-    }
-
-    return (
-      <Container display="grid" className={cn('min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_40%]', className)}>
-        <Container className="min-w-0 gap-3">
-          {/* Post text */}
-          {hasContent && <PostText content={postDetails.content} className={textClassName} />}
-
-          {/* Link previews from text */}
-          {hasContent && <PostLinkEmbeds content={postDetails.content} />}
-        </Container>
-
-        {/* Attachments on this post */}
-        <PostAttachments
-          attachments={postDetails.attachments}
-          localAttachments={localAttachments}
-          mediaSize="compact"
-        />
-      </Container>
-    );
-  }
-
   return (
     <Container className={cn('min-w-0 gap-3', className)}>
       {/* Post text */}
@@ -89,7 +59,11 @@ export function PostContentBase({ postId, className, textClassName, contentLayou
       {hasContent && <PostLinkEmbeds content={postDetails.content} />}
 
       {/* Attachments on this post */}
-      <PostAttachments attachments={postDetails.attachments} localAttachments={localAttachments} />
+      <PostAttachments
+        attachments={postDetails.attachments}
+        localAttachments={localAttachments}
+        {...(mediaVariant !== 'default' ? { mediaVariant } : {})}
+      />
     </Container>
   );
 }

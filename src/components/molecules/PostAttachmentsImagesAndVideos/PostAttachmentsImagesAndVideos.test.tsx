@@ -24,8 +24,16 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
         </div>
       );
     },
-    DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-      <div data-testid="dialog-trigger" data-aschild={asChild}>
+    DialogTrigger: ({
+      children,
+      asChild,
+      className,
+    }: {
+      children: React.ReactNode;
+      asChild?: boolean;
+      className?: string;
+    }) => (
+      <div data-testid="dialog-trigger" data-aschild={asChild} className={className}>
         {children}
       </div>
     ),
@@ -369,14 +377,39 @@ describe('PostAttachmentsImagesAndVideos', () => {
       expect(images).toHaveLength(3);
     });
 
-    it('uses compact media item height when size is compact', () => {
-      const imagesAndVideos = [createMockVideo()];
-      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} size="compact" />);
+    it('uses a constrained smaller grid for inline media', () => {
+      const imagesAndVideos = [createMockImage(), createMockImage()];
+      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} variant="list" />);
 
-      const video = screen.getByTestId('video');
-      expect(video).toHaveClass('h-28');
-      expect(video).toHaveClass('only:max-h-56');
-      expect(video).not.toHaveClass('h-52');
+      const grid = screen.getAllByTestId('container').find((element) => element.classList.contains('grid'));
+      expect(grid).toHaveClass('grid');
+      expect(grid).toHaveClass('grid-cols-[minmax(0,192px)]');
+      expect(grid).toHaveClass('sm:grid-cols-[repeat(2,192px)]');
+      expect(grid).toHaveClass('self-start');
+      expect(grid).toHaveClass('justify-self-start');
+      expect(grid).not.toHaveClass('mx-auto');
+
+      const firstTrigger = screen.getAllByTestId('dialog-trigger')[0];
+      expect(firstTrigger).toHaveClass('aspect-video');
+      expect(firstTrigger).toHaveClass('h-[108px]');
+      expect(firstTrigger).not.toHaveClass('w-full');
+      expect(firstTrigger).not.toHaveClass('md:h-44');
+      expect(firstTrigger).not.toHaveClass('h-52');
+    });
+
+    it('shows only four inline media items and overlays the remaining count on the last visible item', () => {
+      const imagesAndVideos = [
+        createMockImage({ name: 'image1.jpg' }),
+        createMockImage({ name: 'image2.jpg' }),
+        createMockImage({ name: 'image3.jpg' }),
+        createMockImage({ name: 'image4.jpg' }),
+        createMockImage({ name: 'image5.jpg' }),
+        createMockImage({ name: 'image6.jpg' }),
+      ];
+      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} variant="list" />);
+
+      expect(screen.getAllByTestId('image')).toHaveLength(4);
+      expect(screen.getByText('+2')).toBeInTheDocument();
     });
 
     it('renders a single video', () => {
