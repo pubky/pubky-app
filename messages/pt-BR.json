@@ -1006,9 +1006,10 @@
       "copyFailedDesc": "Não foi possível copiar para a área de transferência"
     },
     "follow": {
-      "failed": "Não foi possível atualizar o status de seguimento",
       "followed": "Seguindo {username}",
-      "unfollowed": "Deixou de seguir {username}"
+      "unfollowed": "Deixou de seguir {username}",
+      "followFailed": "Não foi possível seguir {username}",
+      "unfollowFailed": "Não foi possível deixar de seguir {username}"
     },
     "mute": {
       "muted": "{username} silenciado",

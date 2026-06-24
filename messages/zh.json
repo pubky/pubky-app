@@ -1006,9 +1006,10 @@
       "copyFailedDesc": "无法复制到剪贴板"
     },
     "follow": {
-      "failed": "无法更新关注状态",
       "followed": "正在关注 {username}",
-      "unfollowed": "已取消关注 {username}"
+      "unfollowed": "已取消关注 {username}",
+      "followFailed": "无法关注 {username}",
+      "unfollowFailed": "无法取消关注 {username}"
     },
     "mute": {
       "muted": "已静音 {username}",

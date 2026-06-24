@@ -58,11 +58,8 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
         }),
     icon: isFollowing ? UserRoundMinus : UserRoundPlus,
     onClick: async () => {
-      try {
-        await toggleFollow(userId, isFollowing, profile?.name);
-      } catch {
-        // Error already handled by useFollowUser (toast + state)
-      }
+      // useFollowUser handles all feedback (toast + state) and never throws.
+      await toggleFollow(userId, isFollowing, profile?.name);
     },
     disabled: isFollowLoading || isUserLoading(userId),
   });
