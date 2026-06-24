@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog';
 // TODO: Re-enable the bookmark count badge once the backend exposes an accurate
 // posts-only bookmark count. The current `userCounts.bookmarks` total also counts
 // bookmarked collections and deleted posts, so it overstates what the grid shows
@@ -68,6 +69,10 @@ export function BookmarksHero({
         >
           {t('bookmarks.description')}
         </Typography>
+
+        <Container overrideDefaults className="flex flex-wrap items-center gap-3">
+          <AddContentDialog target={{ type: 'bookmarks' }} dataCy="bookmarks-add-content" />
+        </Container>
       </CardContent>
     </Card>
   );

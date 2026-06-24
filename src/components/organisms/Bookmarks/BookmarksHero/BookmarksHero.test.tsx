@@ -23,30 +23,38 @@ vi.mock('next-intl', () => ({
   }),
 }));
 
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
-  AvatarWithFallback: ({
-    avatarUrl,
+vi.mock('@/organisms/HeroOwner/HeroOwner', () => ({
+  HeroOwner: ({
     name,
     fallbackSeed,
+    avatarUrl,
     size,
-    alt,
+    isResolved,
   }: {
-    avatarUrl?: string;
     name: string;
-    fallbackSeed?: string;
+    fallbackSeed: string;
+    avatarUrl?: string;
     size?: string;
-    alt?: string;
+    isResolved: boolean;
   }) => (
     <div
-      data-testid="avatar-with-fallback"
-      data-avatar-url={avatarUrl ?? ''}
+      data-testid="hero-owner"
       data-name={name}
       data-fallback-seed={fallbackSeed}
+      data-avatar-url={avatarUrl ?? ''}
       data-size={size}
-      data-alt={alt}
+      data-resolved={String(isResolved)}
     >
-      {name}
+      {isResolved ? name : 'skeleton'}
     </div>
+  ),
+}));
+
+vi.mock('@/organisms/AddContentDialog/AddContentDialog', () => ({
+  AddContentDialog: ({ dataCy }: { dataCy?: string }) => (
+    <button type="button" data-testid={dataCy ?? 'add-content-dialog'} aria-label="collections.single.content">
+      collections.single.content
+    </button>
   ),
 }));
 
@@ -68,8 +76,15 @@ describe('BookmarksHero', () => {
     // collections + deleted posts, overstating the grid). Re-assert once the
     // backend exposes an accurate posts-only count and the badge is re-wired.
     expect(screen.queryByText('15')).not.toBeInTheDocument();
-    expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-name', 'Alice');
-    expect(screen.getByText('Alice', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByTestId('hero-owner')).toHaveAttribute('data-name', 'Alice');
+    expect(screen.getByText('Alice', { selector: 'div' })).toBeInTheDocument();
+  });
+
+  it('renders the Content action in the hero', () => {
+    render(<BookmarksHero avatarName="Alice" avatarSeed="alice-pubky" bookmarkCount={15} isProfileResolved={true} />);
+
+    expect(screen.getByTestId('bookmarks-add-content')).toBeInTheDocument();
+    expect(screen.getByLabelText('collections.single.content')).toBeInTheDocument();
   });
 
   it('does not render custom-collection management actions for the system collection', () => {
@@ -90,8 +105,8 @@ describe('BookmarksHero', () => {
     render(<BookmarksHero avatarName="U" avatarSeed="alice-pubky" bookmarkCount={15} isProfileResolved={false} />);
 
     // The avatar still renders, but the username text must not appear yet.
-    expect(screen.getByTestId('avatar-with-fallback')).toBeInTheDocument();
-    expect(screen.queryByText('U', { selector: 'span' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('hero-owner')).toBeInTheDocument();
+    expect(screen.queryByText('U', { selector: 'div' })).not.toBeInTheDocument();
   });
 });
 

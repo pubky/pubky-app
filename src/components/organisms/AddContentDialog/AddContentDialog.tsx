@@ -1,7 +1,7 @@
 'use client';
 
 import { type ComponentPropsWithoutRef, type ComponentRef, forwardRef, type SyntheticEvent, useState } from 'react';
-import { Library, MessageCircle, Plus, Repeat } from 'lucide-react';
+import { Library, MessageCircle, Plus, Repeat, SquarePlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/atoms/Card/Card';
@@ -16,21 +16,42 @@ import {
 } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useAddContentForm } from '@/hooks/useAddContentForm/useAddContentForm';
-import { ADD_CONTENT_FORM_FIELDS, type AddContentTarget } from '@/hooks/useAddContentForm/useAddContentForm.types';
+import { ADD_CONTENT_FORM_FIELDS } from '@/hooks/useAddContentForm/useAddContentForm.types';
 import { cn } from '@/libs/utils/utils';
 import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
+import { GRID_DASHED_CTA_TRIGGER_CLASS } from '@/organisms/Collections/gridDashedCta.const';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
+import type { AddContentDialogProps } from './AddContentDialog.types';
 
-interface AddContentDialogProps {
-  className?: string;
-  dataCy?: string;
-  target?: AddContentTarget;
-}
-
-const AddContentTrigger = forwardRef<
+const AddContentHeroTrigger = forwardRef<
   ComponentRef<typeof Button>,
-  ComponentPropsWithoutRef<typeof Button> & AddContentDialogProps
->(function AddContentTrigger({ className, dataCy, ...props }, ref) {
+  ComponentPropsWithoutRef<typeof Button> & Pick<AddContentDialogProps, 'dataCy'>
+>(function AddContentHeroTrigger({ className, dataCy, ...props }, ref) {
+  const t = useTranslations('collections.single');
+
+  return (
+    <Button
+      ref={ref}
+      variant="secondary"
+      size="icon"
+      type="button"
+      aria-label={t('content')}
+      data-cy={dataCy}
+      className={cn('lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs', className)}
+      {...props}
+    >
+      <SquarePlus className="size-4" />
+      <Typography as="span" overrideDefaults className="hidden lg:inline">
+        {t('content')}
+      </Typography>
+    </Button>
+  );
+});
+
+const AddContentGridTrigger = forwardRef<
+  ComponentRef<typeof Button>,
+  ComponentPropsWithoutRef<typeof Button> & Pick<AddContentDialogProps, 'dataCy'>
+>(function AddContentGridTrigger({ className, dataCy, ...props }, ref) {
   const t = useTranslations('collections.single');
 
   return (
@@ -40,10 +61,7 @@ const AddContentTrigger = forwardRef<
       type="button"
       aria-label={t('addContent')}
       data-cy={dataCy}
-      className={cn(
-        'flex h-39 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-foreground transition-colors outline-none hover:border-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none',
-        className,
-      )}
+      className={cn(GRID_DASHED_CTA_TRIGGER_CLASS, className)}
       {...props}
     >
       <Plus className="size-3 shrink-0" />
@@ -181,9 +199,9 @@ function AddContentDialogBody({
 }
 
 export function AddContentDialog({
-  className,
-  dataCy = 'add-content-cta',
+  dataCy = 'add-content',
   target = { type: 'bookmarks' },
+  triggerVariant = 'hero',
 }: AddContentDialogProps) {
   const t = useTranslations('collections.addContentDialog');
   const [open, setOpen] = useState(false);
@@ -194,11 +212,12 @@ export function AddContentDialog({
     setOpen(false);
   };
 
+  const trigger =
+    triggerVariant === 'grid' ? <AddContentGridTrigger dataCy={dataCy} /> : <AddContentHeroTrigger dataCy={dataCy} />;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <AddContentTrigger className={className} dataCy={dataCy} />
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent
         className="flex max-w-xl flex-col overflow-hidden bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
         hiddenTitle={t('title')}

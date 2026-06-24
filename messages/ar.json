@@ -1373,6 +1373,7 @@
       "delete": "حذف",
       "follow": "متابعة",
       "unfollow": "إلغاء المتابعة",
+      "content": "محتوى",
       "addContent": "إضافة محتوى",
       "empty": "هذه المجموعة فارغة.",
       "notFound": {
@@ -1385,7 +1386,7 @@
       }
     },
     "addContentDialog": {
-      "title": "إضافة محتوى",
+      "title": "محتوى",
       "description": "أضف منشورًا أو مقالًا من خلاصتك أو الصق رابطًا مباشرة.",
       "fromFeedTitle": "إضافة من الخلاصة",
       "fromFeedLead": "ابحث عن منشور",

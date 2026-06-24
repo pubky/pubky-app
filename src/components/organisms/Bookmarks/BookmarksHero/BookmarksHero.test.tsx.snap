@@ -27,25 +27,14 @@ exports[`BookmarksHero - Snapshots > matches the snapshot with count and avatar 
       data-testid="container"
     >
       <div
-        class="flex min-w-0 items-center gap-3"
-        data-testid="container"
+        data-avatar-url="https://example.com/avatar.png"
+        data-fallback-seed="alice-pubky"
+        data-name="Alice"
+        data-resolved="true"
+        data-size="sm"
+        data-testid="hero-owner"
       >
-        <div
-          data-alt="Alice"
-          data-avatar-url="https://example.com/avatar.png"
-          data-fallback-seed="alice-pubky"
-          data-name="Alice"
-          data-size="sm"
-          data-testid="avatar-with-fallback"
-        >
-          Alice
-        </div>
-        <span
-          class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
-          data-testid="typography"
-        >
-          Alice
-        </span>
+        Alice
       </div>
     </div>
     <p
@@ -54,6 +43,18 @@ exports[`BookmarksHero - Snapshots > matches the snapshot with count and avatar 
     >
       Everything you saved for later.
     </p>
+    <div
+      class="flex flex-wrap items-center gap-3"
+      data-testid="container"
+    >
+      <button
+        aria-label="collections.single.content"
+        data-testid="bookmarks-add-content"
+        type="button"
+      >
+        collections.single.content
+      </button>
+    </div>
   </div>
 </div>
 `;
