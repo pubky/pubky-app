@@ -2,12 +2,7 @@ import * as React from 'react';
 import { X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { useElementKeyboardAvoidance } from '@/hooks/useElementKeyboardAvoidance/useElementKeyboardAvoidance';
-import { isIOSBrowser } from '@/libs/utils/browser';
 import { cn } from '@/libs/utils/utils';
-
-type DialogContentStyle = React.CSSProperties & {
-  '--dialog-ios-keyboard-background-offset'?: string;
-};
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" data-testid="dialog" {...props} />;
@@ -82,21 +77,10 @@ function DialogContent({
 }) {
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
-  const { isKeyboardVisible, keyboardAvoidanceOffset, keyboardAvoidanceStyle } = useElementKeyboardAvoidance(
-    contentRef,
-    {
-      enabled: avoidKeyboard,
-    },
-  );
-  const shouldExtendIOSKeyboardBackground =
-    avoidKeyboard && isIOSBrowser() && isKeyboardVisible && keyboardAvoidanceOffset > 0;
-  const iosKeyboardBackgroundStyle: DialogContentStyle | undefined = shouldExtendIOSKeyboardBackground
-    ? { '--dialog-ios-keyboard-background-offset': `${keyboardAvoidanceOffset}px` }
-    : undefined;
-  const contentStyle: DialogContentStyle | undefined =
-    style || (avoidKeyboard && keyboardAvoidanceStyle) || iosKeyboardBackgroundStyle
-      ? { ...style, ...(avoidKeyboard ? keyboardAvoidanceStyle : undefined), ...iosKeyboardBackgroundStyle }
-      : undefined;
+  const { isKeyboardVisible, keyboardAvoidanceStyle } = useElementKeyboardAvoidance(contentRef, {
+    enabled: avoidKeyboard,
+  });
+  const contentStyle = avoidKeyboard ? { ...style, ...keyboardAvoidanceStyle } : style;
 
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -124,8 +108,6 @@ function DialogContent({
             overrideDefaults
               ? ''
               : 'max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8',
-            shouldExtendIOSKeyboardBackground &&
-              'max-sm:[margin-bottom:calc(var(--dialog-ios-keyboard-background-offset)*-1)] max-sm:[border-bottom-width:var(--dialog-ios-keyboard-background-offset)] max-sm:[border-bottom-color:hsl(var(--background))]',
             className,
           )}
           style={contentStyle}
