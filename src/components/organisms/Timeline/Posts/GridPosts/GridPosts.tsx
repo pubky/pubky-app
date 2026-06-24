@@ -29,12 +29,6 @@ interface TimelineGridPostsProps {
    */
   showEndMessage?: boolean;
   emptyState?: ReactNode;
-  /**
-   * Optional last grid cell (e.g. Add Content CTA on bookmarks/collection feeds).
-   * Rendered after post cards inside the same grid. The cell uses `h-full` so the
-   * tile stretches to a taller sibling in the row without imposing min-height.
-   */
-  trailingSlot?: ReactNode;
 }
 
 /**
@@ -53,14 +47,7 @@ interface TimelineGridPostsProps {
  * so the Phase C grid-scoped container-query overrides can adapt the card to the
  * narrow cell width. Because a container query with no ancestor container resolves
  * to `false`, those overrides are inert on every non-grid surface (decision D4).
- *
- * When `trailingSlot` is set, it becomes the last grid cell after all posts.
- * When there are no posts but a trailing slot is present, `emptyState` is still
- * rendered above the grid so the user sees both the empty copy and the CTA tile.
  */
-const GRID_TRAILING_CELL_CLASS =
-  '@container/grid block h-full w-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1';
-
 export function TimelineGridPosts({
   postIds,
   loading,
@@ -70,7 +57,6 @@ export function TimelineGridPosts({
   loadMore,
   showEndMessage = true,
   emptyState,
-  trailingSlot,
 }: TimelineGridPostsProps) {
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
@@ -82,23 +68,16 @@ export function TimelineGridPosts({
 
   const { handlePostKeyDown } = usePostNavigation();
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
-  const hasGridContent = postIds.length > 0 || trailingSlot != null;
-  const showEmptyMessageWithTrailingSlot = postIds.length === 0 && trailingSlot != null && emptyState != null;
 
   return (
     <TimelineStateWrapper
       loading={loading}
       error={error}
-      hasItems={hasGridContent}
+      hasItems={postIds.length > 0}
       loadingComponent={<GridPostsSkeleton />}
       emptyComponent={emptyState}
     >
-      <Container
-        data-cy="timeline-container"
-        overrideDefaults={showEmptyMessageWithTrailingSlot}
-        className={showEmptyMessageWithTrailingSlot ? 'flex w-full flex-col gap-6' : undefined}
-      >
-        {showEmptyMessageWithTrailingSlot ? emptyState : null}
+      <Container data-cy="timeline-container">
         <Container
           data-cy="timeline-posts-grid"
           overrideDefaults
@@ -121,11 +100,6 @@ export function TimelineGridPosts({
               <PostMain postId={postId} isReply={false} />
             </Container>
           ))}
-          {trailingSlot != null ? (
-            <Container overrideDefaults className={GRID_TRAILING_CELL_CLASS}>
-              {trailingSlot}
-            </Container>
-          ) : null}
         </Container>
 
         {loadingMore && <TimelineLoadingMore />}

@@ -19,17 +19,14 @@ export function BookmarksCollection() {
       className="pb-24 lg:pb-12 xl:px-0!"
     >
       <Container className="gap-12">
-        <BookmarksItems
-          header={
-            <BookmarksHero
-              avatarName={avatarName}
-              avatarSeed={avatarSeed}
-              avatarUrl={avatarUrl}
-              bookmarkCount={bookmarkCount}
-              isProfileResolved={isProfileResolved}
-            />
-          }
+        <BookmarksHero
+          avatarName={avatarName}
+          avatarSeed={avatarSeed}
+          avatarUrl={avatarUrl}
+          bookmarkCount={bookmarkCount}
+          isProfileResolved={isProfileResolved}
         />
+        <BookmarksItems />
         <CollectionsSections />
       </Container>
     </ContentLayout>

@@ -14,18 +14,22 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
 }));
 
+vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
+  CollectionHero: (p: { authorPubky: string; postId: string }) => (
+    <div data-testid="collection-hero" data-author={p.authorPubky} data-post={p.postId} />
+  ),
+}));
+
 vi.mock('@/organisms/Collections/CollectionItems/CollectionItems', () => ({
   CollectionItems: (p: {
     authorPubky: string;
     postId: string;
-    postDetails?: unknown;
     pullToRefreshContainerRef?: RefObject<HTMLElement | null>;
   }) => (
     <div
       data-testid="collection-items"
       data-author={p.authorPubky}
       data-post={p.postId}
-      data-has-post-details={String(p.postDetails != null)}
       data-has-ptr-ref={String(Boolean(p.pullToRefreshContainerRef))}
     />
   ),
@@ -88,15 +92,17 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('Collection (template)', () => {
-  it('renders the resolved items region + sections for a valid collection envelope', () => {
+  it('renders the resolved hero + items + sections for a valid collection envelope', () => {
     setPostDetails(COLLECTION_CONTENT, false);
 
     render(<Collection postId={COMPOSITE} />);
 
+    const hero = screen.getByTestId('collection-hero');
     const items = screen.getByTestId('collection-items');
+    expect(hero).toHaveAttribute('data-author', AUTHOR_PUBKY);
+    expect(hero).toHaveAttribute('data-post', POST_ID);
     expect(items).toHaveAttribute('data-author', AUTHOR_PUBKY);
     expect(items).toHaveAttribute('data-post', POST_ID);
-    expect(items).toHaveAttribute('data-has-post-details', 'true');
     expect(items).toHaveAttribute('data-has-ptr-ref', 'true');
     expect(screen.getByTestId('collections-sections')).toBeInTheDocument();
     expect(screen.queryByTestId('collection-not-found')).not.toBeInTheDocument();
@@ -107,12 +113,12 @@ describe('Collection (template)', () => {
 
     render(<Collection postId={COMPOSITE} />);
 
-    const items = screen.getByTestId('collection-items');
-    expect(items).toHaveAttribute('data-has-post-details', 'false');
+    expect(screen.getByTestId('collection-hero')).toBeInTheDocument();
+    expect(screen.getByTestId('collection-items')).toBeInTheDocument();
     expect(screen.queryByTestId('collection-not-found')).not.toBeInTheDocument();
   });
 
-  it('renders the not-found state (with sections, without items) when the post is missing', () => {
+  it('renders the not-found state (with sections, without hero) when the post is missing', () => {
     setPostDetails(null, false);
 
     render(<Collection postId={COMPOSITE} />);
@@ -120,6 +126,7 @@ describe('Collection (template)', () => {
     const notFound = screen.getByTestId('collection-not-found');
     expect(notFound).toHaveAttribute('data-post', COMPOSITE);
     expect(screen.getByTestId('collections-sections')).toBeInTheDocument();
+    expect(screen.queryByTestId('collection-hero')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collection-items')).not.toBeInTheDocument();
   });
 
@@ -129,7 +136,7 @@ describe('Collection (template)', () => {
     render(<Collection postId={COMPOSITE} />);
 
     expect(screen.getByTestId('collection-not-found')).toBeInTheDocument();
-    expect(screen.queryByTestId('collection-items')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('collection-hero')).not.toBeInTheDocument();
   });
 
   it('treats an invalid composite as not found and disables the post details query', () => {
@@ -138,7 +145,7 @@ describe('Collection (template)', () => {
     render(<Collection postId="garbage" />);
 
     expect(screen.getByTestId('collection-not-found')).toBeInTheDocument();
-    expect(screen.queryByTestId('collection-items')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('collection-hero')).not.toBeInTheDocument();
     expect(mockUsePostDetails).toHaveBeenCalledWith('garbage', { enabled: false });
   });
 

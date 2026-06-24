@@ -34,11 +34,7 @@ vi.mock('@/organisms/Bookmarks/BookmarksHero/BookmarksHero', () => ({
 }));
 
 vi.mock('@/organisms/Bookmarks/BookmarksItems/BookmarksItems', () => ({
-  BookmarksItems: ({ header }: { header: ReactNode }) => (
-    <div data-testid="bookmarks-items">
-      <div data-testid="bookmarks-items-header">{header}</div>
-    </div>
-  ),
+  BookmarksItems: () => <div data-testid="bookmarks-items" />,
 }));
 
 vi.mock('@/organisms/Collections/CollectionsSections/CollectionsSections', () => ({
@@ -92,27 +88,9 @@ describe('BookmarksCollection', () => {
     expect(screen.getByTestId('content-layout')).toHaveAttribute('data-show-right-sidebar', 'false');
     expect(screen.getByTestId('content-layout')).toHaveAttribute('data-show-left-mobile-button', 'false');
     expect(screen.getByTestId('content-layout')).toHaveAttribute('data-show-right-mobile-button', 'false');
+    expect(screen.getByTestId('bookmarks-hero')).toHaveAttribute('data-bookmark-count', '4');
     expect(screen.getByTestId('bookmarks-items')).toBeInTheDocument();
     expect(screen.getByTestId('collections-sections')).toBeInTheDocument();
-  });
-
-  it('passes a BookmarksHero with summary props as the BookmarksItems header', () => {
-    mockUseBookmarksCollectionSummary.mockReturnValue({
-      avatarName: 'Alice',
-      avatarSeed: 'alice-pubky',
-      avatarUrl: 'https://example.com/avatar.png',
-      bookmarkCount: 4,
-      isProfileResolved: true,
-    });
-
-    render(<BookmarksCollection />);
-
-    const hero = screen.getByTestId('bookmarks-hero');
-    expect(hero).toHaveAttribute('data-avatar-name', 'Alice');
-    expect(hero).toHaveAttribute('data-avatar-seed', 'alice-pubky');
-    expect(hero).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
-    expect(hero).toHaveAttribute('data-bookmark-count', '4');
-    expect(hero).toHaveAttribute('data-is-profile-resolved', 'true');
   });
 });
 
