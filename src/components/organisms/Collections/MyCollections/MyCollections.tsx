@@ -123,7 +123,6 @@ interface MyCollectionsStreamProps {
  */
 function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
   const t = useTranslations('collections');
-  const tToast = useTranslations('toast');
   const { toast } = useToast();
   const streamId = buildAuthorCollectionsStreamId(currentUserPubky);
 
@@ -136,7 +135,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
     // across all three sections of the Collections landing.
     onError: () => {
       toast({
-        title: tToast('error'),
+        variant: 'error',
         description: t('loadFailed'),
       });
     },

@@ -1368,9 +1368,9 @@
       "unfollow": "إلغاء المتابعة",
       "delete": "حذف",
       "toast": {
-        "followed": "لقد تابعت مجموعة {name}",
-        "unfollowed": "لقد ألغيت متابعة مجموعة {name}",
-        "shared": "لقد شاركت مجموعة {name}"
+        "followed": "لقد تابعت هذه المجموعة",
+        "unfollowed": "لقد ألغيت متابعة هذه المجموعة",
+        "shared": "لقد شاركت هذه المجموعة"
       }
     },
     "single": {
@@ -1420,8 +1420,8 @@
     "collectionNamePlaceholder": "اسم المجموعة",
     "createCollection": "إنشاء مجموعة",
     "loadingCollections": "جارٍ تحميل المجموعات...",
-    "addedToCollection": "تمت إضافة المنشور إلى {name}.",
-    "removedFromCollection": "تمت إزالة المنشور من {name}.",
+    "addedToCollection": "تمت إضافة المنشور إلى المجموعة.",
+    "removedFromCollection": "تمت إزالة المنشور من المجموعة.",
     "updateCollectionFailed": "فشل تحديث المجموعة.",
     "collectionCreated": "تم إنشاء المجموعة وحفظ المنشور.",
     "createCollectionFailed": "فشل إنشاء المجموعة."

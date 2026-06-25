@@ -1374,9 +1374,9 @@
       "unfollow": "Entfolgen",
       "delete": "Löschen",
       "toast": {
-        "followed": "Du folgst jetzt der Sammlung {name}",
-        "unfollowed": "Du folgst der Sammlung {name} nicht mehr",
-        "shared": "Du hast die Sammlung {name} geteilt"
+        "followed": "Du folgst jetzt dieser Sammlung",
+        "unfollowed": "Du folgst dieser Sammlung nicht mehr",
+        "shared": "Du hast diese Sammlung geteilt"
       }
     },
     "single": {
@@ -1426,8 +1426,8 @@
     "collectionNamePlaceholder": "Name der Sammlung",
     "createCollection": "Sammlung erstellen",
     "loadingCollections": "Sammlungen werden geladen...",
-    "addedToCollection": "Beitrag zu {name} hinzugefügt.",
-    "removedFromCollection": "Beitrag aus {name} entfernt.",
+    "addedToCollection": "Beitrag zur Sammlung hinzugefügt.",
+    "removedFromCollection": "Beitrag aus der Sammlung entfernt.",
     "updateCollectionFailed": "Sammlung konnte nicht aktualisiert werden.",
     "collectionCreated": "Sammlung erstellt und Beitrag gespeichert.",
     "createCollectionFailed": "Sammlung konnte nicht erstellt werden."

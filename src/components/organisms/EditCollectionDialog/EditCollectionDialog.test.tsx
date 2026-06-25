@@ -131,8 +131,7 @@ describe('EditCollectionDialog', () => {
     });
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'Success',
-      description: 'Collection updated',
+      title: 'Collection updated',
     });
   });
 
@@ -147,7 +146,7 @@ describe('EditCollectionDialog', () => {
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: 'Error',
+        variant: 'error',
         description: 'Failed to update collection.',
       });
     });

@@ -6,6 +6,7 @@ import { postUriBuilder } from 'pubky-app-specs';
 import { PostController } from '@/controllers/post/post';
 import { useAuthoredCollections } from '@/hooks/useAuthoredCollections/useAuthoredCollections';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
+import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { parseCompositeId } from '@/models/models.utils';
 import { useToast } from '@/molecules/Toaster/use-toast';
@@ -36,7 +37,6 @@ export function usePostSaveTargets(postId: string): UsePostSaveTargetsResult {
   const bookmark = useBookmark(postId);
   const { collections, isLoading: isCollectionsLoading } = useAuthoredCollections(Boolean(currentUserPubky));
   const { toast } = useToast();
-  const tToast = useTranslations('toast');
   const tSave = useTranslations('postSave');
   const [updatingCollectionIds, setUpdatingCollectionIds] = useState<Set<string>>(new Set());
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
@@ -77,16 +77,13 @@ export function usePostSaveTargets(postId: string): UsePostSaveTargetsResult {
         shouldAdd: !target.isSaved,
       });
       toast({
-        title: tToast('success'),
-        description: target.isSaved
-          ? tSave('removedFromCollection', { name: target.name })
-          : tSave('addedToCollection', { name: target.name }),
+        title: target.isSaved ? tSave('removedFromCollection') : tSave('addedToCollection'),
       });
     } catch (error) {
       Logger.error('[usePostSaveTargets] Failed to update collection membership', { error, collectionId, postId });
       toast({
-        title: tToast('error'),
-        description: tSave('updateCollectionFailed'),
+        variant: 'error',
+        description: isAppError(error) ? error.message : tSave('updateCollectionFailed'),
       });
     } finally {
       setCollectionUpdating(collectionId, false);
@@ -105,14 +102,13 @@ export function usePostSaveTargets(postId: string): UsePostSaveTargetsResult {
         items: [postUri],
       });
       toast({
-        title: tToast('success'),
-        description: tSave('collectionCreated'),
+        title: tSave('collectionCreated'),
       });
     } catch (error) {
       Logger.error('[usePostSaveTargets] Failed to create collection', { error, postId });
       toast({
-        title: tToast('error'),
-        description: tSave('createCollectionFailed'),
+        variant: 'error',
+        description: isAppError(error) ? error.message : tSave('createCollectionFailed'),
       });
     } finally {
       setIsCreatingCollection(false);

@@ -1372,9 +1372,9 @@
       "unfollow": "Non seguire più",
       "delete": "Elimina",
       "toast": {
-        "followed": "Ora segui la raccolta {name}",
-        "unfollowed": "Hai smesso di seguire la raccolta {name}",
-        "shared": "Hai condiviso la raccolta {name}"
+        "followed": "Ora segui questa raccolta",
+        "unfollowed": "Hai smesso di seguire questa raccolta",
+        "shared": "Hai condiviso questa raccolta"
       }
     },
     "single": {
@@ -1424,8 +1424,8 @@
     "collectionNamePlaceholder": "Nome della collezione",
     "createCollection": "Crea collezione",
     "loadingCollections": "Caricamento collezioni...",
-    "addedToCollection": "Post aggiunto a {name}.",
-    "removedFromCollection": "Post rimosso da {name}.",
+    "addedToCollection": "Post aggiunto alla raccolta.",
+    "removedFromCollection": "Post rimosso dalla raccolta.",
     "updateCollectionFailed": "Impossibile aggiornare la collezione.",
     "collectionCreated": "Collezione creata e post salvato.",
     "createCollectionFailed": "Impossibile creare la collezione."

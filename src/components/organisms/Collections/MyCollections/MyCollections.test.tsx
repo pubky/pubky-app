@@ -363,7 +363,7 @@ describe('MyCollections', () => {
 
     expect(mockToast).toHaveBeenCalledTimes(1);
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'toast.error',
+      variant: 'error',
       description: 'collections.loadFailed',
     });
   });
