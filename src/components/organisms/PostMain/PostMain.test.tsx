@@ -687,6 +687,13 @@ describe('PostMain - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useIsMobile).mockReturnValue(false);
+    vi.mocked(usePostNavigation).mockReturnValue({
+      getPostHref: vi.fn(() => '/post/author/post-abc'),
+      navigateToPost: vi.fn(),
+      handlePostClick: vi.fn(),
+      handlePostAuxClick: vi.fn(),
+      handlePostKeyDown: vi.fn(),
+    });
 
     // Reset mocked hook return values that are overridden in earlier (non-snapshot) tests.
     // Without this, running the full suite (e.g. CI `test:coverage`) can leak mocked

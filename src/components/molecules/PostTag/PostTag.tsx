@@ -39,7 +39,7 @@ export function PostTag({
       data-cy="post-tag"
       data-tag-label={label}
       className={cn(
-        'group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg',
+        'group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg',
         'border-0 text-sm leading-5 font-bold text-white subpixel-antialiased',
         'transition-all duration-200',
         // Override Toggle default hover styles - keep text white
@@ -76,7 +76,7 @@ export function PostTag({
 
       {/* Hover shadow overlay - exactly as Figma */}
       <span
-        className="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+        className="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
         style={{
           boxShadow: `inset 0px 0px 8px 0px ${tagColor}`,
         }}

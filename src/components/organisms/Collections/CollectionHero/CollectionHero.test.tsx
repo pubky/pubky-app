@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -29,6 +30,10 @@ vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
 
 vi.mock('@/hooks/useBookmark/useBookmark', () => ({
   useBookmark: vi.fn(),
+}));
+
+vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
+  usePostCounts: vi.fn(),
 }));
 
 vi.mock('@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs', () => ({
@@ -167,6 +172,31 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => ({
   ),
 }));
 
+vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => ({
+  PostTagsPanel: ({
+    postId,
+    widthMode,
+    autoFocusInput,
+    enableLoadingSkeleton,
+    className,
+  }: {
+    postId: string;
+    widthMode: string;
+    autoFocusInput: boolean;
+    enableLoadingSkeleton: boolean;
+    className?: string;
+  }) => (
+    <div
+      data-testid="post-tags-panel"
+      data-auto-focus-input={String(autoFocusInput)}
+      data-enable-loading-skeleton={String(enableLoadingSkeleton)}
+      data-post-id={postId}
+      data-width-mode={widthMode}
+      className={className}
+    />
+  ),
+}));
+
 // ---------------------------------------------------------------------------
 // Fixtures + helpers
 // ---------------------------------------------------------------------------
@@ -191,6 +221,7 @@ const COLLECTION_CONTENT_NO_COVER = JSON.stringify({
 
 const mockUseUserProfile = vi.mocked(useUserProfile);
 const mockUseBookmark = vi.mocked(useBookmark);
+const mockUsePostCounts = vi.mocked(usePostCounts);
 const mockUsePostReplyRepostDialogs = vi.mocked(usePostReplyRepostDialogs);
 
 let currentPostDetails: EnrichedPostDetails | null | undefined;
@@ -269,6 +300,19 @@ function setRepostDialogs() {
   return { openRepostDialog, openReplyDialog };
 }
 
+function setPostCounts(uniqueTags = 3) {
+  mockUsePostCounts.mockReturnValue({
+    postCounts: {
+      id: COMPOSITE_ID,
+      tags: 4,
+      unique_tags: uniqueTags,
+      reposts: 0,
+      replies: 0,
+    },
+    isLoading: false,
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockDeleteState.isDeleting = false;
@@ -277,6 +321,7 @@ beforeEach(() => {
   setPostDetails(COLLECTION_CONTENT);
   setOwnerProfile('Bitcoin Wizard', 'https://example.com/avatar.png');
   setBookmark();
+  setPostCounts();
   setRepostDialogs();
 });
 
@@ -304,6 +349,22 @@ describe('CollectionHero', () => {
     expect(tags).toHaveAttribute('data-tagged-id', COMPOSITE_ID);
     expect(tags).toHaveAttribute('data-tagged-kind', String(TagKind.POST));
     expect(tags).toHaveAttribute('data-show-add-button', 'true');
+    expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
+  });
+
+  it('toggles the editable tags panel from the tag CTA', () => {
+    const { container } = renderHero();
+
+    fireEvent.click(screen.getByLabelText('Tag post (3)'));
+
+    expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+    const panel = screen.getByTestId('post-tags-panel');
+    expect(panel).toHaveAttribute('data-post-id', COMPOSITE_ID);
+    expect(panel).toHaveAttribute('data-width-mode', 'fit');
+    expect(panel).toHaveAttribute('data-auto-focus-input', 'true');
+    expect(panel).toHaveAttribute('data-enable-loading-skeleton', 'false');
+    expect(container.querySelector('[data-cy="post-tags-expandable-row"]')).toHaveClass('items-end');
+    expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).toHaveClass('self-end');
   });
 
   it('omits the description block when the envelope description is empty / nullish', () => {
@@ -371,6 +432,7 @@ describe('CollectionHero', () => {
       expect(screen.getByLabelText('collections.single.share')).toBeInTheDocument();
       expect(screen.getByLabelText('collections.single.edit')).toBeInTheDocument();
       expect(screen.getByLabelText('collections.single.delete')).toBeInTheDocument();
+      expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
       expect(screen.getByText('collections.single.share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
       expect(screen.getByText('collections.single.edit', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
       expect(screen.getByText('collections.single.delete', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
@@ -493,6 +555,7 @@ describe('CollectionHero', () => {
       renderHero();
 
       expect(screen.getByLabelText('collections.single.follow')).toBeInTheDocument();
+      expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
       expect(screen.queryByLabelText('collections.single.unfollow')).not.toBeInTheDocument();
     });
 
