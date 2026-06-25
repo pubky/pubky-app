@@ -56,7 +56,13 @@ export function useFabAction(): FabAction {
           return;
         }
 
-        if (!currentUserPubky) return;
+        // The post is already created and the dialog closed by the time this
+        // runs, so a missing pubky (e.g. sign-out racing the create) must
+        // surface feedback rather than silently dropping the bookmark.
+        if (!currentUserPubky) {
+          toast({ variant: 'error', description: tBookmark('loginRequired') });
+          return;
+        }
         await BookmarkController.commitCreate({ postId: createdPostId, userId: currentUserPubky });
         enqueue(buildFeedKey(target), createdPostId);
         toast({ title: tBookmark('added') });

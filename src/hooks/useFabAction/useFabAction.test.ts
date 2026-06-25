@@ -154,6 +154,25 @@ describe('useFabAction', () => {
       expect(mocks.toast).toHaveBeenCalledWith({ title: 'toast.bookmark.added' });
     });
 
+    it('surfaces an error and skips bookmarking when the pubky is missing', async () => {
+      // Bookmarks still binds onPostCreated when signed out, so the handler must
+      // guard against a missing pubky (e.g. sign-out racing the create).
+      mocks.currentUserPubky = null;
+      mocks.pathname = '/collections/bookmarks';
+      const { result } = renderHook(() => useFabAction());
+      const action = result.current;
+      if (action.kind !== 'createPost' || !action.onPostCreated) throw new Error('expected a createPost save handler');
+      const onPostCreated = action.onPostCreated;
+
+      await act(async () => {
+        await onPostCreated('author:bp');
+      });
+
+      expect(mocks.commitCreate).not.toHaveBeenCalled();
+      expect(useFeedOptimisticStore.getState().pendingByKey.bookmarks).toBeUndefined();
+      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'toast.bookmark.loginRequired' });
+    });
+
     it('shows an error toast and does not enqueue when the collection save fails', async () => {
       mocks.commitUpdateCollectionItem.mockRejectedValue(new Error('boom'));
       mocks.pathname = `/collections/${ME}/post1`;
