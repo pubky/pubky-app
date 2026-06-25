@@ -103,7 +103,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
         />
       </div>
       <div
-        class="flex shrink-0 items-center gap-2"
+        class="flex shrink-0 items-center gap-2 self-end"
         data-cy="post-tags-expandable-row-actions"
         data-testid="container"
       >
@@ -326,7 +326,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
         />
       </div>
       <div
-        class="flex shrink-0 items-center gap-2"
+        class="flex shrink-0 items-center gap-2 self-end"
         data-cy="post-tags-expandable-row-actions"
         data-testid="container"
       >
@@ -592,7 +592,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
         />
       </div>
       <div
-        class="flex shrink-0 items-center gap-2"
+        class="flex shrink-0 items-center gap-2 self-end"
         data-cy="post-tags-expandable-row-actions"
         data-testid="container"
       >

@@ -88,7 +88,7 @@ export function PostTagsExpandableRow({
         data-cy="post-tags-expandable-row-actions"
         onClick={suppressParentInteraction}
         onAuxClick={suppressParentInteraction}
-        className={cn('flex shrink-0 items-center gap-2', tagsExpanded && 'self-end', actionsClassName)}
+        className={cn('flex shrink-0 items-center gap-2 self-end', actionsClassName)}
       >
         {isTagCountLoading ? (
           <Skeleton data-cy="post-tag-btn-skeleton" className="h-8 w-12 rounded-full" />
