@@ -1329,13 +1329,13 @@
       "cancel": "取消",
       "save": "保存更改",
       "saving": "保存中...",
-      "created": "收藏集 {name} 已创建",
+      "created": "收藏集已创建",
       "createFailed": "创建收藏集失败。"
     },
     "edit": {
       "title": "编辑收藏集",
       "save": "保存更改",
-      "updated": "收藏集 {name} 已更新",
+      "updated": "收藏集已更新",
       "updateFailed": "更新收藏集失败。"
     },
     "showMore": "显示更多",

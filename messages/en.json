@@ -1335,13 +1335,13 @@
       "cancel": "Cancel",
       "save": "Save changes",
       "saving": "Saving...",
-      "created": "Collection {name} created",
+      "created": "Collection created",
       "createFailed": "Failed to create collection."
     },
     "edit": {
       "title": "Edit Collection",
       "save": "Save changes",
-      "updated": "Collection {name} updated",
+      "updated": "Collection updated",
       "updateFailed": "Failed to update collection."
     },
     "showMore": "Show more",

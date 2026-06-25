@@ -1337,13 +1337,13 @@
       "cancel": "Abbrechen",
       "save": "Änderungen speichern",
       "saving": "Wird gespeichert...",
-      "created": "Sammlung {name} erstellt",
+      "created": "Sammlung erstellt",
       "createFailed": "Sammlung konnte nicht erstellt werden."
     },
     "edit": {
       "title": "Sammlung bearbeiten",
       "save": "Änderungen speichern",
-      "updated": "Sammlung {name} aktualisiert",
+      "updated": "Sammlung aktualisiert",
       "updateFailed": "Sammlung konnte nicht aktualisiert werden."
     },
     "showMore": "Mehr anzeigen",

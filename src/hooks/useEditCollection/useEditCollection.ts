@@ -134,7 +134,7 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
 
         toast({
           title: tToast('success'),
-          description: tEdit('updated', { name: name.trim() }),
+          description: tEdit('updated'),
         });
         ok = true;
       } catch (error) {
