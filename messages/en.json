@@ -1338,6 +1338,13 @@
       "created": "Collection created",
       "createFailed": "Failed to create collection."
     },
+    "intro": {
+      "title": "Welcome to Collections",
+      "description": "Save posts worth keeping. Collect the best content from your network. Curate ideas, filter signal from noise, and share what matters.",
+      "imageAlt": "Collections",
+      "cancel": "Cancel",
+      "continue": "Continue"
+    },
     "edit": {
       "title": "Edit Collection",
       "save": "Save changes",

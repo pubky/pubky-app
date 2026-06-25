@@ -4,10 +4,13 @@ import { type ReactNode, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { Slot } from 'radix-ui';
 import { getCollectionRoute } from '@/app/routes';
+import { useAuthoredCollections } from '@/hooks/useAuthoredCollections/useAuthoredCollections';
 import { useCreateCollection } from '@/hooks/useCreateCollection/useCreateCollection';
 import { parseCompositeId } from '@/models/models.utils';
 import { CollectionFormDialog } from '@/organisms/Collections/CollectionFormDialog/CollectionFormDialog';
+import { CollectionsIntroDialog } from '@/organisms/Collections/CollectionsIntroDialog/CollectionsIntroDialog';
 
 type NewCollectionDialogProps = {
   /** Optional trigger element. Omit when driving the dialog via `open`/`onOpenChange`. */
@@ -28,6 +31,18 @@ export function NewCollectionDialog({
   const [openState, setOpenState] = useState(false);
   const isControlled = openProp !== undefined;
   const open = isControlled ? openProp : openState;
+
+  // First-collection onboarding: users with no collections of their own see an
+  // intro before the form. Bookmarks is a separate default feed (not an authored
+  // collection), so it never counts here. `continued` records that the user
+  // advanced past the intro, keeping the form mounted for the rest of the open
+  // session even after the optimistic create flips the count to 1.
+  const { collections, isLoading } = useAuthoredCollections();
+  const [continued, setContinued] = useState(false);
+  const needsIntro = !isLoading && collections.length === 0;
+  const introOpen = open && needsIntro && !continued;
+  const formOpen = open && (!needsIntro || continued);
+
   // Local saving flag, flipped synchronously via `flushSync` so the "Saving..."
   // state paints before any heavy work (e.g. cover image canvas re-encoding)
   // begins. RHF's own `formState.isSubmitting` would otherwise be batched.
@@ -35,10 +50,21 @@ export function NewCollectionDialog({
 
   const { form, cover, submit, reset } = useCreateCollection();
 
-  const handleOpenChange = (nextOpen: boolean) => {
+  const setOpen = (nextOpen: boolean) => {
     if (!isControlled) setOpenState(nextOpen);
     onOpenChangeProp?.(nextOpen);
-    if (!nextOpen) reset();
+  };
+
+  const closeFlow = () => {
+    setOpen(false);
+    setContinued(false);
+    reset();
+  };
+
+  // Close handlers only ever fire on dismissal — the intro's Continue advances
+  // the flow through `onContinue`, not by toggling open.
+  const handleDismiss = (nextOpen: boolean) => {
+    if (!nextOpen) closeFlow();
   };
 
   const handleSave = async () => {
@@ -46,7 +72,7 @@ export function NewCollectionDialog({
     try {
       const compositeId = await submit();
       if (!compositeId) return;
-      handleOpenChange(false);
+      closeFlow();
       const { pubky, id } = parseCompositeId(compositeId);
       router.push(getCollectionRoute(pubky, id));
     } finally {
@@ -57,18 +83,22 @@ export function NewCollectionDialog({
   const isSaving = isSavingLocal || form.formState.isSubmitting;
 
   return (
-    <CollectionFormDialog
-      open={open}
-      onOpenChange={handleOpenChange}
-      title={t('title')}
-      submitLabel={t('save')}
-      form={form}
-      cover={cover}
-      onSubmit={handleSave}
-      isSaving={isSaving}
-      coverInputId="new-collection-cover-image"
-    >
-      {children}
-    </CollectionFormDialog>
+    <>
+      {children ? <Slot.Root onClick={() => setOpen(true)}>{children}</Slot.Root> : null}
+
+      <CollectionsIntroDialog open={introOpen} onOpenChange={handleDismiss} onContinue={() => setContinued(true)} />
+
+      <CollectionFormDialog
+        open={formOpen}
+        onOpenChange={handleDismiss}
+        title={t('title')}
+        submitLabel={t('save')}
+        form={form}
+        cover={cover}
+        onSubmit={handleSave}
+        isSaving={isSaving}
+        coverInputId="new-collection-cover-image"
+      />
+    </>
   );
 }

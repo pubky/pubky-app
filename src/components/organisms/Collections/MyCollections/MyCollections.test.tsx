@@ -39,6 +39,14 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
 
+// `NewCollectionDialog` (rendered via the header button and `NewCollectionCardCTA`)
+// reads the viewer's authored collections to gate the onboarding intro. Stub it so
+// it doesn't register its own `useLiveQuery` call, which would otherwise clobber the
+// deleted-filter live query this suite captures.
+vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
+  useAuthoredCollections: () => ({ collections: [], isLoading: false }),
+}));
+
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     getDetailsByIds: vi.fn().mockResolvedValue([]),

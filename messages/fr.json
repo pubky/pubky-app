@@ -1338,6 +1338,13 @@
       "created": "Collection créée",
       "createFailed": "Échec de la création de la collection."
     },
+    "intro": {
+      "title": "Bienvenue dans les Collections",
+      "description": "Gardez les publications qui en valent la peine. Rassemblez le meilleur contenu de votre réseau. Organisez vos idées, filtrez le signal du bruit et partagez ce qui compte.",
+      "imageAlt": "Collections",
+      "cancel": "Annuler",
+      "continue": "Continuer"
+    },
     "edit": {
       "title": "Modifier la collection",
       "save": "Enregistrer les modifications",

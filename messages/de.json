@@ -1340,6 +1340,13 @@
       "created": "Sammlung erstellt",
       "createFailed": "Sammlung konnte nicht erstellt werden."
     },
+    "intro": {
+      "title": "Willkommen bei Sammlungen",
+      "description": "Bewahre Beiträge auf, die es wert sind. Sammle die besten Inhalte aus deinem Netzwerk. Ordne Ideen, filtere das Signal vom Rauschen und teile, was zählt.",
+      "imageAlt": "Sammlungen",
+      "cancel": "Abbrechen",
+      "continue": "Weiter"
+    },
     "edit": {
       "title": "Sammlung bearbeiten",
       "save": "Änderungen speichern",
