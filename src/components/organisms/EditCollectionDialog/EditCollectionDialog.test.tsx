@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 const translations: Record<string, string> = {
   'collections.edit.title': 'Edit Collection',
   'collections.edit.save': 'Save changes',
-  'collections.edit.updated': 'Collection {name} updated',
+  'collections.edit.updated': 'Collection updated',
   'collections.edit.updateFailed': 'Failed to update collection.',
   'collections.new.nameLabel': 'Title',
   'collections.new.namePlaceholder': 'Proof of Work',
@@ -132,7 +132,7 @@ describe('EditCollectionDialog', () => {
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(mocks.toast).toHaveBeenCalledWith({
       title: 'Success',
-      description: 'Collection New name updated',
+      description: 'Collection updated',
     });
   });
 

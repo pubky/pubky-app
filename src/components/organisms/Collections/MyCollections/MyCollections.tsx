@@ -22,6 +22,7 @@ import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFal
 import { CollectionBookmarkCard } from '@/organisms/Collections/CollectionBookmarkCard/CollectionBookmarkCard';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
+import { NewCollectionCardCTA } from '@/organisms/Collections/NewCollectionCardCTA/NewCollectionCardCTA';
 import { NewCollectionDialog } from '@/organisms/NewCollectionDialog/NewCollectionDialog';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
@@ -178,6 +179,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
               const { pubky, id } = parseCompositeId(compositeId);
               return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} />;
             })}
+        <NewCollectionCardCTA />
       </Container>
 
       {showShowMore && (

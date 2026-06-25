@@ -1021,7 +1021,8 @@
     "follow": {
       "followed": "Following {username}",
       "unfollowed": "Unfollowed {username}",
-      "failed": "Could not update follow status"
+      "followFailed": "Failed to follow {username}",
+      "unfollowFailed": "Failed to unfollow {username}"
     },
     "mute": {
       "muted": "{username} muted",
@@ -1334,13 +1335,13 @@
       "cancel": "Cancel",
       "save": "Save changes",
       "saving": "Saving...",
-      "created": "Collection {name} created",
+      "created": "Collection created",
       "createFailed": "Failed to create collection."
     },
     "edit": {
       "title": "Edit Collection",
       "save": "Save changes",
-      "updated": "Collection {name} updated",
+      "updated": "Collection updated",
       "updateFailed": "Failed to update collection."
     },
     "showMore": "Show more",
@@ -1377,6 +1378,7 @@
       "delete": "Delete",
       "follow": "Follow",
       "unfollow": "Unfollow",
+      "content": "Content",
       "addContent": "Add Content",
       "empty": "This collection is empty.",
       "notFound": {
@@ -1389,7 +1391,7 @@
       }
     },
     "addContentDialog": {
-      "title": "Add Content",
+      "title": "Content",
       "description": "Add a post or article from your feed or paste a url directly.",
       "fromFeedTitle": "Add from feed",
       "fromFeedLead": "Find a post",

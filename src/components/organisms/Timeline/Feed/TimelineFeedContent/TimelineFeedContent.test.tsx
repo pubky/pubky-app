@@ -110,14 +110,21 @@ vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
       postIds,
       showEndMessage,
       emptyState,
+      trailingSlot,
     }: {
       postIds: string[];
       showEndMessage?: boolean;
       emptyState?: ReactNode;
+      trailingSlot?: ReactNode;
     }) => (
-      <div data-testid="timeline-grid-posts" data-show-end-message={String(showEndMessage)}>
+      <div
+        data-testid="timeline-grid-posts"
+        data-show-end-message={String(showEndMessage)}
+        data-has-trailing-slot={String(Boolean(trailingSlot))}
+      >
         <span data-testid="grid-post-count">{postIds.length}</span>
         {postIds.length === 0 ? emptyState : null}
+        {trailingSlot}
       </div>
     ),
   };
@@ -132,6 +139,14 @@ const gridLayoutResolution: FeedLayoutResolution = {
   isVisualActive: false,
   isGridActive: true,
   isPhoneViewport: false,
+};
+
+const visualGridLayoutResolution: FeedLayoutResolution = {
+  ...gridLayoutResolution,
+  requestedLayout: LAYOUT.VISUAL,
+  effectiveLayout: LAYOUT.VISUAL,
+  isVisualRequested: true,
+  isVisualActive: true,
 };
 
 const mockLoadMore = vi.fn();
@@ -583,6 +598,21 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
   });
 
+  it('forwards gridTrailingSlot to the grid renderer', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+        gridTrailingSlot={<div data-testid="grid-trailing-slot">Add content</div>}
+      />,
+    );
+
+    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(screen.getByTestId('grid-trailing-slot')).toBeInTheDocument();
+  });
+
   it('renders the bookmarks variant in the grid and suppresses the end-of-feed message', () => {
     render(
       <TimelineFeedWithStream
@@ -596,6 +626,23 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
     expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+  });
+
+  it('keeps header children visible for bookmarks when visual layout still resolves to the grid', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+        variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+        tagsLayout="inline"
+        layoutResolution={visualGridLayoutResolution}
+      >
+        <div data-testid="bookmarks-header">Bookmarks hero</div>
+      </TimelineFeedWithStream>,
+    );
+
+    expect(screen.getByTestId('bookmarks-header')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.queryByTestId('visual-timeline-posts')).not.toBeInTheDocument();
   });
 
   it('falls back to the vertical list when no grid layout resolution is provided', () => {

@@ -1019,9 +1019,10 @@
       "copyFailedDesc": "无法复制到剪贴板"
     },
     "follow": {
-      "failed": "无法更新关注状态",
       "followed": "正在关注 {username}",
-      "unfollowed": "已取消关注 {username}"
+      "unfollowed": "已取消关注 {username}",
+      "followFailed": "无法关注 {username}",
+      "unfollowFailed": "无法取消关注 {username}"
     },
     "mute": {
       "muted": "已静音 {username}",
@@ -1328,13 +1329,13 @@
       "cancel": "取消",
       "save": "保存更改",
       "saving": "保存中...",
-      "created": "收藏集 {name} 已创建",
+      "created": "收藏集已创建",
       "createFailed": "创建收藏集失败。"
     },
     "edit": {
       "title": "编辑收藏集",
       "save": "保存更改",
-      "updated": "收藏集 {name} 已更新",
+      "updated": "收藏集已更新",
       "updateFailed": "更新收藏集失败。"
     },
     "showMore": "显示更多",
@@ -1371,6 +1372,7 @@
       "delete": "删除",
       "follow": "关注",
       "unfollow": "取消关注",
+      "content": "内容",
       "addContent": "添加内容",
       "empty": "此收藏为空。",
       "notFound": {
@@ -1383,7 +1385,7 @@
       }
     },
     "addContentDialog": {
-      "title": "添加内容",
+      "title": "内容",
       "description": "从你的信息流添加帖子或文章，或直接粘贴 URL。",
       "fromFeedTitle": "从信息流添加",
       "fromFeedLead": "找到一个帖子",

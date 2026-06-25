@@ -42,6 +42,7 @@ vi.mock('dexie-react-hooks', () => ({
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     getDetailsByIds: vi.fn().mockResolvedValue([]),
+    commitCreateCollection: vi.fn(),
   },
 }));
 
@@ -100,6 +101,11 @@ vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
 
 vi.mock('@/organisms/Collections/CollectionCard/CollectionCard.skeleton', () => ({
   CollectionCardSkeleton: () => <div data-testid="collection-card-skeleton" />,
+}));
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
+    selector({ currentUserPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy' }),
 }));
 
 vi.mock('@/molecules/AvatarStack/AvatarStack.skeleton', () => ({
@@ -177,6 +183,7 @@ describe('MyCollections', () => {
     expect(skeleton).toHaveAttribute('data-count', '1');
     expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'collections.new.cta' })).not.toBeInTheDocument();
     expect(mockUseStreamPagination).not.toHaveBeenCalled();
   });
 
@@ -193,6 +200,10 @@ describe('MyCollections', () => {
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Alice');
     expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'collections.new.cta' })).toHaveAttribute(
+      'data-cy',
+      'new-collection-card-cta',
+    );
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collection-card-skeleton')).not.toBeInTheDocument();
     expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
@@ -221,6 +232,10 @@ describe('MyCollections', () => {
     expect(cards[1]).toHaveAttribute('data-author-pubky', AUTHOR_A);
     expect(cards[1]).toHaveAttribute('data-post-id', 'p2');
     expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'collections.new.cta' })).toHaveAttribute(
+      'data-cy',
+      'new-collection-card-cta',
+    );
     expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
   });
 
@@ -235,6 +250,10 @@ describe('MyCollections', () => {
 
     expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
     expect(screen.getAllByTestId('collection-card-skeleton')).toHaveLength(COLLECTIONS_MY_SECTION_SKELETON_COUNT);
+    expect(screen.getByRole('button', { name: 'collections.new.cta' })).toHaveAttribute(
+      'data-cy',
+      'new-collection-card-cta',
+    );
   });
 
   it('does NOT render skeletons on warm-cache load (loading=true, postIds non-empty)', () => {

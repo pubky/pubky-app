@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => ({
 
 const translations: Record<string, string> = {
   'collections.new.nameRequired': 'Collection title is required.',
-  'collections.edit.updated': 'Collection {name} updated',
+  'collections.edit.updated': 'Collection updated',
   'collections.edit.updateFailed': 'Failed to update collection.',
   'toast.success': 'Success',
   'toast.error': 'Error',
@@ -131,7 +131,7 @@ describe('useEditCollection', () => {
     expect(mocks.setCollectionCover).not.toHaveBeenCalled();
     expect(mocks.toast).toHaveBeenCalledWith({
       title: 'Success',
-      description: 'Collection New name updated',
+      description: 'Collection updated',
     });
   });
 
