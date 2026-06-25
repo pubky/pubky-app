@@ -1363,11 +1363,13 @@
       "delete": "删除",
       "toast": {
         "followed": "你已关注 {name} 收藏",
-        "unfollowed": "你已取消关注 {name} 收藏"
+        "unfollowed": "你已取消关注 {name} 收藏",
+        "shared": "你已分享 {name} 收藏"
       }
     },
     "single": {
       "share": "分享",
+      "shareTitle": "分享收藏",
       "edit": "编辑",
       "delete": "删除",
       "follow": "关注",

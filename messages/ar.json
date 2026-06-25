@@ -1365,11 +1365,13 @@
       "delete": "حذف",
       "toast": {
         "followed": "لقد تابعت مجموعة {name}",
-        "unfollowed": "لقد ألغيت متابعة مجموعة {name}"
+        "unfollowed": "لقد ألغيت متابعة مجموعة {name}",
+        "shared": "لقد شاركت مجموعة {name}"
       }
     },
     "single": {
       "share": "مشاركة",
+      "shareTitle": "مشاركة المجموعة",
       "edit": "تعديل",
       "delete": "حذف",
       "follow": "متابعة",

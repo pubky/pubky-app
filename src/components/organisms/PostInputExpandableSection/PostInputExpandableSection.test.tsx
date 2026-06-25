@@ -123,6 +123,7 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
     isArticle,
     isEdit,
     postButtonIcon,
+    postButtonLabel,
     characterLimit,
   }: {
     onPostClick?: () => void;
@@ -134,6 +135,7 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
     isArticle?: boolean;
     isEdit?: boolean;
     postButtonIcon?: React.ComponentType;
+    postButtonLabel?: string;
     characterLimit?: { count: number; max: number };
   }) => (
     <div
@@ -144,6 +146,7 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
       data-is-article={isArticle}
       data-is-edit={isEdit}
       data-has-post-button-icon={!!postButtonIcon}
+      data-post-button-label={postButtonLabel}
       data-character-count={characterLimit?.count}
       data-character-max={characterLimit?.max}
     >
@@ -419,6 +422,24 @@ describe('PostInputExpandableSection', () => {
 
     const actionBar = screen.getByTestId('post-input-action-bar');
     expect(actionBar).toHaveAttribute('data-has-post-button-icon', 'false');
+  });
+
+  it('overrides the submit button label with submitLabel when provided', () => {
+    render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.REPOST} submitLabel="Share" />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).toHaveAttribute('data-post-button-label', 'Share');
+  });
+
+  it('overrides the submit button icon with submitIcon when provided', () => {
+    const ShareIcon = () => <svg data-testid="share-icon" />;
+    render(
+      <PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.POST} submitIcon={ShareIcon} />,
+    );
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    // POST has no default icon, so a truthy icon here proves the override applied.
+    expect(actionBar).toHaveAttribute('data-has-post-button-icon', 'true');
   });
 
   it('hides article button when submitMode is EDIT', () => {

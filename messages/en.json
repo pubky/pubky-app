@@ -1369,11 +1369,13 @@
       "delete": "Delete",
       "toast": {
         "followed": "You've followed the {name} collection",
-        "unfollowed": "You've unfollowed the {name} collection"
+        "unfollowed": "You've unfollowed the {name} collection",
+        "shared": "You've shared the {name} collection"
       }
     },
     "single": {
       "share": "Share",
+      "shareTitle": "Share Collection",
       "edit": "Edit",
       "delete": "Delete",
       "follow": "Follow",

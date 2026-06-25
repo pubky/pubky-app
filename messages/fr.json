@@ -1369,11 +1369,13 @@
       "delete": "Supprimer",
       "toast": {
         "followed": "Vous suivez désormais la collection {name}",
-        "unfollowed": "Vous ne suivez plus la collection {name}"
+        "unfollowed": "Vous ne suivez plus la collection {name}",
+        "shared": "Vous avez partagé la collection {name}"
       }
     },
     "single": {
       "share": "Partager",
+      "shareTitle": "Partager la collection",
       "edit": "Modifier",
       "delete": "Supprimer",
       "follow": "Suivre",

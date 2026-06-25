@@ -1373,11 +1373,13 @@
       "delete": "Eliminar",
       "toast": {
         "followed": "Ahora sigues la colección {name}",
-        "unfollowed": "Has dejado de seguir la colección {name}"
+        "unfollowed": "Has dejado de seguir la colección {name}",
+        "shared": "Has compartido la colección {name}"
       }
     },
     "single": {
       "share": "Compartir",
+      "shareTitle": "Compartir colección",
       "edit": "Editar",
       "delete": "Eliminar",
       "follow": "Seguir",
