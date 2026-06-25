@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
-import { useElementKeyboardAvoidance } from '@/hooks/useElementKeyboardAvoidance/useElementKeyboardAvoidance';
+import { useDialogKeyboardOrchestrator } from '@/hooks/useDialogKeyboardOrchestrator/useDialogKeyboardOrchestrator';
 import { cn } from '@/libs/utils/utils';
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -77,10 +77,10 @@ function DialogContent({
 }) {
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
-  const { isKeyboardVisible, keyboardAvoidanceStyle } = useElementKeyboardAvoidance(contentRef, {
+  const { contentStyle: keyboardContentStyle, spacerHeight } = useDialogKeyboardOrchestrator(contentRef, {
     enabled: avoidKeyboard,
   });
-  const contentStyle = avoidKeyboard ? { ...style, ...keyboardAvoidanceStyle } : style;
+  const contentStyle = avoidKeyboard ? { ...style, ...keyboardContentStyle } : style;
 
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -95,7 +95,6 @@ function DialogContent({
           className={cn(
             'relative z-50 grid',
             'duration-200',
-            avoidKeyboard && 'transition-transform ease-out',
             'm-0 sm:m-4',
             'data-[state=closed]:animate-out data-[state=open]:animate-in',
             // Mobile: clean slide up/down from the bottom (the overlay handles the dimming).
@@ -104,7 +103,6 @@ function DialogContent({
             'sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0',
             'sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0',
             'sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95',
-            avoidKeyboard && isKeyboardVisible && 'will-change-transform',
             overrideDefaults
               ? ''
               : 'max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8',
@@ -115,6 +113,14 @@ function DialogContent({
         >
           {hiddenTitle && <DialogPrimitive.Title className="sr-only">{hiddenTitle}</DialogPrimitive.Title>}
           {children}
+          {avoidKeyboard && spacerHeight > 0 && (
+            <div
+              aria-hidden="true"
+              data-slot="dialog-keyboard-spacer"
+              className="pointer-events-none"
+              style={{ height: spacerHeight }}
+            />
+          )}
           <DialogClose
             ref={closeRef}
             className={cn(

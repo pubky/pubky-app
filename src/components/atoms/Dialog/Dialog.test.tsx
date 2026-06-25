@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { UseElementKeyboardAvoidanceResult } from '@/hooks/useElementKeyboardAvoidance/useElementKeyboardAvoidance.types';
+import type { UseDialogKeyboardOrchestratorResult } from '@/hooks/useDialogKeyboardOrchestrator/useDialogKeyboardOrchestrator.types';
 import {
   Dialog,
   DialogContent,
@@ -12,23 +12,23 @@ import {
   DialogTrigger,
 } from './Dialog';
 
-const mockUseElementKeyboardAvoidance = vi.hoisted(() =>
-  vi.fn<() => UseElementKeyboardAvoidanceResult>(() => ({
+const mockUseDialogKeyboardOrchestrator = vi.hoisted(() =>
+  vi.fn<() => UseDialogKeyboardOrchestratorResult>(() => ({
     isKeyboardVisible: false,
-    keyboardAvoidanceOffset: 0,
-    keyboardAvoidanceStyle: undefined,
+    spacerHeight: 0,
+    contentStyle: undefined,
   })),
 );
 
-vi.mock('@/hooks/useElementKeyboardAvoidance/useElementKeyboardAvoidance', () => ({
-  useElementKeyboardAvoidance: mockUseElementKeyboardAvoidance,
+vi.mock('@/hooks/useDialogKeyboardOrchestrator/useDialogKeyboardOrchestrator', () => ({
+  useDialogKeyboardOrchestrator: mockUseDialogKeyboardOrchestrator,
 }));
 
 beforeEach(() => {
-  mockUseElementKeyboardAvoidance.mockReturnValue({
+  mockUseDialogKeyboardOrchestrator.mockReturnValue({
     isKeyboardVisible: false,
-    keyboardAvoidanceOffset: 0,
-    keyboardAvoidanceStyle: undefined,
+    spacerHeight: 0,
+    contentStyle: undefined,
   });
 });
 
@@ -73,11 +73,11 @@ describe('Dialog', () => {
     expect(closeButton).toHaveClass('hidden');
   });
 
-  it('does not apply keyboard avoidance transform by default', () => {
-    mockUseElementKeyboardAvoidance.mockReturnValue({
+  it('does not apply keyboard orchestrator styles by default', () => {
+    mockUseDialogKeyboardOrchestrator.mockReturnValue({
       isKeyboardVisible: true,
-      keyboardAvoidanceOffset: 120,
-      keyboardAvoidanceStyle: { transform: 'translateY(-120px)' },
+      spacerHeight: 120,
+      contentStyle: { scrollPaddingBottom: '144px' },
     });
 
     render(
@@ -90,14 +90,15 @@ describe('Dialog', () => {
 
     const dialogContent = screen.getByTestId('dialog-content');
     expect(dialogContent).not.toHaveClass('will-change-transform');
-    expect(dialogContent).not.toHaveStyle({ transform: 'translateY(-120px)' });
+    expect(dialogContent).not.toHaveStyle({ scrollPaddingBottom: '144px' });
+    expect(document.querySelector('[data-slot="dialog-keyboard-spacer"]')).not.toBeInTheDocument();
   });
 
-  it('applies keyboard avoidance transform when keyboard is visible', () => {
-    mockUseElementKeyboardAvoidance.mockReturnValue({
+  it('applies keyboard spacer and scroll padding when keyboard is visible', () => {
+    mockUseDialogKeyboardOrchestrator.mockReturnValue({
       isKeyboardVisible: true,
-      keyboardAvoidanceOffset: 120,
-      keyboardAvoidanceStyle: { transform: 'translateY(-120px)' },
+      spacerHeight: 120,
+      contentStyle: { scrollPaddingBottom: '144px' },
     });
 
     render(
@@ -109,8 +110,14 @@ describe('Dialog', () => {
     );
 
     const dialogContent = screen.getByTestId('dialog-content');
-    expect(dialogContent).toHaveClass('will-change-transform');
-    expect(dialogContent).toHaveStyle({ transform: 'translateY(-120px)' });
+    expect(dialogContent).not.toHaveClass('will-change-transform');
+    expect(dialogContent).not.toHaveStyle({ transform: 'translateY(-120px)' });
+    expect(dialogContent).toHaveStyle({ scrollPaddingBottom: '144px' });
+
+    const spacer = document.querySelector('[data-slot="dialog-keyboard-spacer"]');
+    expect(spacer).toBeInTheDocument();
+    expect(spacer).toHaveAttribute('aria-hidden', 'true');
+    expect(spacer).toHaveStyle({ height: '120px' });
   });
 });
 
