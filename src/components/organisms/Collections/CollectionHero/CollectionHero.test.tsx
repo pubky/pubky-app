@@ -353,7 +353,7 @@ describe('CollectionHero', () => {
   });
 
   it('toggles the editable tags panel from the tag CTA', () => {
-    const { container } = render(<CollectionHero authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    const { container } = renderHero();
 
     fireEvent.click(screen.getByLabelText('Tag post (3)'));
 
