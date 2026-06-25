@@ -497,7 +497,12 @@ describe('CollectionHero', () => {
       fireEvent.click(screen.getByLabelText('collections.single.share'));
 
       expect(openRepostDialog).toHaveBeenCalledTimes(1);
-      expect(mockUsePostReplyRepostDialogs).toHaveBeenCalledWith(COMPOSITE_ID);
+      expect(mockUsePostReplyRepostDialogs).toHaveBeenCalledWith(COMPOSITE_ID, {
+        title: 'collections.single.shareTitle',
+        submitLabel: 'collections.single.share',
+        submitIcon: expect.anything(),
+        successToastTitle: 'collections.card.toast.shared',
+      });
       expect(screen.getByTestId('repost-dialogs')).toBeInTheDocument();
     });
 

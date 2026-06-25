@@ -111,8 +111,15 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
     void toggle();
   };
 
-  // Sharing a collection = reposting the underlying post; reuse the standard dialog.
-  const { openRepostDialog, dialogs } = usePostReplyRepostDialogs(compositeId);
+  // Sharing a collection = reposting the underlying post; reuse the standard
+  // dialog but override its copy/icon so it reads as a collection share (title,
+  // submit button matching the hero's Share button, success toast).
+  const { openRepostDialog, dialogs } = usePostReplyRepostDialogs(compositeId, {
+    title: t('shareTitle'),
+    submitLabel: t('share'),
+    submitIcon: StickyNote,
+    successToastTitle: tCardToast('shared', { name: toastName }),
+  });
   const handleShare = openRepostDialog;
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

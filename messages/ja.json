@@ -1369,11 +1369,13 @@
       "delete": "削除",
       "toast": {
         "followed": "「{name}」コレクションをフォローしました",
-        "unfollowed": "「{name}」コレクションのフォローを解除しました"
+        "unfollowed": "「{name}」コレクションのフォローを解除しました",
+        "shared": "「{name}」コレクションを共有しました"
       }
     },
     "single": {
       "share": "共有",
+      "shareTitle": "コレクションを共有",
       "edit": "編集",
       "delete": "削除",
       "follow": "フォロー",
