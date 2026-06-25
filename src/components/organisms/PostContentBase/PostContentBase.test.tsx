@@ -115,6 +115,10 @@ vi.mock('../PostContentBlurred/PostContentBlurred', () => ({
   )),
 }));
 
+vi.mock('@/molecules/PostMissing/PostMissing', () => ({
+  PostMissing: () => <div data-testid="post-missing" />,
+}));
+
 const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
 const mockPostAttachments = vi.mocked(PostAttachments);
@@ -351,6 +355,24 @@ describe('PostContentBase', () => {
 
     expect(screen.getByTestId('post-content-blurred')).toBeInTheDocument();
     expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
+  });
+
+  it('renders PostMissing when the post is not found (settled null)', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+
+    render(<PostContentBase postId="post-missing" />);
+
+    expect(screen.getByTestId('post-missing')).toBeInTheDocument();
+    expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument();
+  });
+
+  it('renders the skeleton (not PostMissing) while still loading', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: true });
+
+    render(<PostContentBase postId="post-loading" />);
+
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('post-missing')).not.toBeInTheDocument();
   });
 });
 

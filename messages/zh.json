@@ -511,6 +511,7 @@
       "unmuteUser": "取消静音 {username}"
     },
     "deleted": "此帖子已被作者删除。",
+    "missing": "未找到帖子。",
     "dropFiles": "将文件拖放到此处",
     "articleTitle": "文章标题",
     "addTag": "添加标签",
@@ -1316,6 +1317,7 @@
   },
   "collections": {
     "deleted": "此收藏集已被作者删除。",
+    "missing": "未找到收藏集。",
     "new": {
       "cta": "新建收藏集",
       "ctaShort": "新建",

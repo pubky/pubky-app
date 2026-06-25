@@ -511,6 +511,7 @@
       "unmuteUser": "Unmute {username}"
     },
     "deleted": "This post has been deleted by its author.",
+    "missing": "Post not found.",
     "dropFiles": "Drop files here",
     "articleTitle": "Article Title",
     "addTag": "add tag",
@@ -1322,6 +1323,7 @@
   },
   "collections": {
     "deleted": "This collection has been deleted by its author.",
+    "missing": "Collection not found.",
     "new": {
       "cta": "New Collection",
       "ctaShort": "New",

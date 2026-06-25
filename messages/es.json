@@ -513,6 +513,7 @@
       "unmuteUser": "Desilenciar a {username}"
     },
     "deleted": "Esta publicación ha sido eliminada por su autor.",
+    "missing": "Publicación no encontrada.",
     "dropFiles": "Suelta los archivos aqui",
     "articleTitle": "Titulo del articulo",
     "addTag": "agregar etiqueta",
@@ -1326,6 +1327,7 @@
   },
   "collections": {
     "deleted": "Esta colección ha sido eliminada por su autor.",
+    "missing": "Colección no encontrada.",
     "new": {
       "cta": "Nueva colección",
       "ctaShort": "Nueva",

@@ -511,6 +511,7 @@
       "unmuteUser": "Afficher {username}"
     },
     "deleted": "Cette publication a ete supprimée par son auteur.",
+    "missing": "Publication introuvable.",
     "dropFiles": "Deposez les fichiers ici",
     "articleTitle": "Titre de l'article",
     "addTag": "ajouter un tag",
@@ -1322,6 +1323,7 @@
   },
   "collections": {
     "deleted": "Cette collection a été supprimée par son auteur.",
+    "missing": "Collection introuvable.",
     "new": {
       "cta": "Nouvelle collection",
       "ctaShort": "Nouveau",
