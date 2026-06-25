@@ -139,6 +139,7 @@ describe('UserController', () => {
         tagged: 3,
         tags: 2,
         unique_tags: 1,
+        collections: 0,
         bookmarks: 7,
       };
 
@@ -183,6 +184,7 @@ describe('UserController', () => {
         tagged: 3,
         tags: 2,
         unique_tags: 1,
+        collections: 0,
         bookmarks: 7,
       };
 
@@ -305,6 +307,7 @@ describe('UserController', () => {
         tagged: 3,
         tags: 2,
         unique_tags: 1,
+        collections: 0,
         bookmarks: 7,
       };
 
@@ -350,6 +353,7 @@ describe('UserController', () => {
             tagged: 0,
             tags: 0,
             unique_tags: 0,
+            collections: 0,
             bookmarks: 0,
           },
         ],
@@ -364,6 +368,7 @@ describe('UserController', () => {
             tagged: 0,
             tags: 0,
             unique_tags: 0,
+            collections: 0,
             bookmarks: 0,
           },
         ],

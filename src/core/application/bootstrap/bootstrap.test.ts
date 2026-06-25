@@ -72,6 +72,7 @@ const createMockBootstrapData = (): NexusBootstrapResponse => ({
         unique_tags: 0,
         replies: 0,
         friends: 0,
+        collections: 0,
         bookmarks: 0,
       },
       relationship: { following: false, followed_by: false },

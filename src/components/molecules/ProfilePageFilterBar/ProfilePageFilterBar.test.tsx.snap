@@ -417,6 +417,12 @@ exports[`ProfilePageFilterBar - Snapshots > matches snapshot with loading state 
           Collections
         </span>
       </div>
+      <div
+        aria-label="Loading"
+        class="animate-spin rounded-full border-b-2 border-brand size-4"
+        data-testid="spinner"
+        role="status"
+      />
     </button>
   </div>
 </div>
@@ -803,6 +809,13 @@ exports[`ProfilePageFilterBar - Snapshots > matches snapshot with stats 1`] = `
           Collections
         </span>
       </div>
+      <span
+        class="text-base font-medium text-muted-foreground"
+        data-cy="profile-filter-item-collections-count"
+        data-testid="typography"
+      >
+        3
+      </span>
     </button>
   </div>
 </div>
@@ -1189,6 +1202,13 @@ exports[`ProfilePageFilterBar - Snapshots > matches snapshot with zero stats 1`]
           Collections
         </span>
       </div>
+      <span
+        class="text-base font-medium text-muted-foreground"
+        data-cy="profile-filter-item-collections-count"
+        data-testid="typography"
+      >
+        0
+      </span>
     </button>
   </div>
 </div>

@@ -169,6 +169,7 @@ const mockStats = {
   following: 50,
   friends: 25,
   tagged: 7,
+  collections: 0,
   uniqueTags: 12,
 };
 

@@ -136,6 +136,7 @@ export type NexusUserCounts = {
   unique_tags: number;
   posts: number;
   replies: number;
+  collections: number;
   following: number;
   followers: number;
   friends: number;

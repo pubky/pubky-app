@@ -123,13 +123,10 @@ describe('CollectionBookmarkCard', () => {
     expect(screen.getByText(BOOKMARKS_COPY.description)).toBeInTheDocument();
   });
 
-  it('hides the bookmark count label (temporarily, pending an accurate BE count)', () => {
+  it('renders the bookmark count label from the summary', () => {
     setup({ bookmarkCount: 42 });
     render(<CollectionBookmarkCard />);
-    // TODO: The badge is hidden because the BE total counts collections + deleted
-    // posts, overstating what the grid shows. Re-assert the formatted count once the
-    // backend exposes a posts-only count and the badge is re-wired.
-    expect(screen.queryByText('42')).not.toBeInTheDocument();
+    expect(screen.getByText('42')).toBeInTheDocument();
   });
 
   it('renders no count label when the bookmark count is undefined', () => {

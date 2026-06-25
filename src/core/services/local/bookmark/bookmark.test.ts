@@ -59,6 +59,7 @@ const setupUserCounts = async (userId: Pubky, bookmarks: number = 0) => {
     unique_tags: 0,
     posts: 0,
     replies: 0,
+    collections: 0,
     following: 0,
     followers: 0,
     friends: 0,
@@ -66,7 +67,7 @@ const setupUserCounts = async (userId: Pubky, bookmarks: number = 0) => {
 };
 
 const setupPostDetails = async (
-  kind: 'short' | 'long' | 'image' | 'video' | 'file' | 'link',
+  kind: 'short' | 'long' | 'image' | 'video' | 'file' | 'link' | 'collection',
   attachments?: string[] | null,
   content?: string,
 ) => {
@@ -130,6 +131,18 @@ describe('LocalBookmarkService', () => {
 
       const userCounts = await getUserCounts(testData.userPubky);
       expect(userCounts!.bookmarks).toBe(6);
+    });
+
+    it('should NOT increment bookmarks count when bookmarking a collection', async () => {
+      // The `bookmarks` count is posts-only — bookmarked collections are excluded.
+      await setupUserCounts(testData.userPubky, 5);
+      await setupPostDetails('collection');
+      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
+
+      // The bookmark itself is still recorded, but the count must not move.
+      expect(await getSavedBookmark()).toBeTruthy();
+      const userCounts = await getUserCounts(testData.userPubky);
+      expect(userCounts!.bookmarks).toBe(5);
     });
 
     it('should add post to TIMELINE_BOOKMARKS_ALL stream', async () => {
@@ -208,6 +221,19 @@ describe('LocalBookmarkService', () => {
       expect(shortStream).toBeUndefined(); // Should not be in short stream
     });
 
+    it('should add a bookmarked collection to the COLLECTION stream and NOT the ALL stream', async () => {
+      // Collections are "followed", not feed posts: they belong in the collection
+      // bookmark stream, not the posts feed (ALL) stream that filters them out anyway.
+      await setupPostDetails('collection');
+      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
+
+      const collectionStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION);
+      const allStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
+
+      expect(collectionStream!.stream).toContain(testData.compositePostId);
+      expect(allStream).toBeUndefined(); // must not pollute the posts feed stream
+    });
+
     it('should not update counts when post is already bookmarked', async () => {
       await setupExistingBookmark();
       await setupUserCounts(testData.userPubky, 5);
@@ -253,6 +279,18 @@ describe('LocalBookmarkService', () => {
       expect(userCounts!.bookmarks).toBe(9);
     });
 
+    it('should NOT decrement bookmarks count when un-bookmarking a collection', async () => {
+      // Collections never moved the posts-only `bookmarks` count, so removing
+      // a collection bookmark must not move it either.
+      await setupUserCounts(testData.userPubky, 10);
+      await setupPostDetails('collection'); // overwrite the 'short' details from beforeEach
+      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
+
+      expect(await getSavedBookmark()).toBeUndefined();
+      const userCounts = await getUserCounts(testData.userPubky);
+      expect(userCounts!.bookmarks).toBe(10);
+    });
+
     it('should remove post from all and kind-specific bookmark streams', async () => {
       await LocalStreamPostsService.prependToStream({
         streamId: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT,
@@ -266,6 +304,19 @@ describe('LocalBookmarkService', () => {
 
       expect(allStream!.stream).not.toContain(testData.compositePostId);
       expect(shortStream!.stream).not.toContain(testData.compositePostId);
+    });
+
+    it('should remove an un-bookmarked collection from the COLLECTION stream', async () => {
+      await setupPostDetails('collection'); // overwrite the 'short' details from beforeEach
+      await LocalStreamPostsService.prependToStream({
+        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION,
+        compositePostId: testData.compositePostId,
+      });
+
+      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
+
+      const collectionStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION);
+      expect(collectionStream?.stream ?? []).not.toContain(testData.compositePostId);
     });
 
     it('should ignore if post is not bookmarked', async () => {

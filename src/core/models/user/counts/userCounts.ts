@@ -15,6 +15,7 @@ export class UserCountsModel extends TupleModelBase<Pubky, UserCountsModelSchema
   unique_tags: number;
   posts: number;
   replies: number;
+  collections: number;
   following: number;
   followers: number;
   friends: number;
@@ -27,6 +28,7 @@ export class UserCountsModel extends TupleModelBase<Pubky, UserCountsModelSchema
     this.unique_tags = userCounts.unique_tags;
     this.posts = userCounts.posts;
     this.replies = userCounts.replies;
+    this.collections = userCounts.collections;
     this.following = userCounts.following;
     this.followers = userCounts.followers;
     this.friends = userCounts.friends;
@@ -58,6 +60,11 @@ export class UserCountsModel extends TupleModelBase<Pubky, UserCountsModelSchema
     }
     if (countChanges.replies !== undefined && countChanges.replies !== 0) {
       updates.replies = Math.max(0, userCounts.replies + countChanges.replies);
+    }
+    if (countChanges.collections !== undefined && countChanges.collections !== 0) {
+      // `?? 0` guards rows cached before `collections` existed (undefined + n = NaN),
+      // until the next Nexus fetch backfills the field.
+      updates.collections = Math.max(0, (userCounts.collections ?? 0) + countChanges.collections);
     }
     if (countChanges.following !== undefined) {
       updates.following = Math.max(0, userCounts.following + countChanges.following);

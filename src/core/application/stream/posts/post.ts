@@ -17,7 +17,7 @@ import {
 import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import {
@@ -29,13 +29,11 @@ import {
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
-import type { TUserCountsCountChanges } from '@/models/user/counts/userCounts.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalPostService } from '@/services/local/post/post';
 import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
-import { LocalUserService } from '@/services/local/user/user';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { StreamKind, StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { breakDownStreamId, createPostStreamParams } from '@/services/nexus/stream/posts/postStream.utils';
@@ -633,19 +631,13 @@ export class PostStreamApplication {
       });
     }
 
-    // Update the related user counts of the authors of the posts
-    // Only update counts for posts that are truly new (not in unread stream AND not in database)
-    if (invokeEndpoint === StreamSource.REPLIES || invokeEndpoint === StreamSource.ALL) {
-      const countUpdates = trulyNewPostIds.map(async (postId) => {
-        const { pubky: authorId } = parseCompositeId(postId);
-        const countChanges: TUserCountsCountChanges = { posts: 1 };
-        if (invokeEndpoint === StreamSource.REPLIES) {
-          countChanges.replies = 1;
-        }
-        return LocalUserService.updateCounts({ userId: authorId, countChanges });
-      });
-      await Promise.all(countUpdates);
-    }
+    // NOTE: We intentionally do NOT optimistically bump the post authors' user
+    // `posts`/`replies` counts from streamed-in posts. That bump was unlinked from
+    // Nexus — it had no reconciliation against when each author's count was last
+    // fetched — so it double-counted and could show counts higher than reality,
+    // which the TTL refetch then snapped back down. The authoritative counts come
+    // from `fetchCounts` (TTL), and a user's own actions are still reflected
+    // instantly via the mutation paths (create/delete/follow/bookmark).
   }
 
   // Delegate to service for cache miss detection

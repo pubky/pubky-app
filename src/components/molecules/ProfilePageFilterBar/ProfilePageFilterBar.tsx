@@ -22,7 +22,7 @@ export interface ProfilePageFilterBarItem {
   labelKey: string;
   count: number | undefined;
   pageType: FilterBarPageType;
-  /** When false, the tab renders without a count badge (e.g. Collections). */
+  /** When false, the tab renders without a count badge (set for tabs that have no stat). */
   showCount?: boolean;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
@@ -95,6 +95,7 @@ const FILTER_ITEMS_CONFIG: Array<{
     icon: Library,
     labelKey: 'collections',
     pageType: PROFILE_PAGE_TYPES.COLLECTIONS,
+    statKey: 'collections',
   },
 ];
 export const getDefaultItems = (stats?: ProfileStats, isOwnProfile: boolean = true): ProfilePageFilterBarItem[] => {

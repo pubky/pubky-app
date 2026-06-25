@@ -64,13 +64,13 @@ const getPostTtl = async (postId: string) => {
   return await PostTtlModel.findById(postId);
 };
 
-const setupExistingPost = async (postId: string, content: string, parentUri?: string) => {
+const setupExistingPost = async (postId: string, content: string, parentUri?: string, kind: string = 'short') => {
   const { pubky, id: postIdPart } = parseCompositeId(postId);
   const postDetails: PostDetailsModelSchema = {
     id: postId,
     content,
     indexed_at: Date.now(),
-    kind: 'short',
+    kind,
     uri: `pubky://${pubky}/pub/pubky.app/posts/${postIdPart}`,
     attachments: null,
   };
@@ -107,6 +107,7 @@ const setupUserCounts = async (userId: Pubky) => {
     following: 0,
     followers: 0,
     friends: 0,
+    collections: 0,
     bookmarks: 0,
   };
   await UserCountsModel.table.add(userCounts);
@@ -171,7 +172,7 @@ describe('LocalPostService', () => {
       // Verify user count increment for root post (single update call)
       expect(userCountsSpy).toHaveBeenCalledWith({
         userId: testData.authorPubky,
-        countChanges: { posts: 1, replies: 0 },
+        countChanges: { posts: 1, replies: 0, collections: 0 },
       });
 
       userCountsSpy.mockRestore();
@@ -200,7 +201,29 @@ describe('LocalPostService', () => {
       // Verify user count increments for reply (single update call)
       expect(userCountsSpy).toHaveBeenCalledWith({
         userId: testData.authorPubky,
-        countChanges: { posts: 1, replies: 1 },
+        countChanges: { posts: 1, replies: 1, collections: 0 },
+      });
+
+      userCountsSpy.mockRestore();
+    });
+
+    it('should increment posts and collections counts when creating a collection', async () => {
+      await setupUserCounts(testData.authorPubky);
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+
+      const baseParams = createSaveParams('My collection');
+      const saveParams: TLocalSavePostParams = {
+        ...baseParams,
+        post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Collection, undefined, undefined, undefined),
+      };
+
+      await LocalPostService.create(saveParams);
+
+      // A collection bumps both the total `posts` count and the dedicated
+      // `collections` count (the sidebar subtracts collections back out).
+      expect(userCountsSpy).toHaveBeenCalledWith({
+        userId: testData.authorPubky,
+        countChanges: { posts: 1, replies: 0, collections: 1 },
       });
 
       userCountsSpy.mockRestore();
@@ -473,7 +496,26 @@ describe('LocalPostService', () => {
       // Verify user count decrement for root post (single update call)
       expect(userCountsSpy).toHaveBeenCalledWith({
         userId: testData.authorPubky,
-        countChanges: { posts: -1, replies: 0 },
+        countChanges: { posts: -1, replies: 0, collections: 0 },
+      });
+
+      userCountsSpy.mockRestore();
+    });
+
+    it('should decrement posts and collections counts when deleting a collection', async () => {
+      const postId = testData.fullPostId1;
+
+      await setupExistingPost(postId, 'My collection', undefined, 'collection');
+      await setupUserCounts(testData.authorPubky);
+
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+
+      await LocalPostService.delete({ compositePostId: postId });
+
+      // Mirror the create path: a collection decrements both counts.
+      expect(userCountsSpy).toHaveBeenCalledWith({
+        userId: testData.authorPubky,
+        countChanges: { posts: -1, replies: 0, collections: -1 },
       });
 
       userCountsSpy.mockRestore();
@@ -523,7 +565,7 @@ describe('LocalPostService', () => {
       // Verify user count decrements for reply (single update call)
       expect(userCountsSpy).toHaveBeenCalledWith({
         userId: testData.authorPubky,
-        countChanges: { posts: -1, replies: -1 },
+        countChanges: { posts: -1, replies: -1, collections: 0 },
       });
 
       userCountsSpy.mockRestore();

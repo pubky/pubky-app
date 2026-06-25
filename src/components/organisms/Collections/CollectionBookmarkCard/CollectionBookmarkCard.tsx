@@ -9,11 +9,7 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmarksCollectionSummary } from '@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary';
 import { cn } from '@/libs/utils/utils';
-// TODO: Re-enable the bookmark count badge once the backend exposes an accurate
-// posts-only bookmark count. The current `userCounts.bookmarks` total also counts
-// bookmarked collections and deleted posts, so it overstates what the grid shows
-// (e.g. 60 total vs 5 visible posts). The BE team will add a dedicated count to rewire here.
-// import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
+import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 
 interface CollectionBookmarkCardProps {
@@ -37,9 +33,7 @@ interface CollectionBookmarkCardProps {
  */
 export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProps) {
   const t = useTranslations('collections');
-  // TODO: `bookmarkCount` is omitted while the count badge is hidden (see import note
-  // above). Pull it back off the summary when re-wiring the badge.
-  const { avatarName, avatarSeed, avatarUrl } = useBookmarksCollectionSummary();
+  const { avatarName, avatarSeed, avatarUrl, bookmarkCount } = useBookmarksCollectionSummary();
 
   const title = t('bookmarks.title');
   const description = t('bookmarks.description');
@@ -67,9 +61,7 @@ export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProp
             </Container>
 
             <Container overrideDefaults className="flex shrink-0 items-center gap-2 sm:gap-3">
-              {/* TODO: Bookmark count badge hidden — see import note above. Re-enable once
-                  the backend provides an accurate posts-only bookmark count. */}
-              {/* {bookmarkCount !== undefined && <CollectionCountBadge count={bookmarkCount} />} */}
+              {bookmarkCount !== undefined && <CollectionCountBadge count={bookmarkCount} />}
               <AvatarWithFallback
                 avatarUrl={avatarUrl}
                 name={avatarName}
