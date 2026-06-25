@@ -79,6 +79,10 @@
         "tagging": {
           "title": "Alles taggen",
           "description": "Tagge Beiträge, Medien und Profile, um Kontext hinzuzufügen, bessere Inhalte zu finden, Menschen zu entdecken und schnell zu reagieren."
+        },
+        "collections": {
+          "title": "Sammle, was zählt",
+          "description": "Speichere Beiträge, die bleiben sollen, kuratiere deine eigenen Ideen und teile deine Sammlungen mit anderen."
         }
       }
     },
