@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, RefObject } from 'react';
-import { useKeyboardViewport } from '../useKeyboardViewport/useKeyboardViewport';
+import { useKeyboardViewport } from '@/hooks/useKeyboardViewport/useKeyboardViewport';
 import type {
   UseDialogKeyboardOrchestratorOptions,
   UseDialogKeyboardOrchestratorResult,
@@ -165,13 +165,12 @@ export function useDialogKeyboardOrchestrator<T extends HTMLElement>(
     viewportOffsetTop,
   ]);
 
-  const contentStyle = useMemo<CSSProperties | undefined>(() => {
-    if (!enabled || !isKeyboardVisible || spacerHeight <= 0) return undefined;
-
-    return {
-      scrollPaddingBottom: `${spacerHeight + bottomMargin}px`,
-    };
-  }, [bottomMargin, enabled, isKeyboardVisible, spacerHeight]);
+  const contentStyle: CSSProperties | undefined =
+    enabled && isKeyboardVisible && spacerHeight > 0
+      ? {
+          scrollPaddingBottom: `${spacerHeight + bottomMargin}px`,
+        }
+      : undefined;
 
   return {
     isKeyboardVisible,

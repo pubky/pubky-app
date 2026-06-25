@@ -1,6 +1,6 @@
 'use client';
 
-import { useKeyboardViewport } from '../useKeyboardViewport/useKeyboardViewport';
+import { useKeyboardViewport } from '@/hooks/useKeyboardViewport/useKeyboardViewport';
 import type { UseKeyboardVisibleOptions } from './useKeyboardVisible.types';
 
 /**
