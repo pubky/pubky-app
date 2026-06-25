@@ -68,9 +68,8 @@ exports[`CollectionsIntroDialog - Snapshots > matches snapshot when open 1`] = `
         data-nimg="1"
         decoding="async"
         height="192"
-        loading="lazy"
-        src="/_next/image?url=%2Fimages%2Fcollections-onboarding.webp&w=384&q=75"
-        srcset="/_next/image?url=%2Fimages%2Fcollections-onboarding.webp&w=256&q=75 1x, /_next/image?url=%2Fimages%2Fcollections-onboarding.webp&w=384&q=75 2x"
+        loading="eager"
+        src="/images/collections-onboarding.webp"
         style="color: transparent;"
         width="192"
       />

@@ -42,11 +42,17 @@ export function CollectionsIntroDialog({ open, onOpenChange, onContinue }: Colle
 
         <DialogDescription className="text-base text-secondary-foreground">{t('description')}</DialogDescription>
 
+        {/* `loading="eager"` + `unoptimized` so the art shows the instant the modal
+            opens: `unoptimized` serves the raw 22KB webp directly instead of the
+            on-demand `/_next/image` optimizer (slow on first hit), and `eager` drops
+            the default lazy-loading so the fetch starts as soon as the modal mounts. */}
         <Image
           src={COLLECTIONS_INTRO_IMAGE}
           alt={t('imageAlt')}
           width={192}
           height={192}
+          loading="eager"
+          unoptimized
           className="mx-auto h-48 w-48"
         />
 
