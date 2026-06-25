@@ -66,6 +66,14 @@ function livePost() {
   };
 }
 
+function collectionPost() {
+  return {
+    ...livePost(),
+    content: JSON.stringify({ name: 'Nested', description: '', items: [] }),
+    kind: 'collection',
+  };
+}
+
 function collectionDetails(items: string[] = []) {
   return {
     id: COLLECTION_ID,
@@ -165,6 +173,42 @@ describe('AddContentDialog', () => {
 
     expect(errorMessage).toBeInTheDocument();
     expect(inputContainer).toHaveClass('has-[input[aria-invalid=true]]:border-red-500');
+  });
+
+  it('keeps the dialog open when a collection URL is pasted into bookmarks', async () => {
+    mocks.getOrFetchPost.mockResolvedValue(collectionPost());
+    render(<AddContentDialog />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+      clipboardData: {
+        getData: () => POST_URL,
+      },
+    });
+
+    expect(await screen.findByText('collections.addContentDialog.errors.collectionNotAllowed')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(mocks.bookmarkExists).not.toHaveBeenCalled();
+    expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
+    expect(mocks.prependOptimisticPosts).not.toHaveBeenCalled();
+  });
+
+  it('keeps the dialog open when a collection URL is pasted into a collection', async () => {
+    mocks.getOrFetchPost.mockResolvedValue(collectionPost());
+    render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+      clipboardData: {
+        getData: () => POST_URL,
+      },
+    });
+
+    expect(await screen.findByText('collections.addContentDialog.errors.collectionNotAllowed')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(mocks.getCollectionDetails).not.toHaveBeenCalled();
+    expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
+    expect(mocks.prependOptimisticPosts).not.toHaveBeenCalled();
   });
 
   it('adds pasted bookmark content, prepends it, and closes the dialog', async () => {

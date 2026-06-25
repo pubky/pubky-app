@@ -91,6 +91,11 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
         return false;
       }
 
+      if (post.kind === 'collection') {
+        setFieldError(t('errors.collectionNotAllowed'));
+        return false;
+      }
+
       const alreadyAdded = await isAlreadyAdded({ target, postId: parsed.compositeId, postUri: parsed.postUri });
       if (alreadyAdded) {
         setFieldError(t('errors.alreadyAdded'));
