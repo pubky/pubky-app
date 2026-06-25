@@ -229,7 +229,7 @@ describe('FeedNavigation', () => {
 
     const links = screen.getAllByTestId('link');
     const homeLink = links.find((link) => link.getAttribute('href') === '/home');
-    expect(homeLink).toHaveClass('border-muted-foreground');
+    expect(homeLink).toHaveClass('border-border');
     expect(homeLink).toHaveClass('text-muted-foreground');
   });
 
@@ -296,7 +296,7 @@ describe('FeedNavigation', () => {
 
     const links = screen.getAllByTestId('link');
     const inactiveLink = links.find((link) => link.getAttribute('href') === '/feed/feed-inactive');
-    expect(inactiveLink).toHaveClass('border-muted-foreground');
+    expect(inactiveLink).toHaveClass('border-border');
     expect(inactiveLink).toHaveClass('text-muted-foreground');
   });
 

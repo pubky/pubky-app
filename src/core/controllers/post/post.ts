@@ -249,11 +249,13 @@ export class PostController {
     attachments,
     pubky,
   }: TFileAttachmentsParams): Promise<TFileAttachmentResult[]> {
-    return await Promise.all(
-      attachments.map(async (attachment) => {
-        return await FileApplication.toFileAttachment({ file: attachment, pubky });
-      }),
-    );
+    const fileAttachments: TFileAttachmentResult[] = [];
+
+    for (const attachment of attachments) {
+      fileAttachments.push(await FileApplication.toFileAttachment({ file: attachment, pubky }));
+    }
+
+    return fileAttachments;
   }
 
   /**

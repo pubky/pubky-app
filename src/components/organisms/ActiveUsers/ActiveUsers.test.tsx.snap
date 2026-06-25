@@ -207,7 +207,7 @@ exports[`ActiveUsers - Snapshots > matches snapshot with users 1`] = `
     data-testid="container"
   >
     <div
-      class="flex w-full items-center gap-2"
+      class="flex w-full items-center gap-2 pr-1"
       data-testid="user-list-item-user-1"
     >
       <button
@@ -417,7 +417,7 @@ exports[`ActiveUsers - Snapshots > matches snapshot with users 1`] = `
       </button>
     </div>
     <div
-      class="flex w-full items-center gap-2"
+      class="flex w-full items-center gap-2 pr-1"
       data-testid="user-list-item-user-2"
     >
       <button

@@ -37,7 +37,8 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, values?: { username?: string }) => {
     if (key === 'followed') return `Following ${values?.username ?? ''}`;
     if (key === 'unfollowed') return `Unfollowed ${values?.username ?? ''}`;
-    if (key === 'failed') return 'Could not update follow status';
+    if (key === 'followFailed') return `Failed to follow ${values?.username ?? ''}`;
+    if (key === 'unfollowFailed') return `Failed to unfollow ${values?.username ?? ''}`;
     return key;
   },
 }));
@@ -123,27 +124,43 @@ describe('useFollowUser', () => {
     });
   });
 
-  it('shows error toast and rethrows on failure', async () => {
-    const error = new Error('Follow failed');
+  it('shows a friendly named error toast and resolves false when following fails', async () => {
+    // A raw transport error must never reach the user.
+    const error = new Error('Request failed: HTTP transport error: error sending request');
     mockCommitFollow.mockRejectedValue(error);
 
     const { result } = renderHook(() => useFollowUser());
 
+    let returned: boolean | undefined;
     await act(async () => {
-      try {
-        await result.current.toggleFollow('user-1', false, 'Alice');
-      } catch {
-        // swallow to allow state update assertions
-      }
+      returned = await result.current.toggleFollow('user-1', false, 'Alice');
     });
 
+    expect(returned).toBe(false);
     await waitFor(() => {
-      expect(result.current.error).toBe('Could not update follow status');
+      expect(result.current.error).toBe('Failed to follow Alice');
     });
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Could not update follow status',
+      description: 'Failed to follow Alice',
     });
     expect(mockLogger.error).toHaveBeenCalledWith('[useFollowUser] Failed to toggle follow:', error);
+  });
+
+  it('shows the unfollow-specific friendly error when unfollowing fails', async () => {
+    mockCommitFollow.mockRejectedValue(new Error('boom'));
+
+    const { result } = renderHook(() => useFollowUser());
+
+    let returned: boolean | undefined;
+    await act(async () => {
+      returned = await result.current.toggleFollow('user-1', true, 'Alice');
+    });
+
+    expect(returned).toBe(false);
+    expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Failed to unfollow Alice',
+    });
   });
 });
