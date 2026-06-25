@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
+import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -32,6 +33,10 @@ vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
 
 vi.mock('@/hooks/useBookmark/useBookmark', () => ({
   useBookmark: vi.fn(),
+}));
+
+vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
+  usePostCounts: vi.fn(),
 }));
 
 const mockDeletePost = vi.fn().mockResolvedValue(undefined);
@@ -125,6 +130,31 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => ({
   ),
 }));
 
+vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => ({
+  PostTagsPanel: ({
+    postId,
+    widthMode,
+    autoFocusInput,
+    enableLoadingSkeleton,
+    className,
+  }: {
+    postId: string;
+    widthMode: string;
+    autoFocusInput: boolean;
+    enableLoadingSkeleton: boolean;
+    className?: string;
+  }) => (
+    <div
+      data-testid="post-tags-panel"
+      data-auto-focus-input={String(autoFocusInput)}
+      data-enable-loading-skeleton={String(enableLoadingSkeleton)}
+      data-post-id={postId}
+      data-width-mode={widthMode}
+      className={className}
+    />
+  ),
+}));
+
 // ---------------------------------------------------------------------------
 // Fixtures + helpers
 // ---------------------------------------------------------------------------
@@ -149,6 +179,7 @@ const COLLECTION_CONTENT_NO_COVER = JSON.stringify({
 const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseUserProfile = vi.mocked(useUserProfile);
 const mockUseBookmark = vi.mocked(useBookmark);
+const mockUsePostCounts = vi.mocked(usePostCounts);
 
 function setAuthStore(currentUserPubky: string | null) {
   mockUseAuthStore.mockImplementation((selector: (state: { currentUserPubky: string | null }) => unknown) =>
@@ -203,6 +234,19 @@ function setBookmark({ isBookmarked = false, isToggling = false } = {}) {
   return toggle;
 }
 
+function setPostCounts(uniqueTags = 3) {
+  mockUsePostCounts.mockReturnValue({
+    postCounts: {
+      id: COMPOSITE_ID,
+      tags: 4,
+      unique_tags: uniqueTags,
+      reposts: 0,
+      replies: 0,
+    },
+    isLoading: false,
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   for (const key of Object.keys(mockLocalCollections)) delete mockLocalCollections[key];
@@ -210,6 +254,7 @@ beforeEach(() => {
   setPostDetails(COLLECTION_CONTENT);
   setOwnerProfile('Bitcoin Wizard', 'https://example.com/avatar.png');
   setBookmark();
+  setPostCounts();
 });
 
 // ---------------------------------------------------------------------------
@@ -244,6 +289,15 @@ describe('CollectionCard', () => {
     expect(tags).toHaveAttribute('data-tagged-id', COMPOSITE_ID);
     expect(tags).toHaveAttribute('data-tagged-kind', String(TagKind.POST));
     expect(tags).toHaveAttribute('data-show-add-button', 'true');
+  });
+
+  it('pins the tags and action row to the bottom of the card with mt-auto', () => {
+    const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+    const expandableRow = container.querySelector('[data-cy="post-tags-expandable-row"]');
+    const actionRow = expandableRow?.parentElement;
+
+    expect(actionRow).toHaveClass('mt-auto');
   });
 
   it('falls back to the author pubky as the owner name when the profile is missing', () => {
@@ -310,6 +364,16 @@ describe('CollectionCard', () => {
       expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
     });
 
+    it('renders the tag CTA before the Follow button', () => {
+      setAuthStore('some-other-user');
+
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      const tagButton = screen.getByLabelText('Tag post (3)');
+      const followButton = screen.getByLabelText('collections.card.follow');
+      expect(tagButton.compareDocumentPosition(followButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
     it('renders an Unfollow button when the post is already bookmarked', () => {
       setAuthStore('some-other-user');
       setBookmark({ isBookmarked: true });
@@ -358,6 +422,84 @@ describe('CollectionCard', () => {
       expect(screen.getByLabelText('collections.card.delete')).toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.unfollow')).not.toBeInTheDocument();
+    });
+
+    it('renders the tag CTA before the Delete button', () => {
+      setAuthStore(AUTHOR_PUBKY);
+
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      const tagButton = screen.getByLabelText('Tag post (3)');
+      const deleteButton = screen.getByLabelText('collections.card.delete');
+      expect(tagButton.compareDocumentPosition(deleteButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('toggles the editable tags panel from the tag CTA and suppresses card navigation', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const onParentClick = vi.fn();
+
+      render(
+        <div onClick={onParentClick}>
+          <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
+        </div>,
+      );
+
+      const tagButton = screen.getByLabelText('Tag post (3)');
+      fireEvent.click(tagButton);
+
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+      const panel = screen.getByTestId('post-tags-panel');
+      expect(panel).toHaveAttribute('data-post-id', COMPOSITE_ID);
+      expect(panel).toHaveAttribute('data-width-mode', 'fit');
+      expect(panel).toHaveAttribute('data-auto-focus-input', 'true');
+      expect(panel).toHaveAttribute('data-enable-loading-skeleton', 'false');
+      expect(document.querySelector('[data-cy="post-tags-expandable-row"]')).toHaveClass('items-end');
+      expect(document.querySelector('[data-cy="post-tags-expandable-row-actions"]')).toHaveClass('self-end');
+      expect(onParentClick).not.toHaveBeenCalled();
+    });
+
+    it('lets clicks in expanded tag panel gaps bubble to the card link', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const onParentClick = vi.fn();
+
+      render(
+        <div onClick={onParentClick}>
+          <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
+        </div>,
+      );
+
+      fireEvent.click(screen.getByLabelText('Tag post (3)'));
+
+      const tagsColumn = document.querySelector('[data-cy="post-tags-expandable-row"]')?.firstElementChild;
+      expect(tagsColumn).toBeTruthy();
+      fireEvent.click(tagsColumn!);
+
+      expect(onParentClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('suppresses navigation when clicking inside the expanded tag panel', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const onParentClick = vi.fn();
+
+      render(
+        <div onClick={onParentClick}>
+          <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
+        </div>,
+      );
+
+      fireEvent.click(screen.getByLabelText('Tag post (3)'));
+      fireEvent.click(screen.getByTestId('post-tags-panel'));
+
+      expect(onParentClick).not.toHaveBeenCalled();
+    });
+
+    it('renders Delete as an icon-only button (aria-label, no visible label text)', () => {
+      setAuthStore(AUTHOR_PUBKY);
+
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      const deleteButton = screen.getByLabelText('collections.card.delete');
+      expect(deleteButton).not.toHaveTextContent('collections.card.delete');
     });
 
     it('does not toggle the bookmark when the owner clicks Delete (placeholder only)', () => {
@@ -475,6 +617,7 @@ describe('CollectionCard', () => {
       expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.unfollow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Tag post (3)')).not.toBeInTheDocument();
     });
 
     it('hides the inline tags row and Delete action for the owner', () => {
@@ -484,6 +627,7 @@ describe('CollectionCard', () => {
 
       expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Tag post (3)')).not.toBeInTheDocument();
     });
   });
 
@@ -496,6 +640,7 @@ describe('CollectionCard', () => {
       expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Tag post (3)')).not.toBeInTheDocument();
     });
   });
 });

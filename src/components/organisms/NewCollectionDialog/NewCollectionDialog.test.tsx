@@ -24,7 +24,7 @@ const translations: Record<string, string> = {
   'collections.new.cancel': 'Cancel',
   'collections.new.save': 'Save changes',
   'collections.new.saving': 'Saving...',
-  'collections.new.created': 'Collection {name} created',
+  'collections.new.created': 'Collection created',
   'collections.new.createFailed': 'Failed to create collection.',
   'toast.success': 'Success',
   'toast.error': 'Error',
@@ -191,7 +191,7 @@ describe('NewCollectionDialog', () => {
     });
     expect(mocks.toast).toHaveBeenCalledWith({
       title: 'Success',
-      description: 'Collection Proof of Work created',
+      description: 'Collection created',
     });
     await waitFor(() => {
       expect(mocks.push).toHaveBeenCalledWith('/collections/current-user/collection1');

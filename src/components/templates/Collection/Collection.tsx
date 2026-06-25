@@ -6,7 +6,6 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { isPostDeleted, isValidPostCompositeId } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
-import { CollectionHero } from '@/organisms/Collections/CollectionHero/CollectionHero';
 import { CollectionItems } from '@/organisms/Collections/CollectionItems/CollectionItems';
 import { CollectionNotFound } from '@/organisms/Collections/CollectionNotFound/CollectionNotFound';
 import { CollectionsSections } from '@/organisms/Collections/CollectionsSections/CollectionsSections';
@@ -52,7 +51,11 @@ export function Collection({ postId }: CollectionProps) {
       className="pb-24 lg:pb-12 xl:px-0!"
     >
       <Container overrideDefaults className="flex w-full flex-col gap-12">
-        {collectionMissing ? <CollectionNotFound postId={postId} /> : <CollectionResolved postId={postId} />}
+        {collectionMissing ? (
+          <CollectionNotFound postId={postId} />
+        ) : (
+          <CollectionResolved postId={postId} postDetails={postDetails} />
+        )}
         <CollectionsSections />
       </Container>
     </ContentLayout>
@@ -64,16 +67,19 @@ export function Collection({ postId }: CollectionProps) {
  * composite id is valid, so `parseCompositeId` (which throws on malformed ids)
  * is safe here.
  */
-function CollectionResolved({ postId }: CollectionProps) {
+function CollectionResolved({
+  postId,
+  postDetails,
+}: CollectionProps & { postDetails: ReturnType<typeof usePostDetails>['postDetails'] }) {
   const pullToRefreshContainerRef = useRef<HTMLDivElement>(null);
   const { pubky: authorPubky, id: rawPostId } = parseCompositeId(postId);
 
   return (
     <Container ref={pullToRefreshContainerRef} overrideDefaults className="flex w-full flex-col gap-12">
-      <CollectionHero authorPubky={authorPubky} postId={rawPostId} />
       <CollectionItems
         authorPubky={authorPubky}
         postId={rawPostId}
+        postDetails={postDetails}
         pullToRefreshContainerRef={pullToRefreshContainerRef}
       />
     </Container>

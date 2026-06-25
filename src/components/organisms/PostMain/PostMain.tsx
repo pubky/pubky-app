@@ -71,7 +71,7 @@ export function PostMain({
         overrideDefaults
         onClick={isNavigable ? (e) => handlePostClick(postId, e) : undefined}
         onAuxClick={isNavigable ? (e) => handlePostAuxClick(postId, e) : undefined}
-        className={cn('relative flex min-w-0', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
+        className={cn('relative flex min-w-0 @max-xl/grid:h-full', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
           <Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">
@@ -84,7 +84,9 @@ export function PostMain({
           ) : (
             <>
               {showRepostHeader && <RepostHeader />}
-              <CardContent className={cn('flex min-w-0 flex-col', isWideLayout ? 'p-0' : 'gap-4 p-6')}>
+              <CardContent
+                className={cn('flex min-w-0 flex-col @max-xl/grid:flex-1', isWideLayout ? 'p-0' : 'gap-4 p-6')}
+              >
                 {isWideLayout ? (
                   <Container className="flex min-w-0 flex-col lg:flex-row">
                     <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">

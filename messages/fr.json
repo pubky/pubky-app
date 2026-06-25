@@ -1335,13 +1335,13 @@
       "cancel": "Annuler",
       "save": "Enregistrer les modifications",
       "saving": "Enregistrement...",
-      "created": "Collection {name} créée",
+      "created": "Collection créée",
       "createFailed": "Échec de la création de la collection."
     },
     "edit": {
       "title": "Modifier la collection",
       "save": "Enregistrer les modifications",
-      "updated": "Collection {name} mise à jour",
+      "updated": "Collection mise à jour",
       "updateFailed": "Échec de la mise à jour de la collection."
     },
     "showMore": "Afficher plus",
@@ -1378,6 +1378,7 @@
       "delete": "Supprimer",
       "follow": "Suivre",
       "unfollow": "Ne plus suivre",
+      "content": "Contenu",
       "addContent": "Ajouter du contenu",
       "empty": "Cette collection est vide.",
       "notFound": {
@@ -1390,7 +1391,7 @@
       }
     },
     "addContentDialog": {
-      "title": "Ajouter du contenu",
+      "title": "Contenu",
       "description": "Ajoutez une publication ou un article depuis votre fil ou collez directement une URL.",
       "fromFeedTitle": "Ajouter depuis le fil",
       "fromFeedLead": "Trouvez une publication",

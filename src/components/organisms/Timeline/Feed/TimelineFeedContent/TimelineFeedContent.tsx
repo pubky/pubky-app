@@ -20,6 +20,11 @@ import type { TimelineFeedContextValue, TimelineFeedProps } from '../TimelineFee
 import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { VisualTimelinePosts } from '../TimelineFeed/VisualTimelinePosts';
 
+type TimelineFeedGridTrailingSlot = Extract<
+  TimelineFeedProps,
+  { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION }
+>['gridTrailingSlot'];
+
 interface TimelineFeedContentProps {
   streamId: PostStreamId;
   variant: TimelineFeedProps['variant'];
@@ -29,6 +34,7 @@ interface TimelineFeedContentProps {
   emptyState?: TimelineFeedProps['emptyState'];
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
+  gridTrailingSlot?: TimelineFeedGridTrailingSlot;
 }
 
 interface TimelineFeedWithStreamProps {
@@ -40,6 +46,7 @@ interface TimelineFeedWithStreamProps {
   emptyState?: TimelineFeedProps['emptyState'];
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
+  gridTrailingSlot?: TimelineFeedGridTrailingSlot;
 }
 
 /**
@@ -57,6 +64,7 @@ export function TimelineFeedWithStream({
   emptyState,
   collectionId,
   pullToRefreshContainerRef,
+  gridTrailingSlot,
 }: TimelineFeedWithStreamProps) {
   if (!streamId) {
     return <TimelineLoading />;
@@ -71,6 +79,7 @@ export function TimelineFeedWithStream({
       emptyState={emptyState}
       collectionId={collectionId}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
+      gridTrailingSlot={gridTrailingSlot}
     >
       {children}
     </TimelineFeedContent>
@@ -99,6 +108,7 @@ function TimelineFeedContent({
   emptyState,
   collectionId,
   pullToRefreshContainerRef,
+  gridTrailingSlot,
 }: TimelineFeedContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const refreshContainerRef = pullToRefreshContainerRef ?? containerRef;
@@ -179,13 +189,14 @@ function TimelineFeedContent({
   };
   const showGridEndMessage =
     variant !== TIMELINE_FEED_VARIANT.COLLECTION && variant !== TIMELINE_FEED_VARIANT.BOOKMARKS;
+  const shouldRenderChildren = !isVisualActive || isGridActive;
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
       <PostMainLayoutProvider tagsLayout={tagsLayout}>
         <Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
           {enablePullToRefresh && <PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
-          {!isVisualActive ? children : null}
+          {shouldRenderChildren ? children : null}
           <NewPostsSection
             streamId={streamId}
             variant={variant}
@@ -204,6 +215,7 @@ function TimelineFeedContent({
               loadMore={loadMore}
               showEndMessage={showGridEndMessage}
               emptyState={emptyState}
+              trailingSlot={gridTrailingSlot}
             />
           ) : isVisualActive ? (
             <VisualTimelinePosts
