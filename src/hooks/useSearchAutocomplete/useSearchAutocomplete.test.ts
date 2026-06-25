@@ -71,6 +71,18 @@ vi.mock('lodash-es', () => ({
   }),
 }));
 
+async function flushAutocompleteSearch() {
+  await act(async () => {
+    vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
+    await vi.runOnlyPendingTimersAsync();
+  });
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
 describe('useSearchAutocomplete', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -141,17 +153,7 @@ describe('useSearchAutocomplete', () => {
   it('fetches tags and users after debounce', async () => {
     const { result, rerender } = renderHook(() => useSearchAutocomplete({ query: 'tech' }));
 
-    // Fast-forward past debounce and run all pending timers
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    // Wait for promises to resolve
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     // Set mock user details map to simulate useLiveQuery returning data
     const userDetailsMap = new Map<Pubky, NexusUserDetails>();
@@ -179,17 +181,7 @@ describe('useSearchAutocomplete', () => {
   it('searches by user ID when query starts with pk:', async () => {
     renderHook(() => useSearchAutocomplete({ query: 'pk:abc' }));
 
-    // Fast-forward past debounce and run all pending timers
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    // Wait for promises to resolve
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'abc', limit: 10 });
     // Should not search by name or tags when doing explicit ID search with prefix
@@ -197,20 +189,60 @@ describe('useSearchAutocomplete', () => {
     expect(mockGetTagsByPrefix).not.toHaveBeenCalled();
   });
 
+  it.each(['p', 'pu', 'pub', 'pubk', 'pubky'])('searches tags and usernames but not user IDs for %s', async (query) => {
+    renderHook(() => useSearchAutocomplete({ query }));
+
+    await flushAutocompleteSearch();
+
+    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: query, limit: 3 });
+    expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: query, limit: 10 });
+    expect(mockFetchUsersById).not.toHaveBeenCalled();
+  });
+
+  it('keeps compact pubky tag text intact and skips the invalid user ID search', async () => {
+    renderHook(() => useSearchAutocomplete({ query: 'pubky-feedback' }));
+
+    await flushAutocompleteSearch();
+
+    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'pubky-feedback', limit: 3 });
+    expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: 'pubky-feedback', limit: 10 });
+    expect(mockFetchUsersById).not.toHaveBeenCalled();
+  });
+
+  it('searches compact pubky text by tag and name while stripping only the user ID prefix', async () => {
+    renderHook(() => useSearchAutocomplete({ query: 'pubkyabc' }));
+
+    await flushAutocompleteSearch();
+
+    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'pubkyabc', limit: 3 });
+    expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: 'pubkyabc', limit: 10 });
+    expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'abc', limit: 10 });
+  });
+
+  it('preserves uppercase raw text while searching user IDs case-insensitively', async () => {
+    renderHook(() => useSearchAutocomplete({ query: 'IH4' }));
+
+    await flushAutocompleteSearch();
+
+    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'IH4', limit: 3 });
+    expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: 'IH4', limit: 10 });
+    expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'IH4', limit: 10 });
+  });
+
+  it('recognizes a mixed-case compact prefix without changing endpoint query casing', async () => {
+    renderHook(() => useSearchAutocomplete({ query: 'pubkyIH4' }));
+
+    await flushAutocompleteSearch();
+
+    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'pubkyIH4', limit: 3 });
+    expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: 'pubkyIH4', limit: 10 });
+    expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'IH4', limit: 10 });
+  });
+
   it('searches by user ID AND name AND tags for non-prefixed queries', async () => {
     renderHook(() => useSearchAutocomplete({ query: 'abc123' }));
 
-    // Fast-forward past debounce and run all pending timers
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    // Wait for promises to resolve
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     // Should search by ID (using the raw query as prefix)
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'abc123', limit: 10 });
@@ -222,17 +254,7 @@ describe('useSearchAutocomplete', () => {
   it('does not search by ID if prefix is too short', async () => {
     renderHook(() => useSearchAutocomplete({ query: 'pk:ab' }));
 
-    // Fast-forward past debounce and run all pending timers
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    // Wait for promises to resolve
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     expect(mockFetchUsersById).not.toHaveBeenCalled();
   });
@@ -244,17 +266,7 @@ describe('useSearchAutocomplete', () => {
 
     const { result, rerender } = renderHook(() => useSearchAutocomplete({ query: 'test' }));
 
-    // Fast-forward past debounce and run all pending timers
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    // Wait for promises to resolve
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     // Set mock user details map for all users (including user3 from ID search)
     const userDetailsMap = new Map<Pubky, NexusUserDetails>();
@@ -284,17 +296,7 @@ describe('useSearchAutocomplete', () => {
 
     const { result } = renderHook(() => useSearchAutocomplete({ query: 'tech' }));
 
-    // Fast-forward past debounce and run all pending timers
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    // Wait for promises to resolve
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     expect(result.current.tags).toEqual([]);
     expect(result.current.users).toEqual([]);
@@ -313,17 +315,7 @@ describe('useSearchAutocomplete', () => {
     // Change query
     rerender({ query: 'test' });
 
-    // Fast-forward past debounce and run all pending timers
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    // Wait for promises to resolve
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     // Should have searched with 'test'
     expect(mockGetTagsByPrefix).toHaveBeenLastCalledWith({ prefix: 'test', limit: 3 });
@@ -332,17 +324,7 @@ describe('useSearchAutocomplete', () => {
   it('trims whitespace from query', async () => {
     renderHook(() => useSearchAutocomplete({ query: '  tech  ' }));
 
-    // Fast-forward past debounce and run all pending timers
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    // Wait for promises to resolve
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'tech', limit: 3 });
   });
@@ -350,17 +332,7 @@ describe('useSearchAutocomplete', () => {
   it('searches by user ID when query starts with pubky: (with colon)', async () => {
     renderHook(() => useSearchAutocomplete({ query: 'pubky:abc123' }));
 
-    // Fast-forward past debounce and run all pending timers
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    // Wait for promises to resolve
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     // Should strip the 'pubky:' prefix (including colon) and search with just the z32 part
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'abc123', limit: 10 });
@@ -373,15 +345,7 @@ describe('useSearchAutocomplete', () => {
     const longQuery = 'a'.repeat(21);
     renderHook(() => useSearchAutocomplete({ query: longQuery }));
 
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     expect(mockGetTagsByPrefix).not.toHaveBeenCalled();
     // User searches should still proceed
@@ -393,15 +357,7 @@ describe('useSearchAutocomplete', () => {
     const exactQuery = 'a'.repeat(20);
     renderHook(() => useSearchAutocomplete({ query: exactQuery }));
 
-    await act(async () => {
-      vi.advanceTimersByTime(AUTOCOMPLETE_DEBOUNCE_MS);
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAutocompleteSearch();
 
     expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: exactQuery, limit: 3 });
   });

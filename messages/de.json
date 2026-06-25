@@ -1008,9 +1008,10 @@
       "copyFailedDesc": "Kopieren in Zwischenablage nicht möglich"
     },
     "follow": {
-      "failed": "Folgestatus konnte nicht aktualisiert werden",
       "followed": "Folge {username}",
-      "unfollowed": "{username} entfolgt"
+      "unfollowed": "{username} entfolgt",
+      "followFailed": "{username} konnte nicht gefolgt werden",
+      "unfollowFailed": "{username} konnte nicht entfolgt werden"
     },
     "mute": {
       "muted": "{username} stummgeschaltet",

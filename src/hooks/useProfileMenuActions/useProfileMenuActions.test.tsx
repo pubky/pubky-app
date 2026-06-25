@@ -239,10 +239,9 @@ describe('useProfileMenuActions', () => {
       expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, true, 'Test User');
     });
 
-    it('swallows follow rejection after useFollowUser handles the error', async () => {
-      const followError = new Error('Follow failed');
+    it('does not throw when the follow fails (useFollowUser handles feedback)', async () => {
       mockUseFollowUser.mockReturnValue({
-        toggleFollow: vi.fn().mockRejectedValue(followError),
+        toggleFollow: vi.fn().mockResolvedValue(false),
         isLoading: false,
         isUserLoading: defaultMocks.isUserLoading,
       });

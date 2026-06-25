@@ -42,11 +42,8 @@ export function useUserInfoPopoverActions({
     e.stopPropagation();
     if (isCurrentUser) return;
     requireAuth(async () => {
-      try {
-        await toggleFollow(userId, isFollowing, resolveFollowDisplayName(userId, userName));
-      } catch {
-        // Error already handled by useFollowUser (logged + state updated)
-      }
+      // useFollowUser handles all feedback (toast + state) and never throws.
+      await toggleFollow(userId, isFollowing, resolveFollowDisplayName(userId, userName));
     });
   };
 

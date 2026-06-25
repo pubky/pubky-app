@@ -1006,9 +1006,10 @@
       "copyFailedDesc": "Impossibile copiare negli appunti"
     },
     "follow": {
-      "failed": "Impossibile aggiornare lo stato di follow",
       "followed": "Stai seguendo {username}",
-      "unfollowed": "Hai smesso di seguire {username}"
+      "unfollowed": "Hai smesso di seguire {username}",
+      "followFailed": "Impossibile seguire {username}",
+      "unfollowFailed": "Impossibile smettere di seguire {username}"
     },
     "mute": {
       "muted": "{username} silenziato",

@@ -1010,7 +1010,8 @@
     "follow": {
       "followed": "Siguiendo a {username}",
       "unfollowed": "Dejaste de seguir a {username}",
-      "failed": "No se pudo actualizar el estado de seguimiento"
+      "followFailed": "No se pudo seguir a {username}",
+      "unfollowFailed": "No se pudo dejar de seguir a {username}"
     },
     "mute": {
       "muted": "{username} silenciado",

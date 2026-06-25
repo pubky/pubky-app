@@ -239,7 +239,7 @@ function CompactVariant({
     <Container
       ref={ttlRef}
       overrideDefaults
-      className={cn('flex w-full items-center gap-2', className)}
+      className={cn('flex w-full items-center gap-2 pr-1', className)}
       data-testid={dataTestId || `user-list-item-${user.id}`}
     >
       {/* Clickable user area */}

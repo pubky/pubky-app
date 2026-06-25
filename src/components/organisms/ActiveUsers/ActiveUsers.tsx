@@ -68,6 +68,7 @@ export function ActiveUsers() {
             showStats
             isLoading={isUserLoading(user.id)}
             isStatusLoading={isStreamLoading}
+            isCurrentUser={currentUserPubky === user.id}
             onUserClick={handleUserClick}
             onFollowClick={handleFollowClick}
           />
