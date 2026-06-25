@@ -42,8 +42,11 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
   const emptyState = <CollectionItemsEmpty />;
 
   if (!isOwn && isConfirmedEmpty) {
+    // gap-6 mirrors the hero → grid/empty spacing the feed-driven paths get from
+    // `TimelineFeedContent`'s container, so empty non-owner collections line up
+    // with every other collection/bookmarks path.
     return (
-      <Container overrideDefaults className="flex w-full flex-col gap-12">
+      <Container overrideDefaults className="flex w-full flex-col gap-6">
         {hero}
         {emptyState}
       </Container>
