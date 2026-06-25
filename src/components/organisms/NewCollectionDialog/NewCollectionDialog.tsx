@@ -10,13 +10,24 @@ import { parseCompositeId } from '@/models/models.utils';
 import { CollectionFormDialog } from '@/organisms/Collections/CollectionFormDialog/CollectionFormDialog';
 
 type NewCollectionDialogProps = {
-  children: ReactNode;
+  /** Optional trigger element. Omit when driving the dialog via `open`/`onOpenChange`. */
+  children?: ReactNode;
+  /** Controlled open state (e.g. when opened by the FAB). Uncontrolled when omitted. */
+  open?: boolean;
+  /** Controlled open-change handler, paired with `open`. */
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function NewCollectionDialog({ children }: NewCollectionDialogProps) {
+export function NewCollectionDialog({
+  children,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+}: NewCollectionDialogProps) {
   const t = useTranslations('collections.new');
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : openState;
   // Local saving flag, flipped synchronously via `flushSync` so the "Saving..."
   // state paints before any heavy work (e.g. cover image canvas re-encoding)
   // begins. RHF's own `formState.isSubmitting` would otherwise be batched.
@@ -25,7 +36,8 @@ export function NewCollectionDialog({ children }: NewCollectionDialogProps) {
   const { form, cover, submit, reset } = useCreateCollection();
 
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen);
+    if (!isControlled) setOpenState(nextOpen);
+    onOpenChangeProp?.(nextOpen);
     if (!nextOpen) reset();
   };
 

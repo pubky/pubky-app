@@ -1410,6 +1410,13 @@
       }
     }
   },
+  "fab": {
+    "newPost": "Nuovo post",
+    "newCollection": "Nuova collezione",
+    "newPostInCollection": "Nuovo post nella collezione",
+    "newBookmark": "Nuovo segnalibro",
+    "addedToCollection": "Post aggiunto alla collezione."
+  },
   "postSave": {
     "title": "Salva post",
     "description": "Scegli dove salvare questo post.",

@@ -232,6 +232,28 @@ export function getCollectionRoute(authorPubky: string, postId: string): string 
   return `${APP_ROUTES.COLLECTIONS}/${authorPubky}/${postId}`;
 }
 
+/** `/collections` exactly — the collections overview page (not a single collection or bookmarks). */
+export function isCollectionsOverviewRoute(pathname: string): boolean {
+  return pathname === APP_ROUTES.COLLECTIONS;
+}
+
+/**
+ * Matches a single collection detail route `/collections/[userId]/[postId]` and
+ * returns its params, or `null` for any other path. `bookmarks` is excluded so
+ * `/collections/bookmarks` is never treated as a `userId`.
+ */
+export function matchSingleCollectionRoute(pathname: string): { userId: string; postId: string } | null {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] !== 'collections' || segments.length !== 3) {
+    return null;
+  }
+  const [, userId, postId] = segments;
+  if (userId === 'bookmarks') {
+    return null;
+  }
+  return { userId, postId };
+}
+
 // ============================================================================
 // Navigation Active State
 // ============================================================================

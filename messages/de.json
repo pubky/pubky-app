@@ -1412,6 +1412,13 @@
       }
     }
   },
+  "fab": {
+    "newPost": "Neuer Beitrag",
+    "newCollection": "Neue Sammlung",
+    "newPostInCollection": "Neuer Beitrag in der Sammlung",
+    "newBookmark": "Neues Lesezeichen",
+    "addedToCollection": "Beitrag zur Sammlung hinzugefügt."
+  },
   "postSave": {
     "title": "Beitrag speichern",
     "description": "Wähle, wo dieser Beitrag gespeichert werden soll.",

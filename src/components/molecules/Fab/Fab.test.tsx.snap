@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Fab - Snapshots > matches snapshot for the create collection action 1`] = `
+<button
+  aria-label="New collection"
+  class="fixed right-3 bottom-18 sm:right-10 md:bottom-20 lg:bottom-6 size-20 rounded-full flex items-center justify-center bg-white/12 backdrop-blur-lg hover:bg-brand text-white shadow-xl transition-colors group cursor-pointer z-40"
+  data-cy="new-post-btn"
+  data-override-defaults="true"
+  data-testid="new-post-cta"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-plus size-10 transition-colors group-hover:text-black"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="0.8"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M5 12h14"
+    />
+    <path
+      d="M12 5v14"
+    />
+  </svg>
+</button>
+`;
+
+exports[`Fab - Snapshots > matches snapshot for the default new post action 1`] = `
+<button
+  aria-label="New post"
+  class="fixed right-3 bottom-18 sm:right-10 md:bottom-20 lg:bottom-6 size-20 rounded-full flex items-center justify-center bg-white/12 backdrop-blur-lg hover:bg-brand text-white shadow-xl transition-colors group cursor-pointer z-40"
+  data-cy="new-post-btn"
+  data-override-defaults="true"
+  data-testid="new-post-cta"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-plus size-10 transition-colors group-hover:text-black"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="0.8"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M5 12h14"
+    />
+    <path
+      d="M12 5v14"
+    />
+  </svg>
+</button>
+`;

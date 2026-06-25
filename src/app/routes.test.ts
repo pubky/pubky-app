@@ -5,6 +5,7 @@ import {
   getCollectionRoute,
   getProfileRoute,
   getUserProfileUrl,
+  isCollectionsOverviewRoute,
   isCoreExploreRoute,
   isDynamicPublicRoute,
   isLogoLandingRoute,
@@ -12,6 +13,7 @@ import {
   isPostRoute,
   isPublicExploreRoute,
   LOGO_LANDING_ROUTES,
+  matchSingleCollectionRoute,
   ONBOARDING_ROUTES,
   PROFILE_ROUTES,
   SETTINGS_ROUTES,
@@ -174,6 +176,47 @@ describe('getCollectionRoute', () => {
 
   it('is anchored on APP_ROUTES.COLLECTIONS', () => {
     expect(getCollectionRoute(pubky, postId).startsWith(`${APP_ROUTES.COLLECTIONS}/`)).toBe(true);
+  });
+});
+
+describe('isCollectionsOverviewRoute', () => {
+  it('returns true only for the exact /collections path', () => {
+    expect(isCollectionsOverviewRoute(APP_ROUTES.COLLECTIONS)).toBe(true);
+    expect(isCollectionsOverviewRoute('/collections')).toBe(true);
+  });
+
+  it('returns false for bookmarks, single collections, and unrelated paths', () => {
+    const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+
+    expect(isCollectionsOverviewRoute('/collections/bookmarks')).toBe(false);
+    expect(isCollectionsOverviewRoute(`/collections/${pubky}/0034BBBDFK83G`)).toBe(false);
+    expect(isCollectionsOverviewRoute('/collections/')).toBe(false);
+    expect(isCollectionsOverviewRoute('/home')).toBe(false);
+  });
+});
+
+describe('matchSingleCollectionRoute', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const postId = '0034BBBDFK83G';
+
+  it('extracts userId and postId from a single collection route', () => {
+    expect(matchSingleCollectionRoute(`/collections/${pubky}/${postId}`)).toEqual({ userId: pubky, postId });
+  });
+
+  it('returns null for the bookmarks pseudo-collection route', () => {
+    expect(matchSingleCollectionRoute('/collections/bookmarks')).toBeNull();
+    expect(matchSingleCollectionRoute('/collections/bookmarks/extra')).toBeNull();
+  });
+
+  it('returns null for the overview route and wrong segment counts', () => {
+    expect(matchSingleCollectionRoute('/collections')).toBeNull();
+    expect(matchSingleCollectionRoute(`/collections/${pubky}`)).toBeNull();
+    expect(matchSingleCollectionRoute(`/collections/${pubky}/${postId}/extra`)).toBeNull();
+  });
+
+  it('returns null for unrelated routes', () => {
+    expect(matchSingleCollectionRoute('/home')).toBeNull();
+    expect(matchSingleCollectionRoute(`/post/${pubky}/${postId}`)).toBeNull();
   });
 });
 

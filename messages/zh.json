@@ -1404,6 +1404,13 @@
       }
     }
   },
+  "fab": {
+    "newPost": "新帖子",
+    "newCollection": "新建收藏集",
+    "newPostInCollection": "在收藏集中新建帖子",
+    "newBookmark": "新建书签",
+    "addedToCollection": "帖子已添加到收藏集。"
+  },
   "postSave": {
     "title": "保存帖子",
     "description": "选择将此帖子保存到哪里。",

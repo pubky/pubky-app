@@ -1414,6 +1414,13 @@
       }
     }
   },
+  "fab": {
+    "newPost": "Nueva publicación",
+    "newCollection": "Nueva colección",
+    "newPostInCollection": "Nueva publicación en la colección",
+    "newBookmark": "Nuevo marcador",
+    "addedToCollection": "Publicación añadida a la colección."
+  },
   "postSave": {
     "title": "Guardar publicación",
     "description": "Elige dónde guardar esta publicación.",

@@ -12,6 +12,8 @@ import {
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
+import { useFeedOptimisticStore } from '@/stores/feedOptimistic/feedOptimistic.store';
+import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
 import { LAYOUT } from '@/stores/home/home.types';
 import { useTimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
@@ -277,6 +279,61 @@ describe('TimelineFeedContent', () => {
         </TimelineFeedWithStream>,
       );
       expect(screen.getByTestId('timeline-context-collection-id')).toHaveTextContent('author-pubky:collection-post');
+    });
+  });
+
+  describe('Optimistic feed inserts (FAB bridge)', () => {
+    const collectionId = 'author-pubky:collection-post';
+    const collectionKey = buildFeedKey({ type: 'collection', collectionId });
+
+    beforeEach(() => {
+      useFeedOptimisticStore.setState({ pendingByKey: {} });
+    });
+
+    it('applies queued ids to a single collection feed and clears them', () => {
+      useFeedOptimisticStore.setState({ pendingByKey: { [collectionKey]: ['author:new1'] } });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId={collectionId}
+        />,
+      );
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['author:new1']);
+      expect(useFeedOptimisticStore.getState().pendingByKey[collectionKey]).toBeUndefined();
+    });
+
+    it('applies queued ids to the bookmarks feed', () => {
+      useFeedOptimisticStore.setState({ pendingByKey: { bookmarks: ['author:bm1'] } });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['author:bm1']);
+      expect(useFeedOptimisticStore.getState().pendingByKey.bookmarks).toBeUndefined();
+    });
+
+    it('ignores queued ids for non-participating feeds (home)', () => {
+      useFeedOptimisticStore.setState({ pendingByKey: { bookmarks: ['author:bm1'] } });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+      expect(useFeedOptimisticStore.getState().pendingByKey.bookmarks).toEqual(['author:bm1']);
     });
   });
 

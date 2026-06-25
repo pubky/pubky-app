@@ -1410,6 +1410,13 @@
       }
     }
   },
+  "fab": {
+    "newPost": "Nouvelle publication",
+    "newCollection": "Nouvelle collection",
+    "newPostInCollection": "Nouvelle publication dans la collection",
+    "newBookmark": "Nouveau signet",
+    "addedToCollection": "Publication ajoutée à la collection."
+  },
   "postSave": {
     "title": "Enregistrer la publication",
     "description": "Choisissez où enregistrer cette publication.",

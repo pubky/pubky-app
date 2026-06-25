@@ -85,13 +85,13 @@ vi.mock('@/organisms/PostInput/PostInput', () => {
         onArticleModeChange,
       }: {
         variant: string;
-        onSuccess?: () => void;
+        onSuccess?: (createdPostId: string) => void;
         expanded?: boolean;
         onContentChange?: (content: string, tags: string[]) => void;
         onArticleModeChange?: (isArticle: boolean) => void;
       }) => (
         <div data-testid="post-input" data-variant={variant} data-expanded={expanded}>
-          <button data-testid="mock-success-btn" onClick={onSuccess}>
+          <button data-testid="mock-success-btn" onClick={() => onSuccess?.('author:post123')}>
             Success
           </button>
           <button data-testid="mock-content-change-btn" onClick={() => onContentChange?.('test content', ['tag1'])}>
@@ -178,6 +178,30 @@ describe('DialogNewPost', () => {
 
     const successButton = screen.getByTestId('mock-success-btn');
     fireEvent.click(successButton);
+
+    await waitFor(() => {
+      expect(onOpenChangeAction).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it('calls onPostCreated with the created post id before closing', async () => {
+    const onOpenChangeAction = vi.fn();
+    const onPostCreated = vi.fn();
+    render(<DialogNewPost open onOpenChangeAction={onOpenChangeAction} onPostCreated={onPostCreated} />);
+
+    fireEvent.click(screen.getByTestId('mock-success-btn'));
+
+    await waitFor(() => {
+      expect(onPostCreated).toHaveBeenCalledWith('author:post123');
+      expect(onOpenChangeAction).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it('still closes when no onPostCreated is provided', async () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogNewPost open onOpenChangeAction={onOpenChangeAction} />);
+
+    fireEvent.click(screen.getByTestId('mock-success-btn'));
 
     await waitFor(() => {
       expect(onOpenChangeAction).toHaveBeenCalledWith(false);

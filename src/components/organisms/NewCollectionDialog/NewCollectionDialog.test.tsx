@@ -251,6 +251,26 @@ describe('NewCollectionDialog', () => {
     expect(screen.getByRole('button', { name: 'Add image' })).toBeInTheDocument();
   });
 
+  describe('controlled mode', () => {
+    it('honors the controlled open prop without a trigger child', () => {
+      const { rerender } = render(<NewCollectionDialog open={false} onOpenChange={vi.fn()} />);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      rerender(<NewCollectionDialog open onOpenChange={vi.fn()} />);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'New Collection' })).toBeInTheDocument();
+    });
+
+    it('calls onOpenChange when dismissed in controlled mode', () => {
+      const onOpenChange = vi.fn();
+      render(<NewCollectionDialog open onOpenChange={onOpenChange} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
   it('matches snapshot when open', () => {
     render(
       <NewCollectionDialog>

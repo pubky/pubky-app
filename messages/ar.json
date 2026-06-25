@@ -1406,6 +1406,13 @@
       }
     }
   },
+  "fab": {
+    "newPost": "منشور جديد",
+    "newCollection": "مجموعة جديدة",
+    "newPostInCollection": "منشور جديد في المجموعة",
+    "newBookmark": "إشارة مرجعية جديدة",
+    "addedToCollection": "تمت إضافة المنشور إلى المجموعة."
+  },
   "postSave": {
     "title": "حفظ المنشور",
     "description": "اختر مكان حفظ هذا المنشور.",

@@ -1410,6 +1410,13 @@
       }
     }
   },
+  "fab": {
+    "newPost": "新しい投稿",
+    "newCollection": "新しいコレクション",
+    "newPostInCollection": "コレクションに新しい投稿",
+    "newBookmark": "新しいブックマーク",
+    "addedToCollection": "投稿をコレクションに追加しました。"
+  },
   "postSave": {
     "title": "投稿を保存",
     "description": "この投稿を保存する場所を選択してください。",
