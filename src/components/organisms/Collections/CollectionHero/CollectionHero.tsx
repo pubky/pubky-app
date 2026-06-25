@@ -12,7 +12,6 @@ import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
-import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
@@ -20,6 +19,7 @@ import { cn } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
+import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { CollectionHeroSkeleton } from '@/organisms/Collections/CollectionHero/CollectionHero.skeleton';
 import { CollectionHeroBlurred } from '@/organisms/Collections/CollectionHero/CollectionHeroBlurred';
@@ -34,19 +34,18 @@ import type { CollectionHeroContentProps, CollectionHeroProps } from './Collecti
  * CollectionHero
  *
  * Top region of the single-collection view (`/collections/[userId]/[postId]`).
- * Mirrors `CollectionCard`'s two-stage data approach: while `usePostDetails`
- * resolves (`undefined`) we render `CollectionHeroSkeleton`; once the envelope
- * lands we delegate to `CollectionHeroContent` (which owns the hooks that read
- * the parsed envelope — `useBookmark` toast copy, etc.).
+ * While the shared `postDetails` envelope is still resolving (`undefined`) we
+ * render `CollectionHeroSkeleton`; once the envelope lands we delegate to
+ * `CollectionHeroContent` (which owns the hooks that read the parsed envelope
+ * — `useBookmark` toast copy, etc.).
  *
  * The Hero → feed → Sections structure is identical for both owner and
  * other-user views; only the action buttons differ:
- *   - owner   → Share / Edit / Delete (visual placeholders this slice).
+ *   - owner   → Content / Share / Edit / Delete.
  *   - other   → real Follow / Unfollow (via `useBookmark`) + Share placeholder.
  */
-export function CollectionHero({ authorPubky, postId, className }: CollectionHeroProps) {
+export function CollectionHero({ authorPubky, postId, postDetails, className }: CollectionHeroProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
-  const { postDetails } = usePostDetails(compositeId);
 
   if (!postDetails) {
     return <CollectionHeroSkeleton className={className} />;
@@ -214,9 +213,14 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">
           {isOwn ? (
             <>
-              {/* While a delete is in flight, disable every owner action.
-                  Lets the user know something's happening and prevents racing
-                  Share / Edit against an imminent route replace. */}
+              <AddContentDialog
+                target={{ type: 'collection', collectionId: compositeId }}
+                dataCy="collection-add-content"
+                disabled={isDeleting}
+              />
+              {/* While a delete is in flight, disable owner actions so the
+                  user knows something is happening and those actions cannot race
+                  an imminent route replace. */}
               <Button
                 variant="secondary"
                 size="icon"

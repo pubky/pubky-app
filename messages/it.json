@@ -1378,6 +1378,7 @@
       "delete": "Elimina",
       "follow": "Segui",
       "unfollow": "Smetti di seguire",
+      "content": "Contenuto",
       "addContent": "Aggiungi contenuto",
       "empty": "Questa raccolta è vuota.",
       "notFound": {
@@ -1390,7 +1391,7 @@
       }
     },
     "addContentDialog": {
-      "title": "Aggiungi contenuto",
+      "title": "Contenuto",
       "description": "Aggiungi un post o un articolo dal tuo feed oppure incolla direttamente un URL.",
       "fromFeedTitle": "Aggiungi dal feed",
       "fromFeedLead": "Trova un post",

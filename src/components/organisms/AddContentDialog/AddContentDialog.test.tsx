@@ -94,16 +94,45 @@ describe('AddContentDialog', () => {
     mocks.prependOptimisticPosts.mockReturnValue(undefined);
   });
 
-  it('renders the Add Content trigger', () => {
+  it('renders the Content trigger', () => {
     render(<AddContentDialog />);
 
-    expect(screen.getByRole('button', { name: 'collections.single.addContent' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'collections.single.content' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'collections.single.content' })).toHaveAttribute(
+      'data-cy',
+      'add-content',
+    );
+  });
+
+  it('disables the Content trigger and does not open the dialog when disabled', () => {
+    render(<AddContentDialog disabled />);
+
+    const trigger = screen.getByRole('button', { name: 'collections.single.content' });
+    expect(trigger).toBeDisabled();
+
+    fireEvent.click(trigger);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('renders the Add Content grid trigger when triggerVariant is grid', () => {
+    render(<AddContentDialog triggerVariant="grid" dataCy="bookmarks-add-content-grid" />);
+
+    const trigger = screen.getByRole('button', { name: 'collections.single.addContent' });
+    expect(trigger).toBeInTheDocument();
+    expect(trigger).toHaveAttribute('data-cy', 'bookmarks-add-content-grid');
+  });
+
+  it('disables the Add Content grid trigger when disabled', () => {
+    render(<AddContentDialog triggerVariant="grid" disabled />);
+
+    expect(screen.getByRole('button', { name: 'collections.single.addContent' })).toBeDisabled();
   });
 
   it('opens the desktop dialog with feed and URL placeholder options', () => {
     render(<AddContentDialog />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
 
     expect(screen.getByRole('dialog')).toHaveClass('outline-none', 'focus:outline-none', 'focus-visible:outline-none');
     expect(screen.getByTestId('dialog-title')).toHaveTextContent('collections.addContentDialog.title');
@@ -115,7 +144,7 @@ describe('AddContentDialog', () => {
   it('stacks URL validation messages below the input', () => {
     render(<AddContentDialog />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
 
     const footer = screen.getByPlaceholderText('https://').closest('[data-slot="card-footer"]');
     expect(footer).toHaveClass('flex-col', 'items-stretch');
@@ -124,7 +153,7 @@ describe('AddContentDialog', () => {
   it('shows a red dashed border when the pasted URL is invalid', async () => {
     render(<AddContentDialog />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
       clipboardData: {
         getData: () => 'not a post url',
@@ -141,7 +170,7 @@ describe('AddContentDialog', () => {
   it('adds pasted bookmark content, prepends it, and closes the dialog', async () => {
     render(<AddContentDialog />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
       clipboardData: {
         getData: () => POST_URL,
@@ -162,7 +191,7 @@ describe('AddContentDialog', () => {
 
     render(<AddContentDialog />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
       clipboardData: {
         getData: () => POST_URL,
@@ -182,7 +211,7 @@ describe('AddContentDialog', () => {
   it('adds pasted content to a collection and closes the dialog', async () => {
     render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
       clipboardData: {
         getData: () => POST_URL,
@@ -209,10 +238,16 @@ describe('AddContentDialog - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it('matches the closed grid trigger snapshot', () => {
+    const { container } = render(<AddContentDialog triggerVariant="grid" />);
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   it('matches the opened desktop dialog snapshot', () => {
     render(<AddContentDialog />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.addContent' }));
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
 
     expect(document.body).toMatchSnapshot();
   });

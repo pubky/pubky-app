@@ -1372,6 +1372,7 @@
       "delete": "删除",
       "follow": "关注",
       "unfollow": "取消关注",
+      "content": "内容",
       "addContent": "添加内容",
       "empty": "此收藏为空。",
       "notFound": {
@@ -1384,7 +1385,7 @@
       }
     },
     "addContentDialog": {
-      "title": "添加内容",
+      "title": "内容",
       "description": "从你的信息流添加帖子或文章，或直接粘贴 URL。",
       "fromFeedTitle": "从信息流添加",
       "fromFeedLead": "找到一个帖子",
