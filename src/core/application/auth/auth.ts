@@ -1,5 +1,6 @@
 import { userUriBuilder } from 'pubky-app-specs';
 import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
+import { HOMESERVER } from '@/config/network';
 import type { TPubkyParams } from '@/controllers/auth/auth.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -14,6 +15,7 @@ import type {
   THomeserverSessionResult,
   THomeserverSignUpParams,
 } from '@/services/homeserver/homeserver.types';
+import { NexusUserService } from '@/services/nexus/user/user';
 
 export class AuthApplication {
   private constructor() {} // Prevent instantiation
@@ -188,6 +190,31 @@ export class AuthApplication {
       const appError = isAppError(error) ? error : toAppError(error, ErrorService.Homeserver, 'userIsSignedUp');
       if (isNotFound(appError)) return false;
       throw appError;
+    }
+  }
+
+  private static homeserverId(homeserver: unknown): string {
+    if (typeof homeserver === 'string') return homeserver.replace(/^pk:/, '');
+    if (
+      homeserver &&
+      typeof homeserver === 'object' &&
+      'z32' in homeserver &&
+      typeof homeserver.z32 === 'function'
+    ) {
+      return homeserver.z32();
+    }
+    return String(homeserver);
+  }
+
+  static async ingestExternalUserWithoutProfile({ pubky, session }: TPubkyParams & THomeserverSessionResult) {
+    try {
+      const homeserver = await HomeserverService.getHomeserver({ publicKey: session.info.publicKey });
+      console.log('--> homeserver', homeserver);
+      if (this.homeserverId(homeserver) !== HOMESERVER) {
+        await NexusUserService.ingest({ user_id: pubky });
+      }
+    } catch (error) {
+      Logger.warn('Failed to ingest external homeserver user during sign-in', { error, pubky });
     }
   }
 }

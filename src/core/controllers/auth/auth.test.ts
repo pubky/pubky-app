@@ -1046,6 +1046,7 @@ describe('AuthController', () => {
       const mockSession = buildMockSession();
       vi.spyOn(Identity, 'z32FromSession').mockReturnValue(TEST_PUBKY as Pubky);
       vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
+      vi.spyOn(AuthApplication, 'ingestExternalUserWithoutProfile').mockResolvedValue(undefined);
       const authStore = storeMocks.getAuthState();
       vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
 
@@ -1061,6 +1062,7 @@ describe('AuthController', () => {
 
       const z32FromSessionSpy = vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
+      const ingestSpy = vi.spyOn(AuthApplication, 'ingestExternalUserWithoutProfile').mockResolvedValue(undefined);
       const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
 
       const authStore = storeMocks.getAuthState();
@@ -1074,6 +1076,7 @@ describe('AuthController', () => {
       expect(signInStore.setAuthUrlResolved).toHaveBeenCalledWith(true);
       expect(z32FromSessionSpy).toHaveBeenCalledWith({ session: mockSession });
       expect(userIsSignedUpSpy).toHaveBeenCalledWith({ pubky: mockPubky });
+      expect(ingestSpy).not.toHaveBeenCalled();
       expect(signInStore.setProfileChecked).toHaveBeenCalledWith(true);
       expect(initializeSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1099,6 +1102,7 @@ describe('AuthController', () => {
 
       const z32FromSessionSpy = vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
+      const ingestSpy = vi.spyOn(AuthApplication, 'ingestExternalUserWithoutProfile').mockResolvedValue(undefined);
       const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize');
 
       const authStore = storeMocks.getAuthState();
@@ -1112,6 +1116,7 @@ describe('AuthController', () => {
       expect(signInStore.setAuthUrlResolved).toHaveBeenCalledWith(true);
       expect(z32FromSessionSpy).toHaveBeenCalledWith({ session: mockSession });
       expect(userIsSignedUpSpy).toHaveBeenCalledWith({ pubky: mockPubky });
+      expect(ingestSpy).toHaveBeenCalledWith({ pubky: mockPubky, session: mockSession });
       expect(signInStore.setProfileChecked).toHaveBeenCalledWith(true);
       expect(initializeSpy).not.toHaveBeenCalled();
       // Session stored early with hasProfile: null, then setHasProfile called after check

@@ -1,3 +1,6 @@
+import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod } from '@/libs/http/http.types';
 import type {
   NexusNotification,
   NexusTag,
@@ -16,6 +19,12 @@ import type { TUserPaginationParams, TUserTaggersParams, TUserTagsParams } from 
  * Handles fetching user data from Nexus API.
  */
 export class NexusUserService {
+  static async ingest(params: TUserId): Promise<void> {
+    const url = userApi.ingest(params);
+    const response = await safeFetch(url, { method: HttpMethod.PUT }, ErrorService.Nexus, 'ingestUser');
+    if (!response.ok) throw httpResponseToError(response, ErrorService.Nexus, 'ingestUser', url);
+  }
+
   /**
    * Retrieves user data from Nexus API
    *

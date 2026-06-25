@@ -18,6 +18,10 @@ import {
 const PREFIX = 'v0/user';
 
 export const userApi = {
+  ingest: (params: TUserId) => {
+    const userId = encodePathSegment(params.user_id);
+    return buildNexusUrl(`v0/ingest/${userId}`);
+  },
   view: (params: TUserViewParams) => {
     const userId = encodePathSegment(params.user_id);
     return buildUrlWithQuery({ baseRoute: `${PREFIX}/${userId}`, params, excludeKeys: USER_PATH_PARAMS });

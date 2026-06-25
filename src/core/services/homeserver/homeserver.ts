@@ -120,6 +120,10 @@ export class HomeserverService {
     }
   }
 
+  static async getHomeserver({ publicKey }: TPublicKeyParams) {
+    return await this.checkHomeserver({ publicKey });
+  }
+
   /**
    * Signs up a new user in the homeserver
    * @param keypair - The keypair to sign up with
