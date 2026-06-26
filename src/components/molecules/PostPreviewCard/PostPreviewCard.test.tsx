@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { PostPreviewCard } from './PostPreviewCard';
 
 // Mock hooks
@@ -16,6 +17,14 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
     ref: mockTtlRef,
     isVisible: false,
   }),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: vi.fn(),
+}));
+
+vi.mock('@/molecules/PostMissing/PostMissing', () => ({
+  PostMissing: () => <div data-testid="post-missing" />,
 }));
 
 // Mock organisms
@@ -82,9 +91,19 @@ vi.mock('@/atoms/Card/Card', () => {
   };
 });
 
+const mockUsePostDetails = vi.mocked(usePostDetails);
+
+// Minimal resolved post — PostHeader / PostContentBase are mocked, so only the
+// non-null `postDetails` (and `isLoading: false`) matters for the missing check.
+const resolvedPost = {
+  postDetails: { id: 'test-post-123' } as never,
+  isLoading: false,
+};
+
 describe('PostPreviewCard', () => {
   beforeEach(() => {
     mockNavigateToPost.mockClear();
+    mockUsePostDetails.mockReturnValue(resolvedPost);
   });
 
   it('renders with required props', () => {
@@ -139,6 +158,28 @@ describe('PostPreviewCard', () => {
     fireEvent.keyDown(card, { key: 'Tab' });
 
     expect(mockNavigateToPost).not.toHaveBeenCalled();
+  });
+
+  it('renders PostMissing (not header/content) when the original post is not found', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+
+    render(<PostPreviewCard postId="missing-post" />);
+
+    // PostMissing replaces the inner CardContent so the header doesn't skeleton.
+    expect(screen.getByTestId('post-missing')).toBeInTheDocument();
+    expect(screen.queryByTestId('card-content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-content-base')).not.toBeInTheDocument();
+  });
+
+  it('renders header/content (not PostMissing) while the original post is still loading', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: true });
+
+    render(<PostPreviewCard postId="loading-post" />);
+
+    expect(screen.queryByTestId('post-missing')).not.toBeInTheDocument();
+    expect(screen.getByTestId('post-header')).toBeInTheDocument();
+    expect(screen.getByTestId('post-content-base')).toBeInTheDocument();
   });
 });
 

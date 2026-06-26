@@ -1,0 +1,16 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PostMissing - Snapshots > matches snapshot with default props 1`] = `
+<div
+  class="flex flex-1 items-center justify-center py-2"
+  data-testid="card-content"
+>
+  <p
+    class="text-center font-normal text-muted-foreground"
+    data-size="sm"
+    data-testid="typography"
+  >
+    Post not found.
+  </p>
+</div>
+`;

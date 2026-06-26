@@ -513,6 +513,7 @@
       "unmuteUser": "Stummschaltung von {username} aufheben"
     },
     "deleted": "Dieser Beitrag wurde vom Autor gelöscht.",
+    "missing": "Beitrag nicht gefunden.",
     "dropFiles": "Dateien hier ablegen",
     "articleTitle": "Artikeltitel",
     "addTag": "Tag hinzufügen",
@@ -1324,6 +1325,7 @@
   },
   "collections": {
     "deleted": "Diese Sammlung wurde vom Autor gelöscht.",
+    "missing": "Sammlung nicht gefunden.",
     "new": {
       "cta": "Neue Sammlung",
       "ctaShort": "Neu",

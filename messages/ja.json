@@ -511,6 +511,7 @@
       "unmuteUser": "{username}のミュートを解除"
     },
     "deleted": "この投稿は作成者によって削除されました。",
+    "missing": "投稿が見つかりません。",
     "dropFiles": "ここにファイルをドロップ",
     "articleTitle": "記事タイトル",
     "addTag": "タグを追加",
@@ -1322,6 +1323,7 @@
   },
   "collections": {
     "deleted": "このコレクションは作成者によって削除されました。",
+    "missing": "コレクションが見つかりません。",
     "new": {
       "cta": "新しいコレクション",
       "ctaShort": "新規",

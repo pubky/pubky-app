@@ -511,6 +511,7 @@
       "unmuteUser": "Riattiva {username}"
     },
     "deleted": "Questo post e stato eliminato dal suo autore.",
+    "missing": "Post non trovato.",
     "dropFiles": "Rilascia i file qui",
     "articleTitle": "Titolo articolo",
     "addTag": "aggiungi tag",
@@ -1322,6 +1323,7 @@
   },
   "collections": {
     "deleted": "Questa raccolta è stata eliminata dal suo autore.",
+    "missing": "Raccolta non trovata.",
     "new": {
       "cta": "Nuova collezione",
       "ctaShort": "Nuova",

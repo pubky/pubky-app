@@ -6,6 +6,7 @@ import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
+import { PostMissing } from '@/molecules/PostMissing/PostMissing';
 import { PostText } from '@/molecules/PostText/PostText';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -24,10 +25,12 @@ export function PostContentBase({ postId, className, textClassName, contrast }: 
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
-  const { postDetails } = usePostDetails(postId);
+  const { postDetails, isLoading } = usePostDetails(postId);
 
   if (!postDetails) {
-    return <PostContentBaseSkeleton />;
+    // `undefined`/in-flight → skeleton; a settled `null` means the post 404'd,
+    // so show the terminal "not found" message instead of skeletoning forever.
+    return isLoading ? <PostContentBaseSkeleton /> : <PostMissing />;
   }
 
   const isDeleted = isPostDeleted(postDetails.content);

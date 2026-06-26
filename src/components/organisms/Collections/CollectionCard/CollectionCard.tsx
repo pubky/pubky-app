@@ -20,6 +20,7 @@ import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { CollectionDeleted } from '@/molecules/CollectionDeleted/CollectionDeleted';
+import { CollectionMissing } from '@/molecules/CollectionMissing/CollectionMissing';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
@@ -83,10 +84,13 @@ export function CollectionCard({
   contrast = 'subtle',
 }: CollectionCardProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
-  const { postDetails } = usePostDetails(compositeId);
+  const { postDetails, isLoading } = usePostDetails(compositeId);
 
   if (!postDetails) {
-    return <CollectionCardSkeleton className={className} />;
+    // `undefined`/in-flight → skeleton; a settled `null` means the collection
+    // post 404'd, so show the terminal "not found" card instead of skeletoning
+    // forever. Defensive — mirrors the post fix for the theoretical 404 case.
+    return isLoading ? <CollectionCardSkeleton className={className} /> : <CollectionMissing className={className} />;
   }
 
   // Soft-deleted collections (`content === '[DELETED]'`) render the standard

@@ -68,6 +68,10 @@ vi.mock('@/molecules/CollectionDeleted/CollectionDeleted', () => ({
   CollectionDeleted: () => <div data-testid="collection-deleted" />,
 }));
 
+vi.mock('@/molecules/CollectionMissing/CollectionMissing', () => ({
+  CollectionMissing: () => <div data-testid="collection-missing" />,
+}));
+
 const mockUnBlur = vi.fn();
 vi.mock('@/controllers/moderation/moderation', () => ({
   ModerationController: {
@@ -351,6 +355,18 @@ describe('CollectionCard', () => {
     // and item count are not yet in the DOM.
     expect(container.querySelector('a[data-cy="collection-card"]')).toBeNull();
     expect(screen.queryByText('Based Bitcoin')).not.toBeInTheDocument();
+    // While loading we keep the skeleton, not the not-found fallback.
+    expect(screen.queryByTestId('collection-missing')).not.toBeInTheDocument();
+  });
+
+  it('renders the CollectionMissing fallback when the collection is not found (settled null)', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+
+    const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+    expect(screen.getByTestId('collection-missing')).toBeInTheDocument();
+    // Not a skeleton and not the real card.
+    expect(container.querySelector('a[data-cy="collection-card"]')).toBeNull();
   });
 
   describe('CTA — non-owner', () => {
