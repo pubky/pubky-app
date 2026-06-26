@@ -204,8 +204,7 @@ describe('NewCollectionDialog', () => {
       });
     });
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'Success',
-      description: 'Collection created',
+      title: 'Collection created',
     });
     await waitFor(() => {
       expect(mocks.push).toHaveBeenCalledWith('/collections/current-user/collection1');

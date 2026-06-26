@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Tout taguer",
           "description": "Taguez publications, médias et profils pour ajouter du contexte, trouver du contenu plus pertinent, découvrir des personnes et réagir vite."
+        },
+        "collections": {
+          "title": "Collectez ce qui compte",
+          "description": "Sauvegardez les publications qui méritent d’être gardées, organisez vos propres idées et partagez vos collections avec d’autres."
         }
       }
     },
@@ -507,6 +511,7 @@
       "unmuteUser": "Afficher {username}"
     },
     "deleted": "Cette publication a ete supprimée par son auteur.",
+    "missing": "Publication introuvable.",
     "dropFiles": "Deposez les fichiers ici",
     "articleTitle": "Titre de l'article",
     "addTag": "ajouter un tag",
@@ -1318,6 +1323,7 @@
   },
   "collections": {
     "deleted": "Cette collection a été supprimée par son auteur.",
+    "missing": "Collection introuvable.",
     "new": {
       "cta": "Nouvelle collection",
       "ctaShort": "Nouveau",
@@ -1375,9 +1381,9 @@
       "unfollow": "Ne plus suivre",
       "delete": "Supprimer",
       "toast": {
-        "followed": "Vous suivez désormais la collection {name}",
-        "unfollowed": "Vous ne suivez plus la collection {name}",
-        "shared": "Vous avez partagé la collection {name}"
+        "followed": "Vous suivez désormais cette collection",
+        "unfollowed": "Vous ne suivez plus cette collection",
+        "shared": "Vous avez partagé cette collection"
       }
     },
     "single": {
@@ -1434,8 +1440,8 @@
     "collectionNamePlaceholder": "Nom de la collection",
     "createCollection": "Créer une collection",
     "loadingCollections": "Chargement des collections...",
-    "addedToCollection": "Publication ajoutée à {name}.",
-    "removedFromCollection": "Publication retirée de {name}.",
+    "addedToCollection": "Publication ajoutée à la collection.",
+    "removedFromCollection": "Publication retirée de la collection.",
     "updateCollectionFailed": "Échec de la mise à jour de la collection.",
     "collectionCreated": "Collection créée et publication enregistrée.",
     "createCollectionFailed": "Échec de la création de la collection."

@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Tag everything",
           "description": "Tag posts, media, and profiles to add context, find better content, discover people, and react quickly."
+        },
+        "collections": {
+          "title": "Collect what matters",
+          "description": "Save posts worth keeping, curate your own ideas, and share your collections with others."
         }
       }
     },
@@ -507,6 +511,7 @@
       "unmuteUser": "Unmute {username}"
     },
     "deleted": "This post has been deleted by its author.",
+    "missing": "Post not found.",
     "dropFiles": "Drop files here",
     "articleTitle": "Article Title",
     "addTag": "add tag",
@@ -1318,6 +1323,7 @@
   },
   "collections": {
     "deleted": "This collection has been deleted by its author.",
+    "missing": "Collection not found.",
     "new": {
       "cta": "New Collection",
       "ctaShort": "New",
@@ -1375,9 +1381,9 @@
       "unfollow": "Unfollow",
       "delete": "Delete",
       "toast": {
-        "followed": "You've followed the {name} collection",
-        "unfollowed": "You've unfollowed the {name} collection",
-        "shared": "You've shared the {name} collection"
+        "followed": "You've followed this collection",
+        "unfollowed": "You've unfollowed this collection",
+        "shared": "You've shared this collection"
       }
     },
     "single": {
@@ -1434,8 +1440,8 @@
     "collectionNamePlaceholder": "Collection name",
     "createCollection": "Create collection",
     "loadingCollections": "Loading collections...",
-    "addedToCollection": "Post added to {name}.",
-    "removedFromCollection": "Post removed from {name}.",
+    "addedToCollection": "Post added to collection.",
+    "removedFromCollection": "Post removed from collection.",
     "updateCollectionFailed": "Failed to update collection.",
     "collectionCreated": "Collection created and post saved.",
     "createCollectionFailed": "Failed to create collection."

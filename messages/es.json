@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Etiqueta todo",
           "description": "Etiqueta publicaciones, medios y perfiles para añadir contexto, encontrar mejor contenido, descubrir personas y reaccionar rápido."
+        },
+        "collections": {
+          "title": "Colecciona lo que importa",
+          "description": "Guarda publicaciones que vale la pena conservar, cura tus propias ideas y comparte tus colecciones con otros."
         }
       }
     },
@@ -509,6 +513,7 @@
       "unmuteUser": "Desilenciar a {username}"
     },
     "deleted": "Esta publicación ha sido eliminada por su autor.",
+    "missing": "Publicación no encontrada.",
     "dropFiles": "Suelta los archivos aqui",
     "articleTitle": "Titulo del articulo",
     "addTag": "agregar etiqueta",
@@ -1322,6 +1327,7 @@
   },
   "collections": {
     "deleted": "Esta colección ha sido eliminada por su autor.",
+    "missing": "Colección no encontrada.",
     "new": {
       "cta": "Nueva colección",
       "ctaShort": "Nueva",
@@ -1379,9 +1385,9 @@
       "unfollow": "Dejar de seguir",
       "delete": "Eliminar",
       "toast": {
-        "followed": "Ahora sigues la colección {name}",
-        "unfollowed": "Has dejado de seguir la colección {name}",
-        "shared": "Has compartido la colección {name}"
+        "followed": "Ahora sigues esta colección",
+        "unfollowed": "Has dejado de seguir esta colección",
+        "shared": "Has compartido esta colección"
       }
     },
     "single": {
@@ -1438,8 +1444,8 @@
     "collectionNamePlaceholder": "Nombre de la colección",
     "createCollection": "Crear colección",
     "loadingCollections": "Cargando colecciones...",
-    "addedToCollection": "Publicación añadida a {name}.",
-    "removedFromCollection": "Publicación eliminada de {name}.",
+    "addedToCollection": "Publicación añadida a la colección.",
+    "removedFromCollection": "Publicación eliminada de la colección.",
     "updateCollectionFailed": "No se pudo actualizar la colección.",
     "collectionCreated": "Colección creada y publicación guardada.",
     "createCollectionFailed": "No se pudo crear la colección."

@@ -86,7 +86,6 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
  */
 export function DiscoverCollections() {
   const t = useTranslations('collections');
-  const tToast = useTranslations('toast');
   const { toast } = useToast();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   // Gate the initial fetch on auth hydration so we never fire a fetch under a
@@ -256,7 +255,7 @@ export function DiscoverCollections() {
       // Mirror `MyCollections`' `useStreamPagination({ onError })` toast so the
       // three Collections sections fail consistently from the user's POV.
       toast({
-        title: tToast('error'),
+        variant: 'error',
         description: t('loadFailed'),
       });
       // Give up on this action so the spinner clears.

@@ -1,5 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AppError } from '@/libs/error/error';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { usePostSaveTargets } from './usePostSaveTargets';
 
 const mocks = vi.hoisted(() => ({
@@ -11,8 +14,8 @@ const mocks = vi.hoisted(() => ({
 
 const translations: Record<string, string> = {
   success: 'Success',
-  addedToCollection: 'Post added to {name}.',
-  removedFromCollection: 'Post removed from {name}.',
+  addedToCollection: 'Post added to collection.',
+  removedFromCollection: 'Post removed from collection.',
 };
 
 vi.mock('@/controllers/post/post', () => ({
@@ -101,12 +104,11 @@ describe('usePostSaveTargets', () => {
     });
     expect(mocks.toggleBookmark).not.toHaveBeenCalled();
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'Success',
-      description: 'Post removed from Proof of Work.',
+      title: 'Post removed from collection.',
     });
   });
 
-  it('shows the target collection name when adding a post to a collection', async () => {
+  it('shows a generic toast when adding a post to a collection', async () => {
     const { result } = renderHook(() => usePostSaveTargets('author:post1'));
 
     await act(async () => {
@@ -119,8 +121,29 @@ describe('usePostSaveTargets', () => {
       shouldAdd: true,
     });
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'Success',
-      description: 'Post added to AI Papers.',
+      title: 'Post added to collection.',
+    });
+  });
+
+  it('forwards the backend error message when updating a collection fails', async () => {
+    mocks.commitUpdateCollectionItem.mockRejectedValue(
+      new AppError({
+        category: ErrorCategory.Validation,
+        code: ValidationErrorCode.INVALID_INPUT,
+        message: 'Collection has too many items',
+        service: ErrorService.Local,
+        operation: 'validateCollectionContent',
+      }),
+    );
+    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+
+    await act(async () => {
+      await result.current.toggleCollection('author:collection2');
+    });
+
+    expect(mocks.toast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Collection has too many items',
     });
   });
 

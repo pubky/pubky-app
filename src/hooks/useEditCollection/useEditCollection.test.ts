@@ -130,8 +130,7 @@ describe('useEditCollection', () => {
     // No new file picked → store should NOT be touched (CDN already has it).
     expect(mocks.setCollectionCover).not.toHaveBeenCalled();
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'Success',
-      description: 'Collection updated',
+      title: 'Collection updated',
     });
   });
 
@@ -186,7 +185,7 @@ describe('useEditCollection', () => {
 
     expect(ok).toBe(false);
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'Error',
+      variant: 'error',
       description: 'Failed to update collection.',
     });
   });

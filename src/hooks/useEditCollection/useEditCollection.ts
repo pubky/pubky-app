@@ -13,6 +13,7 @@ import {
   createCollectionFormSchema,
 } from '@/hooks/useCreateCollection/useCreateCollection.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { useToast } from '@/molecules/Toaster/use-toast';
@@ -48,7 +49,6 @@ type UseEditCollectionResult = {
 export function useEditCollection({ compositeCollectionId }: UseEditCollectionParams): UseEditCollectionResult {
   const tEdit = useTranslations('collections.edit');
   const tForm = useTranslations('collections.new');
-  const tToast = useTranslations('toast');
   const { toast } = useToast();
 
   const { postDetails } = usePostDetails(compositeCollectionId);
@@ -133,15 +133,14 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
         }
 
         toast({
-          title: tToast('success'),
-          description: tEdit('updated'),
+          title: tEdit('updated'),
         });
         ok = true;
       } catch (error) {
         Logger.error('[useEditCollection] Failed to edit collection', { error });
         toast({
-          title: tToast('error'),
-          description: tEdit('updateFailed'),
+          variant: 'error',
+          description: isAppError(error) ? error.message : tEdit('updateFailed'),
         });
       }
     })();

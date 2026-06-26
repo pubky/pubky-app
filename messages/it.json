@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Tagga tutto",
           "description": "Tagga post, media e profili per aggiungere contesto, trovare contenuti migliori, scoprire persone e reagire rapidamente."
+        },
+        "collections": {
+          "title": "Raccogli ciò che conta",
+          "description": "Salva i post da tenere, cura le tue idee e condividi le tue collezioni con gli altri."
         }
       }
     },
@@ -507,6 +511,7 @@
       "unmuteUser": "Riattiva {username}"
     },
     "deleted": "Questo post e stato eliminato dal suo autore.",
+    "missing": "Post non trovato.",
     "dropFiles": "Rilascia i file qui",
     "articleTitle": "Titolo articolo",
     "addTag": "aggiungi tag",
@@ -1318,6 +1323,7 @@
   },
   "collections": {
     "deleted": "Questa raccolta è stata eliminata dal suo autore.",
+    "missing": "Raccolta non trovata.",
     "new": {
       "cta": "Nuova collezione",
       "ctaShort": "Nuova",
@@ -1375,9 +1381,9 @@
       "unfollow": "Non seguire più",
       "delete": "Elimina",
       "toast": {
-        "followed": "Ora segui la raccolta {name}",
-        "unfollowed": "Hai smesso di seguire la raccolta {name}",
-        "shared": "Hai condiviso la raccolta {name}"
+        "followed": "Ora segui questa raccolta",
+        "unfollowed": "Hai smesso di seguire questa raccolta",
+        "shared": "Hai condiviso questa raccolta"
       }
     },
     "single": {
@@ -1434,8 +1440,8 @@
     "collectionNamePlaceholder": "Nome della collezione",
     "createCollection": "Crea collezione",
     "loadingCollections": "Caricamento collezioni...",
-    "addedToCollection": "Post aggiunto a {name}.",
-    "removedFromCollection": "Post rimosso da {name}.",
+    "addedToCollection": "Post aggiunto alla raccolta.",
+    "removedFromCollection": "Post rimosso dalla raccolta.",
     "updateCollectionFailed": "Impossibile aggiornare la collezione.",
     "collectionCreated": "Collezione creata e post salvato.",
     "createCollectionFailed": "Impossibile creare la collezione."

@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Etiquete tudo",
           "description": "Etiquete posts, mídia e perfis para adicionar contexto, encontrar conteúdo melhor, descobrir pessoas e reagir rapidamente."
+        },
+        "collections": {
+          "title": "Colete o que importa",
+          "description": "Salve posts que valem guardar, faça curadoria das suas próprias ideias e compartilhe suas coleções com outras pessoas."
         }
       }
     },
@@ -507,6 +511,7 @@
       "unmuteUser": "Reativar {username}"
     },
     "deleted": "Este post foi excluido pelo autor.",
+    "missing": "Post não encontrado.",
     "dropFiles": "Solte os arquivos aqui",
     "articleTitle": "Titulo do Artigo",
     "addTag": "adicionar tag",
@@ -1318,6 +1323,7 @@
   },
   "collections": {
     "deleted": "Esta coleção foi excluída pelo autor.",
+    "missing": "Coleção não encontrada.",
     "new": {
       "cta": "Nova coleção",
       "ctaShort": "Nova",
@@ -1375,9 +1381,9 @@
       "unfollow": "Deixar de seguir",
       "delete": "Excluir",
       "toast": {
-        "followed": "Você agora segue a coleção {name}",
-        "unfollowed": "Você deixou de seguir a coleção {name}",
-        "shared": "Você compartilhou a coleção {name}"
+        "followed": "Você agora segue esta coleção",
+        "unfollowed": "Você deixou de seguir esta coleção",
+        "shared": "Você compartilhou esta coleção"
       }
     },
     "single": {
@@ -1434,8 +1440,8 @@
     "collectionNamePlaceholder": "Nome da coleção",
     "createCollection": "Criar coleção",
     "loadingCollections": "Carregando coleções...",
-    "addedToCollection": "Publicação adicionada a {name}.",
-    "removedFromCollection": "Publicação removida de {name}.",
+    "addedToCollection": "Publicação adicionada à coleção.",
+    "removedFromCollection": "Publicação removida da coleção.",
     "updateCollectionFailed": "Falha ao atualizar a coleção.",
     "collectionCreated": "Coleção criada e publicação salva.",
     "createCollectionFailed": "Falha ao criar a coleção."

@@ -77,6 +77,10 @@
         "tagging": {
           "title": "标记一切",
           "description": "标记帖子、媒体和资料，用来添加上下文、找到更相关的内容、发现人物并快速回应。"
+        },
+        "collections": {
+          "title": "收藏重要内容",
+          "description": "保存值得留下的帖子，整理你自己的想法，并与他人分享你的收藏。"
         }
       }
     },
@@ -507,6 +511,7 @@
       "unmuteUser": "取消静音 {username}"
     },
     "deleted": "此帖子已被作者删除。",
+    "missing": "未找到帖子。",
     "dropFiles": "将文件拖放到此处",
     "articleTitle": "文章标题",
     "addTag": "添加标签",
@@ -1312,6 +1317,7 @@
   },
   "collections": {
     "deleted": "此收藏集已被作者删除。",
+    "missing": "未找到收藏集。",
     "new": {
       "cta": "新建收藏集",
       "ctaShort": "新建",
@@ -1369,9 +1375,9 @@
       "unfollow": "取消关注",
       "delete": "删除",
       "toast": {
-        "followed": "你已关注 {name} 收藏",
-        "unfollowed": "你已取消关注 {name} 收藏",
-        "shared": "你已分享 {name} 收藏"
+        "followed": "你已关注此收藏",
+        "unfollowed": "你已取消关注此收藏",
+        "shared": "你已分享此收藏"
       }
     },
     "single": {
@@ -1428,8 +1434,8 @@
     "collectionNamePlaceholder": "收藏集名称",
     "createCollection": "创建收藏集",
     "loadingCollections": "正在加载收藏集...",
-    "addedToCollection": "帖子已添加到 {name}。",
-    "removedFromCollection": "帖子已从 {name} 移除。",
+    "addedToCollection": "帖子已添加到收藏。",
+    "removedFromCollection": "帖子已从收藏移除。",
     "updateCollectionFailed": "更新收藏集失败。",
     "collectionCreated": "收藏集已创建并保存帖子。",
     "createCollectionFailed": "创建收藏集失败。"

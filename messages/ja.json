@@ -77,6 +77,10 @@
         "tagging": {
           "title": "すべてをタグ付け",
           "description": "投稿、メディア、プロフィールにタグを付けて文脈を加え、より関連性の高いコンテンツや人を見つけ、すばやく反応できます。"
+        },
+        "collections": {
+          "title": "大切なものを集める",
+          "description": "残しておきたい投稿を保存し、自分のアイデアを整理して、コレクションを他の人と共有できます。"
         }
       }
     },
@@ -507,6 +511,7 @@
       "unmuteUser": "{username}のミュートを解除"
     },
     "deleted": "この投稿は作成者によって削除されました。",
+    "missing": "投稿が見つかりません。",
     "dropFiles": "ここにファイルをドロップ",
     "articleTitle": "記事タイトル",
     "addTag": "タグを追加",
@@ -1318,6 +1323,7 @@
   },
   "collections": {
     "deleted": "このコレクションは作成者によって削除されました。",
+    "missing": "コレクションが見つかりません。",
     "new": {
       "cta": "新しいコレクション",
       "ctaShort": "新規",
@@ -1375,9 +1381,9 @@
       "unfollow": "フォロー解除",
       "delete": "削除",
       "toast": {
-        "followed": "「{name}」コレクションをフォローしました",
-        "unfollowed": "「{name}」コレクションのフォローを解除しました",
-        "shared": "「{name}」コレクションを共有しました"
+        "followed": "このコレクションをフォローしました",
+        "unfollowed": "このコレクションのフォローを解除しました",
+        "shared": "このコレクションを共有しました"
       }
     },
     "single": {
@@ -1434,8 +1440,8 @@
     "collectionNamePlaceholder": "コレクション名",
     "createCollection": "コレクションを作成",
     "loadingCollections": "コレクションを読み込み中...",
-    "addedToCollection": "投稿を「{name}」に追加しました。",
-    "removedFromCollection": "投稿を「{name}」から削除しました。",
+    "addedToCollection": "投稿をコレクションに追加しました。",
+    "removedFromCollection": "投稿をコレクションから削除しました。",
     "updateCollectionFailed": "コレクションの更新に失敗しました。",
     "collectionCreated": "コレクションを作成し、投稿を保存しました。",
     "createCollectionFailed": "コレクションの作成に失敗しました。"

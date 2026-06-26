@@ -1,12 +1,12 @@
 'use client';
 
 import { type ChangeEvent, type RefObject, useEffect, useRef, useState } from 'react';
-import { ATTACHMENT_MAX_IMAGE_SIZE } from '@/config/posts';
+import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 
 type CoverImagePickerError = 'invalid-type' | 'too-large';
 
 type UseCoverImagePickerParams = {
-  /** Maximum allowed file size in bytes. Defaults to `ATTACHMENT_MAX_IMAGE_SIZE`. */
+  /** Maximum allowed file size in bytes. Defaults to `IMAGE_MAX_RAW_SIZE`. */
   maxSize?: number;
   /**
    * Existing cover image URL (e.g. a `pubky://` URL on edit). When set, it is
@@ -50,7 +50,7 @@ export type UseCoverImagePickerResult = {
  * ```
  */
 export function useCoverImagePicker({
-  maxSize = ATTACHMENT_MAX_IMAGE_SIZE,
+  maxSize = IMAGE_MAX_RAW_SIZE,
   initialPreviewUrl = null,
 }: UseCoverImagePickerParams = {}): UseCoverImagePickerResult {
   const inputRef = useRef<HTMLInputElement | null>(null);

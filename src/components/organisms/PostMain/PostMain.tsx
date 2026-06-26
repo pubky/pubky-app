@@ -14,6 +14,7 @@ import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/use
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
+import { PostMissing } from '@/molecules/PostMissing/PostMissing';
 import { RepostHeader } from '@/molecules/RepostHeader/RepostHeader';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContent } from '../PostContent/PostContent';
@@ -41,8 +42,12 @@ export function PostMain({
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
   const isWideLayout = effectiveTagsLayout === 'side';
-  const { postDetails } = usePostDetails(postId);
+  const { postDetails, isLoading } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
+  // A settled `null` (cache miss after the fetch resolved) means the post 404'd.
+  // Without this branch the card below would skeleton forever (PostHeader /
+  // PostContent each wait on `postDetails`). `undefined` is still loading.
+  const isMissing = postDetails === null && !isLoading;
 
   const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
@@ -79,7 +84,9 @@ export function PostMain({
           </Container>
         )}
         <Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
-          {isDeleted ? (
+          {isMissing ? (
+            <PostMissing />
+          ) : isDeleted ? (
             <PostDeleted />
           ) : (
             <>
