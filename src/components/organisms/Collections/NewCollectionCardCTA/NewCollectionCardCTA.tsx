@@ -24,7 +24,7 @@ const NewCollectionCardCTATrigger = forwardRef<ComponentRef<typeof Button>, Comp
       >
         <Plus className="size-3 shrink-0" />
         <Typography as="span" overrideDefaults className="text-sm font-bold">
-          {t('ctaShort')}
+          {t('cta')}
         </Typography>
       </Button>
     );

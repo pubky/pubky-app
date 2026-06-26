@@ -1,8 +1,10 @@
 'use client';
 
 import { type ComponentPropsWithoutRef, type ComponentRef, forwardRef, type SyntheticEvent, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Library, MessageCircle, Plus, Repeat, SquarePlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -81,16 +83,26 @@ function ActionPill({
   icon: Icon,
   count,
   isHighlighted = false,
+  onClick,
+  dataCy,
+  ariaLabel,
 }: {
   icon: typeof MessageCircle;
   count?: number;
   isHighlighted?: boolean;
+  onClick: () => void;
+  dataCy: string;
+  ariaLabel: string;
 }) {
   return (
-    <Container
+    <Button
       overrideDefaults
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      data-cy={dataCy}
       className={cn(
-        'flex h-8 items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs',
+        'flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs',
         !isHighlighted && 'opacity-30',
         isHighlighted && 'drop-shadow-[0_0_8px_var(--brand)]',
       )}
@@ -101,11 +113,11 @@ function ActionPill({
           {count}
         </Typography>
       )}
-    </Container>
+    </Button>
   );
 }
 
-function FeedInstructionCard() {
+function FeedInstructionCard({ onOpenFeed }: { onOpenFeed: () => void }) {
   const t = useTranslations('collections.addContentDialog');
 
   return (
@@ -115,9 +127,27 @@ function FeedInstructionCard() {
       </CardHeader>
       <CardFooter className="justify-start px-6">
         <Container overrideDefaults className="flex w-full flex-wrap items-center justify-start gap-2">
-          <ActionPill icon={MessageCircle} count={7} />
-          <ActionPill icon={Repeat} count={3} />
-          <ActionPill icon={Library} isHighlighted />
+          <ActionPill
+            icon={MessageCircle}
+            count={7}
+            onClick={onOpenFeed}
+            dataCy="add-content-feed-reply-pill"
+            ariaLabel={t('fromFeedTitle')}
+          />
+          <ActionPill
+            icon={Repeat}
+            count={3}
+            onClick={onOpenFeed}
+            dataCy="add-content-feed-repost-pill"
+            ariaLabel={t('fromFeedTitle')}
+          />
+          <ActionPill
+            icon={Library}
+            isHighlighted
+            onClick={onOpenFeed}
+            dataCy="add-content-feed-save-pill"
+            ariaLabel={t('fromFeedTitle')}
+          />
         </Container>
       </CardFooter>
     </Card>
@@ -169,7 +199,7 @@ function CreatePostCard({ onCreatePost }: { onCreatePost: () => void }) {
           type="button"
           onClick={onCreatePost}
           data-cy="add-content-create-post"
-          className="flex w-full cursor-pointer items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 text-left transition-colors outline-none hover:bg-accent/30 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="flex w-full cursor-pointer items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 text-left outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           <AvatarWithFallback
             avatarUrl={avatarUrl}
@@ -191,10 +221,12 @@ function AddContentDialogBody({
   target,
   onSuccess,
   onCreatePost,
+  onOpenFeed,
 }: {
   target: NonNullable<AddContentDialogProps['target']>;
   onSuccess: (postId: string) => Promise<void>;
   onCreatePost: () => void;
+  onOpenFeed: () => void;
 }) {
   const t = useTranslations('collections.addContentDialog');
   const addContentForm = useAddContentForm({
@@ -214,7 +246,7 @@ function AddContentDialogBody({
         <DialogDescription className="sr-only">{t('description')}</DialogDescription>
       </DialogHeader>
       <Container overrideDefaults className="flex w-full flex-col gap-3">
-        <FeedInstructionCard />
+        <FeedInstructionCard onOpenFeed={onOpenFeed} />
         <UrlPasteCard addContentForm={addContentForm} />
         <CreatePostCard onCreatePost={onCreatePost} />
       </Container>
@@ -231,6 +263,7 @@ export function AddContentDialog({
   const t = useTranslations('collections.addContentDialog');
   const [open, setOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(false);
+  const router = useRouter();
   const timelineFeed = useTimelineFeedContext();
   const saveCreatedPostToTarget = useSaveCreatedPostToTarget();
 
@@ -242,6 +275,11 @@ export function AddContentDialog({
   const handleCreatePost = () => {
     setOpen(false);
     setNewPostOpen(true);
+  };
+
+  const handleOpenFeed = () => {
+    setOpen(false);
+    router.push(APP_ROUTES.HOME);
   };
 
   const handlePostCreated = async (createdPostId: string) => {
@@ -267,7 +305,12 @@ export function AddContentDialog({
           className="flex w-full max-w-xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
           hiddenTitle={t('title')}
         >
-          <AddContentDialogBody target={target} onSuccess={handleSuccess} onCreatePost={handleCreatePost} />
+          <AddContentDialogBody
+            target={target}
+            onSuccess={handleSuccess}
+            onCreatePost={handleCreatePost}
+            onOpenFeed={handleOpenFeed}
+          />
         </DialogContent>
       </Dialog>
       <DialogNewPost open={newPostOpen} onOpenChangeAction={setNewPostOpen} onPostCreated={handlePostCreated} />

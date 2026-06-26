@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   commitUpdateCollectionItem: vi.fn(),
   prependPosts: vi.fn(),
   prependOptimisticPosts: vi.fn(),
+  routerPush: vi.fn(),
   toast: vi.fn(),
 }));
 
@@ -25,6 +26,12 @@ const COLLECTION_ID = `${VIEWER}:collection-1`;
 
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mocks.routerPush,
+  }),
 }));
 
 vi.mock('@/controllers/bookmark/bookmark', () => ({
@@ -190,6 +197,24 @@ describe('AddContentDialog', () => {
     expect(screen.getByText('collections.addContentDialog.createPostPlaceholder')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://')).toBeInTheDocument();
   });
+
+  it.each(['add-content-feed-reply-pill', 'add-content-feed-repost-pill', 'add-content-feed-save-pill'])(
+    'closes the dialog and navigates home when clicking %s',
+    async (dataCy) => {
+      render(<AddContentDialog />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+      const feedPill = document.querySelector(`[data-cy="${dataCy}"]`);
+      if (!(feedPill instanceof HTMLElement)) {
+        throw new Error(`Expected ${dataCy} to render`);
+      }
+
+      fireEvent.click(feedPill);
+
+      expect(mocks.routerPush).toHaveBeenCalledWith('/home');
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    },
+  );
 
   it('stacks URL validation messages below the input', () => {
     render(<AddContentDialog />);

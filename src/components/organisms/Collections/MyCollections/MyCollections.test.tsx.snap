@@ -118,7 +118,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
         class="text-sm font-bold"
         data-testid="typography"
       >
-        collections.new.ctaShort
+        collections.new.cta
       </span>
     </button>
   </div>
