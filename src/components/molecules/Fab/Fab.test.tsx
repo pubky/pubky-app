@@ -157,7 +157,6 @@ describe('Fab', () => {
       mockUseFabAction.mockReturnValue({
         kind: 'createPost',
         ariaLabel: 'New bookmark',
-        saveTarget: { type: 'bookmarks' },
         onPostCreated: vi.fn(),
       });
       render(<Fab />);

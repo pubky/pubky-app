@@ -84,7 +84,6 @@ export function useFabAction(): FabAction {
     return {
       kind: 'createPost',
       ariaLabel: tFab('newBookmark'),
-      saveTarget: target,
       onPostCreated: makeOnPostCreated(target),
     };
   }
@@ -98,7 +97,6 @@ export function useFabAction(): FabAction {
     return {
       kind: 'createPost',
       ariaLabel: tFab('newPostInCollection'),
-      saveTarget: target,
       onPostCreated: makeOnPostCreated(target),
     };
   }

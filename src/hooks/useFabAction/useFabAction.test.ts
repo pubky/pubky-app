@@ -75,7 +75,6 @@ describe('useFabAction', () => {
       const { result } = renderHook(() => useFabAction());
       expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'fab.newPost' });
       if (result.current.kind === 'createPost') {
-        expect(result.current.saveTarget).toBeUndefined();
         expect(result.current.onPostCreated).toBeUndefined();
       }
     });
@@ -85,7 +84,6 @@ describe('useFabAction', () => {
       const { result } = renderHook(() => useFabAction());
       expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'fab.newBookmark' });
       if (result.current.kind === 'createPost') {
-        expect(result.current.saveTarget).toEqual({ type: 'bookmarks' });
         expect(result.current.onPostCreated).toBeTypeOf('function');
       }
     });
@@ -95,7 +93,6 @@ describe('useFabAction', () => {
       const { result } = renderHook(() => useFabAction());
       expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'fab.newPostInCollection' });
       if (result.current.kind === 'createPost') {
-        expect(result.current.saveTarget).toEqual({ type: 'collection', collectionId: `${ME}:post1` });
         expect(result.current.onPostCreated).toBeTypeOf('function');
       }
     });
@@ -105,7 +102,7 @@ describe('useFabAction', () => {
       const { result } = renderHook(() => useFabAction());
       expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'fab.newPost' });
       if (result.current.kind === 'createPost') {
-        expect(result.current.saveTarget).toBeUndefined();
+        expect(result.current.onPostCreated).toBeUndefined();
       }
     });
 

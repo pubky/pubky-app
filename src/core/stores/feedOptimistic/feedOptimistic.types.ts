@@ -13,7 +13,7 @@ export type FeedInsertTarget =
       collectionId: string;
     };
 
-export interface FeedOptimisticState {
+interface FeedOptimisticState {
   /**
    * Post ids waiting to be optimistically prepended, keyed by feed identity
    * (see `buildFeedKey`). The producer (the global FAB) and the consumer (the
@@ -23,7 +23,7 @@ export interface FeedOptimisticState {
   pendingByKey: Record<string, string[] | undefined>;
 }
 
-export interface FeedOptimisticActions {
+interface FeedOptimisticActions {
   /** Queue a freshly created post id for the given feed key. */
   enqueue: (key: string, postId: string) => void;
   /** Drop all pending ids for the given feed key (after they are applied). */

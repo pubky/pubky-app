@@ -61,7 +61,7 @@ export function Fab() {
       data-testid="new-post-cta"
       className={buttonClasses}
       aria-label={action.ariaLabel}
-      onClick={isFullyAuthenticated ? () => setOpen(true) : () => requireAuth(() => setOpen(true))}
+      onClick={() => requireAuth(() => setOpen(true))}
     >
       <Plus className="size-10 transition-colors group-hover:text-black" strokeWidth={0.8} />
     </Button>
