@@ -97,12 +97,11 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
   const ownerAvatarUrl = ownerProfile?.avatarUrl;
 
   // Override the generic bookmark toast copy so Follow / Unfollow reads as a
-  // collection action, with the name interpolated (matches `CollectionCard`).
-  const toastName = title || authorPubky;
+  // collection action (matches `CollectionCard`).
   const { isBookmarked, isToggling, toggle } = useBookmark(compositeId, {
     toastMessages: {
-      added: tCardToast('followed', { name: toastName }),
-      removed: tCardToast('unfollowed', { name: toastName }),
+      added: tCardToast('followed'),
+      removed: tCardToast('unfollowed'),
     },
   });
 
@@ -118,7 +117,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
     title: t('shareTitle'),
     submitLabel: t('share'),
     submitIcon: StickyNote,
-    successToastTitle: tCardToast('shared', { name: toastName }),
+    successToastTitle: tCardToast('shared'),
   });
   const handleShare = openRepostDialog;
 

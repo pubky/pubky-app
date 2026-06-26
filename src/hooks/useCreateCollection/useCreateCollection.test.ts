@@ -127,8 +127,7 @@ describe('useCreateCollection', () => {
       coverImage: file,
     });
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'Success',
-      description: 'Collection created',
+      title: 'Collection created',
     });
   });
 
@@ -179,7 +178,7 @@ describe('useCreateCollection', () => {
 
     expect(saved).toBeNull();
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'Error',
+      variant: 'error',
       description: 'Failed to create collection.',
     });
   });

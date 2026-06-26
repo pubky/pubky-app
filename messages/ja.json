@@ -1372,9 +1372,9 @@
       "unfollow": "フォロー解除",
       "delete": "削除",
       "toast": {
-        "followed": "「{name}」コレクションをフォローしました",
-        "unfollowed": "「{name}」コレクションのフォローを解除しました",
-        "shared": "「{name}」コレクションを共有しました"
+        "followed": "このコレクションをフォローしました",
+        "unfollowed": "このコレクションのフォローを解除しました",
+        "shared": "このコレクションを共有しました"
       }
     },
     "single": {
@@ -1424,8 +1424,8 @@
     "collectionNamePlaceholder": "コレクション名",
     "createCollection": "コレクションを作成",
     "loadingCollections": "コレクションを読み込み中...",
-    "addedToCollection": "投稿を「{name}」に追加しました。",
-    "removedFromCollection": "投稿を「{name}」から削除しました。",
+    "addedToCollection": "投稿をコレクションに追加しました。",
+    "removedFromCollection": "投稿をコレクションから削除しました。",
     "updateCollectionFailed": "コレクションの更新に失敗しました。",
     "collectionCreated": "コレクションを作成し、投稿を保存しました。",
     "createCollectionFailed": "コレクションの作成に失敗しました。"

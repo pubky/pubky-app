@@ -154,14 +154,11 @@ function CollectionCardContent({
   const title = collection?.name ?? '';
 
   // Override the generic "Bookmark added / removed" toast copy so collection
-  // Follow / Unfollow reads as a collection action, with the collection name
-  // interpolated. Falls back to the author pubky if the envelope failed to
-  // parse a name — the button is disabled while toggling, so this is rare.
-  const toastName = title || authorPubky;
+  // Follow / Unfollow reads as a collection action.
   const { isBookmarked, isToggling, toggle } = useBookmark(compositeId, {
     toastMessages: {
-      added: tCardToast('followed', { name: toastName }),
-      removed: tCardToast('unfollowed', { name: toastName }),
+      added: tCardToast('followed'),
+      removed: tCardToast('unfollowed'),
     },
     initialIsBookmarked,
   });

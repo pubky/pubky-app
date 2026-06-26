@@ -330,7 +330,7 @@ describe('FollowedCollections', () => {
     // Mirror of the `MyCollections` onError toast — keeps failure UX
     // consistent across the three Collections sections.
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'toast.error',
+      variant: 'error',
       description: 'collections.loadFailed',
     });
     expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();

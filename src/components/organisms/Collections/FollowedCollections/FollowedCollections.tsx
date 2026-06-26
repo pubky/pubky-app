@@ -55,7 +55,6 @@ const EMPTY_IDS: string[] = [];
  */
 export function FollowedCollections() {
   const t = useTranslations('collections');
-  const tToast = useTranslations('toast');
   const { toast } = useToast();
   // Gate the seed fetch on auth hydration. `StreamPostsController.getOrFetchStreamSlice`
   // reads `viewerId` from the auth store synchronously, and the bookmarks-collection
@@ -99,7 +98,7 @@ export function FollowedCollections() {
       // Mirror `MyCollections`' `useStreamPagination({ onError })` toast so the
       // three Collections sections fail consistently from the user's POV.
       toast({
-        title: tToast('error'),
+        variant: 'error',
         description: t('loadFailed'),
       });
       setReachedEnd(true);

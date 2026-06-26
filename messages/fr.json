@@ -1372,9 +1372,9 @@
       "unfollow": "Ne plus suivre",
       "delete": "Supprimer",
       "toast": {
-        "followed": "Vous suivez désormais la collection {name}",
-        "unfollowed": "Vous ne suivez plus la collection {name}",
-        "shared": "Vous avez partagé la collection {name}"
+        "followed": "Vous suivez désormais cette collection",
+        "unfollowed": "Vous ne suivez plus cette collection",
+        "shared": "Vous avez partagé cette collection"
       }
     },
     "single": {
@@ -1424,8 +1424,8 @@
     "collectionNamePlaceholder": "Nom de la collection",
     "createCollection": "Créer une collection",
     "loadingCollections": "Chargement des collections...",
-    "addedToCollection": "Publication ajoutée à {name}.",
-    "removedFromCollection": "Publication retirée de {name}.",
+    "addedToCollection": "Publication ajoutée à la collection.",
+    "removedFromCollection": "Publication retirée de la collection.",
     "updateCollectionFailed": "Échec de la mise à jour de la collection.",
     "collectionCreated": "Collection créée et publication enregistrée.",
     "createCollectionFailed": "Échec de la création de la collection."

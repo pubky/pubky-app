@@ -1372,9 +1372,9 @@
       "unfollow": "Unfollow",
       "delete": "Delete",
       "toast": {
-        "followed": "You've followed the {name} collection",
-        "unfollowed": "You've unfollowed the {name} collection",
-        "shared": "You've shared the {name} collection"
+        "followed": "You've followed this collection",
+        "unfollowed": "You've unfollowed this collection",
+        "shared": "You've shared this collection"
       }
     },
     "single": {
@@ -1424,8 +1424,8 @@
     "collectionNamePlaceholder": "Collection name",
     "createCollection": "Create collection",
     "loadingCollections": "Loading collections...",
-    "addedToCollection": "Post added to {name}.",
-    "removedFromCollection": "Post removed from {name}.",
+    "addedToCollection": "Post added to collection.",
+    "removedFromCollection": "Post removed from collection.",
     "updateCollectionFailed": "Failed to update collection.",
     "collectionCreated": "Collection created and post saved.",
     "createCollectionFailed": "Failed to create collection."

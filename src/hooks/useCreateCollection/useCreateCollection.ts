@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { PostController } from '@/controllers/post/post';
 import { useCoverImagePicker, type UseCoverImagePickerResult } from '@/hooks/useCoverImagePicker/useCoverImagePicker';
+import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -48,7 +49,6 @@ type UseCreateCollectionResult = {
  */
 export function useCreateCollection(): UseCreateCollectionResult {
   const t = useTranslations('collections.new');
-  const tToast = useTranslations('toast');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { toast } = useToast();
   const cover = useCoverImagePicker();
@@ -85,15 +85,14 @@ export function useCreateCollection(): UseCreateCollectionResult {
           useLocalFilesStore.getState().setCollectionCover(compositeId, blobUrl);
         }
         toast({
-          title: tToast('success'),
-          description: t('created'),
+          title: t('created'),
         });
         createdCollectionId = compositeId;
       } catch (error) {
         Logger.error('[useCreateCollection] Failed to create collection', { error });
         toast({
-          title: tToast('error'),
-          description: t('createFailed'),
+          variant: 'error',
+          description: isAppError(error) ? error.message : t('createFailed'),
         });
       }
     })();
