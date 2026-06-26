@@ -32,7 +32,7 @@ exports[`NewCollectionCardCTA - Snapshots > matches the closed trigger snapshot 
     class="text-sm font-bold"
     data-testid="typography"
   >
-    collections.new.cta
+    collections.new.ctaShort
   </span>
 </button>
 `;

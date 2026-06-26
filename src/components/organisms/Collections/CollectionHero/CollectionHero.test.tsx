@@ -364,7 +364,8 @@ describe('CollectionHero', () => {
     expect(panel).toHaveAttribute('data-auto-focus-input', 'true');
     expect(panel).toHaveAttribute('data-enable-loading-skeleton', 'false');
     expect(container.querySelector('[data-cy="post-tags-expandable-row"]')).toHaveClass('items-end');
-    expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).toHaveClass('self-end');
+    expect(screen.getByLabelText('Tag post (3)')).toHaveAttribute('aria-expanded', 'true');
+    expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).not.toBeInTheDocument();
   });
 
   it('omits the description block when the envelope description is empty / nullish', () => {
@@ -433,6 +434,11 @@ describe('CollectionHero', () => {
       expect(screen.getByLabelText('collections.single.edit')).toBeInTheDocument();
       expect(screen.getByLabelText('collections.single.delete')).toBeInTheDocument();
       expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
+      expect(
+        screen
+          .getByLabelText('collections.single.delete')
+          .compareDocumentPosition(screen.getByLabelText('Tag post (3)')) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       expect(screen.getByText('collections.single.share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
       expect(screen.getByText('collections.single.edit', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
       expect(screen.getByText('collections.single.delete', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');

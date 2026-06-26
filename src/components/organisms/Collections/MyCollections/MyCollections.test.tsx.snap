@@ -65,7 +65,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
           class="hidden text-sm font-bold lg:inline"
           data-testid="typography"
         >
-          collections.new.cta
+          collections.new.ctaShort
         </span>
       </button>
     </div>
@@ -118,7 +118,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
         class="text-sm font-bold"
         data-testid="typography"
       >
-        collections.new.cta
+        collections.new.ctaShort
       </span>
     </button>
   </div>
@@ -198,7 +198,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
           class="hidden text-sm font-bold lg:inline"
           data-testid="typography"
         >
-          collections.new.cta
+          collections.new.ctaShort
         </span>
       </button>
     </div>

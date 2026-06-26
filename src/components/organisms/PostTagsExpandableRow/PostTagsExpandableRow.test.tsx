@@ -197,6 +197,24 @@ describe('PostTagsExpandableRow', () => {
     expect(tagButton.compareDocumentPosition(extraButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it('hides the default tag CTA when an external trigger owns expansion', () => {
+    const { container } = render(
+      <PostTagsExpandableRow postId={POST_ID} expanded={false} onExpandedChange={vi.fn()} showTagToggle={false} />,
+    );
+
+    expect(container.querySelector('[data-cy="clickable-tags-list"]')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Tag post (3)')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).not.toBeInTheDocument();
+  });
+
+  it('renders the editable panel from controlled expanded state without the default tag CTA', () => {
+    render(<PostTagsExpandableRow postId={POST_ID} expanded onExpandedChange={vi.fn()} showTagToggle={false} />);
+
+    expect(document.querySelector('[data-cy="clickable-tags-list"]')).not.toBeInTheDocument();
+    expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-post-id', POST_ID);
+    expect(screen.queryByLabelText('Tag post (3)')).not.toBeInTheDocument();
+  });
+
   it('stops propagation without preventing defaults by default', () => {
     const onParentClick = vi.fn();
 

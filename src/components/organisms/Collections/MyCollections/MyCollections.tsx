@@ -82,7 +82,7 @@ export function MyCollections({ showPublicNote = false }: MyCollectionsProps = {
                 {t('new.ctaShort')}
               </Typography>
               <Typography as="span" overrideDefaults className="hidden text-sm font-bold lg:inline">
-                {t('new.cta')}
+                {t('new.ctaShort')}
               </Typography>
             </Button>
           </NewCollectionDialog>
