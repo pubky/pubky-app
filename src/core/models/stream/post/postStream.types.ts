@@ -51,28 +51,14 @@ export enum PostStreamTypes {
   TIMELINE_FRIENDS_COLLECTION = 'timeline:friends:collection',
 
   // ============================================
-  // TIMELINE (Recent) - BOOKMARKS ALL Source
+  // TIMELINE (Recent) - BOOKMARKS Source
   // ============================================
+  // The bookmarks route uses a single fixed stream (it has no content/sort filter
+  // UI). ALL is the main bookmarks feed; COLLECTION backs the FollowedCollections
+  // section (see buildFollowedCollectionsStreamId). Kind-specific and popularity
+  // bookmark variants were removed with the legacy filter coupling.
   TIMELINE_BOOKMARKS_ALL = 'timeline:bookmarks:all',
-  TIMELINE_BOOKMARKS_SHORT = 'timeline:bookmarks:short',
-  TIMELINE_BOOKMARKS_LONG = 'timeline:bookmarks:long',
-  TIMELINE_BOOKMARKS_IMAGE = 'timeline:bookmarks:image',
-  TIMELINE_BOOKMARKS_VIDEO = 'timeline:bookmarks:video',
-  TIMELINE_BOOKMARKS_LINK = 'timeline:bookmarks:link',
-  TIMELINE_BOOKMARKS_FILE = 'timeline:bookmarks:file',
   TIMELINE_BOOKMARKS_COLLECTION = 'timeline:bookmarks:collection',
-
-  // ============================================
-  // POPULARITY (Total Engagement) - BOOKMARKS Source
-  // ============================================
-  POPULARITY_BOOKMARKS_ALL = 'total_engagement:bookmarks:all',
-  POPULARITY_BOOKMARKS_SHORT = 'total_engagement:bookmarks:short',
-  POPULARITY_BOOKMARKS_LONG = 'total_engagement:bookmarks:long',
-  POPULARITY_BOOKMARKS_IMAGE = 'total_engagement:bookmarks:image',
-  POPULARITY_BOOKMARKS_VIDEO = 'total_engagement:bookmarks:video',
-  POPULARITY_BOOKMARKS_LINK = 'total_engagement:bookmarks:link',
-  POPULARITY_BOOKMARKS_FILE = 'total_engagement:bookmarks:file',
-  POPULARITY_BOOKMARKS_COLLECTION = 'total_engagement:bookmarks:collection',
 
   // ============================================
   // POPULARITY (Total Engagement) - ALL Sources

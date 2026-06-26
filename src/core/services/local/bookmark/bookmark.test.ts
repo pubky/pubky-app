@@ -154,71 +154,17 @@ describe('LocalBookmarkService', () => {
       expect(stream!.stream).toContain(testData.compositePostId);
     });
 
-    it('should add short post to TIMELINE_BOOKMARKS_SHORT stream', async () => {
-      await setupPostDetails('short');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_SHORT);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add long post to TIMELINE_BOOKMARKS_LONG stream', async () => {
-      await setupPostDetails('long');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_LONG);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add image post to TIMELINE_BOOKMARKS_IMAGE stream', async () => {
-      await setupPostDetails('image');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add video post to TIMELINE_BOOKMARKS_VIDEO stream', async () => {
-      await setupPostDetails('video');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add file post to TIMELINE_BOOKMARKS_FILE stream', async () => {
-      await setupPostDetails('file');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_FILE);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add link post to TIMELINE_BOOKMARKS_LINK stream', async () => {
-      await setupPostDetails('link');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_LINK);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add post to only ALL and kind-based stream', async () => {
+    it('should add a non-collection post to ONLY the ALL stream', async () => {
+      // Kind-specific bookmark streams were removed with the legacy filter UI;
+      // every non-collection bookmark now lives only in the ALL feed stream.
       await setupPostDetails('image');
       await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
 
       const allStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
-      const imageStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE);
-      const shortStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_SHORT);
+      const collectionStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION);
 
       expect(allStream!.stream).toContain(testData.compositePostId);
-      expect(imageStream!.stream).toContain(testData.compositePostId);
-      expect(shortStream).toBeUndefined(); // Should not be in short stream
+      expect(collectionStream).toBeUndefined(); // non-collection posts never touch the collection stream
     });
 
     it('should add a bookmarked collection to the COLLECTION stream and NOT the ALL stream', async () => {
@@ -291,19 +237,11 @@ describe('LocalBookmarkService', () => {
       expect(userCounts!.bookmarks).toBe(10);
     });
 
-    it('should remove post from all and kind-specific bookmark streams', async () => {
-      await LocalStreamPostsService.prependToStream({
-        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT,
-        compositePostId: testData.compositePostId,
-      });
-
+    it('should remove a non-collection post from the ALL bookmark stream', async () => {
       await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
 
       const allStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
-      const shortStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_SHORT);
-
       expect(allStream!.stream).not.toContain(testData.compositePostId);
-      expect(shortStream!.stream).not.toContain(testData.compositePostId);
     });
 
     it('should remove an un-bookmarked collection from the COLLECTION stream', async () => {
