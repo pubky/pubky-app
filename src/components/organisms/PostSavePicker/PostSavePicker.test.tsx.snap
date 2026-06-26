@@ -30,32 +30,69 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
       id="radix-normalized"
       type="button"
     >
-      <svg
-        aria-hidden="true"
-        class="lucide lucide-library"
-        fill="none"
-        height="24"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="24"
-        xmlns="http://www.w3.org/2000/svg"
+      <span
+        class="relative size-4"
+        data-cy="post-save-trigger-icon"
+        data-state="saved"
+        data-testid="typography"
       >
-        <path
-          d="m16 6 4 14"
-        />
-        <path
-          d="M12 6v14"
-        />
-        <path
-          d="M8 8v12"
-        />
-        <path
-          d="M4 4v16"
-        />
-      </svg>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-library absolute inset-0 transition-[opacity,transform] duration-150 ease-out scale-75 opacity-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m16 6 4 14"
+          />
+          <path
+            d="M12 6v14"
+          />
+          <path
+            d="M8 8v12"
+          />
+          <path
+            d="M4 4v16"
+          />
+        </svg>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-square-library absolute inset-0 transition-[opacity,transform] duration-150 ease-out scale-100 opacity-100"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="18"
+            rx="2"
+            width="18"
+            x="3"
+            y="3"
+          />
+          <path
+            d="M7 7v10"
+          />
+          <path
+            d="M11 7v10"
+          />
+          <path
+            d="m15 7 2 10"
+          />
+        </svg>
+      </span>
     </button>
   </div>
   <div
