@@ -109,7 +109,7 @@ function FeedInstructionCard() {
   const t = useTranslations('collections.addContentDialog');
 
   return (
-    <Card className="min-w-0 overflow-hidden rounded-md py-6 shadow-sm">
+    <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
       <CardHeader className="px-6">
         <CardTitle className="text-base leading-none font-bold text-card-foreground">{t('fromFeedTitle')}</CardTitle>
       </CardHeader>
@@ -128,7 +128,7 @@ function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof us
   const t = useTranslations('collections.addContentDialog');
 
   return (
-    <Card className="min-w-0 overflow-hidden rounded-md py-6 shadow-sm">
+    <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
       <CardHeader className="px-6">
         <CardTitle className="text-base leading-none font-bold text-card-foreground">{t('pasteTitle')}</CardTitle>
       </CardHeader>
@@ -159,33 +159,31 @@ function CreatePostCard({ onCreatePost }: { onCreatePost: () => void }) {
   const displayName = userDetails?.name ?? currentUserPubky ?? t('createPostAvatarFallback');
 
   return (
-    <button
-      type="button"
-      onClick={onCreatePost}
-      data-cy="add-content-create-post"
-      className="flex min-w-0 flex-col gap-6 overflow-hidden rounded-md bg-card py-6 text-left text-card-foreground shadow-sm"
-    >
+    <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
       <CardHeader className="px-6">
         <CardTitle className="text-base leading-none font-bold text-card-foreground">{t('createPostTitle')}</CardTitle>
       </CardHeader>
       <CardFooter className="flex-col items-stretch px-6">
-        <Container
+        <Button
           overrideDefaults
-          className="flex w-full items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 shadow-xs"
+          type="button"
+          onClick={onCreatePost}
+          data-cy="add-content-create-post"
+          className="flex w-full cursor-pointer items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 text-left transition-colors outline-none hover:bg-accent/30 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           <AvatarWithFallback
             avatarUrl={avatarUrl}
             name={displayName}
             fallbackSeed={currentUserPubky ?? displayName}
-            size="sm"
+            size="default"
             alt={displayName}
           />
           <Typography overrideDefaults className="min-w-0 flex-1 truncate text-base font-medium text-input">
             {t('createPostPlaceholder')}
           </Typography>
-        </Container>
+        </Button>
       </CardFooter>
-    </button>
+    </Card>
   );
 }
 

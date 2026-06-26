@@ -284,7 +284,7 @@ describe('AddContentDialog', () => {
     render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
-    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostTitle/ }));
+    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: 'new post' })).toBeInTheDocument();
@@ -296,7 +296,7 @@ describe('AddContentDialog', () => {
     render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
-    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostTitle/ }));
+    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
     fireEvent.click(screen.getByRole('button', { name: 'create post success' }));
 
     await waitFor(() =>
@@ -318,7 +318,7 @@ describe('AddContentDialog', () => {
     render(<AddContentDialog />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
-    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostTitle/ }));
+    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
     fireEvent.click(screen.getByRole('button', { name: 'create post success' }));
 
     await waitFor(() =>

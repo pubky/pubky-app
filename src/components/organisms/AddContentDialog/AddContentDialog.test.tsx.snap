@@ -219,7 +219,7 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
           data-testid="container"
         >
           <div
-            class="flex flex-col gap-6 bg-card text-card-foreground min-w-0 overflow-hidden rounded-md py-6 shadow-sm"
+            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
             data-slot="card"
             data-testid="card"
           >
@@ -342,7 +342,7 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
             </div>
           </div>
           <div
-            class="flex flex-col gap-6 bg-card text-card-foreground min-w-0 overflow-hidden rounded-md py-6 shadow-sm"
+            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
             data-slot="card"
             data-testid="card"
           >
@@ -379,10 +379,10 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
               </div>
             </div>
           </div>
-          <button
-            class="flex min-w-0 flex-col gap-6 overflow-hidden rounded-md bg-card py-6 text-left text-card-foreground shadow-sm"
-            data-cy="add-content-create-post"
-            type="button"
+          <div
+            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
+            data-slot="card"
+            data-testid="card"
           >
             <div
               class="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 px-6"
@@ -399,12 +399,14 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
               class="flex [.border-t]:pt-6 flex-col items-stretch px-6"
               data-slot="card-footer"
             >
-              <div
-                class="flex w-full items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 shadow-xs"
-                data-testid="container"
+              <button
+                class="flex w-full cursor-pointer items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 text-left transition-colors outline-none hover:bg-accent/30 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                data-cy="add-content-create-post"
+                data-slot="button"
+                type="button"
               >
                 <span
-                  class="relative flex shrink-0 overflow-hidden rounded-full h-6 w-6"
+                  class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
                 >
                   <span
                     class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
@@ -472,9 +474,9 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
                 >
                   collections.addContentDialog.createPostPlaceholder
                 </p>
-              </div>
+              </button>
             </div>
-          </button>
+          </div>
         </div>
       </form>
       <button
