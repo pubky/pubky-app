@@ -1,7 +1,7 @@
 'use client';
 
 import { type KeyboardEvent, type ReactNode, useEffect, useState } from 'react';
-import { Bookmark, Check, Library, Loader2, Plus } from 'lucide-react';
+import { Bookmark, Check, Library, Loader2, Plus, SquareLibrary } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -35,6 +35,7 @@ type PostSavePickerProps = {
 };
 
 type SavePickerLayout = 'dropdown' | 'sheet';
+type SaveTriggerIconState = 'default' | 'saved';
 
 type SaveTargetIconProps = {
   isSaved: boolean;
@@ -63,6 +64,27 @@ function SaveTargetIcon({ isSaved, isBusy }: SaveTargetIconProps) {
   }
 
   return null;
+}
+
+function SaveTriggerIcon({ state }: { state: SaveTriggerIconState }) {
+  const iconClassName = (targetState: SaveTriggerIconState) =>
+    cn(
+      'absolute inset-0 transition-[opacity,transform] duration-150 ease-out',
+      state === targetState ? 'scale-100 opacity-100' : 'scale-75 opacity-0',
+    );
+
+  return (
+    <Typography
+      as="span"
+      overrideDefaults
+      data-cy="post-save-trigger-icon"
+      data-state={state}
+      className="relative size-4"
+    >
+      <Library aria-hidden="true" className={iconClassName('default')} />
+      <SquareLibrary aria-hidden="true" className={iconClassName('saved')} />
+    </Typography>
+  );
 }
 
 function SavePickerRow({
@@ -255,6 +277,8 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
     feedVariant === TIMELINE_FEED_VARIANT.COLLECTION && feedCollectionId
       ? saveTargets.collections.find((collection) => collection.id === feedCollectionId)
       : undefined;
+  const isSavedToLibrary = saveTargets.isBookmarked || saveTargets.collections.some((collection) => collection.isSaved);
+  const triggerIconState: SaveTriggerIconState = isSavedToLibrary ? 'saved' : 'default';
   const shouldRemoveFromCollectionFeed =
     feedVariant === TIMELINE_FEED_VARIANT.COLLECTION &&
     !open &&
@@ -282,7 +306,7 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
       aria-label={t('open')}
       data-cy="post-bookmark-btn"
     >
-      <Library />
+      <SaveTriggerIcon state={triggerIconState} />
     </Button>
   );
 

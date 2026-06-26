@@ -112,6 +112,14 @@ describe('PostSavePicker', () => {
     return { ...result, rerenderPicker: () => result.rerender(createPicker()) };
   };
 
+  const getTriggerIcon = (container: HTMLElement) => {
+    const icon = container.querySelector('[data-cy="post-save-trigger-icon"]');
+    if (!(icon instanceof HTMLElement)) {
+      throw new Error('Expected post save trigger icon to render');
+    }
+    return icon;
+  };
+
   const openPicker = () => {
     const trigger = screen.getByRole('button', { name: 'Save post' });
     fireEvent.pointerDown(trigger);
@@ -133,6 +141,40 @@ describe('PostSavePicker', () => {
       expect(screen.getByText('Proof of Work')).toBeInTheDocument();
       expect(screen.getByText('AI Papers')).toBeInTheDocument();
     });
+  });
+
+  it('shows the default collection icon when the post is not in bookmarks or any collection', () => {
+    mockState.isBookmarked = false;
+    mockState.collection1Saved = false;
+    const { container } = renderPicker();
+
+    expect(getTriggerIcon(container)).toHaveAttribute('data-state', 'default');
+  });
+
+  it('shows the saved collection icon when the post belongs to a collection', () => {
+    mockState.collection1Saved = true;
+    const { container } = renderPicker();
+
+    expect(getTriggerIcon(container)).toHaveAttribute('data-state', 'saved');
+  });
+
+  it('keeps the collection icon while the desktop save menu is open', async () => {
+    const { container } = renderPicker();
+
+    openPicker();
+
+    await waitFor(() => {
+      expect(screen.getByText('Bookmarks')).toBeInTheDocument();
+    });
+    expect(getTriggerIcon(container)).toHaveAttribute('data-state', 'saved');
+  });
+
+  it('shows the saved collection icon for bookmarked posts without collection membership', () => {
+    mockState.isBookmarked = true;
+    mockState.collection1Saved = false;
+    const { container } = renderPicker();
+
+    expect(getTriggerIcon(container)).toHaveAttribute('data-state', 'saved');
   });
 
   it('toggles bookmark and collection targets from the desktop menu', async () => {
