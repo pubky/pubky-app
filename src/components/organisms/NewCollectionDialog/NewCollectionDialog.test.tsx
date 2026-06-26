@@ -300,6 +300,21 @@ describe('NewCollectionDialog', () => {
       expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
     });
 
+    it('waits for authored collections to load before showing either dialog state', () => {
+      mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: true });
+      render(
+        <NewCollectionDialog>
+          <Button>Open dialog</Button>
+        </NewCollectionDialog>,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
+
+      expect(screen.queryByRole('heading', { name: 'Welcome to Collections' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'New Collection' })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+    });
+
     it('advances from the intro to the form on Continue', () => {
       mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: false });
       render(
@@ -352,6 +367,13 @@ describe('NewCollectionDialog', () => {
       expect(screen.getByRole('heading', { name: 'Welcome to Collections' })).toBeInTheDocument();
       expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('NewCollectionDialog - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.useAuthoredCollections.mockReturnValue({ collections: [{ id: 'seed-collection' }], isLoading: false });
   });
 
   it('matches snapshot when open', () => {

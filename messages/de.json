@@ -1408,13 +1408,16 @@
       }
     },
     "addContentDialog": {
-      "title": "Inhalt",
+      "title": "Inhalt hinzufügen",
       "description": "Füge einen Beitrag oder Artikel aus deinem Feed hinzu oder füge direkt eine URL ein.",
       "fromFeedTitle": "Aus Feed hinzufügen",
       "fromFeedLead": "Finde einen Beitrag",
       "fromFeedRest": " den du hinzufügen möchtest und klicke auf die Sammlungen-Schaltfläche.",
       "pasteTitle": "Beitrags-URL einfügen",
       "pasteDescription": "Du kannst auch eine Beitrags-URL einfügen, um ihn schnell zu deiner Sammlung hinzuzufügen.",
+      "createPostTitle": "Neuen Beitrag erstellen",
+      "createPostPlaceholder": "Was gibt es Neues?",
+      "createPostAvatarFallback": "Du",
       "adding": "Wird hinzugefügt...",
       "errors": {
         "required": "Füge eine Beitrags-URL ein.",

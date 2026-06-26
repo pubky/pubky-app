@@ -1406,13 +1406,16 @@
       }
     },
     "addContentDialog": {
-      "title": "Contenuto",
+      "title": "Aggiungi contenuto",
       "description": "Aggiungi un post o un articolo dal tuo feed oppure incolla direttamente un URL.",
       "fromFeedTitle": "Aggiungi dal feed",
       "fromFeedLead": "Trova un post",
       "fromFeedRest": " che vuoi aggiungere e clicca sul pulsante delle raccolte.",
       "pasteTitle": "Incolla URL del post",
       "pasteDescription": "Puoi anche incollare l'URL di un post per aggiungerlo rapidamente alla tua raccolta.",
+      "createPostTitle": "Crea nuovo post",
+      "createPostPlaceholder": "A cosa stai pensando?",
+      "createPostAvatarFallback": "Tu",
       "adding": "Aggiunta...",
       "errors": {
         "required": "Incolla l'URL di un post.",

@@ -20,6 +20,10 @@ vi.mock('@/molecules/Toaster/use-toast', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
+vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
+  useAuthoredCollections: () => ({ collections: [{ id: 'seed-collection' }], isLoading: false }),
+}));
+
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
     selector({ currentUserPubky: 'current-user' }),

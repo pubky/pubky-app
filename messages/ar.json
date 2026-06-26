@@ -1402,13 +1402,16 @@
       }
     },
     "addContentDialog": {
-      "title": "محتوى",
+      "title": "إضافة محتوى",
       "description": "أضف منشورًا أو مقالًا من خلاصتك أو الصق رابطًا مباشرة.",
       "fromFeedTitle": "إضافة من الخلاصة",
       "fromFeedLead": "ابحث عن منشور",
       "fromFeedRest": " تريد إضافته واضغط على زر المجموعات.",
       "pasteTitle": "لصق رابط المنشور",
       "pasteDescription": "يمكنك أيضًا لصق رابط منشور لإضافته بسرعة إلى مجموعتك.",
+      "createPostTitle": "إنشاء منشور جديد",
+      "createPostPlaceholder": "بماذا تفكر؟",
+      "createPostAvatarFallback": "أنت",
       "adding": "جارٍ الإضافة...",
       "errors": {
         "required": "الصق رابط منشور.",

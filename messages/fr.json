@@ -1406,13 +1406,16 @@
       }
     },
     "addContentDialog": {
-      "title": "Contenu",
+      "title": "Ajouter du contenu",
       "description": "Ajoutez une publication ou un article depuis votre fil ou collez directement une URL.",
       "fromFeedTitle": "Ajouter depuis le fil",
       "fromFeedLead": "Trouvez une publication",
       "fromFeedRest": " que vous voulez ajouter et cliquez sur le bouton des collections.",
       "pasteTitle": "Coller l'URL de la publication",
       "pasteDescription": "Vous pouvez aussi coller l'URL d'une publication pour l'ajouter rapidement à votre collection.",
+      "createPostTitle": "Créer une nouvelle publication",
+      "createPostPlaceholder": "Qu'avez-vous en tête ?",
+      "createPostAvatarFallback": "Vous",
       "adding": "Ajout...",
       "errors": {
         "required": "Collez une URL de publication.",

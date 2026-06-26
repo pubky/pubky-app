@@ -53,7 +53,7 @@ export function CollectionsIntroDialog({ open, onOpenChange, onContinue }: Colle
           height={192}
           loading="eager"
           unoptimized
-          className="mx-auto h-48 w-48"
+          className="mx-auto size-48"
         />
 
         <DialogFooter>

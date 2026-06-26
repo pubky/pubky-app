@@ -64,7 +64,7 @@ exports[`CollectionsIntroDialog - Snapshots > matches snapshot when open 1`] = `
       </p>
       <img
         alt="Collections"
-        class="mx-auto h-48 w-48"
+        class="mx-auto size-48"
         data-nimg="1"
         decoding="async"
         height="192"

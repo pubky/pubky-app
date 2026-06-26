@@ -1400,13 +1400,16 @@
       }
     },
     "addContentDialog": {
-      "title": "内容",
+      "title": "添加内容",
       "description": "从你的信息流添加帖子或文章，或直接粘贴 URL。",
       "fromFeedTitle": "从信息流添加",
       "fromFeedLead": "找到一个帖子",
       "fromFeedRest": "，然后点击收藏按钮将其添加。",
       "pasteTitle": "粘贴帖子 URL",
       "pasteDescription": "你也可以粘贴帖子 URL，将其快速添加到你的收藏中。",
+      "createPostTitle": "创建新帖子",
+      "createPostPlaceholder": "你在想什么？",
+      "createPostAvatarFallback": "你",
       "adding": "正在添加...",
       "errors": {
         "required": "粘贴帖子 URL。",

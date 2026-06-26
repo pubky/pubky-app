@@ -3,11 +3,8 @@
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { COLLECTION_ROUTES, isCollectionsOverviewRoute, matchSingleCollectionRoute } from '@/app/routes';
-import { BookmarkController } from '@/controllers/bookmark/bookmark';
-import { PostController } from '@/controllers/post/post';
-import { Logger } from '@/libs/logger/logger';
+import { useSaveCreatedPostToTarget } from '@/hooks/useSaveCreatedPostToTarget/useSaveCreatedPostToTarget';
 import { buildCompositeId } from '@/models/models.utils';
-import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useFeedOptimisticStore } from '@/stores/feedOptimistic/feedOptimistic.store';
 import { buildFeedKey, type FeedInsertTarget } from '@/stores/feedOptimistic/feedOptimistic.types';
@@ -35,45 +32,17 @@ export function useFabAction(): FabAction {
   const pathname = usePathname();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const enqueue = useFeedOptimisticStore((state) => state.enqueue);
-  const { toast } = useToast();
   const tFab = useTranslations('fab');
-  const tToast = useTranslations('toast');
-  const tSave = useTranslations('postSave');
-  const tBookmark = useTranslations('toast.bookmark');
+  const saveCreatedPostToTarget = useSaveCreatedPostToTarget();
 
   const makeOnPostCreated =
     (target: FeedInsertTarget) =>
-    async (createdPostId: string): Promise<void> => {
-      try {
-        if (target.type === 'collection') {
-          await PostController.commitUpdateCollectionItem({
-            collectionId: target.collectionId,
-            postId: createdPostId,
-            shouldAdd: true,
-          });
-          enqueue(buildFeedKey(target), createdPostId);
-          toast({ title: tToast('success'), description: tFab('addedToCollection') });
-          return;
-        }
-
-        // The post is already created and the dialog closed by the time this
-        // runs, so a missing pubky (e.g. sign-out racing the create) must
-        // surface feedback rather than silently dropping the bookmark.
-        if (!currentUserPubky) {
-          toast({ variant: 'error', description: tBookmark('loginRequired') });
-          return;
-        }
-        await BookmarkController.commitCreate({ postId: createdPostId, userId: currentUserPubky });
-        enqueue(buildFeedKey(target), createdPostId);
-        toast({ title: tBookmark('added') });
-      } catch (error) {
-        Logger.error('[useFabAction] Failed to save created post', { error, target, createdPostId });
-        toast({
-          variant: 'error',
-          description: target.type === 'collection' ? tSave('updateCollectionFailed') : tBookmark('addFailed'),
-        });
-      }
-    };
+    (createdPostId: string): Promise<void> =>
+      saveCreatedPostToTarget({
+        target,
+        createdPostId,
+        onSaved: (savedPostId) => enqueue(buildFeedKey(target), savedPostId),
+      });
 
   if (isCollectionsOverviewRoute(pathname)) {
     return { kind: 'createCollection', ariaLabel: tFab('newCollection') };

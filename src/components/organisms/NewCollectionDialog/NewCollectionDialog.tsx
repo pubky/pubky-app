@@ -40,8 +40,8 @@ export function NewCollectionDialog({
   const { collections, isLoading } = useAuthoredCollections();
   const [continued, setContinued] = useState(false);
   const needsIntro = !isLoading && collections.length === 0;
-  const introOpen = open && needsIntro && !continued;
-  const formOpen = open && (!needsIntro || continued);
+  const introOpen = open && !isLoading && needsIntro && !continued;
+  const formOpen = open && !isLoading && (!needsIntro || continued);
 
   // Local saving flag, flipped synchronously via `flushSync` so the "Saving..."
   // state paints before any heavy work (e.g. cover image canvas re-encoding)
