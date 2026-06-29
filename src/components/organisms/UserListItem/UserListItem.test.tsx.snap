@@ -2,7 +2,7 @@
 
 exports[`UserListItem - Snapshots > matches snapshot for compact variant 1`] = `
 <div
-  class="flex w-full items-center gap-2"
+  class="flex w-full items-center gap-2 pr-1"
   data-testid="user-list-item-test-user-pubky-123456"
 >
   <button
@@ -68,7 +68,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant 1`] = `
 
 exports[`UserListItem - Snapshots > matches snapshot for compact variant as current user 1`] = `
 <div
-  class="flex w-full items-center gap-2"
+  class="flex w-full items-center gap-2 pr-1"
   data-testid="user-list-item-test-user-pubky-123456"
 >
   <button
@@ -128,7 +128,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant as curr
 
 exports[`UserListItem - Snapshots > matches snapshot for compact variant when following 1`] = `
 <div
-  class="flex w-full items-center gap-2"
+  class="flex w-full items-center gap-2 pr-1"
   data-testid="user-list-item-test-user-pubky-123456"
 >
   <button
@@ -211,7 +211,7 @@ exports[`UserListItem - Snapshots > matches snapshot for compact variant when fo
 
 exports[`UserListItem - Snapshots > matches snapshot for compact variant with stats 1`] = `
 <div
-  class="flex w-full items-center gap-2"
+  class="flex w-full items-center gap-2 pr-1"
   data-testid="user-list-item-test-user-pubky-123456"
 >
   <button

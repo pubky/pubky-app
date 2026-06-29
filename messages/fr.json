@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Tout taguer",
           "description": "Taguez publications, médias et profils pour ajouter du contexte, trouver du contenu plus pertinent, découvrir des personnes et réagir vite."
+        },
+        "collections": {
+          "title": "Collectez ce qui compte",
+          "description": "Sauvegardez les publications qui méritent d’être gardées, organisez vos propres idées et partagez vos collections avec d’autres."
         }
       }
     },

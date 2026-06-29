@@ -595,6 +595,37 @@ describe('PostController', () => {
       expect(tagList?.[0]?.taggedId).toBe(createdId);
       expect(tagList?.[0]?.label).toBe('nft');
     });
+
+    it('normalizes file attachments sequentially to avoid concurrent image decodes', async () => {
+      const events: string[] = [];
+      vi.spyOn(FileApplication, 'toFileAttachment').mockImplementation(async ({ file }) => {
+        events.push(`start:${file.name}`);
+        await Promise.resolve();
+        events.push(`finish:${file.name}`);
+        const safeName = encodeURIComponent(file.name);
+
+        return {
+          blobResult: {
+            blob: { data: new Uint8Array([1, 2, 3]) },
+            meta: { url: `pubky://mock-author/pub/pubky.app/blobs/${safeName}` },
+          } as TFileAttachmentResult['blobResult'],
+          fileResult: {
+            file: { toJson: () => ({}) },
+            meta: { url: `pubky://mock-author/pub/pubky.app/files/${safeName}` },
+          } as TFileAttachmentResult['fileResult'],
+        };
+      });
+      const firstFile = new File(['first'], 'first.jpg', { type: 'image/jpeg' });
+      const secondFile = new File(['second'], 'second.jpg', { type: 'image/jpeg' });
+
+      const { PostController } = await import('./post');
+      await PostController.commitCreate({
+        ...createPostParams('photos'),
+        attachments: [firstFile, secondFile],
+      });
+
+      expect(events).toEqual(['start:first.jpg', 'finish:first.jpg', 'start:second.jpg', 'finish:second.jpg']);
+    });
   });
 
   describe('commitDelete', () => {
