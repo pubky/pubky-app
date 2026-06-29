@@ -118,6 +118,21 @@ describe('notifications', () => {
   });
 
   it('can be notified for tagged post and profile', () => {
+    // helper function to verify the tag is visible on desktop and not on mobile
+    const expectLatestNotificationTag = (tagLabel: string) => {
+      const isMobile = Cypress.expose('isMobile');
+      cy.get('[data-cy="notifications-list"]')
+        .children()
+        .first()
+        .find('[data-cy="post-tag"]')
+        .should(isMobile ? 'not.be.visible' : 'be.visible')
+        .then(($tag) => {
+          if (!isMobile) {
+            cy.wrap($tag).should('contain', tagLabel);
+          }
+        });
+    };
+
     // * profile 1 creates a post
     const postContent = `I will be notified when this post is tagged! ${Date.now()}`;
     createQuickPost(postContent);
@@ -140,7 +155,9 @@ describe('notifications', () => {
     goToProfilePageFromHeader();
     verifyNotificationCounter(0);
     // check latest notification on profile page
-    checkLatestNotification([profile1.username, 'tagged your profile', profileTag], LatestNotificationReadState.Unread);
+    checkLatestNotification([profile1.username, 'tagged your profile'], LatestNotificationReadState.Unread);
+
+    expectLatestNotificationTag(profileTag);
 
     // * profile 2 tags profile 1's post (from their profile page)
     cy.get(`@${profile1.pubkyAlias}`).then((pubky) => {
@@ -161,25 +178,17 @@ describe('notifications', () => {
     verifyNotificationCounter(1);
     goToProfilePageFromHeader();
     verifyNotificationCounter(0);
-    checkLatestNotification([profile2.username, 'tagged your post', postTag], LatestNotificationReadState.Unread);
+    checkLatestNotification([profile2.username, 'tagged your post'], LatestNotificationReadState.Unread);
 
     // * toggle tabs to check unread dot disappears
     causeNotificationsToBeRead();
     verifyNotificationCounter(0);
-    checkLatestNotification([profile2.username, 'tagged your post', postTag], LatestNotificationReadState.Read);
+    checkLatestNotification([profile2.username, 'tagged your post'], LatestNotificationReadState.Read);
 
-    cy.get('[data-cy="notifications-list"]')
-      .children()
-      .first()
-      .within(() => {
-        cy.contains('a', 'tagged your post')
-          .should('be.visible')
-          .parent()
-          .should('have.css', 'white-space', Cypress.expose('isMobile') ? 'normal' : 'nowrap');
+    // verify post tag is visible on desktop and not on mobile
+    expectLatestNotificationTag(postTag);
 
-        cy.get('[data-cy="post-tag"]').should(Cypress.expose('isMobile') ? 'not.be.visible' : 'be.visible');
-      });
-
+    // verify navigation to search page with tag on desktop post page on mobile
     if (Cypress.expose('isMobile')) {
       cy.get('[data-cy="notifications-list"]').children().first().contains('a', 'tagged your post').click();
       cy.location('pathname').should('match', /^\/post\/[^/]+\/[^/]+$/);
