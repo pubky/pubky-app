@@ -166,23 +166,26 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
         <Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
           <Typography
             as="p"
-            className="min-w-0 shrink truncate text-sm leading-none font-medium text-foreground lg:text-base lg:leading-normal"
+            className="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
           >
-            {/* Username - links to user profile without underline on hover */}
+            {/* Username - truncated independently so long names do not overlap timestamp/icon */}
             {userProfileLink ? (
-              <Link href={userProfileLink} className="no-underline hover:no-underline">
+              <Link
+                href={userProfileLink}
+                className="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
+              >
                 {userName}
               </Link>
             ) : (
-              userName
+              <span className="inline-block max-w-full min-w-0 truncate align-bottom">{userName}</span>
             )}{' '}
             {/* Action text - links to notification target (post or profile) */}
             {notificationLink ? (
-              <Link href={notificationLink} className="text-foreground hover:underline">
+              <Link href={notificationLink} className="text-foreground hover:underline lg:shrink-0">
                 {actionText}
               </Link>
             ) : (
-              <span className="text-foreground">{actionText}</span>
+              <span className="text-foreground lg:shrink-0">{actionText}</span>
             )}
           </Typography>
 
@@ -201,13 +204,13 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
               </Typography>
             ))}
 
-          {/* Tag badge for tagged notifications - click navigates to search */}
+          {/* Desktop tag badge for tagged notifications - click navigates to search */}
           {(notification.type === NotificationType.TagPost || notification.type === NotificationType.TagProfile) &&
             'tag_label' in notification && (
               <PostTag
                 label={notification.tag_label}
                 showClose={false}
-                className="shrink-0"
+                className="hidden shrink-0 lg:inline-flex"
                 onClick={handleTagClick(notification.tag_label)}
               />
             )}
