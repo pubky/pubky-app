@@ -508,7 +508,8 @@
       "followUser": "{username}をフォロー",
       "unfollowUser": "{username}のフォローを解除",
       "muteUser": "{username}をミュート",
-      "unmuteUser": "{username}のミュートを解除"
+      "unmuteUser": "{username}のミュートを解除",
+      "tagPost": "投稿にタグを付ける ({count})"
     },
     "deleted": "この投稿は作成者によって削除されました。",
     "missing": "投稿が見つかりません。",

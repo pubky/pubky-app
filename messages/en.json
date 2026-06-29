@@ -508,7 +508,8 @@
       "followUser": "Follow {username}",
       "unfollowUser": "Unfollow {username}",
       "muteUser": "Mute {username}",
-      "unmuteUser": "Unmute {username}"
+      "unmuteUser": "Unmute {username}",
+      "tagPost": "Tag post ({count})"
     },
     "deleted": "This post has been deleted by its author.",
     "missing": "Post not found.",

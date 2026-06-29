@@ -508,7 +508,8 @@
       "followUser": "关注 {username}",
       "unfollowUser": "取消关注 {username}",
       "muteUser": "静音 {username}",
-      "unmuteUser": "取消静音 {username}"
+      "unmuteUser": "取消静音 {username}",
+      "tagPost": "标记帖子 ({count})"
     },
     "deleted": "此帖子已被作者删除。",
     "missing": "未找到帖子。",

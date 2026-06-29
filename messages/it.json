@@ -508,7 +508,8 @@
       "followUser": "Segui {username}",
       "unfollowUser": "Non seguire più {username}",
       "muteUser": "Silenzia {username}",
-      "unmuteUser": "Riattiva {username}"
+      "unmuteUser": "Riattiva {username}",
+      "tagPost": "Tagga il post ({count})"
     },
     "deleted": "Questo post e stato eliminato dal suo autore.",
     "missing": "Post non trovato.",

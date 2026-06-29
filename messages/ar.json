@@ -510,7 +510,8 @@
       "followUser": "متابعة {username}",
       "unfollowUser": "الغاء متابعة {username}",
       "muteUser": "كتم {username}",
-      "unmuteUser": "الغاء كتم {username}"
+      "unmuteUser": "الغاء كتم {username}",
+      "tagPost": "وسم المنشور ({count})"
     },
     "deleted": "تم حذف هذا المنشور من قبل صاحبه.",
     "missing": "المنشور غير موجود.",

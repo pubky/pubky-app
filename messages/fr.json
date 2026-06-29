@@ -508,7 +508,8 @@
       "followUser": "Suivre {username}",
       "unfollowUser": "Ne plus suivre {username}",
       "muteUser": "Masquer {username}",
-      "unmuteUser": "Afficher {username}"
+      "unmuteUser": "Afficher {username}",
+      "tagPost": "Taguer la publication ({count})"
     },
     "deleted": "Cette publication a ete supprimée par son auteur.",
     "missing": "Publication introuvable.",

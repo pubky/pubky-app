@@ -510,7 +510,8 @@
       "followUser": "{username} folgen",
       "unfollowUser": "{username} entfolgen",
       "muteUser": "{username} stummschalten",
-      "unmuteUser": "Stummschaltung von {username} aufheben"
+      "unmuteUser": "Stummschaltung von {username} aufheben",
+      "tagPost": "Beitrag taggen ({count})"
     },
     "deleted": "Dieser Beitrag wurde vom Autor gelöscht.",
     "missing": "Beitrag nicht gefunden.",

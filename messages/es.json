@@ -510,7 +510,8 @@
       "followUser": "Seguir a {username}",
       "unfollowUser": "Dejar de seguir a {username}",
       "muteUser": "Silenciar a {username}",
-      "unmuteUser": "Desilenciar a {username}"
+      "unmuteUser": "Desilenciar a {username}",
+      "tagPost": "Etiquetar publicación ({count})"
     },
     "deleted": "Esta publicación ha sido eliminada por su autor.",
     "missing": "Publicación no encontrada.",
