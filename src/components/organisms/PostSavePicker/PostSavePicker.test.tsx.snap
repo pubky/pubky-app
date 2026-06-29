@@ -83,150 +83,155 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
         data-testid="container"
       >
         <div
-          class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
-          data-cy="post-save-bookmarks-option"
-          data-orientation="vertical"
-          data-radix-collection-item=""
-          role="menuitem"
-          tabindex="-1"
+          class="flex max-h-[50dvh] flex-col overflow-y-auto gap-3"
+          data-testid="container"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-bookmark size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
+          <div
+            class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
+            data-cy="post-save-bookmarks-option"
+            data-orientation="vertical"
+            data-radix-collection-item=""
+            role="menuitem"
+            tabindex="-1"
           >
-            <path
-              d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
-            />
-          </svg>
-          <span
-            class="min-w-0 flex-1 truncate"
-            data-testid="typography"
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-bookmark size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+              />
+            </svg>
+            <span
+              class="min-w-0 flex-1 truncate"
+              data-testid="typography"
+            >
+              Bookmarks
+            </span>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-4 text-brand"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+          </div>
+          <div
+            class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
+            data-orientation="vertical"
+            data-radix-collection-item=""
+            role="menuitem"
+            tabindex="-1"
           >
-            Bookmarks
-          </span>
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-check size-4 text-brand"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-library size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m16 6 4 14"
+              />
+              <path
+                d="M12 6v14"
+              />
+              <path
+                d="M8 8v12"
+              />
+              <path
+                d="M4 4v16"
+              />
+            </svg>
+            <span
+              class="min-w-0 flex-1 truncate"
+              data-testid="typography"
+            >
+              Proof of Work
+            </span>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-4 text-brand"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+          </div>
+          <div
+            class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
+            data-orientation="vertical"
+            data-radix-collection-item=""
+            role="menuitem"
+            tabindex="-1"
           >
-            <path
-              d="M20 6 9 17l-5-5"
-            />
-          </svg>
-        </div>
-        <div
-          class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
-          data-orientation="vertical"
-          data-radix-collection-item=""
-          role="menuitem"
-          tabindex="-1"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-library size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="m16 6 4 14"
-            />
-            <path
-              d="M12 6v14"
-            />
-            <path
-              d="M8 8v12"
-            />
-            <path
-              d="M4 4v16"
-            />
-          </svg>
-          <span
-            class="min-w-0 flex-1 truncate"
-            data-testid="typography"
-          >
-            Proof of Work
-          </span>
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-check size-4 text-brand"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M20 6 9 17l-5-5"
-            />
-          </svg>
-        </div>
-        <div
-          class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
-          data-orientation="vertical"
-          data-radix-collection-item=""
-          role="menuitem"
-          tabindex="-1"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-library size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="m16 6 4 14"
-            />
-            <path
-              d="M12 6v14"
-            />
-            <path
-              d="M8 8v12"
-            />
-            <path
-              d="M4 4v16"
-            />
-          </svg>
-          <span
-            class="min-w-0 flex-1 truncate"
-            data-testid="typography"
-          >
-            AI Papers
-          </span>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-library size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m16 6 4 14"
+              />
+              <path
+                d="M12 6v14"
+              />
+              <path
+                d="M8 8v12"
+              />
+              <path
+                d="M4 4v16"
+              />
+            </svg>
+            <span
+              class="min-w-0 flex-1 truncate"
+              data-testid="typography"
+            >
+              AI Papers
+            </span>
+          </div>
         </div>
         <div
           aria-orientation="horizontal"

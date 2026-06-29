@@ -168,40 +168,49 @@ function SavePickerContent({
 
   return (
     <Container overrideDefaults className={cn('flex w-full flex-col', layout === 'sheet' ? 'gap-4' : 'gap-3')}>
-      <SavePickerRow
-        layout={layout}
-        disabled={isBookmarkBusy}
-        dataCy="post-save-bookmarks-option"
-        onActivate={() => void toggleBookmark()}
+      {/* Bookmark + collections scroll as one region so a long collection list
+          can't push the "New collection" creator off-screen and out of reach.
+          `max-h-[50dvh]` keeps the picker within the viewport on both the
+          desktop dropdown and the mobile sheet. */}
+      <Container
+        overrideDefaults
+        className={cn('flex max-h-[50dvh] flex-col overflow-y-auto', layout === 'sheet' ? 'gap-4' : 'gap-3')}
       >
-        <Bookmark className="size-4" />
-        <Typography
-          as="span"
-          overrideDefaults
-          className={cn('min-w-0 flex-1 truncate', layout === 'sheet' && 'text-left')}
+        <SavePickerRow
+          layout={layout}
+          disabled={isBookmarkBusy}
+          dataCy="post-save-bookmarks-option"
+          onActivate={() => void toggleBookmark()}
         >
-          {t('bookmarks')}
-        </Typography>
-        <SaveTargetIcon isSaved={isBookmarked} isBusy={isBookmarkBusy} />
-      </SavePickerRow>
-
-      {isCollectionsLoading ? (
-        <Container overrideDefaults className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          <Typography overrideDefaults className="text-base font-medium">
-            {t('loadingCollections')}
+          <Bookmark className="size-4" />
+          <Typography
+            as="span"
+            overrideDefaults
+            className={cn('min-w-0 flex-1 truncate', layout === 'sheet' && 'text-left')}
+          >
+            {t('bookmarks')}
           </Typography>
-        </Container>
-      ) : (
-        collections.map((collection) => (
-          <CollectionRow
-            key={collection.id}
-            layout={layout}
-            collection={collection}
-            onToggleCollection={toggleCollection}
-          />
-        ))
-      )}
+          <SaveTargetIcon isSaved={isBookmarked} isBusy={isBookmarkBusy} />
+        </SavePickerRow>
+
+        {isCollectionsLoading ? (
+          <Container overrideDefaults className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            <Typography overrideDefaults className="text-base font-medium">
+              {t('loadingCollections')}
+            </Typography>
+          </Container>
+        ) : (
+          collections.map((collection) => (
+            <CollectionRow
+              key={collection.id}
+              layout={layout}
+              collection={collection}
+              onToggleCollection={toggleCollection}
+            />
+          ))
+        )}
+      </Container>
 
       {layout === 'dropdown' ? <DropdownMenuSeparator /> : <Container overrideDefaults className="h-px bg-muted" />}
 
