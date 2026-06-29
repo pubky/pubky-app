@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Etiqueta todo",
           "description": "Etiqueta publicaciones, medios y perfiles para añadir contexto, encontrar mejor contenido, descubrir personas y reaccionar rápido."
+        },
+        "collections": {
+          "title": "Colecciona lo que importa",
+          "description": "Guarda publicaciones que vale la pena conservar, cura tus propias ideas y comparte tus colecciones con otros."
         }
       }
     },

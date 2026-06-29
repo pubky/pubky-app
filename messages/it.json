@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Tagga tutto",
           "description": "Tagga post, media e profili per aggiungere contesto, trovare contenuti migliori, scoprire persone e reagire rapidamente."
+        },
+        "collections": {
+          "title": "Raccogli ciò che conta",
+          "description": "Salva i post da tenere, cura le tue idee e condividi le tue collezioni con gli altri."
         }
       }
     },

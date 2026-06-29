@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Tag everything",
           "description": "Tag posts, media, and profiles to add context, find better content, discover people, and react quickly."
+        },
+        "collections": {
+          "title": "Collect what matters",
+          "description": "Save posts worth keeping, curate your own ideas, and share your collections with others."
         }
       }
     },
