@@ -15,7 +15,7 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
 describe('useWhoToFollowFollowPreservation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockToggleFollow.mockResolvedValue(undefined);
+    mockToggleFollow.mockResolvedValue(true);
     mockIsUserLoading.mockReturnValue(false);
   });
 
@@ -47,7 +47,7 @@ describe('useWhoToFollowFollowPreservation', () => {
   });
 
   it('rolls back optimistic preservation when follow fails', async () => {
-    mockToggleFollow.mockRejectedValue(new Error('follow failed'));
+    mockToggleFollow.mockResolvedValue(false);
     const { result } = renderHook(() => useWhoToFollowFollowPreservation());
 
     await act(async () => {

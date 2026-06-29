@@ -79,6 +79,10 @@
         "tagging": {
           "title": "وسم كل شيء",
           "description": "وسم المنشورات والوسائط والملفات الشخصية لإضافة السياق، والعثور على محتوى أفضل، واكتشاف أشخاص، والتفاعل بسرعة."
+        },
+        "collections": {
+          "title": "اجمع ما يهم",
+          "description": "احفظ المنشورات التي تستحق الاحتفاظ بها، ونسّق أفكارك الخاصة، وشارك مجموعاتك مع الآخرين."
         }
       }
     },
@@ -1008,9 +1012,10 @@
       "copyFailedDesc": "تعذر النسخ إلى الحافظة"
     },
     "follow": {
-      "failed": "تعذر تحديث حالة المتابعة",
       "followed": "تتابع {username}",
-      "unfollowed": "ألغيت متابعة {username}"
+      "unfollowed": "ألغيت متابعة {username}",
+      "followFailed": "تعذر متابعة {username}",
+      "unfollowFailed": "تعذر إلغاء متابعة {username}"
     },
     "mute": {
       "muted": "تم كتم {username}",

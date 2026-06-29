@@ -77,6 +77,10 @@
         "tagging": {
           "title": "标记一切",
           "description": "标记帖子、媒体和资料，用来添加上下文、找到更相关的内容、发现人物并快速回应。"
+        },
+        "collections": {
+          "title": "收藏重要内容",
+          "description": "保存值得留下的帖子，整理你自己的想法，并与他人分享你的收藏。"
         }
       }
     },
@@ -1006,9 +1010,10 @@
       "copyFailedDesc": "无法复制到剪贴板"
     },
     "follow": {
-      "failed": "无法更新关注状态",
       "followed": "正在关注 {username}",
-      "unfollowed": "已取消关注 {username}"
+      "unfollowed": "已取消关注 {username}",
+      "followFailed": "无法关注 {username}",
+      "unfollowFailed": "无法取消关注 {username}"
     },
     "mute": {
       "muted": "已静音 {username}",

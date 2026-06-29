@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Tout taguer",
           "description": "Taguez publications, médias et profils pour ajouter du contexte, trouver du contenu plus pertinent, découvrir des personnes et réagir vite."
+        },
+        "collections": {
+          "title": "Collectez ce qui compte",
+          "description": "Sauvegardez les publications qui méritent d’être gardées, organisez vos propres idées et partagez vos collections avec d’autres."
         }
       }
     },
@@ -1006,9 +1010,10 @@
       "copyFailedDesc": "Impossible de copier dans le presse-papiers"
     },
     "follow": {
-      "failed": "Impossible de mettre à jour le statut d'abonnement",
       "followed": "Vous suivez {username}",
-      "unfollowed": "Vous ne suivez plus {username}"
+      "unfollowed": "Vous ne suivez plus {username}",
+      "followFailed": "Impossible de suivre {username}",
+      "unfollowFailed": "Impossible de ne plus suivre {username}"
     },
     "mute": {
       "muted": "{username} masqué",

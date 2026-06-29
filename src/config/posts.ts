@@ -42,9 +42,6 @@ export const POST_ATTACHMENT_ACCEPT_STRING = POST_SUPPORTED_ATTACHMENT_MIME_TYPE
 
 export const ARTICLE_ATTACHMENT_ACCEPT_STRING = ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.join(',');
 
-/** Maximum file size for images (5MB) */
-export const ATTACHMENT_MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-
 /** Maximum file size for non-image files (spec) */
 export const ATTACHMENT_MAX_OTHER_SIZE = validationLimits.maxFileSizeBytes;
 

@@ -77,6 +77,10 @@
         "tagging": {
           "title": "すべてをタグ付け",
           "description": "投稿、メディア、プロフィールにタグを付けて文脈を加え、より関連性の高いコンテンツや人を見つけ、すばやく反応できます。"
+        },
+        "collections": {
+          "title": "大切なものを集める",
+          "description": "残しておきたい投稿を保存し、自分のアイデアを整理して、コレクションを他の人と共有できます。"
         }
       }
     },
@@ -1006,9 +1010,10 @@
       "copyFailedDesc": "クリップボードにコピーできませんでした"
     },
     "follow": {
-      "failed": "フォロー状態を更新できませんでした",
       "followed": "{username}をフォロー中",
-      "unfollowed": "{username}のフォローを解除しました"
+      "unfollowed": "{username}のフォローを解除しました",
+      "followFailed": "{username}をフォローできませんでした",
+      "unfollowFailed": "{username}のフォローを解除できませんでした"
     },
     "mute": {
       "muted": "{username}をミュートしました",

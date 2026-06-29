@@ -79,6 +79,10 @@
         "tagging": {
           "title": "Alles taggen",
           "description": "Tagge Beiträge, Medien und Profile, um Kontext hinzuzufügen, bessere Inhalte zu finden, Menschen zu entdecken und schnell zu reagieren."
+        },
+        "collections": {
+          "title": "Sammle, was zählt",
+          "description": "Speichere Beiträge, die bleiben sollen, kuratiere deine eigenen Ideen und teile deine Sammlungen mit anderen."
         }
       }
     },
@@ -1008,9 +1012,10 @@
       "copyFailedDesc": "Kopieren in Zwischenablage nicht möglich"
     },
     "follow": {
-      "failed": "Folgestatus konnte nicht aktualisiert werden",
       "followed": "Folge {username}",
-      "unfollowed": "{username} entfolgt"
+      "unfollowed": "{username} entfolgt",
+      "followFailed": "{username} konnte nicht gefolgt werden",
+      "unfollowFailed": "{username} konnte nicht entfolgt werden"
     },
     "mute": {
       "muted": "{username} stummgeschaltet",
