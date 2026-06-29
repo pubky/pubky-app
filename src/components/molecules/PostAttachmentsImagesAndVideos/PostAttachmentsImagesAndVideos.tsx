@@ -23,6 +23,11 @@ import { useToast } from '../Toaster/use-toast';
 
 const MAX_VISIBLE_MEDIA = 4;
 
+// List media tiles follow the 16:9 design spec — 192px-wide cells, 108px tall.
+const LIST_GRID_CLASS =
+  'grid w-fit max-w-full grid-cols-[minmax(0,192px)] self-start justify-self-start sm:grid-cols-[repeat(2,192px)]';
+const LIST_TILE_CLASS = 'aspect-video h-[108px] max-w-full';
+
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
   variant?: 'default' | 'list';
@@ -102,11 +107,7 @@ export const PostAttachmentsImagesAndVideos = ({
         <Container
           display={isListVariant ? undefined : 'grid'}
           overrideDefaults={isListVariant}
-          className={
-            isListVariant
-              ? 'grid w-fit max-w-full grid-cols-[minmax(0,192px)] gap-3 self-start justify-self-start sm:grid-cols-[repeat(2,192px)]'
-              : 'gap-3 sm:grid-cols-2'
-          }
+          className={cn('gap-3', isListVariant ? LIST_GRID_CLASS : 'sm:grid-cols-2')}
         >
           {visibleMedia.map((media, i) =>
             media.type.startsWith('image') ? (
@@ -114,13 +115,13 @@ export const PostAttachmentsImagesAndVideos = ({
                 key={i}
                 asChild
                 className={cn(
-                  isListVariant ? 'aspect-video h-[108px] max-w-full' : 'h-52 w-full',
+                  isListVariant ? LIST_TILE_CLASS : 'h-52 w-full',
                   'relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2',
                 )}
               >
                 <Button overrideDefaults onClick={(e) => openPreview(i, e)}>
                   <Image
-                    src={media.type === 'image/gif' ? media.urls.main : (media.urls.feed as string)}
+                    src={media.type === 'image/gif' ? media.urls.main : (media.urls.feed ?? media.urls.main)}
                     alt={media.name}
                     fill={!isOnlyMedia}
                     className={cn(
@@ -137,7 +138,10 @@ export const PostAttachmentsImagesAndVideos = ({
               <Container
                 key={i}
                 overrideDefaults
-                className="relative aspect-video h-[108px] max-w-full only:h-auto only:max-h-[108px] only:w-fit sm:last:odd:col-span-2"
+                className={cn(
+                  LIST_TILE_CLASS,
+                  'relative only:h-auto only:max-h-[108px] only:w-fit sm:last:odd:col-span-2',
+                )}
               >
                 <Video
                   onClick={(e) => {
