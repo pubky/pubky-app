@@ -11,7 +11,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with GIF 
     data-testid="container"
   >
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -43,7 +43,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
     data-testid="container"
   >
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -213,7 +213,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
     data-testid="container"
   >
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -231,7 +231,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       </button>
     </div>
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -249,7 +249,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       </button>
     </div>
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -429,7 +429,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
     data-testid="container"
   >
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -846,7 +846,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with four
     data-testid="container"
   >
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -864,7 +864,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with four
       </button>
     </div>
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -882,7 +882,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with four
       </button>
     </div>
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -900,7 +900,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with four
       </button>
     </div>
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -932,7 +932,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mixe
     data-testid="container"
   >
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -956,7 +956,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mixe
       src="https://example.com/mixed-video.mp4"
     />
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -988,7 +988,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mult
     data-testid="container"
   >
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -1006,7 +1006,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mult
       </button>
     </div>
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -1024,7 +1024,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with mult
       </button>
     </div>
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >
@@ -1088,7 +1088,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with sing
     data-testid="container"
   >
     <div
-      class="h-52 w-full relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+      class="h-52 w-full relative only:h-auto only:w-fit sm:last:odd:col-span-2 cursor-pointer only:static"
       data-aschild="true"
       data-testid="dialog-trigger"
     >

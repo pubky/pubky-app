@@ -383,15 +383,15 @@ describe('PostAttachmentsImagesAndVideos', () => {
 
       const grid = screen.getAllByTestId('container').find((element) => element.classList.contains('grid'));
       expect(grid).toHaveClass('grid');
-      expect(grid).toHaveClass('grid-cols-[minmax(0,192px)]');
-      expect(grid).toHaveClass('sm:grid-cols-[repeat(2,192px)]');
+      expect(grid).toHaveClass('grid-cols-[minmax(0,theme(spacing.48))]');
+      expect(grid).toHaveClass('sm:grid-cols-[repeat(2,theme(spacing.48))]');
       expect(grid).toHaveClass('self-start');
       expect(grid).toHaveClass('justify-self-start');
       expect(grid).not.toHaveClass('mx-auto');
 
       const firstTrigger = screen.getAllByTestId('dialog-trigger')[0];
       expect(firstTrigger).toHaveClass('aspect-video');
-      expect(firstTrigger).toHaveClass('h-[108px]');
+      expect(firstTrigger).toHaveClass('h-[theme(spacing.27)]');
       expect(firstTrigger).not.toHaveClass('w-full');
       expect(firstTrigger).not.toHaveClass('md:h-44');
       expect(firstTrigger).not.toHaveClass('h-52');

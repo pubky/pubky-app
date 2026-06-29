@@ -127,7 +127,9 @@ export function PostInputExpandableSection({
 
                 <Container
                   overrideDefaults={inline}
-                  className={cn(inline ? 'flex items-center' : 'justify-between gap-4 md:flex-row md:gap-0')}
+                  className={cn(
+                    inline ? 'flex min-w-0 flex-1 items-center gap-6' : 'justify-between gap-4 md:flex-row md:gap-0',
+                  )}
                 >
                   <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
 
@@ -146,6 +148,7 @@ export function PostInputExpandableSection({
                       isEdit={isEdit}
                       postButtonIcon={IconsButton[submitMode]}
                       characterLimit={characterLimit}
+                      separateActions={inline}
                     />
                   )}
                 </Container>

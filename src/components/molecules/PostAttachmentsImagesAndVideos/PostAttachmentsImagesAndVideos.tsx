@@ -23,10 +23,15 @@ import { useToast } from '../Toaster/use-toast';
 
 const MAX_VISIBLE_MEDIA = 4;
 
-// List media tiles follow the 16:9 design spec — 192px-wide cells, 108px tall.
+// List media tiles follow the 16:9 design spec — spacing.48 (192px) wide, spacing.27 (108px) tall.
 const LIST_GRID_CLASS =
-  'grid w-fit max-w-full grid-cols-[minmax(0,192px)] self-start justify-self-start sm:grid-cols-[repeat(2,192px)]';
-const LIST_TILE_CLASS = 'aspect-video h-[108px] max-w-full';
+  'grid w-fit max-w-full grid-cols-[minmax(0,theme(spacing.48))] self-start justify-self-start sm:grid-cols-[repeat(2,theme(spacing.48))]';
+const LIST_TILE_CLASS = 'aspect-video h-[theme(spacing.27)] max-w-full';
+// Shared tile framing for both image and video cells (single-media collapse + last-odd span).
+const TILE_FRAME_CLASS = 'relative only:h-auto only:w-fit sm:last:odd:col-span-2';
+// "+N more" badge shown on the last visible tile when media overflows the grid.
+const REMAINING_OVERLAY_CLASS =
+  'absolute right-3 bottom-3 z-10 flex size-10 items-center justify-center rounded-full border border-secondary-foreground/40 bg-black/80 text-base font-bold text-white shadow-md';
 
 type PostAttachmentsImagesAndVideosProps = {
   imagesAndVideos: AttachmentConstructed[];
@@ -91,12 +96,29 @@ export const PostAttachmentsImagesAndVideos = ({
   const remainingMediaCount = isListVariant ? Math.max(0, imagesAndVideos.length - visibleMedia.length) : 0;
   const remainingOverlayIndex = remainingMediaCount > 0 ? visibleMedia.length - 1 : -1;
 
-  const renderRemainingOverlay = (index: number) =>
-    index === remainingOverlayIndex ? (
-      <Typography className="absolute right-3 bottom-3 z-10 flex size-10 items-center justify-center rounded-full border border-secondary-foreground/40 bg-black/80 text-base font-bold text-white shadow-md">
-        +{remainingMediaCount}
-      </Typography>
-    ) : null;
+  const renderRemainingOverlay = (index: number, onClick?: (event: MouseEvent) => void) => {
+    if (index !== remainingOverlayIndex) {
+      return null;
+    }
+
+    // Video tiles stop click propagation, so their overlay needs its own handler;
+    // image tiles sit inside the DialogTrigger button and just need a static badge.
+    if (onClick) {
+      return (
+        <Button
+          overrideDefaults
+          type="button"
+          aria-label={`Open media carousel with ${remainingMediaCount} more items`}
+          onClick={onClick}
+          className={REMAINING_OVERLAY_CLASS}
+        >
+          +{remainingMediaCount}
+        </Button>
+      );
+    }
+
+    return <Typography className={REMAINING_OVERLAY_CLASS}>+{remainingMediaCount}</Typography>;
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -116,7 +138,8 @@ export const PostAttachmentsImagesAndVideos = ({
                 asChild
                 className={cn(
                   isListVariant ? LIST_TILE_CLASS : 'h-52 w-full',
-                  'relative cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2',
+                  TILE_FRAME_CLASS,
+                  'cursor-pointer only:static',
                 )}
               >
                 <Button overrideDefaults onClick={(e) => openPreview(i, e)}>
@@ -127,7 +150,7 @@ export const PostAttachmentsImagesAndVideos = ({
                     className={cn(
                       'rounded-md',
                       isOnlyMedia
-                        ? cn(isListVariant ? 'max-h-[108px]' : 'max-h-96', 'w-fit object-contain')
+                        ? cn(isListVariant ? 'max-h-[theme(spacing.27)]' : 'max-h-96', 'w-fit object-contain')
                         : 'object-cover object-center',
                     )}
                   />
@@ -138,10 +161,7 @@ export const PostAttachmentsImagesAndVideos = ({
               <Container
                 key={i}
                 overrideDefaults
-                className={cn(
-                  LIST_TILE_CLASS,
-                  'relative only:h-auto only:max-h-[108px] only:w-fit sm:last:odd:col-span-2',
-                )}
+                className={cn(LIST_TILE_CLASS, TILE_FRAME_CLASS, 'only:max-h-[theme(spacing.27)]')}
               >
                 <Video
                   onClick={(e) => {
@@ -151,17 +171,7 @@ export const PostAttachmentsImagesAndVideos = ({
                   pauseVideo={open}
                   className="h-full w-full cursor-auto object-cover"
                 />
-                {remainingMediaCount > 0 && i === remainingOverlayIndex ? (
-                  <Button
-                    overrideDefaults
-                    type="button"
-                    aria-label={`Open media carousel with ${remainingMediaCount} more items`}
-                    onClick={(e) => openPreview(i, e)}
-                    className="absolute right-3 bottom-3 z-10 flex size-10 items-center justify-center rounded-full border border-secondary-foreground/40 bg-black/80 text-base font-bold text-white shadow-md"
-                  >
-                    +{remainingMediaCount}
-                  </Button>
-                ) : null}
+                {renderRemainingOverlay(i, (e) => openPreview(i, e))}
               </Container>
             ) : (
               <Video

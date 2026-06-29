@@ -7,7 +7,7 @@ import { PostAttachmentsAudios } from '@/molecules/PostAttachmentsAudios/PostAtt
 import { PostAttachmentsGenericFiles } from '@/molecules/PostAttachmentsGenericFiles/PostAttachmentsGenericFiles';
 import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
 import { useToast } from '@/molecules/Toaster/use-toast';
-import { FileVariant } from '@/services/nexus/file/file.types';
+import { categorizeAttachments, splitAttachmentsByMediaType } from './PostAttachments.helpers';
 import type { AttachmentConstructed, PostAttachmentsProps } from './PostAttachments.types';
 
 export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 'default' }: PostAttachmentsProps) => {
@@ -24,41 +24,7 @@ export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 
 
       try {
         const result = await FileController.getMetadata({ fileAttachments: attachments });
-
-        const imagesAndVideos: AttachmentConstructed[] = [];
-        const audios: AttachmentConstructed[] = [];
-        const genericFiles: AttachmentConstructed[] = [];
-
-        result.forEach((a) => {
-          const { content_type, name, id } = a;
-
-          const isImage = content_type.startsWith('image');
-          const isVideo = content_type.startsWith('video');
-          const isAudio = content_type.startsWith('audio');
-
-          if (isImage || isVideo) {
-            imagesAndVideos.push({
-              type: content_type,
-              name,
-              urls: {
-                main: FileController.getFileUrl({ fileId: id, variant: FileVariant.MAIN }),
-                feed: isImage ? FileController.getFileUrl({ fileId: id, variant: FileVariant.FEED }) : undefined,
-              },
-            });
-          } else if (isAudio) {
-            audios.push({
-              type: content_type,
-              name,
-              urls: { main: FileController.getFileUrl({ fileId: id, variant: FileVariant.MAIN }) },
-            });
-          } else {
-            genericFiles.push({
-              type: content_type,
-              name,
-              urls: { main: FileController.getFileUrl({ fileId: id, variant: FileVariant.MAIN }) },
-            });
-          }
-        });
+        const { imagesAndVideos, audios, genericFiles } = splitAttachmentsByMediaType(result);
 
         setImagesAndVideos(imagesAndVideos);
         setAudios(audios);
@@ -74,23 +40,7 @@ export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 
     const constructLocalAttachments = () => {
       if (!localAttachments?.length) return;
 
-      const imagesAndVideos: AttachmentConstructed[] = [];
-      const audios: AttachmentConstructed[] = [];
-      const genericFiles: AttachmentConstructed[] = [];
-
-      localAttachments.forEach((a) => {
-        const isImage = a.type.startsWith('image');
-        const isVideo = a.type.startsWith('video');
-        const isAudio = a.type.startsWith('audio');
-
-        if (isImage || isVideo) {
-          imagesAndVideos.push(a);
-        } else if (isAudio) {
-          audios.push(a);
-        } else {
-          genericFiles.push(a);
-        }
-      });
+      const { imagesAndVideos, audios, genericFiles } = categorizeAttachments(localAttachments);
 
       setImagesAndVideos(imagesAndVideos);
       setAudios(audios);

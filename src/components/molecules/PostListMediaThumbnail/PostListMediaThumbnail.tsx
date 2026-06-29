@@ -1,19 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
 import { Video } from '@/atoms/Video/Video';
-import { FileController } from '@/controllers/file/file';
-import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostAttachmentsMedia } from '@/hooks/usePostAttachmentsMedia/usePostAttachmentsMedia';
 import { cn } from '@/libs/utils/utils';
 import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
-import {
-  categorizeAttachments,
-  splitAttachmentsByMediaType,
-} from '@/organisms/PostAttachments/PostAttachments.helpers';
-import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
-import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 interface PostListMediaThumbnailProps {
   postId: string;
@@ -22,46 +14,7 @@ interface PostListMediaThumbnailProps {
 }
 
 export function PostListMediaThumbnail({ postId, className, onClick }: PostListMediaThumbnailProps) {
-  const { postDetails } = usePostDetails(postId);
-  const localAttachments = useLocalFilesStore((state) => state.posts[postId]);
-  const [mediaItems, setMediaItems] = useState<AttachmentConstructed[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const resolveMedia = async () => {
-      if (localAttachments) {
-        if (!cancelled) {
-          setMediaItems(categorizeAttachments(localAttachments).imagesAndVideos);
-        }
-        return;
-      }
-
-      if (!postDetails?.attachments?.length) {
-        if (!cancelled) {
-          setMediaItems([]);
-        }
-        return;
-      }
-
-      try {
-        const metadata = await FileController.getMetadata({ fileAttachments: postDetails.attachments });
-        if (cancelled) return;
-
-        setMediaItems(splitAttachmentsByMediaType(metadata).imagesAndVideos);
-      } catch {
-        if (!cancelled) {
-          setMediaItems([]);
-        }
-      }
-    };
-
-    void resolveMedia();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [localAttachments, postDetails?.attachments]);
+  const { mediaItems } = usePostAttachmentsMedia(postId);
 
   const previewIndex = mediaItems.findIndex(
     (media) => media.type.startsWith('image') || media.type.startsWith('video'),
