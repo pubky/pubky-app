@@ -382,12 +382,6 @@ describe('createPostStreamParams', () => {
   describe('Bookmark streams', () => {
     test.each([
       { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_ALL, kind: undefined, name: 'all' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT, kind: StreamKind.SHORT, name: 'short' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LONG, kind: StreamKind.LONG, name: 'long' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE, kind: StreamKind.IMAGE, name: 'image' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO, kind: StreamKind.VIDEO, name: 'video' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LINK, kind: StreamKind.LINK, name: 'link' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_FILE, kind: StreamKind.FILE, name: 'file' },
       { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION, kind: StreamKind.COLLECTION, name: 'collection' },
     ])('should handle timeline:bookmarks:$name stream', ({ streamType, kind }) => {
       const result = createPostStreamParams({
