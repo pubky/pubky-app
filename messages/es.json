@@ -645,7 +645,7 @@
     },
     "deleteCollection": {
       "title": "¿Eliminar colección?",
-      "description": "¿Deseas eliminar la colección «{name}»? Los usuarios que la hayan añadido a sus colecciones ya no tendrán acceso y perderás todas las estadísticas.",
+      "description": "¿Seguro que quieres eliminar {name}? Las personas que siguen esta colección ya no tendrán acceso a ella. Las publicaciones dentro de la colección no se eliminarán.",
       "confirmButton": "Eliminar",
       "cancelButton": "Cancelar"
     },

@@ -643,7 +643,7 @@
     },
     "deleteCollection": {
       "title": "Eliminare la raccolta?",
-      "description": "Vuoi eliminare la collezione «{name}»? Gli utenti che l'hanno aggiunta alle proprie collezioni non avranno più accesso e perderai tutte le statistiche.",
+      "description": "Sei sicuro di voler eliminare {name}? Le persone che seguono questa raccolta non vi avranno più accesso. I post all'interno della raccolta non verranno eliminati.",
       "confirmButton": "Elimina",
       "cancelButton": "Annulla"
     },

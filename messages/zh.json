@@ -643,7 +643,7 @@
     },
     "deleteCollection": {
       "title": "删除收藏集？",
-      "description": "确定要删除收藏集「{name}」吗？将其添加到收藏集的用户将无法再访问，您也将失去所有统计数据。",
+      "description": "您确定要删除 {name} 吗？关注此收藏集的用户将无法再访问它。收藏集内的帖子不会被删除。",
       "confirmButton": "删除",
       "cancelButton": "取消"
     },

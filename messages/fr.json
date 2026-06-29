@@ -643,7 +643,7 @@
     },
     "deleteCollection": {
       "title": "Supprimer la collection ?",
-      "description": "Voulez-vous supprimer la collection « {name} » ? Les utilisateurs qui l'ont ajoutée à leurs collections n'y auront plus accès et vous perdrez toutes les statistiques.",
+      "description": "Voulez-vous vraiment supprimer {name} ? Les personnes qui suivent cette collection n'y auront plus accès. Les publications dans la collection ne seront pas supprimées.",
       "confirmButton": "Supprimer",
       "cancelButton": "Annuler"
     },

@@ -645,7 +645,7 @@
     },
     "deleteCollection": {
       "title": "Sammlung löschen?",
-      "description": "Möchten Sie die Sammlung ‘{name}’ löschen? Nutzer, die sie zu ihren Sammlungen hinzugefügt haben, haben keinen Zugriff mehr und Sie verlieren alle Statistiken.",
+      "description": "Sind Sie sicher, dass Sie {name} löschen möchten? Personen, die dieser Sammlung folgen, haben keinen Zugriff mehr darauf. Beiträge in der Sammlung werden nicht gelöscht.",
       "confirmButton": "Löschen",
       "cancelButton": "Abbrechen"
     },
