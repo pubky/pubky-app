@@ -6,6 +6,7 @@ import type { TCreatePostInput, TEditPostInput } from '@/application/post/post.t
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { TagApplication } from '@/application/tag/tag';
 import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
+import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import type { TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -1021,6 +1022,28 @@ describe('Post Application', () => {
 
       expect(result).toHaveLength(1);
       expect(result?.[0].details.id).toBe(liveId);
+    });
+  });
+
+  describe('fetchAuthoredCollections', () => {
+    // Regression: Nexus rejects any stream `limit` above 50 with
+    // "limit exceeds maximum of 50". A previous hardcoded `limit: 100` made
+    // every collections fetch fail, so the post-save picker rendered no
+    // collections. Pin the request to the Nexus cap so it can't regress.
+    it('requests the collections stream slice within the Nexus limit cap', async () => {
+      const authorId = asOpaque<Pubky>('author-1');
+      const viewerId = asOpaque<Pubky>('viewer-1');
+      const fetchSliceSpy = vi
+        .spyOn(PostStreamApplication, 'fetchStreamSlice')
+        .mockResolvedValue({ cacheMissPostIds: [] } as never);
+      vi.spyOn(PostApplication, 'getAuthoredCollections').mockResolvedValue([]);
+
+      await PostApplication.fetchAuthoredCollections({ authorId, viewerId });
+
+      expect(fetchSliceSpy).toHaveBeenCalledTimes(1);
+      const sliceArgs = fetchSliceSpy.mock.calls[0][0];
+      expect(sliceArgs.limit).toBe(NEXUS_STREAM_MAX_LIMIT);
+      expect(sliceArgs.limit).toBeLessThanOrEqual(50);
     });
   });
 

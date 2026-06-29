@@ -2,7 +2,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -45,10 +44,6 @@ vi.mock('next/navigation', () => ({
 // Mock dependencies
 vi.mock('@/hooks/useStreamIdFromFilters/useStreamIdFromFilters', () => ({
   useStreamIdFromFilters: vi.fn(),
-}));
-
-vi.mock('@/hooks/useBookmarksStreamId/useBookmarksStreamId', () => ({
-  useBookmarksStreamId: vi.fn(),
 }));
 
 vi.mock('@/hooks/useHotStreamId/useHotStreamId', () => ({
@@ -187,7 +182,6 @@ vi.mock('./VisualTimelinePosts', () => ({
 const mockUseStreamIdFromFilters = vi.mocked(useStreamIdFromFilters);
 const mockUseCustomFeed = vi.mocked(useCustomFeed);
 const mockUseCustomStreamId = vi.mocked(useCustomStreamId);
-const mockUseBookmarksStreamId = vi.mocked(useBookmarksStreamId);
 const mockUseStreamPagination = vi.mocked(useStreamPagination);
 const mockUseFeedLayoutResolution = vi.mocked(useFeedLayoutResolution);
 
@@ -256,7 +250,6 @@ function setupTimelineFeedSnapshotMocks() {
     updated_at: 0,
   });
   mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as PostStreamId);
-  mockUseBookmarksStreamId.mockReturnValue(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
   mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
   mockUseFeedLayoutResolution.mockReturnValue(columnsLayoutResolution);
   mockUsePullToRefresh.mockReturnValue({
@@ -289,7 +282,6 @@ describe('TimelineFeed', () => {
       updated_at: 0,
     });
     mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as PostStreamId);
-    mockUseBookmarksStreamId.mockReturnValue(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     mockUseFeedLayoutResolution.mockReturnValue({
       requestedLayout: 'columns',
@@ -494,29 +486,19 @@ describe('TimelineFeed', () => {
       expect(screen.queryByText('No posts found')).not.toBeInTheDocument();
     });
 
-    it('should persist visual content coercion for bookmarks feeds', async () => {
-      useHomeStore.setState({ content: CONTENT.SHORT });
-      mockUseBookmarksStreamId.mockImplementation((contentOverride?: ContentType) => {
-        return contentOverride === CONTENT.ALL
-          ? PostStreamTypes.TIMELINE_BOOKMARKS_ALL
-          : PostStreamTypes.TIMELINE_BOOKMARKS_SHORT;
-      });
-      mockUseFeedLayoutResolution.mockReturnValue({
-        requestedLayout: 'visual',
-        effectiveLayout: 'visual',
-        isVisualRequested: true,
-        isVisualActive: true,
-        isGridActive: false,
-        isPhoneViewport: false,
-      });
+    it('should always use the fixed all-bookmarks stream regardless of shared filters', () => {
+      // The bookmarks route exposes no filter UI; changing the shared home-store
+      // content/sort must not change the bookmarks stream, and the feed must not
+      // write back to the shared content filter.
+      useHomeStore.setState({ content: CONTENT.COLLECTIONS, sort: SORT.ENGAGEMENT });
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />);
 
-      expect(mockUseBookmarksStreamId).toHaveBeenCalledWith(CONTENT.ALL);
-
-      await waitFor(() => {
-        expect(useHomeStore.getState().content).toBe(CONTENT.ALL);
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({
+        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
       });
+      // The feed leaves the shared filter state untouched.
+      expect(useHomeStore.getState().content).toBe(CONTENT.COLLECTIONS);
     });
   });
 

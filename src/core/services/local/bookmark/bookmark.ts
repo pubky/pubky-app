@@ -13,19 +13,14 @@ import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 
 /**
- * Mapping of post kinds to their corresponding bookmark stream types.
- * The 'all' key represents the stream containing all bookmarks.
+ * The two local bookmark streams. The bookmarks route has no content/sort filter
+ * UI, so non-collection bookmarks all live in the single ALL feed; collections
+ * are filed under the dedicated collection stream that backs FollowedCollections.
  */
-const BOOKMARK_STREAMS: Record<string, PostStreamTypes> = {
+const BOOKMARK_STREAMS = {
   all: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
-  short: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT,
-  long: PostStreamTypes.TIMELINE_BOOKMARKS_LONG,
-  image: PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE,
-  video: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO,
-  file: PostStreamTypes.TIMELINE_BOOKMARKS_FILE,
-  link: PostStreamTypes.TIMELINE_BOOKMARKS_LINK,
   collection: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION,
-};
+} as const;
 
 export class LocalBookmarkService {
   private static readonly BOOKMARK_TABLES = [
@@ -129,27 +124,17 @@ export class LocalBookmarkService {
   }
 
   /**
-   * Resolve which local bookmark streams a post belongs to, by kind.
+   * Resolve which local bookmark stream a post belongs to, by kind.
    *
    * Collections are "followed", not feed posts: the posts feed (`…_ALL`) filters
    * collection-kind posts out on read, so we keep them out of it entirely and
    * file them under the dedicated collection bookmark stream instead. Every other
-   * kind goes to the ALL stream plus its kind-specific stream (and a post with no
-   * resolvable kind goes to ALL only).
+   * kind goes to the ALL stream.
    *
    * @param kind - Post kind (short, long, image, video, file, link, collection)
    */
   private static bookmarkStreamsForKind(kind?: string): PostStreamTypes[] {
-    if (kind === 'collection') {
-      return [BOOKMARK_STREAMS.collection];
-    }
-
-    const streams = [BOOKMARK_STREAMS.all]; // Non-collection bookmarks always go to the ALL stream.
-    const kindStream = kind && BOOKMARK_STREAMS[kind];
-    if (kindStream) {
-      streams.push(kindStream);
-    }
-    return streams;
+    return kind === 'collection' ? [BOOKMARK_STREAMS.collection] : [BOOKMARK_STREAMS.all];
   }
 
   /**

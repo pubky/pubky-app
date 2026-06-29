@@ -2,7 +2,6 @@
 
 import { useParams } from 'next/navigation';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useHotStreamId } from '@/hooks/useHotStreamId/useHotStreamId';
@@ -14,6 +13,7 @@ import {
   type AuthorStreamCompositeId,
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
+  PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
@@ -126,22 +126,20 @@ function BookmarksTimelineFeed({
     { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }
   >['gridTrailingSlot'];
 }) {
-  const content = useHomeStore((state) => state.content);
+  // The bookmarks route exposes no filter UI and shows collections in their own
+  // section below, so the feed is always the fixed all-bookmarks stream. It must
+  // not react to the shared home-store content/sort filters. Layout is pinned to
+  // columns (BOOKMARKS is excluded from RICH_LAYOUT_SUPPORTED_FEED_VARIANTS), so
+  // tags are always inline — mirroring the sibling single-collection grid feed.
+  // `layoutResolution` is still required: it carries `isGridActive` for the grid.
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.BOOKMARKS);
-  const resolvedContent = resolveVisualFeedContent({
-    content,
-    variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
-    isVisualActive: layoutResolution.isVisualActive,
-  });
-  useSyncInteractiveVisualContent(resolvedContent);
-  const streamId = useBookmarksStreamId(resolvedContent);
-  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
+  const streamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL;
 
   return (
     <TimelineFeedWithStream
       streamId={streamId}
       variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
-      tagsLayout={tagsLayout}
+      tagsLayout="inline"
       layoutResolution={layoutResolution}
       emptyState={emptyState}
       gridTrailingSlot={gridTrailingSlot}

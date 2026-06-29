@@ -9,6 +9,7 @@ import type {
 } from '@/application/post/post.types';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { TagApplication } from '@/application/tag/tag';
+import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { ModerationController } from '@/controllers/moderation/moderation';
 import type {
   TDeletePostParams,
@@ -200,7 +201,7 @@ export class PostApplication {
       streamId,
       streamHead: SKIP_FETCH_NEW_POSTS,
       streamTail: NOT_FOUND_CACHED_STREAM,
-      limit: 100,
+      limit: NEXUS_STREAM_MAX_LIMIT,
       viewerId: viewerId ?? null,
     });
 

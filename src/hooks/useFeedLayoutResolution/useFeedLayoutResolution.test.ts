@@ -19,7 +19,7 @@ describe('resolveFeedLayout', () => {
   it('falls back to columns for visual layout on phones', () => {
     const result = resolveFeedLayout({
       requestedLayout: LAYOUT.VISUAL,
-      variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+      variant: TIMELINE_FEED_VARIANT.HOME,
       isPhoneViewport: true,
     });
 
@@ -28,6 +28,23 @@ describe('resolveFeedLayout', () => {
     expect(result.isVisualRequested).toBe(true);
     expect(result.isVisualActive).toBe(false);
   });
+
+  // The bookmarks route has no layout filter UI; it must not adopt the shared
+  // wide/visual layout. It is a fixed grid (see isGridActive) rendered in columns.
+  it.each([LAYOUT.VISUAL, LAYOUT.WIDE])(
+    'falls back to columns for %s layout on the bookmarks variant (desktop)',
+    (requestedLayout) => {
+      const result = resolveFeedLayout({
+        requestedLayout,
+        variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+        isPhoneViewport: false,
+      });
+
+      expect(result.requestedLayout).toBe(requestedLayout);
+      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+      expect(result.isVisualActive).toBe(false);
+    },
+  );
 
   it('falls back to columns for unsupported feeds without mutating the requested value', () => {
     const result = resolveFeedLayout({
