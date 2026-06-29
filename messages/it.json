@@ -1412,6 +1412,7 @@
         "invalid": "Inserisci un URL di post valido.",
         "notFound": "Non abbiamo trovato quel post.",
         "alreadyAdded": "Questo post è già stato aggiunto.",
+        "collectionNotAllowed": "Una raccolta non può essere aggiunta a una raccolta.",
         "failure": "Impossibile aggiungere questo post."
       }
     }

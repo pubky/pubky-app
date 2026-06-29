@@ -1414,6 +1414,7 @@
         "invalid": "Gib eine gültige Beitrags-URL ein.",
         "notFound": "Wir konnten diesen Beitrag nicht finden.",
         "alreadyAdded": "Dieser Beitrag wurde bereits hinzugefügt.",
+        "collectionNotAllowed": "Eine Sammlung kann nicht zu einer Sammlung hinzugefügt werden.",
         "failure": "Dieser Beitrag konnte nicht hinzugefügt werden."
       }
     }

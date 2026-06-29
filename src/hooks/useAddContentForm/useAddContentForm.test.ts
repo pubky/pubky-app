@@ -61,6 +61,14 @@ function livePost() {
   };
 }
 
+function collectionPost() {
+  return {
+    ...livePost(),
+    content: JSON.stringify({ name: 'Nested', description: '', items: [] }),
+    kind: 'collection',
+  };
+}
+
 function collectionDetails(items: string[]) {
   return {
     id: COLLECTION_ID,
@@ -152,6 +160,26 @@ describe('useAddContentForm', () => {
     );
   });
 
+  it('rejects collection posts when adding to bookmarks', async () => {
+    mocks.getOrFetchPost.mockResolvedValue(collectionPost());
+    const { result } = renderHook(() =>
+      useAddContentForm({ target: { type: 'bookmarks' }, onSuccess: mocks.onSuccess }),
+    );
+
+    let saved = true;
+    await act(async () => {
+      saved = await result.current.submit(POST_URL);
+    });
+
+    expect(saved).toBe(false);
+    expect(mocks.bookmarkExists).not.toHaveBeenCalled();
+    expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
+    expect(mocks.onSuccess).not.toHaveBeenCalled();
+    expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
+      'collections.addContentDialog.errors.collectionNotAllowed',
+    );
+  });
+
   it('commits a bookmark, calls success, and clears the field', async () => {
     const { result } = renderHook(() =>
       useAddContentForm({ target: { type: 'bookmarks' }, onSuccess: mocks.onSuccess }),
@@ -168,6 +196,30 @@ describe('useAddContentForm', () => {
     expect(mocks.commitCreateBookmark).toHaveBeenCalledWith({ postId: COMPOSITE_ID, userId: VIEWER });
     expect(mocks.onSuccess).toHaveBeenCalledWith(COMPOSITE_ID);
     expect(result.current.form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL)).toBe('');
+  });
+
+  it('rejects collection posts when adding to a collection', async () => {
+    mocks.getOrFetchPost.mockResolvedValue(collectionPost());
+    const { result } = renderHook(() =>
+      useAddContentForm({
+        target: { type: 'collection', collectionId: COLLECTION_ID },
+        onSuccess: mocks.onSuccess,
+      }),
+    );
+
+    let saved = true;
+    await act(async () => {
+      saved = await result.current.submit(POST_URL);
+    });
+
+    expect(saved).toBe(false);
+    expect(mocks.getCollectionDetails).not.toHaveBeenCalled();
+    expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
+    expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
+    expect(mocks.onSuccess).not.toHaveBeenCalled();
+    expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
+      'collections.addContentDialog.errors.collectionNotAllowed',
+    );
   });
 
   it('rejects posts already in the collection', async () => {

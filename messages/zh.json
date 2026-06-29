@@ -1406,6 +1406,7 @@
         "invalid": "输入有效的帖子 URL。",
         "notFound": "找不到该帖子。",
         "alreadyAdded": "此帖子已添加。",
+        "collectionNotAllowed": "不能将一个收藏添加到收藏中。",
         "failure": "无法添加此帖子。"
       }
     }
