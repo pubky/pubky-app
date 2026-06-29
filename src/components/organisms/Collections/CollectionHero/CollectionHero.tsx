@@ -24,6 +24,7 @@ import { CollectionHeroBlurred } from '@/organisms/Collections/CollectionHero/Co
 import { EditCollectionDialog } from '@/organisms/EditCollectionDialog/EditCollectionDialog';
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
+import { PostTagToggleButton } from '@/organisms/PostTagsExpandableRow/PostTagToggleButton';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -150,6 +151,15 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
     await deletePost(compositeId);
     router.replace(APP_ROUTES.COLLECTIONS);
   };
+  const [tagsExpanded, setTagsExpanded] = useState(false);
+  const tagToggle = (
+    <PostTagToggleButton
+      postId={compositeId}
+      expanded={tagsExpanded}
+      onToggle={() => setTagsExpanded((prev) => !prev)}
+      disabled={isOwn && isDeleting}
+    />
+  );
 
   return (
     <Card
@@ -205,7 +215,12 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         )}
 
         {/* Tags */}
-        <PostTagsExpandableRow postId={compositeId} />
+        <PostTagsExpandableRow
+          postId={compositeId}
+          expanded={tagsExpanded}
+          onExpandedChange={setTagsExpanded}
+          showTagToggle={false}
+        />
 
         {/* Actions */}
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">
@@ -258,6 +273,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
                   {t('delete')}
                 </Typography>
               </Button>
+              {tagToggle}
             </>
           ) : (
             <>
@@ -284,6 +300,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
                   {t('share')}
                 </Typography>
               </Button>
+              {tagToggle}
             </>
           )}
         </Container>

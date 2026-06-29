@@ -18,12 +18,20 @@ const mocks = vi.hoisted(() => ({
   commitUpdateCollectionItem: vi.fn(),
   prependPosts: vi.fn(),
   prependOptimisticPosts: vi.fn(),
+  routerPush: vi.fn(),
+  toast: vi.fn(),
 }));
 
 const COLLECTION_ID = `${VIEWER}:collection-1`;
 
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mocks.routerPush,
+  }),
 }));
 
 vi.mock('@/controllers/bookmark/bookmark', () => ({
@@ -44,6 +52,53 @@ vi.mock('@/controllers/post/post', () => ({
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
     selector({ currentUserPubky: mocks.currentUserPubky }),
+}));
+
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: () => ({
+    currentUserPubky: mocks.currentUserPubky,
+    userDetails: mocks.currentUserPubky
+      ? {
+          id: mocks.currentUserPubky,
+          name: 'Viewer',
+          bio: '',
+          links: null,
+          status: null,
+          image: null,
+          indexed_at: 0,
+        }
+      : null,
+  }),
+}));
+
+vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
+  useAvatarUrl: () => undefined,
+}));
+
+vi.mock('@/molecules/Toaster/use-toast', () => ({
+  useToast: () => ({ toast: mocks.toast }),
+}));
+
+vi.mock('@/organisms/DialogNewPost/DialogNewPost', () => ({
+  DialogNewPost: ({
+    open,
+    onOpenChangeAction,
+    onPostCreated,
+  }: {
+    open: boolean;
+    onOpenChangeAction: (open: boolean) => void;
+    onPostCreated?: (createdPostId: string) => void | Promise<void>;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label="new post">
+        <button type="button" onClick={() => void onPostCreated?.('author:new-post')}>
+          create post success
+        </button>
+        <button type="button" onClick={() => onOpenChangeAction(false)}>
+          close new post
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
@@ -137,7 +192,7 @@ describe('AddContentDialog', () => {
     expect(screen.getByRole('button', { name: 'collections.single.addContent' })).toBeDisabled();
   });
 
-  it('opens the desktop dialog with feed and URL placeholder options', () => {
+  it('opens the desktop dialog with feed, URL, and create-post options', () => {
     render(<AddContentDialog />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
@@ -146,8 +201,28 @@ describe('AddContentDialog', () => {
     expect(screen.getByTestId('dialog-title')).toHaveTextContent('collections.addContentDialog.title');
     expect(screen.getByText('collections.addContentDialog.fromFeedTitle')).toBeInTheDocument();
     expect(screen.getByText('collections.addContentDialog.pasteTitle')).toBeInTheDocument();
+    expect(screen.getByText('collections.addContentDialog.createPostTitle')).toBeInTheDocument();
+    expect(screen.getByText('collections.addContentDialog.createPostPlaceholder')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://')).toBeInTheDocument();
   });
+
+  it.each(['add-content-feed-reply-pill', 'add-content-feed-repost-pill', 'add-content-feed-save-pill'])(
+    'closes the dialog and navigates home when clicking %s',
+    async (dataCy) => {
+      render(<AddContentDialog />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+      const feedPill = document.querySelector(`[data-cy="${dataCy}"]`);
+      if (!(feedPill instanceof HTMLElement)) {
+        throw new Error(`Expected ${dataCy} to render`);
+      }
+
+      fireEvent.click(feedPill);
+
+      expect(mocks.routerPush).toHaveBeenCalledWith('/home');
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    },
+  );
 
   it('stacks URL validation messages below the input', () => {
     render(<AddContentDialog />);
@@ -272,6 +347,55 @@ describe('AddContentDialog', () => {
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
     expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith(COMPOSITE_ID);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('closes Add Content and opens New Post when Create new post is clicked', async () => {
+    render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: 'new post' })).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('dialog-title')).not.toBeInTheDocument();
+  });
+
+  it('adds a newly created post to a collection and prepends it optimistically', async () => {
+    render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'create post success' }));
+
+    await waitFor(() =>
+      expect(mocks.commitUpdateCollectionItem).toHaveBeenCalledWith({
+        collectionId: COLLECTION_ID,
+        postId: 'author:new-post',
+        shouldAdd: true,
+      }),
+    );
+    expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
+    expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith('author:new-post');
+    expect(mocks.toast).toHaveBeenCalledWith({
+      title: 'toast.success',
+      description: 'fab.addedToCollection',
+    });
+  });
+
+  it('bookmarks a newly created post and prepends it optimistically', async () => {
+    render(<AddContentDialog />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'create post success' }));
+
+    await waitFor(() =>
+      expect(mocks.commitCreateBookmark).toHaveBeenCalledWith({ postId: 'author:new-post', userId: VIEWER }),
+    );
+    expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
+    expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith('author:new-post');
+    expect(mocks.toast).toHaveBeenCalledWith({ title: 'toast.bookmark.added' });
   });
 });
 

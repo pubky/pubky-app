@@ -4,8 +4,8 @@ import { getLocale, getMessages } from 'next-intl/server';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { RootContainer } from '@/molecules/ContainerRoot/ContainerRoot';
+import { Fab } from '@/molecules/Fab/Fab';
 import { Metadata } from '@/molecules/Metadata/Metadata';
-import { NewPostCTA } from '@/molecules/NewPostCTA/NewPostCTA';
 import { Toaster } from '@/molecules/Toaster/Toaster';
 import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/CoordinatorsManager';
 import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
@@ -48,7 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <CoordinatorsManager />
                   <Header />
                   {children}
-                  <NewPostCTA />
+                  <Fab />
                   <Toaster />
                   <DialogSignIn />
                 </RouteGuardProvider>

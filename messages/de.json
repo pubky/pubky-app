@@ -510,7 +510,8 @@
       "followUser": "{username} folgen",
       "unfollowUser": "{username} entfolgen",
       "muteUser": "{username} stummschalten",
-      "unmuteUser": "Stummschaltung von {username} aufheben"
+      "unmuteUser": "Stummschaltung von {username} aufheben",
+      "tagPost": "Beitrag taggen ({count})"
     },
     "deleted": "Dieser Beitrag wurde vom Autor gelöscht.",
     "missing": "Beitrag nicht gefunden.",
@@ -1346,6 +1347,13 @@
       "created": "Sammlung erstellt",
       "createFailed": "Sammlung konnte nicht erstellt werden."
     },
+    "intro": {
+      "title": "Willkommen bei Sammlungen",
+      "description": "Bewahre Beiträge auf, die es wert sind. Sammle die besten Inhalte aus deinem Netzwerk. Ordne Ideen, filtere das Signal vom Rauschen und teile, was zählt.",
+      "imageAlt": "Sammlungen",
+      "cancel": "Abbrechen",
+      "continue": "Weiter"
+    },
     "edit": {
       "title": "Sammlung bearbeiten",
       "save": "Änderungen speichern",
@@ -1401,13 +1409,16 @@
       }
     },
     "addContentDialog": {
-      "title": "Inhalt",
+      "title": "Inhalt hinzufügen",
       "description": "Füge einen Beitrag oder Artikel aus deinem Feed hinzu oder füge direkt eine URL ein.",
       "fromFeedTitle": "Aus Feed hinzufügen",
       "fromFeedLead": "Finde einen Beitrag",
       "fromFeedRest": " den du hinzufügen möchtest und klicke auf die Sammlungen-Schaltfläche.",
       "pasteTitle": "Beitrags-URL einfügen",
       "pasteDescription": "Du kannst auch eine Beitrags-URL einfügen, um ihn schnell zu deiner Sammlung hinzuzufügen.",
+      "createPostTitle": "Neuen Beitrag erstellen",
+      "createPostPlaceholder": "Was gibt es Neues?",
+      "createPostAvatarFallback": "Du",
       "adding": "Wird hinzugefügt...",
       "errors": {
         "required": "Füge eine Beitrags-URL ein.",
@@ -1418,6 +1429,13 @@
         "failure": "Dieser Beitrag konnte nicht hinzugefügt werden."
       }
     }
+  },
+  "fab": {
+    "newPost": "Neuer Beitrag",
+    "newCollection": "Neue Sammlung",
+    "newPostInCollection": "Neuer Beitrag in der Sammlung",
+    "newBookmark": "Neues Lesezeichen",
+    "addedToCollection": "Beitrag zur Sammlung hinzugefügt."
   },
   "postSave": {
     "title": "Beitrag speichern",

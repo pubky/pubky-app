@@ -508,7 +508,8 @@
       "followUser": "Segui {username}",
       "unfollowUser": "Non seguire più {username}",
       "muteUser": "Silenzia {username}",
-      "unmuteUser": "Riattiva {username}"
+      "unmuteUser": "Riattiva {username}",
+      "tagPost": "Tagga il post ({count})"
     },
     "deleted": "Questo post e stato eliminato dal suo autore.",
     "missing": "Post non trovato.",
@@ -1344,6 +1345,13 @@
       "created": "Collezione creata",
       "createFailed": "Impossibile creare la collezione."
     },
+    "intro": {
+      "title": "Benvenuto nelle Collezioni",
+      "description": "Salva i post che vale la pena conservare. Raccogli i migliori contenuti dalla tua rete. Organizza idee, filtra il segnale dal rumore e condividi ciò che conta.",
+      "imageAlt": "Collezioni",
+      "cancel": "Annulla",
+      "continue": "Continua"
+    },
     "edit": {
       "title": "Modifica collezione",
       "save": "Salva modifiche",
@@ -1399,13 +1407,16 @@
       }
     },
     "addContentDialog": {
-      "title": "Contenuto",
+      "title": "Aggiungi contenuto",
       "description": "Aggiungi un post o un articolo dal tuo feed oppure incolla direttamente un URL.",
       "fromFeedTitle": "Aggiungi dal feed",
       "fromFeedLead": "Trova un post",
       "fromFeedRest": " che vuoi aggiungere e clicca sul pulsante delle raccolte.",
       "pasteTitle": "Incolla URL del post",
       "pasteDescription": "Puoi anche incollare l'URL di un post per aggiungerlo rapidamente alla tua raccolta.",
+      "createPostTitle": "Crea nuovo post",
+      "createPostPlaceholder": "A cosa stai pensando?",
+      "createPostAvatarFallback": "Tu",
       "adding": "Aggiunta...",
       "errors": {
         "required": "Incolla l'URL di un post.",
@@ -1416,6 +1427,13 @@
         "failure": "Impossibile aggiungere questo post."
       }
     }
+  },
+  "fab": {
+    "newPost": "Nuovo post",
+    "newCollection": "Nuova collezione",
+    "newPostInCollection": "Nuovo post nella collezione",
+    "newBookmark": "Nuovo segnalibro",
+    "addedToCollection": "Post aggiunto alla collezione."
   },
   "postSave": {
     "title": "Salva post",

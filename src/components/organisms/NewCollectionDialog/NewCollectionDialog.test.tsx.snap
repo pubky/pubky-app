@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`NewCollectionDialog > matches snapshot when open 1`] = `
+exports[`NewCollectionDialog - Snapshots > matches snapshot when open 1`] = `
 <body
   data-scroll-locked="1"
   style="pointer-events: none;"
@@ -17,15 +17,8 @@ exports[`NewCollectionDialog > matches snapshot when open 1`] = `
     data-aria-hidden="true"
   >
     <button
-      aria-controls="radix-normalized"
-      aria-expanded="true"
-      aria-haspopup="dialog"
       class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-10 gap-1 px-4 py-2 has-[>svg]:px-4"
-      data-as-child="true"
-      data-slot="dialog-trigger"
-      data-state="open"
-      data-testid="dialog-trigger"
-      type="button"
+      data-slot="button"
     >
       Open dialog
     </button>

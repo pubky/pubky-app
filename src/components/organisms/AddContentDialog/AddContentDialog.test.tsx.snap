@@ -174,7 +174,7 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
   >
     <div
       aria-labelledby="radix-normalized"
-      class="relative z-50 duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 m-4 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 rounded-lg border p-6 sm:rounded-xl sm:p-8 flex max-w-xl flex-col overflow-hidden bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
+      class="relative z-50 duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 m-4 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 rounded-lg border p-6 sm:rounded-xl sm:p-8 flex w-full max-w-xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
       data-cy="dialog-content"
       data-slot="dialog-content"
       data-state="open"
@@ -207,7 +207,7 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
             collections.addContentDialog.title
           </h2>
           <p
-            class="text-sm leading-normal font-medium text-muted-foreground"
+            class="text-sm leading-normal font-medium text-muted-foreground sr-only"
             data-slot="dialog-description"
             id="radix-normalized"
           >
@@ -215,11 +215,11 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
           </p>
         </div>
         <div
-          class="flex w-full flex-col gap-3 lg:flex-row"
+          class="flex w-full flex-col gap-3"
           data-testid="container"
         >
           <div
-            class="flex flex-col gap-6 bg-card text-card-foreground min-w-0 flex-1 overflow-hidden rounded-md py-6 shadow-sm"
+            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
             data-slot="card"
             data-testid="card"
           >
@@ -228,40 +228,26 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
               data-slot="card-header"
             >
               <div
-                class="text-base leading-none font-bold text-card-foreground lg:text-brand"
+                class="text-base leading-none font-bold text-card-foreground"
                 data-slot="card-title"
               >
                 collections.addContentDialog.fromFeedTitle
               </div>
             </div>
             <div
-              class="px-6"
-              data-slot="card-content"
-            >
-              <p
-                class="text-sm leading-5 font-medium text-muted-foreground"
-                data-testid="typography"
-              >
-                <span
-                  class="font-bold text-brand lg:font-medium lg:text-muted-foreground"
-                  data-testid="typography"
-                >
-                  collections.addContentDialog.fromFeedLead
-                </span>
-                collections.addContentDialog.fromFeedRest
-              </p>
-            </div>
-            <div
               class="flex items-center [.border-t]:pt-6 justify-start px-6"
               data-slot="card-footer"
             >
               <div
-                class="flex flex-wrap items-center justify-start gap-2"
+                class="flex w-full flex-wrap items-center justify-start gap-2"
                 data-testid="container"
               >
-                <div
-                  class="flex h-8 items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs opacity-30"
-                  data-testid="container"
+                <button
+                  aria-label="collections.addContentDialog.fromFeedTitle"
+                  class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs opacity-30"
+                  data-cy="add-content-feed-reply-pill"
+                  data-slot="button"
+                  type="button"
                 >
                   <svg
                     aria-hidden="true"
@@ -286,10 +272,13 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
                   >
                     7
                   </span>
-                </div>
-                <div
-                  class="flex h-8 items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs opacity-30"
-                  data-testid="container"
+                </button>
+                <button
+                  aria-label="collections.addContentDialog.fromFeedTitle"
+                  class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs opacity-30"
+                  data-cy="add-content-feed-repost-pill"
+                  data-slot="button"
+                  type="button"
                 >
                   <svg
                     aria-hidden="true"
@@ -323,10 +312,13 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
                   >
                     3
                   </span>
-                </div>
-                <div
-                  class="flex h-8 items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs drop-shadow-[0_0_8px_var(--brand)]"
-                  data-testid="container"
+                </button>
+                <button
+                  aria-label="collections.addContentDialog.fromFeedTitle"
+                  class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs drop-shadow-[0_0_8px_var(--brand)]"
+                  data-cy="add-content-feed-save-pill"
+                  data-slot="button"
+                  type="button"
                 >
                   <svg
                     aria-hidden="true"
@@ -354,12 +346,12 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
                       d="M4 4v16"
                     />
                   </svg>
-                </div>
+                </button>
               </div>
             </div>
           </div>
           <div
-            class="flex flex-col gap-6 bg-card text-card-foreground min-w-0 flex-1 overflow-hidden rounded-md py-6 shadow-sm"
+            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
             data-slot="card"
             data-testid="card"
           >
@@ -373,17 +365,6 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
               >
                 collections.addContentDialog.pasteTitle
               </div>
-            </div>
-            <div
-              class="px-6"
-              data-slot="card-content"
-            >
-              <p
-                class="text-sm leading-5 font-medium text-muted-foreground"
-                data-testid="typography"
-              >
-                collections.addContentDialog.pasteDescription
-              </p>
             </div>
             <div
               class="flex [.border-t]:pt-6 flex-col items-stretch px-6"
@@ -405,6 +386,104 @@ exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapsh
                   value=""
                 />
               </div>
+            </div>
+          </div>
+          <div
+            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
+            data-slot="card"
+            data-testid="card"
+          >
+            <div
+              class="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 px-6"
+              data-slot="card-header"
+            >
+              <div
+                class="text-base leading-none font-bold text-card-foreground"
+                data-slot="card-title"
+              >
+                collections.addContentDialog.createPostTitle
+              </div>
+            </div>
+            <div
+              class="flex [.border-t]:pt-6 flex-col items-stretch px-6"
+              data-slot="card-footer"
+            >
+              <button
+                class="flex w-full cursor-pointer items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 text-left outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                data-cy="add-content-create-post"
+                data-slot="button"
+                type="button"
+              >
+                <span
+                  class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+                >
+                  <span
+                    class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+                  >
+                    <div
+                      class="facehash h-full w-full rounded-full text-background"
+                      data-facehash=""
+                      data-interactive="true"
+                      style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(255, 0, 0);"
+                    >
+                      <div
+                        data-facehash-gradient=""
+                        style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                      />
+                      <div
+                        data-facehash-face=""
+                        style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(-15deg) rotateY(0deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          fill="none"
+                          style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                          viewBox="0 0 63 15"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g
+                            style="animation: facehash-blink 2s ease-in-out 0s infinite; transform-origin: center center;"
+                          >
+                            <circle
+                              cx="55.2"
+                              cy="7.2"
+                              fill="currentColor"
+                              r="7.2"
+                            />
+                          </g>
+                          <g
+                            style="animation: facehash-blink 2s ease-in-out 0s infinite; transform-origin: center center;"
+                          >
+                            <circle
+                              cx="7.2"
+                              cy="7.2"
+                              fill="currentColor"
+                              r="7.2"
+                            />
+                          </g>
+                        </svg>
+                        <div
+                          data-facehash-mouth=""
+                          style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                        >
+                          <span
+                            data-testid="avatar-fallback-initial"
+                            style="font-size: 26cqw; line-height: 1;"
+                          >
+                            V
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </span>
+                </span>
+                <p
+                  class="min-w-0 flex-1 truncate text-base font-medium text-input"
+                  data-testid="typography"
+                >
+                  collections.addContentDialog.createPostPlaceholder
+                </p>
+              </button>
             </div>
           </div>
         </div>

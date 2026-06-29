@@ -508,7 +508,8 @@
       "followUser": "{username}をフォロー",
       "unfollowUser": "{username}のフォローを解除",
       "muteUser": "{username}をミュート",
-      "unmuteUser": "{username}のミュートを解除"
+      "unmuteUser": "{username}のミュートを解除",
+      "tagPost": "投稿にタグを付ける ({count})"
     },
     "deleted": "この投稿は作成者によって削除されました。",
     "missing": "投稿が見つかりません。",
@@ -1344,6 +1345,13 @@
       "created": "コレクションを作成しました",
       "createFailed": "コレクションの作成に失敗しました。"
     },
+    "intro": {
+      "title": "コレクションへようこそ",
+      "description": "保存する価値のある投稿を集めましょう。ネットワークから最高のコンテンツを集め、アイデアを整理し、ノイズからシグナルを選り分け、大切なものを共有しましょう。",
+      "imageAlt": "コレクション",
+      "cancel": "キャンセル",
+      "continue": "続ける"
+    },
     "edit": {
       "title": "コレクションを編集",
       "save": "変更を保存",
@@ -1399,13 +1407,16 @@
       }
     },
     "addContentDialog": {
-      "title": "コンテンツ",
+      "title": "コンテンツを追加",
       "description": "フィードから投稿または記事を追加するか、URLを直接貼り付けます。",
       "fromFeedTitle": "フィードから追加",
       "fromFeedLead": "投稿を見つけて",
       "fromFeedRest": "追加したい投稿のコレクションボタンをクリックします。",
       "pasteTitle": "投稿URLを貼り付け",
       "pasteDescription": "投稿URLを貼り付けて、すばやくコレクションに追加することもできます。",
+      "createPostTitle": "新しい投稿を作成",
+      "createPostPlaceholder": "いま何を考えていますか？",
+      "createPostAvatarFallback": "あなた",
       "adding": "追加中...",
       "errors": {
         "required": "投稿URLを貼り付けてください。",
@@ -1416,6 +1427,13 @@
         "failure": "この投稿を追加できませんでした。"
       }
     }
+  },
+  "fab": {
+    "newPost": "新しい投稿",
+    "newCollection": "新しいコレクション",
+    "newPostInCollection": "コレクションに新しい投稿",
+    "newBookmark": "新しいブックマーク",
+    "addedToCollection": "投稿をコレクションに追加しました。"
   },
   "postSave": {
     "title": "投稿を保存",

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useApplyPendingFeedInsert } from '@/hooks/useApplyPendingFeedInsert/useApplyPendingFeedInsert';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
@@ -13,6 +14,7 @@ import { PullToRefreshIndicator } from '@/molecules/PullToRefreshIndicator/PullT
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
 import { TimelineGridPosts } from '../../Posts/GridPosts/GridPosts';
 import { TimelinePosts } from '../../Posts/Posts';
 import { NewPostsSection } from '../NewPostsSection/NewPostsSection';
@@ -132,6 +134,18 @@ function TimelineFeedContent({
   });
 
   const postIds = [...new Set(rawPostIds)];
+
+  // Drain optimistic posts the global FAB enqueued for this feed. The FAB lives
+  // outside this feed's React tree, so it cannot call `prependOptimisticPosts`
+  // directly — the `feedOptimistic` store bridges the gap. Only the finite,
+  // membership-ordered feeds (single collection + bookmarks) participate.
+  const optimisticFeedKey =
+    variant === TIMELINE_FEED_VARIANT.COLLECTION && collectionId
+      ? buildFeedKey({ type: 'collection', collectionId })
+      : variant === TIMELINE_FEED_VARIANT.BOOKMARKS
+        ? buildFeedKey({ type: 'bookmarks' })
+        : undefined;
+  useApplyPendingFeedInsert(optimisticFeedKey, prependOptimisticPosts);
 
   const { mutedUserIdSet } = useMutedUsers();
 

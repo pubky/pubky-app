@@ -508,7 +508,8 @@
       "followUser": "Suivre {username}",
       "unfollowUser": "Ne plus suivre {username}",
       "muteUser": "Masquer {username}",
-      "unmuteUser": "Afficher {username}"
+      "unmuteUser": "Afficher {username}",
+      "tagPost": "Taguer la publication ({count})"
     },
     "deleted": "Cette publication a ete supprimée par son auteur.",
     "missing": "Publication introuvable.",
@@ -1344,6 +1345,13 @@
       "created": "Collection créée",
       "createFailed": "Échec de la création de la collection."
     },
+    "intro": {
+      "title": "Bienvenue dans les Collections",
+      "description": "Gardez les publications qui en valent la peine. Rassemblez le meilleur contenu de votre réseau. Organisez vos idées, filtrez le signal du bruit et partagez ce qui compte.",
+      "imageAlt": "Collections",
+      "cancel": "Annuler",
+      "continue": "Continuer"
+    },
     "edit": {
       "title": "Modifier la collection",
       "save": "Enregistrer les modifications",
@@ -1399,13 +1407,16 @@
       }
     },
     "addContentDialog": {
-      "title": "Contenu",
+      "title": "Ajouter du contenu",
       "description": "Ajoutez une publication ou un article depuis votre fil ou collez directement une URL.",
       "fromFeedTitle": "Ajouter depuis le fil",
       "fromFeedLead": "Trouvez une publication",
       "fromFeedRest": " que vous voulez ajouter et cliquez sur le bouton des collections.",
       "pasteTitle": "Coller l'URL de la publication",
       "pasteDescription": "Vous pouvez aussi coller l'URL d'une publication pour l'ajouter rapidement à votre collection.",
+      "createPostTitle": "Créer une nouvelle publication",
+      "createPostPlaceholder": "Qu'avez-vous en tête ?",
+      "createPostAvatarFallback": "Vous",
       "adding": "Ajout...",
       "errors": {
         "required": "Collez une URL de publication.",
@@ -1416,6 +1427,13 @@
         "failure": "Impossible d'ajouter cette publication."
       }
     }
+  },
+  "fab": {
+    "newPost": "Nouvelle publication",
+    "newCollection": "Nouvelle collection",
+    "newPostInCollection": "Nouvelle publication dans la collection",
+    "newBookmark": "Nouveau signet",
+    "addedToCollection": "Publication ajoutée à la collection."
   },
   "postSave": {
     "title": "Enregistrer la publication",

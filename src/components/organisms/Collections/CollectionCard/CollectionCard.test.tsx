@@ -385,7 +385,7 @@ describe('CollectionCard', () => {
 
       render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
-      const tagButton = screen.getByLabelText('Tag post (3)');
+      const tagButton = screen.getByLabelText('post.actions.tagPost');
       const followButton = screen.getByLabelText('collections.card.follow');
       expect(tagButton.compareDocumentPosition(followButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
@@ -445,7 +445,7 @@ describe('CollectionCard', () => {
 
       render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
-      const tagButton = screen.getByLabelText('Tag post (3)');
+      const tagButton = screen.getByLabelText('post.actions.tagPost');
       const deleteButton = screen.getByLabelText('collections.card.delete');
       expect(tagButton.compareDocumentPosition(deleteButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
@@ -460,7 +460,7 @@ describe('CollectionCard', () => {
         </div>,
       );
 
-      const tagButton = screen.getByLabelText('Tag post (3)');
+      const tagButton = screen.getByLabelText('post.actions.tagPost');
       fireEvent.click(tagButton);
 
       expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
@@ -484,7 +484,7 @@ describe('CollectionCard', () => {
         </div>,
       );
 
-      fireEvent.click(screen.getByLabelText('Tag post (3)'));
+      fireEvent.click(screen.getByLabelText('post.actions.tagPost'));
 
       const tagsColumn = document.querySelector('[data-cy="post-tags-expandable-row"]')?.firstElementChild;
       expect(tagsColumn).toBeTruthy();
@@ -503,7 +503,7 @@ describe('CollectionCard', () => {
         </div>,
       );
 
-      fireEvent.click(screen.getByLabelText('Tag post (3)'));
+      fireEvent.click(screen.getByLabelText('post.actions.tagPost'));
       fireEvent.click(screen.getByTestId('post-tags-panel'));
 
       expect(onParentClick).not.toHaveBeenCalled();
@@ -633,7 +633,7 @@ describe('CollectionCard', () => {
       expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.unfollow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Tag post (3)')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('post.actions.tagPost')).not.toBeInTheDocument();
     });
 
     it('hides the inline tags row and Delete action for the owner', () => {
@@ -643,7 +643,7 @@ describe('CollectionCard', () => {
 
       expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Tag post (3)')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('post.actions.tagPost')).not.toBeInTheDocument();
     });
   });
 
@@ -656,7 +656,7 @@ describe('CollectionCard', () => {
       expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Tag post (3)')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('post.actions.tagPost')).not.toBeInTheDocument();
     });
   });
 });

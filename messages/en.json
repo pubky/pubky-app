@@ -508,7 +508,8 @@
       "followUser": "Follow {username}",
       "unfollowUser": "Unfollow {username}",
       "muteUser": "Mute {username}",
-      "unmuteUser": "Unmute {username}"
+      "unmuteUser": "Unmute {username}",
+      "tagPost": "Tag post ({count})"
     },
     "deleted": "This post has been deleted by its author.",
     "missing": "Post not found.",
@@ -1344,6 +1345,13 @@
       "created": "Collection created",
       "createFailed": "Failed to create collection."
     },
+    "intro": {
+      "title": "Welcome to Collections",
+      "description": "Save posts worth keeping. Collect the best content from your network. Curate ideas, filter signal from noise, and share what matters.",
+      "imageAlt": "Collections",
+      "cancel": "Cancel",
+      "continue": "Continue"
+    },
     "edit": {
       "title": "Edit Collection",
       "save": "Save changes",
@@ -1399,13 +1407,16 @@
       }
     },
     "addContentDialog": {
-      "title": "Content",
+      "title": "Add Content",
       "description": "Add a post or article from your feed or paste a url directly.",
       "fromFeedTitle": "Add from feed",
       "fromFeedLead": "Find a post",
       "fromFeedRest": " you want to add and click the collections button.",
       "pasteTitle": "Paste post url",
       "pasteDescription": "You can also paste a post URL to quickly add it to your collection.",
+      "createPostTitle": "Create new post",
+      "createPostPlaceholder": "What's on your mind?",
+      "createPostAvatarFallback": "You",
       "adding": "Adding...",
       "errors": {
         "required": "Paste a post URL.",
@@ -1416,6 +1427,13 @@
         "failure": "Could not add this post."
       }
     }
+  },
+  "fab": {
+    "newPost": "New post",
+    "newCollection": "New collection",
+    "newPostInCollection": "New post in collection",
+    "newBookmark": "New bookmark",
+    "addedToCollection": "Post added to collection."
   },
   "postSave": {
     "title": "Save post",

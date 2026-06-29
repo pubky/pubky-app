@@ -508,7 +508,8 @@
       "followUser": "Seguir {username}",
       "unfollowUser": "Deixar de seguir {username}",
       "muteUser": "Silenciar {username}",
-      "unmuteUser": "Reativar {username}"
+      "unmuteUser": "Reativar {username}",
+      "tagPost": "Marcar post ({count})"
     },
     "deleted": "Este post foi excluido pelo autor.",
     "missing": "Post não encontrado.",
@@ -1344,6 +1345,13 @@
       "created": "Coleção criada",
       "createFailed": "Falha ao criar a coleção."
     },
+    "intro": {
+      "title": "Bem-vindo às Coleções",
+      "description": "Salve as publicações que valem a pena. Reúna o melhor conteúdo da sua rede. Organize ideias, filtre o sinal do ruído e compartilhe o que importa.",
+      "imageAlt": "Coleções",
+      "cancel": "Cancelar",
+      "continue": "Continuar"
+    },
     "edit": {
       "title": "Editar coleção",
       "save": "Salvar alterações",
@@ -1399,13 +1407,16 @@
       }
     },
     "addContentDialog": {
-      "title": "Conteúdo",
+      "title": "Adicionar conteúdo",
       "description": "Adicione uma publicação ou artigo do seu feed ou cole uma URL diretamente.",
       "fromFeedTitle": "Adicionar do feed",
       "fromFeedLead": "Encontre uma publicação",
       "fromFeedRest": " que você quer adicionar e clique no botão de coleções.",
       "pasteTitle": "Colar URL da publicação",
       "pasteDescription": "Você também pode colar a URL de uma publicação para adicioná-la rapidamente à sua coleção.",
+      "createPostTitle": "Criar novo post",
+      "createPostPlaceholder": "O que você está pensando?",
+      "createPostAvatarFallback": "Você",
       "adding": "Adicionando...",
       "errors": {
         "required": "Cole uma URL de publicação.",
@@ -1416,6 +1427,13 @@
         "failure": "Não foi possível adicionar esta publicação."
       }
     }
+  },
+  "fab": {
+    "newPost": "Novo post",
+    "newCollection": "Nova coleção",
+    "newPostInCollection": "Novo post na coleção",
+    "newBookmark": "Novo favorito",
+    "addedToCollection": "Post adicionado à coleção."
   },
   "postSave": {
     "title": "Salvar publicação",

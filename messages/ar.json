@@ -510,7 +510,8 @@
       "followUser": "متابعة {username}",
       "unfollowUser": "الغاء متابعة {username}",
       "muteUser": "كتم {username}",
-      "unmuteUser": "الغاء كتم {username}"
+      "unmuteUser": "الغاء كتم {username}",
+      "tagPost": "وسم المنشور ({count})"
     },
     "deleted": "تم حذف هذا المنشور من قبل صاحبه.",
     "missing": "المنشور غير موجود.",
@@ -1340,6 +1341,13 @@
       "created": "تم إنشاء المجموعة",
       "createFailed": "فشل إنشاء المجموعة."
     },
+    "intro": {
+      "title": "مرحبًا بك في المجموعات",
+      "description": "احفظ المنشورات التي تستحق الاحتفاظ بها. اجمع أفضل المحتوى من شبكتك. نظّم الأفكار، وصفِّ الإشارة من الضوضاء، وشارك ما يهم.",
+      "imageAlt": "المجموعات",
+      "cancel": "إلغاء",
+      "continue": "متابعة"
+    },
     "edit": {
       "title": "تعديل المجموعة",
       "save": "حفظ التغييرات",
@@ -1395,13 +1403,16 @@
       }
     },
     "addContentDialog": {
-      "title": "محتوى",
+      "title": "إضافة محتوى",
       "description": "أضف منشورًا أو مقالًا من خلاصتك أو الصق رابطًا مباشرة.",
       "fromFeedTitle": "إضافة من الخلاصة",
       "fromFeedLead": "ابحث عن منشور",
       "fromFeedRest": " تريد إضافته واضغط على زر المجموعات.",
       "pasteTitle": "لصق رابط المنشور",
       "pasteDescription": "يمكنك أيضًا لصق رابط منشور لإضافته بسرعة إلى مجموعتك.",
+      "createPostTitle": "إنشاء منشور جديد",
+      "createPostPlaceholder": "بماذا تفكر؟",
+      "createPostAvatarFallback": "أنت",
       "adding": "جارٍ الإضافة...",
       "errors": {
         "required": "الصق رابط منشور.",
@@ -1412,6 +1423,13 @@
         "failure": "تعذرت إضافة هذا المنشور."
       }
     }
+  },
+  "fab": {
+    "newPost": "منشور جديد",
+    "newCollection": "مجموعة جديدة",
+    "newPostInCollection": "منشور جديد في المجموعة",
+    "newBookmark": "إشارة مرجعية جديدة",
+    "addedToCollection": "تمت إضافة المنشور إلى المجموعة."
   },
   "postSave": {
     "title": "حفظ المنشور",

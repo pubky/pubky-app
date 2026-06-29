@@ -3,31 +3,40 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
-import { Dialog, DialogTrigger } from '@/atoms/Dialog/Dialog';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
+import { useFabAction } from '@/hooks/useFabAction/useFabAction';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn } from '@/libs/utils/utils';
 import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
+import { NewCollectionDialog } from '@/organisms/NewCollectionDialog/NewCollectionDialog';
 
 /**
- * Floating Action Button (FAB) for creating new posts.
+ * Floating Action Button (FAB).
+ *
+ * The button is always a `+`; its behavior is context-aware via
+ * [`useFabAction`](src/hooks/useFabAction/useFabAction.ts):
+ * - `/collections`                      -> create a new collection
+ * - `/collections/bookmarks`            -> create a post and bookmark it
+ * - `/collections/[ownPubky]/[postId]`  -> create a post inside that collection
+ * - everywhere else (incl. non-owned)   -> create a new post
  *
  * Visibility rules:
- * - Shows for authenticated users (opens new post dialog)
- * - Shows for unauthenticated users on public routes (opens sign-in dialog)
+ * - Shows for authenticated users (opens the context dialog)
+ * - Shows for unauthenticated users on public explore routes (opens sign-in)
  * - Hidden on landing page and other non-public routes for unauthenticated users
  *
  * Positioning:
  * - On small screens (sm), the button sits directly on top of the menu bar by design.
- * - 72px is the current height of the footer navigation bar.
- * - md breakpoint uses 80px for additional spacing.
+ * - `bottom-18` (72px) matches the height of the footer navigation bar.
+ * - md breakpoint uses 80px (`bottom-20`) for additional spacing.
  */
-export function NewPostCTA() {
+export function Fab() {
   const [open, setOpen] = useState(false);
   const { isFullyAuthenticated, isLoading } = useAuthStatus();
   const { isPublicExploreRoute } = usePublicRoute();
   const { requireAuth } = useRequireAuth();
+  const action = useFabAction();
 
   // Show FAB for authenticated users OR unauthenticated users on public explore routes
   const shouldShow = isFullyAuthenticated || isPublicExploreRoute;
@@ -35,7 +44,7 @@ export function NewPostCTA() {
     return null;
   }
   const buttonClasses = cn(
-    'fixed right-3 bottom-[72px] sm:right-10 md:bottom-20 lg:bottom-6',
+    'fixed right-3 bottom-18 sm:right-10 md:bottom-20 lg:bottom-6',
     'size-20 rounded-full',
     'flex items-center justify-center',
     'bg-white/12 backdrop-blur-lg',
@@ -51,23 +60,27 @@ export function NewPostCTA() {
       overrideDefaults
       data-testid="new-post-cta"
       className={buttonClasses}
-      aria-label="New post"
-      onClick={!isFullyAuthenticated ? () => requireAuth(() => setOpen(true)) : undefined}
+      aria-label={action.ariaLabel}
+      onClick={() => requireAuth(() => setOpen(true))}
     >
       <Plus className="size-10 transition-colors group-hover:text-black" strokeWidth={0.8} />
     </Button>
   );
 
-  // Unauthenticated: button opens sign-in dialog via requireAuth
+  // Unauthenticated: button only opens the sign-in dialog via requireAuth
   if (!isFullyAuthenticated) {
     return button;
   }
 
-  // Authenticated: wrap button with dialog
+  // Authenticated: render the button next to the context dialog it controls
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{button}</DialogTrigger>
-      <DialogNewPost open={open} onOpenChangeAction={setOpen} />
-    </Dialog>
+    <>
+      {button}
+      {action.kind === 'createCollection' ? (
+        <NewCollectionDialog open={open} onOpenChange={setOpen} />
+      ) : (
+        <DialogNewPost open={open} onOpenChangeAction={setOpen} onPostCreated={action.onPostCreated} />
+      )}
+    </>
   );
 }

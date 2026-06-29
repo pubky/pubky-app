@@ -3,52 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { DialogNewPost } from './DialogNewPost';
 
-vi.mock('@/atoms/Dialog/Dialog', () => {
-  return {
-    Dialog: ({
-      children,
-      open,
-      onOpenChange,
-    }: {
-      children: React.ReactNode;
-      open?: boolean;
-      onOpenChange?: (open: boolean) => void;
-    }) => (
-      <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
-        {children}
-      </div>
-    ),
-    DialogContent: ({
-      children,
-      className,
-      hiddenTitle,
-      'aria-describedby': ariaDescribedBy,
-      ...props
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      hiddenTitle?: string;
-      'aria-describedby'?: string;
-      [key: string]: unknown;
-    }) => (
-      <div
-        data-testid="dialog-content"
-        className={className}
-        aria-label={hiddenTitle}
-        aria-describedby={ariaDescribedBy}
-        {...props}
-      >
-        {children}
-      </div>
-    ),
-    DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-    DialogDescription: ({ children }: { children: React.ReactNode }) => (
-      <p data-testid="dialog-description">{children}</p>
-    ),
-  };
-});
-
 // Mock molecules
 vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
   return {
@@ -85,13 +39,13 @@ vi.mock('@/organisms/PostInput/PostInput', () => {
         onArticleModeChange,
       }: {
         variant: string;
-        onSuccess?: () => void;
+        onSuccess?: (createdPostId: string) => void;
         expanded?: boolean;
         onContentChange?: (content: string, tags: string[]) => void;
         onArticleModeChange?: (isArticle: boolean) => void;
       }) => (
         <div data-testid="post-input" data-variant={variant} data-expanded={expanded}>
-          <button data-testid="mock-success-btn" onClick={onSuccess}>
+          <button data-testid="mock-success-btn" onClick={() => onSuccess?.('author:post123')}>
             Success
           </button>
           <button data-testid="mock-content-change-btn" onClick={() => onContentChange?.('test content', ['tag1'])}>
@@ -164,9 +118,9 @@ describe('DialogNewPost', () => {
 
   it('renders with required props', () => {
     const onOpenChangeAction = vi.fn();
-    render(<DialogNewPost open={false} onOpenChangeAction={onOpenChangeAction} />);
+    render(<DialogNewPost open onOpenChangeAction={onOpenChangeAction} />);
 
-    expect(screen.getByTestId('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-content')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-title')).toHaveTextContent('New Post');
     expect(screen.getByTestId('post-input')).toBeInTheDocument();
@@ -174,10 +128,34 @@ describe('DialogNewPost', () => {
 
   it('calls onOpenChangeAction when PostInput onSuccess is called', async () => {
     const onOpenChangeAction = vi.fn();
-    render(<DialogNewPost open={false} onOpenChangeAction={onOpenChangeAction} />);
+    render(<DialogNewPost open onOpenChangeAction={onOpenChangeAction} />);
 
     const successButton = screen.getByTestId('mock-success-btn');
     fireEvent.click(successButton);
+
+    await waitFor(() => {
+      expect(onOpenChangeAction).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it('calls onPostCreated with the created post id before closing', async () => {
+    const onOpenChangeAction = vi.fn();
+    const onPostCreated = vi.fn();
+    render(<DialogNewPost open onOpenChangeAction={onOpenChangeAction} onPostCreated={onPostCreated} />);
+
+    fireEvent.click(screen.getByTestId('mock-success-btn'));
+
+    await waitFor(() => {
+      expect(onPostCreated).toHaveBeenCalledWith('author:post123');
+      expect(onOpenChangeAction).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it('still closes when no onPostCreated is provided', async () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogNewPost open onOpenChangeAction={onOpenChangeAction} />);
+
+    fireEvent.click(screen.getByTestId('mock-success-btn'));
 
     await waitFor(() => {
       expect(onOpenChangeAction).toHaveBeenCalledWith(false);
@@ -188,12 +166,10 @@ describe('DialogNewPost', () => {
     const onOpenChangeAction = vi.fn();
     const { rerender } = render(<DialogNewPost open={false} onOpenChangeAction={onOpenChangeAction} />);
 
-    let dialog = screen.getByTestId('dialog');
-    expect(dialog).toHaveAttribute('data-open', 'false');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     rerender(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
-    dialog = screen.getByTestId('dialog');
-    expect(dialog).toHaveAttribute('data-open', 'true');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('displays "New Post" title by default', () => {
@@ -201,7 +177,7 @@ describe('DialogNewPost', () => {
     render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
 
     expect(screen.getByTestId('dialog-title')).toHaveTextContent('New Post');
-    expect(screen.getByTestId('dialog-description')).toHaveTextContent('New Post dialog');
+    expect(screen.getByText('New Post dialog')).toBeInTheDocument();
   });
 
   it('changes title to "New Article" when article mode is enabled', async () => {
@@ -215,7 +191,7 @@ describe('DialogNewPost', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('dialog-title')).toHaveTextContent('New Article');
-      expect(screen.getByTestId('dialog-description')).toHaveTextContent('New Article dialog');
+      expect(screen.getByText('New Article dialog')).toBeInTheDocument();
     });
   });
 
@@ -233,7 +209,7 @@ describe('DialogNewPost', () => {
     fireEvent.click(screen.getByTestId('mock-article-mode-off-btn'));
     await waitFor(() => {
       expect(screen.getByTestId('dialog-title')).toHaveTextContent('New Post');
-      expect(screen.getByTestId('dialog-description')).toHaveTextContent('New Post dialog');
+      expect(screen.getByText('New Post dialog')).toBeInTheDocument();
     });
   });
 
@@ -258,21 +234,21 @@ describe('DialogNewPost', () => {
 
     const dialogContent = screen.getByTestId('dialog-content');
     expect(dialogContent).toBeInTheDocument();
-    expect(dialogContent.getAttribute('style')).toBeFalsy();
+    expect(dialogContent.style.transform).toBe('');
   });
 
   it('adds transition class only when keyboard is visible', async () => {
     // When keyboard is not visible, no transition
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
     const onOpenChangeAction = vi.fn();
-    const { container, rerender } = render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
-    let dialogContent = container.querySelector('[data-testid="dialog-content"]');
+    const { rerender } = render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
+    let dialogContent = screen.getByTestId('dialog-content');
     expect(dialogContent).not.toHaveClass('transition-transform');
 
     // When keyboard is visible, add transition for smooth opening (with adjusted offset)
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 100 });
     rerender(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
-    dialogContent = container.querySelector('[data-testid="dialog-content"]');
+    dialogContent = screen.getByTestId('dialog-content');
     expect(dialogContent).toHaveClass('transition-transform', 'duration-75');
   });
 

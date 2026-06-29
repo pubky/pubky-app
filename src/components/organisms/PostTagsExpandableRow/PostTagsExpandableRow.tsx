@@ -1,17 +1,13 @@
 'use client';
 
 import { type MouseEvent, type ReactNode, useState } from 'react';
-import { Tag } from 'lucide-react';
 import { TagKind } from '@/application/tag/tag.types';
-import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-import { Typography } from '@/atoms/Typography/Typography';
 import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
-import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { cn } from '@/libs/utils/utils';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { PostTagsPanel } from '@/organisms/PostTagsPanel/PostTagsPanel';
+import { PostTagToggleButton } from './PostTagToggleButton';
 
 interface PostTagsExpandableRowProps {
   postId: string;
@@ -20,6 +16,9 @@ interface PostTagsExpandableRowProps {
   tagsClassName?: string;
   actionsClassName?: string;
   preventDefaultOnClick?: boolean;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+  showTagToggle?: boolean;
 }
 
 export function PostTagsExpandableRow({
@@ -29,11 +28,14 @@ export function PostTagsExpandableRow({
   tagsClassName,
   actionsClassName,
   preventDefaultOnClick = false,
+  expanded,
+  onExpandedChange,
+  showTagToggle = true,
 }: PostTagsExpandableRowProps) {
-  const [tagsExpanded, setTagsExpanded] = useState(false);
-  const { postCounts, isLoading: isCountsLoading } = usePostCounts(postId);
-  const tagCount = postCounts?.unique_tags ?? 0;
-  const isTagCountLoading = isCountsLoading;
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const tagsExpanded = expanded ?? internalExpanded;
+  const hasExternalExpandedState = expanded !== undefined;
+  const shouldRenderActions = showTagToggle || Boolean(children);
 
   const suppressParentInteraction = (event: MouseEvent) => {
     if (preventDefaultOnClick) event.preventDefault();
@@ -45,7 +47,9 @@ export function PostTagsExpandableRow({
       event.preventDefault();
       event.stopPropagation();
     }
-    setTagsExpanded((prev) => !prev);
+    const nextExpanded = !tagsExpanded;
+    onExpandedChange?.(nextExpanded);
+    if (!hasExternalExpandedState) setInternalExpanded(nextExpanded);
   };
 
   return (
@@ -83,33 +87,18 @@ export function PostTagsExpandableRow({
         )}
       </Container>
 
-      <Container
-        overrideDefaults
-        data-cy="post-tags-expandable-row-actions"
-        onClick={suppressParentInteraction}
-        onAuxClick={suppressParentInteraction}
-        className={cn('flex shrink-0 items-center gap-2 self-end', actionsClassName)}
-      >
-        {isTagCountLoading ? (
-          <Skeleton data-cy="post-tag-btn-skeleton" className="h-8 w-12 rounded-full" />
-        ) : (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleTagToggle}
-            aria-expanded={tagsExpanded}
-            aria-label={`Tag post (${tagCount})`}
-            data-cy="post-tag-btn"
-            className="border-none shadow-xs"
-          >
-            <Tag />
-            <Typography as="span" overrideDefaults className="text-xs leading-4 font-bold text-muted-foreground">
-              {tagCount}
-            </Typography>
-          </Button>
-        )}
-        {children}
-      </Container>
+      {shouldRenderActions && (
+        <Container
+          overrideDefaults
+          data-cy="post-tags-expandable-row-actions"
+          onClick={suppressParentInteraction}
+          onAuxClick={suppressParentInteraction}
+          className={cn('flex shrink-0 items-center gap-2 self-end', actionsClassName)}
+        >
+          {showTagToggle && <PostTagToggleButton postId={postId} expanded={tagsExpanded} onToggle={handleTagToggle} />}
+          {children}
+        </Container>
+      )}
     </Container>
   );
 }

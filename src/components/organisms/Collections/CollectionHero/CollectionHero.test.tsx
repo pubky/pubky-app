@@ -349,13 +349,13 @@ describe('CollectionHero', () => {
     expect(tags).toHaveAttribute('data-tagged-id', COMPOSITE_ID);
     expect(tags).toHaveAttribute('data-tagged-kind', String(TagKind.POST));
     expect(tags).toHaveAttribute('data-show-add-button', 'true');
-    expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
+    expect(screen.getByLabelText('post.actions.tagPost')).toBeInTheDocument();
   });
 
   it('toggles the editable tags panel from the tag CTA', () => {
     const { container } = renderHero();
 
-    fireEvent.click(screen.getByLabelText('Tag post (3)'));
+    fireEvent.click(screen.getByLabelText('post.actions.tagPost'));
 
     expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
     const panel = screen.getByTestId('post-tags-panel');
@@ -364,7 +364,8 @@ describe('CollectionHero', () => {
     expect(panel).toHaveAttribute('data-auto-focus-input', 'true');
     expect(panel).toHaveAttribute('data-enable-loading-skeleton', 'false');
     expect(container.querySelector('[data-cy="post-tags-expandable-row"]')).toHaveClass('items-end');
-    expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).toHaveClass('self-end');
+    expect(screen.getByLabelText('post.actions.tagPost')).toHaveAttribute('aria-expanded', 'true');
+    expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).not.toBeInTheDocument();
   });
 
   it('omits the description block when the envelope description is empty / nullish', () => {
@@ -432,7 +433,12 @@ describe('CollectionHero', () => {
       expect(screen.getByLabelText('collections.single.share')).toBeInTheDocument();
       expect(screen.getByLabelText('collections.single.edit')).toBeInTheDocument();
       expect(screen.getByLabelText('collections.single.delete')).toBeInTheDocument();
-      expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
+      expect(screen.getByLabelText('post.actions.tagPost')).toBeInTheDocument();
+      expect(
+        screen
+          .getByLabelText('collections.single.delete')
+          .compareDocumentPosition(screen.getByLabelText('post.actions.tagPost')) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       expect(screen.getByText('collections.single.share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
       expect(screen.getByText('collections.single.edit', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
       expect(screen.getByText('collections.single.delete', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
@@ -560,7 +566,7 @@ describe('CollectionHero', () => {
       renderHero();
 
       expect(screen.getByLabelText('collections.single.follow')).toBeInTheDocument();
-      expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
+      expect(screen.getByLabelText('post.actions.tagPost')).toBeInTheDocument();
       expect(screen.queryByLabelText('collections.single.unfollow')).not.toBeInTheDocument();
     });
 

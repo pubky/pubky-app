@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   commitCreateCollection: vi.fn(),
   toast: vi.fn(),
   push: vi.fn(),
+  useAuthoredCollections: vi.fn(),
 }));
 
 const translations: Record<string, string> = {
@@ -26,6 +27,12 @@ const translations: Record<string, string> = {
   'collections.new.saving': 'Saving...',
   'collections.new.created': 'Collection created',
   'collections.new.createFailed': 'Failed to create collection.',
+  'collections.intro.title': 'Welcome to Collections',
+  'collections.intro.description':
+    'Save posts worth keeping. Collect the best content from your network. Curate ideas, filter signal from noise, and share what matters.',
+  'collections.intro.imageAlt': 'Collections',
+  'collections.intro.cancel': 'Cancel',
+  'collections.intro.continue': 'Continue',
   'toast.success': 'Success',
   'toast.error': 'Error',
 };
@@ -38,6 +45,10 @@ vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitCreateCollection: (...args: unknown[]) => mocks.commitCreateCollection(...args),
   },
+}));
+
+vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
+  useAuthoredCollections: () => mocks.useAuthoredCollections(),
 }));
 
 vi.mock('@/molecules/Toaster/use-toast', () => ({
@@ -64,6 +75,9 @@ vi.mock('next-intl', () => ({
 describe('NewCollectionDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default to an existing collection so the onboarding intro is skipped and
+    // the form opens directly; intro-gate tests override this with an empty list.
+    mocks.useAuthoredCollections.mockReturnValue({ collections: [{ id: 'seed-collection' }], isLoading: false });
   });
 
   it('opens from the trigger and renders collection fields', () => {
@@ -248,6 +262,118 @@ describe('NewCollectionDialog', () => {
 
     expect(screen.getByText('Cover image must be an image file.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add image' })).toBeInTheDocument();
+  });
+
+  describe('controlled mode', () => {
+    it('honors the controlled open prop without a trigger child', () => {
+      const { rerender } = render(<NewCollectionDialog open={false} onOpenChange={vi.fn()} />);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      rerender(<NewCollectionDialog open onOpenChange={vi.fn()} />);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'New Collection' })).toBeInTheDocument();
+    });
+
+    it('calls onOpenChange when dismissed in controlled mode', () => {
+      const onOpenChange = vi.fn();
+      render(<NewCollectionDialog open onOpenChange={onOpenChange} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('onboarding intro gate', () => {
+    it('shows the intro instead of the form for users with no collections', () => {
+      mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: false });
+      render(
+        <NewCollectionDialog>
+          <Button>Open dialog</Button>
+        </NewCollectionDialog>,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
+
+      expect(screen.getByRole('heading', { name: 'Welcome to Collections' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'New Collection' })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+    });
+
+    it('waits for authored collections to load before showing either dialog state', () => {
+      mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: true });
+      render(
+        <NewCollectionDialog>
+          <Button>Open dialog</Button>
+        </NewCollectionDialog>,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
+
+      expect(screen.queryByRole('heading', { name: 'Welcome to Collections' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'New Collection' })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+    });
+
+    it('advances from the intro to the form on Continue', () => {
+      mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: false });
+      render(
+        <NewCollectionDialog>
+          <Button>Open dialog</Button>
+        </NewCollectionDialog>,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+      expect(screen.getByRole('heading', { name: 'New Collection' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Title')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Welcome to Collections' })).not.toBeInTheDocument();
+    });
+
+    it('skips the intro for users who already have at least one collection', () => {
+      mocks.useAuthoredCollections.mockReturnValue({ collections: [{ id: 'c1' }], isLoading: false });
+      render(
+        <NewCollectionDialog>
+          <Button>Open dialog</Button>
+        </NewCollectionDialog>,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
+
+      expect(screen.getByRole('heading', { name: 'New Collection' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Welcome to Collections' })).not.toBeInTheDocument();
+    });
+
+    it('does not open the form when the intro is dismissed', () => {
+      mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: false });
+      render(
+        <NewCollectionDialog>
+          <Button>Open dialog</Button>
+        </NewCollectionDialog>,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(screen.queryByRole('heading', { name: 'Welcome to Collections' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'New Collection' })).not.toBeInTheDocument();
+    });
+
+    it('shows the intro in controlled mode for users with no collections', () => {
+      mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: false });
+      render(<NewCollectionDialog open onOpenChange={vi.fn()} />);
+
+      expect(screen.getByRole('heading', { name: 'Welcome to Collections' })).toBeInTheDocument();
+      expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe('NewCollectionDialog - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.useAuthoredCollections.mockReturnValue({ collections: [{ id: 'seed-collection' }], isLoading: false });
   });
 
   it('matches snapshot when open', () => {
