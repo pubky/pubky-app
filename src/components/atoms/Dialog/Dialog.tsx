@@ -105,7 +105,7 @@ function DialogContent({
             'sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95',
             overrideDefaults
               ? ''
-              : 'max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8',
+              : 'max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8',
             className,
           )}
           style={contentStyle}

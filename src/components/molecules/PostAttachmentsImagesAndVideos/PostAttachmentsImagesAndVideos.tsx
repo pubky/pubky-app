@@ -72,7 +72,7 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
             <DialogTrigger
               key={i}
               asChild
-              className="relative h-52 w-full cursor-pointer only:static only:h-auto only:w-fit sm:last:odd:col-span-2"
+              className="relative h-52 w-full max-w-full cursor-pointer only:static only:h-auto sm:last:odd:col-span-2"
             >
               <Button
                 overrideDefaults
@@ -87,7 +87,7 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
                   fill={!isOnlyMedia}
                   className={cn(
                     'rounded-md',
-                    isOnlyMedia ? 'max-h-96 w-fit object-contain' : 'object-cover object-center',
+                    isOnlyMedia ? 'max-h-96 max-w-full object-contain' : 'object-cover object-center',
                   )}
                 />
               </Button>
@@ -100,7 +100,7 @@ export const PostAttachmentsImagesAndVideos = ({ imagesAndVideos }: PostAttachme
               }}
               src={media.urls.main}
               pauseVideo={open}
-              className="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+              className="h-52 w-full max-w-full cursor-auto only:h-auto only:max-h-96 sm:last:odd:col-span-2"
             />
           ),
         )}
