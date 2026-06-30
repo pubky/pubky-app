@@ -537,6 +537,10 @@
       "backToFeed": "Retour au fil",
       "viewProfile": "Voir le profil",
       "exploreTags": "Explorer les tags"
+    },
+    "lock": {
+      "unlock": "Déverrouiller",
+      "unavailable": "Le contenu verrouillé n'est pas disponible"
     }
   },
   "profile": {

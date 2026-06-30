@@ -25,6 +25,7 @@ export enum ErrorService {
   Nexus = 'nexus',
   Homeserver = 'homeserver',
   Homegate = 'homegate',
+  Locks = 'locks',
   Exchangerate = 'exchangerate',
   Chatwoot = 'chatwoot',
   PubkyAppSpecs = 'pubky-app-specs',

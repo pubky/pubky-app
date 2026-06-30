@@ -539,6 +539,10 @@
       "backToFeed": "Volver al feed",
       "viewProfile": "Ver perfil",
       "exploreTags": "Explorar etiquetas"
+    },
+    "lock": {
+      "unlock": "Desbloquear",
+      "unavailable": "El contenido del bloqueo no está disponible"
     }
   },
   "profile": {

@@ -539,6 +539,10 @@
       "backToFeed": "Zurück zum Feed",
       "viewProfile": "Profil ansehen",
       "exploreTags": "Tags entdecken"
+    },
+    "lock": {
+      "unlock": "Entsperren",
+      "unavailable": "Sperrinhalt ist nicht verfügbar"
     }
   },
   "profile": {
