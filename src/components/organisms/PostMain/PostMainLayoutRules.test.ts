@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LAYOUT } from '@/stores/home/home.types';
-import {
-  getEffectiveTagsLayout,
-  getPostInputBodyTextClass,
-  getPostInputPaddingClass,
-  getTagsLayoutForSurfaceLayout,
-  usesWidePostInput,
-} from './PostMainLayoutRules';
-import { WIDE_POST_BODY_TEXT_CLASS } from './PostMainTypography';
+import { getEffectiveTagsLayout, getTagsLayoutForSurfaceLayout, usesWidePostInput } from './PostMainLayoutRules';
 
 describe('PostMainLayoutRules', () => {
   describe('getTagsLayoutForSurfaceLayout', () => {
@@ -23,22 +16,6 @@ describe('PostMainLayoutRules', () => {
       expect(usesWidePostInput('side')).toBe(true);
       expect(usesWidePostInput('list')).toBe(true);
       expect(usesWidePostInput('inline')).toBe(false);
-    });
-  });
-
-  describe('getPostInputPaddingClass', () => {
-    it('maps each tags layout to PostInput container padding', () => {
-      expect(getPostInputPaddingClass('inline')).toBe('p-6');
-      expect(getPostInputPaddingClass('side')).toBe('p-12');
-      expect(getPostInputPaddingClass('list')).toBe('p-6');
-    });
-  });
-
-  describe('getPostInputBodyTextClass', () => {
-    it('maps each tags layout to PostInput textarea typography', () => {
-      expect(getPostInputBodyTextClass('inline')).toBeUndefined();
-      expect(getPostInputBodyTextClass('side')).toBe(WIDE_POST_BODY_TEXT_CLASS);
-      expect(getPostInputBodyTextClass('list')).toBe('text-base');
     });
   });
 
