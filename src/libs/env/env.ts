@@ -2,14 +2,21 @@ import { z } from 'zod';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-
-const DEFAULT_PKARR_RELAYS = ['https://pkarr.pubky.app', 'https://pkarr.pubky.org'];
+import {
+  homeserverValue,
+  NETWORK_RUNTIME_DEFAULTS,
+  parsePkarrRelaysString,
+  pkarrRelaysValue,
+  testnetValue,
+  urlValue,
+} from '@/libs/runtime-config/runtime-config.schema';
 
 /**
- * Environment Variables Schema with Zod validation
+ * Build-time and local fallback environment schema.
  *
- * This file validates all environment variables and provides type-safe defaults.
- * All variables are validated at startup to catch configuration errors early.
+ * Deployed/public Docker configuration is resolved through `PUBKY_RUNTIME_*`
+ * in `@/libs/runtime-config`. The `NEXT_PUBLIC_*` values below are retained
+ * only for build-intrinsic values and local dev/test fallback inputs.
  */
 
 // Schema for environment variables
@@ -17,7 +24,7 @@ const envSchema = z.object({
   // Node.js environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  // Next.js public environment variables
+  // Build-intrinsic public values. These are intentionally baked into the artifact.
   NEXT_PUBLIC_DB_NAME: z.string().default('franky'),
   NEXT_PUBLIC_DB_VERSION: z
     .string()
@@ -32,15 +39,15 @@ const envSchema = z.object({
     .pipe(z.boolean()),
 
   // =============================================================================
-  // NETWORK CONFIGURATION (defaults to staging for dev/CI convenience)
+  // RUNTIME-CONFIG FALLBACKS (local dev/test only)
   // =============================================================================
-  // These variables have staging defaults for development and CI/CD.
-  // For production, override these with your production URLs.
-
+  // These NEXT_PUBLIC_* names feed the runtime-config fallback used by local dev/tests.
+  // Deployed containers must use PUBKY_RUNTIME_* instead. Keep validation/defaults aligned
+  // with `src/libs/runtime-config/runtime-config.schema.ts`.
   /** Main API endpoint */
-  NEXT_PUBLIC_NEXUS_URL: z.url().default('https://nexus.staging.pubky.app'),
+  NEXT_PUBLIC_NEXUS_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.nexusUrl),
   /** CDN URL for static assets */
-  NEXT_PUBLIC_CDN_URL: z.url().default('https://nexus.staging.pubky.app/static'),
+  NEXT_PUBLIC_CDN_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.cdnUrl),
 
   NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS: z
     .string()
@@ -90,7 +97,6 @@ const envSchema = z.object({
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().int().positive()),
 
-  // TTL Coordinator configuration
   NEXT_PUBLIC_TTL_POST_MS: z
     .string()
     .default('300000') // 5 minutes in milliseconds
@@ -121,7 +127,6 @@ const envSchema = z.object({
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().int().positive()),
 
-  // TTL retry delay for entities not yet indexed in Nexus (e.g., new users)
   NEXT_PUBLIC_TTL_RETRY_DELAY_MS: z
     .string()
     .default('60000') // 1 minute in milliseconds
@@ -130,9 +135,9 @@ const envSchema = z.object({
 
   NEXT_PUBLIC_TESTNET: z
     .string()
-    .default('false')
+    .default(String(NETWORK_RUNTIME_DEFAULTS.testnet))
     .transform((val) => val === 'true')
-    .pipe(z.boolean()),
+    .pipe(testnetValue),
 
   NEXT_MAX_STREAM_TAGS: z
     .string()
@@ -144,23 +149,20 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((val) => (val && val.trim() !== '' ? val : undefined))
-    .default(JSON.stringify(DEFAULT_PKARR_RELAYS))
+    .default(JSON.stringify(NETWORK_RUNTIME_DEFAULTS.pkarrRelays))
     .transform(parsePkarrRelays)
-    .pipe(z.array(z.string().url()).min(1)),
+    .pipe(pkarrRelaysValue),
 
-  /** Homeserver public key */
-  NEXT_PUBLIC_HOMESERVER: z.string().min(1).default('ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy'),
+  NEXT_PUBLIC_HOMESERVER: homeserverValue.default(NETWORK_RUNTIME_DEFAULTS.homeserver),
 
-  /** Homeserver HTTP base URL (the homeserver pubkey has no resolvable HTTPS PKARR endpoint) */
-  NEXT_PUBLIC_HOMESERVER_URL: z.url().default('https://homeserver.staging.pubky.app'),
+  NEXT_PUBLIC_HOMESERVER_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.homeserverUrl),
 
   // Server-side only admin credentials for signup token generation (dev/test only)
   // These are NOT exposed to the client bundle - only available on the server
   HOMESERVER_ADMIN_URL: z.url().default('http://localhost:6288/generate_signup_token'),
   HOMESERVER_ADMIN_PASSWORD: z.string().default('admin'),
 
-  /** HTTP relay for pubky protocol (auth uses `/inbox` with Pubky SDK 0.7+) */
-  NEXT_PUBLIC_DEFAULT_HTTP_RELAY: z.url().default('https://httprelay.staging.pubky.app/inbox'),
+  NEXT_PUBLIC_DEFAULT_HTTP_RELAY: urlValue.default(NETWORK_RUNTIME_DEFAULTS.defaultHttpRelay),
   NEXT_PUBLIC_MODERATION_ID: z.string().default('euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro'),
   NEXT_PUBLIC_MODERATED_TAGS: z
     .string()
@@ -170,16 +172,10 @@ const envSchema = z.object({
     .transform((val) => JSON.parse(val))
     .pipe(z.array(z.string().min(1)).min(1)),
   NEXT_PUBLIC_EXCHANGE_RATE_API: z.url().default('https://api1.blocktank.to/api/fx/rates/btc'),
-  /** Homegate authentication service URL */
-  NEXT_PUBLIC_HOMEGATE_URL: z.url().default('https://homegate.staging.pubky.app'),
+  NEXT_PUBLIC_HOMEGATE_URL: urlValue.default(NETWORK_RUNTIME_DEFAULTS.homegateUrl),
 
-  // Prelude SDK key for collecting client browser signals for SMS fraud prevention.
-  // This is a public/publishable key (distinct from the secret Prelude API key used server-side).
-  // It is safe to expose in client-side bundles.
-  // Optional: if not set, signals are not dispatched.
   NEXT_PUBLIC_PRELUDE_SDK_KEY: z.string().optional(),
 
-  /** Prelude SDK signal dispatch timeout in milliseconds (default: 5000) */
   NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS: z
     .string()
     .default('5000')
@@ -202,9 +198,6 @@ const envSchema = z.object({
     .default('26')
     .transform((val) => parseInt(val, 10)),
 
-  // =============================================================================
-  // ANALYTICS (Plausible)
-  // =============================================================================
   NEXT_PUBLIC_PLAUSIBLE_DOMAIN: z.string().optional(),
   NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL: z.url().optional(),
 
@@ -217,7 +210,6 @@ const envSchema = z.object({
   NEXT_PUBLIC_CREATOR: z.string().optional().default('@getpubky'),
   NEXT_PUBLIC_DEFAULT_URL: z.string().optional().default('https://pubky.app'),
 
-  // external links
   NEXT_PUBLIC_PUBKY_RING_URL: z.string().optional().default('https://pubkyring.app/'),
   NEXT_PUBLIC_PUBKY_CORE_URL: z.string().optional().default('https://pubky.org'),
   NEXT_PUBLIC_TWITTER_URL: z.string().optional().default('https://x.com/pubky'),
@@ -231,52 +223,10 @@ const envSchema = z.object({
     .optional()
     .default('https://play.google.com/store/apps/details?id=to.pubky.ring&pcampaignid=web_share'),
 
-  // App version (injected from package.json via next.config.ts)
+  // Build-intrinsic release value (package version locally; Git SHA in Docker CI).
   NEXT_PUBLIC_APP_VERSION: z.string(),
 
-  // =============================================================================
-  // SENTRY (Observability)
-  // =============================================================================
-  // DSN is shared across browser/server/edge runtimes. Empty string disables Sentry entirely.
-  NEXT_PUBLIC_SENTRY_DSN: z
-    .string()
-    .optional()
-    .transform((val) => {
-      const trimmed = val?.trim();
-      return trimmed && trimmed !== '' ? trimmed : undefined;
-    })
-    .pipe(z.url().optional()),
-
-  // Environment tag attached to every event (e.g. "production", "staging", "preview").
-  // Defaults to NODE_ENV when unset.
-  NEXT_PUBLIC_SENTRY_ENVIRONMENT: z
-    .string()
-    .optional()
-    .transform((val) => (val && val.trim() !== '' ? val : undefined)),
-
-  NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: z
-    .string()
-    .default('0.1')
-    .transform((val) => parseFloat(val))
-    .pipe(z.number().min(0).max(1)),
-
-  NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE: z
-    .string()
-    .default('0.0')
-    .transform((val) => parseFloat(val))
-    .pipe(z.number().min(0).max(1)),
-
-  NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE: z
-    .string()
-    .default('1.0')
-    .transform((val) => parseFloat(val))
-    .pipe(z.number().min(0).max(1)),
-
-  // Build-only secrets used by withSentryConfig for source map upload.
-  // Not exposed to runtime; safe to leave undefined in dev/CI without source maps.
-  SENTRY_AUTH_TOKEN: z.string().optional(),
-  SENTRY_ORG: z.string().optional(),
-  SENTRY_PROJECT: z.string().optional(),
+  // Sentry fallback names are intentionally handled in runtime-config.schema.ts, not here.
 });
 
 /**
@@ -416,14 +366,6 @@ function parseEnv(): z.infer<typeof envSchema> {
     NEXT_PUBLIC_PLAY_STORE_URL: process.env.NEXT_PUBLIC_PLAY_STORE_URL,
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
     NEXT_PUBLIC_SITE_NAME: process.env.NEXT_PUBLIC_SITE_NAME,
-    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
-    NEXT_PUBLIC_SENTRY_ENVIRONMENT: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT,
-    NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
-    NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE: process.env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
-    NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE: process.env.NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE,
-    SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
-    SENTRY_ORG: process.env.SENTRY_ORG,
-    SENTRY_PROJECT: process.env.SENTRY_PROJECT,
   });
 
   if (!result.success) {
@@ -451,23 +393,12 @@ function parseEnv(): z.infer<typeof envSchema> {
 
 function parsePkarrRelays(val: string): string[] {
   try {
-    const relays = JSON.parse(val) as unknown;
-    if (!Array.isArray(relays)) {
-      throw new Error('NEXT_PUBLIC_PKARR_RELAYS must be a JSON array');
-    }
-    // Validate each relay is a valid URL
-    for (const relay of relays) {
-      if (typeof relay !== 'string') {
-        throw new Error('Each relay must be a string');
-      }
-      new URL(relay);
-    }
-    return relays;
+    return parsePkarrRelaysString(val);
   } catch {
     // Using console.warn here instead of Logger.warn due to circular dependency:
     // env.ts must load before Logger is available (env -> libs -> logger)
     console.warn(`Invalid NEXT_PUBLIC_PKARR_RELAYS value: "${val}", using defaults`);
-    return DEFAULT_PKARR_RELAYS;
+    return NETWORK_RUNTIME_DEFAULTS.pkarrRelays;
   }
 }
 

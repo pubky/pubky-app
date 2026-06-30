@@ -23,6 +23,7 @@ export enum CONTENT {
   ALL = 'all',
   SHORT = 'short',
   LONG = 'long',
+  COLLECTIONS = 'collections',
   IMAGES = 'images',
   VIDEOS = 'videos',
   LINKS = 'links',

@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/atoms/Card/Card';
-import { PostActionsBarSkeleton } from '../PostActionsBar/PostActionsBar.skeleton';
 import { PostContentBaseSkeleton } from '../PostContentBase/PostContentBase.skeleton';
 import { PostHeaderSkeleton } from '../PostHeader/PostHeader.skeleton';
+import { PostInlineTagsActionsSkeleton } from '../PostInlineTagsActions/PostInlineTagsActions.skeleton';
 
 export function PostCardSkeleton() {
   return (
@@ -9,7 +9,7 @@ export function PostCardSkeleton() {
       <CardContent className="flex min-w-0 flex-col gap-4 p-6">
         <PostHeaderSkeleton />
         <PostContentBaseSkeleton />
-        <PostActionsBarSkeleton />
+        <PostInlineTagsActionsSkeleton />
       </CardContent>
     </Card>
   );

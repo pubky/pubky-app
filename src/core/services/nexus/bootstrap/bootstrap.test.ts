@@ -26,6 +26,7 @@ describe('NexusBootstrapService', () => {
           unique_tags: 2,
           posts: 1,
           replies: 0,
+          collections: 0,
           following: 0,
           followers: 0,
           friends: 0,

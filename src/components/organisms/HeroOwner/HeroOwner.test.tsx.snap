@@ -1,0 +1,47 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`HeroOwner - Snapshots > matches the snapshot for the resolved state 1`] = `
+<div
+  class="flex min-w-0 items-center gap-3"
+  data-testid="container"
+>
+  <div
+    data-alt="Alice"
+    data-avatar-url="https://example.com/a.png"
+    data-fallback-seed="alice-pubky"
+    data-name="Alice"
+    data-size="sm"
+    data-testid="avatar-with-fallback"
+  >
+    Alice
+  </div>
+  <span
+    class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
+    data-testid="typography"
+  >
+    Alice
+  </span>
+</div>
+`;
+
+exports[`HeroOwner - Snapshots > matches the snapshot for the unresolved (skeleton) state 1`] = `
+<div
+  class="flex min-w-0 items-center gap-3"
+  data-testid="container"
+>
+  <div
+    data-alt="Alice"
+    data-avatar-url=""
+    data-fallback-seed="alice-pubky"
+    data-name="Alice"
+    data-size="md"
+    data-testid="avatar-with-fallback"
+  >
+    Alice
+  </div>
+  <div
+    class="animate-pulse bg-muted h-5 w-32 rounded-md"
+    data-slot="skeleton"
+  />
+</div>
+`;

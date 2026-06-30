@@ -1,0 +1,342 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
+<body
+  data-scroll-locked="1"
+  style="pointer-events: none;"
+>
+  <span
+    aria-hidden="true"
+    data-aria-hidden="true"
+    data-radix-focus-guard=""
+    style="outline: none; opacity: 0; position: fixed; pointer-events: none;"
+    tabindex="0"
+  />
+  <div
+    aria-hidden="true"
+    data-aria-hidden="true"
+  >
+    <button
+      aria-controls="radix-normalized"
+      aria-expanded="true"
+      aria-haspopup="menu"
+      aria-label="Save post"
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs w-10"
+      data-cy="post-bookmark-btn"
+      data-size="sm"
+      data-slot="button"
+      data-state="open"
+      data-variant="secondary"
+      id="radix-normalized"
+      type="button"
+    >
+      <span
+        class="relative size-4"
+        data-cy="post-save-trigger-icon"
+        data-state="saved"
+        data-testid="typography"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-library absolute inset-0 transition-[opacity,transform] duration-150 ease-out scale-75 opacity-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m16 6 4 14"
+          />
+          <path
+            d="M12 6v14"
+          />
+          <path
+            d="M8 8v12"
+          />
+          <path
+            d="M4 4v16"
+          />
+        </svg>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-square-library absolute inset-0 transition-[opacity,transform] duration-150 ease-out scale-100 opacity-100"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="18"
+            rx="2"
+            width="18"
+            x="3"
+            y="3"
+          />
+          <path
+            d="M7 7v10"
+          />
+          <path
+            d="M11 7v10"
+          />
+          <path
+            d="m15 7 2 10"
+          />
+        </svg>
+      </span>
+    </button>
+  </div>
+  <div
+    data-radix-popper-content-wrapper=""
+    dir="ltr"
+    style="position: fixed; left: 0px; top: 0px; transform: translate(0px, 4px); min-width: max-content; --radix-popper-available-width: 0px; --radix-popper-available-height: -4px; --radix-popper-anchor-width: 0px; --radix-popper-anchor-height: 0px; --radix-popper-transform-origin: 100% 0px;"
+  >
+    <div
+      aria-labelledby="radix-normalized"
+      aria-orientation="vertical"
+      class="z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-background p-4 shadow-xl data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 w-70"
+      data-align="end"
+      data-orientation="vertical"
+      data-radix-menu-content=""
+      data-side="bottom"
+      data-state="open"
+      dir="ltr"
+      id="radix-normalized"
+      role="menu"
+      style="outline: none; --radix-dropdown-menu-content-transform-origin: var(--radix-popper-transform-origin); --radix-dropdown-menu-content-available-width: var(--radix-popper-available-width); --radix-dropdown-menu-content-available-height: var(--radix-popper-available-height); --radix-dropdown-menu-trigger-width: var(--radix-popper-anchor-width); --radix-dropdown-menu-trigger-height: var(--radix-popper-anchor-height); pointer-events: auto;"
+      tabindex="-1"
+    >
+      <div
+        class="flex w-full flex-col gap-3"
+        data-testid="container"
+      >
+        <div
+          class="flex max-h-[50dvh] flex-col overflow-y-auto gap-3"
+          data-testid="container"
+        >
+          <div
+            class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
+            data-cy="post-save-bookmarks-option"
+            data-orientation="vertical"
+            data-radix-collection-item=""
+            role="menuitem"
+            tabindex="-1"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-bookmark size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+              />
+            </svg>
+            <span
+              class="min-w-0 flex-1 truncate"
+              data-testid="typography"
+            >
+              Bookmarks
+            </span>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-4 text-brand"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+          </div>
+          <div
+            class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
+            data-orientation="vertical"
+            data-radix-collection-item=""
+            role="menuitem"
+            tabindex="-1"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-library size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m16 6 4 14"
+              />
+              <path
+                d="M12 6v14"
+              />
+              <path
+                d="M8 8v12"
+              />
+              <path
+                d="M4 4v16"
+              />
+            </svg>
+            <span
+              class="min-w-0 flex-1 truncate"
+              data-testid="typography"
+            >
+              Proof of Work
+            </span>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-4 text-brand"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+          </div>
+          <div
+            class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
+            data-orientation="vertical"
+            data-radix-collection-item=""
+            role="menuitem"
+            tabindex="-1"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-library size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m16 6 4 14"
+              />
+              <path
+                d="M12 6v14"
+              />
+              <path
+                d="M8 8v12"
+              />
+              <path
+                d="M4 4v16"
+              />
+            </svg>
+            <span
+              class="min-w-0 flex-1 truncate"
+              data-testid="typography"
+            >
+              AI Papers
+            </span>
+          </div>
+        </div>
+        <div
+          aria-orientation="horizontal"
+          class="-mx-1 my-1 h-px bg-muted"
+          role="separator"
+        />
+        <div
+          class="flex flex-col gap-2 pt-1"
+          data-testid="container"
+        >
+          <label
+            class="flex items-center gap-2 font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs tracking-widest text-muted-foreground uppercase"
+            data-slot="label"
+          >
+            New Collection
+          </label>
+          <div
+            class="flex items-center gap-2 rounded-md border border-dashed border-input px-4 py-3"
+            data-testid="container"
+          >
+            <input
+              class="flex w-full min-w-0 rounded-md border border-input bg-transparent text-base transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto border-none p-0 shadow-none"
+              data-testid="input"
+              maxlength="100"
+              placeholder="Collection name"
+              value=""
+            />
+            <button
+              aria-label="Create collection"
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-6"
+              data-size="icon"
+              data-slot="button"
+              data-variant="secondary"
+              disabled=""
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-plus"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5 12h14"
+                />
+                <path
+                  d="M12 5v14"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span
+    aria-hidden="true"
+    data-aria-hidden="true"
+    data-radix-focus-guard=""
+    style="outline: none; opacity: 0; position: fixed; pointer-events: none;"
+    tabindex="0"
+  />
+</body>
+`;

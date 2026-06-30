@@ -23,6 +23,34 @@ describe('PostTag', () => {
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
+  it('suppresses navigation (preventDefault + stopPropagation) on click, while still calling onClick', () => {
+    const mockOnClick = vi.fn();
+    render(<PostTag label="bitcoin" onClick={mockOnClick} />);
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    const preventDefault = vi.spyOn(clickEvent, 'preventDefault');
+    const stopPropagation = vi.spyOn(clickEvent, 'stopPropagation');
+    screen.getByRole('button').dispatchEvent(clickEvent);
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(stopPropagation).toHaveBeenCalled();
+    expect(mockOnClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('suppresses navigation on close, while still calling onClose', () => {
+    const mockOnClose = vi.fn();
+    render(<PostTag label="bitcoin" showClose onClose={mockOnClose} />);
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    const preventDefault = vi.spyOn(clickEvent, 'preventDefault');
+    const stopPropagation = vi.spyOn(clickEvent, 'stopPropagation');
+    screen.getByLabelText(/remove bitcoin tag/i).dispatchEvent(clickEvent);
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(stopPropagation).toHaveBeenCalled();
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
+
   it('does not call onClick when close button is clicked', () => {
     const mockOnClick = vi.fn();
     const mockOnClose = vi.fn();

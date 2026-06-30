@@ -86,7 +86,7 @@ exports[`DialogAddLink - Snapshots > matches snapshot for default DialogAddLink 
     </button>
   </div>
   <div
-    class="max-w-xl rounded-xl border bg-popover p-8 sm:rounded-lg sm:p-6"
+    class="w-full max-w-xl"
     data-testid="dialog-content"
   >
     <div
@@ -94,7 +94,6 @@ exports[`DialogAddLink - Snapshots > matches snapshot for default DialogAddLink 
       data-testid="dialog-header"
     >
       <h2
-        class="text-2xl font-bold text-foreground sm:text-xl"
         data-testid="dialog-title"
       >
         Add link

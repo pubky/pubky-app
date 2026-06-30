@@ -422,6 +422,59 @@ describe('NotificationItem', () => {
     });
   });
 
+  it('extracts name from collection post content in notifications', async () => {
+    const collectionContent = JSON.stringify({
+      name: 'My Collection',
+      description: 'Some description',
+      items: ['user1:post1'],
+    });
+
+    mockGetOrFetch.mockResolvedValue({
+      kind: 'collection',
+      content: collectionContent,
+    });
+
+    const mentionNotification = {
+      id: 'mention:123:user1',
+      type: NotificationType.Mention,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      mentioned_by: 'user1',
+      post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
+    } as FlatNotification;
+
+    render(<NotificationItem notification={mentionNotification} isUnread={false} />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText("'My Collection'")).toBeInTheDocument();
+    });
+  });
+
+  it('falls back to raw content and shows toast when collection JSON parsing fails', async () => {
+    const invalidJson = 'not valid json content';
+
+    mockGetOrFetch.mockResolvedValue({
+      kind: 'collection',
+      content: invalidJson,
+    });
+
+    const mentionNotification = {
+      id: 'mention:123:user1',
+      type: NotificationType.Mention,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      mentioned_by: 'user1',
+      post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
+    } as FlatNotification;
+
+    render(<NotificationItem notification={mentionNotification} isUnread={false} />);
+
+    await vi.waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not parse collection content',
+      });
+    });
+  });
+
   it('uses content directly for short posts', async () => {
     mockGetOrFetch.mockResolvedValue({
       kind: 'short',

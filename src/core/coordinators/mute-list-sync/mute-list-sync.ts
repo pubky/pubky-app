@@ -7,8 +7,8 @@ import {
 import { MuteController } from '@/controllers/mute/mute';
 import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
-import { Env } from '@/libs/env/env';
 import { Logger } from '@/libs/logger/logger';
+import { getNotificationRespectPageVisibility } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -23,7 +23,7 @@ type PendingMuteRefresh = {
  * Policy (aligned with {@link NotificationCoordinator}):
  * - Requires authenticated session with profile and current {@link Pubky}.
  * - Disabled on onboarding / sign-in / logout routes.
- * - Uses {@link Env.NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY}: when true, pauses the SDK stream while the tab is hidden.
+ * - Uses runtime notification visibility config: when true, pauses the SDK stream while the tab is hidden.
  * - Route updates from the app shell (`CoordinatorsManager`) only re-open the homeserver SSE when crossing disabled vs allowed
  *   routes (or on first pathname); moving between allowed routes keeps the existing stream to avoid churn.
  *
@@ -38,7 +38,7 @@ export class MuteListSyncCoordinator {
     routeToRegex(AUTH_ROUTES.SIGN_IN),
   ];
 
-  private respectPageVisibility = Env.NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY;
+  private respectPageVisibility = getNotificationRespectPageVisibility();
 
   private state = {
     isStarted: false,

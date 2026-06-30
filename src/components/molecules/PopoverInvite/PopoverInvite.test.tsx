@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { EMAIL_URL, TELEGRAM_URL, TWITTER_URL } from '@/config/externalLinks';
+import { getEmailLink, getTelegramLink, getTwitterLink } from '@/config/externalLinks';
 import { PopoverInvite } from './PopoverInvite';
 
 describe('InvitePopover', () => {
@@ -43,13 +43,16 @@ describe('InvitePopover', () => {
 
     // Icons are now actual lucide-react components (SVGs), find links by href
     const links = screen.getAllByRole('link');
-    const mailLink = links.find((link) => link.getAttribute('href') === EMAIL_URL);
-    const twitterLink = links.find((link) => link.getAttribute('href') === TWITTER_URL);
-    const telegramLink = links.find((link) => link.getAttribute('href') === TELEGRAM_URL);
+    const emailUrl = getEmailLink();
+    const twitterUrl = getTwitterLink();
+    const telegramUrl = getTelegramLink();
+    const mailLink = links.find((link) => link.getAttribute('href') === emailUrl);
+    const twitterLink = links.find((link) => link.getAttribute('href') === twitterUrl);
+    const telegramLink = links.find((link) => link.getAttribute('href') === telegramUrl);
 
-    expect(mailLink).toHaveAttribute('href', EMAIL_URL);
-    expect(twitterLink).toHaveAttribute('href', TWITTER_URL);
-    expect(telegramLink).toHaveAttribute('href', TELEGRAM_URL);
+    expect(mailLink).toHaveAttribute('href', emailUrl);
+    expect(twitterLink).toHaveAttribute('href', twitterUrl);
+    expect(telegramLink).toHaveAttribute('href', telegramUrl);
   });
 
   it('has proper popover content structure', () => {

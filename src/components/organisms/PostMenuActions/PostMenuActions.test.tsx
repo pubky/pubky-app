@@ -87,6 +87,10 @@ const { mockUseIsMobile, mockDeletePost, mockUsePostMenuActions, mockRequireAuth
   })),
   mockRequireAuth: vi.fn((action: () => void) => action()),
 }));
+const mockUsePostDetails = vi.fn((_postId: string) => ({
+  postDetails: { kind: 'short' } as { kind: string } | null,
+  isLoading: false,
+}));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockUseIsMobile(),
@@ -108,6 +112,10 @@ vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
     deletePost: mockDeletePost,
     isDeleting: false,
   })),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: (postId: string) => mockUsePostDetails(postId),
 }));
 
 // Mock DialogReportPost and DialogEditPost
@@ -137,6 +145,21 @@ vi.mock('@/organisms/DialogReportPost/DialogReportPost', () => {
     ),
   };
 });
+
+vi.mock('@/organisms/EditCollectionDialog/EditCollectionDialog', () => ({
+  EditCollectionDialog: ({
+    open,
+    compositeCollectionId,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    compositeCollectionId: string;
+  }) => (
+    <div data-testid="edit-collection-dialog" data-open={open.toString()} data-collection-id={compositeCollectionId}>
+      EditCollectionDialog
+    </div>
+  ),
+}));
 
 vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => {
   return {
@@ -228,6 +251,7 @@ describe('PostMenuActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseIsMobile.mockReturnValue(false);
+    mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'short' }, isLoading: false });
   });
 
   it('renders dropdown menu on desktop', () => {
@@ -363,6 +387,60 @@ describe('PostMenuActions', () => {
 
     expect(mockRequireAuth).toHaveBeenCalled();
     expect(screen.getByTestId('dropdown-menu')).toHaveAttribute('data-open', 'false');
+  });
+
+  describe('edit dialog routing by post kind', () => {
+    it('renders DialogEditPost (and not EditCollectionDialog) for short posts', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'short' }, isLoading: false });
+      const trigger = <button>Menu</button>;
+      render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+      expect(screen.getByTestId('dialog-edit-post')).toBeInTheDocument();
+      expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
+    });
+
+    it('renders DialogEditPost (not EditCollectionDialog) for long-form articles', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'long' }, isLoading: false });
+      const trigger = <button>Menu</button>;
+      render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+      expect(screen.getByTestId('dialog-edit-post')).toBeInTheDocument();
+      expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
+    });
+
+    it('renders EditCollectionDialog (not DialogEditPost) for collection posts', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'collection' }, isLoading: false });
+      const trigger = <button>Menu</button>;
+      render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+      const dialog = screen.getByTestId('edit-collection-dialog');
+      expect(dialog).toBeInTheDocument();
+      expect(dialog).toHaveAttribute('data-collection-id', 'pk:test123:post456');
+      expect(screen.queryByTestId('dialog-edit-post')).not.toBeInTheDocument();
+    });
+
+    it('opens the EditCollectionDialog when Edit is clicked on a collection post', async () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'collection' }, isLoading: false });
+      const user = userEvent.setup();
+      const trigger = <button>Menu</button>;
+      render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+      const editButton = screen.getByTestId('edit-button');
+      await user.click(editButton);
+
+      const dialog = screen.getByTestId('edit-collection-dialog');
+      expect(dialog).toHaveAttribute('data-open', 'true');
+      expect(dialog).toHaveAttribute('data-collection-id', 'pk:test123:post456');
+    });
+
+    it('falls back to DialogEditPost when post details have not loaded yet', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: true });
+      const trigger = <button>Menu</button>;
+      render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+      expect(screen.getByTestId('dialog-edit-post')).toBeInTheDocument();
+      expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
+    });
   });
 });
 

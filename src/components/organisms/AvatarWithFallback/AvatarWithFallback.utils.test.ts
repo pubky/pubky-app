@@ -7,7 +7,7 @@ import {
 
 // Mock the config module
 vi.mock('@/config/nexus', () => ({
-  CDN_URL: 'https://nexus.staging.pubky.app/static',
+  getCdnUrl: () => 'https://nexus.staging.pubky.app/static',
 }));
 
 describe('extractUserIdFromAvatarUrl', () => {

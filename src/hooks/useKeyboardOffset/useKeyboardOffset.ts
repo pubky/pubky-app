@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useKeyboardVisible } from '../useKeyboardVisible/useKeyboardVisible';
-import { UseKeyboardOffsetOptions } from './useKeyboardOffset.types';
+import { useKeyboardViewport } from '@/hooks/useKeyboardViewport/useKeyboardViewport';
+import type { UseKeyboardOffsetOptions } from './useKeyboardOffset.types';
 
 /**
  * useKeyboardOffset
@@ -34,40 +33,8 @@ import { UseKeyboardOffsetOptions } from './useKeyboardOffset.types';
  */
 export function useKeyboardOffset(options: UseKeyboardOffsetOptions = {}) {
   const { offsetAdjustment = 0 } = options;
-  const isKeyboardVisible = useKeyboardVisible();
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
-
-  useEffect(() => {
-    // Reset offset when keyboard is not visible
-    if (!isKeyboardVisible || typeof window === 'undefined' || !window.visualViewport) {
-      setKeyboardOffset(0);
-      return;
-    }
-
-    const updateOffset = () => {
-      if (window.visualViewport) {
-        // Calculate how much to offset to keep content above the keyboard
-        const rawOffset = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
-        // Apply adjustment and ensure offset is never negative
-        const adjustedOffset = Math.max(0, rawOffset - offsetAdjustment);
-        setKeyboardOffset(adjustedOffset);
-      }
-    };
-
-    // Initial calculation
-    updateOffset();
-
-    // Listen for viewport changes
-    window.visualViewport.addEventListener('resize', updateOffset);
-    window.visualViewport.addEventListener('scroll', updateOffset);
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', updateOffset);
-        window.visualViewport.removeEventListener('scroll', updateOffset);
-      }
-    };
-  }, [isKeyboardVisible, offsetAdjustment]);
+  const { isKeyboardVisible, keyboardHeight } = useKeyboardViewport();
+  const keyboardOffset = isKeyboardVisible ? Math.max(0, keyboardHeight - offsetAdjustment) : 0;
 
   return { isKeyboardVisible, keyboardOffset };
 }

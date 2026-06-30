@@ -154,11 +154,12 @@
   "header": {
     "home": "Startseite",
     "hot": "Beliebt",
-    "bookmarks": "Lesezeichen",
     "settings": "Einstellungen",
     "newHere": "Neu hier?",
     "signIn": "Anmelden",
-    "feed": "Feed"
+    "feed": "Feed",
+    "search": "Suchen",
+    "collections": "Sammlungen"
   },
   "settings": {
     "title": "Einstellungen",
@@ -509,9 +510,11 @@
       "followUser": "{username} folgen",
       "unfollowUser": "{username} entfolgen",
       "muteUser": "{username} stummschalten",
-      "unmuteUser": "Stummschaltung von {username} aufheben"
+      "unmuteUser": "Stummschaltung von {username} aufheben",
+      "tagPost": "Beitrag taggen ({count})"
     },
     "deleted": "Dieser Beitrag wurde vom Autor gelöscht.",
+    "missing": "Beitrag nicht gefunden.",
     "dropFiles": "Dateien hier ablegen",
     "articleTitle": "Artikeltitel",
     "addTag": "Tag hinzufügen",
@@ -550,6 +553,7 @@
     "tabs": {
       "notifications": "Benachrichtigungen",
       "posts": "Beiträge",
+      "collections": "Sammlungen",
       "replies": "Antworten",
       "followers": "Follower",
       "following": "Folge ich",
@@ -637,6 +641,12 @@
     "deletePost": {
       "title": "Beitrag löschen?",
       "description": "Diese Aktion kann nicht rückgängig gemacht werden. Der Beitrag wird dauerhaft gelöscht.",
+      "confirmButton": "Löschen",
+      "cancelButton": "Abbrechen"
+    },
+    "deleteCollection": {
+      "title": "Sammlung löschen?",
+      "description": "Sind Sie sicher, dass Sie {name} löschen möchten? Personen, die dieser Sammlung folgen, haben keinen Zugriff mehr darauf. Beiträge in der Sammlung werden nicht gelöscht.",
       "confirmButton": "Löschen",
       "cancelButton": "Abbrechen"
     },
@@ -992,6 +1002,7 @@
       "attachmentsCleared": "Anhaenge entfernt",
       "failedToLoadPosts": "Neue Beiträge konnten nicht geladen werden",
       "parseError": "Artikelinhalt konnte nicht analysiert werden",
+      "collectionParseError": "Sammlungsinhalt konnte nicht analysiert werden",
       "coverImageError": "Titelbild konnte nicht geladen werden",
       "attachmentsLoadFailed": "Anhänge konnten nicht geladen werden",
       "repostSuccessFallback": "Repostet"
@@ -1002,6 +1013,10 @@
       "addFailed": "Lesezeichen konnte nicht hinzugefügt werden",
       "removeFailed": "Lesezeichen konnte nicht entfernt werden",
       "loginRequired": "Melden Sie sich an, um Beiträge zu speichern"
+    },
+    "collection": {
+      "collectionDeleted": "Ihre Sammlung wurde gelöscht",
+      "deleteFailed": "Sammlung konnte nicht gelöscht werden. Bitte erneut versuchen."
     },
     "copy": {
       "pubkyCopied": "Pubky in Zwischenablage kopiert",
@@ -1155,7 +1170,8 @@
       "images": "Bilder",
       "videos": "Videos",
       "links": "Links",
-      "files": "Dateien"
+      "files": "Dateien",
+      "collections": "Sammlungen"
     },
     "timeframe": {
       "title": "Zeitraum",
@@ -1307,5 +1323,138 @@
     "toolbarAriaLabel": "Markdown-Bearbeitungsleiste",
     "warningApproaching": "Du näherst dich dem maximalen Zeichenlimit.",
     "warningReached": "Du hast das maximale Zeichenlimit erreicht."
+  },
+  "collections": {
+    "deleted": "Diese Sammlung wurde vom Autor gelöscht.",
+    "missing": "Sammlung nicht gefunden.",
+    "new": {
+      "cta": "Neue Sammlung",
+      "ctaShort": "Neu",
+      "title": "Neue Sammlung",
+      "nameLabel": "Titel",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "Beschreibung",
+      "descriptionPlaceholder": "Das Beste von den größten Beitragenden in Bitcoin",
+      "backgroundLabel": "Hintergrund",
+      "addImage": "Bild hinzufügen",
+      "removeImage": "Bild entfernen",
+      "coverImageInvalid": "Das Coverbild muss eine Bilddatei sein.",
+      "coverImageTooLarge": "Das Coverbild ist zu groß.",
+      "nameRequired": "Sammlungstitel ist erforderlich.",
+      "cancel": "Abbrechen",
+      "save": "Änderungen speichern",
+      "saving": "Wird gespeichert...",
+      "created": "Sammlung erstellt",
+      "createFailed": "Sammlung konnte nicht erstellt werden."
+    },
+    "intro": {
+      "title": "Willkommen bei Sammlungen",
+      "description": "Bewahre Beiträge auf, die es wert sind. Sammle die besten Inhalte aus deinem Netzwerk. Ordne Ideen, filtere das Signal vom Rauschen und teile, was zählt.",
+      "imageAlt": "Sammlungen",
+      "cancel": "Abbrechen",
+      "continue": "Weiter"
+    },
+    "edit": {
+      "title": "Sammlung bearbeiten",
+      "save": "Änderungen speichern",
+      "updated": "Sammlung aktualisiert",
+      "updateFailed": "Sammlung konnte nicht aktualisiert werden."
+    },
+    "showMore": "Mehr anzeigen",
+    "loadFailed": "Sammlungen konnten nicht geladen werden. Bitte erneut versuchen.",
+    "my": {
+      "title": "Meine Sammlungen",
+      "publicNote": "Hinweis: Alle Sammlungen sind öffentlich und auffindbar.",
+      "publicNoteShort": "Alle Sammlungen sind öffentlich und auffindbar."
+    },
+    "followed": {
+      "title": "Gefolgte Sammlungen",
+      "empty": "Du folgst noch keinen Sammlungen."
+    },
+    "discover": {
+      "title": "Sammlungen entdecken",
+      "empty": "Im Moment gibt es keine Sammlungen zu entdecken."
+    },
+    "bookmarks": {
+      "title": "Lesezeichen",
+      "description": "Alles, was du für später gespeichert hast."
+    },
+    "card": {
+      "follow": "Folgen",
+      "unfollow": "Entfolgen",
+      "delete": "Löschen",
+      "toast": {
+        "followed": "Du folgst jetzt dieser Sammlung",
+        "unfollowed": "Du folgst dieser Sammlung nicht mehr",
+        "shared": "Du hast diese Sammlung geteilt"
+      }
+    },
+    "single": {
+      "share": "Teilen",
+      "shareTitle": "Sammlung teilen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "follow": "Folgen",
+      "unfollow": "Entfolgen",
+      "content": "Inhalt",
+      "addContent": "Inhalt hinzufügen",
+      "empty": "Diese Sammlung ist leer.",
+      "notFound": {
+        "title": "Sammlung nicht gefunden",
+        "subtitle1": "Diese Sammlung ist nicht verfügbar.",
+        "subtitle2": "Sie wurde möglicherweise entfernt oder der Link ist nicht mehr gültig.",
+        "imageAlt": "Sammlung nicht gefunden",
+        "backToCollections": "Zurück zu Sammlungen",
+        "viewProfile": "Profil ansehen"
+      }
+    },
+    "addContentDialog": {
+      "title": "Inhalt hinzufügen",
+      "description": "Füge einen Beitrag oder Artikel aus deinem Feed hinzu oder füge direkt eine URL ein.",
+      "fromFeedTitle": "Aus Feed hinzufügen",
+      "fromFeedLead": "Finde einen Beitrag",
+      "fromFeedRest": " den du hinzufügen möchtest und klicke auf die Sammlungen-Schaltfläche.",
+      "pasteTitle": "Beitrags-URL einfügen",
+      "pasteDescription": "Du kannst auch eine Beitrags-URL einfügen, um ihn schnell zu deiner Sammlung hinzuzufügen.",
+      "createPostTitle": "Neuen Beitrag erstellen",
+      "createPostPlaceholder": "Was gibt es Neues?",
+      "createPostAvatarFallback": "Du",
+      "adding": "Wird hinzugefügt...",
+      "errors": {
+        "required": "Füge eine Beitrags-URL ein.",
+        "invalid": "Gib eine gültige Beitrags-URL ein.",
+        "notFound": "Wir konnten diesen Beitrag nicht finden.",
+        "alreadyAdded": "Dieser Beitrag wurde bereits hinzugefügt.",
+        "collectionNotAllowed": "Eine Sammlung kann nicht zu einer Sammlung hinzugefügt werden.",
+        "failure": "Dieser Beitrag konnte nicht hinzugefügt werden."
+      }
+    }
+  },
+  "fab": {
+    "newPost": "Neuer Beitrag",
+    "newCollection": "Neue Sammlung",
+    "newPostInCollection": "Neuer Beitrag in der Sammlung",
+    "newBookmark": "Neues Lesezeichen",
+    "addedToCollection": "Beitrag zur Sammlung hinzugefügt."
+  },
+  "postSave": {
+    "title": "Beitrag speichern",
+    "description": "Wähle, wo dieser Beitrag gespeichert werden soll.",
+    "open": "Beitrag speichern",
+    "loading": "Speicheroptionen werden geladen",
+    "bookmarks": "Lesezeichen",
+    "newCollection": "Neue Sammlung",
+    "collectionNamePlaceholder": "Name der Sammlung",
+    "createCollection": "Sammlung erstellen",
+    "loadingCollections": "Sammlungen werden geladen...",
+    "addedToCollection": "Beitrag zur Sammlung hinzugefügt.",
+    "removedFromCollection": "Beitrag aus der Sammlung entfernt.",
+    "updateCollectionFailed": "Sammlung konnte nicht aktualisiert werden.",
+    "collectionCreated": "Sammlung erstellt und Beitrag gespeichert.",
+    "createCollectionFailed": "Sammlung konnte nicht erstellt werden."
+  },
+  "moderation": {
+    "postContentModerated": "Beitragsinhalt zensiert.",
+    "collectionContentModerated": "Sammlungsinhalt zensiert."
   }
 }

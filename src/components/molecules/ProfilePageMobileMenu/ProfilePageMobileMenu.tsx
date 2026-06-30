@@ -1,7 +1,16 @@
 'use client';
 
 import { type ComponentType, forwardRef } from 'react';
-import { Bell, CircleUserRound, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
+import {
+  Bell,
+  CircleUserRound,
+  HeartHandshake,
+  Library,
+  MessageCircle,
+  StickyNote,
+  Tag,
+  UsersRound,
+} from 'lucide-react';
 import { PROFILE_PAGE_TYPES, type ProfilePageType } from '@/app/profile/types';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { UsersRound2 } from '@/icons';
@@ -56,6 +65,11 @@ export const PROFILE_MENU_ITEMS: ProfileMenuItem[] = [
     icon: Tag,
     label: 'Tagged',
     pageType: PROFILE_PAGE_TYPES.UNIQUE_TAGS,
+  },
+  {
+    icon: Library,
+    label: 'Collections',
+    pageType: PROFILE_PAGE_TYPES.COLLECTIONS,
   },
 ];
 export interface ProfilePageMobileMenuProps {

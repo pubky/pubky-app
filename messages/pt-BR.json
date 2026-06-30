@@ -152,11 +152,12 @@
   "header": {
     "home": "Início",
     "hot": "Em alta",
-    "bookmarks": "Salvos",
     "settings": "Configurações",
     "newHere": "Novo aqui?",
     "signIn": "Entrar",
-    "feed": "Feed"
+    "feed": "Feed",
+    "search": "Pesquisar",
+    "collections": "Coleções"
   },
   "settings": {
     "title": "Configurações",
@@ -507,9 +508,11 @@
       "followUser": "Seguir {username}",
       "unfollowUser": "Deixar de seguir {username}",
       "muteUser": "Silenciar {username}",
-      "unmuteUser": "Reativar {username}"
+      "unmuteUser": "Reativar {username}",
+      "tagPost": "Marcar post ({count})"
     },
     "deleted": "Este post foi excluido pelo autor.",
+    "missing": "Post não encontrado.",
     "dropFiles": "Solte os arquivos aqui",
     "articleTitle": "Titulo do Artigo",
     "addTag": "adicionar tag",
@@ -548,6 +551,7 @@
     "tabs": {
       "notifications": "Notificações",
       "posts": "Posts",
+      "collections": "Coleções",
       "replies": "Respostas",
       "followers": "Seguidores",
       "following": "Seguindo",
@@ -635,6 +639,12 @@
     "deletePost": {
       "title": "Excluir post?",
       "description": "Esta ação não pode ser desfeita. O post será excluído permanentemente.",
+      "confirmButton": "Excluir",
+      "cancelButton": "Cancelar"
+    },
+    "deleteCollection": {
+      "title": "Excluir coleção?",
+      "description": "Tem certeza de que deseja excluir {name}? As pessoas que seguem esta coleção não terão mais acesso a ela. As postagens dentro da coleção não serão excluídas.",
       "confirmButton": "Excluir",
       "cancelButton": "Cancelar"
     },
@@ -990,6 +1000,7 @@
       "attachmentsCleared": "Anexos removidos",
       "failedToLoadPosts": "Não foi possível carregar novas publicações",
       "parseError": "Não foi possível analisar o conteúdo do artigo",
+      "collectionParseError": "Não foi possível analisar o conteúdo da coleção",
       "coverImageError": "Não foi possível carregar a imagem de capa",
       "attachmentsLoadFailed": "Não foi possível carregar os anexos",
       "repostSuccessFallback": "Repostado"
@@ -1000,6 +1011,10 @@
       "addFailed": "Não foi possível adicionar o favorito",
       "removeFailed": "Não foi possível remover o favorito",
       "loginRequired": "Entre para salvar publicações"
+    },
+    "collection": {
+      "collectionDeleted": "Sua coleção foi excluída",
+      "deleteFailed": "Falha ao excluir a coleção. Tente novamente."
     },
     "copy": {
       "pubkyCopied": "Pubky copiado para área de transferência",
@@ -1153,7 +1168,8 @@
       "images": "Imagens",
       "videos": "Videos",
       "links": "Links",
-      "files": "Arquivos"
+      "files": "Arquivos",
+      "collections": "Coleções"
     },
     "timeframe": {
       "title": "Periodo",
@@ -1305,5 +1321,138 @@
     "toolbarAriaLabel": "Barra de ferramentas de edição Markdown",
     "warningApproaching": "Você está se aproximando do limite máximo de caracteres.",
     "warningReached": "Você atingiu o limite máximo de caracteres."
+  },
+  "collections": {
+    "deleted": "Esta coleção foi excluída pelo autor.",
+    "missing": "Coleção não encontrada.",
+    "new": {
+      "cta": "Nova coleção",
+      "ctaShort": "Nova",
+      "title": "Nova coleção",
+      "nameLabel": "Título",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "Descrição",
+      "descriptionPlaceholder": "O melhor dos maiores contribuidores do Bitcoin",
+      "backgroundLabel": "Plano de fundo",
+      "addImage": "Adicionar imagem",
+      "removeImage": "Remover imagem",
+      "coverImageInvalid": "A imagem de capa deve ser um arquivo de imagem.",
+      "coverImageTooLarge": "A imagem de capa é muito grande.",
+      "nameRequired": "O título da coleção é obrigatório.",
+      "cancel": "Cancelar",
+      "save": "Salvar alterações",
+      "saving": "Salvando...",
+      "created": "Coleção criada",
+      "createFailed": "Falha ao criar a coleção."
+    },
+    "intro": {
+      "title": "Bem-vindo às Coleções",
+      "description": "Salve as publicações que valem a pena. Reúna o melhor conteúdo da sua rede. Organize ideias, filtre o sinal do ruído e compartilhe o que importa.",
+      "imageAlt": "Coleções",
+      "cancel": "Cancelar",
+      "continue": "Continuar"
+    },
+    "edit": {
+      "title": "Editar coleção",
+      "save": "Salvar alterações",
+      "updated": "Coleção atualizada",
+      "updateFailed": "Falha ao atualizar a coleção."
+    },
+    "showMore": "Mostrar mais",
+    "loadFailed": "Falha ao carregar as coleções. Tente novamente.",
+    "my": {
+      "title": "Minhas coleções",
+      "publicNote": "Atenção: todas as coleções são públicas e podem ser descobertas.",
+      "publicNoteShort": "Todas as coleções são públicas e podem ser descobertas."
+    },
+    "followed": {
+      "title": "Coleções seguidas",
+      "empty": "Você ainda não segue nenhuma coleção."
+    },
+    "discover": {
+      "title": "Descobrir coleções",
+      "empty": "Sem coleções para descobrir no momento."
+    },
+    "bookmarks": {
+      "title": "Favoritos",
+      "description": "Tudo o que você salvou para mais tarde."
+    },
+    "card": {
+      "follow": "Seguir",
+      "unfollow": "Deixar de seguir",
+      "delete": "Excluir",
+      "toast": {
+        "followed": "Você agora segue esta coleção",
+        "unfollowed": "Você deixou de seguir esta coleção",
+        "shared": "Você compartilhou esta coleção"
+      }
+    },
+    "single": {
+      "share": "Compartilhar",
+      "shareTitle": "Compartilhar coleção",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "follow": "Seguir",
+      "unfollow": "Deixar de seguir",
+      "content": "Conteúdo",
+      "addContent": "Adicionar conteúdo",
+      "empty": "Esta coleção está vazia.",
+      "notFound": {
+        "title": "Coleção não encontrada",
+        "subtitle1": "Esta coleção não está disponível.",
+        "subtitle2": "Ela pode ter sido removida ou o link pode não ser mais válido.",
+        "imageAlt": "Coleção não encontrada",
+        "backToCollections": "Voltar para coleções",
+        "viewProfile": "Ver perfil"
+      }
+    },
+    "addContentDialog": {
+      "title": "Adicionar conteúdo",
+      "description": "Adicione uma publicação ou artigo do seu feed ou cole uma URL diretamente.",
+      "fromFeedTitle": "Adicionar do feed",
+      "fromFeedLead": "Encontre uma publicação",
+      "fromFeedRest": " que você quer adicionar e clique no botão de coleções.",
+      "pasteTitle": "Colar URL da publicação",
+      "pasteDescription": "Você também pode colar a URL de uma publicação para adicioná-la rapidamente à sua coleção.",
+      "createPostTitle": "Criar novo post",
+      "createPostPlaceholder": "O que você está pensando?",
+      "createPostAvatarFallback": "Você",
+      "adding": "Adicionando...",
+      "errors": {
+        "required": "Cole uma URL de publicação.",
+        "invalid": "Insira uma URL de publicação válida.",
+        "notFound": "Não conseguimos encontrar essa publicação.",
+        "alreadyAdded": "Esta publicação já foi adicionada.",
+        "collectionNotAllowed": "Uma coleção não pode ser adicionada a uma coleção.",
+        "failure": "Não foi possível adicionar esta publicação."
+      }
+    }
+  },
+  "fab": {
+    "newPost": "Novo post",
+    "newCollection": "Nova coleção",
+    "newPostInCollection": "Novo post na coleção",
+    "newBookmark": "Novo favorito",
+    "addedToCollection": "Post adicionado à coleção."
+  },
+  "postSave": {
+    "title": "Salvar publicação",
+    "description": "Escolha onde esta publicação deve ser salva.",
+    "open": "Salvar publicação",
+    "loading": "Carregando opções de salvamento",
+    "bookmarks": "Favoritos",
+    "newCollection": "Nova coleção",
+    "collectionNamePlaceholder": "Nome da coleção",
+    "createCollection": "Criar coleção",
+    "loadingCollections": "Carregando coleções...",
+    "addedToCollection": "Publicação adicionada à coleção.",
+    "removedFromCollection": "Publicação removida da coleção.",
+    "updateCollectionFailed": "Falha ao atualizar a coleção.",
+    "collectionCreated": "Coleção criada e publicação salva.",
+    "createCollectionFailed": "Falha ao criar a coleção."
+  },
+  "moderation": {
+    "postContentModerated": "Conteúdo do post censurado.",
+    "collectionContentModerated": "Conteúdo da coleção censurado."
   }
 }

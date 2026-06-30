@@ -17,7 +17,7 @@ spec:
         run.googleapis.com/startupProbeType: Default
       annotations:
         autoscaling.knative.dev/maxScale: '2'
-        run.googleapis.com/container-dependencies: '{"nginx":["pubky-app-preview-1"]}'
+        run.googleapis.com/container-dependencies: '{"nginx":["pubky-app"]}'
         run.googleapis.com/cpu-throttling: 'true'
         run.googleapis.com/startup-cpu-boost: 'true'
         run.googleapis.com/sessionAffinity: 'true'
@@ -41,8 +41,37 @@ spec:
             failureThreshold: 1
             tcpSocket:
               port: 8080
-        - name: pubky-app-preview-1
+        - name: pubky-app
           image: SHOULD_BE_UPDATED
+          env:
+            - name: PUBKY_RUNTIME_TESTNET
+              value: "false"
+            - name: PUBKY_RUNTIME_HOMESERVER
+              value: "ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy"
+            - name: PUBKY_RUNTIME_HOMESERVER_URL
+              value: "https://homeserver.staging.pubky.app"
+            - name: PUBKY_RUNTIME_NEXUS_URL
+              value: "https://nexus.staging.pubky.app"
+            - name: PUBKY_RUNTIME_CDN_URL
+              value: "https://nexus.staging.pubky.app/static"
+            - name: PUBKY_RUNTIME_HOMEGATE_URL
+              value: "https://homegate.staging.pubky.app"
+            - name: PUBKY_RUNTIME_PKARR_RELAYS
+              value: '["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
+            - name: PUBKY_RUNTIME_DEFAULT_HTTP_RELAY
+              value: "https://httprelay.staging.pubky.app/inbox"
+            # Optional Sentry tier (DSNs are public client-side values, not secrets).
+            # Mirrors the GitHub `SENTRY_DSN` repo variable.
+            - name: PUBKY_RUNTIME_SENTRY_DSN
+              value: "https://eba463f14570a9ce3b3bd831d3d7fa34@o4510935258234880.ingest.de.sentry.io/4510935265640528"
+            - name: PUBKY_RUNTIME_SENTRY_ENVIRONMENT
+              value: "preview"
+            - name: PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE
+              value: "0.5"
+            - name: PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE
+              value: "0.1"
+            - name: PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE
+              value: "1.0"
           resources:
             limits:
               cpu: '1'

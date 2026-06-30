@@ -152,11 +152,12 @@
   "header": {
     "home": "Home",
     "hot": "Hot",
-    "bookmarks": "Bookmarks",
     "settings": "Settings",
     "newHere": "New here?",
     "signIn": "Sign in",
-    "feed": "Feed"
+    "feed": "Feed",
+    "search": "Search",
+    "collections": "Collections"
   },
   "settings": {
     "title": "Settings",
@@ -507,9 +508,11 @@
       "followUser": "Follow {username}",
       "unfollowUser": "Unfollow {username}",
       "muteUser": "Mute {username}",
-      "unmuteUser": "Unmute {username}"
+      "unmuteUser": "Unmute {username}",
+      "tagPost": "Tag post ({count})"
     },
     "deleted": "This post has been deleted by its author.",
+    "missing": "Post not found.",
     "dropFiles": "Drop files here",
     "articleTitle": "Article Title",
     "addTag": "add tag",
@@ -548,6 +551,7 @@
     "tabs": {
       "notifications": "Notifications",
       "posts": "Posts",
+      "collections": "Collections",
       "replies": "Replies",
       "followers": "Followers",
       "following": "Following",
@@ -635,6 +639,12 @@
     "deletePost": {
       "title": "Delete post?",
       "description": "This action cannot be undone. The post will be permanently deleted.",
+      "confirmButton": "Delete",
+      "cancelButton": "Cancel"
+    },
+    "deleteCollection": {
+      "title": "Delete collection?",
+      "description": "Are you sure you want to delete {name}? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.",
       "confirmButton": "Delete",
       "cancelButton": "Cancel"
     },
@@ -991,6 +1001,7 @@
       "attachmentsCleared": "Articles support one cover image",
       "failedToLoadPosts": "Could not load new posts",
       "parseError": "Could not parse article content",
+      "collectionParseError": "Could not parse collection content",
       "coverImageError": "Could not load cover image",
       "attachmentsLoadFailed": "Could not load attachments"
     },
@@ -1000,6 +1011,10 @@
       "addFailed": "Could not add bookmark",
       "removeFailed": "Could not remove bookmark",
       "loginRequired": "Sign in to bookmark posts"
+    },
+    "collection": {
+      "collectionDeleted": "Your collection has been deleted",
+      "deleteFailed": "Failed to delete collection. Please try again."
     },
     "copy": {
       "pubkyCopied": "Pubky copied to clipboard",
@@ -1153,7 +1168,8 @@
       "images": "Images",
       "videos": "Videos",
       "links": "Links",
-      "files": "Files"
+      "files": "Files",
+      "collections": "Collections"
     },
     "timeframe": {
       "title": "Timeframe",
@@ -1305,5 +1321,138 @@
     "toolbarAriaLabel": "Markdown editing toolbar",
     "warningApproaching": "You're approaching the maximum character limit.",
     "warningReached": "You've reached the maximum character limit."
+  },
+  "collections": {
+    "deleted": "This collection has been deleted by its author.",
+    "missing": "Collection not found.",
+    "new": {
+      "cta": "New Collection",
+      "ctaShort": "New",
+      "title": "New Collection",
+      "nameLabel": "Title",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "The best from the biggest contributors in Bitcoin",
+      "backgroundLabel": "Background",
+      "addImage": "Add image",
+      "removeImage": "Remove image",
+      "coverImageInvalid": "Cover image must be an image file.",
+      "coverImageTooLarge": "Cover image is too large.",
+      "nameRequired": "Collection title is required.",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "saving": "Saving...",
+      "created": "Collection created",
+      "createFailed": "Failed to create collection."
+    },
+    "intro": {
+      "title": "Welcome to Collections",
+      "description": "Save posts worth keeping. Collect the best content from your network. Curate ideas, filter signal from noise, and share what matters.",
+      "imageAlt": "Collections",
+      "cancel": "Cancel",
+      "continue": "Continue"
+    },
+    "edit": {
+      "title": "Edit Collection",
+      "save": "Save changes",
+      "updated": "Collection updated",
+      "updateFailed": "Failed to update collection."
+    },
+    "showMore": "Show more",
+    "loadFailed": "Failed to load collections. Please try again.",
+    "my": {
+      "title": "My Collections",
+      "publicNote": "Please note: all collections are public and discoverable.",
+      "publicNoteShort": "All collections are public and discoverable."
+    },
+    "followed": {
+      "title": "Followed Collections",
+      "empty": "You haven't followed any collections yet."
+    },
+    "discover": {
+      "title": "Discover Collections",
+      "empty": "No collections to discover right now."
+    },
+    "bookmarks": {
+      "title": "Bookmarks",
+      "description": "Everything you saved for later."
+    },
+    "card": {
+      "follow": "Follow",
+      "unfollow": "Unfollow",
+      "delete": "Delete",
+      "toast": {
+        "followed": "You've followed this collection",
+        "unfollowed": "You've unfollowed this collection",
+        "shared": "You've shared this collection"
+      }
+    },
+    "single": {
+      "share": "Share",
+      "shareTitle": "Share Collection",
+      "edit": "Edit",
+      "delete": "Delete",
+      "follow": "Follow",
+      "unfollow": "Unfollow",
+      "content": "Content",
+      "addContent": "Add Content",
+      "empty": "This collection is empty.",
+      "notFound": {
+        "title": "Collection Not Found",
+        "subtitle1": "This collection isn't available.",
+        "subtitle2": "It may have been removed or the link is no longer valid.",
+        "imageAlt": "Collection Not Found",
+        "backToCollections": "Back to Collections",
+        "viewProfile": "View profile"
+      }
+    },
+    "addContentDialog": {
+      "title": "Add Content",
+      "description": "Add a post or article from your feed or paste a url directly.",
+      "fromFeedTitle": "Add from feed",
+      "fromFeedLead": "Find a post",
+      "fromFeedRest": " you want to add and click the collections button.",
+      "pasteTitle": "Paste post url",
+      "pasteDescription": "You can also paste a post URL to quickly add it to your collection.",
+      "createPostTitle": "Create new post",
+      "createPostPlaceholder": "What's on your mind?",
+      "createPostAvatarFallback": "You",
+      "adding": "Adding...",
+      "errors": {
+        "required": "Paste a post URL.",
+        "invalid": "Enter a valid post URL.",
+        "notFound": "We could not find that post.",
+        "alreadyAdded": "This post is already added.",
+        "collectionNotAllowed": "Collection can not be added to a collection.",
+        "failure": "Could not add this post."
+      }
+    }
+  },
+  "fab": {
+    "newPost": "New post",
+    "newCollection": "New collection",
+    "newPostInCollection": "New post in collection",
+    "newBookmark": "New bookmark",
+    "addedToCollection": "Post added to collection."
+  },
+  "postSave": {
+    "title": "Save post",
+    "description": "Choose where this post should be saved.",
+    "open": "Save post",
+    "loading": "Loading save options",
+    "bookmarks": "Bookmarks",
+    "newCollection": "New Collection",
+    "collectionNamePlaceholder": "Collection name",
+    "createCollection": "Create collection",
+    "loadingCollections": "Loading collections...",
+    "addedToCollection": "Post added to collection.",
+    "removedFromCollection": "Post removed from collection.",
+    "updateCollectionFailed": "Failed to update collection.",
+    "collectionCreated": "Collection created and post saved.",
+    "createCollectionFailed": "Failed to create collection."
+  },
+  "moderation": {
+    "postContentModerated": "Post content moderated.",
+    "collectionContentModerated": "Collection content moderated."
   }
 }

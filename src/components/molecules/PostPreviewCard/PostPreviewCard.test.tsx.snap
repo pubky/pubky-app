@@ -15,6 +15,7 @@ exports[`PostPreviewCard - Snapshots > matches snapshot with default props 1`] =
     <div
       data-post-id="snapshot-post-id"
       data-testid="post-header"
+      data-time-ago-placement="bottom-left"
     >
       PostHeader 
       snapshot-post-id
@@ -45,6 +46,7 @@ exports[`PostPreviewCard - Snapshots > matches snapshot with extra className 1`]
     <div
       data-post-id="snapshot-post-id"
       data-testid="post-header"
+      data-time-ago-placement="bottom-left"
     >
       PostHeader 
       snapshot-post-id

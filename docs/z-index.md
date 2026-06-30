@@ -4,14 +4,14 @@ Standard z-index values for consistent stacking order throughout the application
 
 ## Z-Index Scale
 
-| Value   | Purpose                     | Examples                                     |
-| ------- | --------------------------- | -------------------------------------------- |
-| `-z-10` | Background elements         | `ImageBackground` — fixed backgrounds        |
-| `z-10`  | Sticky/relative overlays    | `ProgressSteps`, `ButtonFilters`, badges     |
-| `z-30`  | Floating buttons (scrolled) | `NewPostsButton` when scrolled               |
-| `z-40`  | Fixed navigation & FAB      | `NewPostCTA`, `MobileFooter`, dialog overlay |
-| `z-50`  | Modals, dialogs, popovers   | `Dialog`, `Sheet`, `Popover`, dropdowns      |
-| `z-60`  | Modal controls              | Close buttons on lightboxes                  |
+| Value   | Purpose                     | Examples                                 |
+| ------- | --------------------------- | ---------------------------------------- |
+| `-z-10` | Background elements         | `ImageBackground` — fixed backgrounds    |
+| `z-10`  | Sticky/relative overlays    | `ProgressSteps`, `ButtonFilters`, badges |
+| `z-30`  | Floating buttons (scrolled) | `NewPostsButton` when scrolled           |
+| `z-40`  | Fixed navigation & FAB      | `Fab`, `MobileFooter`, dialog overlay    |
+| `z-50`  | Modals, dialogs, popovers   | `Dialog`, `Sheet`, `Popover`, dropdowns  |
+| `z-60`  | Modal controls              | Close buttons on lightboxes              |
 
 ## Layer Hierarchy
 
@@ -111,7 +111,7 @@ z-0   ─────────────  Normal document flow
 
 ### Fixed Navigation (`z-40`)
 
-- `NewPostCTA` (FAB)
+- `Fab` (FAB)
 - `MobileFooter`
 - `DialogOverlay`
 

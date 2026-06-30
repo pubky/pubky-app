@@ -81,6 +81,14 @@ describe('Feed Helpers', () => {
     it('should convert File to "file"', () => {
       expect(postKindToString(PubkyAppPostKind.File)).toBe('file');
     });
+
+    it('should convert Collection to "collection"', () => {
+      expect(postKindToString(PubkyAppPostKind.Collection)).toBe('collection');
+    });
+
+    it('should convert Unknown to "unknown"', () => {
+      expect(postKindToString(PubkyAppPostKind.Unknown)).toBe('unknown');
+    });
   });
 
   describe('reachToStreamSource', () => {
@@ -138,6 +146,14 @@ describe('Feed Helpers', () => {
 
     it('should convert File to StreamKind.FILE', () => {
       expect(contentToStreamKind(PubkyAppPostKind.File)).toBe(StreamKind.FILE);
+    });
+
+    it('should convert Collection to StreamKind.COLLECTION', () => {
+      expect(contentToStreamKind(PubkyAppPostKind.Collection)).toBe(StreamKind.COLLECTION);
+    });
+
+    it('should return undefined for Unknown (no StreamKind equivalent)', () => {
+      expect(contentToStreamKind(PubkyAppPostKind.Unknown)).toBeUndefined();
     });
   });
 

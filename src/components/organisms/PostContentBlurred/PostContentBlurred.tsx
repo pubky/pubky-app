@@ -1,15 +1,16 @@
-import { EyeOff } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
-import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ModerationController } from '@/controllers/moderation/moderation';
 import { cn } from '@/libs/utils/utils';
+import { ModerationBlurOverlay } from '@/molecules/ModerationBlurOverlay/ModerationBlurOverlay';
 
 interface PostContentBlurredProps {
   postId: string;
   className?: string;
 }
 export const PostContentBlurred = ({ postId, className }: PostContentBlurredProps) => {
+  const t = useTranslations('moderation');
   return (
     <Button
       overrideDefaults
@@ -32,16 +33,7 @@ export const PostContentBlurred = ({ postId, className }: PostContentBlurredProp
       </Typography>
 
       {/* Overlay with icon and message */}
-      <Container
-        overrideDefaults
-        className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground transition-colors group-hover:text-secondary-foreground"
-      >
-        <EyeOff className="size-6" />
-
-        <Typography overrideDefaults as="p" className="text-sm">
-          Post content moderated.
-        </Typography>
-      </Container>
+      <ModerationBlurOverlay label={t('postContentModerated')} />
     </Button>
   );
 };

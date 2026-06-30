@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
+import { useDialogKeyboardOrchestrator } from '@/hooks/useDialogKeyboardOrchestrator/useDialogKeyboardOrchestrator';
 import { cn } from '@/libs/utils/utils';
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -65,18 +66,26 @@ function DialogContent({
   showCloseButton = true,
   hiddenTitle,
   overrideDefaults = false,
+  avoidKeyboard = false,
+  style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
   hiddenTitle?: string;
   overrideDefaults?: boolean;
+  avoidKeyboard?: boolean;
 }) {
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const { contentStyle: keyboardContentStyle, spacerHeight } = useDialogKeyboardOrchestrator(contentRef, {
+    enabled: avoidKeyboard,
+  });
+  const contentStyle = avoidKeyboard ? { ...style, ...keyboardContentStyle } : style;
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay onCloseRef={closeRef} contentRef={contentRef} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
         <DialogPrimitive.Content
           ref={contentRef}
           aria-describedby={undefined}
@@ -86,17 +95,32 @@ function DialogContent({
           className={cn(
             'relative z-50 grid',
             'duration-200',
-            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
-            'm-4 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+            'm-0 sm:m-4',
+            'data-[state=closed]:animate-out data-[state=open]:animate-in',
+            // Mobile: clean slide up/down from the bottom (the overlay handles the dimming).
+            'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
+            // Desktop: reset the slide and fade + zoom in/out instead.
+            'sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0',
+            'sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0',
+            'sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95',
             overrideDefaults
               ? ''
-              : 'max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:p-8',
+              : 'max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8',
             className,
           )}
+          style={contentStyle}
           {...props}
         >
           {hiddenTitle && <DialogPrimitive.Title className="sr-only">{hiddenTitle}</DialogPrimitive.Title>}
           {children}
+          {avoidKeyboard && spacerHeight > 0 && (
+            <div
+              aria-hidden="true"
+              data-slot="dialog-keyboard-spacer"
+              className="pointer-events-none"
+              style={{ height: spacerHeight }}
+            />
+          )}
           <DialogClose
             ref={closeRef}
             className={cn(

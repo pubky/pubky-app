@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Env } from '@/libs/env/env';
 import { NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { getExchangeRateApi } from '@/libs/runtime-config/runtime-config';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { ExchangerateService } from './exchangerate';
 import { exchangerateQueryClient } from './exchangerate.query-client';
@@ -52,7 +52,7 @@ describe('ExchangerateService', () => {
       expect(rate.satUsd).toEqual(0.00087076);
       expect(rate.btcUsd).toEqual(87076.0);
       expect(rate.lastUpdatedAt).toBeInstanceOf(Date);
-      expect(mockFetch).toHaveBeenCalledWith(Env.NEXT_PUBLIC_EXCHANGE_RATE_API, { method: 'GET' });
+      expect(mockFetch).toHaveBeenCalledWith(getExchangeRateApi(), { method: 'GET' });
     });
 
     it('throws RESOURCE_NOT_FOUND when BTCUSD ticker is missing', async () => {

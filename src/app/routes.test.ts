@@ -1,16 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import {
+  APP_ROUTES,
   AUTH_ROUTES,
+  getCollectionRoute,
   getProfileRoute,
   getUserProfileUrl,
+  isCollectionsOverviewRoute,
   isCoreExploreRoute,
   isDynamicPublicRoute,
   isLogoLandingRoute,
+  isNavItemActive,
   isPostRoute,
   isPublicExploreRoute,
   LOGO_LANDING_ROUTES,
+  matchSingleCollectionRoute,
   ONBOARDING_ROUTES,
   PROFILE_ROUTES,
+  SETTINGS_ROUTES,
 } from './routes';
 
 describe('isDynamicPublicRoute', () => {
@@ -157,6 +163,89 @@ describe('getProfileRoute', () => {
 
   it('preserves sub-paths other than posts', () => {
     expect(getProfileRoute(PROFILE_ROUTES.FOLLOWERS, pubky)).toBe(`/profile/${pubky}/followers`);
+  });
+});
+
+describe('getCollectionRoute', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const postId = '0034BBBDFK83G';
+
+  it('joins the collections base route, author pubky, and post id', () => {
+    expect(getCollectionRoute(pubky, postId)).toBe(`/collections/${pubky}/${postId}`);
+  });
+
+  it('is anchored on APP_ROUTES.COLLECTIONS', () => {
+    expect(getCollectionRoute(pubky, postId).startsWith(`${APP_ROUTES.COLLECTIONS}/`)).toBe(true);
+  });
+});
+
+describe('isCollectionsOverviewRoute', () => {
+  it('returns true only for the exact /collections path', () => {
+    expect(isCollectionsOverviewRoute(APP_ROUTES.COLLECTIONS)).toBe(true);
+    expect(isCollectionsOverviewRoute('/collections')).toBe(true);
+  });
+
+  it('returns false for bookmarks, single collections, and unrelated paths', () => {
+    const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+
+    expect(isCollectionsOverviewRoute('/collections/bookmarks')).toBe(false);
+    expect(isCollectionsOverviewRoute(`/collections/${pubky}/0034BBBDFK83G`)).toBe(false);
+    expect(isCollectionsOverviewRoute('/collections/')).toBe(false);
+    expect(isCollectionsOverviewRoute('/home')).toBe(false);
+  });
+});
+
+describe('matchSingleCollectionRoute', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const postId = '0034BBBDFK83G';
+
+  it('extracts userId and postId from a single collection route', () => {
+    expect(matchSingleCollectionRoute(`/collections/${pubky}/${postId}`)).toEqual({ userId: pubky, postId });
+  });
+
+  it('returns null for the bookmarks pseudo-collection route', () => {
+    expect(matchSingleCollectionRoute('/collections/bookmarks')).toBeNull();
+    expect(matchSingleCollectionRoute('/collections/bookmarks/extra')).toBeNull();
+  });
+
+  it('returns null for the overview route and wrong segment counts', () => {
+    expect(matchSingleCollectionRoute('/collections')).toBeNull();
+    expect(matchSingleCollectionRoute(`/collections/${pubky}`)).toBeNull();
+    expect(matchSingleCollectionRoute(`/collections/${pubky}/${postId}/extra`)).toBeNull();
+  });
+
+  it('returns null for unrelated routes', () => {
+    expect(matchSingleCollectionRoute('/home')).toBeNull();
+    expect(matchSingleCollectionRoute(`/post/${pubky}/${postId}`)).toBeNull();
+  });
+});
+
+describe('isNavItemActive', () => {
+  it('matches exact href when activePrefix is omitted', () => {
+    expect(isNavItemActive('/home', { href: APP_ROUTES.HOME })).toBe(true);
+    expect(isNavItemActive('/hot', { href: APP_ROUTES.HOT })).toBe(true);
+    expect(isNavItemActive('/search', { href: APP_ROUTES.HOT })).toBe(false);
+  });
+
+  it('matches sub-routes under href when activePrefix is omitted', () => {
+    expect(isNavItemActive('/hot/trending', { href: APP_ROUTES.HOT })).toBe(true);
+  });
+
+  it('matches exact and nested routes under activePrefix', () => {
+    const collectionsItem = { href: APP_ROUTES.COLLECTIONS, activePrefix: APP_ROUTES.COLLECTIONS };
+
+    expect(isNavItemActive('/collections', collectionsItem)).toBe(true);
+    expect(isNavItemActive('/collections/bookmarks', collectionsItem)).toBe(true);
+    expect(isNavItemActive('/collections/other', collectionsItem)).toBe(true);
+  });
+
+  it('highlights settings from default account href using settings prefix', () => {
+    const settingsItem = { href: SETTINGS_ROUTES.ACCOUNT, activePrefix: APP_ROUTES.SETTINGS };
+
+    expect(isNavItemActive('/settings/account', settingsItem)).toBe(true);
+    expect(isNavItemActive('/settings/notifications', settingsItem)).toBe(true);
+    expect(isNavItemActive('/settings/edit', settingsItem)).toBe(true);
+    expect(isNavItemActive('/home', settingsItem)).toBe(false);
   });
 });
 

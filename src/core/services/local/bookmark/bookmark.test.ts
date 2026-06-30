@@ -1,4 +1,6 @@
+import { liveQuery } from 'dexie';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
 import { db } from '@/database/franky/franky';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -11,6 +13,7 @@ import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { asInvalid } from '@/test-utils/type-assertions';
 
 // Test data
 const testData = {
@@ -56,6 +59,7 @@ const setupUserCounts = async (userId: Pubky, bookmarks: number = 0) => {
     unique_tags: 0,
     posts: 0,
     replies: 0,
+    collections: 0,
     following: 0,
     followers: 0,
     friends: 0,
@@ -63,7 +67,7 @@ const setupUserCounts = async (userId: Pubky, bookmarks: number = 0) => {
 };
 
 const setupPostDetails = async (
-  kind: 'short' | 'long' | 'image' | 'video' | 'file' | 'link',
+  kind: 'short' | 'long' | 'image' | 'video' | 'file' | 'link' | 'collection',
   attachments?: string[] | null,
   content?: string,
 ) => {
@@ -129,6 +133,18 @@ describe('LocalBookmarkService', () => {
       expect(userCounts!.bookmarks).toBe(6);
     });
 
+    it('should NOT increment bookmarks count when bookmarking a collection', async () => {
+      // The `bookmarks` count is posts-only — bookmarked collections are excluded.
+      await setupUserCounts(testData.userPubky, 5);
+      await setupPostDetails('collection');
+      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
+
+      // The bookmark itself is still recorded, but the count must not move.
+      expect(await getSavedBookmark()).toBeTruthy();
+      const userCounts = await getUserCounts(testData.userPubky);
+      expect(userCounts!.bookmarks).toBe(5);
+    });
+
     it('should add post to TIMELINE_BOOKMARKS_ALL stream', async () => {
       await setupPostDetails('short');
       await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
@@ -138,71 +154,30 @@ describe('LocalBookmarkService', () => {
       expect(stream!.stream).toContain(testData.compositePostId);
     });
 
-    it('should add short post to TIMELINE_BOOKMARKS_SHORT stream', async () => {
-      await setupPostDetails('short');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_SHORT);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add long post to TIMELINE_BOOKMARKS_LONG stream', async () => {
-      await setupPostDetails('long');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_LONG);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add image post to TIMELINE_BOOKMARKS_IMAGE stream', async () => {
-      await setupPostDetails('image');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add video post to TIMELINE_BOOKMARKS_VIDEO stream', async () => {
-      await setupPostDetails('video');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add file post to TIMELINE_BOOKMARKS_FILE stream', async () => {
-      await setupPostDetails('file');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_FILE);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add link post to TIMELINE_BOOKMARKS_LINK stream', async () => {
-      await setupPostDetails('link');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_LINK);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add post to only ALL and kind-based stream', async () => {
+    it('should add a non-collection post to ONLY the ALL stream', async () => {
+      // Kind-specific bookmark streams were removed with the legacy filter UI;
+      // every non-collection bookmark now lives only in the ALL feed stream.
       await setupPostDetails('image');
       await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
 
       const allStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
-      const imageStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE);
-      const shortStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_SHORT);
+      const collectionStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION);
 
       expect(allStream!.stream).toContain(testData.compositePostId);
-      expect(imageStream!.stream).toContain(testData.compositePostId);
-      expect(shortStream).toBeUndefined(); // Should not be in short stream
+      expect(collectionStream).toBeUndefined(); // non-collection posts never touch the collection stream
+    });
+
+    it('should add a bookmarked collection to the COLLECTION stream and NOT the ALL stream', async () => {
+      // Collections are "followed", not feed posts: they belong in the collection
+      // bookmark stream, not the posts feed (ALL) stream that filters them out anyway.
+      await setupPostDetails('collection');
+      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
+
+      const collectionStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION);
+      const allStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
+
+      expect(collectionStream!.stream).toContain(testData.compositePostId);
+      expect(allStream).toBeUndefined(); // must not pollute the posts feed stream
     });
 
     it('should not update counts when post is already bookmarked', async () => {
@@ -250,19 +225,36 @@ describe('LocalBookmarkService', () => {
       expect(userCounts!.bookmarks).toBe(9);
     });
 
-    it('should remove post from all and kind-specific bookmark streams', async () => {
+    it('should NOT decrement bookmarks count when un-bookmarking a collection', async () => {
+      // Collections never moved the posts-only `bookmarks` count, so removing
+      // a collection bookmark must not move it either.
+      await setupUserCounts(testData.userPubky, 10);
+      await setupPostDetails('collection'); // overwrite the 'short' details from beforeEach
+      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
+
+      expect(await getSavedBookmark()).toBeUndefined();
+      const userCounts = await getUserCounts(testData.userPubky);
+      expect(userCounts!.bookmarks).toBe(10);
+    });
+
+    it('should remove a non-collection post from the ALL bookmark stream', async () => {
+      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
+
+      const allStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
+      expect(allStream!.stream).not.toContain(testData.compositePostId);
+    });
+
+    it('should remove an un-bookmarked collection from the COLLECTION stream', async () => {
+      await setupPostDetails('collection'); // overwrite the 'short' details from beforeEach
       await LocalStreamPostsService.prependToStream({
-        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT,
+        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION,
         compositePostId: testData.compositePostId,
       });
 
       await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
 
-      const allStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
-      const shortStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_SHORT);
-
-      expect(allStream!.stream).not.toContain(testData.compositePostId);
-      expect(shortStream!.stream).not.toContain(testData.compositePostId);
+      const collectionStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION);
+      expect(collectionStream?.stream ?? []).not.toContain(testData.compositePostId);
     });
 
     it('should ignore if post is not bookmarked', async () => {
@@ -322,6 +314,155 @@ describe('LocalBookmarkService', () => {
     it('should return empty array when no bookmarks exist', async () => {
       const bookmarks = await LocalBookmarkService.getAllBookmarks();
       expect(bookmarks).toEqual([]);
+    });
+  });
+
+  describe('getAllBookmarksSorted', () => {
+    it('returns bookmark IDs sorted by created_at descending (newest first)', async () => {
+      const olderId = 'author1:p-older';
+      const middleId = 'author2:p-middle';
+      const newerId = 'author3:p-newer';
+
+      await BookmarkModel.upsert({ id: olderId, created_at: 1000 });
+      await BookmarkModel.upsert({ id: middleId, created_at: 2000 });
+      await BookmarkModel.upsert({ id: newerId, created_at: 3000 });
+
+      const sorted = await LocalBookmarkService.getAllBookmarksSorted();
+
+      expect(sorted).toEqual([newerId, middleId, olderId]);
+    });
+
+    it('returns an empty array when no bookmarks exist', async () => {
+      const sorted = await LocalBookmarkService.getAllBookmarksSorted();
+      expect(sorted).toEqual([]);
+    });
+
+    it('includes rows missing a numeric created_at (treated as oldest)', async () => {
+      // Regression guard for the "FollowedCollections empty while Discover shows
+      // Unfollow" bug: an index-based reverse-cursor silently drops rows whose
+      // indexed key is undefined. The full-table-scan implementation must keep
+      // them visible (sorted to the tail).
+      const withTime = 'authorA:p-with-time';
+      const noTimeA = 'authorB:p-no-time-a';
+      const noTimeB = 'authorC:p-no-time-b';
+
+      await BookmarkModel.upsert({ id: withTime, created_at: 5000 });
+      // Force `created_at` to undefined to simulate historically-bad writes.
+      await BookmarkModel.table.put({ id: noTimeA, created_at: asInvalid<number>(undefined) });
+      await BookmarkModel.table.put({ id: noTimeB, created_at: asInvalid<number>(undefined) });
+
+      const sorted = await LocalBookmarkService.getAllBookmarksSorted();
+
+      expect(sorted).toHaveLength(3);
+      expect(sorted[0]).toBe(withTime);
+      expect(sorted.slice(1).sort()).toEqual([noTimeA, noTimeB].sort());
+    });
+  });
+
+  describe('BookmarkController.getAll — liveQuery reactivity', () => {
+    // Regression guard for the FollowedCollections / DiscoverCollections live
+    // queries: those sections wrap `BookmarkController.getAll()` in
+    // `useLiveQuery(...)`, which only re-runs when Dexie's table-observation
+    // proxy is hit on the same Dexie instance the query subscribes to.
+    //
+    // The call path goes Controller → Application → Service → Model.table.toArray().
+    // If any future refactor adds an `await` that breaks out of the Dexie
+    // async-context (e.g. a `fetch` round-trip in the middle), the live query
+    // would silently stop reacting to bookmark writes — cards would stop
+    // appearing in Followed / disappearing from Discover until a manual
+    // reload. These tests fail loudly in that scenario.
+
+    const waitForEmission = <T>(promise: Promise<T>, timeoutMs = 1000): Promise<T> =>
+      Promise.race<T>([
+        promise,
+        new Promise<T>((_resolve, reject) =>
+          setTimeout(() => reject(new Error(`liveQuery emission timed out after ${timeoutMs}ms`)), timeoutMs),
+        ),
+      ]);
+
+    it('emits initial value on subscription', async () => {
+      const observable = liveQuery(() => BookmarkController.getAll());
+
+      const first = await waitForEmission(
+        new Promise<string[]>((resolve, reject) => {
+          const sub = observable.subscribe({
+            next: (value) => {
+              sub.unsubscribe();
+              resolve(value);
+            },
+            error: reject,
+          });
+        }),
+      );
+
+      expect(first).toEqual([]);
+    });
+
+    it('re-emits when a bookmark is added', async () => {
+      const observable = liveQuery(() => BookmarkController.getAll());
+      const emissions: string[][] = [];
+
+      // Capture the first emission, then write, then capture the second.
+      const secondEmission = new Promise<string[]>((resolve, reject) => {
+        const sub = observable.subscribe({
+          next: (value) => {
+            emissions.push(value);
+            if (emissions.length === 2) {
+              sub.unsubscribe();
+              resolve(value);
+            }
+          },
+          error: reject,
+        });
+      });
+
+      // Wait for the initial emission before writing so the observer is
+      // primed and any subsequent table mutation triggers a re-run.
+      await waitForEmission(
+        new Promise<void>((resolve) => {
+          const check = () => (emissions.length >= 1 ? resolve() : setTimeout(check, 5));
+          check();
+        }),
+      );
+
+      const newId = 'authorA:p-live-1';
+      await BookmarkModel.upsert({ id: newId, created_at: 1000 });
+
+      const next = await waitForEmission(secondEmission);
+      expect(next).toContain(newId);
+    });
+
+    it('re-emits when a bookmark is deleted', async () => {
+      const seedId = 'authorB:p-live-2';
+      await BookmarkModel.upsert({ id: seedId, created_at: 2000 });
+
+      const observable = liveQuery(() => BookmarkController.getAll());
+      const emissions: string[][] = [];
+
+      const secondEmission = new Promise<string[]>((resolve, reject) => {
+        const sub = observable.subscribe({
+          next: (value) => {
+            emissions.push(value);
+            if (emissions.length === 2) {
+              sub.unsubscribe();
+              resolve(value);
+            }
+          },
+          error: reject,
+        });
+      });
+
+      await waitForEmission(
+        new Promise<void>((resolve) => {
+          const check = () => (emissions.length >= 1 ? resolve() : setTimeout(check, 5));
+          check();
+        }),
+      );
+
+      await BookmarkModel.table.delete(seedId);
+
+      const next = await waitForEmission(secondEmission);
+      expect(next).not.toContain(seedId);
     });
   });
 });
