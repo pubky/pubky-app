@@ -15,7 +15,7 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       onOpenChange?: (open: boolean) => void;
     }) => (
       <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(false)}>
-        {children}
+        {open ? children : null}
       </div>
     ),
     DialogContent: vi.fn(
@@ -35,6 +35,8 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
         [key: string]: unknown;
       }) => (
         <div
+          role="dialog"
+          aria-modal="true"
           data-testid="dialog-content"
           className={className}
           aria-label={hiddenTitle}
