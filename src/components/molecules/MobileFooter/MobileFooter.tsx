@@ -10,6 +10,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FileController } from '@/controllers/file/file';
+import { useCollectionsNavDiscovery } from '@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
@@ -41,6 +42,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const unreadNotifications = useNotificationStore((state) => state.selectUnread());
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
   const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset();
+  const { showCollectionsNew, markCollectionsNavSeen } = useCollectionsNavDiscovery();
 
   // Get avatar URL and fallback initial - same logic as desktop header
   const avatarUrl =
@@ -109,6 +111,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
         {authenticatedNavItems.map((item) => {
           const Icon = item.icon;
           const itemIsActive = isNavItemActive(pathname, item);
+          const isCollectionsItem = item.href === APP_ROUTES.COLLECTIONS;
           return (
             <Link
               key={item.href}
@@ -120,15 +123,29 @@ export function MobileFooter({ className }: MobileFooterProps) {
                   setShowSignInDialog(true);
                   return;
                 }
+                if (isAuthenticated && isCollectionsItem) {
+                  markCollectionsNavSeen();
+                }
                 if (!item.isFeedRoute) return;
                 handleFeedNavClick(event, { isActive: itemIsActive, smoothScrollWhenActive: true });
               }}
               className={cn(
                 'rounded-full p-3 transition-all',
                 itemIsActive ? 'bg-secondary' : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
+                isCollectionsItem &&
+                  showCollectionsNew &&
+                  'relative inline-flex border border-brand bg-white/5 text-brand hover:bg-brand/10',
               )}
             >
               <Icon className="h-6 w-6" />
+              {isCollectionsItem && showCollectionsNew ? (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-12 left-1/2 -translate-x-1/2 text-xs font-semibold text-brand uppercase"
+                >
+                  {tHeader('new')}
+                </span>
+              ) : null}
             </Link>
           );
         })}

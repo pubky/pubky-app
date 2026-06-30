@@ -157,7 +157,8 @@
     "signIn": "ログイン",
     "feed": "フィード",
     "search": "検索",
-    "collections": "コレクション"
+    "collections": "コレクション",
+    "new": "新着"
   },
   "settings": {
     "title": "設定",

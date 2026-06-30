@@ -157,7 +157,8 @@
     "signIn": "Se connecter",
     "feed": "Fil",
     "search": "Rechercher",
-    "collections": "Collections"
+    "collections": "Collections",
+    "new": "Nouveau"
   },
   "settings": {
     "title": "Paramètres",

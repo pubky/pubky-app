@@ -157,7 +157,8 @@
     "signIn": "登录",
     "feed": "动态",
     "search": "搜索",
-    "collections": "收藏集"
+    "collections": "收藏集",
+    "new": "新"
   },
   "settings": {
     "title": "设置",

@@ -157,7 +157,8 @@
     "signIn": "Iniciar sesión",
     "feed": "Feed",
     "search": "Buscar",
-    "collections": "Colecciones"
+    "collections": "Colecciones",
+    "new": "Nuevo"
   },
   "settings": {
     "title": "Configuración",

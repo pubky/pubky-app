@@ -7,6 +7,12 @@ import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentU
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { MobileFooter } from './MobileFooter';
 
+const collectionsDiscoveryMock = vi.hoisted(() => ({
+  markCollectionsNavSeen: vi.fn(),
+  setShowSignInDialog: vi.fn(),
+  showCollectionsNew: false,
+}));
+
 let mockCurrentUserPubky: string | null = 'pk:test-user-pubky';
 let mockIsPublicRoute = false;
 let mockIsCoreExploreRoute = false;
@@ -104,6 +110,12 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
   useKeyboardOffset: vi.fn(() => ({ isKeyboardVisible: false, keyboardOffset: 0 })),
 }));
+vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
+  useCollectionsNavDiscovery: () => ({
+    showCollectionsNew: Boolean(mockCurrentUserPubky) && collectionsDiscoveryMock.showCollectionsNew,
+    markCollectionsNavSeen: collectionsDiscoveryMock.markCollectionsNavSeen,
+  }),
+}));
 
 // Track notification store mock for per-test overrides
 const mockSelectUnread = vi.fn(() => 0);
@@ -115,8 +127,12 @@ vi.mock('@/controllers/file/file', () => ({
   },
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: vi.fn((selector: (state: { currentUserPubky: string | null }) => unknown) =>
-    selector({ currentUserPubky: mockCurrentUserPubky }),
+  useAuthStore: vi.fn(
+    (selector: (state: { currentUserPubky: string | null; setShowSignInDialog: (open: boolean) => void }) => unknown) =>
+      selector({
+        currentUserPubky: mockCurrentUserPubky,
+        setShowSignInDialog: collectionsDiscoveryMock.setShowSignInDialog,
+      }),
   ),
 }));
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
@@ -134,6 +150,7 @@ describe('MobileFooter', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
     mockCurrentUserPubky = 'pk:test-user-pubky';
+    collectionsDiscoveryMock.showCollectionsNew = false;
     mockIsPublicRoute = false;
     mockIsCoreExploreRoute = false;
     Object.defineProperty(window, 'sessionStorage', {
@@ -289,6 +306,42 @@ describe('MobileFooter', () => {
     const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
     expect(collectionsLink).toHaveClass('bg-secondary');
     expect(collectionsLink).not.toHaveClass('border');
+  });
+
+  it('shows the Collections NEW treatment before dismissal', () => {
+    collectionsDiscoveryMock.showCollectionsNew = true;
+
+    render(<MobileFooter />);
+
+    const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
+    expect(collectionsLink).toHaveClass('border-brand', 'text-brand');
+    expect(screen.getByText('New')).toBeInTheDocument();
+  });
+
+  it('marks Collections discovery seen when clicking the authenticated Collections nav link', () => {
+    collectionsDiscoveryMock.showCollectionsNew = true;
+    render(<MobileFooter />);
+
+    const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
+    expect(collectionsLink).toBeTruthy();
+    fireEvent.click(collectionsLink!);
+
+    expect(collectionsDiscoveryMock.markCollectionsNavSeen).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show or dismiss Collections discovery for guests', () => {
+    mockCurrentUserPubky = null;
+    mockIsCoreExploreRoute = true;
+    collectionsDiscoveryMock.showCollectionsNew = true;
+
+    render(<MobileFooter />);
+
+    expect(screen.queryByText('New')).not.toBeInTheDocument();
+    const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
+    expect(collectionsLink).toBeTruthy();
+    fireEvent.click(collectionsLink!);
+    expect(collectionsDiscoveryMock.markCollectionsNavSeen).not.toHaveBeenCalled();
+    expect(collectionsDiscoveryMock.setShowSignInDialog).toHaveBeenCalledWith(true);
   });
 
   it('highlights Settings when on any sibling settings page', () => {
@@ -462,6 +515,7 @@ describe('MobileFooter - Snapshots', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
     mockCurrentUserPubky = 'pk:test-user-pubky';
+    collectionsDiscoveryMock.showCollectionsNew = false;
     mockIsPublicRoute = false;
     mockIsCoreExploreRoute = false;
     vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
