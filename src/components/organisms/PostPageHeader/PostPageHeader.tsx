@@ -92,7 +92,13 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
 
         {/* Breadcrumb (only for replies) */}
         {hasParents && (
-          <PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={navigateToPost} />
+          <Container
+            overrideDefaults
+            className="w-full min-w-0 md:ml-auto md:w-full md:max-w-[50%] md:min-w-0"
+            data-testid="post-page-breadcrumb-wrapper"
+          >
+            <PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={navigateToPost} />
+          </Container>
         )}
       </Container>
     </PageHeader>
