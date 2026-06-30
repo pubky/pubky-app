@@ -11,7 +11,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { GITHUB_URL, TELEGRAM_URL, TWITTER_GETPUBKY_URL } from '@/config/externalLinks';
+import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Github2, Telegram, XTwitter } from '@/icons';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
@@ -68,13 +68,13 @@ export function HeaderSocialLinks({ ...props }: React.HTMLAttributes<HTMLDivElem
       data-testid="header-social-links"
       className={cn('mr-6 hidden flex-row justify-end gap-6 md:flex', props.className)}
     >
-      <Link href={GITHUB_URL} target="_blank" variant="muted" size="default">
+      <Link href={getGithubLink()} target="_blank" variant="muted" size="default">
         <Github2 className="h-6 w-6" />
       </Link>
-      <Link href={TWITTER_GETPUBKY_URL} target="_blank" variant="muted" size="default">
+      <Link href={getTwitterGetpubkyLink()} target="_blank" variant="muted" size="default">
         <XTwitter className="h-6 w-6" />
       </Link>
-      <Link href={TELEGRAM_URL} target="_blank" variant="muted" size="default">
+      <Link href={getTelegramLink()} target="_blank" variant="muted" size="default">
         <Telegram className="h-6 w-6" />
       </Link>
     </Container>
