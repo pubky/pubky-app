@@ -183,6 +183,28 @@ describe('stripImageMetadata', () => {
     return bytes.buffer as ArrayBuffer;
   }
 
+  function writeAscii(bytes: Uint8Array, offset: number, value: string): void {
+    for (let i = 0; i < value.length; i += 1) {
+      bytes[offset + i] = value.charCodeAt(i);
+    }
+  }
+
+  function writeUint32LittleEndian(bytes: Uint8Array, offset: number, value: number): void {
+    const valueBytes = uint32LittleEndianBytes(value);
+    bytes.set(valueBytes, offset);
+  }
+
+  function buildLargeAnimatedWebpBytes(size: number): ArrayBuffer {
+    const animPayloadSize = size - 20;
+    const bytes = new Uint8Array(size);
+    writeAscii(bytes, 0, 'RIFF');
+    writeUint32LittleEndian(bytes, 4, size - 8);
+    writeAscii(bytes, 8, 'WEBP');
+    writeAscii(bytes, 12, 'ANIM');
+    writeUint32LittleEndian(bytes, 16, animPayloadSize);
+    return bytes.buffer as ArrayBuffer;
+  }
+
   it('sanitizes supported image types and returns a new file', async () => {
     const inputFile = new File(['raw-image-bytes'], 'photo.jpg', { type: 'image/jpeg' });
     const arrayBufferSpy = vi.spyOn(inputFile, 'arrayBuffer');
@@ -374,6 +396,13 @@ describe('stripImageMetadata', () => {
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
+  it('rejects GIF uploads above the sanitized upload cap because they cannot be safely compressed', async () => {
+    const inputFile = new File([new Uint8Array(IMAGE_MAX_UPLOAD_SIZE + 1)], 'animated.gif', { type: 'image/gif' });
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('Sanitized image file size exceeds upload limits');
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
   it('keeps animated WebP out of the canvas path to preserve all frames', async () => {
     const animatedWebp = buildWebpBytes([
       { type: 'XMP ', payload: new Uint8Array(600) },
@@ -386,6 +415,14 @@ describe('stripImageMetadata', () => {
     expect(result).not.toBe(inputFile);
     expect(result.type).toBe('image/webp');
     expect(result.name).toMatch(/^[a-z0-9]+\.webp$/);
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('rejects animated WebP uploads above the sanitized upload cap because frames are preserved', async () => {
+    const animatedWebp = buildLargeAnimatedWebpBytes(IMAGE_MAX_UPLOAD_SIZE + 1);
+    const inputFile = new File([animatedWebp], 'loop.webp', { type: 'image/webp' });
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('Sanitized image file size exceeds upload limits');
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
@@ -443,6 +480,17 @@ describe('stripImageMetadata', () => {
     expect(result.type).toBe('image/svg+xml');
     expect(result.name).not.toBe(inputFile.name);
     expect(result.name).toMatch(/^[a-z0-9]+\.svg$/);
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('rejects SVG uploads above the sanitized upload cap because they cannot be safely compressed', async () => {
+    const inputFile = new File(
+      [`<svg xmlns="http://www.w3.org/2000/svg"><text>${'x'.repeat(IMAGE_MAX_UPLOAD_SIZE)}</text></svg>`],
+      'large.svg',
+      { type: 'image/svg+xml' },
+    );
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('Sanitized image file size exceeds upload limits');
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 

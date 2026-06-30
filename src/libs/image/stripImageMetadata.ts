@@ -19,7 +19,7 @@ const IMAGE_EXTENSION_TO_MIME_TYPE: Record<string, string> = {
 
 const MIME_TYPES_WITH_CANVAS_SANITIZATION = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MIME_TYPES_WITH_LOSSY_REENCODING = new Set(['image/jpeg', 'image/webp']);
-const MIME_TYPES_WITH_WEBP_FALLBACK = new Set(['image/jpeg', 'image/png']);
+const MIME_TYPES_WITH_WEBP_FALLBACK = new Set(['image/png']);
 const SVG_MIME_TYPE = 'image/svg+xml';
 const WEBP_MIME_TYPE = 'image/webp';
 const FILE_HEADER_BYTES_LENGTH = 512;
@@ -584,7 +584,6 @@ async function sanitizeRasterImage(file: File, mimeType: string): Promise<Blob> 
       throw new Error('Failed to get canvas context for metadata stripping');
     }
 
-    context.imageSmoothingQuality = 'high';
     const encodeTargets = getRasterEncodeTargets(mimeType);
 
     for (const scaleFactor of IMAGE_UPLOAD_SCALE_FACTORS) {
