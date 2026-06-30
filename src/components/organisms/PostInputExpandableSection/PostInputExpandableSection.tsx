@@ -28,6 +28,8 @@ export function PostInputExpandableSection({
   isDisabled = false,
   isPostDisabled: isPostDisabledProp,
   submitMode,
+  submitLabel,
+  submitIcon,
   setTags,
   onSubmit,
   showEmojiPicker,
@@ -45,7 +47,7 @@ export function PostInputExpandableSection({
   const isUiDisabled = isSubmitting || isDisabled;
   // Use provided isPostDisabled or default to requiring content
   const isPostDisabled = isPostDisabledProp ?? (!hasContent || isUiDisabled);
-  const postButtonLabel = getButtonLabel(submitMode, isArticle);
+  const postButtonLabel = submitLabel ?? getButtonLabel(submitMode, isArticle);
   const postButtonAriaLabel = postButtonLabel;
   const isEdit = submitMode === POST_INPUT_VARIANT.EDIT;
   const hasParentGapCompensation = parentGapPx > 0;
@@ -146,7 +148,7 @@ export function PostInputExpandableSection({
                       hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle}
                       isArticle={isArticle}
                       isEdit={isEdit}
-                      postButtonIcon={IconsButton[submitMode]}
+                      postButtonIcon={submitIcon ?? IconsButton[submitMode]}
                       characterLimit={characterLimit}
                       separateActions={inline}
                     />

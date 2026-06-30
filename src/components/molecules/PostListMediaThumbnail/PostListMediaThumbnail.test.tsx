@@ -113,8 +113,10 @@ const selectLocalFiles = (posts: LocalFilesStore['posts']) =>
     selector({
       profile: null,
       posts,
+      collections: {},
       setProfile: vi.fn(),
       setPostAttachments: vi.fn(),
+      setCollectionCover: vi.fn(),
       reset: vi.fn(),
     }),
   );

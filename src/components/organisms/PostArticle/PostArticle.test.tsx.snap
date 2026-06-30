@@ -3,7 +3,7 @@
 exports[`PostArticle > Snapshots > matches snapshot with cover image 1`] = `
 <div>
   <div
-    class="justify-between gap-6 lg:flex-row"
+    class="justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!"
     data-testid="container"
   >
     <div
@@ -52,7 +52,7 @@ exports[`PostArticle > Snapshots > matches snapshot with cover image 1`] = `
 exports[`PostArticle > Snapshots > matches snapshot with custom className 1`] = `
 <div>
   <div
-    class="justify-between gap-6 lg:flex-row custom-article-class"
+    class="justify-between gap-6 lg:flex-row @max-xl/grid:flex-col! custom-article-class"
     data-testid="container"
   >
     <div
@@ -101,7 +101,7 @@ exports[`PostArticle > Snapshots > matches snapshot with custom className 1`] = 
 exports[`PostArticle > Snapshots > matches snapshot with local cover image 1`] = `
 <div>
   <div
-    class="justify-between gap-6 lg:flex-row"
+    class="justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!"
     data-testid="container"
   >
     <div
@@ -150,7 +150,7 @@ exports[`PostArticle > Snapshots > matches snapshot with local cover image 1`] =
 exports[`PostArticle > Snapshots > matches snapshot with local video attachment falling back to hook image 1`] = `
 <div>
   <div
-    class="justify-between gap-6 lg:flex-row"
+    class="justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!"
     data-testid="container"
   >
     <div
@@ -199,7 +199,7 @@ exports[`PostArticle > Snapshots > matches snapshot with local video attachment 
 exports[`PostArticle > Snapshots > matches snapshot with long title and body 1`] = `
 <div>
   <div
-    class="justify-between gap-6 lg:flex-row"
+    class="justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!"
     data-testid="container"
   >
     <div
@@ -248,7 +248,7 @@ exports[`PostArticle > Snapshots > matches snapshot with long title and body 1`]
 exports[`PostArticle > Snapshots > matches snapshot without cover image 1`] = `
 <div>
   <div
-    class="justify-between gap-6 lg:flex-row"
+    class="justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!"
     data-testid="container"
   >
     <div

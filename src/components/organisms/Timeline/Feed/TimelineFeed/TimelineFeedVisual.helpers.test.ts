@@ -149,6 +149,16 @@ describe('resolveVisualFeedContent', () => {
     ).toBe(CONTENT.ALL);
   });
 
+  it('coerces collections content to all for interactive visual feeds', () => {
+    expect(
+      resolveVisualFeedContent({
+        content: CONTENT.COLLECTIONS,
+        variant: TIMELINE_FEED_VARIANT.HOME,
+        isVisualActive: true,
+      }),
+    ).toBe(CONTENT.ALL);
+  });
+
   it('leaves read-only custom feed content untouched in visual mode', () => {
     expect(
       resolveVisualFeedContent({

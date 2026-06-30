@@ -1,0 +1,91 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BookmarksHero - Snapshots > matches the snapshot with count and avatar state 1`] = `
+<div
+  class="flex flex-col gap-6 bg-card text-card-foreground shadow-sm relative overflow-hidden rounded-md py-0"
+  data-cy="bookmarks-hero"
+  data-slot="card"
+  data-testid="card"
+>
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute inset-0 bg-gradient-to-r from-card via-card to-card/60"
+    data-testid="container"
+  />
+  <div
+    class="relative flex flex-col items-start gap-4 p-6 md:p-12"
+    data-slot="card-content"
+  >
+    <h1
+      class="min-w-0 text-5xl leading-none font-bold text-foreground md:text-6xl"
+      data-testid="typography"
+    >
+      Bookmarks
+    </h1>
+    <div
+      class="flex w-full flex-wrap items-center gap-3 sm:gap-6"
+      data-testid="container"
+    >
+      <div
+        data-avatar-url="https://example.com/avatar.png"
+        data-fallback-seed="alice-pubky"
+        data-name="Alice"
+        data-resolved="true"
+        data-size="sm"
+        data-testid="hero-owner"
+      >
+        Alice
+      </div>
+      <div
+        class="flex items-center gap-1 text-muted-foreground"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sticky-note size-3 shrink-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+          />
+          <path
+            d="M15 3v5a1 1 0 0 0 1 1h5"
+          />
+        </svg>
+        <span
+          class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+          data-testid="typography"
+        >
+          15
+        </span>
+      </div>
+    </div>
+    <p
+      class="max-w-full text-xl leading-7 font-light text-muted-foreground md:text-2xl md:leading-8"
+      data-testid="typography"
+    >
+      Everything you saved for later.
+    </p>
+    <div
+      class="flex flex-wrap items-center gap-3"
+      data-testid="container"
+    >
+      <button
+        aria-label="collections.single.content"
+        data-testid="bookmarks-add-content"
+        type="button"
+      >
+        collections.single.content
+      </button>
+    </div>
+  </div>
+</div>
+`;

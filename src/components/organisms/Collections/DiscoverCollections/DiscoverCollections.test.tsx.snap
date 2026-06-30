@@ -1,0 +1,117 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DiscoverCollections > DiscoverCollections - Snapshots > matches the snapshot for the exhausted-empty state 1`] = `
+<div
+  class="flex w-full flex-col gap-4"
+  data-testid="container"
+>
+  <div
+    class="flex items-center gap-3"
+    data-testid="container"
+  >
+    <h2
+      class="text-2xl font-light text-muted-foreground"
+      data-testid="heading-2"
+    >
+      collections.discover.title
+    </h2>
+    <div
+      data-pubkys=""
+      data-testid="avatar-stack"
+    />
+  </div>
+  <p
+    class="text-sm text-muted-foreground"
+    data-testid="typography"
+  >
+    collections.discover.empty
+  </p>
+</div>
+`;
+
+exports[`DiscoverCollections > DiscoverCollections - Snapshots > matches the snapshot for the populated state (post-filter cards + Show More) 1`] = `
+<div
+  class="flex w-full flex-col gap-4"
+  data-testid="container"
+>
+  <div
+    class="flex items-center gap-3"
+    data-testid="container"
+  >
+    <h2
+      class="text-2xl font-light text-muted-foreground"
+      data-testid="heading-2"
+    >
+      collections.discover.title
+    </h2>
+    <div
+      data-pubkys="authorA,authorB"
+      data-testid="avatar-stack"
+    />
+  </div>
+  <div
+    class="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6"
+    data-testid="container"
+  >
+    <div
+      data-author-pubky="authorA"
+      data-initial-bookmarked="false"
+      data-post-id="p1"
+      data-testid="collection-card"
+    />
+    <div
+      data-author-pubky="authorB"
+      data-initial-bookmarked="false"
+      data-post-id="p2"
+      data-testid="collection-card"
+    />
+  </div>
+  <div
+    class="flex w-full justify-center"
+    data-testid="container"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+      data-size="sm"
+      data-slot="button"
+      data-variant="default"
+    >
+      collections.showMore
+    </button>
+  </div>
+</div>
+`;
+
+exports[`DiscoverCollections > DiscoverCollections - Snapshots > matches the snapshot for the pre-hydration skeleton state 1`] = `
+<div
+  class="flex w-full flex-col gap-4"
+  data-testid="container"
+>
+  <div
+    class="flex items-center gap-3"
+    data-testid="container"
+  >
+    <h2
+      class="text-2xl font-light text-muted-foreground"
+      data-testid="heading-2"
+    >
+      collections.discover.title
+    </h2>
+    <div
+      data-count="3"
+      data-testid="avatar-stack-skeleton"
+    />
+  </div>
+  <div
+    class="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6"
+    data-testid="container"
+  >
+    <div
+      data-testid="collection-card-skeleton"
+    />
+    <div
+      data-testid="collection-card-skeleton"
+    />
+  </div>
+</div>
+`;

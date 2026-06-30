@@ -159,8 +159,10 @@ describe('PostArticleDetail', () => {
   const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[] | undefined> = {}) => ({
     profile: null,
     posts,
+    collections: {},
     setProfile: vi.fn(),
     setPostAttachments: vi.fn(),
+    setCollectionCover: vi.fn(),
     reset: vi.fn(),
   });
 

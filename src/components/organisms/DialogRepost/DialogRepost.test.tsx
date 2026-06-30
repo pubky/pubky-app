@@ -194,6 +194,35 @@ describe('DialogRepost', () => {
     );
   });
 
+  it('applies config overrides to the title and forwards copy/icon to PostInput', () => {
+    const ShareIcon = () => <svg data-testid="share-icon" />;
+    const onOpenChangeAction = vi.fn();
+    render(
+      <DialogRepost
+        postId="test-post-123"
+        open={true}
+        onOpenChangeAction={onOpenChangeAction}
+        config={{
+          title: 'Share Collection',
+          submitLabel: 'Share',
+          submitIcon: ShareIcon,
+          successToastTitle: "You've shared the My Collection collection",
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId('dialog-title')).toHaveTextContent('Share Collection');
+    expect(screen.getByTestId('dialog-content')).toHaveAttribute('aria-label', 'Share Collection');
+    expect(PostInput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submitLabel: 'Share',
+        submitIcon: ShareIcon,
+        successToastTitle: "You've shared the My Collection collection",
+      }),
+      undefined,
+    );
+  });
+
   it('calls onOpenChangeAction when PostInput onSuccess is called', async () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogRepost postId="test-post-123" open={false} onOpenChangeAction={onOpenChangeAction} />);

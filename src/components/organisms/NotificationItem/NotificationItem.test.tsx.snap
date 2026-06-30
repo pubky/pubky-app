@@ -28,18 +28,18 @@ exports[`NotificationItem - Snapshots > matches snapshot for Follow notification
       data-testid="container"
     >
       <p
-        class="min-w-0 shrink truncate text-sm leading-none font-medium text-foreground lg:text-base lg:leading-normal"
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
         data-testid="typography"
       >
         <a
-          class="no-underline hover:no-underline"
+          class="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
           href="/profile/user1"
         >
           User
         </a>
          
         <a
-          class="text-foreground hover:underline"
+          class="text-foreground hover:underline lg:shrink-0"
           href="/profile/user1"
         >
           followed you
@@ -102,18 +102,18 @@ exports[`NotificationItem - Snapshots > matches snapshot for Mention notificatio
       data-testid="container"
     >
       <p
-        class="min-w-0 shrink truncate text-sm leading-none font-medium text-foreground lg:text-base lg:leading-normal"
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
         data-testid="typography"
       >
         <a
-          class="no-underline hover:no-underline"
+          class="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
           href="/profile/user1"
         >
           User
         </a>
          
         <a
-          class="text-foreground hover:underline"
+          class="text-foreground hover:underline lg:shrink-0"
           href="/post/user1/post123"
         >
           mentioned you in post
@@ -176,24 +176,25 @@ exports[`NotificationItem - Snapshots > matches snapshot for TagPost notificatio
       data-testid="container"
     >
       <p
-        class="min-w-0 shrink truncate text-sm leading-none font-medium text-foreground lg:text-base lg:leading-normal"
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
         data-testid="typography"
       >
         <a
-          class="no-underline hover:no-underline"
+          class="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
           href="/profile/user1"
         >
           User
         </a>
          
         <a
-          class="text-foreground hover:underline"
+          class="text-foreground hover:underline lg:shrink-0"
           href="/post/user1/post123"
         >
           tagged your post
         </a>
       </p>
       <span
+        class="hidden shrink-0 lg:inline-flex"
         data-testid="post-tag"
       >
         bitcoin

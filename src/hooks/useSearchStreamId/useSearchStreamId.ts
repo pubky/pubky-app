@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Env } from '@/libs/env/env';
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -25,7 +25,7 @@ function parseTags(tagsParam: string | null): string[] {
     .split(',')
     .map((tag) => tag.trim())
     .filter((tag) => tag.length > 0)
-    .slice(0, Env.NEXT_MAX_STREAM_TAGS);
+    .slice(0, getMaxStreamTags());
 }
 
 /**

@@ -49,7 +49,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
 
 // Mock Config
 vi.mock('@/config/nexus', () => ({
-  CDN_URL: 'https://cdn.example.com',
+  getCdnUrl: () => 'https://cdn.example.com',
 }));
 
 // Mock Atoms components

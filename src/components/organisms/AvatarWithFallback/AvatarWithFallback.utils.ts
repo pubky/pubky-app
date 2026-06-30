@@ -1,4 +1,4 @@
-import { CDN_URL } from '@/config/nexus';
+import { getCdnUrl } from '@/config/nexus';
 import { extractInitials } from '@/libs/utils/utils';
 import type { ResolveAvatarFallbackInitialProps, ResolveAvatarFallbackSeedProps } from './AvatarWithFallback.types';
 
@@ -11,7 +11,7 @@ const USER_ID_PATTERN = /^[a-z0-9]{52}$/;
 /**
  * Extracts the userId from an avatar URL.
  *
- * The expected URL format is: `${CDN_URL}/avatar/${userId}`
+ * The expected URL format is: `${getCdnUrl()}/avatar/${userId}`
  * where userId is a 52-character lowercase alphanumeric string.
  *
  * @param avatarUrl - The full avatar URL to extract the userId from
@@ -26,7 +26,7 @@ const USER_ID_PATTERN = /^[a-z0-9]{52}$/;
 export function extractUserIdFromAvatarUrl(avatarUrl: string | undefined | null): string | null {
   if (!avatarUrl) return null;
 
-  const expectedPrefix = `${CDN_URL}/avatar/`;
+  const expectedPrefix = `${getCdnUrl()}/avatar/`;
 
   if (!avatarUrl.startsWith(expectedPrefix)) return null;
 

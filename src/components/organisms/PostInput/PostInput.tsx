@@ -40,6 +40,9 @@ export function PostInput({
   editPostId,
   onSuccess,
   placeholder,
+  submitLabel,
+  submitIcon,
+  successToastTitle,
   showThreadConnector = false,
   expanded = false,
   onContentChange,
@@ -102,6 +105,7 @@ export function PostInput({
     editPostId,
     onSuccess,
     placeholder,
+    successToastTitle,
     expanded,
     onContentChange,
     onArticleModeChange,
@@ -322,6 +326,8 @@ export function PostInput({
           onArticleClick={handleArticleClickWithAuth}
           isPostDisabled={isAuthenticated ? !isValid() : false}
           submitMode={variant}
+          submitLabel={submitLabel}
+          submitIcon={submitIcon}
           parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
           characterLimit={characterLimit}
         />

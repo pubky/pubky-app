@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import type { CharacterLimit, PostInputActionSubmitMode } from '../PostInputActionBar/PostInputActionBar.types';
 
 export interface PostInputExpandableSectionProps {
@@ -14,6 +15,10 @@ export interface PostInputExpandableSectionProps {
    */
   isPostDisabled?: boolean;
   submitMode: PostInputActionSubmitMode;
+  /** Overrides the submit button label derived from `submitMode`. */
+  submitLabel?: string;
+  /** Overrides the submit button icon derived from `submitMode`. */
+  submitIcon?: ComponentType<{ className?: string; strokeWidth?: number }>;
   setTags: React.Dispatch<React.SetStateAction<string[]>>;
   onSubmit: () => void | Promise<void>;
   showEmojiPicker: boolean;

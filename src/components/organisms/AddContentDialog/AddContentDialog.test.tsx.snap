@@ -1,0 +1,533 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AddContentDialog - Snapshots > matches the closed grid trigger snapshot 1`] = `
+<button
+  aria-controls="radix-normalized"
+  aria-expanded="false"
+  aria-haspopup="dialog"
+  aria-label="collections.single.addContent"
+  class="flex h-full w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-foreground transition-colors outline-none hover:border-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+  data-as-child="true"
+  data-cy="add-content"
+  data-slot="dialog-trigger"
+  data-state="closed"
+  data-testid="dialog-trigger"
+  type="button"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-plus size-3 shrink-0"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M5 12h14"
+    />
+    <path
+      d="M12 5v14"
+    />
+  </svg>
+  <span
+    class="text-sm font-bold"
+    data-testid="typography"
+  >
+    collections.single.addContent
+  </span>
+</button>
+`;
+
+exports[`AddContentDialog - Snapshots > matches the closed trigger snapshot 1`] = `
+<button
+  aria-controls="radix-normalized"
+  aria-expanded="false"
+  aria-haspopup="dialog"
+  aria-label="collections.single.content"
+  class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+  data-as-child="true"
+  data-cy="add-content"
+  data-size="icon"
+  data-slot="dialog-trigger"
+  data-state="closed"
+  data-testid="dialog-trigger"
+  data-variant="secondary"
+  type="button"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-square-plus size-4"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <rect
+      height="18"
+      rx="2"
+      width="18"
+      x="3"
+      y="3"
+    />
+    <path
+      d="M8 12h8"
+    />
+    <path
+      d="M12 8v8"
+    />
+  </svg>
+  <span
+    class="hidden lg:inline"
+    data-testid="typography"
+  >
+    collections.single.content
+  </span>
+</button>
+`;
+
+exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapshot 1`] = `
+<body
+  data-scroll-locked="1"
+  style="pointer-events: none;"
+>
+  <span
+    aria-hidden="true"
+    data-aria-hidden="true"
+    data-radix-focus-guard=""
+    style="outline: none; opacity: 0; position: fixed; pointer-events: none;"
+    tabindex="0"
+  />
+  <div
+    aria-hidden="true"
+    data-aria-hidden="true"
+  >
+    <button
+      aria-controls="radix-normalized"
+      aria-expanded="true"
+      aria-haspopup="dialog"
+      aria-label="collections.single.content"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+      data-as-child="true"
+      data-cy="add-content"
+      data-size="icon"
+      data-slot="dialog-trigger"
+      data-state="open"
+      data-testid="dialog-trigger"
+      data-variant="secondary"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-square-plus size-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="18"
+          rx="2"
+          width="18"
+          x="3"
+          y="3"
+        />
+        <path
+          d="M8 12h8"
+        />
+        <path
+          d="M12 8v8"
+        />
+      </svg>
+      <span
+        class="hidden lg:inline"
+        data-testid="typography"
+      >
+        collections.single.content
+      </span>
+    </button>
+  </div>
+  <div
+    aria-hidden="true"
+    class="fixed inset-0 z-40 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0"
+    data-aria-hidden="true"
+    data-slot="dialog-overlay"
+    data-state="open"
+    style="pointer-events: auto;"
+  />
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center"
+  >
+    <div
+      aria-labelledby="radix-normalized"
+      class="relative z-50 duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 m-4 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 rounded-lg border p-6 sm:rounded-xl sm:p-8 flex w-full max-w-xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
+      data-cy="dialog-content"
+      data-slot="dialog-content"
+      data-state="open"
+      data-testid="dialog-content"
+      id="radix-normalized"
+      role="dialog"
+      style="pointer-events: auto;"
+      tabindex="-1"
+    >
+      <h2
+        class="sr-only"
+        id="radix-normalized"
+      >
+        collections.addContentDialog.title
+      </h2>
+      <form
+        class="flex w-full flex-col gap-6"
+      >
+        <div
+          class="flex flex-col gap-1.5 pr-0"
+          data-slot="dialog-header"
+          data-testid="dialog-header"
+        >
+          <h2
+            class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+            data-slot="dialog-title"
+            data-testid="dialog-title"
+            id="radix-normalized"
+          >
+            collections.addContentDialog.title
+          </h2>
+          <p
+            class="text-sm leading-normal font-medium text-muted-foreground sr-only"
+            data-slot="dialog-description"
+            id="radix-normalized"
+          >
+            collections.addContentDialog.description
+          </p>
+        </div>
+        <div
+          class="flex w-full flex-col gap-3"
+          data-testid="container"
+        >
+          <div
+            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
+            data-slot="card"
+            data-testid="card"
+          >
+            <div
+              class="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 px-6"
+              data-slot="card-header"
+            >
+              <div
+                class="text-base leading-none font-bold text-card-foreground"
+                data-slot="card-title"
+              >
+                collections.addContentDialog.fromFeedTitle
+              </div>
+            </div>
+            <div
+              class="flex items-center [.border-t]:pt-6 justify-start px-6"
+              data-slot="card-footer"
+            >
+              <div
+                class="flex w-full flex-wrap items-center justify-start gap-2"
+                data-testid="container"
+              >
+                <button
+                  aria-label="collections.addContentDialog.fromFeedTitle"
+                  class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs opacity-30"
+                  data-cy="add-content-feed-reply-pill"
+                  data-slot="button"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-message-circle size-4 shrink-0"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"
+                    />
+                  </svg>
+                  <span
+                    class="text-xs leading-4 font-bold"
+                    data-testid="typography"
+                  >
+                    7
+                  </span>
+                </button>
+                <button
+                  aria-label="collections.addContentDialog.fromFeedTitle"
+                  class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs opacity-30"
+                  data-cy="add-content-feed-repost-pill"
+                  data-slot="button"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-repeat size-4 shrink-0"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m17 2 4 4-4 4"
+                    />
+                    <path
+                      d="M3 11v-1a4 4 0 0 1 4-4h14"
+                    />
+                    <path
+                      d="m7 22-4-4 4-4"
+                    />
+                    <path
+                      d="M21 13v1a4 4 0 0 1-4 4H3"
+                    />
+                  </svg>
+                  <span
+                    class="text-xs leading-4 font-bold"
+                    data-testid="typography"
+                  >
+                    3
+                  </span>
+                </button>
+                <button
+                  aria-label="collections.addContentDialog.fromFeedTitle"
+                  class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs drop-shadow-[0_0_8px_var(--brand)]"
+                  data-cy="add-content-feed-save-pill"
+                  data-slot="button"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-library size-4 shrink-0"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m16 6 4 14"
+                    />
+                    <path
+                      d="M12 6v14"
+                    />
+                    <path
+                      d="M8 8v12"
+                    />
+                    <path
+                      d="M4 4v16"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div
+            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
+            data-slot="card"
+            data-testid="card"
+          >
+            <div
+              class="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 px-6"
+              data-slot="card-header"
+            >
+              <div
+                class="text-base leading-none font-bold text-card-foreground"
+                data-slot="card-title"
+              >
+                collections.addContentDialog.pasteTitle
+              </div>
+            </div>
+            <div
+              class="flex [.border-t]:pt-6 flex-col items-stretch px-6"
+              data-slot="card-footer"
+            >
+              <div
+                class="flex mx-0 w-full cursor-pointer flex-row items-center rounded-md border bg-transparent border-dashed text-base mb-0 h-auto gap-2 border-input bg-background/10! px-6 py-4 font-medium shadow-xs has-[input[aria-invalid=true]]:border-red-500"
+                data-testid="container"
+              >
+                <input
+                  aria-invalid="false"
+                  class="flex min-w-0 rounded-md border border-input bg-transparent text-base transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent h-auto p-0 shadow-none"
+                  data-cy="add-content-url-input"
+                  data-testid="input"
+                  id="postUrl"
+                  name="postUrl"
+                  placeholder="https://"
+                  type="text"
+                  value=""
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
+            data-slot="card"
+            data-testid="card"
+          >
+            <div
+              class="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 px-6"
+              data-slot="card-header"
+            >
+              <div
+                class="text-base leading-none font-bold text-card-foreground"
+                data-slot="card-title"
+              >
+                collections.addContentDialog.createPostTitle
+              </div>
+            </div>
+            <div
+              class="flex [.border-t]:pt-6 flex-col items-stretch px-6"
+              data-slot="card-footer"
+            >
+              <button
+                class="flex w-full cursor-pointer items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 text-left outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                data-cy="add-content-create-post"
+                data-slot="button"
+                type="button"
+              >
+                <span
+                  class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+                >
+                  <span
+                    class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+                  >
+                    <div
+                      class="facehash h-full w-full rounded-full text-background"
+                      data-facehash=""
+                      data-interactive="true"
+                      style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(255, 0, 0);"
+                    >
+                      <div
+                        data-facehash-gradient=""
+                        style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                      />
+                      <div
+                        data-facehash-face=""
+                        style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(-15deg) rotateY(0deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          fill="none"
+                          style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                          viewBox="0 0 63 15"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g
+                            style="animation: facehash-blink 2s ease-in-out 0s infinite; transform-origin: center center;"
+                          >
+                            <circle
+                              cx="55.2"
+                              cy="7.2"
+                              fill="currentColor"
+                              r="7.2"
+                            />
+                          </g>
+                          <g
+                            style="animation: facehash-blink 2s ease-in-out 0s infinite; transform-origin: center center;"
+                          >
+                            <circle
+                              cx="7.2"
+                              cy="7.2"
+                              fill="currentColor"
+                              r="7.2"
+                            />
+                          </g>
+                        </svg>
+                        <div
+                          data-facehash-mouth=""
+                          style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                        >
+                          <span
+                            data-testid="avatar-fallback-initial"
+                            style="font-size: 26cqw; line-height: 1;"
+                          >
+                            V
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </span>
+                </span>
+                <p
+                  class="min-w-0 flex-1 truncate text-base font-medium text-input"
+                  data-testid="typography"
+                >
+                  collections.addContentDialog.createPostPlaceholder
+                </p>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+      <button
+        class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+        data-slot="dialog-close"
+        data-testid="dialog-close"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M18 6 6 18"
+          />
+          <path
+            d="m6 6 12 12"
+          />
+        </svg>
+        <span
+          class="sr-only"
+        >
+          Close
+        </span>
+      </button>
+    </div>
+  </div>
+  <span
+    aria-hidden="true"
+    data-aria-hidden="true"
+    data-radix-focus-guard=""
+    style="outline: none; opacity: 0; position: fixed; pointer-events: none;"
+    tabindex="0"
+  />
+</body>
+`;

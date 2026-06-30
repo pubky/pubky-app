@@ -59,35 +59,48 @@ exports[`PostCardSkeleton - Snapshots > matches snapshot 1`] = `
       />
     </div>
     <div
-      class="flex justify-between"
+      class="mx-auto w-full flex flex-col items-start gap-2 md:flex-row md:items-start md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-2!"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted h-8 w-8 rounded-sm"
-        data-slot="skeleton"
-      />
-      <div
-        class="flex gap-2"
+        class="flex flex-wrap items-center gap-2"
         data-testid="container"
       >
         <div
-          class="animate-pulse bg-muted h-8 w-14 rounded-full"
+          class="animate-pulse bg-muted h-8 rounded-md w-24"
           data-slot="skeleton"
         />
         <div
-          class="animate-pulse bg-muted h-8 w-14 rounded-full"
+          class="animate-pulse bg-muted h-8 rounded-md w-20"
           data-slot="skeleton"
         />
         <div
-          class="animate-pulse bg-muted h-8 w-14 rounded-full"
+          class="animate-pulse bg-muted h-8 w-8 rounded-md"
+          data-slot="skeleton"
+        />
+      </div>
+      <div
+        class="flex flex-wrap gap-2 w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
+        data-testid="container"
+      >
+        <div
+          class="animate-pulse bg-muted h-8 rounded-full w-12"
           data-slot="skeleton"
         />
         <div
-          class="animate-pulse bg-muted h-8 w-14 rounded-full"
+          class="animate-pulse bg-muted h-8 rounded-full w-12"
           data-slot="skeleton"
         />
         <div
-          class="animate-pulse bg-muted h-8 w-14 rounded-full"
+          class="animate-pulse bg-muted h-8 rounded-full w-12"
+          data-slot="skeleton"
+        />
+        <div
+          class="animate-pulse bg-muted h-8 rounded-full w-9"
+          data-slot="skeleton"
+        />
+        <div
+          class="animate-pulse bg-muted h-8 rounded-full w-9"
           data-slot="skeleton"
         />
       </div>

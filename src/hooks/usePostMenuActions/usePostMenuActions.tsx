@@ -76,6 +76,9 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const rawUsername = authorProfile?.name || postAuthorId;
   const username = truncateString(rawUsername, 15);
   const isArticle = postDetails?.kind === 'long';
+  // Collections store a JSON envelope in `content`; copying that raw JSON would
+  // be useless to the user, so we hide "Copy text" for them just like articles.
+  const isCollection = postDetails?.kind === 'collection';
   const isLoading = isPostLoading || isAuthorLoading || isFollowingLoading || isMutedUsersLoading;
   const postUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;
   const menuItems: PostMenuActionItem[] = [];
@@ -130,7 +133,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
     },
     variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
   });
-  if (!isArticle) {
+  if (!isArticle && !isCollection) {
     menuItems.push({
       id: POST_MENU_ACTION_IDS.COPY_TEXT,
       label: t('copyText'),

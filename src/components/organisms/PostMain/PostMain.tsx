@@ -14,6 +14,7 @@ import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/use
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
+import { PostMissing } from '@/molecules/PostMissing/PostMissing';
 import { RepostHeader } from '@/molecules/RepostHeader/RepostHeader';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContent } from '../PostContent/PostContent';
@@ -45,8 +46,12 @@ export function PostMain({
   const effectiveTagsLayout = getEffectiveTagsLayout(inheritedTagsLayout, isMobile);
   const isWideLayout = effectiveTagsLayout === 'side';
   const isListLayout = effectiveTagsLayout === 'list';
-  const { postDetails } = usePostDetails(postId);
+  const { postDetails, isLoading } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
+  // A settled `null` (cache miss after the fetch resolved) means the post 404'd.
+  // Without this branch the card below would skeleton forever (PostHeader /
+  // PostContent each wait on `postDetails`). `undefined` is still loading.
+  const isMissing = postDetails === null && !isLoading;
 
   const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
@@ -75,7 +80,7 @@ export function PostMain({
         overrideDefaults
         onClick={isNavigable ? (e) => handlePostClick(postId, e) : undefined}
         onAuxClick={isNavigable ? (e) => handlePostAuxClick(postId, e) : undefined}
-        className={cn('relative flex min-w-0', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
+        className={cn('relative flex min-w-0 @max-xl/grid:h-full', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
           <Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">
@@ -83,12 +88,19 @@ export function PostMain({
           </Container>
         )}
         <Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
-          {isDeleted ? (
+          {isMissing ? (
+            <PostMissing />
+          ) : isDeleted ? (
             <PostDeleted />
           ) : (
             <>
               {showRepostHeader && <RepostHeader />}
-              <CardContent className={cn('flex min-w-0 flex-col', isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6')}>
+              <CardContent
+                className={cn(
+                  'flex min-w-0 flex-col @max-xl/grid:flex-1',
+                  isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6',
+                )}
+              >
                 {isListLayout ? (
                   <PostMainListRow
                     postId={postId}
@@ -145,7 +157,7 @@ export function PostMain({
                       postId={postId}
                       onReplyClick={openReplyDialog}
                       onRepostClick={openRepostDialog}
-                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
                     />
                   </>
                 )}

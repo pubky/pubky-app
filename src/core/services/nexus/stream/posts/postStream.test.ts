@@ -9,6 +9,7 @@ import {
   type TStreamAllParams,
   type TStreamAuthorParams,
   type TStreamAuthorRepliesParams,
+  type TStreamCollectionParams,
   type TStreamPostRepliesParams,
   type TStreamPostsByIdsParams,
   type TStreamQueryParams,
@@ -52,6 +53,8 @@ function callStreamEndpoint(
       return postStreamApi.author(params as TStreamAuthorParams);
     case 'author_replies':
       return postStreamApi.author_replies(params as TStreamAuthorRepliesParams);
+    case 'collection':
+      return postStreamApi.collection(params as TStreamCollectionParams);
     case 'postsByIds':
       return postStreamApi.postsByIds(params as TStreamPostsByIdsParams);
     default:
@@ -379,12 +382,7 @@ describe('createPostStreamParams', () => {
   describe('Bookmark streams', () => {
     test.each([
       { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_ALL, kind: undefined, name: 'all' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT, kind: StreamKind.SHORT, name: 'short' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LONG, kind: StreamKind.LONG, name: 'long' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE, kind: StreamKind.IMAGE, name: 'image' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO, kind: StreamKind.VIDEO, name: 'video' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_LINK, kind: StreamKind.LINK, name: 'link' },
-      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_FILE, kind: StreamKind.FILE, name: 'file' },
+      { streamType: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION, kind: StreamKind.COLLECTION, name: 'collection' },
     ])('should handle timeline:bookmarks:$name stream', ({ streamType, kind }) => {
       const result = createPostStreamParams({
         streamId: streamType,
@@ -492,6 +490,44 @@ describe('createPostStreamParams', () => {
         // Rationale: Offset-based pagination naturally avoids duplicates
       });
     });
+
+    describe('Collection items stream - Uses offset-based pagination', () => {
+      // collection:<authorPubky>:<postId> — Nexus serves these in the collection's own item
+      // order and returns no score/timestamp cursor, so they must page by `skip` (regression
+      // guard for the infinite-scroll flicker caused by a stuck null timestamp cursor).
+      const collectionStreamId = 'collection:author-pubky:post-id-123' as PostStreamId;
+
+      it('should use skip (NOT start) for collection item pagination', () => {
+        const streamTail = 10; // Number of items already loaded
+        const result = createPostStreamParams({
+          streamId: collectionStreamId,
+          streamTail,
+          streamHead: 0,
+          limit: 10,
+          viewerId: mockViewerId,
+        });
+
+        expect(result.params.skip).toBe(streamTail);
+        expect(result.params.start).toBeUndefined();
+        expect(result.params.end).toBeUndefined();
+      });
+
+      it('should set skip=0 for the initial load and forward author_id + post_id', () => {
+        const result = createPostStreamParams({
+          streamId: collectionStreamId,
+          streamTail: 0,
+          streamHead: 0,
+          limit: 10,
+          viewerId: mockViewerId,
+        });
+
+        expect(result.params.skip).toBe(0);
+        expect(result.params.start).toBeUndefined();
+        expect(result.invokeEndpoint).toBe(StreamSource.COLLECTION);
+        expect(result.extraParams.author_id).toBe('author-pubky');
+        expect(result.extraParams.post_id).toBe('post-id-123');
+      });
+    });
   });
 
   describe('Tags handling in stream IDs', () => {
@@ -589,6 +625,7 @@ describe('createPostStreamParams', () => {
       { kind: 'video', tags: 'tutorials,vlogs', expectedKind: StreamKind.VIDEO },
       { kind: 'link', tags: 'resources,refs', expectedKind: StreamKind.LINK },
       { kind: 'file', tags: 'docs,pdfs', expectedKind: StreamKind.FILE },
+      { kind: 'collection', tags: 'lists,research', expectedKind: StreamKind.COLLECTION },
     ])('should handle tags in $kind content stream', ({ kind, tags, expectedKind }) => {
       const streamIdWithTags = `timeline:bookmarks:${kind}:${tags}` as PostStreamId;
       const result = createPostStreamParams({
@@ -602,6 +639,75 @@ describe('createPostStreamParams', () => {
       expect(result.params.tags).toBe(tags);
       expect(result.params.kind).toBe(expectedKind);
       expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
+    });
+  });
+
+  describe('Collections streams', () => {
+    it('builds params for <pubky>:author:collection (My Collections)', () => {
+      const result = createPostStreamParams({
+        streamId: 'pubky:author:collection' as PostStreamId,
+        streamHead: 0,
+        streamTail: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.invokeEndpoint).toBe(StreamSource.AUTHOR);
+      expect(result.params.kind).toBe(StreamKind.COLLECTION);
+      expect(result.params.viewer_id).toBe(mockViewerId);
+      // Regression guard: a non-empty 3rd segment on the AUTHOR source must NOT leak as post_id.
+      expect(result.extraParams.author_id).toBe('pubky');
+      expect(result.extraParams.post_id).toBeUndefined();
+    });
+
+    it('builds params for timeline:bookmarks:collection (Followed Collections)', () => {
+      const result = createPostStreamParams({
+        streamId: 'timeline:bookmarks:collection' as PostStreamId,
+        streamHead: 0,
+        streamTail: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.invokeEndpoint).toBe(StreamSource.BOOKMARKS);
+      expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
+      expect(result.params.kind).toBe(StreamKind.COLLECTION);
+      expect(result.params.viewer_id).toBe(mockViewerId);
+      // Bookmarks endpoint doesn't consume extraParams.post_id; ensure it isn't populated.
+      expect(result.extraParams.post_id).toBeUndefined();
+    });
+
+    it('builds params for total_engagement:all:collection (Discover Collections)', () => {
+      const result = createPostStreamParams({
+        streamId: 'total_engagement:all:collection' as PostStreamId,
+        streamHead: 0,
+        streamTail: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.invokeEndpoint).toBe(StreamSource.ALL);
+      expect(result.params.sorting).toBe(StreamSorting.ENGAGEMENT);
+      expect(result.params.kind).toBe(StreamKind.COLLECTION);
+      expect(result.params.viewer_id).toBe(mockViewerId);
+      expect(result.extraParams.post_id).toBeUndefined();
+    });
+
+    it('builds params for collection:<pubky>:<postId> (single-collection items, source-first composite)', () => {
+      const result = createPostStreamParams({
+        streamId: 'collection:pubky:post123' as PostStreamId,
+        streamHead: 0,
+        streamTail: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.invokeEndpoint).toBe(StreamSource.COLLECTION);
+      // 3rd segment is a postId for COLLECTION, NOT a kind — parseContent must be skipped.
+      expect(result.params.kind).toBeUndefined();
+      expect(result.params.viewer_id).toBe(mockViewerId);
+      expect(result.extraParams.author_id).toBe('pubky');
+      expect(result.extraParams.post_id).toBe('post123');
     });
   });
 });
@@ -640,6 +746,33 @@ describe('breakDownStreamId', () => {
     it('should parse author_replies:pubky', () => {
       const result = breakDownStreamId('author_replies:pubky' as PostStreamId);
       expect(result).toEqual(['pubky', StreamSource.AUTHOR_REPLIES, undefined, undefined]);
+    });
+  });
+
+  describe('Collections patterns', () => {
+    it('should parse <pubky>:author:collection (My Collections)', () => {
+      const result = breakDownStreamId('pubky:author:collection' as PostStreamId);
+      expect(result).toEqual(['pubky', StreamSource.AUTHOR, 'collection', undefined]);
+    });
+
+    it('should parse timeline:bookmarks:collection (Followed Collections)', () => {
+      const result = breakDownStreamId('timeline:bookmarks:collection' as PostStreamId);
+      expect(result).toEqual(['timeline', StreamSource.BOOKMARKS, 'collection', undefined]);
+    });
+
+    it('should parse total_engagement:all:collection (Discover Collections)', () => {
+      const result = breakDownStreamId('total_engagement:all:collection' as PostStreamId);
+      expect(result).toEqual(['total_engagement', StreamSource.ALL, 'collection', undefined]);
+    });
+
+    it('should parse collection:<pubky>:<postId> (single collection items, source-first composite)', () => {
+      const result = breakDownStreamId('collection:pubky:post123' as PostStreamId);
+      expect(result).toEqual(['pubky', StreamSource.COLLECTION, 'post123', undefined]);
+    });
+
+    it('should parse collection:<pubky>:<postId> with tags', () => {
+      const result = breakDownStreamId('collection:pubky:post123:tag1,tag2' as PostStreamId);
+      expect(result).toEqual(['pubky', StreamSource.COLLECTION, 'post123', 'tag1,tag2']);
     });
   });
 
@@ -716,6 +849,18 @@ describe('NexusPostStreamService', () => {
         params: { limit: 50, tags: 'coding' },
         extraParams: { author_id: mockAuthorId },
         expectedInUrl: ['source=author_replies', 'author_id=author-pubky-id', 'tags=coding'],
+      },
+      {
+        name: 'COLLECTION',
+        invokeEndpoint: StreamSource.COLLECTION,
+        params: { limit: 20, viewer_id: mockViewerId },
+        extraParams: { author_id: mockAuthorId, post_id: mockPostId },
+        expectedInUrl: [
+          'source=collection',
+          'author_id=author-pubky-id',
+          'post_id=post-pubky-id',
+          `viewer_id=${mockViewerId}`,
+        ],
       },
     ])('routes $name stream correctly', async ({ invokeEndpoint, params, extraParams, expectedInUrl }) => {
       const mockResponse: NexusPostsKeyStream = {

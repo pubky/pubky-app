@@ -1,0 +1,24 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BookmarksItems - Snapshots > matches the snapshot 1`] = `
+<div
+  data-has-empty-state="true"
+  data-has-grid-trailing-slot="true"
+  data-testid="timeline-feed"
+  data-variant="bookmarks"
+>
+  <div
+    class=""
+    data-testid="container"
+  >
+    <div>
+      Bookmarks header
+    </div>
+  </div>
+  <div
+    data-cy="bookmarks-add-content-grid"
+    data-testid="add-content-dialog"
+    data-trigger-variant="grid"
+  />
+</div>
+`;

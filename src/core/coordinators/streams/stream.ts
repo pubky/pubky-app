@@ -7,8 +7,13 @@ import { Coordinator } from '@/coordinators/base/coordinator';
 import { PollingInactiveReason } from '@/coordinators/base/coordinators.types';
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
 import type { StreamCoordinatorConfig, StreamCoordinatorState } from '@/coordinators/streams/stream.types';
-import { Env } from '@/libs/env/env';
 import { Logger } from '@/libs/logger/logger';
+import {
+  getStreamFetchLimit,
+  getStreamPollIntervalMs,
+  getStreamPollOnStart,
+  getStreamRespectPageVisibility,
+} from '@/libs/runtime-config/runtime-config';
 import { buildFeedStreamId } from '@/models/feed/feed.helpers';
 import { buildCompositeId } from '@/models/models.utils';
 import { buildPostReplyStreamId, type PostStreamId } from '@/models/stream/post/postStream.types';
@@ -35,7 +40,7 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
   // Extended configuration
   private streamConfig: Required<Pick<StreamCoordinatorConfig, 'enabledRoutes' | 'fetchLimit'>> = {
     enabledRoutes: [routeToRegex(APP_ROUTES.HOME), routeToRegex(POST_ROUTES.POST), routeToRegex(APP_ROUTES.FEED)],
-    fetchLimit: Env.NEXT_PUBLIC_STREAM_FETCH_LIMIT,
+    fetchLimit: getStreamFetchLimit(),
   };
 
   // Extended state
@@ -70,9 +75,9 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
   private constructor() {
     super({
       initialConfig: {
-        intervalMs: Env.NEXT_PUBLIC_STREAM_POLL_INTERVAL_MS,
-        pollOnStart: Env.NEXT_PUBLIC_STREAM_POLL_ON_START,
-        respectPageVisibility: Env.NEXT_PUBLIC_STREAM_RESPECT_PAGE_VISIBILITY,
+        intervalMs: getStreamPollIntervalMs(),
+        pollOnStart: getStreamPollOnStart(),
+        respectPageVisibility: getStreamRespectPageVisibility(),
       },
     });
   }

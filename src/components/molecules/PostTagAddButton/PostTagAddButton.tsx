@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { cn } from '@/libs/utils/utils';
@@ -8,7 +7,14 @@ export function PostTagAddButton({ onClick, className, disabled, variant = 'dash
   return (
     <Button
       data-cy="post-tag-add-button"
-      onClick={onClick}
+      // Opening the tag input is the only intent — never navigation. Suppress
+      // the native default + propagation so the button works inside a clickable
+      // / linked surface (e.g. a collection card) without triggering it.
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick?.();
+      }}
       variant="outline"
       size="sm"
       disabled={disabled}

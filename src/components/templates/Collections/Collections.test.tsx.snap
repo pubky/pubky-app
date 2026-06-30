@@ -1,0 +1,17 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Collections (template) > matches the snapshot 1`] = `
+<div
+  data-testid="content-layout"
+>
+  <div
+    class="flex w-full flex-col gap-6"
+    data-testid="container"
+  >
+    <div
+      data-show-my-public-note="true"
+      data-testid="collections-sections"
+    />
+  </div>
+</div>
+`;

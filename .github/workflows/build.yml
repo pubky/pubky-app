@@ -36,6 +36,17 @@ jobs:
       - name: Smoke test production server
         run: |
           SERVER_LOG="$(mktemp)"
+
+          #PUBKY runtime variables
+          export PUBKY_RUNTIME_TESTNET="false"
+          export PUBKY_RUNTIME_HOMESERVER="ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy"
+          export PUBKY_RUNTIME_HOMESERVER_URL="https://homeserver.staging.pubky.app"
+          export PUBKY_RUNTIME_NEXUS_URL="https://nexus.staging.pubky.app"
+          export PUBKY_RUNTIME_CDN_URL="https://nexus.staging.pubky.app/static"
+          export PUBKY_RUNTIME_HOMEGATE_URL="https://homegate.staging.pubky.app"
+          export PUBKY_RUNTIME_PKARR_RELAYS='["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
+          export PUBKY_RUNTIME_DEFAULT_HTTP_RELAY="https://httprelay.staging.pubky.app/inbox"
+
           npm run start > "$SERVER_LOG" 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT

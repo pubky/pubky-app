@@ -189,6 +189,10 @@ describe('pubky-app-spec-feed-mappers', () => {
         expect(pubkyPostKindToHomeContent(PubkyAppPostKind.File)).toBe(CONTENT.FILES);
       });
 
+      it('should map PubkyAppPostKind.Collection to CONTENT.COLLECTIONS', () => {
+        expect(pubkyPostKindToHomeContent(PubkyAppPostKind.Collection)).toBe(CONTENT.COLLECTIONS);
+      });
+
       it('should return undefined for unknown post kind values', () => {
         expect(pubkyPostKindToHomeContent(999 as PubkyAppPostKind)).toBeUndefined();
       });
@@ -219,6 +223,10 @@ describe('pubky-app-spec-feed-mappers', () => {
         expect(homeContentToPubkyPostKind(CONTENT.FILES)).toBe(PubkyAppPostKind.File);
       });
 
+      it('should map CONTENT.COLLECTIONS to PubkyAppPostKind.Collection', () => {
+        expect(homeContentToPubkyPostKind(CONTENT.COLLECTIONS)).toBe(PubkyAppPostKind.Collection);
+      });
+
       it('should return undefined for CONTENT.ALL (no PubkyAppPostKind equivalent)', () => {
         expect(homeContentToPubkyPostKind(CONTENT.ALL)).toBeUndefined();
       });
@@ -238,6 +246,7 @@ describe('pubky-app-spec-feed-mappers', () => {
           PubkyAppPostKind.Video,
           PubkyAppPostKind.Link,
           PubkyAppPostKind.File,
+          PubkyAppPostKind.Collection,
         ];
 
         for (const pubkyPostKind of postKinds) {
@@ -255,6 +264,7 @@ describe('pubky-app-spec-feed-mappers', () => {
           CONTENT.VIDEOS,
           CONTENT.LINKS,
           CONTENT.FILES,
+          CONTENT.COLLECTIONS,
         ];
 
         for (const homeContent of contentTypes) {

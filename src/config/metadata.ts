@@ -1,10 +1,10 @@
-import { Env } from '@/libs/env/env';
-
-export const DEFAULT_PREVIEW_IMAGE = Env.NEXT_PUBLIC_PREVIEW_IMAGE;
-export const DEFAULT_SITE_NAME = Env.NEXT_PUBLIC_SITE_NAME;
-export const DEFAULT_LOCALE = Env.NEXT_PUBLIC_LOCALE;
-export const DEFAULT_AUTHOR = Env.NEXT_PUBLIC_AUTHOR;
-export const DEFAULT_KEYWORDS = Env.NEXT_PUBLIC_KEYWORDS;
-export const DEFAULT_TYPE = Env.NEXT_PUBLIC_TYPE;
-export const DEFAULT_CREATOR = Env.NEXT_PUBLIC_CREATOR;
-export const DEFAULT_URL = Env.NEXT_PUBLIC_DEFAULT_URL;
+export {
+  getAuthor,
+  getCreator,
+  getDefaultUrl,
+  getKeywords,
+  getLocale,
+  getPreviewImage,
+  getSiteName,
+  getType,
+} from '@/libs/runtime-config/runtime-config';

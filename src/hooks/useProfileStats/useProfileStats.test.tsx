@@ -148,6 +148,7 @@ describe('useProfileStats', () => {
         tagged: 0,
         tags: 0,
         unique_tags: 3,
+        collections: 0,
         bookmarks: 0,
       } as UserCountsModelSchema);
 
@@ -175,6 +176,7 @@ describe('useProfileStats', () => {
         uniqueTags: 0,
         tags: 0,
         unique_tags: 0,
+        collections: 0,
         bookmarks: 0,
       } as UserCountsModelSchema);
 
@@ -200,6 +202,7 @@ describe('useProfileStats', () => {
         tagged: 0,
         tags: 0,
         unique_tags: 7,
+        collections: 0,
         bookmarks: 0,
       } as UserCountsModelSchema);
 
@@ -209,6 +212,53 @@ describe('useProfileStats', () => {
       expect(result.current.stats.posts).toBe(0);
       expect(result.current.stats.replies).toBe(27);
       expect(result.current.stats.uniqueTags).toBe(7);
+    });
+
+    it('subtracts both replies and collections from the posts count', () => {
+      // Backend posts total includes replies and collections; the sidebar shows
+      // each broken out, so plain posts = total - replies - collections.
+      setMockUserCounts({
+        id: 'test-user-id',
+        posts: 20, // Backend: includes 5 replies and 3 collections
+        replies: 5,
+        collections: 3,
+        followers: 0,
+        following: 0,
+        friends: 0,
+        tagged: 0,
+        tags: 0,
+        unique_tags: 0,
+        bookmarks: 0,
+      } as UserCountsModelSchema);
+
+      const { result } = renderHook(() => useProfileStats('test-user-id'));
+
+      // UI calculates: 20 - 5 - 3 = 12 actual posts
+      expect(result.current.stats.posts).toBe(12);
+      expect(result.current.stats.replies).toBe(5);
+      expect(result.current.stats.collections).toBe(3);
+    });
+
+    it('clamps posts to zero when replies and collections exceed the total', () => {
+      setMockUserCounts({
+        id: 'test-user-id',
+        posts: 4,
+        replies: 3,
+        collections: 3,
+        followers: 0,
+        following: 0,
+        friends: 0,
+        tagged: 0,
+        tags: 0,
+        unique_tags: 0,
+        bookmarks: 0,
+      } as UserCountsModelSchema);
+
+      const { result } = renderHook(() => useProfileStats('test-user-id'));
+
+      // UI calculates: max(0, 4 - 3 - 3) = 0
+      expect(result.current.stats.posts).toBe(0);
+      expect(result.current.stats.collections).toBe(3);
     });
   });
 
@@ -226,6 +276,7 @@ describe('useProfileStats', () => {
         tagged: 0,
         tags: 0,
         unique_tags: 3,
+        collections: 0,
         bookmarks: 0,
       } as UserCountsModelSchema);
 
@@ -268,6 +319,7 @@ describe('useProfileStats', () => {
         tagged: 0,
         tags: 0,
         unique_tags: 3,
+        collections: 0,
         bookmarks: 0,
       } as UserCountsModelSchema);
 
@@ -300,6 +352,7 @@ describe('useProfileStats', () => {
         tagged: 0,
         tags: 0,
         unique_tags: 444444,
+        collections: 0,
         bookmarks: 0,
       } as UserCountsModelSchema);
 

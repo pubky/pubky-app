@@ -67,9 +67,6 @@ export function sortToStreamSorting(sort: PubkyAppFeedSort): StreamSorting {
 
 export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKind | undefined {
   if (content === null) return undefined;
-  // Collection and Unknown have no Nexus StreamKind equivalent and resolve to undefined,
-  // which buildFeedStreamId treats as the 'all' kind.
-  // TODO - Revert when Collections and Unknown are supported by Collections feature by Vlada and Matthew
   const map: Record<PubkyAppPostKind, StreamKind | undefined> = {
     [PubkyAppPostKind.Short]: StreamKind.SHORT,
     [PubkyAppPostKind.Long]: StreamKind.LONG,
@@ -77,7 +74,7 @@ export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKin
     [PubkyAppPostKind.Video]: StreamKind.VIDEO,
     [PubkyAppPostKind.Link]: StreamKind.LINK,
     [PubkyAppPostKind.File]: StreamKind.FILE,
-    [PubkyAppPostKind.Collection]: undefined,
+    [PubkyAppPostKind.Collection]: StreamKind.COLLECTION,
     [PubkyAppPostKind.Unknown]: undefined,
   };
   return map[content];

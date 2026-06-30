@@ -37,15 +37,20 @@ export function useProfileStats(userId: string, options?: UseProfileStatsOptions
   const unreadNotificationsCount = useNotificationStore((state) => state.selectUnread());
 
   // Build stats object from user counts
-  // IMPORTANT: Backend counts.posts includes replies, so we subtract to get actual posts
+  // IMPORTANT: Backend counts.posts is the total of every post the user authored,
+  // which includes replies and collections. The profile sidebar breaks these out as
+  // sibling tabs, so we subtract them to get the count of plain posts (matching what
+  // the Posts tab feed actually shows).
   const totalPosts = userCounts?.posts ?? 0;
   const repliesCount = userCounts?.replies ?? 0;
-  const actualPostsCount = Math.max(0, totalPosts - repliesCount);
+  const collectionsCount = userCounts?.collections ?? 0;
+  const actualPostsCount = Math.max(0, totalPosts - repliesCount - collectionsCount);
 
   const stats: ProfileStats = {
     notifications: unreadNotificationsCount,
     posts: actualPostsCount,
     replies: repliesCount,
+    collections: collectionsCount,
     followers: userCounts?.followers ?? 0,
     following: userCounts?.following ?? 0,
     friends: userCounts?.friends ?? 0,

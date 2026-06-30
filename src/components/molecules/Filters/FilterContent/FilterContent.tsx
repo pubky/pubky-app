@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CirclePlay, Download, Image, Layers, Link, Newspaper, StickyNote } from 'lucide-react';
+import { CirclePlay, Download, Image, Layers, Library, Link, Newspaper, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { CONTENT, type ContentType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
@@ -44,6 +44,12 @@ export function FilterContent({
         label: t('articles'),
         icon: Newspaper,
         disabled: isDisabled(CONTENT.LONG),
+      },
+      {
+        key: CONTENT.COLLECTIONS,
+        label: t('collections'),
+        icon: Library,
+        disabled: isDisabled(CONTENT.COLLECTIONS),
       },
       {
         key: CONTENT.IMAGES,

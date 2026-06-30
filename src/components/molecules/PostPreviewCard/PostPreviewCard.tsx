@@ -1,9 +1,11 @@
 'use client';
 
 import { Card, CardContent } from '@/atoms/Card/Card';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn } from '@/libs/utils/utils';
+import { PostMissing } from '@/molecules/PostMissing/PostMissing';
 import { PostContentBase } from '@/organisms/PostContentBase/PostContentBase';
 import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 import type { PostPreviewCardProps } from './PostPreviewCard.types';
@@ -29,12 +31,19 @@ import type { PostPreviewCardProps } from './PostPreviewCard.types';
  * - Reply previews: Shows the post being replied to (in DialogReply)
  * - Any nested context where a compact post preview is needed
  */
-export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
+export function PostPreviewCard({ postId, className, contrast }: PostPreviewCardProps) {
   const { navigateToPost } = usePostNavigation();
+  const { postDetails, isLoading } = usePostDetails(postId);
   const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
     id: postId,
   });
+  // A settled `null` means the original post 404'd. Handle it at the card level
+  // (not just in PostContentBase): the PostHeader below also waits on
+  // `postDetails`, so it would skeleton forever for a missing original. Render
+  // PostMissing as a direct Card child (it IS a CardContent) so it isn't nested
+  // inside the inner CardContent — matching how PostMain renders PostDeleted.
+  const isMissing = postDetails === null && !isLoading;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -60,10 +69,14 @@ export function PostPreviewCard({ postId, className }: PostPreviewCardProps) {
       tabIndex={0}
       aria-label="View original post"
     >
-      <CardContent className="flex min-w-0 flex-col gap-4 p-6">
-        <PostHeader postId={postId} showPopover={false} />
-        <PostContentBase postId={postId} />
-      </CardContent>
+      {isMissing ? (
+        <PostMissing />
+      ) : (
+        <CardContent className="flex min-w-0 flex-col gap-4 p-6">
+          <PostHeader postId={postId} showPopover={false} />
+          <PostContentBase postId={postId} contrast={contrast} />
+        </CardContent>
+      )}
     </Card>
   );
 }

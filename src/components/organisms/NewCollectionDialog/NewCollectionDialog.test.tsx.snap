@@ -1,0 +1,254 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`NewCollectionDialog - Snapshots > matches snapshot when open 1`] = `
+<body
+  data-scroll-locked="1"
+  style="pointer-events: none;"
+>
+  <span
+    aria-hidden="true"
+    data-aria-hidden="true"
+    data-radix-focus-guard=""
+    style="outline: none; opacity: 0; position: fixed; pointer-events: none;"
+    tabindex="0"
+  />
+  <div
+    aria-hidden="true"
+    data-aria-hidden="true"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-10 gap-1 px-4 py-2 has-[>svg]:px-4"
+      data-slot="button"
+    >
+      Open dialog
+    </button>
+  </div>
+  <div
+    aria-hidden="true"
+    class="fixed inset-0 z-40 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0"
+    data-aria-hidden="true"
+    data-slot="dialog-overlay"
+    data-state="open"
+    style="pointer-events: auto;"
+  />
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center"
+  >
+    <div
+      aria-labelledby="radix-normalized"
+      class="relative z-50 grid duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 m-4 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-lg border p-6 shadow-lg sm:rounded-xl sm:p-8 w-full max-w-xl border-border bg-popover"
+      data-cy="dialog-content"
+      data-slot="dialog-content"
+      data-state="open"
+      data-testid="dialog-content"
+      id="radix-normalized"
+      role="dialog"
+      style="pointer-events: auto;"
+      tabindex="-1"
+    >
+      <div
+        class="flex flex-col gap-1.5 pr-6"
+        data-slot="dialog-header"
+        data-testid="dialog-header"
+      >
+        <h2
+          class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+          data-slot="dialog-title"
+          data-testid="dialog-title"
+          id="radix-normalized"
+        >
+          New Collection
+        </h2>
+      </div>
+      <div
+        class="flex flex-col gap-4"
+        data-testid="container"
+      >
+        <div
+          class="mx-auto w-full flex-col flex gap-2"
+          data-testid="container"
+        >
+          <label
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+            data-slot="label"
+            for="name"
+          >
+            Title
+          </label>
+          <div
+            class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0 min-w-0 overflow-hidden"
+            data-testid="container"
+          >
+            <input
+              aria-invalid="false"
+              class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent min-w-0 truncate placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
+              data-testid="input"
+              id="name"
+              maxlength="100"
+              name="name"
+              placeholder="Proof of Work"
+              type="text"
+              value=""
+            />
+          </div>
+        </div>
+        <div
+          class="mx-auto w-full flex-col flex gap-2"
+          data-testid="container"
+        >
+          <label
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+            data-slot="label"
+            for="description"
+          >
+            Description
+          </label>
+          <div
+            class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0 min-w-0 overflow-hidden"
+            data-testid="container"
+          >
+            <input
+              aria-invalid="false"
+              class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent min-w-0 truncate placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
+              data-testid="input"
+              id="description"
+              maxlength="500"
+              name="description"
+              placeholder="The best from the biggest contributors in Bitcoin"
+              type="text"
+              value=""
+            />
+          </div>
+        </div>
+        <div
+          class="flex flex-col gap-2"
+          data-testid="container"
+        >
+          <label
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+            data-slot="label"
+            for="new-collection-cover-image"
+          >
+            Background
+          </label>
+          <div
+            class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-md bg-card bg-cover bg-center"
+            data-testid="new-collection-cover-image"
+          >
+            <button
+              aria-label="Add image"
+              class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 rounded-full"
+              data-size="sm"
+              data-slot="button"
+              data-variant="secondary"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-image size-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  ry="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <circle
+                  cx="9"
+                  cy="9"
+                  r="2"
+                />
+                <path
+                  d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+                />
+              </svg>
+              <span
+                data-testid="typography"
+              >
+                Add image
+              </span>
+            </button>
+            <input
+              accept="image/*"
+              class="hidden"
+              id="new-collection-cover-image"
+              type="file"
+            />
+          </div>
+        </div>
+      </div>
+      <div
+        class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+        data-slot="dialog-footer"
+      >
+        <button
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal order-1 sm:order-2"
+          data-size="lg"
+          data-slot="button"
+          disabled=""
+        >
+          Save changes
+        </button>
+        <button
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal order-2 sm:order-1"
+          data-size="lg"
+          data-slot="button"
+          data-variant="outline"
+        >
+          Cancel
+        </button>
+      </div>
+      <button
+        class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+        data-slot="dialog-close"
+        data-testid="dialog-close"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M18 6 6 18"
+          />
+          <path
+            d="m6 6 12 12"
+          />
+        </svg>
+        <span
+          class="sr-only"
+        >
+          Close
+        </span>
+      </button>
+    </div>
+  </div>
+  <span
+    aria-hidden="true"
+    data-aria-hidden="true"
+    data-radix-focus-guard=""
+    style="outline: none; opacity: 0; position: fixed; pointer-events: none;"
+    tabindex="0"
+  />
+</body>
+`;

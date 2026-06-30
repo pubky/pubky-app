@@ -1234,6 +1234,26 @@ describe('usePost', () => {
       );
     });
 
+    it('should use successToastTitle override when provided, taking precedence over author name', async () => {
+      const { result } = renderHook(() => usePost());
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          originalAuthorName: 'John Doe',
+          successToastTitle: "You've shared the My Collection collection",
+          onSuccess: vi.fn(),
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "You've shared the My Collection collection",
+        }),
+      );
+    });
+
     it('should include ToastAction with onUndo', async () => {
       const { result } = renderHook(() => usePost());
       const mockOnUndo = vi.fn();

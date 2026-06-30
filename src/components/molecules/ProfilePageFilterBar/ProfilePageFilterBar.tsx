@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Bell, HeartHandshake, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
+import { Bell, HeartHandshake, Library, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FilterBarPageType, PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import { Container } from '@/atoms/Container/Container';
@@ -22,6 +22,8 @@ export interface ProfilePageFilterBarItem {
   labelKey: string;
   count: number | undefined;
   pageType: FilterBarPageType;
+  /** When false, the tab renders without a count badge (set for tabs that have no stat). */
+  showCount?: boolean;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
 }
@@ -42,7 +44,7 @@ const FILTER_ITEMS_CONFIG: Array<{
   }>;
   labelKey: string;
   pageType: FilterBarPageType;
-  statKey: keyof ProfileStats;
+  statKey?: keyof ProfileStats;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
 }> = [
@@ -89,6 +91,12 @@ const FILTER_ITEMS_CONFIG: Array<{
     pageType: PROFILE_PAGE_TYPES.UNIQUE_TAGS,
     statKey: 'uniqueTags',
   },
+  {
+    icon: Library,
+    labelKey: 'collections',
+    pageType: PROFILE_PAGE_TYPES.COLLECTIONS,
+    statKey: 'collections',
+  },
 ];
 export const getDefaultItems = (stats?: ProfileStats, isOwnProfile: boolean = true): ProfilePageFilterBarItem[] => {
   return FILTER_ITEMS_CONFIG.filter((config) => {
@@ -101,9 +109,10 @@ export const getDefaultItems = (stats?: ProfileStats, isOwnProfile: boolean = tr
     icon: config.icon,
     labelKey: config.labelKey,
     pageType: config.pageType,
+    showCount: config.statKey !== undefined,
     // If stats not provided, count is undefined (loading state)
     // If stats provided, use the value or fallback to 0
-    count: stats ? (stats[config.statKey] ?? 0) : undefined,
+    count: config.statKey ? (stats ? (stats[config.statKey] ?? 0) : undefined) : undefined,
     ownProfileOnly: config.ownProfileOnly,
   }));
 };
@@ -155,7 +164,8 @@ export function ProfilePageFilterBar({
         {filterItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = item.pageType === activePage;
-          const isLoading = item.count === undefined;
+          const showCount = item.showCount !== false;
+          const isLoading = showCount && item.count === undefined;
           const label = t(item.labelKey);
           return (
             <FilterItem
@@ -172,17 +182,18 @@ export function ProfilePageFilterBar({
                 <FilterItemIcon icon={Icon} />
                 <FilterItemLabel>{label}</FilterItemLabel>
               </Container>
-              {isLoading ? (
-                <Spinner size="sm" className="size-4" />
-              ) : (
-                <Typography
-                  data-cy={`profile-filter-item-${item.labelKey}-count`}
-                  as="span"
-                  className={`text-base font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
-                >
-                  {item.count}
-                </Typography>
-              )}
+              {showCount &&
+                (isLoading ? (
+                  <Spinner size="sm" className="size-4" />
+                ) : (
+                  <Typography
+                    data-cy={`profile-filter-item-${item.labelKey}-count`}
+                    as="span"
+                    className={`text-base font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
+                  >
+                    {item.count}
+                  </Typography>
+                ))}
             </FilterItem>
           );
         })}

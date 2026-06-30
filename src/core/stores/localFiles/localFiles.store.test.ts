@@ -18,7 +18,7 @@ describe('LocalFilesStore', () => {
 
   beforeEach(() => {
     // Reset the store to initial state before each test
-    useLocalFilesStore.setState({ profile: null, posts: {} });
+    useLocalFilesStore.setState({ profile: null, posts: {}, collections: {} });
     revokeObjectURLSpy.mockClear();
   });
 
@@ -31,6 +31,11 @@ describe('LocalFilesStore', () => {
     it('should have posts set to empty object initially', () => {
       const state = useLocalFilesStore.getState();
       expect(state.posts).toEqual({});
+    });
+
+    it('should have collections set to empty object initially', () => {
+      const state = useLocalFilesStore.getState();
+      expect(state.collections).toEqual({});
     });
   });
 
@@ -153,6 +158,73 @@ describe('LocalFilesStore', () => {
     });
   });
 
+  describe('setCollectionCover', () => {
+    const collectionId = 'pk:abc123/posts/collection1';
+
+    it('should set the collection cover blob URL', () => {
+      useLocalFilesStore.getState().setCollectionCover(collectionId, 'blob:http://localhost/cover1');
+      expect(useLocalFilesStore.getState().collections[collectionId]).toBe('blob:http://localhost/cover1');
+    });
+
+    it('should remove the collection key when cleared with null', () => {
+      useLocalFilesStore.getState().setCollectionCover(collectionId, 'blob:http://localhost/cover1');
+      useLocalFilesStore.getState().setCollectionCover(collectionId, null);
+      expect(useLocalFilesStore.getState().collections[collectionId]).toBeUndefined();
+      expect(collectionId in useLocalFilesStore.getState().collections).toBe(false);
+    });
+
+    it('should revoke the previous blob URL when overwritten', () => {
+      const oldBlobUrl = 'blob:http://localhost/old-cover';
+      const newBlobUrl = 'blob:http://localhost/new-cover';
+
+      useLocalFilesStore.getState().setCollectionCover(collectionId, oldBlobUrl);
+      revokeObjectURLSpy.mockClear();
+
+      useLocalFilesStore.getState().setCollectionCover(collectionId, newBlobUrl);
+
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith(oldBlobUrl);
+      expect(revokeObjectURLSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should revoke the previous blob URL when cleared with null', () => {
+      const oldBlobUrl = 'blob:http://localhost/old-cover';
+
+      useLocalFilesStore.getState().setCollectionCover(collectionId, oldBlobUrl);
+      revokeObjectURLSpy.mockClear();
+
+      useLocalFilesStore.getState().setCollectionCover(collectionId, null);
+
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith(oldBlobUrl);
+      expect(revokeObjectURLSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not revoke non-blob URLs (e.g. CDN URLs stored externally)', () => {
+      const httpUrl = 'https://cdn.example.com/cover.png';
+
+      useLocalFilesStore.getState().setCollectionCover(collectionId, httpUrl);
+      revokeObjectURLSpy.mockClear();
+
+      useLocalFilesStore.getState().setCollectionCover(collectionId, 'blob:http://localhost/new-cover');
+
+      expect(revokeObjectURLSpy).not.toHaveBeenCalledWith(httpUrl);
+    });
+
+    it('should handle multiple collections independently', () => {
+      const collectionId2 = 'pk:abc123/posts/collection2';
+
+      useLocalFilesStore.getState().setCollectionCover(collectionId, 'blob:http://localhost/c1');
+      useLocalFilesStore.getState().setCollectionCover(collectionId2, 'blob:http://localhost/c2');
+
+      expect(useLocalFilesStore.getState().collections[collectionId]).toBe('blob:http://localhost/c1');
+      expect(useLocalFilesStore.getState().collections[collectionId2]).toBe('blob:http://localhost/c2');
+    });
+
+    it('should not call revokeObjectURL when there is no previous entry', () => {
+      useLocalFilesStore.getState().setCollectionCover(collectionId, 'blob:http://localhost/cover1');
+      expect(revokeObjectURLSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('reset', () => {
     it('should reset profile to null', () => {
       useLocalFilesStore.getState().setProfile('blob:http://localhost/profile');
@@ -171,6 +243,21 @@ describe('LocalFilesStore', () => {
       useLocalFilesStore.getState().reset();
 
       expect(useLocalFilesStore.getState().posts).toEqual({});
+    });
+
+    it('should reset collections to empty object and revoke their blob URLs', () => {
+      const cover1 = 'blob:http://localhost/cover1';
+      const cover2 = 'blob:http://localhost/cover2';
+      useLocalFilesStore.getState().setCollectionCover('col1', cover1);
+      useLocalFilesStore.getState().setCollectionCover('col2', cover2);
+      revokeObjectURLSpy.mockClear();
+
+      useLocalFilesStore.getState().reset();
+
+      expect(useLocalFilesStore.getState().collections).toEqual({});
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith(cover1);
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith(cover2);
+      expect(revokeObjectURLSpy).toHaveBeenCalledTimes(2);
     });
 
     it('should revoke profile blob URL on reset', () => {
@@ -221,6 +308,7 @@ describe('LocalFilesStore', () => {
       useLocalFilesStore.setState({
         profile: 'https://example.com/avatar.png',
         posts: { post1: [createMockAttachment('https://example.com/attach.png')] },
+        collections: { col1: 'https://cdn.example.com/cover.png' },
       });
       revokeObjectURLSpy.mockClear();
 
@@ -234,6 +322,7 @@ describe('LocalFilesStore', () => {
 
       expect(useLocalFilesStore.getState().profile).toBeNull();
       expect(useLocalFilesStore.getState().posts).toEqual({});
+      expect(useLocalFilesStore.getState().collections).toEqual({});
       expect(revokeObjectURLSpy).not.toHaveBeenCalled();
     });
   });
