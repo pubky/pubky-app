@@ -19,7 +19,7 @@ describe('resolveFeedLayout', () => {
   it('falls back to columns for visual layout on phones', () => {
     const result = resolveFeedLayout({
       requestedLayout: LAYOUT.VISUAL,
-      variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+      variant: TIMELINE_FEED_VARIANT.HOME,
       isPhoneViewport: true,
     });
 
@@ -28,6 +28,23 @@ describe('resolveFeedLayout', () => {
     expect(result.isVisualRequested).toBe(true);
     expect(result.isVisualActive).toBe(false);
   });
+
+  // The bookmarks route has no layout filter UI; it must not adopt the shared
+  // wide/visual layout. It is a fixed grid (see isGridActive) rendered in columns.
+  it.each([LAYOUT.VISUAL, LAYOUT.WIDE])(
+    'falls back to columns for %s layout on the bookmarks variant (desktop)',
+    (requestedLayout) => {
+      const result = resolveFeedLayout({
+        requestedLayout,
+        variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+        isPhoneViewport: false,
+      });
+
+      expect(result.requestedLayout).toBe(requestedLayout);
+      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+      expect(result.isVisualActive).toBe(false);
+    },
+  );
 
   it('falls back to columns for unsupported feeds without mutating the requested value', () => {
     const result = resolveFeedLayout({
@@ -90,5 +107,58 @@ describe('resolveFeedLayout', () => {
     expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
     expect(result.isVisualRequested).toBe(false);
     expect(result.isVisualActive).toBe(false);
+  });
+
+  describe('isGridActive (grid-layout variants, decision D5)', () => {
+    it('marks the collection variant as grid-active', () => {
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.COLUMNS,
+        variant: TIMELINE_FEED_VARIANT.COLLECTION,
+        isPhoneViewport: false,
+      });
+
+      expect(result.isGridActive).toBe(true);
+    });
+
+    it('marks the bookmarks variant as grid-active', () => {
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.COLUMNS,
+        variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+        isPhoneViewport: false,
+      });
+
+      expect(result.isGridActive).toBe(true);
+    });
+
+    it.each([
+      TIMELINE_FEED_VARIANT.HOME,
+      TIMELINE_FEED_VARIANT.CUSTOM,
+      TIMELINE_FEED_VARIANT.PROFILE,
+      TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS,
+      TIMELINE_FEED_VARIANT.HOT,
+      TIMELINE_FEED_VARIANT.SEARCH,
+    ])('does not mark the %s variant as grid-active', (variant) => {
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.COLUMNS,
+        variant,
+        isPhoneViewport: false,
+      });
+
+      expect(result.isGridActive).toBe(false);
+    });
+
+    it('keeps grid active independently of effectiveLayout (orthogonal to wide/visual)', () => {
+      // The collection variant is not in the rich-layout set, so a VISUAL request
+      // falls back to COLUMNS; grid membership must still be derived from the variant.
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.VISUAL,
+        variant: TIMELINE_FEED_VARIANT.COLLECTION,
+        isPhoneViewport: false,
+      });
+
+      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+      expect(result.isVisualActive).toBe(false);
+      expect(result.isGridActive).toBe(true);
+    });
   });
 });

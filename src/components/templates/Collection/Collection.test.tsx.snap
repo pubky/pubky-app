@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Collection (template) > matches the snapshot for the resolved collection state 1`] = `
+<div
+  data-testid="content-layout"
+>
+  <div
+    class="flex w-full flex-col gap-12"
+    data-testid="container"
+  >
+    <div
+      class="flex w-full flex-col gap-12"
+      data-testid="container"
+    >
+      <div
+        data-author="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+        data-has-post-details="true"
+        data-has-ptr-ref="true"
+        data-post="0034BBBDFK83G"
+        data-testid="collection-items"
+      />
+    </div>
+    <div
+      data-testid="collections-sections"
+    />
+  </div>
+</div>
+`;

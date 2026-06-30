@@ -26,7 +26,9 @@ export function PostContent({ postId, className, textClassName }: PostContentOrg
       <PostContentBase postId={postId} className={className} textClassName={textClassName} />
 
       {/* Show original post preview for reposts */}
-      {shouldRenderRepostPreview && <PostPreviewCard postId={originalPostId} className={'bg-muted'} />}
+      {shouldRenderRepostPreview && (
+        <PostPreviewCard postId={originalPostId} className={'bg-muted'} contrast="strong" />
+      )}
     </>
   );
 }

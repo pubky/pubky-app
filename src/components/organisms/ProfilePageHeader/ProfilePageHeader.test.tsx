@@ -110,6 +110,7 @@ const mockProps: ProfilePageHeaderProps = {
     followers: 83,
     following: 0,
     friends: 0,
+    collections: 0,
     uniqueTags: 0,
   },
 };

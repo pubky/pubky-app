@@ -1,0 +1,16 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CollectionItemsEmpty - Snapshots > matches the snapshot 1`] = `
+<div
+  class="w-full"
+  data-cy="collection-items-empty"
+  data-testid="container"
+>
+  <p
+    class="text-center text-base font-medium text-muted-foreground"
+    data-testid="typography"
+  >
+    collections.single.empty
+  </p>
+</div>
+`;

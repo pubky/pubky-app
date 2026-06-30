@@ -12,10 +12,12 @@ import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.s
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { mockSession } from '@/test-utils/pubky';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 // Mock HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({
@@ -215,6 +217,29 @@ describe('PostController', () => {
       const result = await PostController.getDetails({ compositeId: 'nonexistent:post' });
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getDetailsByIds', () => {
+    it('should return post details aligned to input order with undefined for missing posts', async () => {
+      await setupExistingPost();
+      const { PostController } = await import('./post');
+
+      const result = await PostController.getDetailsByIds({
+        compositeIds: ['nonexistent:post', testData.fullPostId],
+      });
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toBeUndefined();
+      expect(result[1]?.id).toBe(testData.fullPostId);
+    });
+
+    it('should return an empty array when given no ids', async () => {
+      const { PostController } = await import('./post');
+
+      const result = await PostController.getDetailsByIds({ compositeIds: [] });
+
+      expect(result).toEqual([]);
     });
   });
 
@@ -678,6 +703,495 @@ describe('PostController', () => {
         );
       } finally {
         deleteSpy.mockRestore();
+        cleanupAuthUser();
+      }
+    });
+  });
+
+  describe('commitUpdateCollectionItem', () => {
+    const collectionPostId = buildCompositeId({ pubky: testData.authorPubky, id: 'collection123' });
+    const targetPostId = buildCompositeId({ pubky: 'target_author_pubky' as Pubky, id: 'target123' });
+    const targetPostUri = 'pubky://target_author_pubky/pub/pubky.app/posts/target123';
+
+    const createCollectionDetails = (items: string[] = [], overrides: Partial<PostDetailsModelSchema> = {}) =>
+      ({
+        id: collectionPostId,
+        content: JSON.stringify({ name: 'Saved posts', description: '', items }),
+        indexed_at: Date.now(),
+        kind: 'collection',
+        uri: `pubky://${testData.authorPubky}/pub/pubky.app/posts/collection123`,
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+        ...overrides,
+      }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
+
+    it('adds a post URI to a collection', async () => {
+      setupAuthUser(testData.authorPubky);
+      const getDetailsSpy = vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const toEditSpy = vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
+        post: { toJson: () => ({}) },
+        meta: { url: 'pubky://author/pub/pubky.app/posts/collection123' },
+      } as never);
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitUpdateCollectionItem({
+          collectionId: collectionPostId,
+          postId: targetPostId,
+          shouldAdd: true,
+        });
+
+        expect(getDetailsSpy).toHaveBeenCalledWith({ compositeId: collectionPostId });
+        expect(toEditSpy).toHaveBeenCalledWith({
+          compositePostId: collectionPostId,
+          content: JSON.stringify({
+            name: 'Saved posts',
+            description: '',
+            items: [targetPostUri],
+          }),
+          currentUserPubky: testData.authorPubky,
+        });
+        expect(commitEditSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            compositePostId: collectionPostId,
+            postUrl: 'pubky://author/pub/pubky.app/posts/collection123',
+          }),
+        );
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('prepends a new post URI before existing collection items', async () => {
+      setupAuthUser(testData.authorPubky);
+      const existingItemUri = 'pubky://existing_author/pub/pubky.app/posts/existing123';
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([existingItemUri]));
+      const toEditSpy = vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
+        post: { toJson: () => ({}) },
+        meta: { url: 'pubky://author/pub/pubky.app/posts/collection123' },
+      } as never);
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitUpdateCollectionItem({
+          collectionId: collectionPostId,
+          postId: targetPostId,
+          shouldAdd: true,
+        });
+
+        expect(toEditSpy).toHaveBeenCalledWith({
+          compositePostId: collectionPostId,
+          content: JSON.stringify({
+            name: 'Saved posts',
+            description: '',
+            items: [targetPostUri, existingItemUri],
+          }),
+          currentUserPubky: testData.authorPubky,
+        });
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('removes a post URI from a collection', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([targetPostUri]));
+      const toEditSpy = vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
+        post: { toJson: () => ({}) },
+        meta: { url: 'pubky://author/pub/pubky.app/posts/collection123' },
+      } as never);
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitUpdateCollectionItem({
+          collectionId: collectionPostId,
+          postId: targetPostId,
+          shouldAdd: false,
+        });
+
+        expect(toEditSpy).toHaveBeenCalledWith({
+          compositePostId: collectionPostId,
+          content: JSON.stringify({ name: 'Saved posts', description: '', items: [] }),
+          currentUserPubky: testData.authorPubky,
+        });
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('does not edit when adding an existing item or removing a missing item', async () => {
+      setupAuthUser(testData.authorPubky);
+      const getDetailsSpy = vi.spyOn(PostApplication, 'getDetails');
+      const toEditSpy = vi.spyOn(PostNormalizer, 'toEdit');
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit');
+      const { PostController } = await import('./post');
+
+      try {
+        getDetailsSpy.mockResolvedValueOnce(createCollectionDetails([targetPostUri]));
+        await PostController.commitUpdateCollectionItem({
+          collectionId: collectionPostId,
+          postId: targetPostId,
+          shouldAdd: true,
+        });
+
+        getDetailsSpy.mockResolvedValueOnce(createCollectionDetails());
+        await PostController.commitUpdateCollectionItem({
+          collectionId: collectionPostId,
+          postId: targetPostId,
+          shouldAdd: false,
+        });
+
+        expect(toEditSpy).not.toHaveBeenCalled();
+        expect(commitEditSpy).not.toHaveBeenCalled();
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects missing collections', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(null);
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitUpdateCollectionItem({
+            collectionId: collectionPostId,
+            postId: targetPostId,
+            shouldAdd: true,
+          }),
+        ).rejects.toThrow('Collection not found');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects collections with invalid content', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([], { content: 'not-json' }));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitUpdateCollectionItem({
+            collectionId: collectionPostId,
+            postId: targetPostId,
+            shouldAdd: true,
+          }),
+        ).rejects.toThrow('Collection content is invalid');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects tombstoned collections (content === [DELETED]) as not-found', async () => {
+      // Regression: pre-tombstone refactor `!collection` caught hard-deleted
+      // rows. Tombstones now stick around, and without the content check this
+      // path would surface "Collection content is invalid" instead.
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([], { content: '[DELETED]' }));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitUpdateCollectionItem({
+            collectionId: collectionPostId,
+            postId: targetPostId,
+            shouldAdd: true,
+          }),
+        ).rejects.toThrow('Collection not found');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects edits when the current user is not the collection author', async () => {
+      setupAuthUser('different_user_pubky' as Pubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitUpdateCollectionItem({
+            collectionId: collectionPostId,
+            postId: targetPostId,
+            shouldAdd: true,
+          }),
+        ).rejects.toThrow('Current user is not the author of this post');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+  });
+
+  describe('commitEditCollection', () => {
+    const collectionPostId = buildCompositeId({ pubky: testData.authorPubky, id: 'editCol1' });
+    const existingItemUri = 'pubky://target_author_pubky/pub/pubky.app/posts/keep-me';
+
+    const createCollectionDetails = (
+      content: { name: string; description?: string; items?: string[]; cover_image?: string | null } = {
+        name: 'Original name',
+        description: 'Original description',
+        items: [existingItemUri],
+        cover_image: 'pubky://author/pub/pubky.app/files/oldcover',
+      },
+      overrides: Partial<PostDetailsModelSchema> = {},
+    ) =>
+      ({
+        id: collectionPostId,
+        content: JSON.stringify(content),
+        indexed_at: Date.now(),
+        kind: 'collection',
+        uri: `pubky://${testData.authorPubky}/pub/pubky.app/posts/editCol1`,
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+        ...overrides,
+      }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
+
+    const stubToEdit = () =>
+      vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
+        post: { toJson: () => ({}) },
+        meta: { url: 'pubky://author/pub/pubky.app/posts/editCol1' },
+      } as never);
+
+    it('preserves the existing items array, name/description updates, and passes through a string cover URL', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const toEditSpy = stubToEdit();
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+      const toFileAttachmentSpy = vi.spyOn(FileApplication, 'toFileAttachment');
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEditCollection({
+          compositeCollectionId: collectionPostId,
+          name: 'Renamed',
+          description: 'Updated description',
+          coverImage: 'pubky://author/pub/pubky.app/files/oldcover',
+        });
+
+        expect(toFileAttachmentSpy).not.toHaveBeenCalled();
+        expect(toEditSpy).toHaveBeenCalledWith({
+          compositePostId: collectionPostId,
+          content: JSON.stringify({
+            name: 'Renamed',
+            description: 'Updated description',
+            items: [existingItemUri],
+            cover_image: 'pubky://author/pub/pubky.app/files/oldcover',
+          }),
+          currentUserPubky: testData.authorPubky,
+        });
+        expect(commitEditSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            compositePostId: collectionPostId,
+            postUrl: 'pubky://author/pub/pubky.app/posts/editCol1',
+          }),
+        );
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('uploads a new cover File, replaces cover_image with the resulting URL, and persists', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const toEditSpy = stubToEdit();
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      const file = new File(['new-cover-bytes'], 'cover.png', { type: 'image/png' });
+      const toFileAttachmentSpy = vi.spyOn(FileApplication, 'toFileAttachment').mockResolvedValue(
+        asOpaque<TFileAttachmentResult>({
+          fileResult: { meta: { url: 'pubky://author/pub/pubky.app/files/newcover' } },
+        }),
+      );
+      const commitFileCreateSpy = vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEditCollection({
+          compositeCollectionId: collectionPostId,
+          name: 'Renamed',
+          description: 'Updated description',
+          coverImage: file,
+        });
+
+        expect(toFileAttachmentSpy).toHaveBeenCalledWith({ file, pubky: testData.authorPubky });
+        expect(commitFileCreateSpy).toHaveBeenCalled();
+        expect(toEditSpy).toHaveBeenCalledWith({
+          compositePostId: collectionPostId,
+          content: JSON.stringify({
+            name: 'Renamed',
+            description: 'Updated description',
+            items: [existingItemUri],
+            cover_image: 'pubky://author/pub/pubky.app/files/newcover',
+          }),
+          currentUserPubky: testData.authorPubky,
+        });
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('clears the cover when coverImage is null', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const toEditSpy = stubToEdit();
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEditCollection({
+          compositeCollectionId: collectionPostId,
+          name: 'Renamed',
+          description: 'Updated description',
+          coverImage: null,
+        });
+
+        const lastCall = toEditSpy.mock.calls.at(-1)?.[0] as { content: string } | undefined;
+        expect(lastCall).toBeDefined();
+        const parsedContent = JSON.parse(lastCall!.content);
+        // cover_image is normalized to `undefined` (omitted) when input is null/empty —
+        // the CollectionPostContent normalizer drops it from the envelope.
+        expect(parsedContent).not.toHaveProperty('cover_image');
+        expect(parsedContent.items).toEqual([existingItemUri]);
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects when the collection cannot be loaded', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(null);
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: null,
+          }),
+        ).rejects.toThrow('Collection not found');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects when the existing collection content is unparseable', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(
+        createCollectionDetails(undefined, { content: 'not-json' }),
+      );
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: null,
+          }),
+        ).rejects.toThrow('Collection content is invalid');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects tombstoned collections (content === [DELETED]) as not-found', async () => {
+      // Regression: pre-tombstone refactor `!collection` caught hard-deleted
+      // rows. Tombstones now stick around, and without the content check this
+      // path would surface the misleading "Collection content is invalid".
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(
+        createCollectionDetails(undefined, { content: '[DELETED]' }),
+      );
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: null,
+          }),
+        ).rejects.toThrow('Collection not found');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('wraps cover-upload failures with a specific validation error', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      vi.spyOn(FileApplication, 'toFileAttachment').mockRejectedValue(new Error('boom'));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: new File(['x'], 'cover.png', { type: 'image/png' }),
+          }),
+        ).rejects.toThrow('Failed to upload collection cover image');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects when the current user is not the collection author', async () => {
+      setupAuthUser('different_user_pubky' as Pubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: null,
+          }),
+        ).rejects.toThrow('Current user is not the author of this post');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects a non-author before any side effects (no file upload, no DB read)', async () => {
+      // Regression guard: a non-author passing a `File` cover must NOT trigger
+      // the homeserver upload (which could orphan a file under their pubky).
+      setupAuthUser('different_user_pubky' as Pubky);
+      const getDetailsSpy = vi.spyOn(PostApplication, 'getDetails');
+      const toFileAttachmentSpy = vi.spyOn(FileApplication, 'toFileAttachment');
+      const commitFileCreateSpy = vi.spyOn(FileApplication, 'commitCreate');
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit');
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: new File(['x'], 'cover.png', { type: 'image/png' }),
+          }),
+        ).rejects.toThrow('Current user is not the author of this post');
+
+        expect(getDetailsSpy).not.toHaveBeenCalled();
+        expect(toFileAttachmentSpy).not.toHaveBeenCalled();
+        expect(commitFileCreateSpy).not.toHaveBeenCalled();
+        expect(commitEditSpy).not.toHaveBeenCalled();
+      } finally {
         cleanupAuthUser();
       }
     });

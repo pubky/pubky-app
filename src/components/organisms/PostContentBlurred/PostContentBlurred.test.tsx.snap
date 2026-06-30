@@ -50,7 +50,7 @@ exports[`PostContentBlurred - Snapshots > matches snapshot with custom className
       data-override-defaults="true"
       data-testid="typography"
     >
-      Post content moderated.
+      moderation.postContentModerated
     </p>
   </div>
 </button>
@@ -106,7 +106,7 @@ exports[`PostContentBlurred - Snapshots > matches snapshot with default props 1`
       data-override-defaults="true"
       data-testid="typography"
     >
-      Post content moderated.
+      moderation.postContentModerated
     </p>
   </div>
 </button>

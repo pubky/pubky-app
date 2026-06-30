@@ -1,4 +1,14 @@
-import { Env } from '@/libs/env/env';
+import {
+  getAppStoreUrl,
+  getEmail,
+  getGithubUrl,
+  getPlayStoreUrl,
+  getPubkyCoreUrl,
+  getPubkyRingUrl,
+  getTelegramUrl,
+  getTwitterGetpubkyUrl,
+  getTwitterUrl,
+} from '@/libs/runtime-config/runtime-config';
 import { APP_VERSION } from './app';
 
 /**
@@ -12,18 +22,18 @@ import { APP_VERSION } from './app';
 export const APP_RELEASE_URL = `https://github.com/pubky/pubky-app/releases/tag/${APP_VERSION}`;
 
 // Pubky ecosystem links
-export const PUBKY_RING_URL = Env.NEXT_PUBLIC_PUBKY_RING_URL;
-export const PUBKY_CORE_URL = Env.NEXT_PUBLIC_PUBKY_CORE_URL;
+export const getPubkyRingLink = getPubkyRingUrl;
+export const getPubkyCoreLink = getPubkyCoreUrl;
 
 // Social media links
-export const TWITTER_URL = Env.NEXT_PUBLIC_TWITTER_URL;
-export const TWITTER_GETPUBKY_URL = Env.NEXT_PUBLIC_TWITTER_GETPUBKY_URL;
-export const TELEGRAM_URL = Env.NEXT_PUBLIC_TELEGRAM_URL;
-export const GITHUB_URL = Env.NEXT_PUBLIC_GITHUB_URL;
+export const getTwitterLink = getTwitterUrl;
+export const getTwitterGetpubkyLink = getTwitterGetpubkyUrl;
+export const getTelegramLink = getTelegramUrl;
+export const getGithubLink = getGithubUrl;
 
 // Contact links
-export const EMAIL_URL = `mailto:${Env.NEXT_PUBLIC_EMAIL}`;
+export const getEmailLink = (): string => `mailto:${getEmail()}`;
 
 // App store links
-export const APP_STORE_URL = Env.NEXT_PUBLIC_APP_STORE_URL;
-export const PLAY_STORE_URL = Env.NEXT_PUBLIC_PLAY_STORE_URL;
+export const getAppStoreLink = getAppStoreUrl;
+export const getPlayStoreLink = getPlayStoreUrl;

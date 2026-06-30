@@ -53,6 +53,10 @@ const PROFILE_ROUTES_CONFIG: Record<
     route: PROFILE_ROUTES.UNIQUE_TAGS,
     subPath: '/tagged',
   },
+  [PROFILE_PAGE_TYPES.COLLECTIONS]: {
+    route: PROFILE_ROUTES.COLLECTIONS,
+    subPath: '/collections',
+  },
   [PROFILE_PAGE_TYPES.PROFILE]: {
     route: PROFILE_ROUTES.PROFILE_PAGE,
     subPath: '/profile',

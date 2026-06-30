@@ -8,9 +8,19 @@ import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmabl
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostInput } from '../PostInput/PostInput';
-import type { DialogNewPostProps } from './DialogNewPost.types';
 
-export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) {
+interface DialogNewPostProps {
+  open: boolean;
+  onOpenChangeAction: (open: boolean) => void;
+  /**
+   * Optional side effect run after a post is created, before the dialog closes.
+   * Receives the new post's composite id. Used by the FAB to save the post to a
+   * collection / bookmarks and trigger an optimistic feed insert.
+   */
+  onPostCreated?: (createdPostId: string) => void | Promise<void>;
+}
+
+export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: DialogNewPostProps) {
   const t = useTranslations('dialogs.newPost');
   const [isArticle, setIsArticle] = useState(false);
   const title = isArticle ? t('newArticle') : t('newPost');
@@ -18,6 +28,11 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
     useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
+
+  const handlePostSuccess = (createdPostId: string) => {
+    void onPostCreated?.(createdPostId);
+    onOpenChangeAction(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -31,7 +46,7 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
             dataCy="new-post-input"
             key={resetKey}
             variant={POST_INPUT_VARIANT.POST}
-            onSuccess={() => onOpenChangeAction(false)}
+            onSuccess={handlePostSuccess}
             expanded={true}
             onContentChange={handleContentChange}
             onArticleModeChange={setIsArticle}

@@ -1,4 +1,4 @@
-import { CDN_URL, NEXUS_URL } from '@/config/nexus';
+import { getCdnUrl, getNexusUrl } from '@/config/nexus';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
@@ -14,11 +14,11 @@ import type {
 const FETCH_NEXUS_OPERATION = 'fetchNexus';
 
 export function buildNexusUrl(endpoint: string): string {
-  return `${NEXUS_URL}/${endpoint}`;
+  return `${getNexusUrl()}/${endpoint}`;
 }
 
 export function buildCdnUrl(endpoint: string): string {
-  return `${CDN_URL}/${endpoint}`;
+  return `${getCdnUrl()}/${endpoint}`;
 }
 
 /**

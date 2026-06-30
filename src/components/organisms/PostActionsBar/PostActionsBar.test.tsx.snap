@@ -2,38 +2,29 @@
 
 exports[`PostActionsBar - Snapshots > matches snapshot loading 1`] = `
 <div
-  data-class-name="flex justify-between"
+  data-class-name="flex flex-wrap gap-2"
   data-testid="actions-container"
 >
   <div
-    class="h-8 w-8 rounded-sm"
+    class="h-8 rounded-full w-12"
     data-testid="skeleton"
   />
   <div
-    data-class-name="flex gap-2"
-    data-testid="actions-container"
-  >
-    <div
-      class="h-8 w-14 rounded-full"
-      data-testid="skeleton"
-    />
-    <div
-      class="h-8 w-14 rounded-full"
-      data-testid="skeleton"
-    />
-    <div
-      class="h-8 w-14 rounded-full"
-      data-testid="skeleton"
-    />
-    <div
-      class="h-8 w-14 rounded-full"
-      data-testid="skeleton"
-    />
-    <div
-      class="h-8 w-14 rounded-full"
-      data-testid="skeleton"
-    />
-  </div>
+    class="h-8 rounded-full w-12"
+    data-testid="skeleton"
+  />
+  <div
+    class="h-8 rounded-full w-12"
+    data-testid="skeleton"
+  />
+  <div
+    class="h-8 rounded-full w-9"
+    data-testid="skeleton"
+  />
+  <div
+    class="h-8 rounded-full w-9"
+    data-testid="skeleton"
+  />
 </div>
 `;
 
@@ -148,28 +139,11 @@ exports[`PostActionsBar - Snapshots > matches snapshot with counts 1`] = `
     </span>
   </button>
   <button
-    aria-label="Add bookmark"
-    class="border-none shadow-xs w-10"
-    data-size="sm"
-    data-variant="secondary"
+    aria-label="Save post"
+    data-post-id="post-4"
+    data-testid="post-save-picker"
   >
-    <svg
-      aria-hidden="true"
-      class="lucide lucide-bookmark"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
-      />
-    </svg>
+    Save
   </button>
   <div
     data-post-id="post-4"

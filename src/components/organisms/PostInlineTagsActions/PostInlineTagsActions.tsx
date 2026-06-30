@@ -31,6 +31,9 @@ export function PostInlineTagsActions({
       onClick={(event) => event.stopPropagation()}
       className={cn(
         'flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4',
+        // Grid-scoped (decision D4): inside a narrow grid cell keep tags + actions
+        // stacked. `!` beats the still-active viewport `md:` row classes; inert off-grid.
+        '@max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-2!',
         tagsExpanded ? 'md:items-end' : 'md:items-start',
         className,
       )}

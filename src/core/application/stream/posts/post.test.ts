@@ -1,14 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
-import { STREAM_CACHE_MAX_AGE_MS } from '@/config/nexus';
+import { getStreamCacheMaxAgeMs } from '@/config/nexus';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type { Pubky } from '@/models/models.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DELETED } from '@/models/post/details/postDetails.constants';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import {
+  buildAuthorCollectionsStreamId,
+  type PostStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamModel } from '@/models/stream/user/userStream';
@@ -120,6 +124,7 @@ describe('PostStreamApplication', () => {
       unique_tags: 0,
       posts: 0,
       replies: 0,
+      collections: 0,
       following: 0,
       followers: 0,
       friends: 0,
@@ -156,6 +161,17 @@ describe('PostStreamApplication', () => {
       content: `Content for ${postId}`,
       kind: 'short',
       indexed_at: indexedAt,
+      uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${postId}`,
+      attachments: null,
+    });
+  };
+
+  const createPostDetailWithKind = async (postId: string, kind: 'short' | 'long' | 'collection') => {
+    await PostDetailsModel.create({
+      id: postId,
+      content: `Content for ${postId}`,
+      kind,
+      indexed_at: BASE_TIMESTAMP,
       uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${postId}`,
       attachments: null,
     });
@@ -207,6 +223,146 @@ describe('PostStreamApplication', () => {
   // ============================================================================
   // Tests
   // ============================================================================
+
+  describe('filterStreamPosts', () => {
+    it('excludes collection-kind posts from non-collection streams', async () => {
+      const shortPostId = `${DEFAULT_AUTHOR}:short-post`;
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      const longPostId = `${DEFAULT_AUTHOR}:long-post`;
+
+      await createPostDetailWithKind(shortPostId, 'short');
+      await createPostDetailWithKind(collectionPostId, 'collection');
+      await createPostDetailWithKind(longPostId, 'long');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
+        postIds: [shortPostId, collectionPostId, longPostId],
+      });
+
+      expect(result).toEqual([shortPostId, longPostId]);
+    });
+
+    it('keeps collection-kind posts in collection content streams', async () => {
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION,
+        postIds: [collectionPostId],
+      });
+
+      expect(result).toEqual([collectionPostId]);
+    });
+
+    it('excludes collection-kind posts from author profile streams', async () => {
+      const authorStreamId = `author:${DEFAULT_AUTHOR}` as PostStreamId;
+      const shortPostId = `${DEFAULT_AUTHOR}:short-post`;
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+
+      await createPostDetailWithKind(shortPostId, 'short');
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: authorStreamId,
+        postIds: [shortPostId, collectionPostId],
+      });
+
+      expect(result).toEqual([shortPostId]);
+    });
+
+    it('keeps collection-kind posts in author collections streams', async () => {
+      const authorCollectionsStreamId = `${DEFAULT_AUTHOR}:author:collection` as PostStreamId;
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: authorCollectionsStreamId,
+        postIds: [collectionPostId],
+      });
+
+      expect(result).toEqual([collectionPostId]);
+    });
+
+    it('keeps posts without cached details so cache misses can be resolved', async () => {
+      const missingPostId = `${DEFAULT_AUTHOR}:missing-post`;
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
+        postIds: [missingPostId],
+      });
+
+      expect(result).toEqual([missingPostId]);
+    });
+
+    const createDeletedPostDetail = async (postId: string) => {
+      await PostDetailsModel.create({
+        id: postId,
+        content: DELETED,
+        kind: 'short',
+        indexed_at: BASE_TIMESTAMP,
+        uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${postId}`,
+        attachments: null,
+      });
+    };
+
+    it('removes deleted posts from timeline streams', async () => {
+      const livePostId = `${DEFAULT_AUTHOR}:live-post`;
+      const deletedPostId = `${DEFAULT_AUTHOR}:deleted-post`;
+      await createPostDetailWithKind(livePostId, 'short');
+      await createDeletedPostDetail(deletedPostId);
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL,
+        postIds: [livePostId, deletedPostId],
+      });
+
+      expect(result).toEqual([livePostId]);
+    });
+
+    it('keeps deleted posts in bookmark streams so they render their deleted state', async () => {
+      const livePostId = `${DEFAULT_AUTHOR}:live-post`;
+      const deletedPostId = `${DEFAULT_AUTHOR}:deleted-post`;
+      await createPostDetailWithKind(livePostId, 'short');
+      await createDeletedPostDetail(deletedPostId);
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
+        postIds: [livePostId, deletedPostId],
+      });
+
+      expect(result).toEqual([livePostId, deletedPostId]);
+    });
+
+    it('removes deleted posts from the collection-kind bookmark stream (FollowedCollections seed)', async () => {
+      const livePostId = `${DEFAULT_AUTHOR}:live-post`;
+      const deletedPostId = `${DEFAULT_AUTHOR}:deleted-post`;
+      await createPostDetailWithKind(livePostId, 'collection');
+      await createDeletedPostDetail(deletedPostId);
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION,
+        postIds: [livePostId, deletedPostId],
+      });
+
+      expect(result).toEqual([livePostId]);
+    });
+
+    it('keeps deleted posts in single-collection item streams', async () => {
+      const collectionItemsStreamId = `collection:${DEFAULT_AUTHOR}:my-collection` as PostStreamId;
+      const livePostId = `${DEFAULT_AUTHOR}:live-post`;
+      const deletedPostId = `${DEFAULT_AUTHOR}:deleted-post`;
+      await createPostDetailWithKind(livePostId, 'short');
+      await createDeletedPostDetail(deletedPostId);
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: collectionItemsStreamId,
+        postIds: [livePostId, deletedPostId],
+      });
+
+      expect(result).toEqual([livePostId, deletedPostId]);
+    });
+  });
 
   describe('getOrFetchStreamSlice', () => {
     it('should return posts from cache when available (no cursor)', async () => {
@@ -564,6 +720,35 @@ describe('PostStreamApplication', () => {
       expect(result.nextPageIds).toHaveLength(5);
       // Should not return cached posts (should return fetched posts from Nexus)
       expectPostIds(result.nextPageIds, 1, 5);
+    });
+
+    it('should skip cache check AND local persistence for collection item streams (skip-paginated)', async () => {
+      // collection:<author>:<postId> pages by offset and Nexus returns no timestamp cursor, so the
+      // timestamp-keyed local stream cache must be bypassed on both read and write. Regression guard
+      // for the infinite-scroll flicker (a stuck null cursor re-served page 1 from cache forever).
+      const collectionStreamId = 'collection:author-pubky:collection-post-1' as PostStreamId;
+      const cachedPostIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      await PostStreamModel.create(collectionStreamId, cachedPostIds);
+      await createPostDetails(cachedPostIds);
+
+      const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+      const persistSpy = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk');
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: collectionStreamId,
+        limit: 10,
+        streamHead: SKIP_FETCH_NEW_POSTS,
+        streamTail: 0,
+        viewerId: DEFAULT_AUTHOR,
+      });
+
+      // Reads from Nexus despite the seeded cache, returning the fetched posts (not the cached ones)...
+      expect(nexusFetchSpy).toHaveBeenCalled();
+      expect(result.nextPageIds).toHaveLength(5);
+      expectPostIds(result.nextPageIds, 1, 5);
+      // ...and never writes the offset-paginated stream into the timestamp-keyed local cache.
+      expect(persistSpy).not.toHaveBeenCalled();
     });
 
     it('should fallback to Nexus when cachedStream exists but getStreamFromCache returns empty', async () => {
@@ -1465,8 +1650,8 @@ describe('PostStreamApplication', () => {
     });
 
     it('should clear both streams when main stream cache is stale', async () => {
-      const now = BASE_TIMESTAMP + STREAM_CACHE_MAX_AGE_MS + 10;
-      const staleTimestamp = now - STREAM_CACHE_MAX_AGE_MS - 1;
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+      const staleTimestamp = now - getStreamCacheMaxAgeMs() - 1;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
@@ -1485,9 +1670,9 @@ describe('PostStreamApplication', () => {
     });
 
     it('should clear unread stream when unread cache is stale and main is fresh', async () => {
-      const now = BASE_TIMESTAMP + STREAM_CACHE_MAX_AGE_MS + 10;
-      const freshTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 1;
-      const staleTimestamp = now - STREAM_CACHE_MAX_AGE_MS - 1;
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+      const freshTimestamp = now - getStreamCacheMaxAgeMs() + 1;
+      const staleTimestamp = now - getStreamCacheMaxAgeMs() - 1;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
@@ -1507,7 +1692,7 @@ describe('PostStreamApplication', () => {
     });
 
     it('should merge unread into main and clear unread when both streams are fresh', async () => {
-      const now = BASE_TIMESTAMP + STREAM_CACHE_MAX_AGE_MS + 10;
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const mainPostIds = [`${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`];
@@ -1515,10 +1700,10 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts(mainPostIds);
       await UnreadPostStreamModel.create(streamId, unreadPostIds);
 
-      const mainHeadTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 2;
-      const mainOlderTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 1;
-      const unreadNewestTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 4;
-      const unreadOlderTimestamp = now - STREAM_CACHE_MAX_AGE_MS + 3;
+      const mainHeadTimestamp = now - getStreamCacheMaxAgeMs() + 2;
+      const mainOlderTimestamp = now - getStreamCacheMaxAgeMs() + 1;
+      const unreadNewestTimestamp = now - getStreamCacheMaxAgeMs() + 4;
+      const unreadOlderTimestamp = now - getStreamCacheMaxAgeMs() + 3;
 
       await createPostDetailWithTimestamp(mainPostIds[0], mainHeadTimestamp);
       await createPostDetailWithTimestamp(mainPostIds[1], mainOlderTimestamp);
@@ -1833,6 +2018,50 @@ describe('PostStreamApplication', () => {
       });
 
       expect(result.nextPageIds).toEqual(['author-1:post-1', 'author-2:post-2', 'author-3:post-3']);
+    });
+
+    it('does not filter author profile stream posts from muted authors', async () => {
+      await setupMutedUsers([DEFAULT_AUTHOR] as Pubky[]);
+
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
+        post_keys: [`${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`],
+        last_post_score: BASE_TIMESTAMP + 1,
+      };
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      const authorStreamId = `author:${DEFAULT_AUTHOR}` as PostStreamId;
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: authorStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+
+      expect(result.nextPageIds).toEqual([`${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`]);
+    });
+
+    it('does not filter author collections stream posts from muted authors', async () => {
+      await setupMutedUsers([DEFAULT_AUTHOR] as Pubky[]);
+
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
+        post_keys: [`${DEFAULT_AUTHOR}:collection-1`, `${DEFAULT_AUTHOR}:collection-2`],
+        last_post_score: BASE_TIMESTAMP + 1,
+      };
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      const authorCollectionsStreamId = buildAuthorCollectionsStreamId(DEFAULT_AUTHOR as Pubky);
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: authorCollectionsStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+
+      expect(result.nextPageIds).toEqual([`${DEFAULT_AUTHOR}:collection-1`, `${DEFAULT_AUTHOR}:collection-2`]);
     });
 
     it('should fetch more posts until limit is reached after mute filtering', async () => {

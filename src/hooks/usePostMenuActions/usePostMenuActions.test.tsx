@@ -528,6 +528,20 @@ describe('usePostMenuActions', () => {
       expect(copyTextItem).toBeUndefined();
     });
 
+    it('does not include copy text action for collections', () => {
+      mockUsePostDetails.mockReturnValue({
+        postDetails: { id: 'post789', content: '{"name":"My Collection"}', kind: 'collection' },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() =>
+        usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
+      );
+
+      const copyTextItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.COPY_TEXT);
+      expect(copyTextItem).toBeUndefined();
+    });
+
     it('calls copyToClipboard with post content on copy text click', async () => {
       const { result } = renderHook(() =>
         usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),

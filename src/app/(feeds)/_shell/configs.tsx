@@ -13,7 +13,7 @@ import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organis
  */
 export type FeedsShellConfig = Omit<ContentLayoutProps, 'children'>;
 
-export type FeedsRouteKey = 'home' | 'customFeed' | 'bookmarks' | 'search';
+export type FeedsRouteKey = 'home' | 'customFeed' | 'search';
 
 /**
  * Maps a pathname to its feeds route key, or `null` when the pathname does
@@ -29,7 +29,6 @@ export type FeedsRouteKey = 'home' | 'customFeed' | 'bookmarks' | 'search';
  */
 export function matchFeedsRouteKey(pathname: string): FeedsRouteKey | null {
   if (pathname === APP_ROUTES.HOME) return 'home';
-  if (pathname === APP_ROUTES.BOOKMARKS) return 'bookmarks';
   if (pathname === APP_ROUTES.SEARCH) return 'search';
   if (pathname.startsWith(`${APP_ROUTES.FEED}/`)) return 'customFeed';
   return null;
@@ -54,21 +53,6 @@ const configs: Record<FeedsRouteKey, FeedsShellConfig> = {
     leftDrawerContentMobile: <CustomFeedFilters variant="drawer" />,
     rightDrawerContentMobile: <FeedNavigation className="lg:hidden" />,
   },
-  bookmarks: {
-    feedVariant: TIMELINE_FEED_VARIANT.BOOKMARKS,
-    showRightMobileButton: false,
-    leftSidebarContent: (
-      <HomeFeedSidebar hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
-    ),
-    rightSidebarContent: <HomeFeedRightSidebar />,
-    leftDrawerContent: (
-      <HomeFeedDrawer hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
-    ),
-    rightDrawerContent: <HomeFeedRightDrawer />,
-    leftDrawerContentMobile: (
-      <HomeFeedDrawerMobile hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.BOOKMARKS} />
-    ),
-  },
   search: {
     feedVariant: TIMELINE_FEED_VARIANT.SEARCH,
     showRightMobileButton: false,
@@ -89,7 +73,7 @@ const configs: Record<FeedsRouteKey, FeedsShellConfig> = {
  * pathname is not a feeds route.
  *
  * Used by `(feeds)/layout.tsx` to hoist the shell so it stays mounted across
- * intra-cluster transitions (e.g. `/home → /feed/[id] → /bookmarks → /search`).
+ * intra-cluster transitions (e.g. `/home → /feed/[id] → /search`).
  * The layout handles the `null` return without throwing — see the header
  * comment in `(feeds)/layout.tsx` for the full fallback chain (cached config
  * during the intercepted post modal; empty chrome otherwise). When adding a

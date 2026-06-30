@@ -150,7 +150,10 @@ describe('HomeFeedSidebar', () => {
 
     render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
 
-    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-disabled-tabs', 'short,long,links,files');
+    expect(screen.getByTestId('filter-content')).toHaveAttribute(
+      'data-disabled-tabs',
+      'short,long,collections,links,files',
+    );
   });
 
   it('shows the resolved visual content without mutating the store from the sidebar', () => {

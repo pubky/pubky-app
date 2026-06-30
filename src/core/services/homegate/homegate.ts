@@ -1,5 +1,4 @@
 import { dispatchSignals } from '@prelude.so/js-sdk/signals';
-import { Env } from '@/libs/env/env';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
@@ -7,6 +6,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode, JSON_HEADERS } from '@/libs/http/http.types';
 import { parseResponseOrThrow, parseRetryAfterHeader } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
+import { getPreludeSdkKey, getPreludeSdkTimeoutMs } from '@/libs/runtime-config/runtime-config';
 import { homegateApi } from './homegate.api';
 import { HOMEGATE_QUERY_KEYS, SmsCodeErrorType } from './homegate.constants';
 import { homegateQueryClient } from './homegate.query-client';
@@ -73,7 +73,7 @@ export class HomegateService {
    * Returns undefined if not configured, times out, or fails.
    */
   private static async getPreludeDispatchId(): Promise<string | undefined> {
-    const sdkKey = Env.NEXT_PUBLIC_PRELUDE_SDK_KEY;
+    const sdkKey = getPreludeSdkKey();
     if (!sdkKey) {
       return undefined;
     }
@@ -81,9 +81,7 @@ export class HomegateService {
     try {
       return await Promise.race([
         dispatchSignals(sdkKey),
-        new Promise<undefined>((resolve) =>
-          setTimeout(() => resolve(undefined), Env.NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS),
-        ),
+        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), getPreludeSdkTimeoutMs())),
       ]);
     } catch (error) {
       Logger.warn('Prelude dispatchSignals failed:', error);

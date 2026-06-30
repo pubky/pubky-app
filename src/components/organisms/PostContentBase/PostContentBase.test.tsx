@@ -81,6 +81,30 @@ vi.mock('../PostArticle/PostArticle', () => ({
   PostArticle: vi.fn(({ content }: { content: string }) => <div data-testid="post-article">{content}</div>),
 }));
 
+vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
+  CollectionCard: vi.fn(
+    ({
+      authorPubky,
+      postId,
+      variant,
+      contrast,
+    }: {
+      authorPubky: string;
+      postId: string;
+      variant?: string;
+      contrast?: string;
+    }) => (
+      <div
+        data-testid="collection-card"
+        data-author-pubky={authorPubky}
+        data-post-id={postId}
+        data-variant={variant}
+        data-contrast={contrast ?? ''}
+      />
+    ),
+  ),
+}));
+
 vi.mock('../PostAttachments/PostAttachments', () => ({
   PostAttachments: vi.fn(() => <div data-testid="post-attachments" />),
 }));
@@ -89,6 +113,10 @@ vi.mock('../PostContentBlurred/PostContentBlurred', () => ({
   PostContentBlurred: vi.fn(({ postId }: { postId: string }) => (
     <div data-testid="post-content-blurred" data-post-id={postId} />
   )),
+}));
+
+vi.mock('@/molecules/PostMissing/PostMissing', () => ({
+  PostMissing: () => <div data-testid="post-missing" />,
 }));
 
 const mockUsePostDetails = vi.mocked(usePostDetails);
@@ -103,7 +131,7 @@ const createMockPostDetails = (
     content: string;
     attachments: string[] | null;
     is_blurred: boolean;
-    kind: 'short' | 'long';
+    kind: 'short' | 'long' | 'collection';
   }> = {},
 ): EnrichedPostDetails => ({
   id: 'test-author:test-post',
@@ -277,6 +305,42 @@ describe('PostContentBase', () => {
     expect(screen.queryByTestId('container')).not.toBeInTheDocument();
   });
 
+  it('renders CollectionCard (preview variant) when kind is collection', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({
+        content: '{"name":"My Collection"}',
+        kind: 'collection',
+      }),
+      isLoading: false,
+    });
+
+    render(<PostContentBase postId="author-pubky:raw-post-id" className="custom-class" />);
+
+    const card = screen.getByTestId('collection-card');
+    expect(card).toBeInTheDocument();
+    expect(card).toHaveAttribute('data-author-pubky', 'author-pubky');
+    expect(card).toHaveAttribute('data-post-id', 'raw-post-id');
+    expect(card).toHaveAttribute('data-variant', 'preview');
+    expect(screen.queryByTestId('container')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
+  });
+
+  it('forwards contrast to CollectionCard for the collection branch', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({
+        content: '{"name":"My Collection"}',
+        kind: 'collection',
+      }),
+      isLoading: false,
+    });
+
+    render(<PostContentBase postId="author-pubky:raw-post-id" contrast="strong" />);
+
+    const card = screen.getByTestId('collection-card');
+    expect(card).toHaveAttribute('data-variant', 'preview');
+    expect(card).toHaveAttribute('data-contrast', 'strong');
+  });
+
   it('prioritizes is_blurred over kind for blurred articles', () => {
     mockUsePostDetails.mockReturnValue({
       postDetails: createMockPostDetails({
@@ -291,6 +355,24 @@ describe('PostContentBase', () => {
 
     expect(screen.getByTestId('post-content-blurred')).toBeInTheDocument();
     expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
+  });
+
+  it('renders PostMissing when the post is not found (settled null)', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+
+    render(<PostContentBase postId="post-missing" />);
+
+    expect(screen.getByTestId('post-missing')).toBeInTheDocument();
+    expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument();
+  });
+
+  it('renders the skeleton (not PostMissing) while still loading', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: true });
+
+    render(<PostContentBase postId="post-loading" />);
+
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('post-missing')).not.toBeInTheDocument();
   });
 });
 

@@ -1,12 +1,17 @@
 import * as Sentry from '@sentry/nextjs';
-import { Env } from '@/libs/env/env';
 import { getSentryInitBase, shouldEnableSentry } from '@/libs/observability/sentry';
+import {
+  getSentryReplaysOnErrorSampleRate,
+  getSentryReplaysSessionSampleRate,
+} from '@/libs/runtime-config/runtime-config';
 
+// Safe to read runtime config here: ContainerRoot emits `window.__PUBKY_CONFIG__` with
+// next/script strategy="beforeInteractive", which Next injects into <head> before app bundles.
 if (shouldEnableSentry()) {
   Sentry.init({
     ...getSentryInitBase(),
-    replaysSessionSampleRate: Env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
-    replaysOnErrorSampleRate: Env.NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE,
+    replaysSessionSampleRate: getSentryReplaysSessionSampleRate(),
+    replaysOnErrorSampleRate: getSentryReplaysOnErrorSampleRate(),
     integrations: [
       Sentry.replayIntegration({
         maskAllText: true,

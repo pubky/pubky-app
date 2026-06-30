@@ -462,30 +462,39 @@ describe('posts', () => {
     cy.findFirstPostInFeedFiltered(postContent1, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-bookmark-btn"]').click();
     });
+    cy.get('[data-cy="post-save-bookmarks-option"]').click();
 
     createQuickPost(postContent2);
     cy.findFirstPostInFeedFiltered(postContent2, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-bookmark-btn"]').click();
     });
+    cy.get('[data-cy="post-save-bookmarks-option"]').click();
 
-    cy.get('a[href="/bookmarks"]').first().click();
-    cy.location('pathname').should('eq', '/bookmarks');
+    cy.get('a[href="/collections"]').first().click();
+    cy.location('pathname').should('eq', '/collections');
+    cy.get('[data-cy="collection-bookmark-card"]').click();
+    cy.location('pathname').should('eq', '/collections/bookmarks');
 
-    cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent1);
-    cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent2);
+    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', postContent1);
+    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', postContent2);
 
     // unbookmark both posts
-    cy.get('[data-cy="timeline-posts"]')
+    cy.get('[data-cy="timeline-posts-grid"]')
       .find('[data-cy="post-card"]')
       .should('have.length', 2)
       .then(($posts) => {
         $posts.each((_idx, element) => {
           cy.wrap(element).find('[data-cy="post-bookmark-btn"]').click();
+          cy.get('[data-cy="post-save-bookmarks-option"]').click();
+          // The save picker stays open after toggling (multi-save UX), so close
+          // it before the next post — otherwise clicking the next trigger is an
+          // outside-dismiss on the still-open menu instead of opening it.
+          cy.get('body').type('{esc}');
         });
       });
 
     cy.reload();
-    cy.contains('No posts found').should('be.visible');
+    cy.contains('No bookmarks yet').should('be.visible');
   });
 
   it('can repost with content then delete the repost', () => {

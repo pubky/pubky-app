@@ -152,11 +152,12 @@
   "header": {
     "home": "首页",
     "hot": "热门",
-    "bookmarks": "书签",
     "settings": "设置",
     "newHere": "新来?",
     "signIn": "登录",
-    "feed": "动态"
+    "feed": "动态",
+    "search": "搜索",
+    "collections": "收藏集"
   },
   "settings": {
     "title": "设置",
@@ -507,9 +508,11 @@
       "followUser": "关注 {username}",
       "unfollowUser": "取消关注 {username}",
       "muteUser": "静音 {username}",
-      "unmuteUser": "取消静音 {username}"
+      "unmuteUser": "取消静音 {username}",
+      "tagPost": "标记帖子 ({count})"
     },
     "deleted": "此帖子已被作者删除。",
+    "missing": "未找到帖子。",
     "dropFiles": "将文件拖放到此处",
     "articleTitle": "文章标题",
     "addTag": "添加标签",
@@ -548,6 +551,7 @@
     "tabs": {
       "notifications": "通知",
       "posts": "帖子",
+      "collections": "收藏",
       "replies": "回复",
       "followers": "粉丝",
       "following": "关注",
@@ -635,6 +639,12 @@
     "deletePost": {
       "title": "删除帖子？",
       "description": "此操作无法撤销。帖子将被永久删除。",
+      "confirmButton": "删除",
+      "cancelButton": "取消"
+    },
+    "deleteCollection": {
+      "title": "删除收藏集？",
+      "description": "您确定要删除 {name} 吗？关注此收藏集的用户将无法再访问它。收藏集内的帖子不会被删除。",
       "confirmButton": "删除",
       "cancelButton": "取消"
     },
@@ -990,6 +1000,7 @@
       "attachmentsCleared": "附件已清除",
       "failedToLoadPosts": "无法加载新帖子",
       "parseError": "无法解析文章内容",
+      "collectionParseError": "无法解析合集内容",
       "coverImageError": "无法加载封面图片",
       "attachmentsLoadFailed": "无法加载附件",
       "repostSuccessFallback": "已转发"
@@ -1000,6 +1011,10 @@
       "addFailed": "无法添加书签",
       "removeFailed": "无法移除书签",
       "loginRequired": "请登录以保存帖子"
+    },
+    "collection": {
+      "collectionDeleted": "您的收藏集已被删除",
+      "deleteFailed": "删除收藏集失败。请重试。"
     },
     "copy": {
       "pubkyCopied": "Pubky 已复制到剪贴板",
@@ -1147,7 +1162,8 @@
       "images": "图片",
       "videos": "视频",
       "links": "链接",
-      "files": "文件"
+      "files": "文件",
+      "collections": "收藏集"
     },
     "timeframe": {
       "title": "时间范围",
@@ -1299,5 +1315,138 @@
     "toolbarAriaLabel": "Markdown 编辑工具栏",
     "warningApproaching": "您即将达到最大字符数限制。",
     "warningReached": "您已达到最大字符数限制。"
+  },
+  "collections": {
+    "deleted": "此收藏集已被作者删除。",
+    "missing": "未找到收藏集。",
+    "new": {
+      "cta": "新建收藏集",
+      "ctaShort": "新建",
+      "title": "新建收藏集",
+      "nameLabel": "标题",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "描述",
+      "descriptionPlaceholder": "来自比特币最大贡献者的精选",
+      "backgroundLabel": "背景",
+      "addImage": "添加图片",
+      "removeImage": "移除图片",
+      "coverImageInvalid": "封面图片必须是图片文件。",
+      "coverImageTooLarge": "封面图片太大。",
+      "nameRequired": "收藏集标题为必填项。",
+      "cancel": "取消",
+      "save": "保存更改",
+      "saving": "保存中...",
+      "created": "收藏集已创建",
+      "createFailed": "创建收藏集失败。"
+    },
+    "intro": {
+      "title": "欢迎使用收藏集",
+      "description": "保存值得收藏的帖子。收集你网络中最优质的内容。整理想法，从噪声中筛选信号，并分享重要的内容。",
+      "imageAlt": "收藏集",
+      "cancel": "取消",
+      "continue": "继续"
+    },
+    "edit": {
+      "title": "编辑收藏集",
+      "save": "保存更改",
+      "updated": "收藏集已更新",
+      "updateFailed": "更新收藏集失败。"
+    },
+    "showMore": "显示更多",
+    "loadFailed": "加载收藏集失败，请重试。",
+    "my": {
+      "title": "我的收藏集",
+      "publicNote": "请注意：所有收藏集均为公开且可被发现。",
+      "publicNoteShort": "所有收藏集均为公开且可被发现。"
+    },
+    "followed": {
+      "title": "已关注的收藏集",
+      "empty": "你还没有关注任何收藏集。"
+    },
+    "discover": {
+      "title": "发现收藏集",
+      "empty": "目前没有可发现的收藏集。"
+    },
+    "bookmarks": {
+      "title": "书签",
+      "description": "您保存以供稍后查看的所有内容。"
+    },
+    "card": {
+      "follow": "关注",
+      "unfollow": "取消关注",
+      "delete": "删除",
+      "toast": {
+        "followed": "你已关注此收藏",
+        "unfollowed": "你已取消关注此收藏",
+        "shared": "你已分享此收藏"
+      }
+    },
+    "single": {
+      "share": "分享",
+      "shareTitle": "分享收藏",
+      "edit": "编辑",
+      "delete": "删除",
+      "follow": "关注",
+      "unfollow": "取消关注",
+      "content": "内容",
+      "addContent": "添加内容",
+      "empty": "此收藏为空。",
+      "notFound": {
+        "title": "未找到收藏",
+        "subtitle1": "此收藏不可用。",
+        "subtitle2": "可能已被删除，或链接已失效。",
+        "imageAlt": "未找到收藏",
+        "backToCollections": "返回收藏",
+        "viewProfile": "查看个人资料"
+      }
+    },
+    "addContentDialog": {
+      "title": "添加内容",
+      "description": "从你的信息流添加帖子或文章，或直接粘贴 URL。",
+      "fromFeedTitle": "从信息流添加",
+      "fromFeedLead": "找到一个帖子",
+      "fromFeedRest": "，然后点击收藏按钮将其添加。",
+      "pasteTitle": "粘贴帖子 URL",
+      "pasteDescription": "你也可以粘贴帖子 URL，将其快速添加到你的收藏中。",
+      "createPostTitle": "创建新帖子",
+      "createPostPlaceholder": "你在想什么？",
+      "createPostAvatarFallback": "你",
+      "adding": "正在添加...",
+      "errors": {
+        "required": "粘贴帖子 URL。",
+        "invalid": "输入有效的帖子 URL。",
+        "notFound": "找不到该帖子。",
+        "alreadyAdded": "此帖子已添加。",
+        "collectionNotAllowed": "不能将一个收藏添加到收藏中。",
+        "failure": "无法添加此帖子。"
+      }
+    }
+  },
+  "fab": {
+    "newPost": "新帖子",
+    "newCollection": "新建收藏集",
+    "newPostInCollection": "在收藏集中新建帖子",
+    "newBookmark": "新建书签",
+    "addedToCollection": "帖子已添加到收藏集。"
+  },
+  "postSave": {
+    "title": "保存帖子",
+    "description": "选择将此帖子保存到哪里。",
+    "open": "保存帖子",
+    "loading": "正在加载保存选项",
+    "bookmarks": "书签",
+    "newCollection": "新建收藏集",
+    "collectionNamePlaceholder": "收藏集名称",
+    "createCollection": "创建收藏集",
+    "loadingCollections": "正在加载收藏集...",
+    "addedToCollection": "帖子已添加到收藏。",
+    "removedFromCollection": "帖子已从收藏移除。",
+    "updateCollectionFailed": "更新收藏集失败。",
+    "collectionCreated": "收藏集已创建并保存帖子。",
+    "createCollectionFailed": "创建收藏集失败。"
+  },
+  "moderation": {
+    "postContentModerated": "帖子内容已被审核。",
+    "collectionContentModerated": "收藏集内容已被审核。"
   }
 }

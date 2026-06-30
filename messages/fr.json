@@ -152,11 +152,12 @@
   "header": {
     "home": "Accueil",
     "hot": "Tendances",
-    "bookmarks": "Favoris",
     "settings": "Paramètres",
     "newHere": "Nouveau ici ?",
     "signIn": "Se connecter",
-    "feed": "Fil"
+    "feed": "Fil",
+    "search": "Rechercher",
+    "collections": "Collections"
   },
   "settings": {
     "title": "Paramètres",
@@ -507,9 +508,11 @@
       "followUser": "Suivre {username}",
       "unfollowUser": "Ne plus suivre {username}",
       "muteUser": "Masquer {username}",
-      "unmuteUser": "Afficher {username}"
+      "unmuteUser": "Afficher {username}",
+      "tagPost": "Taguer la publication ({count})"
     },
     "deleted": "Cette publication a ete supprimée par son auteur.",
+    "missing": "Publication introuvable.",
     "dropFiles": "Deposez les fichiers ici",
     "articleTitle": "Titre de l'article",
     "addTag": "ajouter un tag",
@@ -548,6 +551,7 @@
     "tabs": {
       "notifications": "Notifications",
       "posts": "Publications",
+      "collections": "Collections",
       "replies": "Réponses",
       "followers": "Abonnes",
       "following": "Abonnements",
@@ -635,6 +639,12 @@
     "deletePost": {
       "title": "Supprimer la publication ?",
       "description": "Cette action est irréversible. La publication sera définitivement supprimée.",
+      "confirmButton": "Supprimer",
+      "cancelButton": "Annuler"
+    },
+    "deleteCollection": {
+      "title": "Supprimer la collection ?",
+      "description": "Voulez-vous vraiment supprimer {name} ? Les personnes qui suivent cette collection n'y auront plus accès. Les publications dans la collection ne seront pas supprimées.",
       "confirmButton": "Supprimer",
       "cancelButton": "Annuler"
     },
@@ -990,6 +1000,7 @@
       "attachmentsCleared": "Pieces jointes supprimées",
       "failedToLoadPosts": "Impossible de charger les nouvelles publications",
       "parseError": "Impossible d'analyser le contenu de l'article",
+      "collectionParseError": "Impossible d'analyser le contenu de la collection",
       "coverImageError": "Impossible de charger l'image de couverture",
       "attachmentsLoadFailed": "Impossible de charger les pièces jointes",
       "repostSuccessFallback": "Republié"
@@ -1000,6 +1011,10 @@
       "addFailed": "Impossible d'ajouter le favori",
       "removeFailed": "Impossible de retirer le favori",
       "loginRequired": "Connectez-vous pour enregistrer des publications"
+    },
+    "collection": {
+      "collectionDeleted": "Votre collection a été supprimée",
+      "deleteFailed": "Échec de la suppression de la collection. Veuillez réessayer."
     },
     "copy": {
       "pubkyCopied": "Pubky copie dans le presse-papiers",
@@ -1153,7 +1168,8 @@
       "images": "Images",
       "videos": "Videos",
       "links": "Liens",
-      "files": "Fichiers"
+      "files": "Fichiers",
+      "collections": "Collections"
     },
     "timeframe": {
       "title": "Periode",
@@ -1305,5 +1321,138 @@
     "toolbarAriaLabel": "Barre d'outils d'édition Markdown",
     "warningApproaching": "Vous approchez de la limite maximale de caractères.",
     "warningReached": "Vous avez atteint la limite maximale de caractères."
+  },
+  "collections": {
+    "deleted": "Cette collection a été supprimée par son auteur.",
+    "missing": "Collection introuvable.",
+    "new": {
+      "cta": "Nouvelle collection",
+      "ctaShort": "Nouveau",
+      "title": "Nouvelle collection",
+      "nameLabel": "Titre",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Le meilleur des plus grands contributeurs Bitcoin",
+      "backgroundLabel": "Arrière-plan",
+      "addImage": "Ajouter une image",
+      "removeImage": "Supprimer l'image",
+      "coverImageInvalid": "L'image de couverture doit être un fichier image.",
+      "coverImageTooLarge": "L'image de couverture est trop grande.",
+      "nameRequired": "Le titre de la collection est requis.",
+      "cancel": "Annuler",
+      "save": "Enregistrer les modifications",
+      "saving": "Enregistrement...",
+      "created": "Collection créée",
+      "createFailed": "Échec de la création de la collection."
+    },
+    "intro": {
+      "title": "Bienvenue dans les Collections",
+      "description": "Gardez les publications qui en valent la peine. Rassemblez le meilleur contenu de votre réseau. Organisez vos idées, filtrez le signal du bruit et partagez ce qui compte.",
+      "imageAlt": "Collections",
+      "cancel": "Annuler",
+      "continue": "Continuer"
+    },
+    "edit": {
+      "title": "Modifier la collection",
+      "save": "Enregistrer les modifications",
+      "updated": "Collection mise à jour",
+      "updateFailed": "Échec de la mise à jour de la collection."
+    },
+    "showMore": "Afficher plus",
+    "loadFailed": "Échec du chargement des collections. Veuillez réessayer.",
+    "my": {
+      "title": "Mes collections",
+      "publicNote": "À noter : toutes les collections sont publiques et visibles.",
+      "publicNoteShort": "Toutes les collections sont publiques et visibles."
+    },
+    "followed": {
+      "title": "Collections suivies",
+      "empty": "Vous ne suivez aucune collection pour le moment."
+    },
+    "discover": {
+      "title": "Découvrir des collections",
+      "empty": "Aucune collection à découvrir pour le moment."
+    },
+    "bookmarks": {
+      "title": "Signets",
+      "description": "Tout ce que vous avez enregistré pour plus tard."
+    },
+    "card": {
+      "follow": "Suivre",
+      "unfollow": "Ne plus suivre",
+      "delete": "Supprimer",
+      "toast": {
+        "followed": "Vous suivez désormais cette collection",
+        "unfollowed": "Vous ne suivez plus cette collection",
+        "shared": "Vous avez partagé cette collection"
+      }
+    },
+    "single": {
+      "share": "Partager",
+      "shareTitle": "Partager la collection",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "follow": "Suivre",
+      "unfollow": "Ne plus suivre",
+      "content": "Contenu",
+      "addContent": "Ajouter du contenu",
+      "empty": "Cette collection est vide.",
+      "notFound": {
+        "title": "Collection introuvable",
+        "subtitle1": "Cette collection n'est pas disponible.",
+        "subtitle2": "Elle a peut-être été supprimée ou le lien n'est plus valide.",
+        "imageAlt": "Collection introuvable",
+        "backToCollections": "Retour aux collections",
+        "viewProfile": "Voir le profil"
+      }
+    },
+    "addContentDialog": {
+      "title": "Ajouter du contenu",
+      "description": "Ajoutez une publication ou un article depuis votre fil ou collez directement une URL.",
+      "fromFeedTitle": "Ajouter depuis le fil",
+      "fromFeedLead": "Trouvez une publication",
+      "fromFeedRest": " que vous voulez ajouter et cliquez sur le bouton des collections.",
+      "pasteTitle": "Coller l'URL de la publication",
+      "pasteDescription": "Vous pouvez aussi coller l'URL d'une publication pour l'ajouter rapidement à votre collection.",
+      "createPostTitle": "Créer une nouvelle publication",
+      "createPostPlaceholder": "Qu'avez-vous en tête ?",
+      "createPostAvatarFallback": "Vous",
+      "adding": "Ajout...",
+      "errors": {
+        "required": "Collez une URL de publication.",
+        "invalid": "Saisissez une URL de publication valide.",
+        "notFound": "Nous n'avons pas trouvé cette publication.",
+        "alreadyAdded": "Cette publication est déjà ajoutée.",
+        "collectionNotAllowed": "Une collection ne peut pas être ajoutée à une collection.",
+        "failure": "Impossible d'ajouter cette publication."
+      }
+    }
+  },
+  "fab": {
+    "newPost": "Nouvelle publication",
+    "newCollection": "Nouvelle collection",
+    "newPostInCollection": "Nouvelle publication dans la collection",
+    "newBookmark": "Nouveau signet",
+    "addedToCollection": "Publication ajoutée à la collection."
+  },
+  "postSave": {
+    "title": "Enregistrer la publication",
+    "description": "Choisissez où enregistrer cette publication.",
+    "open": "Enregistrer la publication",
+    "loading": "Chargement des options d'enregistrement",
+    "bookmarks": "Signets",
+    "newCollection": "Nouvelle collection",
+    "collectionNamePlaceholder": "Nom de la collection",
+    "createCollection": "Créer une collection",
+    "loadingCollections": "Chargement des collections...",
+    "addedToCollection": "Publication ajoutée à la collection.",
+    "removedFromCollection": "Publication retirée de la collection.",
+    "updateCollectionFailed": "Échec de la mise à jour de la collection.",
+    "collectionCreated": "Collection créée et publication enregistrée.",
+    "createCollectionFailed": "Échec de la création de la collection."
+  },
+  "moderation": {
+    "postContentModerated": "Contenu de la publication censuré.",
+    "collectionContentModerated": "Contenu de la collection censuré."
   }
 }

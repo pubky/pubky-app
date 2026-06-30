@@ -50,6 +50,24 @@ describe('BookmarkController', () => {
     BookmarkController = bookmarkModule.BookmarkController;
   });
 
+  describe('getAll', () => {
+    it('delegates to BookmarkApplication.getAll and returns its result', async () => {
+      const sortedIds = ['authorA:p1', 'authorB:p2'];
+      const getAllSpy = vi.spyOn(BookmarkApplication, 'getAll').mockResolvedValue(sortedIds);
+
+      const result = await BookmarkController.getAll();
+
+      expect(getAllSpy).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(sortedIds);
+    });
+
+    it('propagates errors from the application layer', async () => {
+      vi.spyOn(BookmarkApplication, 'getAll').mockRejectedValue(new Error('boom'));
+
+      await expect(BookmarkController.getAll()).rejects.toThrow('boom');
+    });
+  });
+
   describe('commitCreate', () => {
     it('should call BookmarkApplication.persist with correct parameters', async () => {
       const persistSpy = vi.spyOn(BookmarkApplication, 'persist');

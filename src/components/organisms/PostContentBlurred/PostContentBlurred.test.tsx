@@ -10,6 +10,10 @@ vi.mock('@/controllers/moderation/moderation', () => ({
   },
 }));
 
+vi.mock('next-intl', () => ({
+  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
+}));
+
 // Mock Atoms
 vi.mock('@/atoms/Button/Button', () => {
   return {
@@ -104,7 +108,7 @@ describe('PostContentBlurred', () => {
   it('displays the moderated post message', () => {
     render(<PostContentBlurred {...defaultProps} />);
 
-    expect(screen.getByText('Post content moderated.')).toBeInTheDocument();
+    expect(screen.getByText('moderation.postContentModerated')).toBeInTheDocument();
   });
 
   it('displays blurred placeholder text', () => {

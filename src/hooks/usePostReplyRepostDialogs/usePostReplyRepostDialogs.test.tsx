@@ -25,12 +25,14 @@ vi.mock('@/organisms/DialogRepost/DialogRepost', () => ({
     postId,
     open,
     onOpenChangeAction,
+    config,
   }: {
     postId: string;
     open: boolean;
     onOpenChangeAction: (open: boolean) => void;
+    config?: { title?: string };
   }) => (
-    <div data-testid="dialog-repost" data-post-id={postId} data-open={open}>
+    <div data-testid="dialog-repost" data-post-id={postId} data-open={open} data-config-title={config?.title}>
       <button data-testid="close-repost-dialog" onClick={() => onOpenChangeAction(false)}>
         Close Repost
       </button>
@@ -48,6 +50,16 @@ describe('usePostReplyRepostDialogs', () => {
     expect(screen.getByTestId('dialog-reply')).toHaveAttribute('data-open', 'false');
     expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-post-id', 'author:post-id');
     expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-open', 'false');
+  });
+
+  it('forwards the repost config to DialogRepost', () => {
+    const { result } = renderHook(() =>
+      usePostReplyRepostDialogs('author:post-id', { title: 'Share Collection', submitLabel: 'Share' }),
+    );
+
+    render(result.current.dialogs);
+
+    expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-config-title', 'Share Collection');
   });
 
   it('opens only the reply dialog', () => {

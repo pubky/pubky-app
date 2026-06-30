@@ -1,0 +1,81 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TimelineGridPosts - Snapshots > should match snapshot for empty state 1`] = `
+<div>
+  <div
+    data-testid="timeline-empty"
+  >
+    No posts
+  </div>
+</div>
+`;
+
+exports[`TimelineGridPosts - Snapshots > should match snapshot for loading state 1`] = `
+<div>
+  <div
+    data-testid="timeline-loading"
+  >
+    Loading...
+  </div>
+</div>
+`;
+
+exports[`TimelineGridPosts - Snapshots > should match snapshot with posts 1`] = `
+<div>
+  <div
+    data-cy="timeline-container"
+    data-testid="container"
+  >
+    <div
+      class="grid gap-3 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+      data-cy="timeline-posts-grid"
+      data-testid="container"
+      role="feed"
+    >
+      <div
+        aria-posinset="1"
+        aria-setsize="3"
+        class="@container/grid rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1"
+        data-cy="post-card"
+        data-testid="container"
+        role="article"
+        tabindex="0"
+      >
+        <div
+          data-testid="post-author1:post1"
+        />
+      </div>
+      <div
+        aria-posinset="2"
+        aria-setsize="3"
+        class="@container/grid rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1"
+        data-cy="post-card"
+        data-testid="container"
+        role="article"
+        tabindex="0"
+      >
+        <div
+          data-testid="post-author2:post2"
+        />
+      </div>
+      <div
+        aria-posinset="3"
+        aria-setsize="3"
+        class="@container/grid rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1"
+        data-cy="post-card"
+        data-testid="container"
+        role="article"
+        tabindex="0"
+      >
+        <div
+          data-testid="post-author3:post3"
+        />
+      </div>
+    </div>
+    <div
+      class="h-5"
+      data-testid="container"
+    />
+  </div>
+</div>
+`;

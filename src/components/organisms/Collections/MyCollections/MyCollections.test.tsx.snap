@@ -1,0 +1,215 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for the authenticated state with two loaded cards 1`] = `
+<div
+  class="flex w-full flex-col gap-4"
+  data-testid="container"
+>
+  <div
+    class="flex flex-wrap items-center justify-between gap-3"
+    data-testid="container"
+  >
+    <div
+      class="flex flex-wrap items-center gap-3"
+      data-testid="container"
+    >
+      <h2
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="heading-2"
+      >
+        collections.my.title
+      </h2>
+      <div
+        data-alt="Alice"
+        data-avatar-url=""
+        data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+        data-name="Alice"
+        data-size="md"
+        data-testid="avatar-with-fallback"
+      >
+        Alice
+      </div>
+      <button
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        data-size="sm"
+        data-slot="button"
+        data-variant="secondary"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-plus"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M5 12h14"
+          />
+          <path
+            d="M12 5v14"
+          />
+        </svg>
+        <span
+          class="text-sm font-bold lg:hidden"
+          data-testid="typography"
+        >
+          collections.new.ctaShort
+        </span>
+        <span
+          class="hidden text-sm font-bold lg:inline"
+          data-testid="typography"
+        >
+          collections.new.ctaShort
+        </span>
+      </button>
+    </div>
+  </div>
+  <div
+    class="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6"
+    data-testid="container"
+  >
+    <div
+      data-testid="collection-bookmark-card"
+    />
+    <div
+      data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+      data-post-id="p1"
+      data-testid="collection-card"
+    />
+    <div
+      data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+      data-post-id="p2"
+      data-testid="collection-card"
+    />
+    <button
+      aria-label="collections.new.cta"
+      class="flex h-full w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-foreground transition-colors outline-none hover:border-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+      data-cy="new-collection-card-cta"
+      data-slot="button"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-plus size-3 shrink-0"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M5 12h14"
+        />
+        <path
+          d="M12 5v14"
+        />
+      </svg>
+      <span
+        class="text-sm font-bold"
+        data-testid="typography"
+      >
+        collections.new.cta
+      </span>
+    </button>
+  </div>
+  <div
+    class="flex w-full justify-center"
+    data-testid="container"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+      data-size="sm"
+      data-slot="button"
+      data-variant="default"
+    >
+      collections.showMore
+    </button>
+  </div>
+</div>
+`;
+
+exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for the signed-out fallback state 1`] = `
+<div
+  class="flex w-full flex-col gap-4"
+  data-testid="container"
+>
+  <div
+    class="flex flex-wrap items-center justify-between gap-3"
+    data-testid="container"
+  >
+    <div
+      class="flex flex-wrap items-center gap-3"
+      data-testid="container"
+    >
+      <h2
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="heading-2"
+      >
+        collections.my.title
+      </h2>
+      <div
+        data-count="1"
+        data-size="md"
+        data-testid="avatar-stack-skeleton"
+      />
+      <button
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        data-size="sm"
+        data-slot="button"
+        data-variant="secondary"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-plus"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M5 12h14"
+          />
+          <path
+            d="M12 5v14"
+          />
+        </svg>
+        <span
+          class="text-sm font-bold lg:hidden"
+          data-testid="typography"
+        >
+          collections.new.ctaShort
+        </span>
+        <span
+          class="hidden text-sm font-bold lg:inline"
+          data-testid="typography"
+        >
+          collections.new.ctaShort
+        </span>
+      </button>
+    </div>
+  </div>
+  <div
+    class="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6"
+    data-testid="container"
+  >
+    <div
+      data-testid="collection-bookmark-card"
+    />
+  </div>
+</div>
+`;

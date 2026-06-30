@@ -83,6 +83,7 @@ const setupUserCounts = async (userId: Pubky, tagged: number = 0) => {
     following: 0,
     followers: 0,
     friends: 0,
+    collections: 0,
     bookmarks: 0,
   });
 };

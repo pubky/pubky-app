@@ -37,7 +37,7 @@ exports[`GenericPreview - Snapshots > matches snapshot for image type 1`] = `
 exports[`GenericPreview - Snapshots > matches snapshot for loading state 1`] = `
 <div>
   <div
-    class="mx-auto w-full flex-col flex justify-between gap-6 rounded-md p-6 lg:flex-row"
+    class="mx-auto w-full flex-col flex justify-between gap-6 rounded-md p-6 lg:flex-row @max-xl/grid:flex-col!"
     data-testid="container"
   >
     <div
@@ -83,7 +83,7 @@ exports[`GenericPreview - Snapshots > matches snapshot for website type with all
     target="_blank"
   >
     <div
-      class="mx-auto w-full flex-col flex justify-between gap-6 rounded-md bg-muted p-6 lg:flex-row"
+      class="mx-auto w-full flex-col flex justify-between gap-6 rounded-md bg-muted p-6 lg:flex-row @max-xl/grid:flex-col!"
       data-testid="container"
     >
       <div
@@ -159,7 +159,7 @@ exports[`GenericPreview - Snapshots > matches snapshot for website type without 
     target="_blank"
   >
     <div
-      class="mx-auto w-full flex-col flex justify-between gap-6 rounded-md bg-muted p-6 lg:flex-row"
+      class="mx-auto w-full flex-col flex justify-between gap-6 rounded-md bg-muted p-6 lg:flex-row @max-xl/grid:flex-col!"
       data-testid="container"
     >
       <div

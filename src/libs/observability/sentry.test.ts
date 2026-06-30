@@ -5,11 +5,33 @@ import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
+import { RUNTIME_CONFIG_WINDOW_KEY } from '@/libs/runtime-config/runtime-config';
+import { NETWORK_RUNTIME_DEFAULTS } from '@/libs/runtime-config/runtime-config.schema';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { getSentryInitBase } from './sentry';
 import { shouldDropAppErrorFromSentry } from './sentry.utils';
 
 const TEST_PUBKY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
+
+const TEST_DSN = 'https://public@example.com/1';
+
+/**
+ * Inject a window runtime config (the client-side source the sentry gates read).
+ * Returns a cleanup that removes the injection again.
+ */
+function injectRuntimeConfig(overrides: Record<string, unknown> = {}): () => void {
+  window[RUNTIME_CONFIG_WINDOW_KEY] = {
+    ...NETWORK_RUNTIME_DEFAULTS,
+    testnet: false,
+    sentryDsn: TEST_DSN,
+    sentryEnvironment: 'production',
+    sentryTracesSampleRate: 0,
+    ...overrides,
+  };
+  return () => {
+    delete window[RUNTIME_CONFIG_WINDOW_KEY];
+  };
+}
 
 function runBeforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
   const beforeSend = getSentryInitBase().beforeSend;
@@ -65,18 +87,17 @@ async function withEnabledSentryCapture(
     Env: {
       NODE_ENV: 'production',
       VITEST: undefined,
-      NEXT_PUBLIC_TESTNET: false,
-      NEXT_PUBLIC_SENTRY_DSN: 'https://public@example.com/1',
-      NEXT_PUBLIC_SENTRY_ENVIRONMENT: 'production',
       NEXT_PUBLIC_APP_VERSION: 'test',
-      NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: 0,
     },
   }));
+  // DSN + testnet gates read the runtime config (fresh module after resetModules).
+  const removeRuntimeConfig = injectRuntimeConfig();
 
   try {
     const { captureAppError } = await import('./sentry');
     run({ captureAppError, captureException });
   } finally {
+    removeRuntimeConfig();
     vi.doUnmock('@sentry/nextjs');
     vi.doUnmock('@/libs/env/env');
     vi.resetModules();
@@ -106,25 +127,78 @@ function createCapturedAppError({
   });
 }
 
-describe('shouldEnableSentry', () => {
-  it('is disabled when NEXT_PUBLIC_TESTNET is true outside unit-test guards', async () => {
+/**
+ * Import a fresh ./sentry with Env mocked to a deployed shape (NODE_ENV=production, not Vitest)
+ * so the runtime-config gates are actually exercised instead of short-circuiting on test guards.
+ */
+async function withProdEnvSentry(run: (mod: typeof import('./sentry')) => void | Promise<void>): Promise<void> {
+  vi.resetModules();
+  vi.doMock('@/libs/env/env', () => ({
+    Env: {
+      NODE_ENV: 'production',
+      VITEST: undefined,
+      NEXT_PUBLIC_APP_VERSION: 'test',
+    },
+  }));
+
+  try {
+    const mod = await import('./sentry');
+    await run(mod);
+  } finally {
+    vi.doUnmock('@/libs/env/env');
     vi.resetModules();
-    vi.doMock('@/libs/env/env', () => ({
-      Env: {
-        NODE_ENV: 'production',
-        VITEST: undefined,
-        NEXT_PUBLIC_TESTNET: true,
-        NEXT_PUBLIC_SENTRY_DSN: 'https://public@example.com/1',
-      },
-    }));
+  }
+}
 
+describe('shouldEnableSentry', () => {
+  it('is disabled when the runtime config sets testnet=true (single image switched at runtime)', async () => {
+    const removeRuntimeConfig = injectRuntimeConfig({ testnet: true });
     try {
-      const { shouldEnableSentry: shouldEnableSentryWithMockedEnv } = await import('./sentry');
-
-      expect(shouldEnableSentryWithMockedEnv()).toBe(false);
+      await withProdEnvSentry(({ shouldEnableSentry }) => {
+        expect(shouldEnableSentry()).toBe(false);
+      });
     } finally {
-      vi.doUnmock('@/libs/env/env');
-      vi.resetModules();
+      removeRuntimeConfig();
+    }
+  });
+
+  it('is disabled when no runtime DSN is configured', async () => {
+    const removeRuntimeConfig = injectRuntimeConfig({ sentryDsn: undefined });
+    try {
+      await withProdEnvSentry(({ shouldEnableSentry }) => {
+        expect(shouldEnableSentry()).toBe(false);
+      });
+    } finally {
+      removeRuntimeConfig();
+    }
+  });
+
+  it('is enabled when a runtime DSN is configured and testnet is false', async () => {
+    const removeRuntimeConfig = injectRuntimeConfig();
+    try {
+      await withProdEnvSentry(({ shouldEnableSentry, getSentryInitBase: initBase }) => {
+        expect(shouldEnableSentry()).toBe(true);
+        expect(initBase().dsn).toBe(TEST_DSN);
+        expect(initBase().environment).toBe('production');
+      });
+    } finally {
+      removeRuntimeConfig();
+    }
+  });
+
+  it('returns false instead of throwing when the runtime config cannot be resolved', async () => {
+    // Deployed/required mode with neither a window injection nor PUBKY_RUNTIME_* set:
+    // config resolution throws, and the capture funnel must swallow that (never mask the
+    // original boot error with its own).
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('VITEST', '');
+    try {
+      await withProdEnvSentry(({ shouldEnableSentry }) => {
+        expect(() => shouldEnableSentry()).not.toThrow();
+        expect(shouldEnableSentry()).toBe(false);
+      });
+    } finally {
+      vi.unstubAllEnvs();
     }
   });
 });

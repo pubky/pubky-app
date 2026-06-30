@@ -154,11 +154,12 @@
   "header": {
     "home": "الرئيسية",
     "hot": "الرائج",
-    "bookmarks": "المفضلة",
     "settings": "الاعدادات",
     "newHere": "جديد هنا؟",
     "signIn": "تسجيل الدخول",
-    "feed": "فيد"
+    "feed": "فيد",
+    "search": "بحث",
+    "collections": "المجموعات"
   },
   "settings": {
     "title": "الاعدادات",
@@ -509,9 +510,11 @@
       "followUser": "متابعة {username}",
       "unfollowUser": "الغاء متابعة {username}",
       "muteUser": "كتم {username}",
-      "unmuteUser": "الغاء كتم {username}"
+      "unmuteUser": "الغاء كتم {username}",
+      "tagPost": "وسم المنشور ({count})"
     },
     "deleted": "تم حذف هذا المنشور من قبل صاحبه.",
+    "missing": "المنشور غير موجود.",
     "dropFiles": "اسقط الملفات هنا",
     "articleTitle": "عنوان المقال",
     "addTag": "اضافة وسم",
@@ -550,6 +553,7 @@
     "tabs": {
       "notifications": "الاشعارات",
       "posts": "المنشورات",
+      "collections": "المجموعات",
       "replies": "الردود",
       "followers": "المتابعون",
       "following": "المتابَعون",
@@ -637,6 +641,12 @@
     "deletePost": {
       "title": "حذف المنشور؟",
       "description": "لا يمكن التراجع عن هذا الإجراء. سيتم حذف المنشور نهائياً.",
+      "confirmButton": "حذف",
+      "cancelButton": "إلغاء"
+    },
+    "deleteCollection": {
+      "title": "حذف المجموعة؟",
+      "description": "هل أنت متأكد من أنك تريد حذف {name}؟ لن يتمكن الأشخاص الذين يتابعون هذه المجموعة من الوصول إليها بعد الآن. لن يتم حذف المنشورات داخل المجموعة.",
       "confirmButton": "حذف",
       "cancelButton": "إلغاء"
     },
@@ -992,6 +1002,7 @@
       "attachmentsCleared": "تم ازالة المرفقات",
       "failedToLoadPosts": "تعذر تحميل المنشورات الجديدة",
       "parseError": "تعذر تحليل محتوى المقال",
+      "collectionParseError": "تعذر تحليل محتوى المجموعة",
       "coverImageError": "تعذر تحميل صورة الغلاف",
       "attachmentsLoadFailed": "تعذر تحميل المرفقات",
       "repostSuccessFallback": "أُعيد النشر"
@@ -1002,6 +1013,10 @@
       "addFailed": "تعذر إضافة الإشارة المرجعية",
       "removeFailed": "تعذر إزالة الإشارة المرجعية",
       "loginRequired": "سجّل الدخول لحفظ المنشورات"
+    },
+    "collection": {
+      "collectionDeleted": "تم حذف مجموعتك",
+      "deleteFailed": "فشل حذف المجموعة. يُرجى المحاولة مرة أخرى."
     },
     "copy": {
       "pubkyCopied": "تم نسخ البوبكي الى الحافظة",
@@ -1149,7 +1164,8 @@
       "images": "الصور",
       "videos": "الفيديوهات",
       "links": "الروابط",
-      "files": "الملفات"
+      "files": "الملفات",
+      "collections": "المجموعات"
     },
     "timeframe": {
       "title": "الفترة الزمنية",
@@ -1301,5 +1317,138 @@
     "toolbarAriaLabel": "شريط أدوات تحرير ماركداون",
     "warningApproaching": "أنت تقترب من الحد الأقصى لعدد الأحرف.",
     "warningReached": "لقد وصلت إلى الحد الأقصى لعدد الأحرف."
+  },
+  "collections": {
+    "deleted": "تم حذف هذه المجموعة من قبل صاحبها.",
+    "missing": "المجموعة غير موجودة.",
+    "new": {
+      "cta": "مجموعة جديدة",
+      "ctaShort": "جديد",
+      "title": "مجموعة جديدة",
+      "nameLabel": "العنوان",
+      "namePlaceholder": "إثبات العمل",
+      "descriptionLabel": "الوصف",
+      "descriptionPlaceholder": "أفضل ما قدمه أكبر المساهمين في بيتكوين",
+      "backgroundLabel": "الخلفية",
+      "addImage": "إضافة صورة",
+      "removeImage": "إزالة الصورة",
+      "coverImageInvalid": "يجب أن تكون صورة الغلاف ملف صورة.",
+      "coverImageTooLarge": "صورة الغلاف كبيرة جداً.",
+      "nameRequired": "عنوان المجموعة مطلوب.",
+      "cancel": "إلغاء",
+      "save": "حفظ التغييرات",
+      "saving": "جارٍ الحفظ...",
+      "created": "تم إنشاء المجموعة",
+      "createFailed": "فشل إنشاء المجموعة."
+    },
+    "intro": {
+      "title": "مرحبًا بك في المجموعات",
+      "description": "احفظ المنشورات التي تستحق الاحتفاظ بها. اجمع أفضل المحتوى من شبكتك. نظّم الأفكار، وصفِّ الإشارة من الضوضاء، وشارك ما يهم.",
+      "imageAlt": "المجموعات",
+      "cancel": "إلغاء",
+      "continue": "متابعة"
+    },
+    "edit": {
+      "title": "تعديل المجموعة",
+      "save": "حفظ التغييرات",
+      "updated": "تم تحديث المجموعة",
+      "updateFailed": "فشل تحديث المجموعة."
+    },
+    "showMore": "عرض المزيد",
+    "loadFailed": "تعذّر تحميل المجموعات. يُرجى المحاولة مرة أخرى.",
+    "my": {
+      "title": "مجموعاتي",
+      "publicNote": "يرجى ملاحظة: جميع المجموعات عامة وقابلة للاكتشاف.",
+      "publicNoteShort": "جميع المجموعات عامة وقابلة للاكتشاف."
+    },
+    "followed": {
+      "title": "المجموعات المتابَعة",
+      "empty": "لم تتابع أي مجموعات بعد."
+    },
+    "discover": {
+      "title": "اكتشف المجموعات",
+      "empty": "لا توجد مجموعات لاكتشافها الآن."
+    },
+    "bookmarks": {
+      "title": "الإشارات المرجعية",
+      "description": "كل ما حفظته لوقت لاحق."
+    },
+    "card": {
+      "follow": "متابعة",
+      "unfollow": "إلغاء المتابعة",
+      "delete": "حذف",
+      "toast": {
+        "followed": "لقد تابعت هذه المجموعة",
+        "unfollowed": "لقد ألغيت متابعة هذه المجموعة",
+        "shared": "لقد شاركت هذه المجموعة"
+      }
+    },
+    "single": {
+      "share": "مشاركة",
+      "shareTitle": "مشاركة المجموعة",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "follow": "متابعة",
+      "unfollow": "إلغاء المتابعة",
+      "content": "محتوى",
+      "addContent": "إضافة محتوى",
+      "empty": "هذه المجموعة فارغة.",
+      "notFound": {
+        "title": "المجموعة غير موجودة",
+        "subtitle1": "هذه المجموعة غير متاحة.",
+        "subtitle2": "قد تكون قد أُزيلت أو لم يعد الرابط صالحًا.",
+        "imageAlt": "المجموعة غير موجودة",
+        "backToCollections": "العودة إلى المجموعات",
+        "viewProfile": "عرض الملف الشخصي"
+      }
+    },
+    "addContentDialog": {
+      "title": "إضافة محتوى",
+      "description": "أضف منشورًا أو مقالًا من خلاصتك أو الصق رابطًا مباشرة.",
+      "fromFeedTitle": "إضافة من الخلاصة",
+      "fromFeedLead": "ابحث عن منشور",
+      "fromFeedRest": " تريد إضافته واضغط على زر المجموعات.",
+      "pasteTitle": "لصق رابط المنشور",
+      "pasteDescription": "يمكنك أيضًا لصق رابط منشور لإضافته بسرعة إلى مجموعتك.",
+      "createPostTitle": "إنشاء منشور جديد",
+      "createPostPlaceholder": "بماذا تفكر؟",
+      "createPostAvatarFallback": "أنت",
+      "adding": "جارٍ الإضافة...",
+      "errors": {
+        "required": "الصق رابط منشور.",
+        "invalid": "أدخل رابط منشور صالحًا.",
+        "notFound": "تعذر العثور على ذلك المنشور.",
+        "alreadyAdded": "تمت إضافة هذا المنشور بالفعل.",
+        "collectionNotAllowed": "لا يمكن إضافة مجموعة إلى مجموعة.",
+        "failure": "تعذرت إضافة هذا المنشور."
+      }
+    }
+  },
+  "fab": {
+    "newPost": "منشور جديد",
+    "newCollection": "مجموعة جديدة",
+    "newPostInCollection": "منشور جديد في المجموعة",
+    "newBookmark": "إشارة مرجعية جديدة",
+    "addedToCollection": "تمت إضافة المنشور إلى المجموعة."
+  },
+  "postSave": {
+    "title": "حفظ المنشور",
+    "description": "اختر مكان حفظ هذا المنشور.",
+    "open": "حفظ المنشور",
+    "loading": "جارٍ تحميل خيارات الحفظ",
+    "bookmarks": "الإشارات المرجعية",
+    "newCollection": "مجموعة جديدة",
+    "collectionNamePlaceholder": "اسم المجموعة",
+    "createCollection": "إنشاء مجموعة",
+    "loadingCollections": "جارٍ تحميل المجموعات...",
+    "addedToCollection": "تمت إضافة المنشور إلى المجموعة.",
+    "removedFromCollection": "تمت إزالة المنشور من المجموعة.",
+    "updateCollectionFailed": "فشل تحديث المجموعة.",
+    "collectionCreated": "تم إنشاء المجموعة وحفظ المنشور.",
+    "createCollectionFailed": "فشل إنشاء المجموعة."
+  },
+  "moderation": {
+    "postContentModerated": "تم حظر محتوى المنشور.",
+    "collectionContentModerated": "تم حظر محتوى المجموعة."
   }
 }

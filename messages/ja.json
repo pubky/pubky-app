@@ -152,11 +152,12 @@
   "header": {
     "home": "ホーム",
     "hot": "人気",
-    "bookmarks": "ブックマーク",
     "settings": "設定",
     "newHere": "初めてですか？",
     "signIn": "ログイン",
-    "feed": "フィード"
+    "feed": "フィード",
+    "search": "検索",
+    "collections": "コレクション"
   },
   "settings": {
     "title": "設定",
@@ -507,9 +508,11 @@
       "followUser": "{username}をフォロー",
       "unfollowUser": "{username}のフォローを解除",
       "muteUser": "{username}をミュート",
-      "unmuteUser": "{username}のミュートを解除"
+      "unmuteUser": "{username}のミュートを解除",
+      "tagPost": "投稿にタグを付ける ({count})"
     },
     "deleted": "この投稿は作成者によって削除されました。",
+    "missing": "投稿が見つかりません。",
     "dropFiles": "ここにファイルをドロップ",
     "articleTitle": "記事タイトル",
     "addTag": "タグを追加",
@@ -548,6 +551,7 @@
     "tabs": {
       "notifications": "通知",
       "posts": "投稿",
+      "collections": "コレクション",
       "replies": "返信",
       "followers": "フォロワー",
       "following": "フォロー中",
@@ -635,6 +639,12 @@
     "deletePost": {
       "title": "投稿を削除しますか？",
       "description": "この操作は取り消せません。投稿は完全に削除されます。",
+      "confirmButton": "削除",
+      "cancelButton": "キャンセル"
+    },
+    "deleteCollection": {
+      "title": "コレクションを削除しますか？",
+      "description": "{name}を削除してもよろしいですか？このコレクションをフォローしているユーザーはアクセスできなくなります。コレクション内の投稿は削除されません。",
       "confirmButton": "削除",
       "cancelButton": "キャンセル"
     },
@@ -990,6 +1000,7 @@
       "attachmentsCleared": "添付ファイルを消去しました",
       "failedToLoadPosts": "新しい投稿を読み込めませんでした",
       "parseError": "記事コンテンツを解析できませんでした",
+      "collectionParseError": "コレクションのコンテンツを解析できませんでした",
       "coverImageError": "カバー画像を読み込めませんでした",
       "attachmentsLoadFailed": "添付ファイルを読み込めませんでした",
       "repostSuccessFallback": "リポストしました"
@@ -1000,6 +1011,10 @@
       "addFailed": "ブックマークを追加できませんでした",
       "removeFailed": "ブックマークを削除できませんでした",
       "loginRequired": "投稿を保存するにはサインインしてください"
+    },
+    "collection": {
+      "collectionDeleted": "あなたのコレクションが削除されました",
+      "deleteFailed": "コレクションの削除に失敗しました。もう一度お試しください。"
     },
     "copy": {
       "pubkyCopied": "pubkyをクリップボードにコピーしました",
@@ -1153,7 +1168,8 @@
       "images": "画像",
       "videos": "動画",
       "links": "リンク",
-      "files": "ファイル"
+      "files": "ファイル",
+      "collections": "コレクション"
     },
     "timeframe": {
       "title": "期間",
@@ -1305,5 +1321,138 @@
     "toolbarAriaLabel": "マークダウン編集ツールバー",
     "warningApproaching": "最大文字数制限に近づいています。",
     "warningReached": "最大文字数制限に達しました。"
+  },
+  "collections": {
+    "deleted": "このコレクションは作成者によって削除されました。",
+    "missing": "コレクションが見つかりません。",
+    "new": {
+      "cta": "新しいコレクション",
+      "ctaShort": "新規",
+      "title": "新しいコレクション",
+      "nameLabel": "タイトル",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "説明",
+      "descriptionPlaceholder": "ビットコインの主要な貢献者のベスト",
+      "backgroundLabel": "背景",
+      "addImage": "画像を追加",
+      "removeImage": "画像を削除",
+      "coverImageInvalid": "カバー画像は画像ファイルである必要があります。",
+      "coverImageTooLarge": "カバー画像が大きすぎます。",
+      "nameRequired": "コレクションのタイトルは必須です。",
+      "cancel": "キャンセル",
+      "save": "変更を保存",
+      "saving": "保存中...",
+      "created": "コレクションを作成しました",
+      "createFailed": "コレクションの作成に失敗しました。"
+    },
+    "intro": {
+      "title": "コレクションへようこそ",
+      "description": "保存する価値のある投稿を集めましょう。ネットワークから最高のコンテンツを集め、アイデアを整理し、ノイズからシグナルを選り分け、大切なものを共有しましょう。",
+      "imageAlt": "コレクション",
+      "cancel": "キャンセル",
+      "continue": "続ける"
+    },
+    "edit": {
+      "title": "コレクションを編集",
+      "save": "変更を保存",
+      "updated": "コレクションを更新しました",
+      "updateFailed": "コレクションの更新に失敗しました。"
+    },
+    "showMore": "もっと見る",
+    "loadFailed": "コレクションの読み込みに失敗しました。もう一度お試しください。",
+    "my": {
+      "title": "マイコレクション",
+      "publicNote": "ご注意: すべてのコレクションは公開され、発見可能です。",
+      "publicNoteShort": "すべてのコレクションは公開され、発見可能です。"
+    },
+    "followed": {
+      "title": "フォロー中のコレクション",
+      "empty": "まだコレクションをフォローしていません。"
+    },
+    "discover": {
+      "title": "コレクションを見つける",
+      "empty": "現在見つけられるコレクションはありません。"
+    },
+    "bookmarks": {
+      "title": "ブックマーク",
+      "description": "あとで見るために保存したものがすべてここにあります。"
+    },
+    "card": {
+      "follow": "フォロー",
+      "unfollow": "フォロー解除",
+      "delete": "削除",
+      "toast": {
+        "followed": "このコレクションをフォローしました",
+        "unfollowed": "このコレクションのフォローを解除しました",
+        "shared": "このコレクションを共有しました"
+      }
+    },
+    "single": {
+      "share": "共有",
+      "shareTitle": "コレクションを共有",
+      "edit": "編集",
+      "delete": "削除",
+      "follow": "フォロー",
+      "unfollow": "フォロー解除",
+      "content": "コンテンツ",
+      "addContent": "コンテンツを追加",
+      "empty": "このコレクションは空です。",
+      "notFound": {
+        "title": "コレクションが見つかりません",
+        "subtitle1": "このコレクションは表示できません。",
+        "subtitle2": "削除されたか、リンクが無効になっている可能性があります。",
+        "imageAlt": "コレクションが見つかりません",
+        "backToCollections": "コレクションに戻る",
+        "viewProfile": "プロフィールを見る"
+      }
+    },
+    "addContentDialog": {
+      "title": "コンテンツを追加",
+      "description": "フィードから投稿または記事を追加するか、URLを直接貼り付けます。",
+      "fromFeedTitle": "フィードから追加",
+      "fromFeedLead": "投稿を見つけて",
+      "fromFeedRest": "追加したい投稿のコレクションボタンをクリックします。",
+      "pasteTitle": "投稿URLを貼り付け",
+      "pasteDescription": "投稿URLを貼り付けて、すばやくコレクションに追加することもできます。",
+      "createPostTitle": "新しい投稿を作成",
+      "createPostPlaceholder": "いま何を考えていますか？",
+      "createPostAvatarFallback": "あなた",
+      "adding": "追加中...",
+      "errors": {
+        "required": "投稿URLを貼り付けてください。",
+        "invalid": "有効な投稿URLを入力してください。",
+        "notFound": "その投稿が見つかりませんでした。",
+        "alreadyAdded": "この投稿はすでに追加されています。",
+        "collectionNotAllowed": "コレクションをコレクションに追加することはできません。",
+        "failure": "この投稿を追加できませんでした。"
+      }
+    }
+  },
+  "fab": {
+    "newPost": "新しい投稿",
+    "newCollection": "新しいコレクション",
+    "newPostInCollection": "コレクションに新しい投稿",
+    "newBookmark": "新しいブックマーク",
+    "addedToCollection": "投稿をコレクションに追加しました。"
+  },
+  "postSave": {
+    "title": "投稿を保存",
+    "description": "この投稿を保存する場所を選択してください。",
+    "open": "投稿を保存",
+    "loading": "保存オプションを読み込み中",
+    "bookmarks": "ブックマーク",
+    "newCollection": "新しいコレクション",
+    "collectionNamePlaceholder": "コレクション名",
+    "createCollection": "コレクションを作成",
+    "loadingCollections": "コレクションを読み込み中...",
+    "addedToCollection": "投稿をコレクションに追加しました。",
+    "removedFromCollection": "投稿をコレクションから削除しました。",
+    "updateCollectionFailed": "コレクションの更新に失敗しました。",
+    "collectionCreated": "コレクションを作成し、投稿を保存しました。",
+    "createCollectionFailed": "コレクションの作成に失敗しました。"
+  },
+  "moderation": {
+    "postContentModerated": "投稿内容は検閲されました。",
+    "collectionContentModerated": "コレクションの内容は検閲されました。"
   }
 }

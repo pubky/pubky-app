@@ -709,6 +709,7 @@ describe('CustomFeedDialog', () => {
     expect(within(section).getByText('All')).toBeInTheDocument();
     expect(within(section).getByText('Posts')).toBeInTheDocument();
     expect(within(section).getByText('Articles')).toBeInTheDocument();
+    expect(within(section).getByText('Collections')).toBeInTheDocument();
     expect(within(section).getByText('Images')).toBeInTheDocument();
     expect(within(section).getByText('Videos')).toBeInTheDocument();
     expect(within(section).getByText('Links')).toBeInTheDocument();
@@ -731,6 +732,7 @@ describe('CustomFeedDialog', () => {
       expect(within(section).getByText('Videos')).toBeInTheDocument();
       expect(within(section).queryByText('Posts')).not.toBeInTheDocument();
       expect(within(section).queryByText('Articles')).not.toBeInTheDocument();
+      expect(within(section).queryByText('Collections')).not.toBeInTheDocument();
       expect(within(section).queryByText('Links')).not.toBeInTheDocument();
       expect(within(section).queryByText('Files')).not.toBeInTheDocument();
     });
