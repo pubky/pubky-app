@@ -124,13 +124,3 @@ exports[`TimelineFeed - Snapshots > matches snapshot for home with feed children
   </div>
 </div>
 `;
-
-exports[`TimelineFeed - Snapshots > matches snapshot for loading state 1`] = `
-<div>
-  <div
-    data-testid="timeline-loading"
-  >
-    Loading...
-  </div>
-</div>
-`;
