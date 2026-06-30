@@ -45,7 +45,7 @@ exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = 
               data-testid="breadcrumb-item-0"
             >
               <button
-                class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+                class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
                 type="button"
               >
                 <span
@@ -83,7 +83,7 @@ exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = 
               data-testid="breadcrumb-item-1"
             >
               <button
-                class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+                class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
                 type="button"
               >
                 <span
@@ -117,11 +117,11 @@ exports[`PostPageHeader > matches snapshot for reply post with breadcrumb 1`] = 
               </svg>
             </li>
             <li
-              class="flex items-center justify-start gap-2.5 text-foreground min-w-0 max-w-[50%] shrink-0 overflow-hidden"
+              class="flex items-center justify-start gap-2.5 text-foreground max-w-[50%] min-w-0 shrink-0 overflow-hidden"
               data-testid="breadcrumb-item-2"
             >
               <button
-                class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+                class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
                 type="button"
               >
                 <span

@@ -15,7 +15,7 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for non-truncated sta
         data-testid="breadcrumb-item-0"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
@@ -49,11 +49,11 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for non-truncated sta
         </svg>
       </li>
       <li
-        class="flex items-center justify-start gap-2.5 text-foreground min-w-0 max-w-[50%] shrink-0 overflow-hidden"
+        class="flex items-center justify-start gap-2.5 text-foreground max-w-[50%] min-w-0 shrink-0 overflow-hidden"
         data-testid="breadcrumb-item-1"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
@@ -83,7 +83,7 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for non-truncated sta
         data-testid="breadcrumb-item-0"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
@@ -121,7 +121,7 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for non-truncated sta
         data-testid="breadcrumb-item-1"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
@@ -155,11 +155,11 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for non-truncated sta
         </svg>
       </li>
       <li
-        class="flex items-center justify-start gap-2.5 text-foreground min-w-0 max-w-[50%] shrink-0 overflow-hidden"
+        class="flex items-center justify-start gap-2.5 text-foreground max-w-[50%] min-w-0 shrink-0 overflow-hidden"
         data-testid="breadcrumb-item-2"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
@@ -189,7 +189,7 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         data-testid="breadcrumb-item-0"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
@@ -304,7 +304,7 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         data-testid="breadcrumb-item-3"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
@@ -338,11 +338,11 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         </svg>
       </li>
       <li
-        class="flex items-center justify-start gap-2.5 text-foreground min-w-0 max-w-[50%] shrink-0 overflow-hidden"
+        class="flex items-center justify-start gap-2.5 text-foreground max-w-[50%] min-w-0 shrink-0 overflow-hidden"
         data-testid="breadcrumb-item-4"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
@@ -372,7 +372,7 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         data-testid="breadcrumb-item-0"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
@@ -487,7 +487,7 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         data-testid="breadcrumb-item-4"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
@@ -521,11 +521,11 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         </svg>
       </li>
       <li
-        class="flex items-center justify-start gap-2.5 text-foreground min-w-0 max-w-[50%] shrink-0 overflow-hidden"
+        class="flex items-center justify-start gap-2.5 text-foreground max-w-[50%] min-w-0 shrink-0 overflow-hidden"
         data-testid="breadcrumb-item-5"
       >
         <button
-          class="flex min-w-0 max-w-full items-center gap-1 overflow-hidden"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
