@@ -23,6 +23,17 @@ export interface LocalFilesState {
    * }
    */
   posts: Record<string, AttachmentConstructed[] | undefined>;
+
+  /**
+   * Collection cover images keyed by composite collection id.
+   * Used for instant cover preview before the CDN indexes the uploaded file.
+   *
+   * @example
+   * {
+   *   "pk:abc123/posts/xyz789": "blob:..."
+   * }
+   */
+  collections: Record<string, string | undefined>;
 }
 
 export interface LocalFilesActions {
@@ -39,6 +50,12 @@ export interface LocalFilesActions {
   setPostAttachments: (postId: string, attachments: AttachmentConstructed[]) => void;
 
   /**
+   * Set or clear the cover image blob URL for a collection.
+   * Pass `null` to clear the entry. Automatically revokes the previous blob URL.
+   */
+  setCollectionCover: (collectionId: string, blobUrl: string | null) => void;
+
+  /**
    * Reset all state and revoke all blob URLs.
    * Called on logout.
    */
@@ -50,10 +67,12 @@ export type LocalFilesStore = LocalFilesState & LocalFilesActions;
 export const localFilesInitialState: LocalFilesState = {
   profile: null,
   posts: {},
+  collections: {},
 };
 
 export enum LocalFilesActionTypes {
   SET_PROFILE = 'SET_PROFILE',
   SET_POST_ATTACHMENTS = 'SET_POST_ATTACHMENTS',
+  SET_COLLECTION_COVER = 'SET_COLLECTION_COVER',
   RESET = 'RESET',
 }

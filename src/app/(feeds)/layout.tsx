@@ -7,7 +7,7 @@ import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { type FeedsShellConfig, tryResolveFeedsShellConfig } from './_shell/configs';
 
 /**
- * Shared shell for the feed cluster (`/home`, `/feed/[id]`, `/bookmarks`, `/search`).
+ * Shared shell for the feed cluster (`/home`, `/feed/[id]`, `/search`).
  *
  * Renders a single persistent `<ContentLayout>` across intra-cluster navigation
  * so `MobileHeader`, sticky sidebars and drawer state do not unmount on every

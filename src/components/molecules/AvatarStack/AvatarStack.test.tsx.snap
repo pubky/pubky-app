@@ -1,0 +1,104 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AvatarStack - Snapshots > matches snapshot for a typical 3-pubky case 1`] = `
+<div
+  class="flex items-center"
+  data-testid="avatar-stack"
+>
+  <div
+    data-alt="User-aaaa"
+    data-avatar-url="https://example.com/aaaa.png"
+    data-fallback-seed="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    data-name="User-aaaa"
+    data-size="md"
+    data-testid="avatar-with-fallback"
+  >
+    User-aaaa
+  </div>
+  <div
+    data-alt="User-bbbb"
+    data-avatar-url="https://example.com/bbbb.png"
+    data-fallback-seed="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    data-name="User-bbbb"
+    data-size="md"
+    data-testid="avatar-with-fallback"
+  >
+    User-bbbb
+  </div>
+  <div
+    data-alt="User-cccc"
+    data-avatar-url="https://example.com/cccc.png"
+    data-fallback-seed="cccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    data-name="User-cccc"
+    data-size="md"
+    data-testid="avatar-with-fallback"
+  >
+    User-cccc
+  </div>
+</div>
+`;
+
+exports[`AvatarStack - Snapshots > matches snapshot for an overflow case (7 pubkys, default cap 5) 1`] = `
+<div
+  class="flex items-center"
+  data-testid="avatar-stack"
+>
+  <div
+    data-alt="User-aaaa"
+    data-avatar-url="https://example.com/aaaa.png"
+    data-fallback-seed="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    data-name="User-aaaa"
+    data-size="md"
+    data-testid="avatar-with-fallback"
+  >
+    User-aaaa
+  </div>
+  <div
+    data-alt="User-bbbb"
+    data-avatar-url="https://example.com/bbbb.png"
+    data-fallback-seed="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    data-name="User-bbbb"
+    data-size="md"
+    data-testid="avatar-with-fallback"
+  >
+    User-bbbb
+  </div>
+  <div
+    data-alt="User-cccc"
+    data-avatar-url="https://example.com/cccc.png"
+    data-fallback-seed="cccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    data-name="User-cccc"
+    data-size="md"
+    data-testid="avatar-with-fallback"
+  >
+    User-cccc
+  </div>
+  <div
+    data-alt="User-dddd"
+    data-avatar-url="https://example.com/dddd.png"
+    data-fallback-seed="dddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    data-name="User-dddd"
+    data-size="md"
+    data-testid="avatar-with-fallback"
+  >
+    User-dddd
+  </div>
+  <div
+    data-alt="User-eeee"
+    data-avatar-url="https://example.com/eeee.png"
+    data-fallback-seed="eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    data-name="User-eeee"
+    data-size="md"
+    data-testid="avatar-with-fallback"
+  >
+    User-eeee
+  </div>
+  <div
+    class="z-10 flex shrink-0 items-center justify-center rounded-full border border-muted-foreground bg-background text-xs font-medium text-foreground shadow-sm -ml-2 size-8"
+    data-testid="avatar-stack-overflow"
+  >
+    +
+    2
+  </div>
+</div>
+`;

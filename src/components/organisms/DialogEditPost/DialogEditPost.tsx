@@ -29,7 +29,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-3xl" hiddenTitle={title}>
+      <DialogContent avoidKeyboard className="w-3xl" hiddenTitle={title}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
 

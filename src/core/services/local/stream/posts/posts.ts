@@ -10,6 +10,7 @@ import { ModerationModel } from '@/models/moderation/moderation';
 import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import { PostTagsModel } from '@/models/post/tags/postTags';
@@ -34,6 +35,7 @@ import type {
   TStreamResult,
 } from '@/services/local/stream/posts/post.types';
 import type { NexusFileDetails, NexusPostCounts, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 
 /**
@@ -256,11 +258,24 @@ export class LocalStreamPostsService {
         });
       }
 
-      // Collect bookmarks from Nexus response (viewer's bookmark status)
+      // Collect bookmarks from Nexus response (viewer's bookmark status).
+      //
+      // Nexus returns `bookmark: { id, indexed_at }` (see
+      // `NexusBookmark`). We mirror that into our local `bookmarks` table
+      // using `indexed_at` as the `created_at` sort key.
+      //
+      // The `?? indexed_at ?? now` fallback chain exists because
+      // `created_at` is indexed on the table and IndexedDB silently drops
+      // rows with `undefined` indexed keys from index-cursor reads
+      // (e.g. `orderBy('created_at')`). A single bad write would make the
+      // row invisible to FollowedCollections — keep the chain defensive
+      // against any future Nexus shape drift.
       if (post.bookmark) {
+        const bookmarkCreatedAt =
+          typeof post.bookmark.indexed_at === 'number' ? post.bookmark.indexed_at : (post.details.indexed_at ?? now);
         postBookmarks.push({
           id: postId,
-          created_at: post.bookmark.created_at,
+          created_at: bookmarkCreatedAt,
         });
       }
 
@@ -296,16 +311,37 @@ export class LocalStreamPostsService {
       this.addReplyToStream({ repliedUri: post.relationships.replied, replyPostId: postId, postReplies });
     }
 
+    // Tombstone guard. Defense-in-depth against a Nexus refetch racing a
+    // local delete: if a row already has `content === DELETED`, do NOT
+    // overwrite it with whatever Nexus is returning right now (the by-ids
+    // endpoint can be stale relative to the delete index, see
+    // `LocalPostService.delete`'s hard-delete branch). Tombstoned ids are
+    // dropped from every per-table batch below so we don't leave behind
+    // orphan counts / tags / relationships / bookmarks pointing at a
+    // deleted post.
+    const tombstonedIds = new Set(
+      (await PostDetailsModel.findByIdsPreserveOrder(postDetails.map((d) => d.id)))
+        .map((existing, i) => (existing?.content === DELETED ? postDetails[i].id : null))
+        .filter((id): id is string => id !== null),
+    );
+    const liveDetails = postDetails.filter((d) => !tombstonedIds.has(d.id));
+    const liveCounts = postCounts.filter(([id]) => !tombstonedIds.has(id));
+    const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));
+    const liveTags = postTags.filter(([id]) => !tombstonedIds.has(id));
+    const liveTtl = postTtl.filter(([id]) => !tombstonedIds.has(id));
+    const liveBookmarks = postBookmarks.filter((b) => !tombstonedIds.has(b.id));
+    const liveModerations = postModerations.filter((m) => !tombstonedIds.has(m.id));
+
     await Promise.all([
-      PostDetailsModel.bulkSave(postDetails),
-      PostCountsModel.bulkSave(postCounts),
-      PostTagsModel.bulkSave(postTags),
-      PostRelationshipsModel.bulkSave(postRelationships),
-      PostTtlModel.bulkSave(postTtl),
+      PostDetailsModel.bulkSave(liveDetails),
+      PostCountsModel.bulkSave(liveCounts),
+      PostTagsModel.bulkSave(liveTags),
+      PostRelationshipsModel.bulkSave(liveRelationships),
+      PostTtlModel.bulkSave(liveTtl),
       // Persist bookmarks from Nexus (viewer's bookmark status for each post)
-      postBookmarks.length > 0 ? BookmarkModel.bulkSave(postBookmarks) : Promise.resolve(),
+      liveBookmarks.length > 0 ? BookmarkModel.bulkSave(liveBookmarks) : Promise.resolve(),
       // Persist moderation records for moderated posts (is_blurred defaults to true)
-      postModerations.length > 0 ? ModerationModel.bulkSave(postModerations) : Promise.resolve(),
+      liveModerations.length > 0 ? ModerationModel.bulkSave(liveModerations) : Promise.resolve(),
     ]);
 
     if (Object.keys(postReplies).length > 0) {
@@ -325,8 +361,11 @@ export class LocalStreamPostsService {
    * Persist a new chunk of post IDs into a cached stream.
    *
    * Creates the stream when it does not exist yet. Otherwise merges the incoming
-   * IDs with the existing stream, removes duplicates, and re-sorts by post
-   * timestamp in descending order before saving.
+   * IDs with the existing stream and removes duplicates before saving.
+   *
+   * Normal timeline streams are re-sorted by post timestamp. Bookmark streams
+   * preserve membership order because their meaningful ordering is bookmark
+   * creation time, not post creation time.
    *
    * @param stream - Incoming post IDs to merge into the stream cache
    * @param streamId - Stream identifier to create or update
@@ -347,10 +386,19 @@ export class LocalStreamPostsService {
     // Combine existing and new posts
     const combinedStream = [...postStream.stream, ...newPostsToAdd];
 
+    if (this.isBookmarkStream(streamId)) {
+      await PostStreamModel.upsert(streamId, combinedStream);
+      return;
+    }
+
     // Sort by timestamp (indexed_at) in descending order (most recent first)
     const sortedStream = await sortPostIdsByTimestamp(combinedStream);
 
     await PostStreamModel.upsert(streamId, sortedStream);
+  }
+
+  private static isBookmarkStream(streamId: PostStreamId): boolean {
+    return streamId.includes(`:${StreamSource.BOOKMARKS}:`);
   }
 
   /**

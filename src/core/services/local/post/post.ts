@@ -19,7 +19,11 @@ import type { PostRelationshipsModelSchema } from '@/models/post/relationships/p
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import {
+  buildAuthorCollectionsStreamId,
+  type PostStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
@@ -36,6 +40,30 @@ export class LocalPostService {
    */
   static async readDetails({ postId }: { postId: string }) {
     return PostDetailsModel.findById(postId);
+  }
+
+  /**
+   * Bulk reads multiple post details from the local database, preserving input
+   * order (undefined entries for posts not found). Mirrors `readRelationshipsByIds`.
+   * @param postIds - Array of composite post IDs (author:postId)
+   * @returns Array of post details aligned to `postIds` (undefined for missing posts)
+   *
+   * @throws {DatabaseError} When database operations fail
+   */
+  static async readDetailsByIds(postIds: string[]): Promise<(PostDetailsModelSchema | undefined)[]> {
+    if (postIds.length === 0) return [];
+
+    try {
+      return await PostDetailsModel.findByIdsPreserveOrder(postIds);
+    } catch (error) {
+      Logger.error('Failed to read post details by ids', { postIds, error });
+      throw Err.database(DatabaseErrorCode.QUERY_FAILED, 'Failed to read post details by ids', {
+        service: ErrorService.Local,
+        operation: 'readDetailsByIds',
+        context: { postIds },
+        cause: error,
+      });
+    }
   }
 
   /**
@@ -237,11 +265,18 @@ export class LocalPostService {
           // Touch TTL for the new post
           ops.push(PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }));
 
-          // Update author's user counts in a single operation
+          // Update author's user counts in a single operation.
+          // A collection is a collection-kind post, so it bumps both the total
+          // `posts` count and the dedicated `collections` count (the profile
+          // sidebar subtracts collections back out of posts).
           ops.push(
             UserCountsModel.updateCounts({
               userId: authorId,
-              countChanges: { posts: 1, replies: parentUri ? 1 : 0 },
+              countChanges: {
+                posts: 1,
+                replies: parentUri ? 1 : 0,
+                collections: normalizedKind === 'collection' ? 1 : 0,
+              },
             }),
           );
 
@@ -279,6 +314,19 @@ export class LocalPostService {
   static async delete({ compositePostId }: TDeletePostParams): Promise<boolean> {
     const { pubky: authorId } = parseCompositeId(compositePostId);
 
+    // Idempotency guard: if the post is already tombstoned (`content ===
+    // DELETED`), short-circuit. Otherwise a stray re-delete would re-run the
+    // hard-delete transaction's `UserCountsModel.updateCounts({ posts: -1 })`
+    // and drift the author's post count. In normal UX this is unreachable —
+    // every render path for a tombstoned post shows the deleted-state
+    // component with no delete button — but the guard keeps the function
+    // idempotent against races and stale clients.
+    const existing = await PostDetailsModel.findById(compositePostId);
+    if (existing?.content === DELETED) {
+      Logger.warn('[LocalPostService.delete] post already tombstoned, skipping', { compositePostId });
+      return false;
+    }
+
     // TODO: There is an edge case where the post counts are not found, but the post is linked. This should be handled.
     const postCounts = await PostCountsModel.findById(compositePostId);
     // If counts exist and post is linked → soft delete (mark as DELETED, keep records)
@@ -312,7 +360,19 @@ export class LocalPostService {
         ],
         async () => {
           await Promise.all([
-            PostDetailsModel.deleteById(compositePostId),
+            // Tombstone, not delete. The hard-delete branch used to drop
+            // `PostDetails` entirely, but that left `useLocalFirstQuery`
+            // consumers seeing `data === null` and racing the homeserver
+            // DELETE: `fetchFn` would re-query Nexus, which still returned
+            // the post (Nexus eventual consistency between the delete index
+            // and the by-ids endpoint), and `persistPosts.bulkSave` wrote
+            // the original content back. Leaving a `content = [DELETED]`
+            // row makes `useLocalFirstQuery` treat the post as cache-hit
+            // (data is non-null), so `fetchFn` never fires and the post
+            // stays deleted. Auxiliary records (relationships, counts,
+            // tags) still get fully removed below — only the details row
+            // sticks around as a tombstone.
+            PostDetailsModel.update(compositePostId, { content: DELETED }),
             PostRelationshipsModel.deleteById(compositePostId),
             PostCountsModel.deleteById(compositePostId),
             PostTagsModel.deleteById(compositePostId),
@@ -346,11 +406,16 @@ export class LocalPostService {
             }
           }
 
-          // Update author's user counts in a single operation
+          // Update author's user counts in a single operation. Mirror the create
+          // path: a collection-kind post decrements both `posts` and `collections`.
           ops.push(
             UserCountsModel.updateCounts({
               userId: authorId,
-              countChanges: { posts: -1, replies: parentUri ? -1 : 0 },
+              countChanges: {
+                posts: -1,
+                replies: parentUri ? -1 : 0,
+                collections: kind === 'collection' ? -1 : 0,
+              },
             }),
           );
 
@@ -400,6 +465,15 @@ export class LocalPostService {
       });
       ops.push(updateStream(`author_replies:${authorId}`, [compositePostId]));
       ops.push(updateStream(`post_replies:${parentCompositeId}`, [compositePostId]));
+    } else if (kind === 'collection') {
+      ops.push(updateStream(buildAuthorCollectionsStreamId(authorId), [compositePostId]));
+      ops.push(updateStream(PostStreamTypes.TIMELINE_ALL_COLLECTION, [compositePostId]));
+      ops.push(updateStream(PostStreamTypes.TIMELINE_FOLLOWING_COLLECTION, [compositePostId]));
+      ops.push(updateStream(PostStreamTypes.TIMELINE_FRIENDS_COLLECTION, [compositePostId]));
+      ops.push(removeFromUnreadStream(buildAuthorCollectionsStreamId(authorId), [compositePostId]));
+      ops.push(removeFromUnreadStream(PostStreamTypes.TIMELINE_ALL_COLLECTION, [compositePostId]));
+      ops.push(removeFromUnreadStream(PostStreamTypes.TIMELINE_FOLLOWING_COLLECTION, [compositePostId]));
+      ops.push(removeFromUnreadStream(PostStreamTypes.TIMELINE_FRIENDS_COLLECTION, [compositePostId]));
     } else {
       ops.push(updateStream(PostStreamTypes.TIMELINE_ALL_ALL, [compositePostId]));
       ops.push(updateStream(`timeline:all:${kind}` as PostStreamId, [compositePostId]));

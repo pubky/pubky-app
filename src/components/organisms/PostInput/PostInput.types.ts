@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
 export type PostInputVariant =
@@ -11,6 +12,15 @@ interface PostInputBaseProps {
   onSuccess?: (createdPostId: string) => void;
   /** Custom placeholder text (default depends on variant) */
   placeholder?: string;
+  /** Overrides the submit button label (default depends on variant) */
+  submitLabel?: string;
+  /** Overrides the submit button icon (default depends on variant) */
+  submitIcon?: ComponentType<{ className?: string; strokeWidth?: number }>;
+  /**
+   * Overrides the repost success toast title (repost variant only). Lets the
+   * shared repost flow read as a different action, e.g. sharing a collection.
+   */
+  successToastTitle?: string;
   /** Show the thread connector (for replies, default: false) */
   showThreadConnector?: boolean;
   /**

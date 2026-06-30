@@ -2,16 +2,16 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bookmark, Flame, Home, Settings, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Settings, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { APP_ROUTES, isCoreExploreRoute, SETTINGS_ROUTES } from '@/app/routes';
+import { APP_ROUTES, isCoreExploreRoute, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { GITHUB_URL, TELEGRAM_URL, TWITTER_GETPUBKY_URL } from '@/config/externalLinks';
+import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Github2, Telegram, XTwitter } from '@/icons';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
@@ -68,13 +68,13 @@ export function HeaderSocialLinks({ ...props }: React.HTMLAttributes<HTMLDivElem
       data-testid="header-social-links"
       className={cn('mr-6 hidden flex-row justify-end gap-6 md:flex', props.className)}
     >
-      <Link href={GITHUB_URL} target="_blank" variant="muted" size="default">
+      <Link href={getGithubLink()} target="_blank" variant="muted" size="default">
         <Github2 className="h-6 w-6" />
       </Link>
-      <Link href={TWITTER_GETPUBKY_URL} target="_blank" variant="muted" size="default">
+      <Link href={getTwitterGetpubkyLink()} target="_blank" variant="muted" size="default">
         <XTwitter className="h-6 w-6" />
       </Link>
-      <Link href={TELEGRAM_URL} target="_blank" variant="muted" size="default">
+      <Link href={getTelegramLink()} target="_blank" variant="muted" size="default">
         <Telegram className="h-6 w-6" />
       </Link>
     </Container>
@@ -87,6 +87,7 @@ type NavigationItemConfig = {
   }>;
   labelKey: string;
   dataCy?: string;
+  activePrefix?: string;
   isFeedRoute?: boolean;
 };
 type HeaderNavigationButtonsProps = {
@@ -111,17 +112,18 @@ const NAVIGATION_ITEMS: NavigationItemConfig[] = [
     dataCy: 'header-hot-btn',
   },
   {
-    href: APP_ROUTES.BOOKMARKS,
-    icon: Bookmark,
-    labelKey: 'bookmarks',
-    dataCy: 'header-bookmarks-btn',
-    isFeedRoute: true,
+    href: APP_ROUTES.COLLECTIONS,
+    icon: Library,
+    labelKey: 'collections',
+    dataCy: 'header-collections-btn',
+    activePrefix: APP_ROUTES.COLLECTIONS,
   },
   {
     href: SETTINGS_ROUTES.ACCOUNT,
     icon: Settings,
     labelKey: 'settings',
     dataCy: 'header-settings-btn',
+    activePrefix: APP_ROUTES.SETTINGS,
   },
 ];
 type NavigationButtonProps = {
@@ -190,7 +192,7 @@ export function HeaderNavigationButtons({
           href={item.href}
           icon={item.icon}
           label={t(item.labelKey)}
-          isActive={pathname === item.href}
+          isActive={isNavItemActive(pathname, item)}
           dataCy={item.dataCy}
           isFeedRoute={item.isFeedRoute}
         />
@@ -240,7 +242,7 @@ export function HeaderExploreNavigationButtons({
     <Container className={cn('hidden min-w-0 flex-1 flex-row items-center justify-end gap-3 lg:flex', className)}>
       {showSearch && <SearchInput />}
       {NAVIGATION_ITEMS.map((item) => {
-        // Home/Hot are public explore routes and navigate freely. Bookmarks/Settings (and any
+        // Home/Hot are public explore routes and navigate freely. Collections/Settings (and any
         // other non-explore route) require an account, so they prompt Join Pubky via requireAuth.
         const requiresAuth = !isCoreExploreRoute(item.href);
         return (

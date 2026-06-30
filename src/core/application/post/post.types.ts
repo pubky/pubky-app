@@ -21,3 +21,8 @@ export type TGetOrFetchPostParams = {
   /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
   viewerId?: Pubky | null;
 };
+
+export type TGetDetailsByIdsParams = {
+  /** Composite post IDs in format "authorId:postId". */
+  compositeIds: string[];
+};

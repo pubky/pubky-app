@@ -37,6 +37,7 @@ const CONTENT_TO_KIND = {
   [CONTENT.ALL]: 'all',
   [CONTENT.SHORT]: 'short',
   [CONTENT.LONG]: 'long',
+  [CONTENT.COLLECTIONS]: 'collection',
   [CONTENT.IMAGES]: 'image',
   [CONTENT.VIDEOS]: 'video',
   [CONTENT.LINKS]: 'link',
@@ -52,7 +53,7 @@ const KIND_TO_CONTENT = reverseMapping(CONTENT_TO_KIND);
  * Pattern breakdown:
  * - SORTING: timeline (recent), total_engagement (popularity)
  * - SOURCE: all, following, friends, me
- * - KIND: all, short (posts), long (articles), image, video, link, file
+ * - KIND: all, short (posts), long (articles), collection, image, video, link, file
  *
  * @example
  * getStreamIdFromFilters('recent', 'all', 'all') // => 'timeline:all:all'

@@ -19,6 +19,20 @@ describe('PostTagAddButton', () => {
     expect(mockOnClick).toHaveBeenCalledTimes(1);
   });
 
+  it('suppresses navigation (preventDefault + stopPropagation) on click, while still calling onClick', () => {
+    const mockOnClick = vi.fn();
+    render(<PostTagAddButton onClick={mockOnClick} />);
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    const preventDefault = vi.spyOn(clickEvent, 'preventDefault');
+    const stopPropagation = vi.spyOn(clickEvent, 'stopPropagation');
+    screen.getByRole('button').dispatchEvent(clickEvent);
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(stopPropagation).toHaveBeenCalled();
+    expect(mockOnClick).toHaveBeenCalledTimes(1);
+  });
+
   it('has correct aria-label', () => {
     render(<PostTagAddButton />);
 

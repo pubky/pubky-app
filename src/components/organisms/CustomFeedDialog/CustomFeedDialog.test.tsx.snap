@@ -548,6 +548,39 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Articles
             </div>
             <div
+              data-testid="select-item-6"
+              data-value="6"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-library"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m16 6 4 14"
+                />
+                <path
+                  d="M12 6v14"
+                />
+                <path
+                  d="M8 8v12"
+                />
+                <path
+                  d="M4 4v16"
+                />
+              </svg>
+               
+              Collections
+            </div>
+            <div
               data-testid="select-item-2"
               data-value="2"
             >
@@ -1287,6 +1320,39 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Articles
             </div>
             <div
+              data-testid="select-item-6"
+              data-value="6"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-library"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m16 6 4 14"
+                />
+                <path
+                  d="M12 6v14"
+                />
+                <path
+                  d="M8 8v12"
+                />
+                <path
+                  d="M4 4v16"
+                />
+              </svg>
+               
+              Collections
+            </div>
+            <div
               data-testid="select-item-2"
               data-value="2"
             >
@@ -2022,6 +2088,39 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               </svg>
                
               Articles
+            </div>
+            <div
+              data-testid="select-item-6"
+              data-value="6"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-library"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m16 6 4 14"
+                />
+                <path
+                  d="M12 6v14"
+                />
+                <path
+                  d="M8 8v12"
+                />
+                <path
+                  d="M4 4v16"
+                />
+              </svg>
+               
+              Collections
             </div>
             <div
               data-testid="select-item-2"
@@ -2828,6 +2927,39 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Articles
             </div>
             <div
+              data-testid="select-item-6"
+              data-value="6"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-library"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m16 6 4 14"
+                />
+                <path
+                  d="M12 6v14"
+                />
+                <path
+                  d="M8 8v12"
+                />
+                <path
+                  d="M4 4v16"
+                />
+              </svg>
+               
+              Collections
+            </div>
+            <div
               data-testid="select-item-2"
               data-value="2"
             >
@@ -3611,6 +3743,39 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               </svg>
                
               Articles
+            </div>
+            <div
+              data-testid="select-item-6"
+              data-value="6"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-library"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m16 6 4 14"
+                />
+                <path
+                  d="M12 6v14"
+                />
+                <path
+                  d="M8 8v12"
+                />
+                <path
+                  d="M4 4v16"
+                />
+              </svg>
+               
+              Collections
             </div>
             <div
               data-testid="select-item-2"

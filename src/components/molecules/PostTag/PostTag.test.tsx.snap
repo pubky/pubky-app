@@ -4,7 +4,7 @@ exports[`PostTag - Snapshots > matches snapshot when selected 1`] = `
 <button
   aria-label="bitcoin tag"
   aria-pressed="true"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="on"
   data-tag-label="bitcoin"
@@ -28,7 +28,7 @@ exports[`PostTag - Snapshots > matches snapshot when selected 1`] = `
   </div>
   <span
     aria-hidden="true"
-    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
     style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
   />
   <span
@@ -43,7 +43,7 @@ exports[`PostTag - Snapshots > matches snapshot with all features 1`] = `
 <button
   aria-label="bitcoin tag (16 posts)"
   aria-pressed="true"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="on"
   data-tag-label="bitcoin"
@@ -100,7 +100,7 @@ exports[`PostTag - Snapshots > matches snapshot with all features 1`] = `
   </span>
   <span
     aria-hidden="true"
-    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
     style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
   />
   <span
@@ -115,7 +115,7 @@ exports[`PostTag - Snapshots > matches snapshot with close button 1`] = `
 <button
   aria-label="bitcoin tag"
   aria-pressed="false"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="off"
   data-tag-label="bitcoin"
@@ -165,7 +165,7 @@ exports[`PostTag - Snapshots > matches snapshot with close button 1`] = `
   </span>
   <span
     aria-hidden="true"
-    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
     style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
   />
 </button>
@@ -175,7 +175,7 @@ exports[`PostTag - Snapshots > matches snapshot with counter 1`] = `
 <button
   aria-label="bitcoin tag (16 posts)"
   aria-pressed="false"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="off"
   data-tag-label="bitcoin"
@@ -206,7 +206,7 @@ exports[`PostTag - Snapshots > matches snapshot with counter 1`] = `
   </div>
   <span
     aria-hidden="true"
-    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
     style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
   />
 </button>
@@ -216,7 +216,7 @@ exports[`PostTag - Snapshots > matches snapshot with custom color 1`] = `
 <button
   aria-label="bitcoin tag"
   aria-pressed="false"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="off"
   data-tag-label="bitcoin"
@@ -240,7 +240,7 @@ exports[`PostTag - Snapshots > matches snapshot with custom color 1`] = `
   </div>
   <span
     aria-hidden="true"
-    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
     style="box-shadow: inset 0px 0px 8px 0px #FF0000;"
   />
 </button>
@@ -250,7 +250,7 @@ exports[`PostTag - Snapshots > matches snapshot with default state 1`] = `
 <button
   aria-label="bitcoin tag"
   aria-pressed="false"
-  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
   data-cy="post-tag"
   data-state="off"
   data-tag-label="bitcoin"
@@ -274,7 +274,7 @@ exports[`PostTag - Snapshots > matches snapshot with default state 1`] = `
   </div>
   <span
     aria-hidden="true"
-    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
     style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
   />
 </button>

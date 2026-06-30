@@ -8,18 +8,20 @@ import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostInput } from '../PostInput/PostInput';
 import type { DialogRepostProps } from './DialogRepost.types';
 
-export function DialogRepost({ postId, open, onOpenChangeAction }: DialogRepostProps) {
+export function DialogRepost({ postId, open, onOpenChangeAction, config }: DialogRepostProps) {
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
     useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
 
+  const title = config?.title ?? 'Repost';
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-3xl" hiddenTitle="Repost">
+      <DialogContent avoidKeyboard className="w-3xl" hiddenTitle={title}>
         <DialogHeader>
-          <DialogTitle>Repost</DialogTitle>
-          <DialogDescription className="sr-only">Repost dialog</DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">{`${title} dialog`}</DialogDescription>
         </DialogHeader>
         <Container className="gap-3">
           {/* Repost input - repost preview is rendered inside PostInput */}
@@ -28,6 +30,9 @@ export function DialogRepost({ postId, open, onOpenChangeAction }: DialogRepostP
             key={resetKey}
             variant={POST_INPUT_VARIANT.REPOST}
             originalPostId={postId}
+            submitLabel={config?.submitLabel}
+            submitIcon={config?.submitIcon}
+            successToastTitle={config?.successToastTitle}
             onSuccess={() => {
               onOpenChangeAction(false);
             }}

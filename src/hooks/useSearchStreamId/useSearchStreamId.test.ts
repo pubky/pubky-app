@@ -151,6 +151,15 @@ describe('useSearchStreamId', () => {
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('timeline:all:file:pubky');
     });
+
+    it('should use collection kind for COLLECTIONS content', () => {
+      mockGet.mockReturnValue('pubky');
+      act(() => {
+        useHomeStore.setState({ content: CONTENT.COLLECTIONS });
+      });
+      const { result } = renderHook(() => useSearchStreamId());
+      expect(result.current).toBe('timeline:all:collection:pubky');
+    });
   });
 
   describe('with combined filters', () => {

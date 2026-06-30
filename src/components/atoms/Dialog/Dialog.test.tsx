@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UseDialogKeyboardOrchestratorResult } from '@/hooks/useDialogKeyboardOrchestrator/useDialogKeyboardOrchestrator.types';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +11,26 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './Dialog';
+
+const mockUseDialogKeyboardOrchestrator = vi.hoisted(() =>
+  vi.fn<() => UseDialogKeyboardOrchestratorResult>(() => ({
+    isKeyboardVisible: false,
+    spacerHeight: 0,
+    contentStyle: undefined,
+  })),
+);
+
+vi.mock('@/hooks/useDialogKeyboardOrchestrator/useDialogKeyboardOrchestrator', () => ({
+  useDialogKeyboardOrchestrator: mockUseDialogKeyboardOrchestrator,
+}));
+
+beforeEach(() => {
+  mockUseDialogKeyboardOrchestrator.mockReturnValue({
+    isKeyboardVisible: false,
+    spacerHeight: 0,
+    contentStyle: undefined,
+  });
+});
 
 describe('Dialog', () => {
   it('renders with default props', () => {
@@ -50,6 +71,53 @@ describe('Dialog', () => {
     const closeButton = document.querySelector('[data-slot="dialog-close"]');
     expect(closeButton).toBeInTheDocument();
     expect(closeButton).toHaveClass('hidden');
+  });
+
+  it('does not apply keyboard orchestrator styles by default', () => {
+    mockUseDialogKeyboardOrchestrator.mockReturnValue({
+      isKeyboardVisible: true,
+      spacerHeight: 120,
+      contentStyle: { scrollPaddingBottom: '144px' },
+    });
+
+    render(
+      <Dialog open={true}>
+        <DialogContent>
+          <div>Dialog Content</div>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent).not.toHaveClass('will-change-transform');
+    expect(dialogContent).not.toHaveStyle({ scrollPaddingBottom: '144px' });
+    expect(document.querySelector('[data-slot="dialog-keyboard-spacer"]')).not.toBeInTheDocument();
+  });
+
+  it('applies keyboard spacer and scroll padding when keyboard is visible', () => {
+    mockUseDialogKeyboardOrchestrator.mockReturnValue({
+      isKeyboardVisible: true,
+      spacerHeight: 120,
+      contentStyle: { scrollPaddingBottom: '144px' },
+    });
+
+    render(
+      <Dialog open={true}>
+        <DialogContent avoidKeyboard>
+          <div>Dialog Content</div>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent).not.toHaveClass('will-change-transform');
+    expect(dialogContent).not.toHaveStyle({ transform: 'translateY(-120px)' });
+    expect(dialogContent).toHaveStyle({ scrollPaddingBottom: '144px' });
+
+    const spacer = document.querySelector('[data-slot="dialog-keyboard-spacer"]');
+    expect(spacer).toBeInTheDocument();
+    expect(spacer).toHaveAttribute('aria-hidden', 'true');
+    expect(spacer).toHaveStyle({ height: '120px' });
   });
 });
 

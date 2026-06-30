@@ -1,0 +1,27 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CollectionItems - Snapshots > matches the owner non-empty snapshot 1`] = `
+<div
+  data-has-empty-state="true"
+  data-has-grid-trailing-slot="true"
+  data-testid="timeline-feed"
+  data-variant="collection"
+>
+  <div
+    class=""
+    data-testid="container"
+  >
+    <div
+      data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+      data-has-post-details="true"
+      data-post-id="0034BBBDFK83G"
+      data-testid="collection-hero"
+    />
+  </div>
+  <div
+    data-cy="collection-add-content-grid"
+    data-testid="add-content-dialog"
+    data-trigger-variant="grid"
+  />
+</div>
+`;

@@ -1,0 +1,182 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-in user with full state 1`] = `
+<a
+  aria-label="Bookmarks"
+  class="block h-full w-full lg:max-w-187"
+  data-cy="collection-bookmark-card"
+  href="/collections/bookmarks"
+>
+  <div
+    class="flex flex-col bg-card text-card-foreground shadow-sm h-full gap-3 rounded-md py-0"
+    data-slot="card"
+    data-testid="card"
+  >
+    <div
+      class="flex h-full flex-col gap-3 p-6"
+      data-slot="card-content"
+    >
+      <div
+        class="flex w-full flex-wrap items-center gap-2 sm:flex-nowrap"
+        data-testid="container"
+      >
+        <div
+          class="flex min-w-0 flex-1 items-center gap-2"
+          data-testid="container"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-bookmark size-6 shrink-0"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+            />
+          </svg>
+          <span
+            class="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+            data-testid="typography"
+          >
+            Bookmarks
+          </span>
+        </div>
+        <div
+          class="flex shrink-0 items-center gap-2 sm:gap-3"
+          data-testid="container"
+        >
+          <div
+            class="flex items-center gap-1 text-muted-foreground"
+            data-testid="container"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-sticky-note size-3 shrink-0"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+              />
+              <path
+                d="M15 3v5a1 1 0 0 0 1 1h5"
+              />
+            </svg>
+            <span
+              class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+              data-testid="typography"
+            >
+              123
+            </span>
+          </div>
+          <div
+            data-alt="Alice"
+            data-avatar-url="https://example.com/avatar.png"
+            data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+            data-name="Alice"
+            data-size="sm"
+            data-testid="avatar-with-fallback"
+          >
+            Alice
+          </div>
+        </div>
+      </div>
+      <p
+        class="line-clamp-2 min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+        data-testid="typography"
+      >
+        Everything you saved for later.
+      </p>
+    </div>
+  </div>
+</a>
+`;
+
+exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for the signed-out / no-data fallback state 1`] = `
+<a
+  aria-label="Bookmarks"
+  class="block h-full w-full lg:max-w-187"
+  data-cy="collection-bookmark-card"
+  href="/collections/bookmarks"
+>
+  <div
+    class="flex flex-col bg-card text-card-foreground shadow-sm h-full gap-3 rounded-md py-0"
+    data-slot="card"
+    data-testid="card"
+  >
+    <div
+      class="flex h-full flex-col gap-3 p-6"
+      data-slot="card-content"
+    >
+      <div
+        class="flex w-full flex-wrap items-center gap-2 sm:flex-nowrap"
+        data-testid="container"
+      >
+        <div
+          class="flex min-w-0 flex-1 items-center gap-2"
+          data-testid="container"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-bookmark size-6 shrink-0"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+            />
+          </svg>
+          <span
+            class="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+            data-testid="typography"
+          >
+            Bookmarks
+          </span>
+        </div>
+        <div
+          class="flex shrink-0 items-center gap-2 sm:gap-3"
+          data-testid="container"
+        >
+          <div
+            data-alt="U"
+            data-avatar-url="https://example.com/avatar.png"
+            data-fallback-seed="U"
+            data-name="U"
+            data-size="sm"
+            data-testid="avatar-with-fallback"
+          >
+            U
+          </div>
+        </div>
+      </div>
+      <p
+        class="line-clamp-2 min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+        data-testid="typography"
+      >
+        Everything you saved for later.
+      </p>
+    </div>
+  </div>
+</a>
+`;

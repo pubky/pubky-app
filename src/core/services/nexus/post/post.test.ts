@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NEXUS_URL } from '@/config/nexus';
+import { getNexusUrl } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
 import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
@@ -29,7 +29,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.view(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}`);
     });
 
     it('should generate correct view URL with viewer_id', () => {
@@ -40,7 +40,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.view(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}?viewer_id=${pubky}-viewer`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}?viewer_id=${pubky}-viewer`);
     });
 
     it('should generate correct view URL with tag pagination parameters', () => {
@@ -52,7 +52,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.view(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}?limit_tags=10&limit_taggers=5`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}?limit_tags=10&limit_taggers=5`);
     });
   });
 
@@ -64,7 +64,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.bookmarks(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}/bookmarks`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/bookmarks`);
     });
 
     it('should generate correct bookmarks URL with viewer_id', () => {
@@ -75,7 +75,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.bookmarks(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}/bookmarks?viewer_id=${pubky}-viewer`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/bookmarks?viewer_id=${pubky}-viewer`);
     });
   });
 
@@ -87,7 +87,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.counts(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}/counts`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/counts`);
     });
   });
 
@@ -99,7 +99,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.details(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}/details`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/details`);
     });
   });
 
@@ -112,7 +112,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.taggers(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}/taggers/test-label`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/taggers/test-label`);
     });
 
     it('should generate correct taggers URL with pagination parameters', () => {
@@ -125,7 +125,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.taggers(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}/taggers/test-label?skip=10&limit=20`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/taggers/test-label?skip=10&limit=20`);
     });
 
     it('should generate correct taggers URL with viewer_id', () => {
@@ -137,7 +137,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.taggers(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}/taggers/test-label?viewer_id=${pubky}-viewer`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/taggers/test-label?viewer_id=${pubky}-viewer`);
     });
   });
 
@@ -149,7 +149,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.tags(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}/tags`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/tags`);
     });
 
     it('should generate correct tags URL with tag pagination parameters', () => {
@@ -162,7 +162,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.tags(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}/tags?limit_tags=15&limit_taggers=8&skip_tags=5`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/tags?limit_tags=15&limit_taggers=8&skip_tags=5`);
     });
 
     it('should generate correct tags URL with viewer_id', () => {
@@ -173,7 +173,7 @@ describe('Post API', () => {
       };
 
       const result = postApi.tags(params);
-      expect(result).toBe(`${NEXUS_URL}/v0/post/${pubky}/${postId}/tags?viewer_id=${pubky}-viewer`);
+      expect(result).toBe(`${getNexusUrl()}/v0/post/${pubky}/${postId}/tags?viewer_id=${pubky}-viewer`);
     });
   });
 
@@ -263,7 +263,7 @@ describe('NexusPostService', () => {
 
       expect(result).toEqual(mockTags);
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: `${NEXUS_URL}/v0/post/${pubky}/${postId}/tags?skip_tags=5&limit_tags=3&viewer_id=${testViewerId}`,
+        url: `${getNexusUrl()}/v0/post/${pubky}/${postId}/tags?skip_tags=5&limit_tags=3&viewer_id=${testViewerId}`,
       });
     });
 
@@ -297,7 +297,7 @@ describe('NexusPostService', () => {
 
       expect(result).toEqual(mockTaggers);
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: `${NEXUS_URL}/v0/post/${pubky}/${postId}/taggers/rust%20%26%20wasm?skip=10&limit=5&viewer_id=${testViewerId}`,
+        url: `${getNexusUrl()}/v0/post/${pubky}/${postId}/taggers/rust%20%26%20wasm?skip=10&limit=5&viewer_id=${testViewerId}`,
       });
     });
   });

@@ -12,6 +12,7 @@ import type { TCreateBookmarkInput, TDeleteBookmarkInput } from './bookmark.type
 vi.mock('@/services/local/bookmark/bookmark', () => ({
   LocalBookmarkService: {
     persist: vi.fn(),
+    getAllBookmarksSorted: vi.fn(),
   },
 }));
 
@@ -46,6 +47,26 @@ describe('BookmarkApplication', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('getAll', () => {
+    it('delegates to LocalBookmarkService.getAllBookmarksSorted and returns its result', async () => {
+      const sortedIds = ['authorA:p1', 'authorB:p2', 'authorC:p3'];
+      const spy = vi.spyOn(LocalBookmarkService, 'getAllBookmarksSorted').mockResolvedValue(sortedIds);
+
+      const result = await BookmarkApplication.getAll();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(sortedIds);
+    });
+
+    it('returns an empty array when no bookmarks are stored locally', async () => {
+      vi.spyOn(LocalBookmarkService, 'getAllBookmarksSorted').mockResolvedValue([]);
+
+      const result = await BookmarkApplication.getAll();
+
+      expect(result).toEqual([]);
+    });
   });
 
   describe('persist with PUT action', () => {

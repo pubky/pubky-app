@@ -2,14 +2,17 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import {
+  buildAuthorCollectionsStreamId,
+  type PostStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
 import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, type ContentType, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
@@ -33,15 +36,14 @@ vi.mock('next/navigation', () => ({
   }),
   usePathname: () => '/',
   useParams: () => ({ id: '' }),
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
 }));
 
 // Mock dependencies
 vi.mock('@/hooks/useStreamIdFromFilters/useStreamIdFromFilters', () => ({
   useStreamIdFromFilters: vi.fn(),
-}));
-
-vi.mock('@/hooks/useBookmarksStreamId/useBookmarksStreamId', () => ({
-  useBookmarksStreamId: vi.fn(),
 }));
 
 vi.mock('@/hooks/useHotStreamId/useHotStreamId', () => ({
@@ -66,6 +68,7 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
     effectiveLayout: 'columns',
     isVisualRequested: false,
     isVisualActive: false,
+    isGridActive: false,
     isPhoneViewport: false,
   })),
 }));
@@ -179,11 +182,11 @@ vi.mock('./VisualTimelinePosts', () => ({
 const mockUseStreamIdFromFilters = vi.mocked(useStreamIdFromFilters);
 const mockUseCustomFeed = vi.mocked(useCustomFeed);
 const mockUseCustomStreamId = vi.mocked(useCustomStreamId);
-const mockUseBookmarksStreamId = vi.mocked(useBookmarksStreamId);
 const mockUseStreamPagination = vi.mocked(useStreamPagination);
 const mockUseFeedLayoutResolution = vi.mocked(useFeedLayoutResolution);
 
 const mockPrependPosts = vi.fn();
+const mockPrependOptimisticPosts = vi.fn();
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();
 const defaultPaginationResult = {
@@ -195,6 +198,7 @@ const defaultPaginationResult = {
   loadMore: mockLoadMore,
   refresh: mockRefresh,
   prependPosts: mockPrependPosts,
+  prependOptimisticPosts: mockPrependOptimisticPosts,
   removePosts: vi.fn(),
 };
 
@@ -203,6 +207,7 @@ const visualLayoutResolution = {
   effectiveLayout: 'visual' as const,
   isVisualRequested: true,
   isVisualActive: true,
+  isGridActive: false,
   isPhoneViewport: false,
 };
 
@@ -211,6 +216,7 @@ const phoneColumnsLayoutResolution = {
   effectiveLayout: 'columns' as const,
   isVisualRequested: true,
   isVisualActive: false,
+  isGridActive: false,
   isPhoneViewport: true,
 };
 
@@ -219,6 +225,7 @@ const columnsLayoutResolution = {
   effectiveLayout: 'columns' as const,
   isVisualRequested: false,
   isVisualActive: false,
+  isGridActive: false,
   isPhoneViewport: false,
 };
 
@@ -243,7 +250,6 @@ function setupTimelineFeedSnapshotMocks() {
     updated_at: 0,
   });
   mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as PostStreamId);
-  mockUseBookmarksStreamId.mockReturnValue(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
   mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
   mockUseFeedLayoutResolution.mockReturnValue(columnsLayoutResolution);
   mockUsePullToRefresh.mockReturnValue({
@@ -276,13 +282,13 @@ describe('TimelineFeed', () => {
       updated_at: 0,
     });
     mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as PostStreamId);
-    mockUseBookmarksStreamId.mockReturnValue(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     mockUseFeedLayoutResolution.mockReturnValue({
       requestedLayout: 'columns',
       effectiveLayout: 'columns',
       isVisualRequested: false,
       isVisualActive: false,
+      isGridActive: false,
       isPhoneViewport: false,
     });
     // Reset pull-to-refresh mock to idle state
@@ -329,6 +335,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -344,6 +351,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'columns',
         isVisualRequested: true,
         isVisualActive: false,
+        isGridActive: false,
         isPhoneViewport: true,
       });
 
@@ -363,6 +371,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -381,6 +390,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -397,6 +407,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -450,28 +461,44 @@ describe('TimelineFeed', () => {
       );
     });
 
-    it('should persist visual content coercion for bookmarks feeds', async () => {
-      useHomeStore.setState({ content: CONTENT.SHORT });
-      mockUseBookmarksStreamId.mockImplementation((contentOverride?: ContentType) => {
-        return contentOverride === CONTENT.ALL
-          ? PostStreamTypes.TIMELINE_BOOKMARKS_ALL
-          : PostStreamTypes.TIMELINE_BOOKMARKS_SHORT;
+    it('should render the custom bookmarks empty state when the grid is empty', () => {
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: [],
       });
       mockUseFeedLayoutResolution.mockReturnValue({
-        requestedLayout: 'visual',
-        effectiveLayout: 'visual',
-        isVisualRequested: true,
-        isVisualActive: true,
+        requestedLayout: 'columns',
+        effectiveLayout: 'columns',
+        isVisualRequested: false,
+        isVisualActive: false,
+        isGridActive: true,
         isPhoneViewport: false,
       });
 
+      render(
+        <TimelineFeed
+          variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+          emptyState={<div data-testid="bookmarks-empty-state">This collection is empty.</div>}
+        />,
+      );
+
+      expect(screen.getByTestId('bookmarks-empty-state')).toBeInTheDocument();
+      expect(screen.queryByText('No posts found')).not.toBeInTheDocument();
+    });
+
+    it('should always use the fixed all-bookmarks stream regardless of shared filters', () => {
+      // The bookmarks route exposes no filter UI; changing the shared home-store
+      // content/sort must not change the bookmarks stream, and the feed must not
+      // write back to the shared content filter.
+      useHomeStore.setState({ content: CONTENT.COLLECTIONS, sort: SORT.ENGAGEMENT });
+
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.BOOKMARKS} />);
 
-      expect(mockUseBookmarksStreamId).toHaveBeenCalledWith(CONTENT.ALL);
-
-      await waitFor(() => {
-        expect(useHomeStore.getState().content).toBe(CONTENT.ALL);
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({
+        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
       });
+      // The feed leaves the shared filter state untouched.
+      expect(useHomeStore.getState().content).toBe(CONTENT.COLLECTIONS);
     });
   });
 
@@ -502,6 +529,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -609,6 +637,33 @@ describe('TimelineFeed', () => {
     });
   });
 
+  describe('Profile Collections Variant', () => {
+    const profilePubky = 'profile-user-pubky';
+
+    it('should show loading when profile context has no pubky', () => {
+      render(
+        <ProfileProvider>
+          <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS} />
+        </ProfileProvider>,
+      );
+
+      expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
+      expect(mockUseStreamPagination).not.toHaveBeenCalled();
+    });
+
+    it('should paginate the author collections stream when pubky is available', () => {
+      render(
+        <ProfileProvider pubky={profilePubky}>
+          <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS} />
+        </ProfileProvider>,
+      );
+
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({
+        streamId: buildAuthorCollectionsStreamId(profilePubky),
+      });
+    });
+  });
+
   describe('Loading States', () => {
     it('should show loading when streamId is undefined', () => {
       mockUseStreamIdFromFilters.mockReturnValue(asInvalid<PostStreamTypes>(undefined));
@@ -688,6 +743,7 @@ describe('TimelineFeed', () => {
         const lastValue = contextValues[contextValues.length - 1];
         expect(lastValue).not.toBeNull();
         expect(lastValue?.prependPosts).toBe(mockPrependPosts);
+        expect(lastValue?.prependOptimisticPosts).toBe(mockPrependOptimisticPosts);
       });
     });
 

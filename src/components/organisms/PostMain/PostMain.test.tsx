@@ -208,6 +208,12 @@ vi.mock('@/molecules/PostDeleted/PostDeleted', () => {
   };
 });
 
+vi.mock('@/molecules/PostMissing/PostMissing', () => {
+  return {
+    PostMissing: () => <div data-testid="post-missing">PostMissing</div>,
+  };
+});
+
 vi.mock('@/molecules/RepostHeader/RepostHeader', () => {
   return {
     RepostHeader: () => <div data-testid="repost-header">You reposted</div>,
@@ -383,6 +389,31 @@ describe('PostMain', () => {
     expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
     expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
     expect(screen.queryByTestId('post-actions')).not.toBeInTheDocument();
+  });
+
+  it('renders PostMissing when the post is not found (settled null)', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: null,
+      isLoading: false,
+    });
+
+    render(<PostMain postId="post-missing" />);
+
+    expect(screen.getByTestId('post-missing')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-deleted')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
+  });
+
+  it('does not render PostMissing while the post is still loading (null + loading)', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: null,
+      isLoading: true,
+    });
+
+    render(<PostMain postId="post-loading" />);
+
+    expect(screen.queryByTestId('post-missing')).not.toBeInTheDocument();
   });
 
   it('renders normal content when post is not deleted', () => {
@@ -687,6 +718,13 @@ describe('PostMain - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useIsMobile).mockReturnValue(false);
+    vi.mocked(usePostNavigation).mockReturnValue({
+      getPostHref: vi.fn(() => '/post/author/post-abc'),
+      navigateToPost: vi.fn(),
+      handlePostClick: vi.fn(),
+      handlePostAuxClick: vi.fn(),
+      handlePostKeyDown: vi.fn(),
+    });
 
     // Reset mocked hook return values that are overridden in earlier (non-snapshot) tests.
     // Without this, running the full suite (e.g. CI `test:coverage`) can leak mocked

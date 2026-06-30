@@ -67,7 +67,7 @@ describe('useWhoToFollowFollowPreservation', () => {
     });
     expect(result.current.preservedFollowedUserIds).toEqual(['user-1']);
 
-    rerender({ resetKey: '/bookmarks' });
+    rerender({ resetKey: '/collections' });
 
     await waitFor(() => {
       expect(result.current.preservedFollowedUserIds).toEqual([]);

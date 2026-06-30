@@ -43,7 +43,7 @@ exports[`ProfilePageLayout - Mobile Snapshots > matches snapshot on mobile viewp
     >
       <div
         data-active="posts"
-        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"uniqueTags\\":12}"
+        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"collections\\":0,\\"uniqueTags\\":12}"
         data-testid="profile-filter-bar"
       >
         Filter Bar
@@ -126,7 +126,7 @@ exports[`ProfilePageLayout - Snapshots > matches snapshot for other-user posts o
     >
       <div
         data-active="posts"
-        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"uniqueTags\\":12}"
+        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"collections\\":0,\\"uniqueTags\\":12}"
         data-testid="profile-filter-bar"
       >
         Filter Bar
@@ -195,7 +195,7 @@ exports[`ProfilePageLayout - Snapshots > matches snapshot when loading 1`] = `
     >
       <div
         data-active="notifications"
-        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"uniqueTags\\":12}"
+        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"collections\\":0,\\"uniqueTags\\":12}"
         data-testid="profile-filter-bar"
       >
         Filter Bar
@@ -268,7 +268,7 @@ exports[`ProfilePageLayout - Snapshots > matches snapshot with different active 
     >
       <div
         data-active="posts"
-        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"uniqueTags\\":12}"
+        data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7,\\"collections\\":0,\\"uniqueTags\\":12}"
         data-testid="profile-filter-bar"
       >
         Filter Bar
