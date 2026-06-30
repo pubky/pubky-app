@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { IMAGE_ENCODE_QUALITY, IMAGE_MAX_DIMENSION, IMAGE_MAX_RAW_SIZE } from '@/config/images';
+import { IMAGE_ENCODE_QUALITY, IMAGE_MAX_DIMENSION, IMAGE_MAX_RAW_SIZE, IMAGE_MAX_UPLOAD_SIZE } from '@/config/images';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { stripImageMetadata } from './stripImageMetadata';
 
@@ -93,6 +93,12 @@ describe('stripImageMetadata', () => {
       width,
       height,
     });
+  }
+
+  function createBlobWithReportedSize(type: string, size: number): Blob {
+    const blob = new Blob(['mock'], { type });
+    Object.defineProperty(blob, 'size', { value: size });
+    return blob;
   }
 
   function asciiBytes(value: string): number[] {
@@ -199,6 +205,17 @@ describe('stripImageMetadata', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:input-image');
   });
 
+  it('accepts raw images above the upload cap when sanitized output fits', async () => {
+    const inputFile = new File(['raw-image-bytes'], 'large-photo.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(inputFile, 'size', { value: IMAGE_MAX_UPLOAD_SIZE + 1 });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result.size).toBeLessThanOrEqual(IMAGE_MAX_UPLOAD_SIZE);
+    expect(result.type).toBe('image/jpeg');
+    expect(mockCanvas.toBlob).toHaveBeenCalled();
+  });
+
   it('downscales oversized raster images preserving aspect ratio', async () => {
     setMockImageDimensions(4096, 2048);
     const inputFile = new File(['raw-image-bytes'], 'large-photo.jpg', { type: 'image/jpeg' });
@@ -250,6 +267,56 @@ describe('stripImageMetadata', () => {
     await expect(stripImageMetadata(inputFile)).rejects.toThrow('Image file size exceeds upload limits');
     expect(URL.createObjectURL).not.toHaveBeenCalled();
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('retries lossy raster encoding until sanitized output is within the upload cap', async () => {
+    (mockCanvas.toBlob as ReturnType<typeof vi.fn>)
+      .mockImplementationOnce((callback, mimeType) =>
+        callback(createBlobWithReportedSize(mimeType as string, IMAGE_MAX_UPLOAD_SIZE + 1)),
+      )
+      .mockImplementationOnce((callback, mimeType) =>
+        callback(createBlobWithReportedSize(mimeType as string, IMAGE_MAX_UPLOAD_SIZE)),
+      );
+    const inputFile = new File(['raw-image-bytes'], 'photo.jpg', { type: 'image/jpeg' });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result.size).toBeLessThanOrEqual(IMAGE_MAX_UPLOAD_SIZE);
+    expect(result.type).toBe('image/jpeg');
+    expect(mockCanvas.toBlob).toHaveBeenCalledTimes(2);
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][2]).toBe(IMAGE_ENCODE_QUALITY);
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[1][2]).toBe(0.76);
+  });
+
+  it('falls back to WebP for oversized PNG output before uploading', async () => {
+    (mockCanvas.toBlob as ReturnType<typeof vi.fn>)
+      .mockImplementationOnce((callback, mimeType) =>
+        callback(createBlobWithReportedSize(mimeType as string, IMAGE_MAX_UPLOAD_SIZE + 1)),
+      )
+      .mockImplementationOnce((callback, mimeType) =>
+        callback(createBlobWithReportedSize(mimeType as string, IMAGE_MAX_UPLOAD_SIZE)),
+      );
+    const inputFile = new File(['raw-image-bytes'], 'cover.png', { type: 'image/png' });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result.size).toBeLessThanOrEqual(IMAGE_MAX_UPLOAD_SIZE);
+    expect(result.type).toBe('image/webp');
+    expect(result.name).toMatch(/^[a-z0-9]+\.webp$/);
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][1]).toBe('image/png');
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][2]).toBeUndefined();
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[1][1]).toBe('image/webp');
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[1][2]).toBe(IMAGE_ENCODE_QUALITY);
+  });
+
+  it('rejects raster images when sanitized output cannot fit within the upload cap', async () => {
+    (mockCanvas.toBlob as ReturnType<typeof vi.fn>).mockImplementation((callback, mimeType) =>
+      callback(createBlobWithReportedSize(mimeType as string, IMAGE_MAX_UPLOAD_SIZE + 1)),
+    );
+    const inputFile = new File(['raw-image-bytes'], 'too-dense.webp', { type: 'image/webp' });
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('Sanitized image file size exceeds upload limits');
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:input-image');
   });
 
   it('detects PNG files from magic bytes when file.type is empty', async () => {

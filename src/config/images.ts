@@ -19,6 +19,12 @@ export const IMAGE_MAX_DIMENSION = 2048;
 export const IMAGE_MAX_RAW_SIZE = 20 * 1024 * 1024;
 
 /**
+ * Maximum size for an image after browser-side sanitization/compression and
+ * before writing the blob to the homeserver. This matches the moderation cap.
+ */
+export const IMAGE_MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
+
+/**
  * Encode quality (0..1) for lossy raster re-encoding (JPEG/WebP) during
  * upload sanitization. 0.82 is near-visually-lossless for photos while
  * substantially smaller than quality 1.0.
