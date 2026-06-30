@@ -43,6 +43,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
   const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset();
   const { showCollectionsNew, markCollectionsNavSeen } = useCollectionsNavDiscovery();
+  const collectionsNewLabel = tHeader('new');
 
   // Get avatar URL and fallback initial - same logic as desktop header
   const avatarUrl =
@@ -112,11 +113,12 @@ export function MobileFooter({ className }: MobileFooterProps) {
           const Icon = item.icon;
           const itemIsActive = isNavItemActive(pathname, item);
           const isCollectionsItem = item.href === APP_ROUTES.COLLECTIONS;
+          const showCollectionsNewTreatment = isCollectionsItem && showCollectionsNew;
           return (
             <Link
               key={item.href}
               href={item.href}
-              aria-label={item.label}
+              aria-label={showCollectionsNewTreatment ? `${item.label}, ${collectionsNewLabel}` : item.label}
               onClick={(event) => {
                 if (!isAuthenticated && protectedNavHrefs.has(item.href)) {
                   event.preventDefault();
@@ -131,19 +133,20 @@ export function MobileFooter({ className }: MobileFooterProps) {
               }}
               className={cn(
                 'rounded-full p-3 transition-all',
-                itemIsActive ? 'bg-secondary' : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
-                isCollectionsItem &&
-                  showCollectionsNew &&
-                  'relative inline-flex border border-brand bg-white/5 text-brand hover:bg-brand/10',
+                showCollectionsNewTreatment
+                  ? 'relative inline-flex border border-brand bg-white/5 text-brand hover:bg-brand/10'
+                  : itemIsActive
+                    ? 'bg-secondary'
+                    : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
               )}
             >
               <Icon className="h-6 w-6" />
-              {isCollectionsItem && showCollectionsNew ? (
+              {showCollectionsNewTreatment ? (
                 <span
                   aria-hidden="true"
                   className="pointer-events-none absolute top-12 left-1/2 -translate-x-1/2 text-xs font-semibold text-brand uppercase"
                 >
-                  {tHeader('new')}
+                  {collectionsNewLabel}
                 </span>
               ) : null}
             </Link>

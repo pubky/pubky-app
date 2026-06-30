@@ -492,6 +492,7 @@ describe('Header Components', () => {
 
       const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
       expect(collectionsButton).toHaveClass('border-brand', 'text-brand');
+      expect(screen.getByRole('button', { name: 'Collections, New' })).toBeInTheDocument();
       expect(screen.getByText('New')).toBeInTheDocument();
     });
 

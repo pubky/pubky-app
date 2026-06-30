@@ -315,7 +315,19 @@ describe('MobileFooter', () => {
 
     const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
     expect(collectionsLink).toHaveClass('border-brand', 'text-brand');
+    expect(screen.getByRole('link', { name: 'Collections, New' })).toBeInTheDocument();
     expect(screen.getByText('New')).toBeInTheDocument();
+  });
+
+  it('uses the discovery treatment instead of active background when Collections is active and new', () => {
+    vi.mocked(usePathname).mockReturnValue('/collections');
+    collectionsDiscoveryMock.showCollectionsNew = true;
+
+    render(<MobileFooter />);
+
+    const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
+    expect(collectionsLink).toHaveClass('border-brand', 'bg-white/5', 'text-brand');
+    expect(collectionsLink).not.toHaveClass('bg-secondary');
   });
 
   it('marks Collections discovery seen when clicking the authenticated Collections nav link', () => {

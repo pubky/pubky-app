@@ -152,6 +152,7 @@ const NavigationButton = ({
   showNew = false,
   newLabel,
 }: NavigationButtonProps) => {
+  const accessibleLabel = showNew && newLabel ? `${label}, ${newLabel}` : label;
   const button = (
     <Button
       data-cy={href ? undefined : dataCy}
@@ -162,7 +163,7 @@ const NavigationButton = ({
       )}
       variant="secondary"
       size="icon"
-      aria-label={label}
+      aria-label={accessibleLabel}
       onClick={href ? undefined : onClick}
     >
       <Icon className="size-6" />
