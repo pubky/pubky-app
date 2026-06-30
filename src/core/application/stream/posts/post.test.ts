@@ -3,6 +3,7 @@ import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { getStreamCacheMaxAgeMs } from '@/config/nexus';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
+import { BookmarkModel } from '@/models/bookmark/bookmark';
 import type { Pubky } from '@/models/models.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -208,6 +209,7 @@ describe('PostStreamApplication', () => {
     await PostStreamModel.table.clear();
     await UnreadPostStreamModel.table.clear();
     postStreamQueue.clear();
+    await BookmarkModel.table.clear();
     await PostDetailsModel.table.clear();
     await UserDetailsModel.table.clear();
     await UserCountsModel.table.clear();
@@ -381,6 +383,30 @@ describe('PostStreamApplication', () => {
       expect(result.nextPageIds).toEqual(postIds.slice(0, 10));
       expect(result.cacheMissPostIds).toEqual([]);
       expect(result.timestamp).toBeUndefined();
+    });
+
+    it('returns the bookmark-time cursor on a full cache hit for bookmark streams', async () => {
+      // The cache→Nexus seam must page by bookmark time, not post indexed_at.
+      const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+      const postIds = Array.from({ length: 12 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      await PostStreamModel.create(bookmarkStreamId, postIds);
+      for (let i = 0; i < postIds.length; i++) {
+        // Created long ago, bookmarked recently.
+        await createPostDetailWithTimestamp(postIds[i], BASE_TIMESTAMP + i);
+        await BookmarkModel.create({ id: postIds[i], created_at: BASE_TIMESTAMP + 5000 + i });
+      }
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: bookmarkStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+      });
+
+      expect(result.nextPageIds).toHaveLength(10);
+      // 10th entry (index 9) → its bookmark time, NOT its post indexed_at (BASE + 9).
+      expect(result.timestamp).toBe(BASE_TIMESTAMP + 5000 + 9);
     });
 
     it('should fetch from Nexus when cache is empty', async () => {
@@ -1058,6 +1084,52 @@ describe('PostStreamApplication', () => {
     });
   });
 
+  describe('getCachedLastPostTimestamp — bookmark streams', () => {
+    // Bookmark streams are ordered by bookmark time, so their pagination cursor must
+    // come from the bookmark's `created_at`, not the post's `indexed_at`.
+    const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+
+    it('uses the bookmark time (created_at), not the post indexed_at', async () => {
+      const postOne = `${DEFAULT_AUTHOR}:post-1`;
+      const postTwo = `${DEFAULT_AUTHOR}:post-2`;
+      await PostStreamModel.create(bookmarkStreamId, [postOne, postTwo]);
+      // Both posts created long ago, but bookmarked recently (and in a different order).
+      await createPostDetailWithTimestamp(postOne, BASE_TIMESTAMP);
+      await createPostDetailWithTimestamp(postTwo, BASE_TIMESTAMP + 1);
+      await BookmarkModel.create({ id: postOne, created_at: BASE_TIMESTAMP + 5000 });
+      await BookmarkModel.create({ id: postTwo, created_at: BASE_TIMESTAMP + 4000 });
+
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId: bookmarkStreamId });
+
+      // Last entry is post-2 → its bookmark time, NOT its post indexed_at (BASE + 1).
+      expect(result).toBe(BASE_TIMESTAMP + 4000);
+    });
+
+    it('falls back to the post indexed_at when the bookmark row is missing', async () => {
+      const postOne = `${DEFAULT_AUTHOR}:post-1`;
+      await PostStreamModel.create(bookmarkStreamId, [postOne]);
+      await createPostDetailWithTimestamp(postOne, BASE_TIMESTAMP + 7);
+      // No bookmark row written for postOne.
+
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId: bookmarkStreamId });
+
+      expect(result).toBe(BASE_TIMESTAMP + 7);
+    });
+
+    it('iterates backwards to the most recent resolvable bookmark cursor', async () => {
+      const postOne = `${DEFAULT_AUTHOR}:post-1`;
+      const postTwo = `${DEFAULT_AUTHOR}:post-2`;
+      await PostStreamModel.create(bookmarkStreamId, [postOne, postTwo]);
+      // post-2 has neither a bookmark row nor post details → skip back to post-1.
+      await createPostDetailWithTimestamp(postOne, BASE_TIMESTAMP);
+      await BookmarkModel.create({ id: postOne, created_at: BASE_TIMESTAMP + 9000 });
+
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId: bookmarkStreamId });
+
+      expect(result).toBe(BASE_TIMESTAMP + 9000);
+    });
+  });
+
   describe('fetchMissingPostsFromNexus', () => {
     const viewerId = 'user-viewer' as Pubky;
 
@@ -1667,6 +1739,44 @@ describe('PostStreamApplication', () => {
       const unreadStream = await UnreadPostStreamModel.findById(streamId);
       expect(postStream).toBeNull();
       expect(unreadStream).toBeNull();
+    });
+
+    it('keeps a bookmark cache fresh by bookmark time, even when the bookmarked post is old', async () => {
+      const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+      const oldPostIndexedAt = now - getStreamCacheMaxAgeMs() - 1000; // stale by post age
+      const recentBookmarkAt = now - getStreamCacheMaxAgeMs() + 1; // fresh by bookmark time
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+
+      const headPostId = `${DEFAULT_AUTHOR}:post-old`;
+      await PostStreamModel.create(bookmarkStreamId, [headPostId]);
+      await createPostDetailWithTimestamp(headPostId, oldPostIndexedAt);
+      await BookmarkModel.create({ id: headPostId, created_at: recentBookmarkAt });
+
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId: bookmarkStreamId });
+
+      // Cache preserved: staleness is judged on bookmark time (fresh), not the post age.
+      const postStream = await PostStreamModel.findById(bookmarkStreamId);
+      expect(postStream?.stream).toEqual([headPostId]);
+    });
+
+    it('clears a bookmark cache when the most recent bookmark is older than max age', async () => {
+      const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+      const staleBookmarkAt = now - getStreamCacheMaxAgeMs() - 1;
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+
+      const headPostId = `${DEFAULT_AUTHOR}:post-recent`;
+      await PostStreamModel.create(bookmarkStreamId, [headPostId]);
+      // Post itself is fresh by post time, but it was bookmarked long ago.
+      await createPostDetailWithTimestamp(headPostId, now);
+      await BookmarkModel.create({ id: headPostId, created_at: staleBookmarkAt });
+
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId: bookmarkStreamId });
+
+      // Cache cleared: bookmark time governs staleness, not the post's recency.
+      const postStream = await PostStreamModel.findById(bookmarkStreamId);
+      expect(postStream).toBeNull();
     });
 
     it('should clear unread stream when unread cache is stale and main is fresh', async () => {
