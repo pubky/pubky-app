@@ -1,7 +1,9 @@
+import type { Session } from '@synonymdev/pubky';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationApplication } from '@/application/notification/notification';
 import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
 import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
@@ -288,7 +290,7 @@ describe('NotificationController', () => {
     const mockTimestamp = 1234567890;
     const mockLastReadUrl = 'pubky://test-user/pub/pubky.app/last-read';
 
-    const setupStores = (pubky: Pubky | null, unreadCount = 5) => {
+    const setupStores = (pubky: Pubky | null, unreadCount = 5, session: Session | null = {} as Session) => {
       const setLastRead = vi.fn();
       const setUnread = vi.fn();
 
@@ -299,6 +301,7 @@ describe('NotificationController', () => {
             if (!pubky) throw new Error('No pubky');
             return pubky;
           },
+          selectSession: () => session,
         }),
       );
 
@@ -313,23 +316,23 @@ describe('NotificationController', () => {
       return { setLastRead, setUnread };
     };
 
-    it('should call application and update local store', () => {
-      const { setLastRead, setUnread } = setupStores(mockUserId);
-
-      const mockLastReadResult = {
+    const buildLastReadResult = () =>
+      asOpaque<ReturnType<typeof LastReadNormalizer.to>>({
         last_read: {
           timestamp: BigInt(mockTimestamp),
           toJson: vi.fn().mockReturnValue({ timestamp: mockTimestamp }),
         },
         meta: { url: mockLastReadUrl },
-      };
+      });
 
-      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(
-        asOpaque<ReturnType<typeof LastReadNormalizer.to>>(mockLastReadResult),
-      );
-      const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead').mockImplementation(() => {});
+    it('should call application and update local store once the write succeeds', async () => {
+      const { setLastRead, setUnread } = setupStores(mockUserId);
+      const mockLastReadResult = buildLastReadResult();
 
-      NotificationController.markAllAsRead();
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(mockLastReadResult);
+      const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead').mockResolvedValue(undefined);
+
+      await NotificationController.markAllAsRead();
 
       expect(LastReadNormalizer.to).toHaveBeenCalledWith(mockUserId);
       expect(applicationSpy).toHaveBeenCalledWith(mockLastReadResult);
@@ -337,13 +340,13 @@ describe('NotificationController', () => {
       expect(setUnread).toHaveBeenCalledWith(0);
     });
 
-    it('should skip processing when no user is authenticated', () => {
+    it('should skip processing when no user is authenticated', async () => {
       const { setLastRead, setUnread } = setupStores(null);
 
       const normalizerSpy = vi.spyOn(LastReadNormalizer, 'to');
       const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead');
 
-      NotificationController.markAllAsRead();
+      await NotificationController.markAllAsRead();
 
       // When pubky is null, function returns early without calling application
       expect(normalizerSpy).not.toHaveBeenCalled();
@@ -352,18 +355,70 @@ describe('NotificationController', () => {
       expect(setUnread).not.toHaveBeenCalled();
     });
 
-    it('should skip processing when there are no unread notifications', () => {
-      const { setLastRead, setUnread } = setupStores(mockUserId, 0);
+    it('should skip processing when the session is not yet restored', async () => {
+      // The write must wait for the session, which is restored after currentUserPubky.
+      const { setLastRead, setUnread } = setupStores(mockUserId, 5, null);
 
       const normalizerSpy = vi.spyOn(LastReadNormalizer, 'to');
       const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead');
 
-      NotificationController.markAllAsRead();
+      await NotificationController.markAllAsRead();
 
       expect(normalizerSpy).not.toHaveBeenCalled();
       expect(applicationSpy).not.toHaveBeenCalled();
       expect(setLastRead).not.toHaveBeenCalled();
       expect(setUnread).not.toHaveBeenCalled();
+    });
+
+    it('should skip processing when there are no unread notifications', async () => {
+      const { setLastRead, setUnread } = setupStores(mockUserId, 0);
+
+      const normalizerSpy = vi.spyOn(LastReadNormalizer, 'to');
+      const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead');
+
+      await NotificationController.markAllAsRead();
+
+      expect(normalizerSpy).not.toHaveBeenCalled();
+      expect(applicationSpy).not.toHaveBeenCalled();
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
+    });
+
+    it('should not update local store when the homeserver write fails', async () => {
+      const { setLastRead, setUnread } = setupStores(mockUserId);
+      const mockLastReadResult = buildLastReadResult();
+
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(mockLastReadResult);
+      const applicationSpy = vi
+        .spyOn(NotificationApplication, 'markAllAsRead')
+        .mockRejectedValue(new Error('homeserver-fail'));
+      const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+      await NotificationController.markAllAsRead();
+
+      expect(applicationSpy).toHaveBeenCalledWith(mockLastReadResult);
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
+      expect(loggerWarnSpy).toHaveBeenCalled();
+    });
+
+    it('should not update local store when lastRead creation fails', async () => {
+      const { setLastRead, setUnread } = setupStores(mockUserId);
+
+      vi.spyOn(LastReadNormalizer, 'to').mockImplementation(() => {
+        throw new Error('invalid-pubky');
+      });
+      const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead');
+      const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+      await expect(NotificationController.markAllAsRead()).resolves.toBeUndefined();
+
+      expect(applicationSpy).not.toHaveBeenCalled();
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
+      expect(loggerWarnSpy).toHaveBeenCalledWith('Failed to mark notifications as read on homeserver', {
+        error: expect.any(Error),
+      });
     });
   });
 
