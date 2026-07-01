@@ -42,8 +42,11 @@ export function PostHeader({
   const timeAgo = indexedAt ? formatRelativeTime(indexedAt) : null;
 
   return (
-    <Container className="flex w-full min-w-0 items-start justify-between gap-3" overrideDefaults>
-      <div className="min-w-0 flex-1">
+    <Container
+      className="flex w-full max-w-full min-w-0 items-start justify-between gap-3 overflow-hidden"
+      overrideDefaults
+    >
+      <div className="w-full max-w-full min-w-0 flex-1 overflow-hidden">
         <PostHeaderUserInfo
           userId={userId}
           userName={userDetails.name || ''}

@@ -243,7 +243,9 @@ describe('PostHeader', () => {
 
     renderPostHeader(<PostHeader postId="userpubkykey:post456" />);
 
-    expect(screen.getByTestId('post-header-user-info').parentElement).toHaveClass('min-w-0', 'flex-1');
+    const userInfoSlot = screen.getByTestId('post-header-user-info').parentElement;
+
+    expect(userInfoSlot).toHaveClass('w-full', 'max-w-full', 'min-w-0', 'flex-1', 'overflow-hidden');
   });
 
   it('renders time in top-right by default', () => {

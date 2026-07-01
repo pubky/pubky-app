@@ -45,7 +45,10 @@ export function PostHeaderUserInfo({
   const content = (
     <Container
       overrideDefaults
-      className={cn('flex w-full max-w-full min-w-0 items-center', size === 'large' ? 'gap-4' : 'gap-3')}
+      className={cn(
+        'flex w-full max-w-full min-w-0 items-center overflow-hidden',
+        size === 'large' ? 'gap-4' : 'gap-3',
+      )}
     >
       <Link href={profileUrl} onClick={handleLinkClick} className="shrink-0">
         <AvatarWithFallback
@@ -55,7 +58,7 @@ export function PostHeaderUserInfo({
           size={size === 'large' ? 'xl' : 'default'}
         />
       </Link>
-      <Container overrideDefaults className="min-w-0 flex-1">
+      <Container overrideDefaults className="max-w-full min-w-0 flex-1 overflow-hidden">
         <Link href={profileUrl} onClick={handleLinkClick} className="block w-full max-w-full min-w-0 overflow-hidden">
           <Typography
             className={cn(
