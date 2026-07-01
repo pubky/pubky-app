@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
@@ -87,9 +88,12 @@ vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
 
 // Mock TimelineFeed context
 const mockPrependPosts = vi.fn();
+const mockPrependOptimisticPosts = vi.fn();
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: vi.fn(() => ({
+    variant: TIMELINE_FEED_VARIANT.HOME,
     prependPosts: mockPrependPosts,
+    prependOptimisticPosts: mockPrependOptimisticPosts,
     removePosts: vi.fn(),
   })),
 }));

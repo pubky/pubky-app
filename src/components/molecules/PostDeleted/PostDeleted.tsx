@@ -8,7 +8,7 @@ export const PostDeleted = () => {
   const t = useTranslations('post');
 
   return (
-    <CardContent className="py-2">
+    <CardContent className="flex flex-1 items-center justify-center py-2">
       <Typography size="sm" className="text-center font-normal text-muted-foreground">
         {t('deleted')}
       </Typography>

@@ -13,18 +13,14 @@ import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 
 /**
- * Mapping of post kinds to their corresponding bookmark stream types.
- * The 'all' key represents the stream containing all bookmarks.
+ * The two local bookmark streams. The bookmarks route has no content/sort filter
+ * UI, so non-collection bookmarks all live in the single ALL feed; collections
+ * are filed under the dedicated collection stream that backs FollowedCollections.
  */
-const BOOKMARK_STREAMS: Record<string, PostStreamTypes> = {
+const BOOKMARK_STREAMS = {
   all: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
-  short: PostStreamTypes.TIMELINE_BOOKMARKS_SHORT,
-  long: PostStreamTypes.TIMELINE_BOOKMARKS_LONG,
-  image: PostStreamTypes.TIMELINE_BOOKMARKS_IMAGE,
-  video: PostStreamTypes.TIMELINE_BOOKMARKS_VIDEO,
-  file: PostStreamTypes.TIMELINE_BOOKMARKS_FILE,
-  link: PostStreamTypes.TIMELINE_BOOKMARKS_LINK,
-};
+  collection: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION,
+} as const;
 
 export class LocalBookmarkService {
   private static readonly BOOKMARK_TABLES = [
@@ -55,23 +51,33 @@ export class LocalBookmarkService {
         const postDetails = await PostDetailsModel.findById(postId);
         const kind = postDetails?.kind;
 
+        // The `bookmarks` count is posts-only — bookmarked collections are
+        // excluded — so only move the count when the target isn't a collection.
+        const isCollection = kind === 'collection';
+
         if (isCreate) {
-          await Promise.all([
+          const ops: Promise<unknown>[] = [
             BookmarkModel.upsert({
               id: postId,
               created_at: Date.now(),
             }),
-            UserCountsModel.updateCounts({ userId, countChanges: { bookmarks: 1 } }),
             this.addToBookmarkStreams(postId, kind),
-          ]);
+          ];
+          if (!isCollection) {
+            ops.push(UserCountsModel.updateCounts({ userId, countChanges: { bookmarks: 1 } }));
+          }
+          await Promise.all(ops);
 
           Logger.debug('Bookmark created', { postId });
         } else {
-          await Promise.all([
+          const ops: Promise<unknown>[] = [
             BookmarkModel.deleteById(postId),
-            UserCountsModel.updateCounts({ userId, countChanges: { bookmarks: -1 } }),
             this.removeFromBookmarkStreams(postId, kind),
-          ]);
+          ];
+          if (!isCollection) {
+            ops.push(UserCountsModel.updateCounts({ userId, countChanges: { bookmarks: -1 } }));
+          }
+          await Promise.all(ops);
 
           Logger.debug('Bookmark deleted', { postId });
         }
@@ -98,7 +104,7 @@ export class LocalBookmarkService {
   }
 
   /**
-   * Get all bookmarked post IDs
+   * Get all bookmarked post IDs (unordered).
    *
    * @returns Array of bookmarked post IDs
    */
@@ -107,44 +113,55 @@ export class LocalBookmarkService {
   }
 
   /**
+   * Get all bookmarked post IDs sorted by `created_at` descending
+   * (most recently bookmarked first).
+   *
+   * @returns Array of bookmarked post IDs, newest first.
+   */
+  static async getAllBookmarksSorted(): Promise<string[]> {
+    const sorted = await BookmarkModel.findAllSorted();
+    return sorted.map((b) => b.id);
+  }
+
+  /**
+   * Resolve which local bookmark stream a post belongs to, by kind.
+   *
+   * Collections are "followed", not feed posts: the posts feed (`…_ALL`) filters
+   * collection-kind posts out on read, so we keep them out of it entirely and
+   * file them under the dedicated collection bookmark stream instead. Every other
+   * kind goes to the ALL stream.
+   *
+   * @param kind - Post kind (short, long, image, video, file, link, collection)
+   */
+  private static bookmarkStreamsForKind(kind?: string): PostStreamTypes[] {
+    return kind === 'collection' ? [BOOKMARK_STREAMS.collection] : [BOOKMARK_STREAMS.all];
+  }
+
+  /**
    * Add a post to the appropriate bookmark streams based on post type
    *
    * @param postId - Composite post ID
-   * @param kind - Post kind (short, long, image, video, file, link)
+   * @param kind - Post kind (short, long, image, video, file, link, collection)
    */
   private static async addToBookmarkStreams(postId: string, kind?: string): Promise<void> {
-    const streams = [BOOKMARK_STREAMS.all]; // Always add to ALL stream.
-
-    // If there is a post kind also add to that stream, but never more than one.
-    const kindStream = kind && BOOKMARK_STREAMS[kind];
-    if (kindStream) {
-      streams.push(kindStream);
-    }
-
     await Promise.all(
-      streams.map((streamId) => LocalStreamPostsService.prependToStream({ streamId, compositePostId: postId })),
+      this.bookmarkStreamsForKind(kind).map((streamId) =>
+        LocalStreamPostsService.prependToStream({ streamId, compositePostId: postId }),
+      ),
     );
   }
 
   /**
-   * Remove a post from bookmark streams
-   *
-   * Removes from the 'all' stream and the kind-specific stream if kind is provided.
+   * Remove a post from the bookmark streams it was added to (see `bookmarkStreamsForKind`).
    *
    * @param postId - Composite post ID
-   * @param kind - Post kind (short, long, image, video, file, link)
+   * @param kind - Post kind (short, long, image, video, file, link, collection)
    */
   private static async removeFromBookmarkStreams(postId: string, kind?: string): Promise<void> {
-    const streams = [BOOKMARK_STREAMS.all]; // Always remove from ALL stream.
-
-    // If there is a post kind also remove from that stream.
-    const kindStream = kind && BOOKMARK_STREAMS[kind];
-    if (kindStream) {
-      streams.push(kindStream);
-    }
-
     await Promise.all(
-      streams.map((streamId) => LocalStreamPostsService.removeFromStream({ streamId, compositePostId: postId })),
+      this.bookmarkStreamsForKind(kind).map((streamId) =>
+        LocalStreamPostsService.removeFromStream({ streamId, compositePostId: postId }),
+      ),
     );
   }
 }

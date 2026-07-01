@@ -9,7 +9,7 @@ import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
-import { PUBKY_CORE_URL } from '@/config/externalLinks';
+import { getPubkyCoreLink } from '@/config/externalLinks';
 import { HomeBrandFooter } from '@/molecules/Home/Home';
 import { Logo } from '@/molecules/Logo/Logo';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
@@ -48,7 +48,7 @@ export function LandingFinalSection() {
           {tFooter('andConfirmAge')} <DialogAge />{' '}
           {tFooter.rich('copyright', {
             pubkyCore: (chunks) => (
-              <Link href={PUBKY_CORE_URL} target="_blank">
+              <Link href={getPubkyCoreLink()} target="_blank">
                 {chunks}
               </Link>
             ),

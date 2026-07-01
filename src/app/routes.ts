@@ -21,11 +21,15 @@ export enum APP_ROUTES {
   FEED = '/feed',
   SEARCH = '/search',
   HOT = '/hot',
-  BOOKMARKS = '/bookmarks',
+  COLLECTIONS = '/collections',
   SETTINGS = '/settings',
   PROFILE = '/profile',
   WHO_TO_FOLLOW = '/who-to-follow',
   SHARE = '/share',
+}
+
+export enum COLLECTION_ROUTES {
+  BOOKMARKS = '/collections/bookmarks',
 }
 
 export enum PROFILE_ROUTES {
@@ -38,6 +42,7 @@ export enum PROFILE_ROUTES {
   FRIENDS = '/profile/friends',
   UNIQUE_TAGS = '/profile/tagged',
   PROFILE_PAGE = '/profile/profile',
+  COLLECTIONS = '/profile/collections',
 }
 
 export enum SETTINGS_ROUTES {
@@ -58,6 +63,11 @@ export enum COPYRIGHT_ROUTES {
   COPYRIGHT = '/copyright',
 }
 
+export enum DEV_ROUTES {
+  /** Sentry verification harness — gated to non-production by the page itself. */
+  SENTRY_TEST = '/sentry-test',
+}
+
 export const EXPLORE_ROUTES: string[] = [APP_ROUTES.HOME, APP_ROUTES.HOT, APP_ROUTES.SEARCH];
 
 // Public routes are accessible regardless of authentication status.
@@ -75,6 +85,9 @@ export const PUBLIC_ROUTES: string[] = [
   COPYRIGHT_ROUTES.COPYRIGHT,
   // Language settings page is public to allow language changes without auth issues
   SETTINGS_ROUTES.LANGUAGE,
+  // Sentry verification harness must be reachable without a session on preview deploys.
+  // The page returns 404 in production via isSentryTestHarnessEnabled().
+  DEV_ROUTES.SENTRY_TEST,
 ];
 
 export const ALLOWED_ROUTES = [
@@ -83,7 +96,7 @@ export const ALLOWED_ROUTES = [
   APP_ROUTES.FEED,
   APP_ROUTES.SEARCH,
   APP_ROUTES.HOT,
-  APP_ROUTES.BOOKMARKS,
+  APP_ROUTES.COLLECTIONS,
   APP_ROUTES.SETTINGS,
   APP_ROUTES.PROFILE,
   APP_ROUTES.WHO_TO_FOLLOW,
@@ -210,6 +223,63 @@ export function getProfileRoute(route: PROFILE_ROUTES, pubky?: string): string {
   }
 
   return `/profile/${pubky}${subPath}`;
+}
+
+// ============================================================================
+// Collection Route Helpers
+// ============================================================================
+
+/**
+ * Builds the route to a single collection's detail page.
+ *
+ * @param authorPubky - The collection owner's pubky
+ * @param postId - The collection post id (raw, not composite)
+ * @returns The full route path (e.g. `/collections/<pubky>/<postId>`)
+ */
+export function getCollectionRoute(authorPubky: string, postId: string): string {
+  return `${APP_ROUTES.COLLECTIONS}/${authorPubky}/${postId}`;
+}
+
+/** `/collections` exactly — the collections overview page (not a single collection or bookmarks). */
+export function isCollectionsOverviewRoute(pathname: string): boolean {
+  return pathname === APP_ROUTES.COLLECTIONS;
+}
+
+/**
+ * Matches a single collection detail route `/collections/[userId]/[postId]` and
+ * returns its params, or `null` for any other path. `bookmarks` is excluded so
+ * `/collections/bookmarks` is never treated as a `userId`.
+ */
+export function matchSingleCollectionRoute(pathname: string): { userId: string; postId: string } | null {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] !== 'collections' || segments.length !== 3) {
+    return null;
+  }
+  const [, userId, postId] = segments;
+  if (userId === 'bookmarks') {
+    return null;
+  }
+  return { userId, postId };
+}
+
+// ============================================================================
+// Navigation Active State
+// ============================================================================
+
+type NavItemActiveConfig = {
+  href: string;
+  activePrefix?: string;
+};
+
+/**
+ * Returns whether a pathname should highlight a primary nav item.
+ *
+ * Uses `activePrefix` when set (e.g. Settings → any `/settings/*` route),
+ * otherwise falls back to exact href match and sub-routes under `href`.
+ */
+export function isNavItemActive(pathname: string, item: NavItemActiveConfig): boolean {
+  const activePath = item.activePrefix ?? item.href;
+  return pathname === activePath || pathname.startsWith(`${activePath}/`);
 }
 
 /**

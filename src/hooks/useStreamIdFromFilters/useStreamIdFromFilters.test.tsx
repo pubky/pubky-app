@@ -105,6 +105,16 @@ describe('useStreamIdFromFilters', () => {
     expect(result.current).toBe('timeline:all:image');
   });
 
+  it('should update when content filter changes to collections', () => {
+    const { result: setContent } = renderHook(() => useHomeStore((state) => state.setContent));
+
+    setContent.current(CONTENT.COLLECTIONS);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+    expect(result.current).toBe(PostStreamTypes.TIMELINE_ALL_COLLECTION);
+    expect(result.current).toBe('timeline:all:collection');
+  });
+
   it('should prefer the provided content override over store content', () => {
     const { result: setContent } = renderHook(() => useHomeStore((state) => state.setContent));
 
@@ -191,6 +201,7 @@ describe('useStreamIdFromFilters', () => {
       { content: CONTENT.ALL, expected: 'timeline:all:all' },
       { content: CONTENT.SHORT, expected: 'timeline:all:short' },
       { content: CONTENT.LONG, expected: 'timeline:all:long' },
+      { content: CONTENT.COLLECTIONS, expected: 'timeline:all:collection' },
       { content: CONTENT.IMAGES, expected: 'timeline:all:image' },
       { content: CONTENT.VIDEOS, expected: 'timeline:all:video' },
       { content: CONTENT.LINKS, expected: 'timeline:all:link' },

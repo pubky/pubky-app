@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bookmark, Flame, Home, Search, Settings, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Search, Settings, UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
+import { APP_ROUTES, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -32,6 +32,7 @@ export interface MobileFooterProps {
  */
 export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
+  const tHeader = useTranslations('header');
   const tCommon = useTranslations('common');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
@@ -40,7 +41,6 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const unreadNotifications = useNotificationStore((state) => state.selectUnread());
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
   const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset();
-  const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
   // Get avatar URL and fallback initial - same logic as desktop header
   const avatarUrl =
@@ -53,34 +53,34 @@ export function MobileFooter({ className }: MobileFooterProps) {
     {
       href: APP_ROUTES.HOME,
       icon: Home,
-      label: 'Home',
+      label: tHeader('home'),
       isFeedRoute: true,
     },
     {
       href: APP_ROUTES.SEARCH,
       icon: Search,
-      label: 'Search',
+      label: tHeader('search'),
       isFeedRoute: true,
     },
     {
       href: APP_ROUTES.HOT,
       icon: Flame,
-      label: 'Hot',
+      label: tHeader('hot'),
     },
     {
-      href: APP_ROUTES.BOOKMARKS,
-      icon: Bookmark,
-      label: 'Bookmarks',
-      isFeedRoute: true,
+      href: APP_ROUTES.COLLECTIONS,
+      activePrefix: APP_ROUTES.COLLECTIONS,
+      icon: Library,
+      label: tHeader('collections'),
     },
     {
       href: SETTINGS_ROUTES.ACCOUNT,
       activePrefix: APP_ROUTES.SETTINGS,
       icon: Settings,
-      label: 'Settings',
+      label: tHeader('settings'),
     },
   ];
-  const protectedNavHrefs = new Set<string>([APP_ROUTES.BOOKMARKS, SETTINGS_ROUTES.ACCOUNT]);
+  const protectedNavHrefs = new Set<string>([APP_ROUTES.COLLECTIONS, SETTINGS_ROUTES.ACCOUNT]);
   // Hide footer for guests only on non-explore routes. Core explore and dynamic public
   // routes (/home, /post/..., /profile/...) use the public explore footer.
   if (!isAuthenticated && !isPublicExploreRoute) {
@@ -108,7 +108,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       >
         {authenticatedNavItems.map((item) => {
           const Icon = item.icon;
-          const activePath = item.activePrefix ?? item.href;
+          const itemIsActive = isNavItemActive(pathname, item);
           return (
             <Link
               key={item.href}
@@ -121,13 +121,11 @@ export function MobileFooter({ className }: MobileFooterProps) {
                   return;
                 }
                 if (!item.isFeedRoute) return;
-                handleFeedNavClick(event, { isActive: isActive(item.href), smoothScrollWhenActive: true });
+                handleFeedNavClick(event, { isActive: itemIsActive, smoothScrollWhenActive: true });
               }}
               className={cn(
                 'rounded-full p-3 transition-all',
-                isActive(activePath)
-                  ? 'bg-secondary'
-                  : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
+                itemIsActive ? 'bg-secondary' : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
               )}
             >
               <Icon className="h-6 w-6" />

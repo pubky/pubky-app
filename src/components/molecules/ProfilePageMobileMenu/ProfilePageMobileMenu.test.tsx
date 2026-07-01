@@ -60,6 +60,7 @@ describe('ProfilePageMobileMenu', () => {
       'Following',
       'Friends',
       'Tagged',
+      'Collections',
     ]);
   });
 
@@ -74,7 +75,16 @@ describe('ProfilePageMobileMenu', () => {
 
     const labels = Array.from(container.querySelectorAll('button')).map((button) => button.getAttribute('aria-label'));
 
-    expect(labels).toEqual(['Profile', 'Posts', 'Replies', 'Followers', 'Following', 'Friends', 'Tagged']);
+    expect(labels).toEqual([
+      'Profile',
+      'Posts',
+      'Replies',
+      'Followers',
+      'Following',
+      'Friends',
+      'Tagged',
+      'Collections',
+    ]);
   });
 
   it('marks the active item with aria-current="page"', () => {

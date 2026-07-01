@@ -13,6 +13,7 @@ import {
   Image,
   Layers,
   LayoutGrid,
+  Library,
   Link,
   Menu,
   Newspaper,
@@ -32,7 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FeedController } from '@/controllers/feed/feed';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { UsersRound2 } from '@/icons';
-import { Env } from '@/libs/env/env';
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { useToast } from '@/molecules/Toaster/use-toast';
@@ -149,6 +150,11 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       value: PubkyAppPostKind.Long,
       label: tFilter('content.articles'),
       icon: Newspaper,
+    },
+    {
+      value: PubkyAppPostKind.Collection,
+      label: tFilter('content.collections'),
+      icon: Library,
     },
     {
       value: PubkyAppPostKind.Image,
@@ -410,7 +416,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             }))}
             showCloseButton={false}
             disabled={disabled}
-            maxTags={Env.NEXT_MAX_STREAM_TAGS}
+            maxTags={getMaxStreamTags()}
             currentTagsCount={tags.length}
             enableApiSuggestions
             excludeFromApiSuggestions={tags}

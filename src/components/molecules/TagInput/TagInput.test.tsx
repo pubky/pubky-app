@@ -57,6 +57,21 @@ describe('TagInput', () => {
     expect(screen.getByLabelText('Open emoji picker')).not.toHaveClass('shadow-xs-dark');
   });
 
+  it('suppresses navigation (preventDefault + stopPropagation) on container click, while still calling onClick', () => {
+    const mockOnClick = vi.fn();
+    const { container } = render(<TagInput onTagAdd={mockOnTagAdd} onClick={mockOnClick} />);
+    const tagInputContainer = container.querySelector('div.relative')!;
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    const preventDefault = vi.spyOn(clickEvent, 'preventDefault');
+    const stopPropagation = vi.spyOn(clickEvent, 'stopPropagation');
+    tagInputContainer.dispatchEvent(clickEvent);
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(stopPropagation).toHaveBeenCalled();
+    expect(mockOnClick).toHaveBeenCalledTimes(1);
+  });
+
   it('calls onTagAdd when Enter is pressed with valid tag', async () => {
     render(<TagInput onTagAdd={mockOnTagAdd} />);
     const input = screen.getByPlaceholderText('add tag') as HTMLInputElement;

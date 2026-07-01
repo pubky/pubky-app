@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NEXUS_URL } from '@/config/nexus';
+import { getNexusUrl } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
 import type { NexusTag, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
@@ -39,7 +39,7 @@ describe('User API', () => {
       const baseRoute = 'v0/user/test';
 
       const result = buildUrlWithQuery({ baseRoute, params, excludeKeys: USER_PATH_PARAMS });
-      expect(result).toBe(`${NEXUS_URL}/v0/user/test?depth=2&viewer_id=${testViewerId}`);
+      expect(result).toBe(`${getNexusUrl()}/v0/user/test?depth=2&viewer_id=${testViewerId}`);
     });
 
     it('should exclude path parameters from query string', () => {
@@ -59,8 +59,8 @@ describe('User API', () => {
     it('should generate correct URLs for basic endpoints', () => {
       const params: TUserId = { user_id: testUserId };
 
-      expect(userApi.counts(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/counts`);
-      expect(userApi.details(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/details`);
+      expect(userApi.counts(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/counts`);
+      expect(userApi.details(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/details`);
     });
 
     it('should generate correct URLs for view endpoints', () => {
@@ -70,12 +70,12 @@ describe('User API', () => {
         viewer_id: testViewerId,
       };
 
-      expect(userApi.view(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}?depth=2&viewer_id=${testViewerId}`);
+      expect(userApi.view(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}?depth=2&viewer_id=${testViewerId}`);
       expect(userApi.followers(params)).toBe(
-        `${NEXUS_URL}/v0/user/${testUserId}/followers?depth=2&viewer_id=${testViewerId}`,
+        `${getNexusUrl()}/v0/user/${testUserId}/followers?depth=2&viewer_id=${testViewerId}`,
       );
       expect(userApi.following(params)).toBe(
-        `${NEXUS_URL}/v0/user/${testUserId}/following?depth=2&viewer_id=${testViewerId}`,
+        `${getNexusUrl()}/v0/user/${testUserId}/following?depth=2&viewer_id=${testViewerId}`,
       );
     });
 
@@ -85,7 +85,7 @@ describe('User API', () => {
         viewer_id: testViewerId,
       };
 
-      expect(userApi.relationship(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/relationship/${testViewerId}`);
+      expect(userApi.relationship(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/relationship/${testViewerId}`);
     });
 
     it('should generate correct URL for friends endpoint', () => {
@@ -96,7 +96,7 @@ describe('User API', () => {
       };
 
       expect(userApi.friends(params)).toBe(
-        `${NEXUS_URL}/v0/user/${testUserId}/friends?depth=2&viewer_id=${testViewerId}`,
+        `${getNexusUrl()}/v0/user/${testUserId}/friends?depth=2&viewer_id=${testViewerId}`,
       );
     });
 
@@ -110,7 +110,7 @@ describe('User API', () => {
       };
 
       expect(userApi.notifications(params)).toBe(
-        `${NEXUS_URL}/v0/user/${testUserId}/notifications?skip=0&limit=10&start=1000&end=2000`,
+        `${getNexusUrl()}/v0/user/${testUserId}/notifications?skip=0&limit=10&start=1000&end=2000`,
       );
     });
 
@@ -122,7 +122,7 @@ describe('User API', () => {
         limit: 10,
       };
 
-      expect(userApi.taggers(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/taggers/test-tag?skip=0&limit=10`);
+      expect(userApi.taggers(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/taggers/test-tag?skip=0&limit=10`);
     });
 
     it('should generate correct URL for tags endpoint', () => {
@@ -132,7 +132,7 @@ describe('User API', () => {
         limit_tags: 10,
       };
 
-      expect(userApi.tags(params)).toBe(`${NEXUS_URL}/v0/user/${testUserId}/tags?skip_tags=0&limit_tags=10`);
+      expect(userApi.tags(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/tags?skip_tags=0&limit_tags=10`);
     });
   });
 
@@ -177,7 +177,7 @@ describe('NexusUserService', () => {
 
       expect(result).toEqual(mockTags);
       expect(queryNexusSpy).toHaveBeenCalledWith({
-        url: `${NEXUS_URL}/v0/user/${testUserId}/tags?skip_tags=5&limit_tags=20`,
+        url: `${getNexusUrl()}/v0/user/${testUserId}/tags?skip_tags=5&limit_tags=20`,
       });
     });
   });
@@ -217,7 +217,7 @@ describe('NexusUserService', () => {
       const result = await NexusUserService.details({ user_id: testUserId });
 
       expect(result).toEqual(mockUserDetails);
-      expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${NEXUS_URL}/v0/user/${testUserId}/details` });
+      expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${getNexusUrl()}/v0/user/${testUserId}/details` });
     });
 
     it('should handle user with complete profile data', async () => {

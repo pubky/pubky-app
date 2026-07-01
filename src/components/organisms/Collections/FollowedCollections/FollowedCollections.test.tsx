@@ -1,0 +1,375 @@
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
+import { BookmarkController } from '@/controllers/bookmark/bookmark';
+import { PostController } from '@/controllers/post/post';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
+import { Logger } from '@/libs/logger/logger';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import { buildFollowedCollectionsStreamId } from '@/models/stream/post/postStream.types';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { FollowedCollections } from './FollowedCollections';
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
+
+let mockAuthState: { hasHydrated: boolean; currentUserPubky: string | null } = {
+  hasHydrated: false,
+  currentUserPubky: null,
+};
+
+vi.mock('next-intl', () => ({
+  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
+}));
+
+vi.mock('dexie-react-hooks', () => ({
+  useLiveQuery: vi.fn(),
+}));
+
+vi.mock('@/controllers/stream/posts/posts', () => ({
+  StreamPostsController: {
+    getOrFetchStreamSlice: vi.fn(),
+    prepareStreamForInitialLoad: vi.fn(),
+    getCachedLastPostTimestamp: vi.fn(),
+  },
+}));
+
+vi.mock('@/controllers/bookmark/bookmark', () => ({
+  BookmarkController: {
+    getAll: vi.fn(),
+  },
+}));
+
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    getDetailsByIds: vi.fn(),
+  },
+}));
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (state: typeof mockAuthState) => unknown) => selector(mockAuthState),
+}));
+
+vi.mock('@/libs/logger/logger', () => ({
+  Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+
+const mockToast = vi.fn();
+vi.mock('@/molecules/Toaster/use-toast', () => ({
+  useToast: () => ({ toast: mockToast }),
+}));
+
+vi.mock('@/molecules/AvatarStack/AvatarStack', () => ({
+  AvatarStack: ({ pubkys }: { pubkys: string[] }) => <div data-testid="avatar-stack" data-pubkys={pubkys.join(',')} />,
+}));
+
+vi.mock('@/molecules/AvatarStack/AvatarStack.skeleton', () => ({
+  AvatarStackSkeleton: ({ count }: { count: number }) => <div data-testid="avatar-stack-skeleton" data-count={count} />,
+}));
+
+vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
+  CollectionCard: ({
+    authorPubky,
+    postId,
+    initialIsBookmarked,
+  }: {
+    authorPubky: string;
+    postId: string;
+    initialIsBookmarked?: boolean;
+  }) => (
+    <div
+      data-testid="collection-card"
+      data-author-pubky={authorPubky}
+      data-post-id={postId}
+      data-initial-bookmarked={String(!!initialIsBookmarked)}
+    />
+  ),
+}));
+
+vi.mock('@/organisms/Collections/CollectionCard/CollectionCard.skeleton', () => ({
+  CollectionCardSkeleton: () => <div data-testid="collection-card-skeleton" />,
+}));
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const mockUseLiveQuery = vi.mocked(useLiveQuery);
+const mockGetOrFetchStreamSlice = vi.mocked(StreamPostsController.getOrFetchStreamSlice);
+const mockPrepareStreamForInitialLoad = vi.mocked(StreamPostsController.prepareStreamForInitialLoad);
+const mockGetCachedLastPostTimestamp = vi.mocked(StreamPostsController.getCachedLastPostTimestamp);
+const mockBookmarkGetAll = vi.mocked(BookmarkController.getAll);
+const mockGetDetailsByIds = vi.mocked(PostController.getDetailsByIds);
+
+function makeSlice({
+  nextPageIds = [],
+  reachedEnd = true,
+  timestamp = 0,
+}: {
+  nextPageIds?: string[];
+  reachedEnd?: boolean;
+  timestamp?: number;
+} = {}) {
+  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, timestamp });
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockAuthState = { hasHydrated: false, currentUserPubky: null };
+  mockUseLiveQuery.mockReturnValue(undefined);
+  mockPrepareStreamForInitialLoad.mockResolvedValue(undefined);
+  mockGetCachedLastPostTimestamp.mockResolvedValue(0);
+  mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ reachedEnd: true }));
+  mockBookmarkGetAll.mockResolvedValue([]);
+  mockGetDetailsByIds.mockResolvedValue([]);
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('FollowedCollections', () => {
+  it('pre-hydration: renders title + skeletons and does not fire a seed fetch', () => {
+    mockAuthState = { hasHydrated: false, currentUserPubky: null };
+
+    render(<FollowedCollections />);
+
+    expect(screen.getByText('collections.followed.title')).toBeInTheDocument();
+    expect(screen.getByTestId('avatar-stack-skeleton')).toHaveAttribute('data-count', '3');
+    expect(screen.getAllByTestId('collection-card-skeleton').length).toBeGreaterThan(0);
+    expect(mockPrepareStreamForInitialLoad).not.toHaveBeenCalled();
+    expect(mockGetOrFetchStreamSlice).not.toHaveBeenCalled();
+  });
+
+  it('post-hydration: seeds the followed-collections stream and persists slice via the controller', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:p1'], reachedEnd: true, timestamp: 123 }));
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    const expectedStreamId = buildFollowedCollectionsStreamId();
+
+    await waitFor(() => {
+      expect(mockPrepareStreamForInitialLoad).toHaveBeenCalledWith({ streamId: expectedStreamId });
+      expect(mockGetCachedLastPostTimestamp).toHaveBeenCalledWith({ streamId: expectedStreamId });
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledWith({
+        streamId: expectedStreamId,
+        lastPostId: undefined,
+        streamTail: 0,
+        limit: COLLECTIONS_SECTION_PAGE_SIZE,
+      });
+    });
+  });
+
+  it('renders one CollectionCard per live-query id with initialIsBookmarked=true', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockUseLiveQuery.mockReturnValue(['authorA:p1', 'authorA:p2', 'authorB:p3']);
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    const cards = screen.getAllByTestId('collection-card');
+    expect(cards).toHaveLength(3);
+    expect(cards[0]).toHaveAttribute('data-author-pubky', 'authorA');
+    expect(cards[0]).toHaveAttribute('data-post-id', 'p1');
+    expect(cards[2]).toHaveAttribute('data-author-pubky', 'authorB');
+    expect(cards[2]).toHaveAttribute('data-post-id', 'p3');
+    for (const card of cards) {
+      expect(card).toHaveAttribute('data-initial-bookmarked', 'true');
+    }
+  });
+
+  it('passes unique authors from displayed cards to AvatarStack', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockUseLiveQuery.mockReturnValue(['a:p1', 'a:p2', 'b:p3']);
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    await waitFor(() => {
+      const stack = screen.getByTestId('avatar-stack');
+      expect(stack).toHaveAttribute('data-pubkys', 'a,b');
+    });
+  });
+
+  it('live-query callback joins bookmarks with post-details and keeps only collection-kind ids', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+
+    const bookmarkIds = ['a:p1', 'a:p2', 'b:p3'];
+    mockBookmarkGetAll.mockResolvedValue(bookmarkIds);
+    mockGetDetailsByIds.mockResolvedValue([
+      asOpaque<PostDetailsModelSchema>({ id: 'a:p1', kind: 'collection' }),
+      asOpaque<PostDetailsModelSchema>({ id: 'a:p2', kind: 'collection' }),
+      asOpaque<PostDetailsModelSchema>({ id: 'b:p3', kind: 'short' }),
+    ]);
+
+    // Capture the live-query callback so we can invoke it ourselves.
+    let capturedFn: (() => Promise<string[]>) | null = null;
+    mockUseLiveQuery.mockImplementation((fn: unknown) => {
+      capturedFn = fn as () => Promise<string[]>;
+      return undefined;
+    });
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    expect(capturedFn).not.toBeNull();
+    const result = await capturedFn!();
+    expect(result).toEqual(['a:p1', 'a:p2']);
+    expect(mockBookmarkGetAll).toHaveBeenCalled();
+    expect(mockGetDetailsByIds).toHaveBeenCalledWith({ compositeIds: bookmarkIds });
+  });
+
+  it('live-query callback excludes soft-deleted collections (content === [DELETED])', async () => {
+    // When a collection is deleted, `LocalPostService.delete` flips
+    // `PostDetails.content` to `[DELETED]`. The live query observes
+    // `post_details` so the bookmark stays (you bookmarked it), but the
+    // filter must drop the deleted id before the card list is built.
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+
+    const bookmarkIds = ['a:p1', 'a:p2', 'b:p3'];
+    mockBookmarkGetAll.mockResolvedValue(bookmarkIds);
+    mockGetDetailsByIds.mockResolvedValue([
+      asOpaque<PostDetailsModelSchema>({ id: 'a:p1', kind: 'collection', content: 'live' }),
+      asOpaque<PostDetailsModelSchema>({ id: 'a:p2', kind: 'collection', content: '[DELETED]' }),
+      asOpaque<PostDetailsModelSchema>({ id: 'b:p3', kind: 'collection', content: 'live' }),
+    ]);
+
+    let capturedFn: (() => Promise<string[]>) | null = null;
+    mockUseLiveQuery.mockImplementation((fn: unknown) => {
+      capturedFn = fn as () => Promise<string[]>;
+      return undefined;
+    });
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    expect(capturedFn).not.toBeNull();
+    const result = await capturedFn!();
+    expect(result).toEqual(['a:p1', 'b:p3']);
+    expect(result).not.toContain('a:p2');
+  });
+
+  it('renders the empty state when seed finished and live query yields no ids', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockUseLiveQuery.mockReturnValue([]);
+    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true }));
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('collections.followed.empty')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
+    // Section title still present.
+    expect(screen.getByText('collections.followed.title')).toBeInTheDocument();
+  });
+
+  it('hides Show More when reachedEnd is true', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockUseLiveQuery.mockReturnValue(['a:p1']);
+    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:p1'], reachedEnd: true }));
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows Show More when reachedEnd is false; clicking fetches another slice', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockUseLiveQuery.mockReturnValue(['a:p1']);
+    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false, timestamp: 42 }));
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    const button = await screen.findByRole('button', { name: 'collections.showMore' });
+    expect(button).toBeInTheDocument();
+
+    const callsBefore = mockGetOrFetchStreamSlice.mock.calls.length;
+    await act(async () => {
+      button.click();
+    });
+    await waitFor(() => {
+      expect(mockGetOrFetchStreamSlice.mock.calls.length).toBeGreaterThan(callsBefore);
+    });
+  });
+
+  it('on seed-fetch failure: logs an error, fires the load-failed toast, and hides Show More (reachedEnd flips true)', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockUseLiveQuery.mockReturnValue([]);
+    mockGetOrFetchStreamSlice.mockRejectedValue(new Error('boom'));
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    await waitFor(() => {
+      expect(Logger.error).toHaveBeenCalled();
+    });
+    // Mirror of the `MyCollections` onError toast — keeps failure UX
+    // consistent across the three Collections sections.
+    expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'collections.loadFailed',
+    });
+    expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
+  });
+
+  describe('FollowedCollections - Snapshots', () => {
+    it('matches the snapshot for the pre-hydration skeleton state', () => {
+      mockAuthState = { hasHydrated: false, currentUserPubky: null };
+
+      const { container } = render(<FollowedCollections />);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+
+    it('matches the snapshot for the populated state with cards + Show More', async () => {
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+      mockUseLiveQuery.mockReturnValue(['authorA:p1', 'authorB:p2']);
+      mockGetOrFetchStreamSlice.mockResolvedValue(
+        makeSlice({ nextPageIds: ['authorA:p1', 'authorB:p2'], reachedEnd: false, timestamp: 100 }),
+      );
+
+      const { container } = await act(async () => render(<FollowedCollections />));
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'collections.showMore' })).toBeInTheDocument();
+      });
+
+      expect(container.firstChild).toMatchSnapshot();
+    });
+
+    it('matches the snapshot for the empty state (live query empty, seed resolved)', async () => {
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+      mockUseLiveQuery.mockReturnValue([]);
+      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true, timestamp: 0 }));
+
+      const { container } = await act(async () => render(<FollowedCollections />));
+      await waitFor(() => {
+        expect(screen.getByText('collections.followed.empty')).toBeInTheDocument();
+      });
+
+      expect(container.firstChild).toMatchSnapshot();
+    });
+  });
+});

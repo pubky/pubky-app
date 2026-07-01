@@ -50,6 +50,11 @@ describe('filters.utils', () => {
         expect(streamId).toBe('timeline:all:long');
       });
 
+      it('should map "collections" to "collection"', () => {
+        const streamId = getStreamIdFromFilters(SORT.TIMELINE, REACH.ALL, CONTENT.COLLECTIONS);
+        expect(streamId).toBe('timeline:all:collection');
+      });
+
       it('should map "images" to "image"', () => {
         const streamId = getStreamIdFromFilters(SORT.TIMELINE, REACH.ALL, CONTENT.IMAGES);
         expect(streamId).toBe('timeline:all:image');
@@ -109,6 +114,12 @@ describe('filters.utils', () => {
       expect(streamId).toBe('timeline:all:image');
     });
 
+    it('should return PostStreamTypes.TIMELINE_ALL_COLLECTION', () => {
+      const streamId = getStreamId(SORT.TIMELINE, REACH.ALL, CONTENT.COLLECTIONS);
+      expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_COLLECTION);
+      expect(streamId).toBe('timeline:all:collection');
+    });
+
     it('should return PostStreamTypes for all combinations', () => {
       const streamId = getStreamId(SORT.ENGAGEMENT, REACH.FOLLOWING, CONTENT.VIDEOS);
       expect(streamId).toBe(PostStreamTypes.POPULARITY_FOLLOWING_VIDEO);
@@ -140,6 +151,9 @@ describe('filters.utils', () => {
         true,
       );
       expect(matchesFilters(PostStreamTypes.TIMELINE_ALL_IMAGE, SORT.TIMELINE, REACH.ALL, CONTENT.IMAGES)).toBe(true);
+      expect(
+        matchesFilters(PostStreamTypes.TIMELINE_ALL_COLLECTION, SORT.TIMELINE, REACH.ALL, CONTENT.COLLECTIONS),
+      ).toBe(true);
     });
   });
 
@@ -202,6 +216,7 @@ describe('filters.utils', () => {
         expect(parseStreamId('timeline:all:all')?.content).toBe(CONTENT.ALL);
         expect(parseStreamId('timeline:all:short')?.content).toBe(CONTENT.SHORT);
         expect(parseStreamId('timeline:all:long')?.content).toBe(CONTENT.LONG);
+        expect(parseStreamId('timeline:all:collection')?.content).toBe(CONTENT.COLLECTIONS);
         expect(parseStreamId('timeline:all:image')?.content).toBe(CONTENT.IMAGES);
         expect(parseStreamId('timeline:all:video')?.content).toBe(CONTENT.VIDEOS);
         expect(parseStreamId('timeline:all:link')?.content).toBe(CONTENT.LINKS);
@@ -241,6 +256,7 @@ describe('filters.utils', () => {
         [SORT.TIMELINE, REACH.FOLLOWING, CONTENT.IMAGES],
         [SORT.ENGAGEMENT, REACH.FRIENDS, CONTENT.VIDEOS],
         [SORT.ENGAGEMENT, REACH.ALL, CONTENT.LINKS],
+        [SORT.TIMELINE, REACH.ALL, CONTENT.COLLECTIONS],
       ];
 
       testCases.forEach(([sort, reach, content]) => {

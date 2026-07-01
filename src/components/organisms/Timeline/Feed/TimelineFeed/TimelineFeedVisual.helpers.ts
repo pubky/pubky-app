@@ -16,19 +16,20 @@ const VISUAL_CONTENT_IMAGES = 'images' as ContentType;
 const VISUAL_CONTENT_VIDEOS = 'videos' as ContentType;
 const VISUAL_CONTENT_SHORT = 'short' as ContentType;
 const VISUAL_CONTENT_LONG = 'long' as ContentType;
+const VISUAL_CONTENT_COLLECTIONS = 'collections' as ContentType;
 const VISUAL_CONTENT_LINKS = 'links' as ContentType;
 const VISUAL_CONTENT_FILES = 'files' as ContentType;
 
 export const VISUAL_DISABLED_CONTENT: ContentType[] = [
   VISUAL_CONTENT_SHORT,
   VISUAL_CONTENT_LONG,
+  VISUAL_CONTENT_COLLECTIONS,
   VISUAL_CONTENT_LINKS,
   VISUAL_CONTENT_FILES,
 ];
 
 const VISUAL_INTERACTIVE_CONTENT_VARIANTS = new Set<TimelineFeedVariant>([
   TIMELINE_FEED_VARIANT.HOME,
-  TIMELINE_FEED_VARIANT.BOOKMARKS,
   TIMELINE_FEED_VARIANT.SEARCH,
 ]);
 

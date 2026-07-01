@@ -50,6 +50,7 @@ export function usePostInput({
   editPostId,
   onSuccess,
   placeholder,
+  successToastTitle,
   expanded = false,
   onContentChange,
   onArticleModeChange,
@@ -219,6 +220,7 @@ export function usePostInput({
         await repost({
           originalPostId: originalPostId!,
           originalAuthorName: originalPostAuthor?.name,
+          successToastTitle,
           onSuccess: handleSuccess,
           onUndo: deletePost,
         });
@@ -240,6 +242,7 @@ export function usePostInput({
     postId,
     originalPostId,
     originalPostAuthor,
+    successToastTitle,
     reply,
     post,
     repost,

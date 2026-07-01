@@ -14,6 +14,7 @@ let mockStats: ProfileStats = {
   followers: 0,
   following: 0,
   friends: 0,
+  collections: 0,
   uniqueTags: 0,
 };
 let mockStatsLoading = false;
@@ -59,6 +60,7 @@ describe('useProfileHeader', () => {
       followers: 0,
       following: 0,
       friends: 0,
+      collections: 0,
       uniqueTags: 0,
     };
     mockStatsLoading = false;
@@ -90,6 +92,7 @@ describe('useProfileHeader', () => {
         followers: 20,
         following: 15,
         friends: 8,
+        collections: 0,
         uniqueTags: 3,
       };
 
@@ -149,6 +152,7 @@ describe('useProfileHeader', () => {
         followers: 20,
         following: 15,
         friends: 8,
+        collections: 0,
         uniqueTags: 3,
       };
 
@@ -170,6 +174,7 @@ describe('useProfileHeader', () => {
         followers: 0,
         following: 0,
         friends: 0,
+        collections: 0,
         uniqueTags: 0,
       };
 
@@ -397,6 +402,7 @@ describe('useProfileHeader', () => {
         followers: 0,
         following: 0,
         friends: 0,
+        collections: 0,
         uniqueTags: 0,
       };
 

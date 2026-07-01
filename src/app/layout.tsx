@@ -4,8 +4,8 @@ import { getLocale, getMessages } from 'next-intl/server';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { RootContainer } from '@/molecules/ContainerRoot/ContainerRoot';
+import { Fab } from '@/molecules/Fab/Fab';
 import { Metadata } from '@/molecules/Metadata/Metadata';
-import { NewPostCTA } from '@/molecules/NewPostCTA/NewPostCTA';
 import { Toaster } from '@/molecules/Toaster/Toaster';
 import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/CoordinatorsManager';
 import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
@@ -24,11 +24,13 @@ export const viewport: Viewport = {
   themeColor: '#000000',
 };
 
-export const metadata = Metadata({
-  title: 'Pubky App - Unlock the web',
-  description:
-    'Pubky App is a social-media-like experience built over Pubky Core. It serves as a working example on how to build over Pubky Core to create simple or complex applications.',
-});
+export function generateMetadata() {
+  return Metadata({
+    title: 'Pubky App - Unlock the web',
+    description:
+      'Pubky App is a social-media-like experience built over Pubky Core. It serves as a working example on how to build over Pubky Core to create simple or complex applications.',
+  });
+}
 
 // Force dynamic rendering since we use cookies for locale detection
 export const dynamic = 'force-dynamic';
@@ -48,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <CoordinatorsManager />
                   <Header />
                   {children}
-                  <NewPostCTA />
+                  <Fab />
                   <Toaster />
                   <DialogSignIn />
                 </RouteGuardProvider>

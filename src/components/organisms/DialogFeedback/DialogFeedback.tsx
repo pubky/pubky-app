@@ -32,7 +32,7 @@ export function DialogFeedback({ open, onOpenChange }: DialogFeedbackProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-2xl" hiddenTitle="Provide Feedback">
+      <DialogContent avoidKeyboard className="w-2xl" hiddenTitle="Provide Feedback">
         {isSuccess ? (
           <DialogFeedbackSuccess onOpenChange={onOpenChange} />
         ) : (

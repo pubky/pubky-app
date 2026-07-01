@@ -1,0 +1,37 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BookmarksCollection - Snapshots > matches the snapshot for the resolved summary state 1`] = `
+<div
+  data-class-name="pb-24 lg:pb-12 xl:px-0!"
+  data-show-left-mobile-button="false"
+  data-show-left-sidebar="false"
+  data-show-right-mobile-button="false"
+  data-show-right-sidebar="false"
+  data-testid="content-layout"
+>
+  <div
+    class="mx-auto w-full flex-col flex gap-12"
+    data-testid="container"
+  >
+    <div
+      data-testid="bookmarks-items"
+    >
+      <div
+        data-testid="bookmarks-items-header"
+      >
+        <div
+          data-avatar-name="Alice"
+          data-avatar-seed="alice-pubky"
+          data-avatar-url="https://example.com/avatar.png"
+          data-bookmark-count="4"
+          data-is-profile-resolved="true"
+          data-testid="bookmarks-hero"
+        />
+      </div>
+    </div>
+    <div
+      data-testid="collections-sections"
+    />
+  </div>
+</div>
+`;

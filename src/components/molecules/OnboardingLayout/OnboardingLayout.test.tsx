@@ -35,6 +35,19 @@ describe('OnboardingLayout', () => {
     const navContainer = container.querySelector('.onboarding-nav');
     expect(navContainer).not.toBeInTheDocument();
   });
+
+  it('keeps navigation close to content when bottom pinning is disabled', () => {
+    const { container } = render(
+      <OnboardingLayout testId="unpinned-nav" navigation={<button>Next</button>} pinNavigationToBottom={false}>
+        <div>Content</div>
+      </OnboardingLayout>,
+    );
+
+    expect(screen.getByTestId('unpinned-nav')).toHaveClass('flex-none');
+    const navContainer = container.querySelector('.onboarding-nav');
+    expect(navContainer).toHaveClass('mt-3');
+    expect(navContainer).not.toHaveClass('mt-auto');
+  });
 });
 
 describe('OnboardingLayout - Snapshots', () => {

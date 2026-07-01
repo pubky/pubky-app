@@ -116,7 +116,13 @@ export function usePost(): UsePostReturn {
     }
   };
 
-  const repost = async ({ originalPostId, originalAuthorName, onSuccess, onUndo }: UsePostRepostOptions) => {
+  const repost = async ({
+    originalPostId,
+    originalAuthorName,
+    successToastTitle,
+    onSuccess,
+    onUndo,
+  }: UsePostRepostOptions) => {
     if (!originalPostId || !currentUserId) return;
 
     setIsSubmitting(true);
@@ -134,9 +140,11 @@ export function usePost(): UsePostReturn {
       setAttachments([]);
 
       const toastInstance = toast({
-        title: originalAuthorName
-          ? tPost('repostSuccess', { author: originalAuthorName })
-          : tPost('repostSuccessFallback'),
+        title:
+          successToastTitle ??
+          (originalAuthorName
+            ? tPost('repostSuccess', { author: originalAuthorName })
+            : tPost('repostSuccessFallback')),
         action: (
           <ToastAction
             variant={'info'}

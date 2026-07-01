@@ -17,6 +17,11 @@ export interface UsePostInputOptions {
   /** Custom placeholder text */
   placeholder?: string;
   /**
+   * Overrides the repost success toast title (repost variant only). Lets the
+   * shared repost flow read as a different action, e.g. sharing a collection.
+   */
+  successToastTitle?: string;
+  /**
    * Controls whether the component starts in expanded mode.
    * @default false
    */

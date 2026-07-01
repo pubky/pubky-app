@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { UseKeyboardVisibleOptions } from './useKeyboardVisible.types';
+import { useKeyboardViewport } from '@/hooks/useKeyboardViewport/useKeyboardViewport';
+import type { UseKeyboardVisibleOptions } from './useKeyboardVisible.types';
 
 /**
  * useKeyboardVisible
@@ -32,68 +32,5 @@ import { UseKeyboardVisibleOptions } from './useKeyboardVisible.types';
  * ```
  */
 export function useKeyboardVisible(options: UseKeyboardVisibleOptions = {}): boolean {
-  const { threshold = 150, debounceMs = 50 } = options;
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const previousVisibleRef = useRef(false);
-
-  useEffect(() => {
-    // Check if Visual Viewport API is available (not available in all browsers)
-    if (typeof window === 'undefined' || !window.visualViewport) {
-      return;
-    }
-
-    const checkKeyboardVisibility = () => {
-      if (!window.visualViewport) return;
-
-      // Calculate the difference between layout viewport and visual viewport
-      // When keyboard opens, visual viewport height is smaller
-      const viewportHeightDiff = window.innerHeight - window.visualViewport.height;
-      const keyboardIsVisible = viewportHeightDiff > threshold;
-
-      setIsKeyboardVisible(keyboardIsVisible);
-      previousVisibleRef.current = keyboardIsVisible;
-    };
-
-    const handleViewportChange = () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      if (!window.visualViewport) return;
-
-      // Calculate current state
-      const viewportHeightDiff = window.innerHeight - window.visualViewport.height;
-      const keyboardIsVisible = viewportHeightDiff > threshold;
-
-      // If keyboard is closing (was visible, now not visible), update immediately with no debounce
-      if (previousVisibleRef.current && !keyboardIsVisible) {
-        checkKeyboardVisibility();
-      } else {
-        // If keyboard is opening or staying open, use debounce
-        timeoutRef.current = setTimeout(() => {
-          checkKeyboardVisibility();
-        }, debounceMs);
-      }
-    };
-
-    // Check initial state
-    checkKeyboardVisibility();
-
-    // Listen to viewport changes
-    window.visualViewport.addEventListener('resize', handleViewportChange);
-    window.visualViewport.addEventListener('scroll', handleViewportChange);
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleViewportChange);
-        window.visualViewport.removeEventListener('scroll', handleViewportChange);
-      }
-    };
-  }, [threshold, debounceMs]);
-
-  return isKeyboardVisible;
+  return useKeyboardViewport(options).isKeyboardVisible;
 }

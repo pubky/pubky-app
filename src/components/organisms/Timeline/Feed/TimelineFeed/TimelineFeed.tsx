@@ -1,14 +1,20 @@
 'use client';
 
+import { useParams } from 'next/navigation';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { useBookmarksStreamId } from '@/hooks/useBookmarksStreamId/useBookmarksStreamId';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useHotStreamId } from '@/hooks/useHotStreamId/useHotStreamId';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
-import type { AuthorStreamCompositeId } from '@/models/stream/post/postStream.types';
+import { buildCompositeId } from '@/models/models.utils';
+import {
+  type AuthorStreamCompositeId,
+  buildAuthorCollectionsStreamId,
+  buildCollectionItemsStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
@@ -26,20 +32,42 @@ export { useTimelineFeedContext } from './TimelineFeedContext';
  * Organism that encapsulates stream calculation and pagination logic.
  * Routes to variant-specific wrappers so each only subscribes to its own data sources.
  */
-export function TimelineFeed({ variant, children }: TimelineFeedProps) {
+export function TimelineFeed({
+  variant,
+  children,
+  emptyState,
+  pullToRefreshContainerRef,
+  gridTrailingSlot,
+}: TimelineFeedProps) {
   switch (variant) {
     case TIMELINE_FEED_VARIANT.HOME:
       return <HomeTimelineFeed>{children}</HomeTimelineFeed>;
     case TIMELINE_FEED_VARIANT.CUSTOM:
       return <CustomTimelineFeed>{children}</CustomTimelineFeed>;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
-      return <BookmarksTimelineFeed>{children}</BookmarksTimelineFeed>;
+      return (
+        <BookmarksTimelineFeed emptyState={emptyState} gridTrailingSlot={gridTrailingSlot}>
+          {children}
+        </BookmarksTimelineFeed>
+      );
     case TIMELINE_FEED_VARIANT.PROFILE:
       return <ProfileTimelineFeed>{children}</ProfileTimelineFeed>;
+    case TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS:
+      return <ProfileCollectionsTimelineFeed>{children}</ProfileCollectionsTimelineFeed>;
     case TIMELINE_FEED_VARIANT.HOT:
       return <HotTimelineFeed>{children}</HotTimelineFeed>;
     case TIMELINE_FEED_VARIANT.SEARCH:
       return <SearchTimelineFeed>{children}</SearchTimelineFeed>;
+    case TIMELINE_FEED_VARIANT.COLLECTION:
+      return (
+        <CollectionTimelineFeed
+          emptyState={emptyState}
+          pullToRefreshContainerRef={pullToRefreshContainerRef}
+          gridTrailingSlot={gridTrailingSlot}
+        >
+          {children}
+        </CollectionTimelineFeed>
+      );
     default:
       return <TimelineLoading />;
   }
@@ -86,24 +114,35 @@ function CustomTimelineFeed({ children }: { children?: TimelineFeedProps['childr
   );
 }
 
-function BookmarksTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
-  const content = useHomeStore((state) => state.content);
+function BookmarksTimelineFeed({
+  children,
+  emptyState,
+  gridTrailingSlot,
+}: {
+  children?: TimelineFeedProps['children'];
+  emptyState?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }>['emptyState'];
+  gridTrailingSlot?: Extract<
+    TimelineFeedProps,
+    { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }
+  >['gridTrailingSlot'];
+}) {
+  // The bookmarks route exposes no filter UI and shows collections in their own
+  // section below, so the feed is always the fixed all-bookmarks stream. It must
+  // not react to the shared home-store content/sort filters. Layout is pinned to
+  // columns (BOOKMARKS is excluded from RICH_LAYOUT_SUPPORTED_FEED_VARIANTS), so
+  // tags are always inline — mirroring the sibling single-collection grid feed.
+  // `layoutResolution` is still required: it carries `isGridActive` for the grid.
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.BOOKMARKS);
-  const resolvedContent = resolveVisualFeedContent({
-    content,
-    variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
-    isVisualActive: layoutResolution.isVisualActive,
-  });
-  useSyncInteractiveVisualContent(resolvedContent);
-  const streamId = useBookmarksStreamId(resolvedContent);
-  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
+  const streamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL;
 
   return (
     <TimelineFeedWithStream
       streamId={streamId}
       variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
-      tagsLayout={tagsLayout}
+      tagsLayout="inline"
       layoutResolution={layoutResolution}
+      emptyState={emptyState}
+      gridTrailingSlot={gridTrailingSlot}
     >
       {children}
     </TimelineFeedWithStream>
@@ -122,6 +161,66 @@ function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['child
       variant={TIMELINE_FEED_VARIANT.PROFILE}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+    >
+      {children}
+    </TimelineFeedWithStream>
+  );
+}
+
+function ProfileCollectionsTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
+  const { pubky } = useProfileContext();
+  const streamId = pubky ? buildAuthorCollectionsStreamId(pubky) : undefined;
+  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
+
+  return (
+    <TimelineFeedWithStream
+      streamId={streamId}
+      variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS}
+      tagsLayout={tagsLayout}
+      layoutResolution={layoutResolution}
+    >
+      {children}
+    </TimelineFeedWithStream>
+  );
+}
+
+function CollectionTimelineFeed({
+  children,
+  emptyState,
+  pullToRefreshContainerRef,
+  gridTrailingSlot,
+}: {
+  children?: TimelineFeedProps['children'];
+  emptyState?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }>['emptyState'];
+  pullToRefreshContainerRef?: Extract<
+    TimelineFeedProps,
+    { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }
+  >['pullToRefreshContainerRef'];
+  gridTrailingSlot?: Extract<
+    TimelineFeedProps,
+    { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }
+  >['gridTrailingSlot'];
+}) {
+  // The single-collection route owns these params (`/collections/[userId]/[postId]`).
+  // Reading them here mirrors how `ProfileTimelineFeed` resolves its stream from context.
+  const params = useParams<{ userId: string; postId: string }>();
+  const userId = params?.userId;
+  const postId = params?.postId;
+  const streamId = userId && postId ? buildCollectionItemsStreamId(userId, postId) : undefined;
+  const collectionId = userId && postId ? buildCompositeId({ pubky: userId, id: postId }) : undefined;
+  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.COLLECTION);
+
+  return (
+    <TimelineFeedWithStream
+      streamId={streamId}
+      variant={TIMELINE_FEED_VARIANT.COLLECTION}
+      tagsLayout="inline"
+      layoutResolution={layoutResolution}
+      emptyState={emptyState}
+      collectionId={collectionId}
+      pullToRefreshContainerRef={pullToRefreshContainerRef}
+      gridTrailingSlot={gridTrailingSlot}
     >
       {children}
     </TimelineFeedWithStream>

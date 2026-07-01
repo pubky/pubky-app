@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
 import { Link } from '@/atoms/Link/Link';
-import { APP_STORE_URL, PLAY_STORE_URL } from '@/config/externalLinks';
+import { getAppStoreLink, getPlayStoreLink } from '@/config/externalLinks';
 
 interface DialogDownloadPubkyRingProps {
   store?: 'apple' | 'android';
@@ -24,14 +24,14 @@ export function DialogDownloadPubkyRing({ store = 'apple' }: DialogDownloadPubky
           alt: 'App Store',
           width: 120,
           height: 40,
-          href: APP_STORE_URL,
+          href: getAppStoreLink(),
         }
       : {
           src: '/images/badge-android.webp',
           alt: 'Google Play',
           width: 135,
           height: 40,
-          href: PLAY_STORE_URL,
+          href: getPlayStoreLink(),
         };
 
   return (

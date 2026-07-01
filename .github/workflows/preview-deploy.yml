@@ -23,7 +23,6 @@ env:
   REGISTRY: europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo
   REGION: europe-west6
   PROJECT_ID: infra-464608
-  SERVICE_BASE_NAME: pubky-app-preview
 
 concurrency:
   group: preview-${{ github.event.pull_request.number || github.event.inputs.pr_number || '0' }}
@@ -57,7 +56,7 @@ jobs:
             COMMIT_SHA="${{ github.sha }}"
           fi
           echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
-          echo "service_name=${{ env.SERVICE_BASE_NAME }}-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "service_name=pubky-app-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
           echo "short_sha=$(echo ${COMMIT_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
           echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
 
@@ -66,7 +65,6 @@ jobs:
     needs: [set-vars]
     uses: ./.github/workflows/build-docker-image.yml
     with:
-      env: preview
       platforms: ${{ needs.set-vars.outputs.platforms }}
       pr_number: ${{ needs.set-vars.outputs.pr_number }}
       commit_sha: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -142,7 +140,7 @@ jobs:
           else
             PR_NUMBER="${{ github.event.pull_request.number }}"
           fi
-          echo "service_name=${{ env.SERVICE_BASE_NAME }}-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "service_name=pubky-app-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2

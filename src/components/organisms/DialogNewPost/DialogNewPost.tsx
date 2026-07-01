@@ -5,14 +5,22 @@ import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
-import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
-import { cn } from '@/libs/utils/utils';
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostInput } from '../PostInput/PostInput';
-import type { DialogNewPostProps } from './DialogNewPost.types';
 
-export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) {
+interface DialogNewPostProps {
+  open: boolean;
+  onOpenChangeAction: (open: boolean) => void;
+  /**
+   * Optional side effect run after a post is created, before the dialog closes.
+   * Receives the new post's composite id. Used by the FAB to save the post to a
+   * collection / bookmarks and trigger an optimistic feed insert.
+   */
+  onPostCreated?: (createdPostId: string) => void | Promise<void>;
+}
+
+export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: DialogNewPostProps) {
   const t = useTranslations('dialogs.newPost');
   const [isArticle, setIsArticle] = useState(false);
   const title = isArticle ? t('newArticle') : t('newPost');
@@ -21,22 +29,14 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
       onClose: () => onOpenChangeAction(false),
     });
 
-  // Dialogs are already centered, so reduce the offset to avoid over-compensation
-  const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset({ offsetAdjustment: 200 });
+  const handlePostSuccess = (createdPostId: string) => {
+    void onPostCreated?.(createdPostId);
+    onOpenChangeAction(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className={cn('w-3xl', isKeyboardVisible && 'transition-transform duration-75')}
-        style={
-          isKeyboardVisible && keyboardOffset > 0
-            ? {
-                transform: `translateY(-${keyboardOffset}px)`,
-              }
-            : undefined
-        }
-        hiddenTitle={title}
-      >
+      <DialogContent avoidKeyboard className="w-3xl" hiddenTitle={title}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="sr-only">{t('description', { title })}</DialogDescription>
@@ -46,7 +46,7 @@ export function DialogNewPost({ open, onOpenChangeAction }: DialogNewPostProps) 
             dataCy="new-post-input"
             key={resetKey}
             variant={POST_INPUT_VARIANT.POST}
-            onSuccess={() => onOpenChangeAction(false)}
+            onSuccess={handlePostSuccess}
             expanded={true}
             onContentChange={handleContentChange}
             onArticleModeChange={setIsArticle}
