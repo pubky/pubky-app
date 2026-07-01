@@ -480,10 +480,9 @@ describe('PostHeaderUserInfo - Navigation', () => {
     const usernameLink = profileLinks[1];
     const userInfoRoot = usernameLink.parentElement?.parentElement;
 
-    expect(userInfoRoot).toHaveClass('w-fit', 'max-w-full', 'min-w-0');
+    expect(userInfoRoot).toHaveClass('w-full', 'max-w-full', 'min-w-0');
     expect(usernameLink.parentElement).toHaveClass('min-w-0', 'flex-1');
-    expect(usernameLink).toHaveClass('block', 'w-fit', 'min-w-0', 'max-w-full');
-    expect(usernameLink).not.toHaveClass('w-full');
+    expect(usernameLink).toHaveClass('block', 'w-full', 'min-w-0', 'max-w-full', 'overflow-hidden');
     expect(screen.getByText(longName)).toHaveClass('w-full', 'truncate', 'max-w-full');
   });
 });
