@@ -13,7 +13,7 @@ import type {
   BreadcrumbSeparatorProps,
 } from './Breadcrumb.types';
 
-const breadcrumbVariants = cva('flex flex-wrap items-center', {
+const breadcrumbVariants = cva('flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden', {
   variants: {
     size: {
       sm: 'gap-1.5',
@@ -24,7 +24,7 @@ const breadcrumbVariants = cva('flex flex-wrap items-center', {
     size: 'md',
   },
 });
-const breadcrumbItemVariants = cva('flex items-center justify-center gap-2.5', {
+const breadcrumbItemVariants = cva('flex min-w-0 items-center justify-start gap-2.5', {
   variants: {
     variant: {
       link: 'text-muted-foreground hover:text-foreground transition-colors cursor-pointer',
@@ -54,7 +54,7 @@ const breadcrumbSeparatorVariants = cva('text-muted-foreground shrink-0', {
 // Main Breadcrumb container - based on Shadcn
 export const Breadcrumb = React.forwardRef<HTMLElement, BreadcrumbProps>(
   ({ className, size, children, ...props }, ref) => (
-    <nav ref={ref} aria-label="breadcrumb" className={cn('inline-flex', className)} {...props}>
+    <nav ref={ref} aria-label="breadcrumb" className={cn('flex w-full max-w-full min-w-0', className)} {...props}>
       <ol
         className={breadcrumbVariants({
           size,
@@ -88,7 +88,7 @@ export const BreadcrumbItem = React.forwardRef<HTMLLIElement, BreadcrumbItemProp
     const itemVariant = variant || (dropdown ? 'dropdown' : 'link');
     const content = (
       <>
-        <span className="font-sans text-sm leading-5 font-bold">{children}</span>
+        <span className="block max-w-full truncate font-sans text-sm leading-5 font-bold">{children}</span>
         {dropdown && <ChevronDown className="h-[15px] w-[15px]" />}
       </>
     );
@@ -105,11 +105,11 @@ export const BreadcrumbItem = React.forwardRef<HTMLLIElement, BreadcrumbItemProp
         {...props}
       >
         {href && !dropdown ? (
-          <a href={href} className="flex items-center gap-1">
+          <a href={href} className="flex max-w-full min-w-0 items-center gap-1 overflow-hidden">
             {content}
           </a>
         ) : (
-          <button type="button" className="flex items-center gap-1">
+          <button type="button" className="flex max-w-full min-w-0 items-center gap-1 overflow-hidden">
             {content}
           </button>
         )}

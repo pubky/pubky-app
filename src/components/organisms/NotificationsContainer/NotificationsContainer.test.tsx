@@ -1,8 +1,15 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useNotifications } from '@/hooks/useNotifications/useNotifications';
 import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationsContainer } from './NotificationsContainer';
+
+const authStoreState = vi.hoisted(() => ({ session: {} as unknown }));
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector?: (state: { session: unknown | null }) => unknown) =>
+    selector ? selector(authStoreState) : authStoreState,
+}));
 
 // Mock useNotifications hook
 vi.mock('@/hooks/useNotifications/useNotifications', () => ({
@@ -89,6 +96,10 @@ vi.mock('@/organisms/NotificationsList/NotificationsList', () => ({
 }));
 
 describe('NotificationsContainer', () => {
+  beforeEach(() => {
+    authStoreState.session = {};
+  });
+
   it('renders without errors', () => {
     render(<NotificationsContainer />);
     expect(screen.getByTestId('heading-5')).toBeInTheDocument();
@@ -216,6 +227,36 @@ describe('NotificationsContainer', () => {
     expect(markAllAsRead).toHaveBeenCalledTimes(1);
     unmount();
     expect(markAllAsRead).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call markAllAsRead until authenticated', () => {
+    authStoreState.session = null;
+    const markAllAsRead = vi.fn();
+    vi.mocked(useNotifications).mockReturnValueOnce({
+      notifications: [
+        {
+          id: 'follow:123:user1',
+          type: NotificationType.Follow,
+          timestamp: Date.now() - 1000 * 60 * 30,
+          followed_by: 'user1',
+        },
+      ],
+      unreadNotifications: [],
+      count: 1,
+      unreadCount: 0,
+      isLoading: false,
+      isLoadingMore: false,
+      hasMore: false,
+      error: null,
+      loadMore: vi.fn(),
+      refresh: vi.fn(),
+      markAllAsRead,
+      isNotificationUnread: vi.fn(() => false),
+    });
+
+    render(<NotificationsContainer />);
+
+    expect(markAllAsRead).not.toHaveBeenCalled();
   });
 
   it('matches snapshot', () => {

@@ -40,6 +40,7 @@ export function PostPageBreadcrumb({ ancestors, userDetailsMap, onNavigate }: Po
       <React.Fragment key={ancestor.postId}>
         <BreadcrumbItem
           variant={isLast ? 'current' : 'link'}
+          className={isLast ? 'max-w-[50%] min-w-0 shrink-0 overflow-hidden' : 'min-w-0 shrink overflow-hidden'}
           onClick={isLast ? undefined : () => onNavigate(ancestor.postId)}
           data-testid={`breadcrumb-item-${index}`}
         >
@@ -51,7 +52,7 @@ export function PostPageBreadcrumb({ ancestors, userDetailsMap, onNavigate }: Po
   };
 
   return (
-    <Breadcrumb size="md" data-testid="post-breadcrumb">
+    <Breadcrumb size="md" className="w-full min-w-0" data-testid="post-breadcrumb">
       {/* Case 1: No Truncation needed */}
       {!shouldTruncate && ancestors.map((ancestor, index) => renderItem(ancestor, index, ancestors.length))}
 
@@ -62,7 +63,7 @@ export function PostPageBreadcrumb({ ancestors, userDetailsMap, onNavigate }: Po
           {renderItem(ancestors[0], 0, ancestors.length)}
 
           {/* 2. Dropdown for Middle Items - using raw li to avoid nested button */}
-          <li className="flex items-center justify-center gap-2.5 text-muted-foreground">
+          <li className="flex shrink-0 items-center justify-center gap-2.5 text-muted-foreground">
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="flex items-center gap-1 outline-none"

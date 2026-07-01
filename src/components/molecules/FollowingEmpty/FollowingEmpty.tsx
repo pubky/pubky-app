@@ -1,15 +1,28 @@
 'use client';
 
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { UserRoundPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 
 export function FollowingEmpty() {
   const t = useTranslations('profile.empty.following');
   const tNav = useTranslations('profile.navigation');
+  const router = useRouter();
+  const { requireAuth } = useRequireAuth();
+
+  const handleWhoToFollowClick = () => {
+    requireAuth(() => router.push(APP_ROUTES.WHO_TO_FOLLOW));
+  };
+
+  const handlePopularUsersClick = () => {
+    router.push(APP_ROUTES.HOT);
+  };
 
   return (
     <Container data-cy="profile-following-empty" className="relative items-center gap-6 px-0 py-6">
@@ -47,13 +60,27 @@ export function FollowingEmpty() {
 
       {/* Action Buttons */}
       <Container className="items-center justify-center gap-3 lg:flex-row">
-        <Button variant="secondary" size="default" className="gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          size="default"
+          className="gap-2"
+          data-cy="profile-following-empty-who-to-follow"
+          onClick={handleWhoToFollowClick}
+        >
           <UserRoundPlus className="size-4" />
           <Typography as="span" overrideDefaults={true}>
             {tNav('whoToFollow')}
           </Typography>
         </Button>
-        <Button variant="secondary" size="default" className="gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          size="default"
+          className="gap-2"
+          data-cy="profile-following-empty-popular-users"
+          onClick={handlePopularUsersClick}
+        >
           <UserRoundPlus className="size-4" />
           <Typography as="span" overrideDefaults={true}>
             {tNav('popularUsers')}

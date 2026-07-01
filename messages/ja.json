@@ -426,7 +426,8 @@
       "title": "バックアップ方法を選択",
       "subtitle": "pubkyのシークレットシードを安全にバックアップして保存してください。どのバックアップ方法を希望しますか？後で行うこともできます。",
       "recoveryPhrase": "リカバリーフレーズ",
-      "encryptedFile": "暗号化ファイル"
+      "encryptedFile": "暗号化ファイル",
+      "exportRing": "Pubky Ringにエクスポート"
     },
     "backup": {
       "title": "<highlight>pubky</highlight>をバックアップ。",

@@ -426,7 +426,8 @@
       "title": "Choisir la methode de sauvegarde",
       "subtitle": "Sauvegardez et stockez en toute sécurité la graine secrete de votre pubky. Quelle methode de sauvegarde préférez-vous ? Vous pouvez aussi choisir de le faire plus tard.",
       "recoveryPhrase": "Phrase de récupération",
-      "encryptedFile": "Fichier chiffre"
+      "encryptedFile": "Fichier chiffre",
+      "exportRing": "Exporter vers Pubky Ring"
     },
     "backup": {
       "title": "Sauvegardez votre <highlight>pubky.</highlight>",

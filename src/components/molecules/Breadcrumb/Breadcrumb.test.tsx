@@ -74,6 +74,18 @@ describe('Breadcrumb', () => {
       fireEvent.click(item);
       expect(handleClick).toHaveBeenCalledTimes(1);
     });
+
+    it('truncates long item text with ellipsis classes', () => {
+      const longName = 'This is an extremely long profile name that should truncate in the breadcrumb trail';
+
+      render(
+        <Breadcrumb>
+          <BreadcrumbItem>{longName}</BreadcrumbItem>
+        </Breadcrumb>,
+      );
+
+      expect(screen.getByText(longName)).toHaveClass('block', 'max-w-full', 'truncate');
+    });
   });
 
   describe('Accessibility', () => {
