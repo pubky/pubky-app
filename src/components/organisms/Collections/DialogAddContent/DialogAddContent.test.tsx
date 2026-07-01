@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddContentDialog } from './AddContentDialog';
+import { DialogAddContent } from './DialogAddContent';
 
 const AUTHOR = 'a'.repeat(52);
 const VIEWER = 'v'.repeat(52);
@@ -144,7 +144,7 @@ function collectionDetails(items: string[] = []) {
   };
 }
 
-describe('AddContentDialog', () => {
+describe('DialogAddContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.currentUserPubky = VIEWER;
@@ -158,7 +158,7 @@ describe('AddContentDialog', () => {
   });
 
   it('renders the Content trigger', () => {
-    render(<AddContentDialog />);
+    render(<DialogAddContent />);
 
     expect(screen.getByRole('button', { name: 'collections.single.content' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'collections.single.content' })).toHaveAttribute(
@@ -168,7 +168,7 @@ describe('AddContentDialog', () => {
   });
 
   it('disables the Content trigger and does not open the dialog when disabled', () => {
-    render(<AddContentDialog disabled />);
+    render(<DialogAddContent disabled />);
 
     const trigger = screen.getByRole('button', { name: 'collections.single.content' });
     expect(trigger).toBeDisabled();
@@ -179,7 +179,7 @@ describe('AddContentDialog', () => {
   });
 
   it('renders the Add Content grid trigger when triggerVariant is grid', () => {
-    render(<AddContentDialog triggerVariant="grid" dataCy="bookmarks-add-content-grid" />);
+    render(<DialogAddContent triggerVariant="grid" dataCy="bookmarks-add-content-grid" />);
 
     const trigger = screen.getByRole('button', { name: 'collections.single.addContent' });
     expect(trigger).toBeInTheDocument();
@@ -187,13 +187,13 @@ describe('AddContentDialog', () => {
   });
 
   it('disables the Add Content grid trigger when disabled', () => {
-    render(<AddContentDialog triggerVariant="grid" disabled />);
+    render(<DialogAddContent triggerVariant="grid" disabled />);
 
     expect(screen.getByRole('button', { name: 'collections.single.addContent' })).toBeDisabled();
   });
 
   it('opens the desktop dialog with feed, URL, and create-post options', () => {
-    render(<AddContentDialog />);
+    render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
 
@@ -209,7 +209,7 @@ describe('AddContentDialog', () => {
   it.each(['add-content-feed-reply-pill', 'add-content-feed-repost-pill', 'add-content-feed-save-pill'])(
     'closes the dialog and navigates home when clicking %s',
     async (dataCy) => {
-      render(<AddContentDialog />);
+      render(<DialogAddContent />);
 
       fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
       const feedPill = document.querySelector(`[data-cy="${dataCy}"]`);
@@ -225,7 +225,7 @@ describe('AddContentDialog', () => {
   );
 
   it('stacks URL validation messages below the input', () => {
-    render(<AddContentDialog />);
+    render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
 
@@ -234,7 +234,7 @@ describe('AddContentDialog', () => {
   });
 
   it('shows a red dashed border when the pasted URL is invalid', async () => {
-    render(<AddContentDialog />);
+    render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
@@ -252,7 +252,7 @@ describe('AddContentDialog', () => {
 
   it('keeps the dialog open when a collection URL is pasted into bookmarks', async () => {
     mocks.getOrFetchPost.mockResolvedValue(collectionPost());
-    render(<AddContentDialog />);
+    render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
@@ -270,7 +270,7 @@ describe('AddContentDialog', () => {
 
   it('keeps the dialog open when a collection URL is pasted into a collection', async () => {
     mocks.getOrFetchPost.mockResolvedValue(collectionPost());
-    render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
+    render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
@@ -287,7 +287,7 @@ describe('AddContentDialog', () => {
   });
 
   it('adds pasted bookmark content, prepends it, and closes the dialog', async () => {
-    render(<AddContentDialog />);
+    render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
@@ -308,7 +308,7 @@ describe('AddContentDialog', () => {
     let resolvePost!: (value: ReturnType<typeof livePost>) => void;
     mocks.getOrFetchPost.mockReturnValue(new Promise((resolve) => (resolvePost = resolve)));
 
-    render(<AddContentDialog />);
+    render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
@@ -328,7 +328,7 @@ describe('AddContentDialog', () => {
   });
 
   it('adds pasted content to a collection and closes the dialog', async () => {
-    render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
+    render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
@@ -350,7 +350,7 @@ describe('AddContentDialog', () => {
   });
 
   it('closes Add Content and opens New Post when Create new post is clicked', async () => {
-    render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
+    render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
@@ -362,7 +362,7 @@ describe('AddContentDialog', () => {
   });
 
   it('adds a newly created post to a collection and prepends it optimistically', async () => {
-    render(<AddContentDialog target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
+    render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
@@ -384,7 +384,7 @@ describe('AddContentDialog', () => {
   });
 
   it('bookmarks a newly created post and prepends it optimistically', async () => {
-    render(<AddContentDialog />);
+    render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
     fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
@@ -399,21 +399,21 @@ describe('AddContentDialog', () => {
   });
 });
 
-describe('AddContentDialog - Snapshots', () => {
+describe('DialogAddContent - Snapshots', () => {
   it('matches the closed trigger snapshot', () => {
-    const { container } = render(<AddContentDialog />);
+    const { container } = render(<DialogAddContent />);
 
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches the closed grid trigger snapshot', () => {
-    const { container } = render(<AddContentDialog triggerVariant="grid" />);
+    const { container } = render(<DialogAddContent triggerVariant="grid" />);
 
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches the opened desktop dialog snapshot', () => {
-    render(<AddContentDialog />);
+    render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
 

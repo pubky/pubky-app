@@ -18,10 +18,10 @@ import { cn } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
-import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog';
 import { CollectionHeroSkeleton } from '@/organisms/Collections/CollectionHero/CollectionHero.skeleton';
 import { CollectionHeroBlurred } from '@/organisms/Collections/CollectionHero/CollectionHeroBlurred';
-import { EditCollectionDialog } from '@/organisms/EditCollectionDialog/EditCollectionDialog';
+import { DialogAddContent } from '@/organisms/Collections/DialogAddContent/DialogAddContent';
+import { DialogEditCollection } from '@/organisms/Collections/DialogEditCollection/DialogEditCollection';
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
 import { PostTagToggleButton } from '@/organisms/PostTagsExpandableRow/PostTagToggleButton';
@@ -226,7 +226,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">
           {isOwn ? (
             <>
-              <AddContentDialog
+              <DialogAddContent
                 target={{ type: 'collection', collectionId: compositeId }}
                 dataCy="collection-add-content"
                 disabled={isDeleting}
@@ -308,7 +308,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
       {dialogs}
       {isOwn && (
         <>
-          <EditCollectionDialog
+          <DialogEditCollection
             open={isEditDialogOpen}
             onOpenChange={setIsEditDialogOpen}
             compositeCollectionId={compositeId}
