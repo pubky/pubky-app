@@ -46,7 +46,7 @@ export function PostHeaderUserInfo({
     <Container
       overrideDefaults
       className={cn(
-        'flex w-full max-w-full min-w-0 items-center overflow-hidden',
+        'grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center overflow-hidden',
         size === 'large' ? 'gap-4' : 'gap-3',
       )}
     >
