@@ -240,7 +240,11 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
 
 const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapResponse) => {
   expect(mocks.nexusFetch).toHaveBeenCalledWith(TEST_PUBKY);
-  expect(mocks.homeserverRequest).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+  expect(mocks.homeserverRequest).toHaveBeenCalledWith({
+    method: HttpMethod.GET,
+    url: MOCK_LAST_READ_URL,
+    noCache: false,
+  });
   expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
@@ -394,7 +398,11 @@ describe('BootstrapApplication', () => {
         pubky: TEST_PUBKY,
       });
       expect(lastReadNormalizerSpy).toHaveBeenCalledWith(TEST_PUBKY);
-      expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+      expect(homeserverRequestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.GET,
+        url: MOCK_LAST_READ_URL,
+        noCache: false,
+      });
       expect(homeserverRequestSpy).toHaveBeenCalledWith({
         method: HttpMethod.PUT,
         url: MOCK_NORMALIZED_LAST_READ_URL,
@@ -445,7 +453,11 @@ describe('BootstrapApplication', () => {
         }),
       );
       expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
-      expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+      expect(homeserverRequestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.GET,
+        url: MOCK_LAST_READ_URL,
+        noCache: false,
+      });
 
       // fetchOrPutLastRead fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();
@@ -472,7 +484,11 @@ describe('BootstrapApplication', () => {
         expect.objectContaining({ message: 'Network timeout' }),
       );
       expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
-      expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+      expect(homeserverRequestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.GET,
+        url: MOCK_LAST_READ_URL,
+        noCache: false,
+      });
 
       // fetchOrPutLastRead fails in the first Promise.all, so persistence is never reached
       expect(mocks.persistUsers).not.toHaveBeenCalled();

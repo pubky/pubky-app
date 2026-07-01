@@ -62,6 +62,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - **NEVER** call application directly
 - **NEVER** call services directly
 - **Mute list (homeserver events stream)**: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/`) refreshes the local mute list when another session changes `/pub/pubky.app/mutes/`; see `docs/adr/0014-muting-system.md`.
+- **Notification last_read (homeserver events stream)**: `NotificationLastReadSyncCoordinator` (`src/core/coordinators/notification-last-read-sync/`) refreshes the local read state when another session changes `/pub/pubky.app/last_read`; see `docs/adr/0017-cross-device-last-read-sync.md`.
 
 ### Application (`src/core/application/`)
 
@@ -303,6 +304,7 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0014 | Muting system                          |
 | 0015 | Error handling                         |
 | 0016 | Service worker local file cache        |
+| 0017 | Cross-device last_read sync            |
 
 ## Quick Checklist
 

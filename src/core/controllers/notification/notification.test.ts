@@ -5,6 +5,7 @@ import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
+import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
@@ -393,6 +394,108 @@ describe('NotificationController', () => {
       vi.spyOn(NotificationApplication, 'getAllFromCache').mockRejectedValue(new Error('app-fail'));
 
       await expect(NotificationController.getAllFromCache()).rejects.toThrow('app-fail');
+    });
+  });
+
+  describe('subscribeLastReadEventStream', () => {
+    it('delegates to NotificationApplication.subscribeLastReadEventStream', async () => {
+      const stream = new ReadableStream();
+      const appSpy = vi
+        .spyOn(NotificationApplication, 'subscribeLastReadEventStream')
+        .mockResolvedValue(stream as ReadableStream<never>);
+
+      const result = await NotificationController.subscribeLastReadEventStream(mockUserId, 'c1');
+
+      expect(appSpy).toHaveBeenCalledWith(mockUserId, 'c1');
+      expect(result).toBe(stream);
+    });
+  });
+
+  describe('refreshLastReadFromHomeserver', () => {
+    const lastReadUrl = 'pubky://test-user/pub/pubky.app/last_read';
+
+    const setupStores = (localLastRead: number) => {
+      const setLastRead = vi.fn();
+      const setUnread = vi.fn();
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({ selectLastRead: () => localLastRead, setLastRead, setUnread }),
+      );
+      mockSettingsStore();
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(
+        asOpaque<ReturnType<typeof LastReadNormalizer.to>>({ meta: { url: lastReadUrl } }),
+      );
+      return { setLastRead, setUnread };
+    };
+
+    it('updates lastRead and recomputes unread when remote is newer', async () => {
+      const { setLastRead, setUnread } = setupStores(1000);
+      const fetchSpy = vi.spyOn(NotificationApplication, 'fetchLastReadFromHomeserver').mockResolvedValue(2000);
+      vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(3);
+
+      await NotificationController.refreshLastReadFromHomeserver(mockUserId);
+
+      // noCache=true: read the live homeserver value, not a cached copy.
+      expect(fetchSpy).toHaveBeenCalledWith(lastReadUrl, true);
+      expect(setLastRead).toHaveBeenCalledWith(2000);
+      expect(setUnread).toHaveBeenCalledWith(3);
+    });
+
+    it('is a no-op when remote is not newer than local (race guard)', async () => {
+      const { setLastRead, setUnread } = setupStores(2000);
+      vi.spyOn(NotificationApplication, 'fetchLastReadFromHomeserver').mockResolvedValue(2000);
+      const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince');
+
+      await NotificationController.refreshLastReadFromHomeserver(mockUserId);
+
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
+      expect(countSpy).not.toHaveBeenCalled();
+    });
+
+    it('recomputes unread using preference-filtered allowed types', async () => {
+      const { setUnread } = setupStores(0);
+      vi.spyOn(NotificationApplication, 'fetchLastReadFromHomeserver').mockResolvedValue(5000);
+      const enabled = [NotificationType.Follow];
+      vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(enabled);
+      const countSpy = vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockResolvedValue(1);
+
+      await NotificationController.refreshLastReadFromHomeserver(mockUserId);
+
+      expect(countSpy).toHaveBeenCalledWith(5000, enabled);
+      expect(setUnread).toHaveBeenCalledWith(1);
+    });
+
+    it('does not advance lastRead when the unread count fails (no partial commit)', async () => {
+      const { setLastRead, setUnread } = setupStores(1000);
+      vi.spyOn(NotificationApplication, 'fetchLastReadFromHomeserver').mockResolvedValue(2000);
+      vi.spyOn(NotificationApplication, 'countFilteredUnreadSince').mockRejectedValue(new Error('idb error'));
+
+      await expect(NotificationController.refreshLastReadFromHomeserver(mockUserId)).rejects.toThrow('idb error');
+
+      // Neither value is mutated, so the coordinator's retry re-enters instead of hitting the
+      // race guard and silently leaving the badge stale.
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
+    });
+
+    it('recovers on retry after the unread count fails once', async () => {
+      const { setLastRead, setUnread } = setupStores(1000);
+      vi.spyOn(NotificationApplication, 'fetchLastReadFromHomeserver').mockResolvedValue(2000);
+      const countSpy = vi
+        .spyOn(NotificationApplication, 'countFilteredUnreadSince')
+        .mockRejectedValueOnce(new Error('idb error'))
+        .mockResolvedValueOnce(3);
+
+      await expect(NotificationController.refreshLastReadFromHomeserver(mockUserId)).rejects.toThrow('idb error');
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
+
+      // Retry: lastRead is still 1000, so the guard passes and both values commit together.
+      await NotificationController.refreshLastReadFromHomeserver(mockUserId);
+
+      expect(countSpy).toHaveBeenCalledTimes(2);
+      expect(setLastRead).toHaveBeenCalledWith(2000);
+      expect(setUnread).toHaveBeenCalledWith(3);
     });
   });
 });

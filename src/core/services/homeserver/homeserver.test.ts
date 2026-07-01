@@ -569,6 +569,45 @@ describe('HomeserverService', () => {
         });
       });
 
+      describe('GET requests with noCache', () => {
+        it('bypasses the cached owned-session read and fetches fresh via the SDK client', async () => {
+          mockState.currentSession = createMockSession();
+          // Fixed fixture mirroring the real last_read file shape (a single millisecond epoch timestamp).
+          // Arbitrary constant — the test only checks request→response roundtrip, never compares against "now".
+          const testData = { timestamp: 1780000000000 };
+          mockState.clientFetch.mockResolvedValue(new Response(JSON.stringify(testData), { status: 200 }));
+
+          const result = await HomeserverService.request<typeof testData>({
+            method: HttpMethod.GET,
+            url: 'pubky://user/pub/pubky.app/last_read',
+            noCache: true,
+          });
+
+          // Guards the return contract: the fresh path must parse and return the body, not just issue the fetch.
+          expect(result).toEqual(testData);
+          // Resolved to a transport URL and read with cache disabled — not via the cached session.storage.get.
+          expect(mockState.clientFetch).toHaveBeenCalledWith('https://user/pub/pubky.app/last_read', {
+            method: HttpMethod.GET,
+            cache: 'no-store',
+            credentials: 'include',
+          });
+          expect(mockState.sessionStorageGet).not.toHaveBeenCalled();
+        });
+
+        it('maps a non-OK fresh response to an error (e.g. 404 for bootstrap fallback)', async () => {
+          mockState.currentSession = createMockSession();
+          mockState.clientFetch.mockResolvedValue(new Response('not found', { status: 404 }));
+
+          await expect(
+            HomeserverService.request({
+              method: HttpMethod.GET,
+              url: 'pubky://user/pub/pubky.app/last_read',
+              noCache: true,
+            }),
+          ).rejects.toBeDefined();
+        });
+      });
+
       describe('PUT requests', () => {
         it('should send JSON body for PUT request', async () => {
           mockState.currentSession = createMockSession();

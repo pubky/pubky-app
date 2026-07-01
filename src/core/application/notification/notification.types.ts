@@ -73,3 +73,16 @@ export type TParseNotificationsResult = {
   relatedPostIds: string[];
   relatedUserIds: Pubky[];
 };
+
+/**
+ * Event emitted by the homeserver event stream for changes to the `last_read` file.
+ *
+ * `eventType` is narrowed to the only values the pubky SDK emits for a single-file path
+ * (`"PUT" | "DEL"`, per the SDK docstring at `@synonymdev/pubky` `eventStreamForUser`).
+ * The upstream `THomeserverUserEvent` types it loosely as `string` for forward
+ * compatibility; the boundary casts when narrowing for this domain.
+ */
+export type TLastReadEvent = {
+  cursor: string;
+  eventType: 'PUT' | 'DEL';
+};

@@ -125,6 +125,10 @@ Omit the `PUBKY_RUNTIME_SENTRY_*` lines to run without Sentry. Other public runt
 
 Cross-session mute alignment uses the `@synonymdev/pubky` homeserver **event stream** (SSE). Debouncing uses a fixed delay in [`src/config/mute-sync.ts`](src/config/mute-sync.ts) (`MUTE_SYNC_DEBOUNCE_MS`), not an environment variable.
 
+### Homeserver notification last_read sync
+
+Cross-device read-state alignment uses the same homeserver **event stream** (SSE). Its debounce, backoff, and retry-cap values are fixed constants in [`src/config/notification-last-read-sync.ts`](src/config/notification-last-read-sync.ts), not environment variables. Tab-visibility pausing reuses the existing `NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY` flag.
+
 ## Setting Variables
 
 1. **Development**: Create a `.env.local` file in the project root

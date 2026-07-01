@@ -5,12 +5,14 @@ import type {
   TFlatNotificationList,
   TGetOrFetchNotificationsParams,
   TGetOrFetchNotificationsResponse,
+  TLastReadEvent,
   TNotificationApplicationNotificationsParams,
   TNotificationsPartialCacheHitParams,
   TPersistAndSummarizeParams,
 } from '@/application/notification/notification.types';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
+import { NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX } from '@/config/notification-last-read-sync';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
@@ -59,6 +61,39 @@ export class NotificationApplication {
     HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: last_read.toJson() }).catch((error) =>
       Logger.warn('Failed to update lastRead on homeserver', { error }),
     );
+  }
+
+  /**
+   * Reads the persisted lastRead timestamp from the homeserver.
+   *
+   * No 404 fallback here. Bootstrap owns the "create-if-missing" semantic via
+   * {@link BootstrapApplication}; cross-device refresh runs after bootstrap so the file
+   * is expected to exist. Errors bubble up — callers (e.g. `NotificationLastReadSyncCoordinator`)
+   * handle retries via their stream loop / backoff.
+   *
+   * @param lastReadUrl - Pubky URL of the user's last_read file on the homeserver
+   * @param noCache - Skip the HTTP cache for cross-device freshness (default false)
+   * @returns The persisted lastRead timestamp
+   */
+  static async fetchLastReadFromHomeserver(lastReadUrl: string, noCache = false): Promise<number> {
+    const { timestamp } = await HomeserverService.request<{ timestamp: number }>({
+      method: HttpMethod.GET,
+      url: lastReadUrl,
+      noCache,
+    });
+    return timestamp;
+  }
+
+  /**
+   * Live SSE for `last_read` changes. Narrows the SDK's loose eventType at this boundary.
+   * @see HomeserverService.subscribeUserEventStreamForPath
+   */
+  static subscribeLastReadEventStream(pubky: Pubky, cursor: string | null): Promise<ReadableStream<TLastReadEvent>> {
+    return HomeserverService.subscribeUserEventStreamForPath({
+      userZ32: pubky,
+      cursor,
+      pathPrefix: NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX,
+    }) as Promise<ReadableStream<TLastReadEvent>>;
   }
 
   /**

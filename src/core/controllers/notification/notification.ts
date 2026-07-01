@@ -1,8 +1,9 @@
 import { NotificationApplication } from '@/application/notification/notification';
-import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
+import type { TGetOrFetchNotificationsResponse, TLastReadEvent } from '@/application/notification/notification.types';
 import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
+import type { Pubky } from '@/models/models.types';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
@@ -116,5 +117,43 @@ export class NotificationController {
   static getNotificationsCountsNow(): number {
     const notificationStore = useNotificationStore.getState();
     return notificationStore.selectUnread();
+  }
+
+  /**
+   * Live SSE (via SDK) for `/pub/pubky.app/last_read` changes on the homeserver.
+   * Drives `NotificationLastReadSyncCoordinator` for cross-device read-state sync.
+   */
+  static subscribeLastReadEventStream(pubky: Pubky, cursor: string | null): Promise<ReadableStream<TLastReadEvent>> {
+    return NotificationApplication.subscribeLastReadEventStream(pubky, cursor);
+  }
+
+  /**
+   * Pulls the homeserver `last_read` value and reconciles it with the local store.
+   * Called by `NotificationLastReadSyncCoordinator` after a homeserver PUT event.
+   *
+   * Race guard: skip if remote is not newer than local. Otherwise updates `lastRead`
+   * and recomputes the preference-filtered unread count.
+   * Example: device A marks read at t=1000 → PUT → SSE echo back to A → refresh()
+   * fetches remote=1000, local=1000 → no-op.
+   */
+  static async refreshLastReadFromHomeserver(pubky: Pubky): Promise<void> {
+    const {
+      meta: { url: lastReadUrl },
+    } = LastReadNormalizer.to(pubky);
+    // noCache: read the live homeserver value, not a cached copy, so a read from another device is seen.
+    const remoteLastRead = await NotificationApplication.fetchLastReadFromHomeserver(lastReadUrl, true);
+
+    const notificationStore = useNotificationStore.getState();
+    if (remoteLastRead <= notificationStore.selectLastRead()) return;
+
+    // Compute unread BEFORE mutating the store.
+    const preferences = useSettingsStore.getState().notifications;
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
+    const unread = await NotificationApplication.countFilteredUnreadSince(remoteLastRead, allowedTypes);
+
+    // Re-check: a local mark-as-read during the count may have moved `lastRead` ahead — don't roll it back.
+    if (remoteLastRead <= notificationStore.selectLastRead()) return;
+    notificationStore.setLastRead(remoteLastRead);
+    notificationStore.setUnread(unread);
   }
 }

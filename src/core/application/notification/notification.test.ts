@@ -689,3 +689,53 @@ describe('NotificationApplication.getAllFromCache', () => {
     await expect(NotificationApplication.getAllFromCache()).rejects.toThrow('service-fail');
   });
 });
+
+describe('NotificationApplication.fetchLastReadFromHomeserver', () => {
+  const mockUrl = 'pubky://test-user/pub/pubky.app/last_read';
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns the timestamp via a cached read by default (noCache=false)', async () => {
+    const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: 1780000000000 });
+
+    const result = await NotificationApplication.fetchLastReadFromHomeserver(mockUrl);
+
+    expect(result).toBe(1780000000000);
+    expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: mockUrl, noCache: false });
+  });
+
+  it('passes noCache through for cross-device freshness', async () => {
+    const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: 1 });
+
+    await NotificationApplication.fetchLastReadFromHomeserver(mockUrl, true);
+
+    expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: mockUrl, noCache: true });
+  });
+
+  it('bubbles homeserver errors (e.g. 404) to the caller', async () => {
+    vi.spyOn(HomeserverService, 'request').mockRejectedValue(new Error('not-found'));
+
+    await expect(NotificationApplication.fetchLastReadFromHomeserver(mockUrl)).rejects.toThrow('not-found');
+  });
+});
+
+describe('NotificationApplication.subscribeLastReadEventStream', () => {
+  const pubky = 'pubky-user' as Pubky;
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('subscribes to the last_read path on the homeserver event stream', async () => {
+    const stream = new ReadableStream();
+    const subscribeSpy = vi
+      .spyOn(HomeserverService, 'subscribeUserEventStreamForPath')
+      .mockResolvedValue(stream as ReadableStream<never>);
+
+    await NotificationApplication.subscribeLastReadEventStream(pubky, 'cursor-1');
+
+    expect(subscribeSpy).toHaveBeenCalledWith({
+      userZ32: pubky,
+      cursor: 'cursor-1',
+      pathPrefix: '/pub/pubky.app/last_read',
+    });
+  });
+});

@@ -102,22 +102,18 @@ export class BootstrapApplication {
   }
 
   /**
-   * Retrieves user's last read timestamp from homeserver, fetches notification data from Nexus
-   * and persists the notifications to the cache.
+   * Retrieves user's last read timestamp from homeserver. Creates a new last_read file
+   * with the current timestamp if none exists yet (404).
    *
    * @private
    * @param params, Bootstrap parameters
    * @param params.pubky, The user's public key identifier
    * @param params.lastReadUrl, URL to fetch user's last read timestamp from homeserver
-   * @returns Promise resolving to notification list and last read timestamp
+   * @returns Promise resolving to the last read timestamp
    */
   private static async fetchOrPutLastRead({ pubky, lastReadUrl }: TBootstrapParams): Promise<number> {
     try {
-      const { timestamp } = await HomeserverService.request<{ timestamp: number }>({
-        method: HttpMethod.GET,
-        url: lastReadUrl,
-      });
-      return timestamp;
+      return await NotificationApplication.fetchLastReadFromHomeserver(lastReadUrl);
     } catch (error) {
       // Only handle 404 errors (resource not found), rethrow everything else
       if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {

@@ -59,6 +59,8 @@ export type THomeserverRequestParams = {
   method: HttpMethod;
   url: string;
   bodyJson?: Record<string, unknown>;
+  /** GET only: skip the HTTP cache and read the live homeserver value (for cross-device freshness). */
+  noCache?: boolean;
 };
 
 export type TPutBlobParams = {

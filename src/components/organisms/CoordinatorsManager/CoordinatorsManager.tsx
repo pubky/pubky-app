@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
+import { NotificationLastReadSyncCoordinator } from '@/coordinators/notification-last-read-sync/notification-last-read-sync';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
@@ -13,6 +14,7 @@ function getAppCoordinators() {
     stream: StreamCoordinator.getInstance(),
     ttl: TtlCoordinator.getInstance(),
     muteListSync: MuteListSyncCoordinator.getInstance(),
+    notificationLastReadSync: NotificationLastReadSyncCoordinator.getInstance(),
   };
 }
 
@@ -22,6 +24,7 @@ function applyRouteToCoordinators(pathname: string): void {
   void coordinators.stream.setRoute(pathname);
   coordinators.ttl.setRoute(pathname);
   coordinators.muteListSync.setRoute(pathname);
+  coordinators.notificationLastReadSync.setRoute(pathname);
 }
 
 function startAppCoordinators(): void {
@@ -30,6 +33,7 @@ function startAppCoordinators(): void {
   void coordinators.stream.start();
   coordinators.ttl.start();
   coordinators.muteListSync.start();
+  coordinators.notificationLastReadSync.start();
 }
 
 function stopAppCoordinators(): void {
@@ -38,6 +42,7 @@ function stopAppCoordinators(): void {
   coordinators.stream.stop();
   coordinators.ttl.stop();
   coordinators.muteListSync.stop();
+  coordinators.notificationLastReadSync.stop();
 }
 
 /**
@@ -48,7 +53,7 @@ function stopAppCoordinators(): void {
  *
  * Responsibilities:
  * - Initialize coordinators on mount (NotificationCoordinator, StreamCoordinator,
- *   MuteListSyncCoordinator, TtlCoordinator)
+ *   MuteListSyncCoordinator, NotificationLastReadSyncCoordinator, TtlCoordinator)
  * - Start coordination when the component is mounted
  * - Track route changes and inform coordinators
  * - Stop coordination and cleanup when unmounted

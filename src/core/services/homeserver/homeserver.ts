@@ -321,7 +321,13 @@ export class HomeserverService {
    * @param {string} url - Pubky URL.
    * @param {Record<string, unknown>} [bodyJson] - JSON body to serialize and send.
    */
-  static async request<T>({ method, url, bodyJson }: THomeserverRequestParams): Promise<T> {
+  static async request<T>({ method, url, bodyJson, noCache }: THomeserverRequestParams): Promise<T> {
+    // Cache-bypassing reads take a dedicated path: the owned-session / publicStorage GETs are served from
+    // the HTTP cache and cannot be told to skip it. Only GET supports it; see {@link THomeserverRequestParams.noCache}.
+    if (noCache && method === HttpMethod.GET) {
+      return this.requestFreshJson<T>(url);
+    }
+
     const owned = this.resolveOwnedSessionPath(url);
 
     // Handle owned session paths
@@ -373,6 +379,31 @@ export class HomeserverService {
     await assertOk({ response, url, operation: 'request' });
 
     return method === HttpMethod.GET ? ((await parseResponseOrUndefined<T>({ response })) as T) : (undefined as T);
+  }
+
+  /**
+   * GETs a homeserver resource as JSON while bypassing the browser HTTP cache.
+   *
+   * The normal owned-session GET ({@link getOwnedResponse} → `session.storage.get`) is served from the
+   * browser cache, so a value written by another device stays invisible locally until the cache entry is
+   * invalidated (e.g. by this device writing it). Cross-device refresh needs the live value, so this issues
+   * a `cache: 'no-store'` fetch via the SDK client. `/pub/*` is world-readable; `credentials: 'include'`
+   * keeps session cookies for parity with other requests. 404/non-OK map through {@link assertOk} exactly
+   * like {@link request}, so callers' status checks (e.g. bootstrap's 404 fallback) keep working.
+   *
+   * @param url - Pubky (or HTTP) URL to read.
+   */
+  private static async requestFreshJson<T>(url: string): Promise<T> {
+    const pubkySdk = this.getPubkySdk();
+    // Mirror `fetch()`: the SDK client expects a resolved transport URL, not a `pubky://` identifier.
+    const resolvedUrl = url.startsWith(PUBKY_PREFIX) ? resolvePubky(url) : url;
+    const response = await pubkySdk.client
+      .fetch(resolvedUrl, { method: HttpMethod.GET, cache: 'no-store', credentials: 'include' })
+      .catch((error) => handleError({ error, additionalContext: { url, method: HttpMethod.GET } }));
+
+    await assertOk({ response, url, operation: 'requestFreshJson' });
+
+    return (await parseResponseOrUndefined<T>({ response })) as T;
   }
 
   /**
