@@ -5,7 +5,14 @@ import { PostPreviewCard } from './PostPreviewCard';
 
 // Mock hooks
 const mockNavigateToPost = vi.fn();
+const mockRouterPush = vi.fn();
 const mockTtlRef = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockRouterPush,
+  }),
+}));
+
 vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
   usePostNavigation: () => ({
     navigateToPost: mockNavigateToPost,
@@ -100,9 +107,15 @@ const resolvedPost = {
   isLoading: false,
 };
 
+const resolvedCollectionPost = {
+  postDetails: { id: 'owner123:collection456', kind: 'collection' } as never,
+  isLoading: false,
+};
+
 describe('PostPreviewCard', () => {
   beforeEach(() => {
     mockNavigateToPost.mockClear();
+    mockRouterPush.mockClear();
     mockUsePostDetails.mockReturnValue(resolvedPost);
   });
 
@@ -137,6 +150,7 @@ describe('PostPreviewCard', () => {
     fireEvent.click(card);
 
     expect(mockNavigateToPost).toHaveBeenCalledWith('test-post-123');
+    expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
   it('navigates to post page on Enter key', () => {
@@ -146,6 +160,7 @@ describe('PostPreviewCard', () => {
     fireEvent.keyDown(card, { key: 'Enter' });
 
     expect(mockNavigateToPost).toHaveBeenCalledWith('test-post-123');
+    expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
   it('navigates to post page on Space key', () => {
@@ -155,6 +170,47 @@ describe('PostPreviewCard', () => {
     fireEvent.keyDown(card, { key: ' ' });
 
     expect(mockNavigateToPost).toHaveBeenCalledWith('test-post-123');
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('navigates collection previews to the collection page on click', () => {
+    mockUsePostDetails.mockReturnValue(resolvedCollectionPost);
+    render(<PostPreviewCard postId="owner123:collection456" />);
+
+    const card = screen.getByTestId('card');
+    fireEvent.click(card);
+
+    expect(mockRouterPush).toHaveBeenCalledWith('/collections/owner123/collection456');
+    expect(mockNavigateToPost).not.toHaveBeenCalled();
+  });
+
+  it('navigates collection previews to the collection page on Enter key', () => {
+    mockUsePostDetails.mockReturnValue(resolvedCollectionPost);
+    render(<PostPreviewCard postId="owner123:collection456" />);
+
+    const card = screen.getByTestId('card');
+    fireEvent.keyDown(card, { key: 'Enter' });
+
+    expect(mockRouterPush).toHaveBeenCalledWith('/collections/owner123/collection456');
+    expect(mockNavigateToPost).not.toHaveBeenCalled();
+  });
+
+  it('navigates collection previews to the collection page on Space key', () => {
+    mockUsePostDetails.mockReturnValue(resolvedCollectionPost);
+    render(<PostPreviewCard postId="owner123:collection456" />);
+
+    const card = screen.getByTestId('card');
+    fireEvent.keyDown(card, { key: ' ' });
+
+    expect(mockRouterPush).toHaveBeenCalledWith('/collections/owner123/collection456');
+    expect(mockNavigateToPost).not.toHaveBeenCalled();
+  });
+
+  it('labels collection previews as collection links', () => {
+    mockUsePostDetails.mockReturnValue(resolvedCollectionPost);
+    render(<PostPreviewCard postId="owner123:collection456" />);
+
+    expect(screen.getByTestId('card')).toHaveAttribute('aria-label', 'View collection');
   });
 
   it('does not navigate on other keys', () => {

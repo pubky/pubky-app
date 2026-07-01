@@ -1,10 +1,13 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { getCollectionRoute } from '@/app/routes';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import { PostMissing } from '@/molecules/PostMissing/PostMissing';
 import { PostContentBase } from '@/organisms/PostContentBase/PostContentBase';
 import { PostHeader } from '@/organisms/PostHeader/PostHeader';
@@ -32,6 +35,7 @@ import type { PostPreviewCardProps } from './PostPreviewCard.types';
  * - Any nested context where a compact post preview is needed
  */
 export function PostPreviewCard({ postId, className, contrast }: PostPreviewCardProps) {
+  const router = useRouter();
   const { navigateToPost } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
   const { ref: ttlRef } = useTtlSubscription({
@@ -44,17 +48,28 @@ export function PostPreviewCard({ postId, className, contrast }: PostPreviewCard
   // PostMissing as a direct Card child (it IS a CardContent) so it isn't nested
   // inside the inner CardContent — matching how PostMain renders PostDeleted.
   const isMissing = postDetails === null && !isLoading;
+  const isCollection = postDetails?.kind === 'collection';
+
+  const navigateToPreview = () => {
+    if (isCollection) {
+      const { pubky, id } = parseCompositeId(postId);
+      router.push(getCollectionRoute(pubky, id));
+      return;
+    }
+
+    navigateToPost(postId);
+  };
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigateToPost(postId);
+    navigateToPreview();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.stopPropagation();
       e.preventDefault();
-      navigateToPost(postId);
+      navigateToPreview();
     }
   };
 
@@ -67,7 +82,7 @@ export function PostPreviewCard({ postId, className, contrast }: PostPreviewCard
       onKeyDown={handleKeyDown}
       role="link"
       tabIndex={0}
-      aria-label="View original post"
+      aria-label={isCollection ? 'View collection' : 'View original post'}
     >
       {isMissing ? (
         <PostMissing />
