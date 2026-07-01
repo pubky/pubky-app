@@ -3,6 +3,7 @@ import type { TGetOrFetchNotificationsResponse } from '@/application/notificatio
 import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
+import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
@@ -64,15 +65,16 @@ export class NotificationController {
     const notificationStore = useNotificationStore.getState();
     if (notificationStore.selectUnread() === 0) return;
 
-    // Create new lastRead with current timestamp using normalizer
-    const lastRead = LastReadNormalizer.to(pubky);
-
     try {
+      // Create new lastRead with current timestamp using normalizer
+      const lastRead = LastReadNormalizer.to(pubky);
       await NotificationApplication.markAllAsRead(lastRead);
       notificationStore.setLastRead(Number(lastRead.last_read.timestamp));
       notificationStore.setUnread(0);
     } catch (error) {
-      Logger.warn('Failed to mark notifications as read on homeserver', { error });
+      if (!isAppError(error)) {
+        Logger.warn('Failed to mark notifications as read on homeserver', { error });
+      }
     }
   }
 

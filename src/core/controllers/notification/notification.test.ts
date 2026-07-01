@@ -401,6 +401,25 @@ describe('NotificationController', () => {
       expect(setUnread).not.toHaveBeenCalled();
       expect(loggerWarnSpy).toHaveBeenCalled();
     });
+
+    it('should not update local store when lastRead creation fails', async () => {
+      const { setLastRead, setUnread } = setupStores(mockUserId);
+
+      vi.spyOn(LastReadNormalizer, 'to').mockImplementation(() => {
+        throw new Error('invalid-pubky');
+      });
+      const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead');
+      const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+      await expect(NotificationController.markAllAsRead()).resolves.toBeUndefined();
+
+      expect(applicationSpy).not.toHaveBeenCalled();
+      expect(setLastRead).not.toHaveBeenCalled();
+      expect(setUnread).not.toHaveBeenCalled();
+      expect(loggerWarnSpy).toHaveBeenCalledWith('Failed to mark notifications as read on homeserver', {
+        error: expect.any(Error),
+      });
+    });
   });
 
   describe('getAllFromCache', () => {

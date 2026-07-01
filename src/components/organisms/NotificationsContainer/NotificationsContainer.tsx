@@ -34,6 +34,7 @@ export function NotificationsContainer() {
   // Mark all notifications as read when entering the page (once authenticated), so the
   // tab counter shows 0 while viewing.
   useEffect(() => {
+    if (!isAuthenticated) return;
     markAllAsRead();
   }, [markAllAsRead, isAuthenticated]);
 
