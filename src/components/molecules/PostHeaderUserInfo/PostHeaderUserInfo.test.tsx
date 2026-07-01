@@ -478,7 +478,9 @@ describe('PostHeaderUserInfo - Navigation', () => {
 
     const profileLinks = screen.getAllByTestId('profile-link');
     const usernameLink = profileLinks[1];
+    const userInfoRoot = usernameLink.parentElement?.parentElement;
 
+    expect(userInfoRoot).toHaveClass('w-fit', 'max-w-full', 'min-w-0');
     expect(usernameLink.parentElement).toHaveClass('min-w-0', 'flex-1');
     expect(usernameLink).toHaveClass('block', 'w-fit', 'min-w-0', 'max-w-full');
     expect(usernameLink).not.toHaveClass('w-full');

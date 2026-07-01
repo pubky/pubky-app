@@ -37,7 +37,7 @@ exports[`DialogReply - Snapshots > matches snapshot with default props 1`] = `
           snapshot-post-id
         </div>
         <div
-          class="relative pl-6"
+          class="relative w-full min-w-0 pl-6"
           data-override-defaults="true"
           data-testid="container"
         >
@@ -113,7 +113,7 @@ exports[`DialogReply - Snapshots > matches snapshot with open prop 1`] = `
           snapshot-post-id
         </div>
         <div
-          class="relative pl-6"
+          class="relative w-full min-w-0 pl-6"
           data-override-defaults="true"
           data-testid="container"
         >

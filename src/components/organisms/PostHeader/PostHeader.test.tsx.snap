@@ -6,18 +6,22 @@ exports[`PostHeader - Mobile Snapshots > matches snapshot on mobile viewport 1`]
   data-testid="container"
 >
   <div
-    data-size="normal"
-    data-testid="post-header-user-info"
+    class="min-w-0 flex-1"
   >
     <div
-      data-testid="avatar"
-    />
-    <div>
-      Snapshot User
-    </div>
-    <div>
-      @
-      snapshot
+      data-size="normal"
+      data-testid="post-header-user-info"
+    >
+      <div
+        data-testid="avatar"
+      />
+      <div>
+        Snapshot User
+      </div>
+      <div>
+        @
+        snapshot
+      </div>
     </div>
   </div>
   <div
@@ -62,18 +66,22 @@ exports[`PostHeader - Snapshots > matches snapshot in loaded state 1`] = `
   data-testid="container"
 >
   <div
-    data-size="normal"
-    data-testid="post-header-user-info"
+    class="min-w-0 flex-1"
   >
     <div
-      data-testid="avatar"
-    />
-    <div>
-      Snapshot User
-    </div>
-    <div>
-      @
-      snapshot
+      data-size="normal"
+      data-testid="post-header-user-info"
+    >
+      <div
+        data-testid="avatar"
+      />
+      <div>
+        Snapshot User
+      </div>
+      <div>
+        @
+        snapshot
+      </div>
     </div>
   </div>
   <div

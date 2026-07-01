@@ -43,16 +43,18 @@ export function PostHeader({
 
   return (
     <Container className="flex w-full min-w-0 items-start justify-between gap-3" overrideDefaults>
-      <PostHeaderUserInfo
-        userId={userId}
-        userName={userDetails.name || ''}
-        avatarUrl={avatarUrl}
-        characterLimit={characterLimit}
-        showPopover={showPopover}
-        size={size}
-        timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
-        indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
-      />
+      <div className="min-w-0 flex-1">
+        <PostHeaderUserInfo
+          userId={userId}
+          userName={userDetails.name || ''}
+          avatarUrl={avatarUrl}
+          characterLimit={characterLimit}
+          showPopover={showPopover}
+          size={size}
+          timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
+          indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
+        />
+      </div>
       {timeAgo && timeAgoPlacement === 'top-right' && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />}
     </Container>
   );
