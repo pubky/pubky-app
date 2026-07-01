@@ -63,7 +63,7 @@ export function PostPreviewCard({ postId, className, contrast }: PostPreviewCard
       ref={ttlRef}
       data-cy="post-preview-card"
       className={cn(
-        'w-full max-w-full min-w-0 cursor-pointer overflow-hidden rounded-md py-0 transition-colors hover:bg-accent/50',
+        'w-full max-w-full min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50',
         className,
       )}
       onClick={handleClick}
@@ -75,7 +75,7 @@ export function PostPreviewCard({ postId, className, contrast }: PostPreviewCard
       {isMissing ? (
         <PostMissing />
       ) : (
-        <CardContent className="flex w-full max-w-full min-w-0 flex-col gap-4 overflow-hidden p-6">
+        <CardContent className="flex w-full max-w-full min-w-0 flex-col gap-4 p-6">
           <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" />
           <PostContentBase postId={postId} contrast={contrast} />
         </CardContent>

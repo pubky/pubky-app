@@ -58,7 +58,7 @@ export function PostHeaderUserInfo({
           size={size === 'large' ? 'xl' : 'default'}
         />
       </Link>
-      <Container overrideDefaults className="max-w-full min-w-0 flex-1 overflow-hidden">
+      <Container overrideDefaults className="max-w-full min-w-0 overflow-hidden">
         <Link href={profileUrl} onClick={handleLinkClick} className="block w-full max-w-full min-w-0 overflow-hidden">
           <Typography
             className={cn(
