@@ -645,7 +645,7 @@
     },
     "deleteCollection": {
       "title": "Eliminare la raccolta?",
-      "description": "Sei sicuro di voler eliminare '{name}'? Le persone che seguono questa raccolta non vi avranno più accesso. I post all'interno della raccolta non verranno eliminati.",
+      "description": "Sei sicuro di voler eliminare ''{name}''? Le persone che seguono questa raccolta non vi avranno più accesso. I post all'interno della raccolta non verranno eliminati.",
       "confirmButton": "Elimina",
       "cancelButton": "Annulla"
     },

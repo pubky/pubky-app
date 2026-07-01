@@ -645,7 +645,7 @@
     },
     "deleteCollection": {
       "title": "Delete collection?",
-      "description": "Are you sure you want to delete '{name}'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.",
+      "description": "Are you sure you want to delete ''{name}''? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.",
       "confirmButton": "Delete",
       "cancelButton": "Cancel"
     },

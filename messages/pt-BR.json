@@ -645,7 +645,7 @@
     },
     "deleteCollection": {
       "title": "Excluir coleção?",
-      "description": "Tem certeza de que deseja excluir '{name}'? As pessoas que seguem esta coleção não terão mais acesso a ela. As postagens dentro da coleção não serão excluídas.",
+      "description": "Tem certeza de que deseja excluir ''{name}''? As pessoas que seguem esta coleção não terão mais acesso a ela. As postagens dentro da coleção não serão excluídas.",
       "confirmButton": "Excluir",
       "cancelButton": "Cancelar"
     },
