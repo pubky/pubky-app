@@ -15,15 +15,21 @@ interface ActionButtonsProps {
 
 export function ActionButtons({ className, onLearn, onCreateAccount, onExplore, ...props }: ActionButtonsProps) {
   const t = useTranslations('landing');
+  const hasBothSecondaryActions = Boolean(onLearn && onExplore);
+  const secondaryActionClassName = cn('w-full sm:w-auto', !hasBothSecondaryActions && 'col-span-2 sm:col-span-1');
 
   return (
-    <Container className={cn('gap-3 sm:flex-row sm:items-center', className)} {...props}>
+    <Container
+      display="grid"
+      className={cn('grid-cols-2 gap-3 sm:flex sm:flex-row sm:items-center', className)}
+      {...props}
+    >
       {onLearn && (
         <Button
           id="learn-btn"
           data-cy="learn-btn"
           variant="secondary"
-          className="sm:w-auto"
+          className={secondaryActionClassName}
           size="lg"
           onClick={onLearn}
         >
@@ -36,7 +42,7 @@ export function ActionButtons({ className, onLearn, onCreateAccount, onExplore, 
           id="explore-btn"
           data-cy="explore-btn"
           variant="secondary"
-          className="sm:w-auto"
+          className={secondaryActionClassName}
           size="lg"
           onClick={onExplore}
         >
@@ -44,7 +50,13 @@ export function ActionButtons({ className, onLearn, onCreateAccount, onExplore, 
           {t('explore')}
         </Button>
       )}
-      <Button id="create-account-btn" variant="brand" className="px-10 sm:w-auto" size="lg" onClick={onCreateAccount}>
+      <Button
+        id="create-account-btn"
+        variant="brand"
+        className="order-first col-span-2 w-full px-10 sm:order-none sm:col-span-1 sm:w-auto"
+        size="lg"
+        onClick={onCreateAccount}
+      >
         <UserRoundPlus className="h-4 w-4" />
         {t('join')}
       </Button>

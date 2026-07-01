@@ -428,7 +428,8 @@
       "title": "Backup-Methode wählen",
       "subtitle": "Sichern und speichern Sie den geheimen Seed für Ihren Pubky sicher. Welche Backup-Methode bevorzugen Sie? Sie können dies auch später tun.",
       "recoveryPhrase": "Wiederherstellungsphrase",
-      "encryptedFile": "Verschlüsselte Datei"
+      "encryptedFile": "Verschlüsselte Datei",
+      "exportRing": "Zu Pubky Ring exportieren"
     },
     "backup": {
       "title": "Sichern Sie Ihren <highlight>Pubky.</highlight>",

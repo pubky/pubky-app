@@ -35,7 +35,7 @@ export function CollectionsIntroDialog({ open, onOpenChange, onContinue }: Colle
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-xl border-border bg-popover">
+      <DialogContent className="w-3xl border-border bg-popover">
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>

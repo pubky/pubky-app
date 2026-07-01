@@ -36,7 +36,7 @@ exports[`NewCollectionDialog - Snapshots > matches snapshot when open 1`] = `
   >
     <div
       aria-labelledby="radix-normalized"
-      class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto rounded-t-lg border border-b-0 p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 w-full max-w-xl border-border bg-popover"
+      class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto rounded-t-lg border border-b-0 p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 w-3xl border-border bg-popover"
       data-cy="dialog-content"
       data-slot="dialog-content"
       data-state="open"
@@ -81,7 +81,7 @@ exports[`NewCollectionDialog - Snapshots > matches snapshot when open 1`] = `
           >
             <input
               aria-invalid="false"
-              class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent min-w-0 truncate placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
+              class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent min-w-0 truncate placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
               data-testid="input"
               id="name"
               maxlength="100"
@@ -109,7 +109,7 @@ exports[`NewCollectionDialog - Snapshots > matches snapshot when open 1`] = `
           >
             <input
               aria-invalid="false"
-              class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent min-w-0 truncate placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
+              class="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent min-w-0 truncate placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
               data-testid="input"
               id="description"
               maxlength="500"

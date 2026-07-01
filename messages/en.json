@@ -426,7 +426,8 @@
       "title": "Choose backup method",
       "subtitle": "Safely back up and store the secret seed for your pubky. Which backup method do you prefer? You can also choose to do this later.",
       "recoveryPhrase": "Recovery phrase",
-      "encryptedFile": "Encrypted file"
+      "encryptedFile": "Encrypted file",
+      "exportRing": "Export to Pubky Ring"
     },
     "backup": {
       "title": "Back up your <highlight>pubky.</highlight>",
