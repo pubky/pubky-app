@@ -49,7 +49,7 @@ export function LandingHowItWorksSection() {
                 <Typography as="h3" size="lg" className="relative text-xl">
                   {t(`features.${key}.title`)}
                 </Typography>
-                <Typography size="md" className="relative mt-1 text-muted-foreground">
+                <Typography size="sm" className="relative mt-1 text-muted-foreground sm:text-base">
                   {t(`features.${key}.description`)}
                 </Typography>
               </div>
