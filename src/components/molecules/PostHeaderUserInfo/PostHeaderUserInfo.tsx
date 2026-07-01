@@ -46,7 +46,7 @@ export function PostHeaderUserInfo({
     <Container
       overrideDefaults
       className={cn(
-        'grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center overflow-hidden',
+        'grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center',
         size === 'large' ? 'gap-4' : 'gap-3',
       )}
     >
@@ -58,7 +58,7 @@ export function PostHeaderUserInfo({
           size={size === 'large' ? 'xl' : 'default'}
         />
       </Link>
-      <Container overrideDefaults className="max-w-full min-w-0 overflow-hidden">
+      <Container overrideDefaults className="max-w-full min-w-0">
         <Link href={profileUrl} onClick={handleLinkClick} className="block w-full max-w-full min-w-0 overflow-hidden">
           <Typography
             className={cn(

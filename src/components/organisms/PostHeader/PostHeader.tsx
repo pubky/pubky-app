@@ -43,10 +43,10 @@ export function PostHeader({
 
   return (
     <Container
-      className="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 overflow-hidden"
+      className="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3"
       overrideDefaults
     >
-      <div className="w-full max-w-full min-w-0 overflow-hidden">
+      <div className="w-full max-w-full min-w-0">
         <PostHeaderUserInfo
           userId={userId}
           userName={userDetails.name || ''}

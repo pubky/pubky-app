@@ -245,7 +245,7 @@ describe('PostHeader', () => {
 
     const userInfoSlot = screen.getByTestId('post-header-user-info').parentElement;
 
-    expect(userInfoSlot).toHaveClass('w-full', 'max-w-full', 'min-w-0', 'overflow-hidden');
+    expect(userInfoSlot).toHaveClass('w-full', 'max-w-full', 'min-w-0');
   });
 
   it('renders time in top-right by default', () => {
