@@ -426,7 +426,8 @@
       "title": "选择备份方式",
       "subtitle": "安全地备份和存储您 pubky 的秘密种子。您更喜欢哪种备份方式？您也可以选择稍后进行。",
       "recoveryPhrase": "恢复短语",
-      "encryptedFile": "加密文件"
+      "encryptedFile": "加密文件",
+      "exportRing": "导出到 Pubky Ring"
     },
     "backup": {
       "title": "备份您的 <highlight>pubky。</highlight>",

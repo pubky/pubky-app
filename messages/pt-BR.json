@@ -426,7 +426,8 @@
       "title": "Escolha o método de backup",
       "subtitle": "Faca backup e armazene com segurança a semente secreta do seu pubky. Qual método de backup você prefere? Voce tambem pode escolher fazer isso mais tarde.",
       "recoveryPhrase": "Frase de recuperação",
-      "encryptedFile": "Arquivo criptografado"
+      "encryptedFile": "Arquivo criptografado",
+      "exportRing": "Exportar para Pubky Ring"
     },
     "backup": {
       "title": "Faça backup do seu <highlight>pubky.</highlight>",

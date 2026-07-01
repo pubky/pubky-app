@@ -200,3 +200,15 @@ export function isSkipPaginatedStream(streamId: string): boolean {
   const head = streamId.split(':')[0];
   return head === StreamSorting.ENGAGEMENT || isCollectionItemsStream(streamId);
 }
+
+/**
+ * Bookmark post streams (`…:bookmarks:…`) — e.g. `timeline:bookmarks:all` and
+ * `timeline:bookmarks:collection`.
+ *
+ * Nexus orders these by *bookmark* time (the bookmark's `indexed_at`, stored
+ * locally as `bookmarks.created_at`), not the post's own `indexed_at`. Pagination
+ * cursors for them must therefore be derived from the local bookmarks table.
+ */
+export function isBookmarkStream(streamId: string): boolean {
+  return streamId.includes(`:${StreamSource.BOOKMARKS}:`);
+}

@@ -428,7 +428,8 @@
       "title": "Elige el metodo de respaldo",
       "subtitle": "Respalda y almacena de forma segura la semilla secreta de tu pubky. Que metodo de respaldo prefieres? Tambien puedes elegir hacerlo más tarde.",
       "recoveryPhrase": "Frase de recuperación",
-      "encryptedFile": "Archivo encriptado"
+      "encryptedFile": "Archivo encriptado",
+      "exportRing": "Exportar a Pubky Ring"
     },
     "backup": {
       "title": "Respalda tu <highlight>pubky.</highlight>",

@@ -115,7 +115,7 @@ export function LandingFreedomSection() {
               <Typography as="h3" size="lg" className="text-xl">
                 {t(`features.${activeFeature.key}.title`)}
               </Typography>
-              <Typography size="md" className="mt-1 text-muted-foreground">
+              <Typography size="sm" className="mt-1 text-muted-foreground sm:text-base">
                 {t(`features.${activeFeature.key}.description`)}
               </Typography>
             </div>
