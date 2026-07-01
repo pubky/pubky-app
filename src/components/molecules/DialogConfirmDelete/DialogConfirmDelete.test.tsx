@@ -115,7 +115,7 @@ describe('DialogConfirmDelete', () => {
 
     expect(screen.getByTestId('dialog-title')).toHaveTextContent('Delete collection?');
     expect(screen.getByTestId('dialog-description')).toHaveTextContent(
-      'Are you sure you want to delete {name}? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.',
+      "Are you sure you want to delete '{name}'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.",
     );
   });
 
@@ -126,12 +126,12 @@ describe('DialogConfirmDelete', () => {
         onOpenChange={vi.fn()}
         onConfirm={vi.fn()}
         i18nNamespace="dialogs.deleteCollection"
-        description="Are you sure you want to delete Proof of Work? People following this collection will no longer have access to it. Posts inside the collection will not be deleted."
+        description="Are you sure you want to delete 'Proof of Work'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted."
       />,
     );
 
     expect(screen.getByTestId('dialog-description')).toHaveTextContent(
-      'Are you sure you want to delete Proof of Work? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.',
+      "Are you sure you want to delete 'Proof of Work'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.",
     );
   });
 });

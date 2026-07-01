@@ -159,6 +159,25 @@ describe('PostTagsExpandableRow', () => {
     expect(screen.getByLabelText('Tag post (3)')).toHaveAttribute('aria-expanded', 'true');
   });
 
+  it('uses panelWidthMode full when expanded', () => {
+    render(<PostTagsExpandableRow postId={POST_ID} panelWidthMode="full" />);
+
+    fireEvent.click(screen.getByLabelText('Tag post (3)'));
+
+    const panel = screen.getByTestId('post-tags-panel');
+    expect(panel).toHaveAttribute('data-width-mode', 'full');
+    expect(panel).toHaveAttribute('data-auto-focus-input', 'true');
+    expect(panel).toHaveAttribute('data-enable-loading-skeleton', 'false');
+  });
+
+  it('defaults panelWidthMode to fit when expanded', () => {
+    render(<PostTagsExpandableRow postId={POST_ID} />);
+
+    fireEvent.click(screen.getByLabelText('Tag post (3)'));
+
+    expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-width-mode', 'fit');
+  });
+
   it('renders a tag CTA skeleton while counts are loading', () => {
     mockUsePostCounts.mockReturnValue({
       postCounts: undefined,

@@ -298,10 +298,11 @@ describe('CollectionCard', () => {
   it('pins the tags and action row to the bottom of the card with mt-auto', () => {
     const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
-    const expandableRow = container.querySelector('[data-cy="post-tags-expandable-row"]');
-    const actionRow = expandableRow?.parentElement;
+    const actionRow = container.querySelector('[data-cy="collection-card-bottom-row"]');
 
-    expect(actionRow).toHaveClass('mt-auto');
+    expect(actionRow).toHaveClass('mt-auto', 'flex-col', 'sm:flex-row');
+    expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-cy="collection-card-tag-actions"]')).toHaveClass('self-start', 'sm:self-end');
   });
 
   it('falls back to the author pubky as the owner name when the profile is missing', () => {
@@ -466,11 +467,15 @@ describe('CollectionCard', () => {
       expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
       const panel = screen.getByTestId('post-tags-panel');
       expect(panel).toHaveAttribute('data-post-id', COMPOSITE_ID);
-      expect(panel).toHaveAttribute('data-width-mode', 'fit');
+      expect(panel).toHaveAttribute('data-width-mode', 'full');
       expect(panel).toHaveAttribute('data-auto-focus-input', 'true');
       expect(panel).toHaveAttribute('data-enable-loading-skeleton', 'false');
       expect(document.querySelector('[data-cy="post-tags-expandable-row"]')).toHaveClass('items-end');
-      expect(document.querySelector('[data-cy="post-tags-expandable-row-actions"]')).toHaveClass('self-end');
+      expect(document.querySelector('[data-cy="post-tags-expandable-row-actions"]')).not.toBeInTheDocument();
+      expect(document.querySelector('[data-cy="collection-card-tag-actions"]')).toHaveClass(
+        'self-start',
+        'sm:self-end',
+      );
       expect(onParentClick).not.toHaveBeenCalled();
     });
 

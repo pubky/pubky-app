@@ -645,7 +645,7 @@
     },
     "deleteCollection": {
       "title": "Eliminare la raccolta?",
-      "description": "Sei sicuro di voler eliminare {name}? Le persone che seguono questa raccolta non vi avranno più accesso. I post all'interno della raccolta non verranno eliminati.",
+      "description": "Sei sicuro di voler eliminare '{name}'? Le persone che seguono questa raccolta non vi avranno più accesso. I post all'interno della raccolta non verranno eliminati.",
       "confirmButton": "Elimina",
       "cancelButton": "Annulla"
     },
@@ -1341,7 +1341,7 @@
       "coverImageTooLarge": "L'immagine di copertina è troppo grande.",
       "nameRequired": "Il titolo della collezione è obbligatorio.",
       "cancel": "Annulla",
-      "save": "Salva modifiche",
+      "save": "Salva raccolta",
       "saving": "Salvataggio...",
       "created": "Collezione creata",
       "createFailed": "Impossibile creare la collezione."

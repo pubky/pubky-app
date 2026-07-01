@@ -7,6 +7,7 @@ import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
 import { cn } from '@/libs/utils/utils';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import { PostTagsPanel } from '@/organisms/PostTagsPanel/PostTagsPanel';
+import type { PostTagsPanelProps } from '@/organisms/PostTagsPanel/PostTagsPanel.types';
 import { PostTagToggleButton } from './PostTagToggleButton';
 
 interface PostTagsExpandableRowProps {
@@ -19,6 +20,7 @@ interface PostTagsExpandableRowProps {
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
   showTagToggle?: boolean;
+  panelWidthMode?: PostTagsPanelProps['widthMode'];
 }
 
 export function PostTagsExpandableRow({
@@ -31,6 +33,7 @@ export function PostTagsExpandableRow({
   expanded,
   onExpandedChange,
   showTagToggle = true,
+  panelWidthMode = 'fit',
 }: PostTagsExpandableRowProps) {
   const [internalExpanded, setInternalExpanded] = useState(false);
   const tagsExpanded = expanded ?? internalExpanded;
@@ -71,7 +74,7 @@ export function PostTagsExpandableRow({
             onAuxClick={preventDefaultOnClick ? suppressParentInteraction : undefined}
             className="w-fit max-w-full"
           >
-            <PostTagsPanel postId={postId} widthMode="fit" autoFocusInput enableLoadingSkeleton={false} />
+            <PostTagsPanel postId={postId} widthMode={panelWidthMode} autoFocusInput enableLoadingSkeleton={false} />
           </Container>
         ) : (
           <ClickableTagsList
