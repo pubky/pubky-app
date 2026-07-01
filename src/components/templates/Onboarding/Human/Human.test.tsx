@@ -144,7 +144,7 @@ describe('Human template', () => {
       expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
     });
 
-    it('shows a warning toast and stays on the invite step when the homeserver returns 404', async () => {
+    it('shows an error toast and stays on the invite step when the homeserver returns 404', async () => {
       mockVerifySignupToken.mockResolvedValue('invalid');
       render(<Human />);
 
@@ -159,7 +159,7 @@ describe('Human template', () => {
       expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
     });
 
-    it('shows a warning toast and stays on the invite step when the homeserver returns 200 with status used', async () => {
+    it('shows an error toast and stays on the invite step when the homeserver returns 200 with status used', async () => {
       mockVerifySignupToken.mockResolvedValue('used');
       render(<Human />);
 

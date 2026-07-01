@@ -202,7 +202,7 @@ exports[`Toast - Snapshots > matches snapshot for ToastAction variant=error 1`] 
       tabindex="0"
     >
       <button
-        class="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 shadow-xs bg-neutral-900 text-foreground hover:border-neutral-800"
+        class="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 shadow-xs bg-toast-action-muted text-foreground hover:border-toast-action-muted-hover-border"
         data-radix-toast-announce-alt="OK"
         data-radix-toast-announce-exclude=""
         type="button"
@@ -243,7 +243,7 @@ exports[`Toast - Snapshots > matches snapshot for ToastAction variant=info 1`] =
       tabindex="0"
     >
       <button
-        class="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 shadow-xs bg-neutral-900 text-foreground hover:border-neutral-800"
+        class="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 shadow-xs bg-toast-action-muted text-foreground hover:border-toast-action-muted-hover-border"
         data-radix-toast-announce-alt="OK"
         data-radix-toast-announce-exclude=""
         type="button"
@@ -284,7 +284,7 @@ exports[`Toast - Snapshots > matches snapshot for ToastAction variant=warning 1`
       tabindex="0"
     >
       <button
-        class="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 shadow-xs bg-neutral-900 text-foreground hover:border-neutral-800"
+        class="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 text-xs font-bold transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 shadow-xs bg-toast-action-muted text-foreground hover:border-toast-action-muted-hover-border"
         data-radix-toast-announce-alt="OK"
         data-radix-toast-announce-exclude=""
         type="button"

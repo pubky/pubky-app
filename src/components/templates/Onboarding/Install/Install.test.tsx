@@ -139,7 +139,7 @@ describe('Install template', () => {
       variant: 'error',
       title: "Couldn't verify invite code",
     });
-    // The invalid-code warning toast is not shown for transient errors.
+    // The invalid-code error toast is not shown for transient errors.
     expect(mockToast).toHaveBeenCalledTimes(1);
   });
 
