@@ -159,7 +159,6 @@ exports[`Home - Snapshots > matches snapshot for HomeSectionTitle with default p
 >
   <h2
     class="self-center text-xl font-light text-muted-foreground sm:text-3xl"
-    data-size="md"
     data-testid="typography"
   >
     Your keys, your content, your rules.
