@@ -6,7 +6,16 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import type { AuthStore } from '@/stores/auth/auth.types';
 import { PostMainListRow } from './PostMainListRow';
+
+const { mockAuthStoreSelector } = vi.hoisted(() => ({
+  mockAuthStoreSelector:
+    (currentUserPubky: string | null) =>
+    (selector: (state: AuthStore) => unknown): unknown =>
+      selector({ currentUserPubky } as AuthStore),
+}));
 
 vi.mock('@/atoms/Card/Card', () => ({
   CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -80,6 +89,10 @@ vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
   useUserDetails: vi.fn(),
 }));
 
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: vi.fn(mockAuthStoreSelector(null)),
+}));
+
 vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => ({
   PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string }) => <span>{timeAgo}</span>,
 }));
@@ -87,6 +100,32 @@ vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => ({
 vi.mock('@/molecules/PostListMediaThumbnail/PostListMediaThumbnail', () => ({
   PostListMediaThumbnail: ({ postId }: { postId: string }) => (
     <div data-testid="post-list-media-thumbnail" data-post-id={postId} />
+  ),
+}));
+
+vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => ({
+  UserInfoPopover: ({
+    children,
+    userId,
+    userName,
+    avatarUrl,
+    formattedPublicKey,
+  }: {
+    children: React.ReactNode;
+    userId: string;
+    userName: string;
+    avatarUrl?: string;
+    formattedPublicKey: string;
+  }) => (
+    <div
+      data-testid="user-info-popover"
+      data-user-id={userId}
+      data-user-name={userName}
+      data-avatar-url={avatarUrl}
+      data-formatted-public-key={formattedPublicKey}
+    >
+      {children}
+    </div>
   ),
 }));
 
@@ -156,10 +195,10 @@ vi.mock('../PostTagsPanel/PostTagsPanel', () => {
 });
 
 describe('PostMainListRow', () => {
-  const createPostDetails = (postId: string, content: string, indexedAt = Date.now()) => ({
+  const createPostDetails = (postId: string, content: string, indexedAt = Date.now(), kind = 'short') => ({
     id: postId,
     indexed_at: indexedAt,
-    kind: 'short' as const,
+    kind,
     uri: `pubky://${postId.split(':')[0]}/pub/pubky.app/posts/${postId.split(':')[1]}`,
     content,
     attachments: [],
@@ -167,7 +206,8 @@ describe('PostMainListRow', () => {
     is_blurred: false,
   });
 
-  const mockPostDetails = (content: string) => {
+  const mockPostDetails = (content: string, kind = 'short') => {
+    vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(null));
     vi.mocked(useAvatarUrl).mockReturnValue('https://example.com/avatar.png');
     vi.mocked(useRelativeTime).mockReturnValue({ formatRelativeTime: () => '1m' });
     vi.mocked(useRepostInfo).mockReturnValue({
@@ -191,7 +231,7 @@ describe('PostMainListRow', () => {
       isLoading: false,
     });
     vi.mocked(usePostDetails).mockImplementation((postId) => ({
-      postDetails: postId === 'author:post' ? createPostDetails('author:post', content) : undefined,
+      postDetails: postId === 'author:post' ? createPostDetails('author:post', content, Date.now(), kind) : undefined,
       isLoading: false,
     }));
   };
@@ -212,6 +252,29 @@ describe('PostMainListRow', () => {
     expect(screen.getByTestId('post-main-list-row-header')).toHaveClass('gap-3');
     expect(screen.getByTestId('post-main-list-row-header')).not.toHaveClass('gap-6');
     expect(screen.getByTestId('post-list-media-thumbnail')).toBeInTheDocument();
+    expect(screen.getByTestId('user-info-popover')).toHaveAttribute('data-user-id', 'author');
+    expect(screen.getByTestId('user-info-popover')).toHaveAttribute('data-user-name', 'Author');
+    expect(screen.getByTestId('user-info-popover')).toHaveAttribute(
+      'data-avatar-url',
+      'https://example.com/avatar.png',
+    );
+  });
+
+  it('links own-user headers to the static profile route', () => {
+    mockPostDetails('Own post content');
+    vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('author'));
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Author').closest('a')).toHaveAttribute('href', '/profile');
   });
 
   it('renders full post content below the header row when full content is enabled', () => {
@@ -257,6 +320,61 @@ describe('PostMainListRow', () => {
     const truncatedText = screen.getByText(/This reply is intentionally long enough/);
     expect(truncatedText).toHaveTextContent('...');
     expect(truncatedText).toHaveClass('truncate');
+  });
+
+  it('renders collection name instead of raw collection JSON in compact rows', () => {
+    const collectionContent = JSON.stringify({
+      name: 'Reading list',
+      description: 'Papers and notes worth revisiting',
+      items: ['pubky://reader/pub/pubky.app/posts/post-1'],
+    });
+    mockPostDetails(collectionContent, 'collection');
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Reading list')).toHaveClass('text-secondary-foreground');
+    expect(screen.queryByText(collectionContent)).not.toBeInTheDocument();
+  });
+
+  it('falls back to collection description when the parsed collection name is blank', () => {
+    mockPostDetails(JSON.stringify({ name: '   ', description: 'Saved protocol notes' }), 'collection');
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Saved protocol notes')).toBeInTheDocument();
+  });
+
+  it('ignores non-string article title and body fields when building compact snippets', () => {
+    mockPostDetails(JSON.stringify({ title: 123, body: ['not text'] }), 'long');
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/"title":123/)).not.toBeInTheDocument();
+    expect(screen.queryByText('123')).not.toBeInTheDocument();
   });
 
   it('uses the original post summary for compact simple repost rows', () => {

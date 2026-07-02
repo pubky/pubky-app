@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
+import { getUserProfileUrl } from '@/app/routes';
 import { TagKind } from '@/application/tag/tag.types';
 import { CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -11,11 +12,14 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
+import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostListMediaThumbnail } from '@/molecules/PostListMediaThumbnail/PostListMediaThumbnail';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
+import { UserInfoPopover } from '@/molecules/UserInfoPopover/UserInfoPopover';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { ClickableTagsList } from '../ClickableTagsList/ClickableTagsList';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContent } from '../PostContent/PostContent';
@@ -36,11 +40,24 @@ function getListPostSnippet(content: string, kind: string): string {
 
   if (kind === 'long') {
     try {
-      const parsed = JSON.parse(trimmed) as { title?: string; body?: string };
-      return parsed.title?.trim() || parsed.body?.trim() || '';
+      const parsed = JSON.parse(trimmed) as { title?: unknown; body?: unknown };
+      const title = typeof parsed.title === 'string' ? parsed.title.trim() : '';
+      const body = typeof parsed.body === 'string' ? parsed.body.trim() : '';
+      return title || body;
     } catch {
       return trimmed;
     }
+  }
+
+  if (kind === 'collection') {
+    const collection = parseCollectionContent(trimmed);
+    if (!collection) {
+      return trimmed;
+    }
+
+    const name = collection.name.trim();
+    const description = collection.description?.trim() ?? '';
+    return name || description;
   }
 
   return trimmed;
@@ -62,6 +79,7 @@ export function PostMainListRow({
   onRepostClick,
 }: PostMainListRowProps) {
   const { postDetails } = usePostDetails(postId);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { isRepost, originalPostId } = useRepostInfo(postId);
   const { postDetails: originalPostDetails } = usePostDetails(originalPostId);
   const ownContentSnippet = getListPostSnippet(postDetails?.content ?? '', postDetails?.kind ?? '');
@@ -92,7 +110,7 @@ export function PostMainListRow({
   const formattedPublicKey = formatPublicKey({ key: displayUserId });
   const contentSnippet = getListPostSnippet(displayPostDetails.content, displayPostDetails.kind);
   const snippet = showFullContent ? '' : truncateAtWordBoundary(contentSnippet, LIST_SNIPPET_MAX_CHARS);
-  const profileUrl = `/profile/${displayUserId}`;
+  const profileUrl = getUserProfileUrl(displayUserId, currentUserPubky);
   const shouldShowDisplayHeader = shouldShowPostHeader || shouldUseOriginalPost;
 
   const handleTagClick = () => {
@@ -104,14 +122,21 @@ export function PostMainListRow({
     <CardContent className="flex min-w-0 flex-col gap-4 p-6">
       <Container overrideDefaults data-testid="post-main-list-row-header" className="flex min-w-0 items-center gap-3">
         {shouldShowDisplayHeader ? (
-          <Link href={profileUrl} onClick={stopCardPropagation} className="shrink-0">
-            <AvatarWithFallback
-              avatarUrl={avatarUrl}
-              name={userDetails.name || ''}
-              fallbackSeed={displayUserId}
-              size="md"
-            />
-          </Link>
+          <UserInfoPopover
+            userId={displayUserId}
+            userName={userDetails.name || ''}
+            avatarUrl={avatarUrl}
+            formattedPublicKey={formattedPublicKey}
+          >
+            <Link href={profileUrl} onClick={stopCardPropagation} className="shrink-0">
+              <AvatarWithFallback
+                avatarUrl={avatarUrl}
+                name={userDetails.name || ''}
+                fallbackSeed={displayUserId}
+                size="md"
+              />
+            </Link>
+          </UserInfoPopover>
         ) : null}
 
         <Container overrideDefaults className="min-w-0 flex-1">
