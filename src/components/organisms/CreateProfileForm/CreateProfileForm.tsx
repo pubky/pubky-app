@@ -212,7 +212,7 @@ export const CreateProfileForm = () => {
           </Container>
         </Card>
         <ProfileNavigation
-          className="onboarding-nav mt-auto lg:pt-0"
+          className="onboarding-nav mt-auto flex-col sm:flex-row lg:pt-0"
           backButtonDisabled={true}
           continueButtonDisabled={isSubmitDisabled}
           continueButtonLoading={state.isSaving}

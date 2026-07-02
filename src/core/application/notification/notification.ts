@@ -49,16 +49,14 @@ export class NotificationApplication {
     return this.persistAndSummarize({ notifications, lastRead, allowedTypes, flatNotifications });
   }
   /**
-   * Updates the lastRead timestamp on the homeserver to mark all notifications as read.
-   * This is a fire-and-forget operation - homeserver errors are logged but don't block.
+   * Persists the lastRead timestamp on the homeserver to mark all notifications as read.
+   * Awaits the write and lets failures propagate so the caller can decide whether to update
+   * local state. Callers must ensure an active session that owns the path exists first.
    *
-   * @param pubky - The user's public key
-   * @returns The new lastRead timestamp
+   * @param lastRead - The lastRead result (target URL + payload) built for the current user
    */
-  static markAllAsRead({ meta, last_read }: LastReadResult) {
-    HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: last_read.toJson() }).catch((error) =>
-      Logger.warn('Failed to update lastRead on homeserver', { error }),
-    );
+  static async markAllAsRead({ meta, last_read }: LastReadResult): Promise<void> {
+    await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: last_read.toJson() });
   }
 
   /**

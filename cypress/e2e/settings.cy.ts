@@ -17,6 +17,20 @@ describe('settings', () => {
   it('Account settings function correctly', () => {
     // Create a new user with recovery phrase backup
     const profileName = 'MrAccountSettings';
+
+    const signInFromLogoutWithRecoveryPhrase = () => {
+      cy.get('#logout-navigation-continue-btn').should('be.visible').click();
+      cy.location('pathname').should('eq', '/sign-in');
+      cy.get('#restore-recovery-phrase-btn').click();
+      cy.get(`@recoveryPhrase-${profileName}`).then((rp) => {
+        const words = `${rp}`.split(' ');
+        words.forEach((word, idx) => {
+          cy.get(`#word-slot-input-${idx + 1}`).type(`${word}`);
+        });
+      });
+      cy.get('#recovery-phrase-restore-btn').click();
+    };
+
     cy.onboardAsNewUser(profileName, 'I like to test account settings', [BackupType.RecoveryPhraseWithConfirmation]);
     cy.get('[data-cy="header-settings-btn"]').click();
 
@@ -25,16 +39,7 @@ describe('settings', () => {
     cy.location('pathname').should('eq', '/logout');
 
     // Sign in with recovery phrase saved from onboarding
-    cy.get('#logout-navigation-continue-btn').should('be.visible').click();
-    cy.location('pathname').should('eq', '/sign-in');
-    cy.get('#restore-recovery-phrase-btn').click();
-    cy.get(`@recoveryPhrase-${profileName}`).then((rp) => {
-      const words = `${rp}`.split(' ');
-      words.forEach((word, idx) => {
-        cy.get(`#word-slot-input-${idx + 1}`).type(`${word}`);
-      });
-    });
-    cy.get('#recovery-phrase-restore-btn').click();
+    signInFromLogoutWithRecoveryPhrase();
     cy.location('pathname').should('eq', '/home');
     waitForFeedToLoad();
     cy.get('[data-cy="header-settings-btn"]').click();
@@ -46,13 +51,19 @@ describe('settings', () => {
     // Navigate back to account settings page
     cy.get('[data-cy="header-settings-btn"]').click();
 
-    // todo: enable once bug is fixed, see https://github.com/pubky/pubky-app/issues/1218
-    // Check delete account button shows modal and confirm (note: DialogDeleteAccount may not perform actual deletion)
-    // cy.get('#delete-account-btn').click();
-    // cy.get('[role="dialog"]').should('be.visible').within(() => {
-    //   cy.get('#delete-account-confirm-btn').click();
-    // });
-    // cy.location('pathname').should('eq', '/logout');
+    // Check delete account button shows modal, confirming deletes the account and redirects to logout
+    cy.get('#delete-account-btn').click();
+    cy.get('[role="dialog"]')
+      .should('be.visible')
+      .within(() => {
+        cy.get('#delete-account-confirm-btn').click();
+      });
+    // After deletion, we should be redirected to the logout page
+    cy.location('pathname').should('eq', '/logout');
+
+    // Sign back in and confirm we are presented with profile creation page
+    signInFromLogoutWithRecoveryPhrase();
+    cy.location('pathname').should('eq', '/onboarding/profile');
   });
 
   it.skip('Privacy and Safety settings is displayed correctly', () => {});
