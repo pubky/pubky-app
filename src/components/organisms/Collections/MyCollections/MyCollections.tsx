@@ -22,8 +22,8 @@ import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFal
 import { CollectionBookmarkCard } from '@/organisms/Collections/CollectionBookmarkCard/CollectionBookmarkCard';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
+import { DialogNewCollection } from '@/organisms/Collections/DialogNewCollection/DialogNewCollection';
 import { NewCollectionCardCTA } from '@/organisms/Collections/NewCollectionCardCTA/NewCollectionCardCTA';
-import { NewCollectionDialog } from '@/organisms/NewCollectionDialog/NewCollectionDialog';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 /**
@@ -75,7 +75,7 @@ export function MyCollections({ showPublicNote = false }: MyCollectionsProps = {
           ) : (
             <AvatarStackSkeleton count={1} size="md" />
           )}
-          <NewCollectionDialog>
+          <DialogNewCollection>
             <Button variant="secondary" size="sm">
               <Plus />
               <Typography as="span" overrideDefaults className="text-sm font-bold lg:hidden">
@@ -85,7 +85,7 @@ export function MyCollections({ showPublicNote = false }: MyCollectionsProps = {
                 {t('new.ctaShort')}
               </Typography>
             </Button>
-          </NewCollectionDialog>
+          </DialogNewCollection>
         </Container>
         {showPublicNote && (
           <>

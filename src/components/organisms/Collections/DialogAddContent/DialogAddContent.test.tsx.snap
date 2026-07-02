@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`AddContentDialog - Snapshots > matches the closed grid trigger snapshot 1`] = `
+exports[`DialogAddContent - Snapshots > matches the closed grid trigger snapshot 1`] = `
 <button
   aria-controls="radix-normalized"
   aria-expanded="false"
@@ -43,7 +43,7 @@ exports[`AddContentDialog - Snapshots > matches the closed grid trigger snapshot
 </button>
 `;
 
-exports[`AddContentDialog - Snapshots > matches the closed trigger snapshot 1`] = `
+exports[`DialogAddContent - Snapshots > matches the closed trigger snapshot 1`] = `
 <button
   aria-controls="radix-normalized"
   aria-expanded="false"
@@ -95,7 +95,7 @@ exports[`AddContentDialog - Snapshots > matches the closed trigger snapshot 1`] 
 </button>
 `;
 
-exports[`AddContentDialog - Snapshots > matches the opened desktop dialog snapshot 1`] = `
+exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapshot 1`] = `
 <body
   data-scroll-locked="1"
   style="pointer-events: none;"

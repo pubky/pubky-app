@@ -57,8 +57,8 @@ vi.mock('@/organisms/DialogNewPost/DialogNewPost', () => ({
   ),
 }));
 
-vi.mock('@/organisms/NewCollectionDialog/NewCollectionDialog', () => ({
-  NewCollectionDialog: ({ open, onOpenChange }: { open?: boolean; onOpenChange?: (open: boolean) => void }) => (
+vi.mock('@/organisms/Collections/DialogNewCollection/DialogNewCollection', () => ({
+  DialogNewCollection: ({ open, onOpenChange }: { open?: boolean; onOpenChange?: (open: boolean) => void }) => (
     <div data-testid="new-collection-dialog" data-open={open}>
       <button data-testid="mock-collection-close-btn" onClick={() => onOpenChange?.(false)}>
         Close
