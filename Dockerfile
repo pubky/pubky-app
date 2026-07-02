@@ -29,10 +29,6 @@ ARG NEXT_PUBLIC_APP_VERSION
 # PKARR_RELAYS and TESTNET are intentionally NOT build args. They are runtime-configurable and must
 # be supplied as PUBKY_RUNTIME_* environment variables on the running container (see runner stage
 # and src/libs/runtime-config). This lets a single image be promoted across staging/prod/testnet.
-ARG BASE_URL_SUPPORT
-ARG SUPPORT_API_ACCESS_TOKEN
-ARG SUPPORT_ACCOUNT_ID
-ARG SUPPORT_FEEDBACK_INBOX_ID
 
 # NOTE: Sentry runtime values (DSN, environment, sample rates) are runtime-configurable
 # (PUBKY_RUNTIME_SENTRY_*, see runner stage). Source-map upload is optional: Synonym CI passes
