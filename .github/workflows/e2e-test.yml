@@ -93,7 +93,6 @@ jobs:
     uses: ./.github/workflows/build-docker-image.yml
     with:
       platforms: ${{ needs.set_vars_pubky_app.outputs.platforms }}
-      env: ${{ needs.set_vars_pubky_app.outputs.env }}
     secrets: inherit
 
   e2e-test:
