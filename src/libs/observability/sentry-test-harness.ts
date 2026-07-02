@@ -39,10 +39,11 @@ function resolveEnvironment(): string {
  *
  * Enabled everywhere EXCEPT real production:
  * - PR previews ('preview'), staging, dev, and local all expose it.
- * - `NEXT_PUBLIC_DEBUG_MODE=true` force-enables it for local builds.
+ * - `NEXT_PUBLIC_DEBUG_MODE=true` force-enables it for local NON-production builds only, so a
+ *   debug-flagged production build can never expose the harness.
  */
 export function isSentryTestHarnessEnabled(): boolean {
-  if (Env.NEXT_PUBLIC_DEBUG_MODE) return true;
+  if (Env.NODE_ENV !== 'production' && Env.NEXT_PUBLIC_DEBUG_MODE) return true;
   return resolveEnvironment() !== PRODUCTION_ENVIRONMENT;
 }
 
