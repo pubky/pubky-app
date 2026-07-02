@@ -59,16 +59,16 @@ See [React 19's `onRecoverableError` docs](https://react.dev/reference/react-dom
 
 ## Environment variables
 
-All Sentry values are part of the **optional runtime-config tier** ([ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md)): deployed environments set `PUBKY_RUNTIME_SENTRY_*` on the container; local dev/test falls back to `NEXT_PUBLIC_SENTRY_*` from `.env.local`. Schema and defaults live in `src/libs/runtime-config/runtime-config.schema.ts`.
+All Sentry values are part of the **optional runtime-config tier** ([ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md)): set `PUBKY_RUNTIME_SENTRY_*` on the deployed container, or in `.env.local` for local dev. Schema and defaults live in `src/libs/runtime-config/runtime-config.schema.ts`.
 
-| Variable (deployed / dev fallback)                                                                      | Runtime                 | Required?                                                  |
-| ------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
-| `PUBKY_RUNTIME_SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`                                                   | browser + server + edge | Optional. Empty/unset disables Sentry entirely.            |
-| `PUBKY_RUNTIME_SENTRY_ENVIRONMENT` / `NEXT_PUBLIC_SENTRY_ENVIRONMENT`                                   | all                     | Optional. Defaults to `NODE_ENV`.                          |
-| `PUBKY_RUNTIME_TESTNET` / `NEXT_PUBLIC_TESTNET`                                                         | all                     | When `true`, Sentry is disabled (CI E2E / testnet deploy). |
-| `PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`                     | all                     | Optional. Default `0.1`.                                   |
-| `PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`   | browser                 | Optional. Default `0.0` (record only on error).            |
-| `PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | browser                 | Optional. Default `1.0`.                                   |
+| Variable                                            | Runtime                 | Required?                                                  |
+| --------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
+| `PUBKY_RUNTIME_SENTRY_DSN`                          | browser + server + edge | Optional. Empty/unset disables Sentry entirely.            |
+| `PUBKY_RUNTIME_SENTRY_ENVIRONMENT`                  | all                     | Optional. Defaults to `NODE_ENV`.                          |
+| `PUBKY_RUNTIME_TESTNET`                             | all                     | When `true`, Sentry is disabled (CI E2E / testnet deploy). |
+| `PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE`           | all                     | Optional. Default `0.1`.                                   |
+| `PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`  | browser                 | Optional. Default `0.0` (record only on error).            |
+| `PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | browser                 | Optional. Default `1.0`.                                   |
 
 `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` are optional Docker build inputs used only for source-map upload. They are never app runtime config and are not required to build or run the public image. The release tag comes from `NEXT_PUBLIC_APP_VERSION`: local builds fall back to the package version, while Docker CI sets it to the commit SHA so SDK events and uploaded maps use the same release.
 
@@ -126,6 +126,12 @@ Deliberately untouched: `event.tags` (app-controlled operational labels — `err
 
 ## Verification
 
-To verify a deployment, inspect recent Sentry events for the configured environment and confirm the
+To verify a deployment, open the `/sentry-test` harness (reachable everywhere except real
+production) and trigger each capture path. The diagnostics card shows the resolved runtime
+settings, including **Client SDK initialized** (`Sentry.getClient()`), which catches the
+silent-failure mode where Sentry is enabled but the browser SDK never initialized because
+`window.__PUBKY_CONFIG__` was not injected before `instrumentation-client.ts` evaluated.
+
+Then inspect recent Sentry events for the configured environment and confirm the
 **source maps** resolve (original `.tsx`/`.ts` frames, not minified bundle names) and the **`release`**
 tag matches `NEXT_PUBLIC_APP_VERSION` for the build under test.
