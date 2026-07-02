@@ -26,6 +26,7 @@ import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFal
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { CollectionCardBlurred } from '@/organisms/Collections/CollectionCard/CollectionCardBlurred';
 import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
+import { PostTagToggleButton } from '@/organisms/PostTagsExpandableRow/PostTagToggleButton';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
@@ -208,10 +209,16 @@ function CollectionCardContent({
     },
   });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
 
   const handleDelete = (event: MouseEvent) => {
     suppressCardNavigation(event);
     setDeleteConfirmOpen(true);
+  };
+
+  const handleTagToggle = (event: MouseEvent<HTMLButtonElement>) => {
+    suppressCardNavigation(event);
+    setTagsExpanded((prev) => !prev);
   };
 
   const handleDeleteConfirm = () => {
@@ -294,8 +301,36 @@ function CollectionCardContent({
               previews) match how normal reposts render — no inline tags, no
               actions on the previewed post. */}
             {!isPreview && (
-              <Container overrideDefaults className="mt-auto w-full">
-                <PostTagsExpandableRow postId={compositeId} preventDefaultOnClick>
+              <Container
+                overrideDefaults
+                data-cy="collection-card-bottom-row"
+                className="mt-auto flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+              >
+                <PostTagsExpandableRow
+                  postId={compositeId}
+                  preventDefaultOnClick
+                  expanded={tagsExpanded}
+                  onExpandedChange={setTagsExpanded}
+                  showTagToggle={false}
+                  // Full mode keeps the expanded tag UI from being squeezed on
+                  // mobile collection cards. It also preserves PostTagsPanel's
+                  // existing "See all" behavior when there are more than 3 tags.
+                  panelWidthMode="full"
+                  className="w-full min-w-0 sm:w-auto sm:flex-1"
+                />
+                <Container
+                  overrideDefaults
+                  data-cy="collection-card-tag-actions"
+                  className="flex shrink-0 items-center gap-2 self-start sm:self-end"
+                  onClick={suppressCardNavigation}
+                  onAuxClick={suppressCardNavigation}
+                >
+                  <PostTagToggleButton
+                    postId={compositeId}
+                    expanded={tagsExpanded}
+                    onToggle={handleTagToggle}
+                    disabled={isOwn && isDeleting}
+                  />
                   {isOwn ? (
                     <Button
                       variant="secondary"
@@ -320,7 +355,7 @@ function CollectionCardContent({
                       {isBookmarked ? t('unfollow') : t('follow')}
                     </Button>
                   )}
-                </PostTagsExpandableRow>
+                </Container>
               </Container>
             )}
           </CardContent>

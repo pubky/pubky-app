@@ -646,7 +646,7 @@
     },
     "deleteCollection": {
       "title": "删除收藏集？",
-      "description": "您确定要删除 {name} 吗？关注此收藏集的用户将无法再访问它。收藏集内的帖子不会被删除。",
+      "description": "您确定要删除「{name}」吗？关注此收藏集的用户将无法再访问它。收藏集内的帖子不会被删除。",
       "confirmButton": "删除",
       "cancelButton": "取消"
     },
@@ -1337,7 +1337,7 @@
       "coverImageTooLarge": "封面图片太大。",
       "nameRequired": "收藏集标题为必填项。",
       "cancel": "取消",
-      "save": "保存更改",
+      "save": "保存收藏",
       "saving": "保存中...",
       "created": "收藏集已创建",
       "createFailed": "创建收藏集失败。"

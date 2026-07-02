@@ -90,8 +90,8 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
     selector({ collections: mockLocalCollections }),
 }));
 
-vi.mock('@/organisms/EditCollectionDialog/EditCollectionDialog', () => ({
-  EditCollectionDialog: ({
+vi.mock('@/organisms/Collections/DialogEditCollection/DialogEditCollection', () => ({
+  DialogEditCollection: ({
     open,
     compositeCollectionId,
   }: {
@@ -106,8 +106,8 @@ vi.mock('@/organisms/EditCollectionDialog/EditCollectionDialog', () => ({
     ) : null,
 }));
 
-vi.mock('@/organisms/AddContentDialog/AddContentDialog', () => ({
-  AddContentDialog: ({
+vi.mock('@/organisms/Collections/DialogAddContent/DialogAddContent', () => ({
+  DialogAddContent: ({
     dataCy,
     disabled,
   }: {
@@ -470,7 +470,7 @@ describe('CollectionHero', () => {
       expect(screen.getByLabelText('collections.single.delete')).toBeDisabled();
     });
 
-    it('opens the EditCollectionDialog (controlled, with the composite id) when the owner clicks Edit', () => {
+    it('opens the DialogEditCollection (controlled, with the composite id) when the owner clicks Edit', () => {
       setAuthStore(AUTHOR_PUBKY);
 
       renderHero();
@@ -485,7 +485,7 @@ describe('CollectionHero', () => {
       expect(dialog).toHaveAttribute('data-collection-id', COMPOSITE_ID);
     });
 
-    it("does not mount the EditCollectionDialog for non-owners (the Edit button isn't shown either)", () => {
+    it("does not mount the DialogEditCollection for non-owners (the Edit button isn't shown either)", () => {
       setAuthStore('some-other-user');
 
       renderHero();

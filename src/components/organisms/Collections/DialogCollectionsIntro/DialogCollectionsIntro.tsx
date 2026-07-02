@@ -15,8 +15,8 @@ import {
 /** Library illustration shown in the first-collection onboarding intro. */
 const COLLECTIONS_INTRO_IMAGE = '/images/collections-onboarding.webp';
 
-type CollectionsIntroDialogProps = {
-  /** Controlled open state, owned by `NewCollectionDialog`. */
+type DialogCollectionsIntroProps = {
+  /** Controlled open state, owned by `DialogNewCollection`. */
   open: boolean;
   /** Fires on close (X / Cancel / overlay) — never on Continue. */
   onOpenChange: (open: boolean) => void;
@@ -28,9 +28,9 @@ type CollectionsIntroDialogProps = {
  * First-run onboarding intro for Collections. Shown once a user with no
  * collections of their own clicks "New Collection", ahead of the create form.
  * Purely presentational: the gate (when to show) and the Continue → form
- * transition are owned by `NewCollectionDialog`.
+ * transition are owned by `DialogNewCollection`.
  */
-export function CollectionsIntroDialog({ open, onOpenChange, onContinue }: CollectionsIntroDialogProps) {
+export function DialogCollectionsIntro({ open, onOpenChange, onContinue }: DialogCollectionsIntroProps) {
   const t = useTranslations('collections.intro');
 
   return (

@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`CollectionFormDialog - Snapshots > matches snapshot in the default (no cover, idle) state 1`] = `
+exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no cover, idle) state 1`] = `
 <body
   data-scroll-locked="1"
   style="pointer-events: none;"
@@ -246,7 +246,7 @@ exports[`CollectionFormDialog - Snapshots > matches snapshot in the default (no 
 </body>
 `;
 
-exports[`CollectionFormDialog - Snapshots > matches snapshot in the saving state 1`] = `
+exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state 1`] = `
 <body
   data-scroll-locked="1"
   style="pointer-events: none;"
@@ -497,7 +497,7 @@ exports[`CollectionFormDialog - Snapshots > matches snapshot in the saving state
 </body>
 `;
 
-exports[`CollectionFormDialog - Snapshots > matches snapshot with a cover preview present 1`] = `
+exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover preview present 1`] = `
 <body
   data-scroll-locked="1"
   style="pointer-events: none;"

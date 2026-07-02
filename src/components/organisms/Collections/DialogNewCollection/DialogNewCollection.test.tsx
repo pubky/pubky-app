@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Button } from '@/atoms/Button/Button';
-import { NewCollectionDialog } from './NewCollectionDialog';
+import { DialogNewCollection } from './DialogNewCollection';
 
 const mocks = vi.hoisted(() => ({
   commitCreateCollection: vi.fn(),
@@ -23,7 +23,7 @@ const translations: Record<string, string> = {
   'collections.new.coverImageTooLarge': 'Cover image is too large.',
   'collections.new.nameRequired': 'Collection title is required.',
   'collections.new.cancel': 'Cancel',
-  'collections.new.save': 'Save changes',
+  'collections.new.save': 'Save collection',
   'collections.new.saving': 'Saving...',
   'collections.new.created': 'Collection created',
   'collections.new.createFailed': 'Failed to create collection.',
@@ -72,7 +72,7 @@ vi.mock('next-intl', () => ({
     },
 }));
 
-describe('NewCollectionDialog', () => {
+describe('DialogNewCollection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default to an existing collection so the onboarding intro is skipped and
@@ -82,9 +82,9 @@ describe('NewCollectionDialog', () => {
 
   it('opens from the trigger and renders collection fields', () => {
     render(
-      <NewCollectionDialog>
+      <DialogNewCollection>
         <Button>Open dialog</Button>
-      </NewCollectionDialog>,
+      </DialogNewCollection>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -100,18 +100,31 @@ describe('NewCollectionDialog', () => {
 
   it('disables save until a title is entered', () => {
     render(
-      <NewCollectionDialog>
+      <DialogNewCollection>
         <Button>Open dialog</Button>
-      </NewCollectionDialog>,
+      </DialogNewCollection>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
 
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save collection' })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Proof of Work' } });
 
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Save collection' })).toBeEnabled();
+  });
+
+  it('does not show the edit-form Save changes label on create', () => {
+    render(
+      <DialogNewCollection>
+        <Button>Open dialog</Button>
+      </DialogNewCollection>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
+
+    expect(screen.getByRole('button', { name: 'Save collection' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
   });
 
   it('does not show required title feedback when the user only focuses then blurs an untouched title field', async () => {
@@ -120,9 +133,9 @@ describe('NewCollectionDialog', () => {
     // input — doesn't fire the required-field error, grow the dialog, and shift
     // the X button out from under the user's mouseup.
     render(
-      <NewCollectionDialog>
+      <DialogNewCollection>
         <Button>Open dialog</Button>
-      </NewCollectionDialog>,
+      </DialogNewCollection>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -135,9 +148,9 @@ describe('NewCollectionDialog', () => {
 
   it('shows required title feedback once the user types then erases the title', async () => {
     render(
-      <NewCollectionDialog>
+      <DialogNewCollection>
         <Button>Open dialog</Button>
-      </NewCollectionDialog>,
+      </DialogNewCollection>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -149,9 +162,9 @@ describe('NewCollectionDialog', () => {
 
   it('clears required title feedback when a valid title is entered', async () => {
     render(
-      <NewCollectionDialog>
+      <DialogNewCollection>
         <Button>Open dialog</Button>
-      </NewCollectionDialog>,
+      </DialogNewCollection>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -169,9 +182,9 @@ describe('NewCollectionDialog', () => {
 
   it('shows required title feedback for whitespace-only titles', async () => {
     render(
-      <NewCollectionDialog>
+      <DialogNewCollection>
         <Button>Open dialog</Button>
-      </NewCollectionDialog>,
+      </DialogNewCollection>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -185,15 +198,15 @@ describe('NewCollectionDialog', () => {
     mocks.commitCreateCollection.mockResolvedValue('current-user:collection1');
 
     render(
-      <NewCollectionDialog>
+      <DialogNewCollection>
         <Button>Open dialog</Button>
-      </NewCollectionDialog>,
+      </DialogNewCollection>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Proof of Work' } });
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Bitcoin writing' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save collection' }));
 
     await waitFor(() => {
       expect(mocks.commitCreateCollection).toHaveBeenCalledWith({
@@ -219,9 +232,9 @@ describe('NewCollectionDialog', () => {
     vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
 
     render(
-      <NewCollectionDialog>
+      <DialogNewCollection>
         <Button>Open dialog</Button>
-      </NewCollectionDialog>,
+      </DialogNewCollection>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -233,7 +246,7 @@ describe('NewCollectionDialog', () => {
 
     expect(screen.getByRole('button', { name: 'Remove image' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save collection' }));
 
     await waitFor(() => {
       expect(mocks.commitCreateCollection).toHaveBeenCalledWith({
@@ -249,9 +262,9 @@ describe('NewCollectionDialog', () => {
 
   it('rejects non-image files for the cover image picker', () => {
     render(
-      <NewCollectionDialog>
+      <DialogNewCollection>
         <Button>Open dialog</Button>
-      </NewCollectionDialog>,
+      </DialogNewCollection>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -266,17 +279,17 @@ describe('NewCollectionDialog', () => {
 
   describe('controlled mode', () => {
     it('honors the controlled open prop without a trigger child', () => {
-      const { rerender } = render(<NewCollectionDialog open={false} onOpenChange={vi.fn()} />);
+      const { rerender } = render(<DialogNewCollection open={false} onOpenChange={vi.fn()} />);
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-      rerender(<NewCollectionDialog open onOpenChange={vi.fn()} />);
+      rerender(<DialogNewCollection open onOpenChange={vi.fn()} />);
       expect(screen.getByRole('dialog')).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'New Collection' })).toBeInTheDocument();
     });
 
     it('calls onOpenChange when dismissed in controlled mode', () => {
       const onOpenChange = vi.fn();
-      render(<NewCollectionDialog open onOpenChange={onOpenChange} />);
+      render(<DialogNewCollection open onOpenChange={onOpenChange} />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
@@ -288,9 +301,9 @@ describe('NewCollectionDialog', () => {
     it('shows the intro instead of the form for users with no collections', () => {
       mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: false });
       render(
-        <NewCollectionDialog>
+        <DialogNewCollection>
           <Button>Open dialog</Button>
-        </NewCollectionDialog>,
+        </DialogNewCollection>,
       );
 
       fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -303,9 +316,9 @@ describe('NewCollectionDialog', () => {
     it('waits for authored collections to load before showing either dialog state', () => {
       mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: true });
       render(
-        <NewCollectionDialog>
+        <DialogNewCollection>
           <Button>Open dialog</Button>
-        </NewCollectionDialog>,
+        </DialogNewCollection>,
       );
 
       fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -318,9 +331,9 @@ describe('NewCollectionDialog', () => {
     it('advances from the intro to the form on Continue', () => {
       mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: false });
       render(
-        <NewCollectionDialog>
+        <DialogNewCollection>
           <Button>Open dialog</Button>
-        </NewCollectionDialog>,
+        </DialogNewCollection>,
       );
 
       fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -334,9 +347,9 @@ describe('NewCollectionDialog', () => {
     it('skips the intro for users who already have at least one collection', () => {
       mocks.useAuthoredCollections.mockReturnValue({ collections: [{ id: 'c1' }], isLoading: false });
       render(
-        <NewCollectionDialog>
+        <DialogNewCollection>
           <Button>Open dialog</Button>
-        </NewCollectionDialog>,
+        </DialogNewCollection>,
       );
 
       fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -348,9 +361,9 @@ describe('NewCollectionDialog', () => {
     it('does not open the form when the intro is dismissed', () => {
       mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: false });
       render(
-        <NewCollectionDialog>
+        <DialogNewCollection>
           <Button>Open dialog</Button>
-        </NewCollectionDialog>,
+        </DialogNewCollection>,
       );
 
       fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
@@ -362,7 +375,7 @@ describe('NewCollectionDialog', () => {
 
     it('shows the intro in controlled mode for users with no collections', () => {
       mocks.useAuthoredCollections.mockReturnValue({ collections: [], isLoading: false });
-      render(<NewCollectionDialog open onOpenChange={vi.fn()} />);
+      render(<DialogNewCollection open onOpenChange={vi.fn()} />);
 
       expect(screen.getByRole('heading', { name: 'Welcome to Collections' })).toBeInTheDocument();
       expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
@@ -370,7 +383,7 @@ describe('NewCollectionDialog', () => {
   });
 });
 
-describe('NewCollectionDialog - Snapshots', () => {
+describe('DialogNewCollection - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.useAuthoredCollections.mockReturnValue({ collections: [{ id: 'seed-collection' }], isLoading: false });
@@ -378,9 +391,9 @@ describe('NewCollectionDialog - Snapshots', () => {
 
   it('matches snapshot when open', () => {
     render(
-      <NewCollectionDialog>
+      <DialogNewCollection>
         <Button>Open dialog</Button>
-      </NewCollectionDialog>,
+      </DialogNewCollection>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));

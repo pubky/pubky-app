@@ -50,8 +50,8 @@ vi.mock('@/organisms/HeroOwner/HeroOwner', () => ({
   ),
 }));
 
-vi.mock('@/organisms/AddContentDialog/AddContentDialog', () => ({
-  AddContentDialog: ({ dataCy }: { dataCy?: string }) => (
+vi.mock('@/organisms/Collections/DialogAddContent/DialogAddContent', () => ({
+  DialogAddContent: ({ dataCy }: { dataCy?: string }) => (
     <button type="button" data-testid={dataCy ?? 'add-content-dialog'} aria-label="collections.single.content">
       collections.single.content
     </button>

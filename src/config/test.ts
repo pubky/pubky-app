@@ -79,9 +79,11 @@ function createTranslationFunction(namespace: string) {
     if (typeof value === 'string') {
       // Handle interpolation
       if (params) {
-        return Object.entries(params).reduce((str, [paramKey, paramValue]) => {
+        const interpolated = Object.entries(params).reduce((str, [paramKey, paramValue]) => {
           return str.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(paramValue));
         }, value);
+        // Mirror ICU MessageFormat apostrophe escaping ('' → ') used in locale strings.
+        return interpolated.replace(/''/g, "'");
       }
       return value;
     }

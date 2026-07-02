@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`EditCollectionDialog - Snapshots > matches snapshot when open with the envelope prefilled 1`] = `
+exports[`DialogEditCollection - Snapshots > matches snapshot when open with the envelope prefilled 1`] = `
 <body
   data-scroll-locked="1"
   style="pointer-events: none;"
