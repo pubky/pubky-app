@@ -201,7 +201,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
             size="md"
             className="min-w-0 flex-1 gap-2 lg:flex-none"
           />
-          <CollectionCountBadge count={itemCount} />
+          <CollectionCountBadge count={itemCount} onCover={!!coverImage} />
         </Container>
 
         {/* Description */}

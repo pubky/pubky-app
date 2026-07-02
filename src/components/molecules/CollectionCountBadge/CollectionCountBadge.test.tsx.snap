@@ -2,7 +2,7 @@
 
 exports[`CollectionCountBadge - Snapshots > matches the snapshot 1`] = `
 <div
-  class="flex items-center gap-1 text-muted-foreground"
+  class="flex shrink-0 items-center gap-1 text-secondary-foreground"
   data-testid="container"
 >
   <svg
@@ -30,6 +30,44 @@ exports[`CollectionCountBadge - Snapshots > matches the snapshot 1`] = `
     data-testid="typography"
   >
     123
+     
+    posts
+  </span>
+</div>
+`;
+
+exports[`CollectionCountBadge - Snapshots > matches the snapshot in the on-cover pill variant 1`] = `
+<div
+  class="flex shrink-0 items-center gap-1 text-secondary-foreground h-6 justify-center rounded-full bg-card px-2 py-1"
+  data-testid="container"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-sticky-note size-3 shrink-0"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+    />
+    <path
+      d="M15 3v5a1 1 0 0 0 1 1h5"
+    />
+  </svg>
+  <span
+    class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+    data-testid="typography"
+  >
+    123
+     
+    posts
   </span>
 </div>
 `;
