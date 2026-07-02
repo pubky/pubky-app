@@ -4,16 +4,16 @@ import { useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { useEditCollection } from '@/hooks/useEditCollection/useEditCollection';
-import { CollectionFormDialog } from '@/organisms/Collections/CollectionFormDialog/CollectionFormDialog';
+import { DialogCollectionForm } from '@/organisms/Collections/DialogCollectionForm/DialogCollectionForm';
 
-type EditCollectionDialogProps = {
+type DialogEditCollectionProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Composite collection id (`author:postId`) the dialog is editing. */
   compositeCollectionId: string;
 };
 
-export function EditCollectionDialog({ open, onOpenChange, compositeCollectionId }: EditCollectionDialogProps) {
+export function DialogEditCollection({ open, onOpenChange, compositeCollectionId }: DialogEditCollectionProps) {
   const t = useTranslations('collections.edit');
   // Local saving flag, flipped synchronously via `flushSync` so the "Saving..."
   // state paints before any heavy work (e.g. cover image canvas re-encoding)
@@ -41,7 +41,7 @@ export function EditCollectionDialog({ open, onOpenChange, compositeCollectionId
   const isSaving = isSavingLocal || form.formState.isSubmitting;
 
   return (
-    <CollectionFormDialog
+    <DialogCollectionForm
       open={open}
       onOpenChange={handleOpenChange}
       title={t('title')}

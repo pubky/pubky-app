@@ -28,12 +28,12 @@ import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFal
 import { GRID_DASHED_CTA_TRIGGER_CLASS } from '@/organisms/Collections/gridDashedCta.const';
 import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
-import type { AddContentDialogProps } from './AddContentDialog.types';
+import type { DialogAddContentProps } from './DialogAddContent.types';
 
-type AddContentTriggerProps = ComponentPropsWithoutRef<typeof Button> & Pick<AddContentDialogProps, 'dataCy'>;
+type DialogAddContentTriggerProps = ComponentPropsWithoutRef<typeof Button> & Pick<DialogAddContentProps, 'dataCy'>;
 
-const AddContentHeroTrigger = forwardRef<ComponentRef<typeof Button>, AddContentTriggerProps>(
-  function AddContentHeroTrigger({ dataCy, ...props }, ref) {
+const DialogAddContentHeroTrigger = forwardRef<ComponentRef<typeof Button>, DialogAddContentTriggerProps>(
+  function DialogAddContentHeroTrigger({ dataCy, ...props }, ref) {
     const t = useTranslations('collections.single');
 
     return (
@@ -56,8 +56,8 @@ const AddContentHeroTrigger = forwardRef<ComponentRef<typeof Button>, AddContent
   },
 );
 
-const AddContentGridTrigger = forwardRef<ComponentRef<typeof Button>, AddContentTriggerProps>(
-  function AddContentGridTrigger({ dataCy, ...props }, ref) {
+const DialogAddContentGridTrigger = forwardRef<ComponentRef<typeof Button>, DialogAddContentTriggerProps>(
+  function DialogAddContentGridTrigger({ dataCy, ...props }, ref) {
     const t = useTranslations('collections.single');
 
     return (
@@ -217,13 +217,13 @@ function CreatePostCard({ onCreatePost }: { onCreatePost: () => void }) {
   );
 }
 
-function AddContentDialogBody({
+function DialogAddContentBody({
   target,
   onSuccess,
   onCreatePost,
   onOpenFeed,
 }: {
-  target: NonNullable<AddContentDialogProps['target']>;
+  target: NonNullable<DialogAddContentProps['target']>;
   onSuccess: (postId: string) => Promise<void>;
   onCreatePost: () => void;
   onOpenFeed: () => void;
@@ -254,12 +254,12 @@ function AddContentDialogBody({
   );
 }
 
-export function AddContentDialog({
+export function DialogAddContent({
   dataCy = 'add-content',
   disabled = false,
   target = { type: 'bookmarks' },
   triggerVariant = 'hero',
-}: AddContentDialogProps) {
+}: DialogAddContentProps) {
   const t = useTranslations('collections.addContentDialog');
   const [open, setOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(false);
@@ -292,9 +292,9 @@ export function AddContentDialog({
 
   const trigger =
     triggerVariant === 'grid' ? (
-      <AddContentGridTrigger dataCy={dataCy} disabled={disabled} />
+      <DialogAddContentGridTrigger dataCy={dataCy} disabled={disabled} />
     ) : (
-      <AddContentHeroTrigger dataCy={dataCy} disabled={disabled} />
+      <DialogAddContentHeroTrigger dataCy={dataCy} disabled={disabled} />
     );
 
   return (
@@ -305,7 +305,7 @@ export function AddContentDialog({
           className="flex w-3xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
           hiddenTitle={t('title')}
         >
-          <AddContentDialogBody
+          <DialogAddContentBody
             target={target}
             onSuccess={handleSuccess}
             onCreatePost={handleCreatePost}

@@ -11,9 +11,9 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
+import { DialogEditCollection } from '@/organisms/Collections/DialogEditCollection/DialogEditCollection';
 import { DialogEditPost } from '../DialogEditPost/DialogEditPost';
 import { DialogReportPost } from '../DialogReportPost/DialogReportPost';
-import { EditCollectionDialog } from '../EditCollectionDialog/EditCollectionDialog';
 import type { PostMenuActionsProps } from './PostMenuActions.types';
 import { PostMenuActionsContent } from './PostMenuActionsContent/PostMenuActionsContent';
 
@@ -104,7 +104,7 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
       )}
       <DialogReportPost open={reportDialogOpen} onOpenChange={setReportDialogOpen} postId={postId} />
       {isCollection ? (
-        <EditCollectionDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} compositeCollectionId={postId} />
+        <DialogEditCollection open={editDialogOpen} onOpenChange={setEditDialogOpen} compositeCollectionId={postId} />
       ) : (
         <DialogEditPost open={editDialogOpen} onOpenChangeAction={setEditDialogOpen} postId={postId} />
       )}

@@ -23,7 +23,7 @@ const COLLECTION_FORM_INPUT_WRAPPER_CLASS = 'mb-0 min-w-0 overflow-hidden';
 const COLLECTION_FORM_INPUT_CLASS =
   'min-w-0 truncate placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap';
 
-type CollectionFormDialogProps = {
+type DialogCollectionFormProps = {
   /** Controlled open state. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -73,7 +73,7 @@ type CollectionFormDialogProps = {
  * can reuse the same DOM and styling. All copy and submit behavior come from
  * the caller (which owns the hook driving `form`, `cover`, and `onSubmit`).
  */
-export function CollectionFormDialog({
+export function DialogCollectionForm({
   open,
   onOpenChange,
   title,
@@ -86,7 +86,7 @@ export function CollectionFormDialog({
   coverInputId,
   disableOpenAutoFocus = false,
   children,
-}: CollectionFormDialogProps) {
+}: DialogCollectionFormProps) {
   const t = useTranslations('collections.new');
   const {
     previewUrl: coverPreviewUrl,

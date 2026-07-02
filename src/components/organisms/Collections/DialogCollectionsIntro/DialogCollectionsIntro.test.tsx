@@ -1,14 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CollectionsIntroDialog } from './CollectionsIntroDialog';
+import { DialogCollectionsIntro } from './DialogCollectionsIntro';
 
-describe('CollectionsIntroDialog', () => {
+describe('DialogCollectionsIntro', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders the welcome copy, illustration, and actions when open', () => {
-    render(<CollectionsIntroDialog open onOpenChange={vi.fn()} onContinue={vi.fn()} />);
+    render(<DialogCollectionsIntro open onOpenChange={vi.fn()} onContinue={vi.fn()} />);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Welcome to Collections' })).toBeInTheDocument();
@@ -23,7 +23,7 @@ describe('CollectionsIntroDialog', () => {
   });
 
   it('renders nothing when closed', () => {
-    render(<CollectionsIntroDialog open={false} onOpenChange={vi.fn()} onContinue={vi.fn()} />);
+    render(<DialogCollectionsIntro open={false} onOpenChange={vi.fn()} onContinue={vi.fn()} />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -31,7 +31,7 @@ describe('CollectionsIntroDialog', () => {
   it('advances the flow on Continue without requesting a close', () => {
     const onContinue = vi.fn();
     const onOpenChange = vi.fn();
-    render(<CollectionsIntroDialog open onOpenChange={onOpenChange} onContinue={onContinue} />);
+    render(<DialogCollectionsIntro open onOpenChange={onOpenChange} onContinue={onContinue} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
@@ -42,7 +42,7 @@ describe('CollectionsIntroDialog', () => {
   it('requests a close on Cancel', () => {
     const onContinue = vi.fn();
     const onOpenChange = vi.fn();
-    render(<CollectionsIntroDialog open onOpenChange={onOpenChange} onContinue={onContinue} />);
+    render(<DialogCollectionsIntro open onOpenChange={onOpenChange} onContinue={onContinue} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
@@ -52,7 +52,7 @@ describe('CollectionsIntroDialog', () => {
 
   it('requests a close from the dialog X button', () => {
     const onOpenChange = vi.fn();
-    render(<CollectionsIntroDialog open onOpenChange={onOpenChange} onContinue={vi.fn()} />);
+    render(<DialogCollectionsIntro open onOpenChange={onOpenChange} onContinue={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
@@ -60,14 +60,14 @@ describe('CollectionsIntroDialog', () => {
   });
 });
 
-describe('CollectionsIntroDialog - Snapshots', () => {
+describe('DialogCollectionsIntro - Snapshots', () => {
   it('matches snapshot when open', () => {
-    render(<CollectionsIntroDialog open onOpenChange={vi.fn()} onContinue={vi.fn()} />);
+    render(<DialogCollectionsIntro open onOpenChange={vi.fn()} onContinue={vi.fn()} />);
     expect(document.body).toMatchSnapshot();
   });
 
   it('matches snapshot when closed', () => {
-    const { container } = render(<CollectionsIntroDialog open={false} onOpenChange={vi.fn()} onContinue={vi.fn()} />);
+    const { container } = render(<DialogCollectionsIntro open={false} onOpenChange={vi.fn()} onContinue={vi.fn()} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

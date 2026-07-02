@@ -157,7 +157,8 @@
     "signIn": "Entrar",
     "feed": "Feed",
     "search": "Pesquisar",
-    "collections": "Coleções"
+    "collections": "Coleções",
+    "new": "Novo"
   },
   "settings": {
     "title": "Configurações",
@@ -641,7 +642,7 @@
     },
     "deleteCollection": {
       "title": "Excluir coleção?",
-      "description": "Tem certeza de que deseja excluir {name}? As pessoas que seguem esta coleção não terão mais acesso a ela. As postagens dentro da coleção não serão excluídas.",
+      "description": "Tem certeza de que deseja excluir ''{name}''? As pessoas que seguem esta coleção não terão mais acesso a ela. As postagens dentro da coleção não serão excluídas.",
       "confirmButton": "Excluir",
       "cancelButton": "Cancelar"
     },
@@ -1337,7 +1338,7 @@
       "coverImageTooLarge": "A imagem de capa é muito grande.",
       "nameRequired": "O título da coleção é obrigatório.",
       "cancel": "Cancelar",
-      "save": "Salvar alterações",
+      "save": "Salvar coleção",
       "saving": "Salvando...",
       "created": "Coleção criada",
       "createFailed": "Falha ao criar a coleção."

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { EditCollectionDialog } from './EditCollectionDialog';
+import { DialogEditCollection } from './DialogEditCollection';
 
 const mocks = vi.hoisted(() => ({
   commitEditCollection: vi.fn(),
@@ -73,7 +73,7 @@ const collectionContent = (overrides?: { name?: string; description?: string; co
     cover_image: overrides?.cover_image ?? null,
   });
 
-describe('EditCollectionDialog', () => {
+describe('DialogEditCollection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.postDetails = { content: collectionContent() };
@@ -81,17 +81,24 @@ describe('EditCollectionDialog', () => {
 
   it('renders the edit-specific title and submit label', async () => {
     const onOpenChange = vi.fn();
-    render(<EditCollectionDialog open onOpenChange={onOpenChange} compositeCollectionId={COMPOSITE_ID} />);
+    render(<DialogEditCollection open onOpenChange={onOpenChange} compositeCollectionId={COMPOSITE_ID} />);
 
     expect(await screen.findByRole('heading', { name: 'Edit Collection' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+  });
+
+  it('does not show the create-form Save collection label on edit', async () => {
+    render(<DialogEditCollection open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
+
+    expect(await screen.findByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save collection' })).not.toBeInTheDocument();
   });
 
   it('prefills the form with the current collection name and description from the envelope', async () => {
     mocks.postDetails = {
       content: collectionContent({ name: 'Proof of Work', description: 'Bitcoin essays' }),
     };
-    render(<EditCollectionDialog open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
+    render(<DialogEditCollection open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
 
     await waitFor(() => {
       expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Proof of Work');
@@ -103,7 +110,7 @@ describe('EditCollectionDialog', () => {
     mocks.postDetails = {
       content: collectionContent({ name: 'Proof of Work', description: 'Bitcoin essays' }),
     };
-    render(<EditCollectionDialog open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
+    render(<DialogEditCollection open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
 
     await screen.findByLabelText('Title');
     // The wrapper passes `disableOpenAutoFocus` so Radix's open-autofocus is
@@ -114,7 +121,7 @@ describe('EditCollectionDialog', () => {
   it('submits via PostController.commitEditCollection and closes the dialog on success', async () => {
     mocks.commitEditCollection.mockResolvedValue(undefined);
     const onOpenChange = vi.fn();
-    render(<EditCollectionDialog open onOpenChange={onOpenChange} compositeCollectionId={COMPOSITE_ID} />);
+    render(<DialogEditCollection open onOpenChange={onOpenChange} compositeCollectionId={COMPOSITE_ID} />);
 
     await waitFor(() => expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Reading list'));
 
@@ -138,7 +145,7 @@ describe('EditCollectionDialog', () => {
   it('keeps the dialog open and toasts an error when the controller throws', async () => {
     mocks.commitEditCollection.mockRejectedValue(new Error('boom'));
     const onOpenChange = vi.fn();
-    render(<EditCollectionDialog open onOpenChange={onOpenChange} compositeCollectionId={COMPOSITE_ID} />);
+    render(<DialogEditCollection open onOpenChange={onOpenChange} compositeCollectionId={COMPOSITE_ID} />);
 
     await waitFor(() => expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Reading list'));
 
@@ -155,11 +162,11 @@ describe('EditCollectionDialog', () => {
 
   it('disables inputs and the picker while the collection envelope is loading', async () => {
     // Until `usePostDetails` resolves, the hook returns isLoaded=false. The
-    // dialog wires that through CollectionFormDialog so the user can't type
+    // dialog wires that through DialogCollectionForm so the user can't type
     // into fields that the prefill effect is about to overwrite.
     mocks.postDetails = null;
 
-    render(<EditCollectionDialog open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
+    render(<DialogEditCollection open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
 
     expect(await screen.findByLabelText('Title')).toBeDisabled();
     expect(screen.getByLabelText('Description')).toBeDisabled();
@@ -171,7 +178,7 @@ describe('EditCollectionDialog', () => {
 
   it('calls onOpenChange(false) when the Cancel button is clicked', async () => {
     const onOpenChange = vi.fn();
-    render(<EditCollectionDialog open onOpenChange={onOpenChange} compositeCollectionId={COMPOSITE_ID} />);
+    render(<DialogEditCollection open onOpenChange={onOpenChange} compositeCollectionId={COMPOSITE_ID} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
 
@@ -179,7 +186,7 @@ describe('EditCollectionDialog', () => {
   });
 });
 
-describe('EditCollectionDialog - Snapshots', () => {
+describe('DialogEditCollection - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.postDetails = { content: collectionContent() };
@@ -190,7 +197,7 @@ describe('EditCollectionDialog - Snapshots', () => {
       content: collectionContent({ name: 'Proof of Work', description: 'Bitcoin essays' }),
     };
 
-    render(<EditCollectionDialog open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
+    render(<DialogEditCollection open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
 
     await waitFor(() => expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Proof of Work'));
     expect(document.body).toMatchSnapshot();
