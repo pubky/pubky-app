@@ -1,8 +1,8 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`CollectionsIntroDialog - Snapshots > matches snapshot when closed 1`] = `null`;
+exports[`DialogCollectionsIntro - Snapshots > matches snapshot when closed 1`] = `null`;
 
-exports[`CollectionsIntroDialog - Snapshots > matches snapshot when open 1`] = `
+exports[`DialogCollectionsIntro - Snapshots > matches snapshot when open 1`] = `
 <body
   data-scroll-locked="1"
   style="pointer-events: none;"

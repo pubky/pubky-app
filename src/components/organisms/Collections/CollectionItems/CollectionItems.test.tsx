@@ -42,8 +42,8 @@ vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
   ),
 }));
 
-vi.mock('@/organisms/AddContentDialog/AddContentDialog', () => ({
-  AddContentDialog: ({ dataCy, triggerVariant }: { dataCy?: string; triggerVariant?: string }) => (
+vi.mock('@/organisms/Collections/DialogAddContent/DialogAddContent', () => ({
+  DialogAddContent: ({ dataCy, triggerVariant }: { dataCy?: string; triggerVariant?: string }) => (
     <div data-testid="add-content-dialog" data-cy={dataCy} data-trigger-variant={triggerVariant ?? 'hero'} />
   ),
 }));

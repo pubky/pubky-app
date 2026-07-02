@@ -1,6 +1,6 @@
 /**
  * Identifies the finite, membership-ordered feed an optimistic post should be
- * inserted into. Mirrors the shape used by `AddContentDialog`'s target so the
+ * inserted into. Mirrors the shape used by `DialogAddContent`'s target so the
  * FAB and the in-feed "Add content" flow speak the same language.
  */
 export type FeedInsertTarget =

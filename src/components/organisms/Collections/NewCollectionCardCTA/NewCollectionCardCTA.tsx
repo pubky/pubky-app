@@ -5,8 +5,8 @@ import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Typography } from '@/atoms/Typography/Typography';
+import { DialogNewCollection } from '@/organisms/Collections/DialogNewCollection/DialogNewCollection';
 import { GRID_DASHED_CTA_TRIGGER_CLASS } from '@/organisms/Collections/gridDashedCta.const';
-import { NewCollectionDialog } from '@/organisms/NewCollectionDialog/NewCollectionDialog';
 
 const NewCollectionCardCTATrigger = forwardRef<ComponentRef<typeof Button>, ComponentPropsWithoutRef<typeof Button>>(
   function NewCollectionCardCTATrigger(props, ref) {
@@ -36,8 +36,8 @@ const NewCollectionCardCTATrigger = forwardRef<ComponentRef<typeof Button>, Comp
  */
 export function NewCollectionCardCTA() {
   return (
-    <NewCollectionDialog>
+    <DialogNewCollection>
       <NewCollectionCardCTATrigger />
-    </NewCollectionDialog>
+    </DialogNewCollection>
   );
 }
