@@ -189,7 +189,7 @@ export function useNotifications(): UseNotificationsResult {
    * Mark all notifications as read
    */
   const markAllAsRead = useCallback(() => {
-    NotificationController.markAllAsRead();
+    void NotificationController.markAllAsRead();
   }, []);
 
   /**
