@@ -172,7 +172,7 @@ describe('useUserProfile', () => {
 
       const { result } = renderHook(() => useUserProfile('test-user-id'));
 
-      // Uses DEFAULT_URL from config (SSR-safe)
+      // Uses the mocked getDefaultUrl() from @/config/metadata (SSR-safe)
       expect(result.current.profile?.link).toBe('https://example.com/profile/test-user-id');
     });
   });

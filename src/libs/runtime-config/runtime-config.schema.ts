@@ -344,8 +344,8 @@ export const NETWORK_RUNTIME_DEFAULTS: NetworkRuntimeConfig = {
 };
 
 /**
- * Env-input schema WITH staging defaults layered. Used only by the dev/test fallback over
- * `NEXT_PUBLIC_*` (never for the production `PUBKY_RUNTIME_*` parse).
+ * Env-input schema WITH staging defaults layered. Used only by the lenient dev/test parse of
+ * `PUBKY_RUNTIME_*` (never for the strict deployed/required-mode parse).
  */
 export const runtimeEnvInputSchemaWithDefaults = z
   .object({
@@ -469,62 +469,4 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   email: 'PUBKY_RUNTIME_EMAIL',
   appStoreUrl: 'PUBKY_RUNTIME_APP_STORE_URL',
   playStoreUrl: 'PUBKY_RUNTIME_PLAY_STORE_URL',
-};
-
-/**
- * Build-time / local default env var names. Used only by the dev/test fallback.
- */
-export const NEXT_PUBLIC_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
-  nexusUrl: 'NEXT_PUBLIC_NEXUS_URL',
-  cdnUrl: 'NEXT_PUBLIC_CDN_URL',
-  homeserver: 'NEXT_PUBLIC_HOMESERVER',
-  homeserverUrl: 'NEXT_PUBLIC_HOMESERVER_URL',
-  homegateUrl: 'NEXT_PUBLIC_HOMEGATE_URL',
-  defaultHttpRelay: 'NEXT_PUBLIC_DEFAULT_HTTP_RELAY',
-  pkarrRelays: 'NEXT_PUBLIC_PKARR_RELAYS',
-  testnet: 'NEXT_PUBLIC_TESTNET',
-  sentryDsn: 'NEXT_PUBLIC_SENTRY_DSN',
-  sentryEnvironment: 'NEXT_PUBLIC_SENTRY_ENVIRONMENT',
-  sentryTracesSampleRate: 'NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE',
-  sentryReplaysSessionSampleRate: 'NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE',
-  sentryReplaysOnErrorSampleRate: 'NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE',
-  notificationPollIntervalMs: 'NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS',
-  notificationPollOnStart: 'NEXT_PUBLIC_NOTIFICATION_POLL_ON_START',
-  notificationRespectPageVisibility: 'NEXT_PUBLIC_NOTIFICATION_RESPECT_PAGE_VISIBILITY',
-  streamPollIntervalMs: 'NEXT_PUBLIC_STREAM_POLL_INTERVAL_MS',
-  streamPollOnStart: 'NEXT_PUBLIC_STREAM_POLL_ON_START',
-  streamRespectPageVisibility: 'NEXT_PUBLIC_STREAM_RESPECT_PAGE_VISIBILITY',
-  streamFetchLimit: 'NEXT_PUBLIC_STREAM_FETCH_LIMIT',
-  streamCacheMaxAgeMs: 'NEXT_PUBLIC_STREAM_CACHE_MAX_AGE_MS',
-  maxStreamTags: 'NEXT_MAX_STREAM_TAGS',
-  ttlPostMs: 'NEXT_PUBLIC_TTL_POST_MS',
-  ttlUserMs: 'NEXT_PUBLIC_TTL_USER_MS',
-  ttlBatchIntervalMs: 'NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS',
-  ttlPostMaxBatchSize: 'NEXT_PUBLIC_TTL_POST_MAX_BATCH_SIZE',
-  ttlUserMaxBatchSize: 'NEXT_PUBLIC_TTL_USER_MAX_BATCH_SIZE',
-  ttlRetryDelayMs: 'NEXT_PUBLIC_TTL_RETRY_DELAY_MS',
-  moderationId: 'NEXT_PUBLIC_MODERATION_ID',
-  moderatedTags: 'NEXT_PUBLIC_MODERATED_TAGS',
-  exchangeRateApi: 'NEXT_PUBLIC_EXCHANGE_RATE_API',
-  preludeSdkKey: 'NEXT_PUBLIC_PRELUDE_SDK_KEY',
-  preludeSdkTimeoutMs: 'NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS',
-  plausibleDomain: 'NEXT_PUBLIC_PLAUSIBLE_DOMAIN',
-  plausibleScriptUrl: 'NEXT_PUBLIC_PLAUSIBLE_SCRIPT_URL',
-  previewImage: 'NEXT_PUBLIC_PREVIEW_IMAGE',
-  siteName: 'NEXT_PUBLIC_SITE_NAME',
-  locale: 'NEXT_PUBLIC_LOCALE',
-  author: 'NEXT_PUBLIC_AUTHOR',
-  keywords: 'NEXT_PUBLIC_KEYWORDS',
-  type: 'NEXT_PUBLIC_TYPE',
-  creator: 'NEXT_PUBLIC_CREATOR',
-  defaultUrl: 'NEXT_PUBLIC_DEFAULT_URL',
-  pubkyRingUrl: 'NEXT_PUBLIC_PUBKY_RING_URL',
-  pubkyCoreUrl: 'NEXT_PUBLIC_PUBKY_CORE_URL',
-  twitterUrl: 'NEXT_PUBLIC_TWITTER_URL',
-  twitterGetpubkyUrl: 'NEXT_PUBLIC_TWITTER_GETPUBKY_URL',
-  telegramUrl: 'NEXT_PUBLIC_TELEGRAM_URL',
-  githubUrl: 'NEXT_PUBLIC_GITHUB_URL',
-  email: 'NEXT_PUBLIC_EMAIL',
-  appStoreUrl: 'NEXT_PUBLIC_APP_STORE_URL',
-  playStoreUrl: 'NEXT_PUBLIC_PLAY_STORE_URL',
 };

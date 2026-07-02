@@ -119,7 +119,16 @@ describe('runtime-config resolver', () => {
       expect(config.sentryReplaysOnErrorSampleRate).toBe(SENTRY_RUNTIME_DEFAULTS.sentryReplaysOnErrorSampleRate);
     });
 
-    it('throws on partial PUBKY_RUNTIME_* config', () => {
+    it('strict-parses PUBKY_RUNTIME_* in deployed/required mode', () => {
+      simulateDeployedEnv();
+      setAllRuntimeEnv();
+      const config = readServerConfig();
+      expect(config.nexusUrl).toBe('https://nexus.runtime.example.com');
+      expect(config.sentryEnvironment).toBe('staging');
+    });
+
+    it('throws on partial PUBKY_RUNTIME_* config in deployed/required mode', () => {
+      simulateDeployedEnv();
       setAllRuntimeEnv();
       delete process.env[PUBKY_RUNTIME_ENV_NAMES.testnet];
       expect(() => readServerConfig()).toThrow(/Runtime config is incomplete or invalid/);
@@ -136,17 +145,28 @@ describe('runtime-config resolver', () => {
       expect(config.siteName).toBe('Runtime Site');
     });
 
-    it('falls back to NEXT_PUBLIC_* defaults in dev/test', () => {
-      // No PUBKY_RUNTIME_* set; running under Vitest -> not required -> fallback.
+    it('resolves staging defaults when nothing is set in dev/test', () => {
+      // No PUBKY_RUNTIME_* set (cleared in beforeEach); not required under Vitest -> staging defaults.
       const config = readServerConfig();
-      // Comes from src/config/test.ts (NEXT_PUBLIC_NEXUS_URL).
+      expect(config.nexusUrl).toBe(NETWORK_RUNTIME_DEFAULTS.nexusUrl);
+      // The staging default, spelled out:
       expect(config.nexusUrl).toBe('https://nexus.staging.pubky.app');
-      expect(config.testnet).toBe(true);
+      expect(config.testnet).toBe(NETWORK_RUNTIME_DEFAULTS.testnet);
+    });
+
+    it('layers partial PUBKY_RUNTIME_* over staging defaults in dev/test', () => {
+      // Partial overrides (e.g. `.env.local` pointing only nexus at localhost) never throw
+      // outside deployed/required mode; unset values keep their staging defaults.
+      process.env[PUBKY_RUNTIME_ENV_NAMES.nexusUrl] = 'http://localhost:8080';
+      const config = readServerConfig();
+      expect(config.nexusUrl).toBe('http://localhost:8080');
+      expect(config.cdnUrl).toBe(NETWORK_RUNTIME_DEFAULTS.cdnUrl);
+      expect(config.testnet).toBe(NETWORK_RUNTIME_DEFAULTS.testnet);
     });
 
     it('throws when required and no PUBKY_RUNTIME_* present', () => {
       simulateDeployedEnv();
-      expect(() => readServerConfig()).toThrow(/no required PUBKY_RUNTIME_\* network variables are set/);
+      expect(() => readServerConfig()).toThrow(/Runtime config is incomplete or invalid/);
     });
 
     it('does not throw during the production build phase', () => {
@@ -171,8 +191,9 @@ describe('runtime-config resolver', () => {
       expect(() => readClientConfig()).toThrow();
     });
 
-    it('falls back to NEXT_PUBLIC_* defaults when not injected (no RootContainer needed)', () => {
+    it('resolves staging defaults when not injected (no RootContainer needed)', () => {
       const config = readClientConfig();
+      // The staging default, spelled out:
       expect(config.nexusUrl).toBe('https://nexus.staging.pubky.app');
     });
 
