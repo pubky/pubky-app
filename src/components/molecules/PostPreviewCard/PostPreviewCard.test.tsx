@@ -40,8 +40,8 @@ vi.mock('@/organisms/PostContentBase/PostContentBase', () => {
 
 vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
-    PostHeader: vi.fn(({ postId }: { postId: string }) => (
-      <div data-testid="post-header" data-post-id={postId}>
+    PostHeader: vi.fn(({ postId, timeAgoPlacement }: { postId: string; timeAgoPlacement?: string }) => (
+      <div data-testid="post-header" data-post-id={postId} data-time-ago-placement={timeAgoPlacement}>
         PostHeader {postId}
       </div>
     )),
@@ -113,6 +113,12 @@ describe('PostPreviewCard', () => {
     expect(screen.getByTestId('card-content')).toBeInTheDocument();
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('post-content-base')).toBeInTheDocument();
+  });
+
+  it('places the timestamp under user info for narrow preview cards', () => {
+    render(<PostPreviewCard postId="test-post-123" />);
+
+    expect(screen.getByTestId('post-header')).toHaveAttribute('data-time-ago-placement', 'bottom-left');
   });
 
   it('has correct accessibility attributes', () => {

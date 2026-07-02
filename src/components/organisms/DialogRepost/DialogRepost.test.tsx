@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DialogContent } from '@/atoms/Dialog/Dialog';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostInput } from '../PostInput/PostInput';
 import { DialogRepost } from './DialogRepost';
@@ -19,28 +20,32 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
         {children}
       </div>
     ),
-    DialogContent: ({
-      children,
-      className,
-      hiddenTitle,
-      'aria-describedby': ariaDescribedBy,
-      ...props
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      hiddenTitle?: string;
-      'aria-describedby'?: string;
-      [key: string]: unknown;
-    }) => (
-      <div
-        data-testid="dialog-content"
-        className={className}
-        aria-label={hiddenTitle}
-        aria-describedby={ariaDescribedBy}
-        {...props}
-      >
-        {children}
-      </div>
+    DialogContent: vi.fn(
+      ({
+        children,
+        className,
+        hiddenTitle,
+        avoidKeyboard: _avoidKeyboard,
+        'aria-describedby': ariaDescribedBy,
+        ...props
+      }: {
+        children: React.ReactNode;
+        className?: string;
+        hiddenTitle?: string;
+        avoidKeyboard?: boolean;
+        'aria-describedby'?: string;
+        [key: string]: unknown;
+      }) => (
+        <div
+          data-testid="dialog-content"
+          className={className}
+          aria-label={hiddenTitle}
+          aria-describedby={ariaDescribedBy}
+          {...props}
+        >
+          {children}
+        </div>
+      ),
     ),
     DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
     DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
@@ -192,6 +197,13 @@ describe('DialogRepost', () => {
       },
       undefined,
     );
+  });
+
+  it('enables keyboard avoidance on DialogContent', () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogRepost postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    expect(vi.mocked(DialogContent).mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ avoidKeyboard: true }));
   });
 
   it('applies config overrides to the title and forwards copy/icon to PostInput', () => {

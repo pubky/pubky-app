@@ -269,6 +269,8 @@ export function PostInput({
               readOnly={!isAuthenticated}
               aria-haspopup="listbox"
               autoFocus={autoFocusTextarea}
+              // Suppress the iOS keyboard autofill accessory bar (passwords/cards/contacts)
+              autoComplete="off"
             />
 
             {/* Mention autocomplete popover */}

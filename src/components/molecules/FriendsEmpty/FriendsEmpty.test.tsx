@@ -1,12 +1,49 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { APP_ROUTES } from '@/app/routes';
 import { FriendsEmpty } from './FriendsEmpty';
+
+const mocks = vi.hoisted(() => ({
+  push: vi.fn(),
+  requireAuth: vi.fn(<T,>(action: () => T) => action()),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mocks.push,
+  }),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    isAuthenticated: true,
+    requireAuth: mocks.requireAuth,
+  }),
+}));
 
 // Mock atoms
 vi.mock('@/atoms/Button/Button', () => {
   return {
-    Button: ({ children, className, variant }: { children: React.ReactNode; className?: string; variant?: string }) => (
-      <button data-testid="button" className={className} data-variant={variant}>
+    Button: ({
+      children,
+      className,
+      variant,
+      onClick,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      variant?: string;
+      onClick?: () => void;
+    }) => (
+      <button
+        type="button"
+        data-testid="button"
+        className={className}
+        data-variant={variant}
+        onClick={onClick}
+        {...props}
+      >
         {children}
       </button>
     ),
@@ -51,9 +88,31 @@ vi.mock('@/atoms/Typography/Typography', () => {
 });
 
 describe('FriendsEmpty', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.requireAuth.mockImplementation(<T,>(action: () => T) => action());
+  });
+
   it('renders title', () => {
     render(<FriendsEmpty />);
     expect(screen.getByText(/No friends yet/i)).toBeInTheDocument();
+  });
+
+  it('navigates to Who to Follow when the first button is clicked', () => {
+    render(<FriendsEmpty />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Who to Follow/i }));
+
+    expect(mocks.requireAuth).toHaveBeenCalledTimes(1);
+    expect(mocks.push).toHaveBeenCalledWith(APP_ROUTES.WHO_TO_FOLLOW);
+  });
+
+  it('navigates to Hot when Popular Users is clicked', () => {
+    render(<FriendsEmpty />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Popular Users/i }));
+
+    expect(mocks.push).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
 });
 

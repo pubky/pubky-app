@@ -73,7 +73,7 @@ export function PostPreviewCard({ postId, className, contrast }: PostPreviewCard
         <PostMissing />
       ) : (
         <CardContent className="flex min-w-0 flex-col gap-4 p-6">
-          <PostHeader postId={postId} showPopover={false} />
+          <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" />
           <PostContentBase postId={postId} contrast={contrast} />
         </CardContent>
       )}

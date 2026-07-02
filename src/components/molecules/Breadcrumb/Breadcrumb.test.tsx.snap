@@ -3,20 +3,20 @@
 exports[`Breadcrumb - Snapshots > Breadcrumb Container > matches snapshot with custom className 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex custom-breadcrumb"
+  class="flex w-full max-w-full min-w-0 custom-breadcrumb"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -29,20 +29,20 @@ exports[`Breadcrumb - Snapshots > Breadcrumb Container > matches snapshot with c
 exports[`Breadcrumb - Snapshots > Breadcrumb Container > matches snapshot with default props 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -55,20 +55,20 @@ exports[`Breadcrumb - Snapshots > Breadcrumb Container > matches snapshot with d
 exports[`Breadcrumb - Snapshots > Breadcrumb Container > matches snapshot with medium size 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -81,20 +81,20 @@ exports[`Breadcrumb - Snapshots > Breadcrumb Container > matches snapshot with m
 exports[`Breadcrumb - Snapshots > Breadcrumb Container > matches snapshot with small size 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-1.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-1.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -107,10 +107,10 @@ exports[`Breadcrumb - Snapshots > Breadcrumb Container > matches snapshot with s
 exports[`Breadcrumb - Snapshots > BreadcrumbEllipsis > matches snapshot with custom className 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <span
       aria-hidden="true"
@@ -159,10 +159,10 @@ exports[`Breadcrumb - Snapshots > BreadcrumbEllipsis > matches snapshot with cus
 exports[`Breadcrumb - Snapshots > BreadcrumbEllipsis > matches snapshot with default props 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <span
       aria-hidden="true"
@@ -211,20 +211,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbEllipsis > matches snapshot with def
 exports[`Breadcrumb - Snapshots > BreadcrumbItem > matches snapshot with current variant 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-foreground"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-foreground"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Current
         </span>
@@ -237,20 +237,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbItem > matches snapshot with current
 exports[`Breadcrumb - Snapshots > BreadcrumbItem > matches snapshot with custom className 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer custom-item"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer custom-item"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -263,20 +263,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbItem > matches snapshot with custom 
 exports[`Breadcrumb - Snapshots > BreadcrumbItem > matches snapshot with dropdown variant 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded overflow-hidden"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded overflow-hidden"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Menu
         </span>
@@ -306,20 +306,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbItem > matches snapshot with dropdow
 exports[`Breadcrumb - Snapshots > BreadcrumbItem > matches snapshot with href prop 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <a
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         href="/home"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -332,20 +332,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbItem > matches snapshot with href pr
 exports[`Breadcrumb - Snapshots > BreadcrumbItem > matches snapshot with link variant 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -358,10 +358,10 @@ exports[`Breadcrumb - Snapshots > BreadcrumbItem > matches snapshot with link va
 exports[`Breadcrumb - Snapshots > BreadcrumbPage > matches snapshot with custom className 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <span
       aria-current="page"
@@ -378,10 +378,10 @@ exports[`Breadcrumb - Snapshots > BreadcrumbPage > matches snapshot with custom 
 exports[`Breadcrumb - Snapshots > BreadcrumbPage > matches snapshot with default props 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <span
       aria-current="page"
@@ -398,20 +398,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbPage > matches snapshot with default
 exports[`Breadcrumb - Snapshots > BreadcrumbSeparator > matches snapshot with custom className 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -447,20 +447,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbSeparator > matches snapshot with cu
 exports[`Breadcrumb - Snapshots > BreadcrumbSeparator > matches snapshot with custom icon 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -484,20 +484,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbSeparator > matches snapshot with cu
 exports[`Breadcrumb - Snapshots > BreadcrumbSeparator > matches snapshot with default icon 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -533,20 +533,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbSeparator > matches snapshot with de
 exports[`Breadcrumb - Snapshots > BreadcrumbSeparator > matches snapshot with medium size 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -582,20 +582,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbSeparator > matches snapshot with me
 exports[`Breadcrumb - Snapshots > BreadcrumbSeparator > matches snapshot with small size 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -631,20 +631,20 @@ exports[`Breadcrumb - Snapshots > BreadcrumbSeparator > matches snapshot with sm
 exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapshot for complex breadcrumb 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <a
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         href="/"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -737,14 +737,14 @@ exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapsho
       </svg>
     </li>
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded overflow-hidden"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded overflow-hidden"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Category
         </span>
@@ -791,14 +791,14 @@ exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapsho
       </svg>
     </li>
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <a
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         href="/products"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Products
         </span>
@@ -842,20 +842,20 @@ exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapsho
 exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapshot for simple breadcrumb 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <a
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         href="/"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -899,20 +899,20 @@ exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapsho
 exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapshot for small size breadcrumb 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex"
+  class="flex w-full max-w-full min-w-0"
 >
   <ol
-    class="flex flex-wrap items-center gap-1.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-1.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <a
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         href="/"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -942,14 +942,14 @@ exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapsho
       </svg>
     </li>
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       <a
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         href="/category"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Category
         </span>
@@ -993,20 +993,20 @@ exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapsho
 exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapshot with custom styling 1`] = `
 <nav
   aria-label="breadcrumb"
-  class="inline-flex custom-breadcrumb"
+  class="flex w-full max-w-full min-w-0 custom-breadcrumb"
 >
   <ol
-    class="flex flex-wrap items-center gap-2.5"
+    class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
   >
     <li
-      class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer custom-link"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer custom-link"
     >
       <a
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         href="/"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Home
         </span>
@@ -1022,14 +1022,14 @@ exports[`Breadcrumb - Snapshots > Complete Breadcrumb Examples > matches snapsho
       </span>
     </li>
     <li
-      class="flex items-center justify-center gap-2.5 text-foreground custom-current"
+      class="flex min-w-0 items-center justify-start gap-2.5 text-foreground custom-current"
     >
       <button
-        class="flex items-center gap-1"
+        class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
         type="button"
       >
         <span
-          class="font-sans text-sm leading-5 font-bold"
+          class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
         >
           Current
         </span>

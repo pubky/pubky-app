@@ -28,7 +28,8 @@ const LIST_GRID_CLASS =
   'grid w-fit max-w-full grid-cols-[minmax(0,theme(spacing.48))] self-start justify-self-start sm:grid-cols-[repeat(2,theme(spacing.48))]';
 const LIST_TILE_CLASS = 'aspect-video h-[theme(spacing.27)] max-w-full';
 // Shared tile framing for both image and video cells (single-media collapse + last-odd span).
-const TILE_FRAME_CLASS = 'relative only:h-auto only:w-fit sm:last:odd:col-span-2';
+const TILE_FRAME_CLASS = 'relative only:h-auto sm:last:odd:col-span-2';
+const LIST_TILE_FRAME_CLASS = cn(TILE_FRAME_CLASS, 'only:w-fit');
 // "+N more" badge shown on the last visible tile when media overflows the grid.
 const REMAINING_OVERLAY_CLASS =
   'absolute right-3 bottom-3 z-10 flex size-10 items-center justify-center rounded-full border border-secondary-foreground/40 bg-black/80 text-base font-bold text-white shadow-md';
@@ -137,8 +138,8 @@ export const PostAttachmentsImagesAndVideos = ({
                 key={i}
                 asChild
                 className={cn(
-                  isListVariant ? LIST_TILE_CLASS : 'h-52 w-full',
-                  TILE_FRAME_CLASS,
+                  isListVariant ? LIST_TILE_CLASS : 'h-52 w-full max-w-full',
+                  isListVariant ? LIST_TILE_FRAME_CLASS : TILE_FRAME_CLASS,
                   'cursor-pointer only:static',
                 )}
               >
@@ -150,7 +151,10 @@ export const PostAttachmentsImagesAndVideos = ({
                     className={cn(
                       'rounded-md',
                       isOnlyMedia
-                        ? cn(isListVariant ? 'max-h-[theme(spacing.27)]' : 'max-h-96', 'w-fit object-contain')
+                        ? cn(
+                            isListVariant ? 'max-h-[theme(spacing.27)] w-fit' : 'max-h-96 max-w-full',
+                            'object-contain',
+                          )
                         : 'object-cover object-center',
                     )}
                   />
@@ -161,7 +165,7 @@ export const PostAttachmentsImagesAndVideos = ({
               <Container
                 key={i}
                 overrideDefaults
-                className={cn(LIST_TILE_CLASS, TILE_FRAME_CLASS, 'only:max-h-[theme(spacing.27)]')}
+                className={cn(LIST_TILE_CLASS, LIST_TILE_FRAME_CLASS, 'only:max-h-[theme(spacing.27)]')}
               >
                 <Video
                   onClick={(e) => {
@@ -181,7 +185,7 @@ export const PostAttachmentsImagesAndVideos = ({
                 }}
                 src={media.urls.main}
                 pauseVideo={open}
-                className="h-52 w-full cursor-auto only:h-auto only:max-h-96 only:w-fit sm:last:odd:col-span-2"
+                className="h-52 w-full max-w-full cursor-auto only:h-auto only:max-h-96 sm:last:odd:col-span-2"
               />
             ),
           )}

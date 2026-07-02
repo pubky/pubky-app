@@ -23,10 +23,16 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
   };
 });
 
+interface MockOnboardingState {
+  mnemonic?: string | null;
+  secretKey?: string;
+  hasHydrated?: boolean;
+}
+
 // Mock onboarding store
-const mockUseOnboardingStore = vi.fn();
+const mockUseOnboardingStore = vi.fn<() => MockOnboardingState>();
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
-  useOnboardingStore: () => mockUseOnboardingStore(),
+  useOnboardingStore: (selector: (state: MockOnboardingState) => unknown) => selector(mockUseOnboardingStore()),
 }));
 
 // Mock atoms
@@ -37,13 +43,15 @@ vi.mock('@/atoms/Button/Button', () => {
       variant,
       className,
       onClick,
+      id,
     }: {
       children: React.ReactNode;
       variant?: string;
       className?: string;
       onClick?: () => void;
+      id?: string;
     }) => (
-      <button data-testid="button" data-variant={variant} className={className} onClick={onClick}>
+      <button id={id} data-testid="button" data-variant={variant} className={className} onClick={onClick}>
         {children}
       </button>
     ),
@@ -146,11 +154,13 @@ vi.mock('@/molecules/Content/Content', () => {
     ContentCard: ({
       children,
       image,
+      className,
     }: {
       children: React.ReactNode;
       image?: { src: string; alt: string; width: number; height: number };
+      className?: string;
     }) => (
-      <div data-testid="content-card" data-image-src={image?.src} data-image-alt={image?.alt}>
+      <div data-testid="content-card" data-image-src={image?.src} data-image-alt={image?.alt} className={className}>
         {children}
       </div>
     ),
@@ -174,8 +184,8 @@ vi.mock('@/organisms/DialogBackupEncrypted/DialogBackupEncrypted', () => {
 
 vi.mock('@/organisms/DialogBackupExport/DialogBackupExport', () => {
   return {
-    DialogBackupExport: ({ mnemonic, children }: { mnemonic?: string; children?: React.ReactNode }) => (
-      <div data-testid="dialog-export" data-mnemonic={mnemonic || ''}>
+    DialogBackupExport: ({ mnemonic, children }: { mnemonic?: string | null; children?: React.ReactNode }) => (
+      <div data-testid="dialog-export" data-mnemonic={mnemonic ?? ''}>
         {children || `Export ${mnemonic ? 'with mnemonic' : 'without mnemonic'}`}
       </div>
     ),
@@ -203,7 +213,10 @@ describe('BackupMethodCard', () => {
     render(<BackupMethodCard />);
 
     expect(screen.getByTestId('content-card')).toBeInTheDocument();
+    expect(screen.getByTestId('content-card')).toHaveClass('rounded-md');
     expect(screen.getByTestId('heading-2')).toHaveTextContent('Choose backup method');
+    expect(screen.getByTestId('heading-2')).toHaveAttribute('data-size', 'md');
+    expect(screen.getByTestId('heading-2')).toHaveClass('font-bold');
   });
 
   it('renders with mnemonic from store', () => {
@@ -227,7 +240,38 @@ describe('BackupMethodCard', () => {
 
     expect(screen.getByTestId('dialog-backup-phrase')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-backup-encrypted')).toBeInTheDocument();
-    // DialogBackupExport is temporarily disabled
+    expect(screen.getByTestId('dialog-export')).toBeInTheDocument();
+
+    const buttons = screen.getAllByTestId('button');
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      'Recovery phrase',
+      'Encrypted file',
+      'Export to Pubky Ring',
+    ]);
+    expect(buttons[0]).toHaveAttribute('id', 'backup-recovery-phrase-btn');
+    expect(buttons[0]).toHaveAttribute('data-variant', 'secondary');
+    expect(buttons[0].querySelector('.lucide-file-text')).toBeInTheDocument();
+    expect(buttons[1]).toHaveAttribute('id', 'backup-encrypted-file-btn');
+    expect(buttons[1]).toHaveAttribute('data-variant', 'secondary');
+    expect(buttons[1].querySelector('.lucide-file-down')).toBeInTheDocument();
+    expect(buttons[2]).toHaveAttribute('id', 'backup-pubky-ring-btn');
+    expect(buttons[2]).not.toHaveAttribute('data-variant');
+    expect(buttons[2].querySelector('.lucide-scan')).toBeInTheDocument();
+  });
+
+  it('uses the mobile stack and preserves the desktop row layout', () => {
+    mockUseOnboardingStore.mockReturnValue({ mnemonic: 'test mnemonic' });
+
+    render(<BackupMethodCard />);
+
+    const actionsContainer = screen
+      .getAllByTestId('container')
+      .find((container) => container.classList.contains('mt-6'));
+    expect(actionsContainer).toHaveClass('flex-col', 'gap-3', 'lg:flex-row', 'lg:flex-wrap');
+
+    screen.getAllByTestId('button').forEach((button) => {
+      expect(button).toHaveClass('w-full', 'font-bold', 'lg:w-auto');
+    });
   });
 
   it('renders content card with shield image', () => {
@@ -242,36 +286,33 @@ describe('BackupMethodCard', () => {
     expect(contentCard).toHaveAttribute('data-image-alt', 'Shield');
   });
 
-  // TODO: Re-enable when Pubky Ring export is ready
-  it.skip('passes mnemonic correctly to DialogBackupExport based on store state', () => {
+  it('passes mnemonic correctly to DialogBackupExport based on store state', () => {
     const testCases = [
-      { mnemonic: '', expectedDisplay: 'Export to Pubky Ring' },
-      { mnemonic: 'test phrase', expectedDisplay: 'Export recovery phrase' },
+      { mnemonic: null, expectedMnemonic: '' },
+      { mnemonic: 'test phrase', expectedMnemonic: 'test phrase' },
       {
         mnemonic: 'wood fox silver drive march fee palace flame earn door case almost',
-        expectedDisplay: 'Export recovery phrase',
+        expectedMnemonic: 'wood fox silver drive march fee palace flame earn door case almost',
       },
     ];
 
-    testCases.forEach(({ mnemonic, expectedDisplay }) => {
+    testCases.forEach(({ mnemonic, expectedMnemonic }) => {
       mockUseOnboardingStore.mockReturnValue({ mnemonic });
 
       const { unmount } = render(<BackupMethodCard />);
 
       const dialogExport = screen.getByTestId('dialog-export');
-      expect(dialogExport).toHaveAttribute('data-mnemonic', mnemonic);
-      expect(dialogExport).toHaveTextContent(expectedDisplay);
+      expect(dialogExport).toHaveAttribute('data-mnemonic', expectedMnemonic);
+      expect(dialogExport).toHaveTextContent('Export to Pubky Ring');
 
       unmount();
     });
   });
 
-  // TODO: Re-enable when Pubky Ring export is ready
-  it.skip('integrates correctly with onboarding store', () => {
+  it('integrates correctly with onboarding store', () => {
     const testMnemonic = 'integration test mnemonic phrase';
     mockUseOnboardingStore.mockReturnValue({
       mnemonic: testMnemonic,
-      pubky: 'test-public-key',
       secretKey: 'test-secret-key',
       hasHydrated: true,
     });
@@ -283,6 +324,7 @@ describe('BackupMethodCard', () => {
 
     // Component should render with store data
     expect(screen.getByTestId('content-card')).toBeInTheDocument();
+    expect(screen.getByTestId('dialog-export')).toHaveAttribute('data-mnemonic', testMnemonic);
   });
 
   describe('organism behavior', () => {
@@ -297,6 +339,7 @@ describe('BackupMethodCard', () => {
       expect(screen.getByTestId('content-card')).toBeInTheDocument();
       expect(screen.getByTestId('dialog-backup-phrase')).toBeInTheDocument();
       expect(screen.getByTestId('dialog-backup-encrypted')).toBeInTheDocument();
+      expect(screen.getByTestId('dialog-export')).toBeInTheDocument();
     });
 
     it('maintains component structure regardless of store state', () => {
@@ -314,7 +357,7 @@ describe('BackupMethodCard', () => {
         expect(screen.getByTestId('typography')).toBeInTheDocument();
         expect(screen.getByTestId('dialog-backup-phrase')).toBeInTheDocument();
         expect(screen.getByTestId('dialog-backup-encrypted')).toBeInTheDocument();
-        // DialogBackupExport is temporarily disabled
+        expect(screen.getByTestId('dialog-export')).toBeInTheDocument();
 
         unmount();
       });
