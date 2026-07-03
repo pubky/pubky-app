@@ -3,7 +3,7 @@
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { isDynamicPublicRoute, PUBLIC_ROUTES } from '@/app/routes';
+import { isAllowedUnauthenticatedRoute, isDynamicPublicRoute, PUBLIC_ROUTES } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { AuthController } from '@/controllers/auth/auth';
 import { MigrationController } from '@/controllers/migration/migration';
@@ -142,9 +142,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     const routeAccess = ROUTE_ACCESS_MAP[status];
 
     // Check if current pathname matches any allowed route (exact match or sub-route)
-    return routeAccess.allowedRoutes.some((route) => {
-      return pathname === route || pathname.startsWith(route + '/');
-    });
+    return routeAccess.allowedRoutes.some((route) => isAllowedUnauthenticatedRoute(pathname, route));
   }, [isLoading, pathname, status]);
 
   // Handle automatic redirects when user tries to access unauthorized routes

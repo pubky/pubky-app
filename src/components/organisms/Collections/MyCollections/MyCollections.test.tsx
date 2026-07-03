@@ -35,6 +35,11 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
 }));
 
+const mockRequireAuth = vi.fn((action: () => void) => action());
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ requireAuth: mockRequireAuth }),
+}));
+
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
@@ -181,7 +186,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('MyCollections', () => {
-  it('renders signed-out fallback: title + AvatarStackSkeleton + pinned card, no CollectionCard items, no stream call', () => {
+  it('renders signed-out fallback: title + AvatarStackSkeleton + pinned card + gated new CTA, no CollectionCard items, no stream call', () => {
     setup({ currentUserPubky: null });
 
     render(<MyCollections />);
@@ -191,8 +196,11 @@ describe('MyCollections', () => {
     expect(skeleton).toHaveAttribute('data-count', '1');
     expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'collections.new.cta' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('collections.new.ctaShort').length).toBeGreaterThan(0);
     expect(mockUseStreamPagination).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button'));
+    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
   });
 
   it('renders authenticated empty state: title + AvatarWithFallback header + pinned card; no skeletons, no Show More', () => {

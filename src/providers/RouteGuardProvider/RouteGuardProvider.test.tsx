@@ -56,8 +56,15 @@ vi.mock('@/app/routes', () => ({
     const segments = path.split('/').filter(Boolean);
     return (
       (segments[0] === 'post' && segments.length === 3) ||
-      (segments[0] === 'profile' && segments.length === 2 && segments[1].length === 52)
+      (segments[0] === 'profile' && segments.length === 2 && segments[1].length === 52) ||
+      (segments[0] === 'collections' && segments.length === 3 && segments[1] !== 'bookmarks')
     );
+  },
+  isAllowedUnauthenticatedRoute: (pathname: string, route: string) => {
+    const EXPLORE_ROUTES = ['/home', '/hot', '/search', '/collections'];
+    if (pathname === route) return true;
+    if (EXPLORE_ROUTES.includes(route)) return false;
+    return pathname.startsWith(`${route}/`);
   },
 }));
 
@@ -65,7 +72,10 @@ vi.mock('@/app/routes', () => ({
 vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
   ROUTE_ACCESS_MAP: {
     AUTHENTICATED: { allowedRoutes: ['/feed', '/settings'], redirectTo: '/feed' },
-    UNAUTHENTICATED: { allowedRoutes: ['/login', '/landing', '/home', '/hot', '/search'], redirectTo: '/login' },
+    UNAUTHENTICATED: {
+      allowedRoutes: ['/login', '/landing', '/home', '/hot', '/search', '/collections'],
+      redirectTo: '/login',
+    },
     NEEDS_PROFILE_CREATION: { allowedRoutes: ['/create-profile'], redirectTo: '/create-profile' },
   },
 }));
@@ -370,6 +380,54 @@ describe('RouteGuardProvider — migration resync', () => {
 
     expect(screen.getByText('Explore Content')).toBeInTheDocument();
     expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('allows unauthenticated users to render the collections overview after auth loading resolves', () => {
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.currentUserPubky = null;
+    mocks.pathname = '/collections';
+
+    render(
+      <RouteGuardProvider>
+        <div>Collections Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(screen.getByText('Collections Content')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('allows unauthenticated users to render a single collection page', () => {
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.currentUserPubky = null;
+    mocks.pathname = '/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G';
+
+    render(
+      <RouteGuardProvider>
+        <div>Single Collection Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(screen.getByText('Single Collection Content')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('still protects collections bookmarks for unauthenticated users', () => {
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.currentUserPubky = null;
+    mocks.pathname = '/collections/bookmarks';
+
+    render(
+      <RouteGuardProvider>
+        <div>Bookmarks Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.queryByText('Bookmarks Content')).not.toBeInTheDocument();
   });
 
   it('still protects bookmarks for unauthenticated users', () => {

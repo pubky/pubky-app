@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`CollectionsSections > matches the snapshot 1`] = `
+exports[`CollectionsSections > matches the snapshot for authenticated users 1`] = `
 <div
   class="flex w-full flex-col gap-12"
   data-testid="container"
@@ -12,6 +12,17 @@ exports[`CollectionsSections > matches the snapshot 1`] = `
   <div
     data-testid="followed-collections"
   />
+  <div
+    data-testid="discover-collections"
+  />
+</div>
+`;
+
+exports[`CollectionsSections > matches the snapshot for guests 1`] = `
+<div
+  class="flex w-full flex-col gap-12"
+  data-testid="container"
+>
   <div
     data-testid="discover-collections"
   />

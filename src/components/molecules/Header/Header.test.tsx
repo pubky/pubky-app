@@ -531,9 +531,9 @@ describe('Header Components', () => {
     it('renders full navigation with account routes gated behind the Join dialog', () => {
       render(<HeaderExploreNavigationButtons />);
 
-      // Home and Hot are public explore routes → real navigation links.
+      // Home, Hot, and Collections are public explore routes → real navigation links.
       const links = screen.getAllByRole('link');
-      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot']);
+      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot', '/collections']);
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
 
       // All four nav icons are shown.
@@ -542,11 +542,10 @@ describe('Header Components', () => {
       expect(document.querySelector('.lucide-library')).toBeInTheDocument();
       expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
 
-      // Collections/Settings require an account, so they render as auth-gated buttons, not links.
-      expect(document.querySelector('.lucide-library')?.closest('a')).toBeNull();
+      // Settings require an account, so it renders as an auth-gated button, not a link.
       expect(document.querySelector('.lucide-settings')?.closest('a')).toBeNull();
-      expect(document.querySelector('[data-cy="header-collections-btn"]')?.tagName).toBe('BUTTON');
       expect(document.querySelector('[data-cy="header-settings-btn"]')?.tagName).toBe('BUTTON');
+      expect(document.querySelector('.lucide-library')?.closest('a')).toHaveAttribute('href', '/collections');
     });
 
     it('opens sign-in dialog from the Join button', () => {

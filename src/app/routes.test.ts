@@ -5,6 +5,7 @@ import {
   getCollectionRoute,
   getProfileRoute,
   getUserProfileUrl,
+  isAllowedUnauthenticatedRoute,
   isCollectionsOverviewRoute,
   isCoreExploreRoute,
   isDynamicPublicRoute,
@@ -114,6 +115,23 @@ describe('isDynamicPublicRoute', () => {
     });
   });
 
+  describe('collection routes', () => {
+    const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+    const postId = '0034BBBDFK83G';
+
+    it('returns true for a single collection detail route', () => {
+      expect(isDynamicPublicRoute(`/collections/${pubky}/${postId}`)).toBe(true);
+    });
+
+    it('returns false for the collections overview route', () => {
+      expect(isDynamicPublicRoute('/collections')).toBe(false);
+    });
+
+    it('returns false for the bookmarks pseudo-collection route', () => {
+      expect(isDynamicPublicRoute('/collections/bookmarks')).toBe(false);
+    });
+  });
+
   describe('other routes', () => {
     it('returns false for home route', () => {
       expect(isDynamicPublicRoute('/home')).toBe(false);
@@ -139,6 +157,19 @@ describe('isDynamicPublicRoute', () => {
       expect(isDynamicPublicRoute('/onboarding')).toBe(false);
       expect(isDynamicPublicRoute('/onboarding/profile')).toBe(false);
     });
+  });
+});
+
+describe('isAllowedUnauthenticatedRoute', () => {
+  it('matches explore routes exactly without prefix access', () => {
+    expect(isAllowedUnauthenticatedRoute('/collections', APP_ROUTES.COLLECTIONS)).toBe(true);
+    expect(isAllowedUnauthenticatedRoute('/collections/bookmarks', APP_ROUTES.COLLECTIONS)).toBe(false);
+    expect(isAllowedUnauthenticatedRoute('/home/trending', APP_ROUTES.HOME)).toBe(false);
+  });
+
+  it('keeps prefix matching for non-explore allowed routes', () => {
+    expect(isAllowedUnauthenticatedRoute('/onboarding/profile', ONBOARDING_ROUTES.PROFILE)).toBe(true);
+    expect(isAllowedUnauthenticatedRoute('/onboarding', ONBOARDING_ROUTES.INSTALL)).toBe(false);
   });
 });
 
@@ -285,6 +316,7 @@ describe('isCoreExploreRoute', () => {
     expect(isCoreExploreRoute('/home')).toBe(true);
     expect(isCoreExploreRoute('/hot')).toBe(true);
     expect(isCoreExploreRoute('/search')).toBe(true);
+    expect(isCoreExploreRoute('/collections')).toBe(true);
   });
 
   it('returns false for dynamic public and protected routes', () => {
@@ -292,6 +324,8 @@ describe('isCoreExploreRoute', () => {
 
     expect(isCoreExploreRoute(`/post/${pubky}/0034BBBDFK83G`)).toBe(false);
     expect(isCoreExploreRoute(`/profile/${pubky}`)).toBe(false);
+    expect(isCoreExploreRoute(`/collections/${pubky}/0034BBBDFK83G`)).toBe(false);
+    expect(isCoreExploreRoute('/collections/bookmarks')).toBe(false);
     expect(isCoreExploreRoute('/bookmarks')).toBe(false);
     expect(isCoreExploreRoute('/feed/custom-feed')).toBe(false);
     expect(isCoreExploreRoute('/settings/account')).toBe(false);
@@ -299,18 +333,21 @@ describe('isCoreExploreRoute', () => {
 });
 
 describe('isPublicExploreRoute', () => {
-  it('returns true for core explore routes and dynamic post/profile pages', () => {
+  it('returns true for core explore routes and dynamic post/profile/collection pages', () => {
     const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
     expect(isPublicExploreRoute('/home')).toBe(true);
     expect(isPublicExploreRoute('/hot')).toBe(true);
     expect(isPublicExploreRoute('/search')).toBe(true);
+    expect(isPublicExploreRoute('/collections')).toBe(true);
     expect(isPublicExploreRoute(`/post/${pubky}/0034BBBDFK83G`)).toBe(true);
     expect(isPublicExploreRoute(`/profile/${pubky}`)).toBe(true);
+    expect(isPublicExploreRoute(`/collections/${pubky}/0034BBBDFK83G`)).toBe(true);
   });
 
   it('returns false for protected routes', () => {
     expect(isPublicExploreRoute('/bookmarks')).toBe(false);
+    expect(isPublicExploreRoute('/collections/bookmarks')).toBe(false);
     expect(isPublicExploreRoute('/feed/custom-feed')).toBe(false);
     expect(isPublicExploreRoute('/settings/account')).toBe(false);
     expect(isPublicExploreRoute('/profile/posts')).toBe(false);

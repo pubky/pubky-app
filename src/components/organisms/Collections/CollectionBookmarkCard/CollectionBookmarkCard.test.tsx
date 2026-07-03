@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTION_ROUTES } from '@/app/routes';
 import { useBookmarksCollectionSummary } from '@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary';
@@ -6,6 +6,7 @@ import enMessages from '../../../../../messages/en.json';
 import { CollectionBookmarkCard } from './CollectionBookmarkCard';
 
 const BOOKMARKS_COPY = enMessages.collections.bookmarks;
+const CURRENT_USER_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -35,6 +36,17 @@ vi.mock('next-intl', () => ({
 
 vi.mock('@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary', () => ({
   useBookmarksCollectionSummary: vi.fn(),
+}));
+
+const mockRequireAuth = vi.fn((action: () => void) => action());
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ requireAuth: mockRequireAuth }),
+}));
+
+let mockCurrentUserPubky: string | null = CURRENT_USER_PUBKY;
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
+    selector({ currentUserPubky: mockCurrentUserPubky }),
 }));
 
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
@@ -68,8 +80,6 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
 // Fixtures + helpers
 // ---------------------------------------------------------------------------
 
-const CURRENT_USER_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
-
 const mockUseBookmarksCollectionSummary = vi.mocked(useBookmarksCollectionSummary);
 
 type SetupOptions = {
@@ -97,6 +107,7 @@ function setup(options: SetupOptions = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockCurrentUserPubky = CURRENT_USER_PUBKY;
   setup();
 });
 
@@ -155,6 +166,16 @@ describe('CollectionBookmarkCard', () => {
 
     const link = screen.getByRole('link', { name: BOOKMARKS_COPY.title });
     expect(link.className).toContain('custom-extra-class');
+  });
+
+  it('prompts sign-in instead of navigating when a guest clicks the card', () => {
+    mockCurrentUserPubky = null;
+    setup();
+    render(<CollectionBookmarkCard />);
+
+    fireEvent.click(screen.getByRole('link', { name: BOOKMARKS_COPY.title }));
+
+    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
   });
 });
 

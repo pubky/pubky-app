@@ -11,6 +11,7 @@ import { COLLECTIONS_MY_SECTION_SKELETON_COUNT, COLLECTIONS_SECTION_PAGE_SIZE } 
 import { FileController } from '@/controllers/file/file';
 import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { isPostDeleted } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -42,8 +43,45 @@ interface MyCollectionsProps {
   showPublicNote?: boolean;
 }
 
+type NewCollectionHeaderButtonProps = {
+  label: string;
+  isAuthenticated: boolean;
+  onGuestClick: () => void;
+};
+
+function NewCollectionHeaderButton({ label, isAuthenticated, onGuestClick }: NewCollectionHeaderButtonProps) {
+  const buttonContent = (
+    <>
+      <Plus />
+      <Typography as="span" overrideDefaults className="text-sm font-bold lg:hidden">
+        {label}
+      </Typography>
+      <Typography as="span" overrideDefaults className="hidden text-sm font-bold lg:inline">
+        {label}
+      </Typography>
+    </>
+  );
+
+  if (isAuthenticated) {
+    return (
+      <DialogNewCollection>
+        <Button variant="secondary" size="sm">
+          {buttonContent}
+        </Button>
+      </DialogNewCollection>
+    );
+  }
+
+  return (
+    <Button variant="secondary" size="sm" onClick={onGuestClick}>
+      {buttonContent}
+    </Button>
+  );
+}
+
 export function MyCollections({ showPublicNote = false }: MyCollectionsProps = {}) {
   const t = useTranslations('collections');
+  const { requireAuth } = useRequireAuth();
 
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
@@ -55,6 +93,10 @@ export function MyCollections({ showPublicNote = false }: MyCollectionsProps = {
       : undefined);
   const avatarName = userDetails?.name || 'U';
   const avatarSeed = currentUserPubky ?? avatarName;
+
+  const handleGuestNewCollectionClick = () => {
+    requireAuth(() => undefined);
+  };
 
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-4">
@@ -75,17 +117,11 @@ export function MyCollections({ showPublicNote = false }: MyCollectionsProps = {
           ) : (
             <AvatarStackSkeleton count={1} size="md" />
           )}
-          <DialogNewCollection>
-            <Button variant="secondary" size="sm">
-              <Plus />
-              <Typography as="span" overrideDefaults className="text-sm font-bold lg:hidden">
-                {t('new.ctaShort')}
-              </Typography>
-              <Typography as="span" overrideDefaults className="hidden text-sm font-bold lg:inline">
-                {t('new.ctaShort')}
-              </Typography>
-            </Button>
-          </DialogNewCollection>
+          <NewCollectionHeaderButton
+            label={t('new.ctaShort')}
+            isAuthenticated={Boolean(currentUserPubky)}
+            onGuestClick={handleGuestNewCollectionClick}
+          />
         </Container>
         {showPublicNote && (
           <>
