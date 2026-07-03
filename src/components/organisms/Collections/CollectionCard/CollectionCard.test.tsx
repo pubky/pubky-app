@@ -44,6 +44,11 @@ vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
   usePostCounts: vi.fn(),
 }));
 
+const mockRequireAuth = vi.fn(<T,>(action: () => T) => action());
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ requireAuth: mockRequireAuth }),
+}));
+
 const mockDeletePost = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: () => ({ deletePost: mockDeletePost, isDeleting: false }),
@@ -431,6 +436,19 @@ describe('CollectionCard', () => {
       const button = screen.getByLabelText('collections.card.follow') as HTMLButtonElement;
       expect(button).toBeDisabled();
       fireEvent.click(button);
+      expect(toggle).not.toHaveBeenCalled();
+    });
+
+    it('prompts sign-in instead of toggling bookmark when a guest clicks Follow', () => {
+      setAuthStore(null);
+      const toggle = setBookmark({ isBookmarked: false });
+      mockRequireAuth.mockImplementation(<T,>(_action: () => T) => undefined as T);
+
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      fireEvent.click(screen.getByLabelText('collections.card.follow'));
+
+      expect(mockRequireAuth).toHaveBeenCalledTimes(1);
       expect(toggle).not.toHaveBeenCalled();
     });
   });

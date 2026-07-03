@@ -555,6 +555,17 @@ describe('Header Components', () => {
 
       expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
     });
+
+    it('highlights Collections on single collection pages for guests', () => {
+      const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+      vi.mocked(usePathname).mockReturnValue(`/collections/${pubky}/0034BBBDFK83G`);
+
+      render(<HeaderExploreNavigationButtons />);
+
+      const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
+      expect(collectionsButton).toHaveClass('bg-secondary');
+      expect(collectionsButton).not.toHaveClass('bg-white/5');
+    });
   });
 
   describe('HeaderSignIn - Avatar Logic', () => {

@@ -66,12 +66,18 @@ vi.mock('@/app/routes', () => ({
     if (EXPLORE_ROUTES.includes(route)) return false;
     return pathname.startsWith(`${route}/`);
   },
+  matchesAllowedRoute: (pathname: string, route: string, options?: { restrictExploreSubRoutes?: boolean }) => {
+    const EXPLORE_ROUTES = ['/home', '/hot', '/search', '/collections'];
+    if (pathname === route) return true;
+    if (options?.restrictExploreSubRoutes && EXPLORE_ROUTES.includes(route)) return false;
+    return pathname.startsWith(`${route}/`);
+  },
 }));
 
 // Mock @/providers/RouteGuardProvider/RouteGuardProvider.constants
 vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
   ROUTE_ACCESS_MAP: {
-    AUTHENTICATED: { allowedRoutes: ['/feed', '/settings'], redirectTo: '/feed' },
+    AUTHENTICATED: { allowedRoutes: ['/feed', '/settings', '/collections'], redirectTo: '/feed' },
     UNAUTHENTICATED: {
       allowedRoutes: ['/login', '/landing', '/home', '/hot', '/search', '/collections'],
       redirectTo: '/login',
@@ -428,6 +434,22 @@ describe('RouteGuardProvider — migration resync', () => {
 
     expect(screen.getByText('redirecting')).toBeInTheDocument();
     expect(screen.queryByText('Bookmarks Content')).not.toBeInTheDocument();
+  });
+
+  it('allows authenticated users to render collections bookmarks via prefix matching', () => {
+    mocks.status = 'AUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.currentUserPubky = 'test-pubky-z32';
+    mocks.pathname = '/collections/bookmarks';
+
+    render(
+      <RouteGuardProvider>
+        <div>Bookmarks Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(screen.getByText('Bookmarks Content')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
   });
 
   it('still protects bookmarks for unauthenticated users', () => {

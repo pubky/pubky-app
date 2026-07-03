@@ -163,21 +163,43 @@ export function isDynamicPublicRoute(pathname: string): boolean {
   }
 }
 
+type MatchesAllowedRouteOptions = {
+  /**
+   * When true, explore routes (`EXPLORE_ROUTES`) match exactly so `/collections`
+   * does not expose auth-only sub-routes like `/collections/bookmarks` to guests.
+   * Authenticated route checks should leave this false so prefix matching still
+   * applies (e.g. `/collections/bookmarks` via the `/collections` allowed route).
+   */
+  restrictExploreSubRoutes?: boolean;
+};
+
 /**
- * Whether an unauthenticated user may access `pathname` via a configured allowed route.
+ * Whether `pathname` is reachable via an allowed route entry.
  *
- * Core explore routes (`EXPLORE_ROUTES`) match exactly so `/collections` does not
- * expose auth-only sub-routes like `/collections/bookmarks`. All other allowed
- * routes keep prefix matching (e.g. onboarding sub-steps).
+ * Non-explore routes keep prefix matching (e.g. onboarding sub-steps). Explore
+ * routes optionally match exactly — see `restrictExploreSubRoutes`.
  */
-export function isAllowedUnauthenticatedRoute(pathname: string, route: string): boolean {
+export function matchesAllowedRoute(
+  pathname: string,
+  route: string,
+  { restrictExploreSubRoutes = false }: MatchesAllowedRouteOptions = {},
+): boolean {
   if (pathname === route) {
     return true;
   }
-  if (EXPLORE_ROUTES.includes(route)) {
+  if (restrictExploreSubRoutes && EXPLORE_ROUTES.includes(route)) {
     return false;
   }
   return pathname.startsWith(`${route}/`);
+}
+
+/**
+ * Whether an unauthenticated user may access `pathname` via a configured allowed route.
+ *
+ * Explore routes match exactly so guests cannot reach auth-only sub-routes.
+ */
+export function isAllowedUnauthenticatedRoute(pathname: string, route: string): boolean {
+  return matchesAllowedRoute(pathname, route, { restrictExploreSubRoutes: true });
 }
 
 /** `/post/[userId]/[postId]` — browsable without auth; uses explore header chrome for guests. */

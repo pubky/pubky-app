@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   APP_ROUTES,
   AUTH_ROUTES,
+  AUTHENTICATED_ROUTES,
   getCollectionRoute,
   getProfileRoute,
   getUserProfileUrl,
@@ -14,10 +15,12 @@ import {
   isPostRoute,
   isPublicExploreRoute,
   LOGO_LANDING_ROUTES,
+  matchesAllowedRoute,
   matchSingleCollectionRoute,
   ONBOARDING_ROUTES,
   PROFILE_ROUTES,
   SETTINGS_ROUTES,
+  UNAUTHENTICATED_ROUTES,
 } from './routes';
 
 describe('isDynamicPublicRoute', () => {
@@ -160,6 +163,22 @@ describe('isDynamicPublicRoute', () => {
   });
 });
 
+describe('matchesAllowedRoute', () => {
+  it('allows explore sub-routes when explore prefix restriction is disabled', () => {
+    expect(
+      matchesAllowedRoute('/collections/bookmarks', APP_ROUTES.COLLECTIONS, { restrictExploreSubRoutes: false }),
+    ).toBe(true);
+    expect(matchesAllowedRoute('/home/trending', APP_ROUTES.HOME, { restrictExploreSubRoutes: false })).toBe(true);
+  });
+
+  it('blocks explore sub-routes when explore prefix restriction is enabled', () => {
+    expect(
+      matchesAllowedRoute('/collections/bookmarks', APP_ROUTES.COLLECTIONS, { restrictExploreSubRoutes: true }),
+    ).toBe(false);
+    expect(matchesAllowedRoute('/home/trending', APP_ROUTES.HOME, { restrictExploreSubRoutes: true })).toBe(false);
+  });
+});
+
 describe('isAllowedUnauthenticatedRoute', () => {
   it('matches explore routes exactly without prefix access', () => {
     expect(isAllowedUnauthenticatedRoute('/collections', APP_ROUTES.COLLECTIONS)).toBe(true);
@@ -170,6 +189,33 @@ describe('isAllowedUnauthenticatedRoute', () => {
   it('keeps prefix matching for non-explore allowed routes', () => {
     expect(isAllowedUnauthenticatedRoute('/onboarding/profile', ONBOARDING_ROUTES.PROFILE)).toBe(true);
     expect(isAllowedUnauthenticatedRoute('/onboarding', ONBOARDING_ROUTES.INSTALL)).toBe(false);
+  });
+});
+
+function isRouteAccessible(
+  pathname: string,
+  allowedRoutes: readonly string[],
+  restrictExploreSubRoutes: boolean,
+): boolean {
+  return allowedRoutes.some((route) => matchesAllowedRoute(pathname, route, { restrictExploreSubRoutes }));
+}
+
+describe('route access matrix', () => {
+  it('allows authenticated users to reach collections bookmarks via prefix matching', () => {
+    expect(isRouteAccessible('/collections/bookmarks', AUTHENTICATED_ROUTES.allowedRoutes, false)).toBe(true);
+  });
+
+  it('blocks guests from collections bookmarks while allowing the overview', () => {
+    expect(isRouteAccessible('/collections', UNAUTHENTICATED_ROUTES.allowedRoutes, true)).toBe(true);
+    expect(isRouteAccessible('/collections/bookmarks', UNAUTHENTICATED_ROUTES.allowedRoutes, true)).toBe(false);
+  });
+
+  it('allows guests to reach single collection pages via dynamic public route, not allowedRoutes prefix', () => {
+    const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+    const pathname = `/collections/${pubky}/0034BBBDFK83G`;
+
+    expect(isDynamicPublicRoute(pathname)).toBe(true);
+    expect(isRouteAccessible(pathname, UNAUTHENTICATED_ROUTES.allowedRoutes, true)).toBe(false);
   });
 });
 
