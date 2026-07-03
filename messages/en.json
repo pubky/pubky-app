@@ -1328,6 +1328,7 @@
   "collections": {
     "deleted": "This collection has been deleted by its author.",
     "missing": "Collection not found.",
+    "postCount": "{count, plural, one {post} other {posts}}",
     "new": {
       "cta": "New Collection",
       "ctaShort": "New",
@@ -1397,8 +1398,8 @@
       "delete": "Delete",
       "follow": "Follow",
       "unfollow": "Unfollow",
-      "content": "Content",
-      "addContent": "Add Content",
+      "content": "Add Post",
+      "addContent": "Add Post",
       "empty": "This collection is empty.",
       "notFound": {
         "title": "Collection Not Found",
@@ -1410,7 +1411,7 @@
       }
     },
     "addContentDialog": {
-      "title": "Add Content",
+      "title": "Add Post",
       "description": "Add a post or article from your feed or paste a url directly.",
       "fromFeedTitle": "Add from feed",
       "fromFeedLead": "Find a post",

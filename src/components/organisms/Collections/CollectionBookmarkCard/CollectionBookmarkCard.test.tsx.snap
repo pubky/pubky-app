@@ -42,18 +42,13 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
             />
           </svg>
           <span
-            class="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
             data-testid="typography"
           >
             Bookmarks
           </span>
-        </div>
-        <div
-          class="flex shrink-0 items-center gap-2 sm:gap-3"
-          data-testid="container"
-        >
           <div
-            class="flex items-center gap-1 text-muted-foreground"
+            class="flex shrink-0 items-center gap-1 text-secondary-foreground"
             data-testid="container"
           >
             <svg
@@ -81,8 +76,15 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
               data-testid="typography"
             >
               123
+               
+              posts
             </span>
           </div>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end"
+          data-testid="container"
+        >
           <div
             data-alt="Alice"
             data-avatar-url="https://example.com/avatar.png"
@@ -148,14 +150,14 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for the signe
             />
           </svg>
           <span
-            class="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
             data-testid="typography"
           >
             Bookmarks
           </span>
         </div>
         <div
-          class="flex shrink-0 items-center gap-2 sm:gap-3"
+          class="flex shrink-0 items-center justify-end"
           data-testid="container"
         >
           <div
