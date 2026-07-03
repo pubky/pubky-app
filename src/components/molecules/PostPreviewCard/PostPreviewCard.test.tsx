@@ -5,17 +5,12 @@ import { PostPreviewCard } from './PostPreviewCard';
 
 // Mock hooks
 const mockNavigateToPost = vi.fn();
-const mockRouterPush = vi.fn();
+const mockNavigateToCollection = vi.fn();
 const mockTtlRef = vi.fn();
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockRouterPush,
-  }),
-}));
-
 vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
   usePostNavigation: () => ({
     navigateToPost: mockNavigateToPost,
+    navigateToCollection: mockNavigateToCollection,
   }),
 }));
 
@@ -115,7 +110,7 @@ const resolvedCollectionPost = {
 describe('PostPreviewCard', () => {
   beforeEach(() => {
     mockNavigateToPost.mockClear();
-    mockRouterPush.mockClear();
+    mockNavigateToCollection.mockClear();
     mockUsePostDetails.mockReturnValue(resolvedPost);
   });
 
@@ -150,7 +145,7 @@ describe('PostPreviewCard', () => {
     fireEvent.click(card);
 
     expect(mockNavigateToPost).toHaveBeenCalledWith('test-post-123');
-    expect(mockRouterPush).not.toHaveBeenCalled();
+    expect(mockNavigateToCollection).not.toHaveBeenCalled();
   });
 
   it('navigates to post page on Enter key', () => {
@@ -160,7 +155,7 @@ describe('PostPreviewCard', () => {
     fireEvent.keyDown(card, { key: 'Enter' });
 
     expect(mockNavigateToPost).toHaveBeenCalledWith('test-post-123');
-    expect(mockRouterPush).not.toHaveBeenCalled();
+    expect(mockNavigateToCollection).not.toHaveBeenCalled();
   });
 
   it('navigates to post page on Space key', () => {
@@ -170,7 +165,7 @@ describe('PostPreviewCard', () => {
     fireEvent.keyDown(card, { key: ' ' });
 
     expect(mockNavigateToPost).toHaveBeenCalledWith('test-post-123');
-    expect(mockRouterPush).not.toHaveBeenCalled();
+    expect(mockNavigateToCollection).not.toHaveBeenCalled();
   });
 
   it('navigates collection previews to the collection page on click', () => {
@@ -180,7 +175,7 @@ describe('PostPreviewCard', () => {
     const card = screen.getByTestId('card');
     fireEvent.click(card);
 
-    expect(mockRouterPush).toHaveBeenCalledWith('/collections/owner123/collection456');
+    expect(mockNavigateToCollection).toHaveBeenCalledWith('owner123:collection456');
     expect(mockNavigateToPost).not.toHaveBeenCalled();
   });
 
@@ -191,7 +186,7 @@ describe('PostPreviewCard', () => {
     const card = screen.getByTestId('card');
     fireEvent.keyDown(card, { key: 'Enter' });
 
-    expect(mockRouterPush).toHaveBeenCalledWith('/collections/owner123/collection456');
+    expect(mockNavigateToCollection).toHaveBeenCalledWith('owner123:collection456');
     expect(mockNavigateToPost).not.toHaveBeenCalled();
   });
 
@@ -202,7 +197,7 @@ describe('PostPreviewCard', () => {
     const card = screen.getByTestId('card');
     fireEvent.keyDown(card, { key: ' ' });
 
-    expect(mockRouterPush).toHaveBeenCalledWith('/collections/owner123/collection456');
+    expect(mockNavigateToCollection).toHaveBeenCalledWith('owner123:collection456');
     expect(mockNavigateToPost).not.toHaveBeenCalled();
   });
 

@@ -1,13 +1,10 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { getCollectionRoute } from '@/app/routes';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn } from '@/libs/utils/utils';
-import { parseCompositeId } from '@/models/models.utils';
 import { PostMissing } from '@/molecules/PostMissing/PostMissing';
 import { PostContentBase } from '@/organisms/PostContentBase/PostContentBase';
 import { PostHeader } from '@/organisms/PostHeader/PostHeader';
@@ -35,8 +32,7 @@ import type { PostPreviewCardProps } from './PostPreviewCard.types';
  * - Any nested context where a compact post preview is needed
  */
 export function PostPreviewCard({ postId, className, contrast }: PostPreviewCardProps) {
-  const router = useRouter();
-  const { navigateToPost } = usePostNavigation();
+  const { navigateToPost, navigateToCollection } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
   const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
@@ -52,8 +48,7 @@ export function PostPreviewCard({ postId, className, contrast }: PostPreviewCard
 
   const navigateToPreview = () => {
     if (isCollection) {
-      const { pubky, id } = parseCompositeId(postId);
-      router.push(getCollectionRoute(pubky, id));
+      navigateToCollection(postId);
       return;
     }
 
