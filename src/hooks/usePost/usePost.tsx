@@ -106,7 +106,6 @@ export function usePost(): UsePostReturn {
       setArticleTitle('');
       toast({
         title: tPost('postCreated'),
-        dismissButton: true,
       });
       onSuccess?.(createdPostId);
     } catch (err) {
@@ -148,6 +147,7 @@ export function usePost(): UsePostReturn {
             : tPost('repostSuccessFallback')),
         action: (
           <ToastAction
+            variant={'info'}
             altText={tPost('repostUndo')}
             onClick={() => {
               toastInstance.dismiss();

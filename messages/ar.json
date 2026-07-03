@@ -475,13 +475,9 @@
       "createInBrowser": "انشاء المفاتيح في المتصفح",
       "continueWithRing": "متابعة مع Pubky Ring",
       "inviteCodeApplied": "تم تطبيق رمز الدعوة",
-      "inviteCodeAppliedDescription": "تم تطبيق رمز الدعوة {inviteCode}.",
       "invalidInviteCode": "رمز دعوة غير صالح",
-      "invalidInviteCodeDescription": "رمز الدعوة هذا غير صالح أو منتهي الصلاحية. يرجى استخدام رمز دعوة صالح.",
       "usedInviteCode": "رمز الدعوة مستخدم بالفعل",
-      "usedInviteCodeDescription": "تم استخدام رمز الدعوة هذا بالفعل. يرجى استخدام رمز دعوة مختلف.",
-      "verificationFailed": "تعذّر التحقق من رمز الدعوة",
-      "verificationFailedDescription": "تعذّر علينا التحقق من رمز الدعوة الآن. يرجى التحقق من اتصالك والمحاولة مرة أخرى."
+      "verificationFailed": "تعذّر التحقق من رمز الدعوة"
     },
     "createProfile": {
       "title": "انشئ <highlight>ملفك الشخصي.</highlight>",
@@ -991,7 +987,7 @@
     "post": {
       "replyPosted": "تم نشر الرد",
       "replyFailed": "تعذر نشر الرد. حاول مرة أخرى.",
-      "postCreated": "تم انشاء المنشور",
+      "postCreated": "تم نشر المنشور",
       "postFailed": "تعذر إنشاء المنشور. حاول مرة أخرى.",
       "repostSuccess": "تمت إعادة النشر!",
       "repostUndo": "تراجع",

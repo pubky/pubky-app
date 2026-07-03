@@ -473,13 +473,12 @@
       "createInBrowser": "Create keys in browser",
       "continueWithRing": "Continue with Pubky Ring",
       "inviteCodeApplied": "Invite code applied",
-      "inviteCodeAppliedDescription": "Your invite code {inviteCode} has been applied.",
+
       "invalidInviteCode": "Invalid invite code",
-      "invalidInviteCodeDescription": "This invite code is not recognized. Please use a different invite code.",
+
       "usedInviteCode": "Invite code already used",
-      "usedInviteCodeDescription": "This invite code has already been used. Please use a different invite code.",
-      "verificationFailed": "Couldn't verify invite code",
-      "verificationFailedDescription": "We couldn't verify your invite code right now. Please check your connection and try again."
+
+      "verificationFailed": "Couldn't verify invite code"
     },
     "createProfile": {
       "title": "Create your <highlight>profile.</highlight>",
@@ -989,7 +988,7 @@
     "post": {
       "replyPosted": "Reply posted",
       "replyFailed": "Could not post reply. Try again.",
-      "postCreated": "Post created",
+      "postCreated": "Post published",
       "postFailed": "Could not create post. Try again.",
       "repostSuccess": "Reposted {author}'s post",
       "repostSuccessFallback": "Reposted",
