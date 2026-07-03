@@ -38,7 +38,7 @@ const envSchema = z.object({
 
   // Server-side only admin credentials for signup token generation (dev/test only)
   // These are NOT exposed to the client bundle - only available on the server
-  HOMESERVER_ADMIN_URL: z.url().default('[REDACTED]'),
+  HOMESERVER_ADMIN_URL: z.url().default('http://localhost:6288/generate_signup_token'),
   HOMESERVER_ADMIN_PASSWORD: z.string().default('admin'),
 
   // Server-side Chatwoot configuration (optional in schema, validated at runtime when service is used)
