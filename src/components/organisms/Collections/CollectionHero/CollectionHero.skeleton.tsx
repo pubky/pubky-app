@@ -25,7 +25,7 @@ export function CollectionHeroSkeleton({ className }: CollectionHeroSkeletonProp
         <Skeleton className="h-12 w-80 max-w-full rounded-md lg:h-16" />
 
         {/* Owner + item count */}
-        <Container overrideDefaults className="flex w-full items-center gap-6">
+        <Container overrideDefaults className="flex w-full items-center gap-3">
           <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2 lg:flex-none">
             <Skeleton className="size-8 shrink-0 rounded-full" />
             <Skeleton className="h-5 w-32 rounded-md" />

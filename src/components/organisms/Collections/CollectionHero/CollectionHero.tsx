@@ -192,7 +192,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         </Typography>
 
         {/* Owner + item count — mobile: count on the right; lg+: inline next to owner */}
-        <Container overrideDefaults className="flex w-full items-center gap-6">
+        <Container overrideDefaults className="flex w-full items-center gap-3">
           <HeroOwner
             name={ownerName}
             fallbackSeed={authorPubky}

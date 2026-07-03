@@ -24,7 +24,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       Based Bitcoin
     </h1>
     <div
-      class="flex w-full items-center gap-6"
+      class="flex w-full items-center gap-3"
       data-testid="container"
     >
       <div
@@ -243,7 +243,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       Based Bitcoin
     </h1>
     <div
-      class="flex w-full items-center gap-6"
+      class="flex w-full items-center gap-3"
       data-testid="container"
     >
       <div
@@ -511,7 +511,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
       Quiet collection
     </h1>
     <div
-      class="flex w-full items-center gap-6"
+      class="flex w-full items-center gap-3"
       data-testid="container"
     >
       <div
