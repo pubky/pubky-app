@@ -48,7 +48,7 @@ export function CollectionHeroBlurred({ compositeId, className }: CollectionHero
           </Typography>
 
           {/* Owner + item count */}
-          <Container overrideDefaults className="flex w-full items-center gap-6">
+          <Container overrideDefaults className="flex w-full items-center gap-3">
             <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2 lg:flex-none">
               <Container overrideDefaults className="size-8 shrink-0 rounded-full bg-white/30" />
               <Container overrideDefaults className="h-5 w-32 rounded-md bg-white/30" />

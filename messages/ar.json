@@ -1323,6 +1323,7 @@
   "collections": {
     "deleted": "تم حذف هذه المجموعة من قبل صاحبها.",
     "missing": "المجموعة غير موجودة.",
+    "postCount": "{count, plural, one {منشور} other {منشورات}}",
     "new": {
       "cta": "مجموعة جديدة",
       "ctaShort": "جديد",
@@ -1392,8 +1393,8 @@
       "delete": "حذف",
       "follow": "متابعة",
       "unfollow": "إلغاء المتابعة",
-      "content": "محتوى",
-      "addContent": "إضافة محتوى",
+      "content": "إضافة منشور",
+      "addContent": "إضافة منشور",
       "empty": "هذه المجموعة فارغة.",
       "notFound": {
         "title": "المجموعة غير موجودة",
@@ -1405,7 +1406,7 @@
       }
     },
     "addContentDialog": {
-      "title": "إضافة محتوى",
+      "title": "إضافة منشور",
       "description": "أضف منشورًا أو مقالًا من خلاصتك أو الصق رابطًا مباشرة.",
       "fromFeedTitle": "إضافة من الخلاصة",
       "fromFeedLead": "ابحث عن منشور",

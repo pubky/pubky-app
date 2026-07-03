@@ -1327,6 +1327,7 @@
   "collections": {
     "deleted": "このコレクションは作成者によって削除されました。",
     "missing": "コレクションが見つかりません。",
+    "postCount": "{count, plural, other {投稿}}",
     "new": {
       "cta": "新しいコレクション",
       "ctaShort": "新規",
@@ -1396,8 +1397,8 @@
       "delete": "削除",
       "follow": "フォロー",
       "unfollow": "フォロー解除",
-      "content": "コンテンツ",
-      "addContent": "コンテンツを追加",
+      "content": "投稿を追加",
+      "addContent": "投稿を追加",
       "empty": "このコレクションは空です。",
       "notFound": {
         "title": "コレクションが見つかりません",
@@ -1409,7 +1410,7 @@
       }
     },
     "addContentDialog": {
-      "title": "コンテンツを追加",
+      "title": "投稿を追加",
       "description": "フィードから投稿または記事を追加するか、URLを直接貼り付けます。",
       "fromFeedTitle": "フィードから追加",
       "fromFeedLead": "投稿を見つけて",

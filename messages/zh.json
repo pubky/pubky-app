@@ -1321,6 +1321,7 @@
   "collections": {
     "deleted": "此收藏集已被作者删除。",
     "missing": "未找到收藏集。",
+    "postCount": "{count, plural, other {帖子}}",
     "new": {
       "cta": "新建收藏集",
       "ctaShort": "新建",
@@ -1390,8 +1391,8 @@
       "delete": "删除",
       "follow": "关注",
       "unfollow": "取消关注",
-      "content": "内容",
-      "addContent": "添加内容",
+      "content": "添加帖子",
+      "addContent": "添加帖子",
       "empty": "此收藏为空。",
       "notFound": {
         "title": "未找到收藏",
@@ -1403,7 +1404,7 @@
       }
     },
     "addContentDialog": {
-      "title": "添加内容",
+      "title": "添加帖子",
       "description": "从你的信息流添加帖子或文章，或直接粘贴 URL。",
       "fromFeedTitle": "从信息流添加",
       "fromFeedLead": "找到一个帖子",

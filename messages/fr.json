@@ -1327,6 +1327,7 @@
   "collections": {
     "deleted": "Cette collection a été supprimée par son auteur.",
     "missing": "Collection introuvable.",
+    "postCount": "{count, plural, one {publication} other {publications}}",
     "new": {
       "cta": "Nouvelle collection",
       "ctaShort": "Nouveau",
@@ -1396,8 +1397,8 @@
       "delete": "Supprimer",
       "follow": "Suivre",
       "unfollow": "Ne plus suivre",
-      "content": "Contenu",
-      "addContent": "Ajouter du contenu",
+      "content": "Ajouter une publication",
+      "addContent": "Ajouter une publication",
       "empty": "Cette collection est vide.",
       "notFound": {
         "title": "Collection introuvable",
@@ -1409,7 +1410,7 @@
       }
     },
     "addContentDialog": {
-      "title": "Ajouter du contenu",
+      "title": "Ajouter une publication",
       "description": "Ajoutez une publication ou un article depuis votre fil ou collez directement une URL.",
       "fromFeedTitle": "Ajouter depuis le fil",
       "fromFeedLead": "Trouvez une publication",
