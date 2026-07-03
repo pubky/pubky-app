@@ -159,7 +159,8 @@
     "signIn": "Anmelden",
     "feed": "Feed",
     "search": "Suchen",
-    "collections": "Sammlungen"
+    "collections": "Sammlungen",
+    "new": "Neu"
   },
   "settings": {
     "title": "Einstellungen",
@@ -474,13 +475,9 @@
       "createInBrowser": "Schlüssel im Browser erstellen",
       "continueWithRing": "Mit Pubky Ring fortfahren",
       "inviteCodeApplied": "Einladungscode angewendet",
-      "inviteCodeAppliedDescription": "Dein Einladungscode {inviteCode} wurde angewendet.",
       "invalidInviteCode": "Ungültiger Einladungscode",
-      "invalidInviteCodeDescription": "Dieser Einladungscode ist ungültig oder abgelaufen. Bitte verwende einen gültigen Einladungscode.",
       "usedInviteCode": "Einladungscode bereits verwendet",
-      "usedInviteCodeDescription": "Dieser Einladungscode wurde bereits verwendet. Bitte verwende einen anderen Einladungscode.",
-      "verificationFailed": "Einladungscode konnte nicht überprüft werden",
-      "verificationFailedDescription": "Wir konnten deinen Einladungscode gerade nicht überprüfen. Bitte überprüfe deine Verbindung und versuche es erneut."
+      "verificationFailed": "Einladungscode konnte nicht überprüft werden"
     },
     "createProfile": {
       "title": "Erstellen Sie Ihr <highlight>Profil.</highlight>",
@@ -647,7 +644,7 @@
     },
     "deleteCollection": {
       "title": "Sammlung löschen?",
-      "description": "Sind Sie sicher, dass Sie {name} löschen möchten? Personen, die dieser Sammlung folgen, haben keinen Zugriff mehr darauf. Beiträge in der Sammlung werden nicht gelöscht.",
+      "description": "Sind Sie sicher, dass Sie ''{name}'' löschen möchten? Personen, die dieser Sammlung folgen, haben keinen Zugriff mehr darauf. Beiträge in der Sammlung werden nicht gelöscht.",
       "confirmButton": "Löschen",
       "cancelButton": "Abbrechen"
     },
@@ -990,7 +987,7 @@
     "post": {
       "replyPosted": "Antwort gepostet",
       "replyFailed": "Antwort konnte nicht gepostet werden. Versuchen Sie es erneut.",
-      "postCreated": "Beitrag erstellt",
+      "postCreated": "Beitrag veröffentlicht",
       "postFailed": "Beitrag konnte nicht erstellt werden. Versuchen Sie es erneut.",
       "repostSuccess": "Repostet!",
       "repostUndo": "Rückgängig",
@@ -1328,6 +1325,7 @@
   "collections": {
     "deleted": "Diese Sammlung wurde vom Autor gelöscht.",
     "missing": "Sammlung nicht gefunden.",
+    "postCount": "{count, plural, one {Beitrag} other {Beiträge}}",
     "new": {
       "cta": "Neue Sammlung",
       "ctaShort": "Neu",
@@ -1343,7 +1341,7 @@
       "coverImageTooLarge": "Das Coverbild ist zu groß.",
       "nameRequired": "Sammlungstitel ist erforderlich.",
       "cancel": "Abbrechen",
-      "save": "Änderungen speichern",
+      "save": "Sammlung speichern",
       "saving": "Wird gespeichert...",
       "created": "Sammlung erstellt",
       "createFailed": "Sammlung konnte nicht erstellt werden."
@@ -1397,8 +1395,8 @@
       "delete": "Löschen",
       "follow": "Folgen",
       "unfollow": "Entfolgen",
-      "content": "Inhalt",
-      "addContent": "Inhalt hinzufügen",
+      "content": "Beitrag hinzufügen",
+      "addContent": "Beitrag hinzufügen",
       "empty": "Diese Sammlung ist leer.",
       "notFound": {
         "title": "Sammlung nicht gefunden",
@@ -1410,7 +1408,7 @@
       }
     },
     "addContentDialog": {
-      "title": "Inhalt hinzufügen",
+      "title": "Beitrag hinzufügen",
       "description": "Füge einen Beitrag oder Artikel aus deinem Feed hinzu oder füge direkt eine URL ein.",
       "fromFeedTitle": "Aus Feed hinzufügen",
       "fromFeedLead": "Finde einen Beitrag",

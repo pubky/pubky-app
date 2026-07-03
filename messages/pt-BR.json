@@ -157,7 +157,8 @@
     "signIn": "Entrar",
     "feed": "Feed",
     "search": "Pesquisar",
-    "collections": "Coleções"
+    "collections": "Coleções",
+    "new": "Novo"
   },
   "settings": {
     "title": "Configurações",
@@ -472,13 +473,9 @@
       "createInBrowser": "Criar chaves no navegador",
       "continueWithRing": "Continuar com Pubky Ring",
       "inviteCodeApplied": "Código de convite aplicado",
-      "inviteCodeAppliedDescription": "Seu código de convite {inviteCode} foi aplicado.",
       "invalidInviteCode": "Código de convite inválido",
-      "invalidInviteCodeDescription": "Este código de convite é inválido ou expirou. Use um código de convite válido.",
       "usedInviteCode": "Código de convite já utilizado",
-      "usedInviteCodeDescription": "Este código de convite já foi utilizado. Use um código de convite diferente.",
-      "verificationFailed": "Não foi possível verificar o código de convite",
-      "verificationFailedDescription": "Não conseguimos verificar seu código de convite agora. Verifique sua conexão e tente novamente."
+      "verificationFailed": "Não foi possível verificar o código de convite"
     },
     "createProfile": {
       "title": "Crie seu <highlight>perfil.</highlight>",
@@ -645,7 +642,7 @@
     },
     "deleteCollection": {
       "title": "Excluir coleção?",
-      "description": "Tem certeza de que deseja excluir {name}? As pessoas que seguem esta coleção não terão mais acesso a ela. As postagens dentro da coleção não serão excluídas.",
+      "description": "Tem certeza de que deseja excluir ''{name}''? As pessoas que seguem esta coleção não terão mais acesso a ela. As postagens dentro da coleção não serão excluídas.",
       "confirmButton": "Excluir",
       "cancelButton": "Cancelar"
     },
@@ -988,7 +985,7 @@
     "post": {
       "replyPosted": "Resposta publicada",
       "replyFailed": "Não foi possível publicar a resposta. Tente novamente.",
-      "postCreated": "Post criado",
+      "postCreated": "Post publicado",
       "postFailed": "Não foi possível criar a publicação. Tente novamente.",
       "repostSuccess": "Repostado!",
       "repostUndo": "Desfazer",
@@ -1326,6 +1323,7 @@
   "collections": {
     "deleted": "Esta coleção foi excluída pelo autor.",
     "missing": "Coleção não encontrada.",
+    "postCount": "{count, plural, one {post} other {posts}}",
     "new": {
       "cta": "Nova coleção",
       "ctaShort": "Nova",
@@ -1341,7 +1339,7 @@
       "coverImageTooLarge": "A imagem de capa é muito grande.",
       "nameRequired": "O título da coleção é obrigatório.",
       "cancel": "Cancelar",
-      "save": "Salvar alterações",
+      "save": "Salvar coleção",
       "saving": "Salvando...",
       "created": "Coleção criada",
       "createFailed": "Falha ao criar a coleção."
@@ -1395,8 +1393,8 @@
       "delete": "Excluir",
       "follow": "Seguir",
       "unfollow": "Deixar de seguir",
-      "content": "Conteúdo",
-      "addContent": "Adicionar conteúdo",
+      "content": "Adicionar post",
+      "addContent": "Adicionar post",
       "empty": "Esta coleção está vazia.",
       "notFound": {
         "title": "Coleção não encontrada",
@@ -1408,7 +1406,7 @@
       }
     },
     "addContentDialog": {
-      "title": "Adicionar conteúdo",
+      "title": "Adicionar post",
       "description": "Adicione uma publicação ou artigo do seu feed ou cole uma URL diretamente.",
       "fromFeedTitle": "Adicionar do feed",
       "fromFeedLead": "Encontre uma publicação",

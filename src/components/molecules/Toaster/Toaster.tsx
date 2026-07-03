@@ -12,8 +12,19 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, dismissButton, variant, className, ...props }) {
+      {toasts.map(function ({
+        id,
+        title,
+        description,
+        action,
+        dismissButton,
+        actionVariant,
+        variant,
+        className,
+        ...props
+      }) {
         const toastVariant = variant ?? 'default';
+        const effectiveActionVariant = actionVariant ?? toastVariant;
         const Icon = TOAST_ICONS[toastVariant];
         const effectiveTitle = title ?? (toastVariant === 'error' ? tToast('genericErrorTitle') : undefined);
 
@@ -27,7 +38,7 @@ export function Toaster() {
             <div className="flex shrink-0 items-center gap-2">
               {action}
               {dismissButton && (
-                <ToastAction altText={tCommon('ok')} variant={toastVariant} onClick={() => dismiss(id)}>
+                <ToastAction altText={tCommon('ok')} variant={effectiveActionVariant} onClick={() => dismiss(id)}>
                   {tCommon('ok')}
                 </ToastAction>
               )}

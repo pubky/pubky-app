@@ -18,7 +18,12 @@ const mockUseAuthStore = vi.fn();
 const mockLocalCollections: Record<string, string | undefined> = {};
 
 vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
+  useTranslations: (namespace?: string) => (key: string, values?: { count?: number }) =>
+    namespace === 'collections' && key === 'postCount'
+      ? values?.count === 1
+        ? 'post'
+        : 'posts'
+      : `${namespace ?? ''}.${key}`,
   useFormatter: () => ({
     number: (value: number, _options?: Intl.NumberFormatOptions) => String(value),
   }),
@@ -90,8 +95,8 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
     selector({ collections: mockLocalCollections }),
 }));
 
-vi.mock('@/organisms/EditCollectionDialog/EditCollectionDialog', () => ({
-  EditCollectionDialog: ({
+vi.mock('@/organisms/Collections/DialogEditCollection/DialogEditCollection', () => ({
+  DialogEditCollection: ({
     open,
     compositeCollectionId,
   }: {
@@ -106,8 +111,8 @@ vi.mock('@/organisms/EditCollectionDialog/EditCollectionDialog', () => ({
     ) : null,
 }));
 
-vi.mock('@/organisms/AddContentDialog/AddContentDialog', () => ({
-  AddContentDialog: ({
+vi.mock('@/organisms/Collections/DialogAddContent/DialogAddContent', () => ({
+  DialogAddContent: ({
     dataCy,
     disabled,
   }: {
@@ -335,7 +340,7 @@ describe('CollectionHero', () => {
 
     expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument(); // compact-formatted item count
+    expect(screen.getByText('2 posts')).toBeInTheDocument(); // compact-formatted item count
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
@@ -374,7 +379,7 @@ describe('CollectionHero', () => {
     renderHero();
 
     expect(screen.queryByText('A bit of Bitcoin purity amidst all of the madness.')).not.toBeInTheDocument();
-    expect(screen.getByText('0')).toBeInTheDocument(); // empty items count still renders
+    expect(screen.getByText('0 posts')).toBeInTheDocument(); // empty items count still renders
   });
 
   it('renders the hero skeleton while post details have not loaded yet', () => {
@@ -470,7 +475,7 @@ describe('CollectionHero', () => {
       expect(screen.getByLabelText('collections.single.delete')).toBeDisabled();
     });
 
-    it('opens the EditCollectionDialog (controlled, with the composite id) when the owner clicks Edit', () => {
+    it('opens the DialogEditCollection (controlled, with the composite id) when the owner clicks Edit', () => {
       setAuthStore(AUTHOR_PUBKY);
 
       renderHero();
@@ -485,7 +490,7 @@ describe('CollectionHero', () => {
       expect(dialog).toHaveAttribute('data-collection-id', COMPOSITE_ID);
     });
 
-    it("does not mount the EditCollectionDialog for non-owners (the Edit button isn't shown either)", () => {
+    it("does not mount the DialogEditCollection for non-owners (the Edit button isn't shown either)", () => {
       setAuthStore('some-other-user');
 
       renderHero();

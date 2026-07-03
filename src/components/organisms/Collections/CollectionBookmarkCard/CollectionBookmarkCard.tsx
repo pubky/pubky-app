@@ -54,14 +54,14 @@ export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProp
               <Typography
                 as="span"
                 overrideDefaults
-                className="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+                className="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
               >
                 {title}
               </Typography>
+              {bookmarkCount !== undefined && <CollectionCountBadge count={bookmarkCount} />}
             </Container>
 
-            <Container overrideDefaults className="flex shrink-0 items-center gap-2 sm:gap-3">
-              {bookmarkCount !== undefined && <CollectionCountBadge count={bookmarkCount} />}
+            <Container overrideDefaults className="flex shrink-0 items-center justify-end">
               <AvatarWithFallback
                 avatarUrl={avatarUrl}
                 name={avatarName}

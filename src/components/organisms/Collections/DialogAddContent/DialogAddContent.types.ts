@@ -1,8 +1,8 @@
 import type { AddContentTarget } from '@/hooks/useAddContentForm/useAddContentForm.types';
 
-export type AddContentTriggerVariant = 'hero' | 'grid';
+export type DialogAddContentTriggerVariant = 'hero' | 'grid';
 
-export interface AddContentDialogProps {
+export interface DialogAddContentProps {
   dataCy?: string;
   disabled?: boolean;
   target?: AddContentTarget;
@@ -10,5 +10,5 @@ export interface AddContentDialogProps {
    * `hero` — pill button for collection/bookmarks hero actions.
    * `grid` — dashed tile for the last cell in bookmarks/collection grids.
    */
-  triggerVariant?: AddContentTriggerVariant;
+  triggerVariant?: DialogAddContentTriggerVariant;
 }

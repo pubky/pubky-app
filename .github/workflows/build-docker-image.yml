@@ -137,10 +137,6 @@ jobs:
             NEXT_PUBLIC_DB_NAME=franky
             NEXT_PUBLIC_DEBUG_MODE=false
             NEXT_PUBLIC_APP_VERSION=${{ github.sha }}
-            BASE_URL_SUPPORT=https://chatwoot.example.com
-            SUPPORT_API_ACCESS_TOKEN=your_token_here
-            SUPPORT_ACCOUNT_ID=123
-            SUPPORT_FEEDBACK_INBOX_ID=26
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             SENTRY_ORG=synonym-52
             SENTRY_PROJECT=pubky-app

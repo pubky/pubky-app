@@ -8,8 +8,8 @@ import { useFabAction } from '@/hooks/useFabAction/useFabAction';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn } from '@/libs/utils/utils';
+import { DialogNewCollection } from '@/organisms/Collections/DialogNewCollection/DialogNewCollection';
 import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
-import { NewCollectionDialog } from '@/organisms/NewCollectionDialog/NewCollectionDialog';
 
 /**
  * Floating Action Button (FAB).
@@ -77,7 +77,7 @@ export function Fab() {
     <>
       {button}
       {action.kind === 'createCollection' ? (
-        <NewCollectionDialog open={open} onOpenChange={setOpen} />
+        <DialogNewCollection open={open} onOpenChange={setOpen} />
       ) : (
         <DialogNewPost open={open} onOpenChangeAction={setOpen} onPostCreated={action.onPostCreated} />
       )}

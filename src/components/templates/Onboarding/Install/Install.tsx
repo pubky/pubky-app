@@ -38,7 +38,6 @@ export function Install() {
           useOnboardingStore.getState().setInviteCode(inviteCodeFromUrl);
           toast({
             title: t('inviteCodeApplied'),
-            description: t('inviteCodeAppliedDescription', { inviteCode: inviteCodeFromUrl }),
           });
           setIsVerifying(false);
           return;
@@ -46,13 +45,13 @@ export function Install() {
 
         if (status === 'used') {
           toast({
+            variant: 'error',
             title: t('usedInviteCode'),
-            description: t('usedInviteCodeDescription'),
           });
         } else {
           toast({
+            variant: 'error',
             title: t('invalidInviteCode'),
-            description: t('invalidInviteCodeDescription'),
           });
         }
       } catch {
@@ -60,7 +59,6 @@ export function Install() {
         toast({
           variant: 'error',
           title: t('verificationFailed'),
-          description: t('verificationFailedDescription'),
         });
       }
 

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { describe, expect, it, vi } from 'vitest';
 import type { UseCoverImagePickerResult } from '@/hooks/useCoverImagePicker/useCoverImagePicker';
 import type { CreateCollectionFormData } from '@/hooks/useCreateCollection/useCreateCollection.types';
-import { CollectionFormDialog } from './CollectionFormDialog';
+import { DialogCollectionForm } from './DialogCollectionForm';
 
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
@@ -29,7 +29,7 @@ type Overrides = Partial<{
 }>;
 
 /**
- * Harness component: drives `CollectionFormDialog` with a real `useForm` + a
+ * Harness component: drives `DialogCollectionForm` with a real `useForm` + a
  * stub cover picker so individual tests can focus on the presentational shell
  * (title, submitLabel, isSaving, cover errors, autofocus suppression).
  */
@@ -72,7 +72,7 @@ function Harness({
   };
 
   return (
-    <CollectionFormDialog
+    <DialogCollectionForm
       open={open}
       onOpenChange={handleOpenChange}
       title={title}
@@ -88,7 +88,7 @@ function Harness({
   );
 }
 
-describe('CollectionFormDialog', () => {
+describe('DialogCollectionForm', () => {
   it('renders the provided title and submit label', () => {
     render(<Harness title="Edit Collection" submitLabel="Save changes" />);
 
@@ -234,7 +234,7 @@ describe('CollectionFormDialog', () => {
   });
 });
 
-describe('CollectionFormDialog - Snapshots', () => {
+describe('DialogCollectionForm - Snapshots', () => {
   it('matches snapshot in the default (no cover, idle) state', () => {
     render(<Harness title="Edit Collection" submitLabel="Save changes" />);
 

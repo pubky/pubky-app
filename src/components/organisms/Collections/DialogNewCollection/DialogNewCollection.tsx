@@ -9,10 +9,10 @@ import { getCollectionRoute } from '@/app/routes';
 import { useAuthoredCollections } from '@/hooks/useAuthoredCollections/useAuthoredCollections';
 import { useCreateCollection } from '@/hooks/useCreateCollection/useCreateCollection';
 import { parseCompositeId } from '@/models/models.utils';
-import { CollectionFormDialog } from '@/organisms/Collections/CollectionFormDialog/CollectionFormDialog';
-import { CollectionsIntroDialog } from '@/organisms/Collections/CollectionsIntroDialog/CollectionsIntroDialog';
+import { DialogCollectionForm } from '@/organisms/Collections/DialogCollectionForm/DialogCollectionForm';
+import { DialogCollectionsIntro } from '@/organisms/Collections/DialogCollectionsIntro/DialogCollectionsIntro';
 
-type NewCollectionDialogProps = {
+type DialogNewCollectionProps = {
   /** Optional trigger element. Omit when driving the dialog via `open`/`onOpenChange`. */
   children?: ReactNode;
   /** Controlled open state (e.g. when opened by the FAB). Uncontrolled when omitted. */
@@ -21,11 +21,11 @@ type NewCollectionDialogProps = {
   onOpenChange?: (open: boolean) => void;
 };
 
-export function NewCollectionDialog({
+export function DialogNewCollection({
   children,
   open: openProp,
   onOpenChange: onOpenChangeProp,
-}: NewCollectionDialogProps) {
+}: DialogNewCollectionProps) {
   const t = useTranslations('collections.new');
   const router = useRouter();
   const [openState, setOpenState] = useState(false);
@@ -86,9 +86,9 @@ export function NewCollectionDialog({
     <>
       {children ? <Slot.Root onClick={() => setOpen(true)}>{children}</Slot.Root> : null}
 
-      <CollectionsIntroDialog open={introOpen} onOpenChange={handleDismiss} onContinue={() => setContinued(true)} />
+      <DialogCollectionsIntro open={introOpen} onOpenChange={handleDismiss} onContinue={() => setContinued(true)} />
 
-      <CollectionFormDialog
+      <DialogCollectionForm
         open={formOpen}
         onOpenChange={handleDismiss}
         title={t('title')}

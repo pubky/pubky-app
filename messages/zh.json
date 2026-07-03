@@ -157,7 +157,8 @@
     "signIn": "登录",
     "feed": "动态",
     "search": "搜索",
-    "collections": "收藏集"
+    "collections": "收藏集",
+    "new": "新"
   },
   "settings": {
     "title": "设置",
@@ -472,13 +473,9 @@
       "createInBrowser": "在浏览器中创建密钥",
       "continueWithRing": "继续使用 Pubky Ring",
       "inviteCodeApplied": "邀请码已应用",
-      "inviteCodeAppliedDescription": "您的邀请码 {inviteCode} 已应用。",
       "invalidInviteCode": "无效的邀请码",
-      "invalidInviteCodeDescription": "此邀请码无效或已过期。请使用有效的邀请码。",
       "usedInviteCode": "邀请码已被使用",
-      "usedInviteCodeDescription": "此邀请码已被使用。请使用其他邀请码。",
-      "verificationFailed": "无法验证邀请码",
-      "verificationFailedDescription": "我们目前无法验证您的邀请码。请检查您的网络连接后重试。"
+      "verificationFailed": "无法验证邀请码"
     },
     "createProfile": {
       "title": "创建您的<highlight>个人资料。</highlight>",
@@ -645,7 +642,7 @@
     },
     "deleteCollection": {
       "title": "删除收藏集？",
-      "description": "您确定要删除 {name} 吗？关注此收藏集的用户将无法再访问它。收藏集内的帖子不会被删除。",
+      "description": "您确定要删除「{name}」吗？关注此收藏集的用户将无法再访问它。收藏集内的帖子不会被删除。",
       "confirmButton": "删除",
       "cancelButton": "取消"
     },
@@ -988,7 +985,7 @@
     "post": {
       "replyPosted": "回复已发布",
       "replyFailed": "无法发布回复。请重试。",
-      "postCreated": "帖子已创建",
+      "postCreated": "帖子已发布",
       "postFailed": "无法创建帖子。请重试。",
       "repostSuccess": "已转发！",
       "repostUndo": "撤销",
@@ -1320,6 +1317,7 @@
   "collections": {
     "deleted": "此收藏集已被作者删除。",
     "missing": "未找到收藏集。",
+    "postCount": "{count, plural, other {帖子}}",
     "new": {
       "cta": "新建收藏集",
       "ctaShort": "新建",
@@ -1335,7 +1333,7 @@
       "coverImageTooLarge": "封面图片太大。",
       "nameRequired": "收藏集标题为必填项。",
       "cancel": "取消",
-      "save": "保存更改",
+      "save": "保存收藏",
       "saving": "保存中...",
       "created": "收藏集已创建",
       "createFailed": "创建收藏集失败。"
@@ -1389,8 +1387,8 @@
       "delete": "删除",
       "follow": "关注",
       "unfollow": "取消关注",
-      "content": "内容",
-      "addContent": "添加内容",
+      "content": "添加帖子",
+      "addContent": "添加帖子",
       "empty": "此收藏为空。",
       "notFound": {
         "title": "未找到收藏",
@@ -1402,7 +1400,7 @@
       }
     },
     "addContentDialog": {
-      "title": "添加内容",
+      "title": "添加帖子",
       "description": "从你的信息流添加帖子或文章，或直接粘贴 URL。",
       "fromFeedTitle": "从信息流添加",
       "fromFeedLead": "找到一个帖子",

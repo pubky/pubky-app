@@ -146,8 +146,8 @@ vi.mock('@/organisms/DialogReportPost/DialogReportPost', () => {
   };
 });
 
-vi.mock('@/organisms/EditCollectionDialog/EditCollectionDialog', () => ({
-  EditCollectionDialog: ({
+vi.mock('@/organisms/Collections/DialogEditCollection/DialogEditCollection', () => ({
+  DialogEditCollection: ({
     open,
     compositeCollectionId,
   }: {
@@ -156,7 +156,7 @@ vi.mock('@/organisms/EditCollectionDialog/EditCollectionDialog', () => ({
     compositeCollectionId: string;
   }) => (
     <div data-testid="edit-collection-dialog" data-open={open.toString()} data-collection-id={compositeCollectionId}>
-      EditCollectionDialog
+      DialogEditCollection
     </div>
   ),
 }));
@@ -390,7 +390,7 @@ describe('PostMenuActions', () => {
   });
 
   describe('edit dialog routing by post kind', () => {
-    it('renders DialogEditPost (and not EditCollectionDialog) for short posts', () => {
+    it('renders DialogEditPost (and not DialogEditCollection) for short posts', () => {
       mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'short' }, isLoading: false });
       const trigger = <button>Menu</button>;
       render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
@@ -399,7 +399,7 @@ describe('PostMenuActions', () => {
       expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
     });
 
-    it('renders DialogEditPost (not EditCollectionDialog) for long-form articles', () => {
+    it('renders DialogEditPost (not DialogEditCollection) for long-form articles', () => {
       mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'long' }, isLoading: false });
       const trigger = <button>Menu</button>;
       render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
@@ -408,7 +408,7 @@ describe('PostMenuActions', () => {
       expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
     });
 
-    it('renders EditCollectionDialog (not DialogEditPost) for collection posts', () => {
+    it('renders DialogEditCollection (not DialogEditPost) for collection posts', () => {
       mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'collection' }, isLoading: false });
       const trigger = <button>Menu</button>;
       render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
@@ -419,7 +419,7 @@ describe('PostMenuActions', () => {
       expect(screen.queryByTestId('dialog-edit-post')).not.toBeInTheDocument();
     });
 
-    it('opens the EditCollectionDialog when Edit is clicked on a collection post', async () => {
+    it('opens the DialogEditCollection when Edit is clicked on a collection post', async () => {
       mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'collection' }, isLoading: false });
       const user = userEvent.setup();
       const trigger = <button>Menu</button>;

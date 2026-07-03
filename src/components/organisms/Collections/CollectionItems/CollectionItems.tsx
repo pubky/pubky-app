@@ -4,9 +4,9 @@ import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { buildCompositeId } from '@/models/models.utils';
-import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog';
 import { CollectionHero } from '@/organisms/Collections/CollectionHero/CollectionHero';
 import { CollectionItemsEmpty } from '@/organisms/Collections/CollectionItemsEmpty/CollectionItemsEmpty';
+import { DialogAddContent } from '@/organisms/Collections/DialogAddContent/DialogAddContent';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { CollectionItemsProps } from './CollectionItems.types';
@@ -60,7 +60,7 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
       pullToRefreshContainerRef={pullToRefreshContainerRef}
       gridTrailingSlot={
         isOwn ? (
-          <AddContentDialog
+          <DialogAddContent
             triggerVariant="grid"
             target={{ type: 'collection', collectionId: compositeId }}
             dataCy="collection-add-content-grid"

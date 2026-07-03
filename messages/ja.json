@@ -157,7 +157,8 @@
     "signIn": "ログイン",
     "feed": "フィード",
     "search": "検索",
-    "collections": "コレクション"
+    "collections": "コレクション",
+    "new": "新着"
   },
   "settings": {
     "title": "設定",
@@ -472,13 +473,9 @@
       "createInBrowser": "ブラウザでキーを作成",
       "continueWithRing": "Pubky Ringで続行",
       "inviteCodeApplied": "招待コードが適用されました",
-      "inviteCodeAppliedDescription": "招待コード {inviteCode} が適用されました。",
       "invalidInviteCode": "無効な招待コード",
-      "invalidInviteCodeDescription": "この招待コードは無効か期限切れです。有効な招待コードを使用してください。",
       "usedInviteCode": "招待コードは既に使用済みです",
-      "usedInviteCodeDescription": "この招待コードは既に使用されています。別の招待コードを使用してください。",
-      "verificationFailed": "招待コードを確認できませんでした",
-      "verificationFailedDescription": "現在、招待コードを確認できませんでした。接続を確認してもう一度お試しください。"
+      "verificationFailed": "招待コードを確認できませんでした"
     },
     "createProfile": {
       "title": "<highlight>プロフィール</highlight>を作成。",
@@ -645,7 +642,7 @@
     },
     "deleteCollection": {
       "title": "コレクションを削除しますか？",
-      "description": "{name}を削除してもよろしいですか？このコレクションをフォローしているユーザーはアクセスできなくなります。コレクション内の投稿は削除されません。",
+      "description": "「{name}」を削除してもよろしいですか？このコレクションをフォローしているユーザーはアクセスできなくなります。コレクション内の投稿は削除されません。",
       "confirmButton": "削除",
       "cancelButton": "キャンセル"
     },
@@ -988,7 +985,7 @@
     "post": {
       "replyPosted": "返信を投稿しました",
       "replyFailed": "返信を投稿できませんでした。もう一度お試しください。",
-      "postCreated": "投稿を作成しました",
+      "postCreated": "投稿を公開しました",
       "postFailed": "投稿を作成できませんでした。もう一度お試しください。",
       "repostSuccess": "リポストしました！",
       "repostUndo": "元に戻す",
@@ -1326,6 +1323,7 @@
   "collections": {
     "deleted": "このコレクションは作成者によって削除されました。",
     "missing": "コレクションが見つかりません。",
+    "postCount": "{count, plural, other {投稿}}",
     "new": {
       "cta": "新しいコレクション",
       "ctaShort": "新規",
@@ -1341,7 +1339,7 @@
       "coverImageTooLarge": "カバー画像が大きすぎます。",
       "nameRequired": "コレクションのタイトルは必須です。",
       "cancel": "キャンセル",
-      "save": "変更を保存",
+      "save": "コレクションを保存",
       "saving": "保存中...",
       "created": "コレクションを作成しました",
       "createFailed": "コレクションの作成に失敗しました。"
@@ -1395,8 +1393,8 @@
       "delete": "削除",
       "follow": "フォロー",
       "unfollow": "フォロー解除",
-      "content": "コンテンツ",
-      "addContent": "コンテンツを追加",
+      "content": "投稿を追加",
+      "addContent": "投稿を追加",
       "empty": "このコレクションは空です。",
       "notFound": {
         "title": "コレクションが見つかりません",
@@ -1408,7 +1406,7 @@
       }
     },
     "addContentDialog": {
-      "title": "コンテンツを追加",
+      "title": "投稿を追加",
       "description": "フィードから投稿または記事を追加するか、URLを直接貼り付けます。",
       "fromFeedTitle": "フィードから追加",
       "fromFeedLead": "投稿を見つけて",
