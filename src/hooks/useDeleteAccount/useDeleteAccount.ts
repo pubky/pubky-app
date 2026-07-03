@@ -26,7 +26,6 @@ interface UseDeleteAccountResult {
 export function useDeleteAccount(): UseDeleteAccountResult {
   const router = useRouter();
   const { toast } = useToast();
-  const tCommon = useTranslations('common');
   const tErrors = useTranslations('errors');
   const [isDeleting, setIsDeleting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -46,9 +45,8 @@ export function useDeleteAccount(): UseDeleteAccountResult {
     } catch (error) {
       Logger.error('Failed to delete account:', { error });
       toast({
-        title: tCommon('error'),
+        variant: 'error',
         description: tErrors('deleteAccountFailed'),
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
       });
       setIsDeleting(false);
       setProgress(0);

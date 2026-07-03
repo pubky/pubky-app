@@ -45,8 +45,7 @@ export function Human() {
 
   // Manually entered invite codes are verified with the homeserver as soon as the full code is
   // entered. On failure we surface a toast and keep the user on this step so they can try again.
-  // A homeserver that reports the code as invalid shows a warning toast; a homeserver we couldn't
-  // reach shows an error toast so the two are not conflated.
+  // Invalid or used codes show an error toast; unreachable homeserver errors use a distinct error title.
   async function onInviteCodeVerify(inviteCode: string): Promise<InviteCodeVerificationResult> {
     try {
       const status = await AuthController.verifySignupToken(inviteCode);
@@ -54,7 +53,6 @@ export function Human() {
       if (status === 'valid') {
         toast({
           title: t('inviteCodeApplied'),
-          description: t('inviteCodeAppliedDescription', { inviteCode }),
         });
         return 'valid';
       }
@@ -62,21 +60,20 @@ export function Human() {
       if (status === 'used') {
         toast({
           title: t('usedInviteCode'),
-          description: t('usedInviteCodeDescription'),
+          variant: 'error',
         });
         return 'used';
       }
 
       toast({
         title: t('invalidInviteCode'),
-        description: t('invalidInviteCodeDescription'),
+        variant: 'error',
       });
       return 'invalid';
     } catch {
       toast({
         variant: 'error',
         title: t('verificationFailed'),
-        description: t('verificationFailedDescription'),
       });
       return 'error';
     }

@@ -473,13 +473,9 @@
       "createInBrowser": "Créér les cles dans le navigateur",
       "continueWithRing": "Continuer avec Pubky Ring",
       "inviteCodeApplied": "Code d'invitation appliqué",
-      "inviteCodeAppliedDescription": "Votre code d'invitation {inviteCode} a été appliqué.",
       "invalidInviteCode": "Code d'invitation invalide",
-      "invalidInviteCodeDescription": "Ce code d'invitation est invalide ou a expiré. Veuillez utiliser un code d'invitation valide.",
       "usedInviteCode": "Code d'invitation déjà utilisé",
-      "usedInviteCodeDescription": "Ce code d'invitation a déjà été utilisé. Veuillez utiliser un autre code d'invitation.",
-      "verificationFailed": "Impossible de vérifier le code d'invitation",
-      "verificationFailedDescription": "Nous n'avons pas pu vérifier votre code d'invitation pour le moment. Veuillez vérifier votre connexion et réessayer."
+      "verificationFailed": "Impossible de vérifier le code d'invitation"
     },
     "createProfile": {
       "title": "Créez votre <highlight>profil.</highlight>",
@@ -989,7 +985,7 @@
     "post": {
       "replyPosted": "Réponse publiee",
       "replyFailed": "Impossible de publier la réponse. Réessayez.",
-      "postCreated": "Publication créée",
+      "postCreated": "Publication publiée",
       "postFailed": "Impossible de créer la publication. Réessayez.",
       "repostSuccess": "Republié !",
       "repostUndo": "Annuler",

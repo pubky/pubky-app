@@ -475,13 +475,9 @@
       "createInBrowser": "Crear claves en el navegador",
       "continueWithRing": "Continuar con Pubky Ring",
       "inviteCodeApplied": "Código de invitación aplicado",
-      "inviteCodeAppliedDescription": "Tu código de invitación {inviteCode} se ha aplicado.",
       "invalidInviteCode": "Código de invitación no válido",
-      "invalidInviteCodeDescription": "Este código de invitación no es válido o ha expirado. Usa un código de invitación válido.",
       "usedInviteCode": "Código de invitación ya utilizado",
-      "usedInviteCodeDescription": "Este código de invitación ya se ha utilizado. Usa un código de invitación diferente.",
-      "verificationFailed": "No se pudo verificar el código de invitación",
-      "verificationFailedDescription": "No pudimos verificar tu código de invitación en este momento. Comprueba tu conexión e inténtalo de nuevo."
+      "verificationFailed": "No se pudo verificar el código de invitación"
     },
     "createProfile": {
       "title": "Crea tu <highlight>perfil.</highlight>",
@@ -991,7 +987,7 @@
     "post": {
       "replyPosted": "Respuesta publicada",
       "replyFailed": "No se pudo publicar la respuesta. Inténtalo de nuevo.",
-      "postCreated": "Publicacion creada",
+      "postCreated": "Publicación publicada",
       "postFailed": "No se pudo crear la publicación. Inténtalo de nuevo.",
       "repostSuccess": "Republicaste la publicación de {author}",
       "repostSuccessFallback": "Republicado",

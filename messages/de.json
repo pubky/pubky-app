@@ -475,13 +475,9 @@
       "createInBrowser": "Schlüssel im Browser erstellen",
       "continueWithRing": "Mit Pubky Ring fortfahren",
       "inviteCodeApplied": "Einladungscode angewendet",
-      "inviteCodeAppliedDescription": "Dein Einladungscode {inviteCode} wurde angewendet.",
       "invalidInviteCode": "Ungültiger Einladungscode",
-      "invalidInviteCodeDescription": "Dieser Einladungscode ist ungültig oder abgelaufen. Bitte verwende einen gültigen Einladungscode.",
       "usedInviteCode": "Einladungscode bereits verwendet",
-      "usedInviteCodeDescription": "Dieser Einladungscode wurde bereits verwendet. Bitte verwende einen anderen Einladungscode.",
-      "verificationFailed": "Einladungscode konnte nicht überprüft werden",
-      "verificationFailedDescription": "Wir konnten deinen Einladungscode gerade nicht überprüfen. Bitte überprüfe deine Verbindung und versuche es erneut."
+      "verificationFailed": "Einladungscode konnte nicht überprüft werden"
     },
     "createProfile": {
       "title": "Erstellen Sie Ihr <highlight>Profil.</highlight>",
@@ -991,7 +987,7 @@
     "post": {
       "replyPosted": "Antwort gepostet",
       "replyFailed": "Antwort konnte nicht gepostet werden. Versuchen Sie es erneut.",
-      "postCreated": "Beitrag erstellt",
+      "postCreated": "Beitrag veröffentlicht",
       "postFailed": "Beitrag konnte nicht erstellt werden. Versuchen Sie es erneut.",
       "repostSuccess": "Repostet!",
       "repostUndo": "Rückgängig",

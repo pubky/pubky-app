@@ -135,9 +135,8 @@ describe('useDeleteAccount', () => {
     });
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
+      variant: 'error',
       description: 'Failed to delete account. Please try again.',
-      className: 'destructive border-destructive bg-destructive text-destructive-foreground',
     });
     expect(result.current.isDeleting).toBe(false);
     expect(result.current.progress).toBe(0);

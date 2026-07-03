@@ -51,6 +51,8 @@ body {
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-brand: var(--brand);
+  --color-toast-action-muted: var(--toast-action-muted);
+  --color-toast-action-muted-hover-border: var(--toast-action-muted-hover-border);
   --color-transparent: var(--transparent);
   --radius-xs: 0.25rem;
   --radius-sm: calc(var(--radius) - 4px);
@@ -124,6 +126,8 @@ body {
   --sidebar-border: oklch(0.311 0.007 285.98);
   --sidebar-ring: oklch(0.472 0.007 274.863);
   --brand: oklch(0.928 0.23 123.978);
+  --toast-action-muted: oklch(0.218 0.006 286);
+  --toast-action-muted-hover-border: oklch(0.277 0.006 286);
   --transparent: oklch(0.118 0.014 284.115 / 0);
   --scrollbar-size: 10px;
   --scrollbar-radius: 100%;

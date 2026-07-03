@@ -473,13 +473,9 @@
       "createInBrowser": "在浏览器中创建密钥",
       "continueWithRing": "继续使用 Pubky Ring",
       "inviteCodeApplied": "邀请码已应用",
-      "inviteCodeAppliedDescription": "您的邀请码 {inviteCode} 已应用。",
       "invalidInviteCode": "无效的邀请码",
-      "invalidInviteCodeDescription": "此邀请码无效或已过期。请使用有效的邀请码。",
       "usedInviteCode": "邀请码已被使用",
-      "usedInviteCodeDescription": "此邀请码已被使用。请使用其他邀请码。",
-      "verificationFailed": "无法验证邀请码",
-      "verificationFailedDescription": "我们目前无法验证您的邀请码。请检查您的网络连接后重试。"
+      "verificationFailed": "无法验证邀请码"
     },
     "createProfile": {
       "title": "创建您的<highlight>个人资料。</highlight>",
@@ -989,7 +985,7 @@
     "post": {
       "replyPosted": "回复已发布",
       "replyFailed": "无法发布回复。请重试。",
-      "postCreated": "帖子已创建",
+      "postCreated": "帖子已发布",
       "postFailed": "无法创建帖子。请重试。",
       "repostSuccess": "已转发！",
       "repostUndo": "撤销",
