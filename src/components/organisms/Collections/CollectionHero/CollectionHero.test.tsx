@@ -18,7 +18,12 @@ const mockUseAuthStore = vi.fn();
 const mockLocalCollections: Record<string, string | undefined> = {};
 
 vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
+  useTranslations: (namespace?: string) => (key: string, values?: { count?: number }) =>
+    namespace === 'collections' && key === 'postCount'
+      ? values?.count === 1
+        ? 'post'
+        : 'posts'
+      : `${namespace ?? ''}.${key}`,
   useFormatter: () => ({
     number: (value: number, _options?: Intl.NumberFormatOptions) => String(value),
   }),
@@ -335,7 +340,7 @@ describe('CollectionHero', () => {
 
     expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument(); // compact-formatted item count
+    expect(screen.getByText('2 posts')).toBeInTheDocument(); // compact-formatted item count
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
@@ -374,7 +379,7 @@ describe('CollectionHero', () => {
     renderHero();
 
     expect(screen.queryByText('A bit of Bitcoin purity amidst all of the madness.')).not.toBeInTheDocument();
-    expect(screen.getByText('0')).toBeInTheDocument(); // empty items count still renders
+    expect(screen.getByText('0 posts')).toBeInTheDocument(); // empty items count still renders
   });
 
   it('renders the hero skeleton while post details have not loaded yet', () => {

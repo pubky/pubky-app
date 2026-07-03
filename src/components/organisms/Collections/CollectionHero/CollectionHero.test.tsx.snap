@@ -24,7 +24,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       Based Bitcoin
     </h1>
     <div
-      class="flex w-full items-center gap-6"
+      class="flex w-full items-center gap-3"
       data-testid="container"
     >
       <div
@@ -49,7 +49,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
         </span>
       </div>
       <div
-        class="flex items-center gap-1 text-muted-foreground"
+        class="flex shrink-0 items-center gap-1 text-secondary-foreground h-6 justify-center rounded-full bg-card px-2 py-1"
         data-testid="container"
       >
         <svg
@@ -77,6 +77,8 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
           data-testid="typography"
         >
           2
+           
+          posts
         </span>
       </div>
     </div>
@@ -241,7 +243,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       Based Bitcoin
     </h1>
     <div
-      class="flex w-full items-center gap-6"
+      class="flex w-full items-center gap-3"
       data-testid="container"
     >
       <div
@@ -266,7 +268,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
         </span>
       </div>
       <div
-        class="flex items-center gap-1 text-muted-foreground"
+        class="flex shrink-0 items-center gap-1 text-secondary-foreground h-6 justify-center rounded-full bg-card px-2 py-1"
         data-testid="container"
       >
         <svg
@@ -294,6 +296,8 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
           data-testid="typography"
         >
           2
+           
+          posts
         </span>
       </div>
     </div>
@@ -507,7 +511,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
       Quiet collection
     </h1>
     <div
-      class="flex w-full items-center gap-6"
+      class="flex w-full items-center gap-3"
       data-testid="container"
     >
       <div
@@ -532,7 +536,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
         </span>
       </div>
       <div
-        class="flex items-center gap-1 text-muted-foreground"
+        class="flex shrink-0 items-center gap-1 text-secondary-foreground"
         data-testid="container"
       >
         <svg
@@ -560,6 +564,8 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
           data-testid="typography"
         >
           0
+           
+          posts
         </span>
       </div>
     </div>

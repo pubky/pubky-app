@@ -17,7 +17,12 @@ const mockUseAuthStore = vi.fn();
 const mockLocalCollections: Record<string, string | undefined> = {};
 
 vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
+  useTranslations: (namespace?: string) => (key: string, values?: { count?: number }) =>
+    namespace === 'collections' && key === 'postCount'
+      ? values?.count === 1
+        ? 'post'
+        : 'posts'
+      : `${namespace ?? ''}.${key}`,
   useFormatter: () => ({
     number: (value: number, _options?: Intl.NumberFormatOptions) => String(value),
   }),
@@ -271,7 +276,7 @@ describe('CollectionCard', () => {
 
     expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument(); // items length
+    expect(screen.getByText('2 posts')).toBeInTheDocument(); // items length
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
@@ -319,7 +324,7 @@ describe('CollectionCard', () => {
     render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
     expect(screen.queryByText('A bit of Bitcoin purity amidst all of the madness.')).not.toBeInTheDocument();
-    expect(screen.getByText('0')).toBeInTheDocument(); // empty items count still renders
+    expect(screen.getByText('0 posts')).toBeInTheDocument(); // empty items count still renders
   });
 
   describe('cover image — local-files store fallback', () => {
@@ -625,7 +630,7 @@ describe('CollectionCard', () => {
 
       expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
       expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-      expect(screen.getByText('2')).toBeInTheDocument();
+      expect(screen.getByText('2 posts')).toBeInTheDocument();
       expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-name', 'Bitcoin Wizard');
     });
 

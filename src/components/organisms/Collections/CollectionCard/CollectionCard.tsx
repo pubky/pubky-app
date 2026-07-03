@@ -260,22 +260,21 @@ function CollectionCardContent({
           )}
 
           <CardContent className="flex h-full flex-col gap-3 p-6">
-            {/* Header row: icon + title (left, grows) | item-count + avatar (right) */}
+            {/* Header row: icon + title + item-count (left, grows) | avatar (right) */}
             <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
               <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">
                 <Library className="size-6 shrink-0 text-foreground" />
                 <Typography
                   as="span"
                   overrideDefaults
-                  className="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+                  className="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
                 >
                   {title}
                 </Typography>
+                <CollectionCountBadge count={itemCount} onCover={!!coverImage} />
               </Container>
 
-              <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-3">
-                <CollectionCountBadge count={itemCount} />
-
+              <Container overrideDefaults className="flex shrink-0 items-center justify-end">
                 <AvatarWithFallback
                   avatarUrl={ownerAvatarUrl}
                   name={ownerName}
