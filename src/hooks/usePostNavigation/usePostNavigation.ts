@@ -22,6 +22,13 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   return Boolean(interactiveElement && !interactiveElement.matches(POST_NAVIGATION_ALLOW_SELECTOR));
 }
 
+// Post detail pages are scrolled to whatever position the click happened at (e.g. clicking
+// "Show more" near the bottom of a card). Scroll to top before push so the new page doesn't
+// briefly render at the old scroll position.
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
 /**
  * usePostNavigation
  *
@@ -40,7 +47,9 @@ export function usePostNavigation(): UsePostNavigationResult {
 
   const navigateToPost = useCallback(
     (postId: string) => {
-      router.push(getPostHref(postId));
+      const href = getPostHref(postId);
+      scrollToTop();
+      router.push(href);
     },
     [router, getPostHref],
   );
@@ -58,9 +67,9 @@ export function usePostNavigation(): UsePostNavigationResult {
         window.open(href, '_blank', 'noopener,noreferrer');
         return;
       }
-      router.push(href);
+      navigateToPost(postId);
     },
-    [router, getPostHref],
+    [getPostHref, navigateToPost],
   );
 
   const handlePostAuxClick = useCallback(
@@ -85,9 +94,9 @@ export function usePostNavigation(): UsePostNavigationResult {
         window.open(href, '_blank', 'noopener,noreferrer');
         return;
       }
-      router.push(href);
+      navigateToPost(postId);
     },
-    [router, getPostHref],
+    [getPostHref, navigateToPost],
   );
 
   return { getPostHref, navigateToPost, handlePostClick, handlePostAuxClick, handlePostKeyDown };

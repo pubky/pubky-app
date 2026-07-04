@@ -124,6 +124,7 @@ const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
 const mockPostAttachments = vi.mocked(PostAttachments);
 const mockPostContentBlurred = vi.mocked(PostContentBlurred);
 const mockPostArticle = vi.mocked(PostArticle);
+const mockPostText = vi.mocked(PostText);
 
 // Helper to create complete PostDetails mock
 const createMockPostDetails = (
@@ -303,6 +304,25 @@ describe('PostContentBase', () => {
 
     expect(screen.getByTestId('post-article')).toBeInTheDocument();
     expect(screen.queryByTestId('container')).not.toBeInTheDocument();
+  });
+
+  it('renders malformed long posts as normal post text', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({
+        content: 'raw long content that is not an article envelope',
+        kind: 'long',
+      }),
+      isLoading: false,
+    });
+
+    render(<PostContentBase postId="post-123" />);
+
+    expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
+    expect(screen.getByTestId('container')).toBeInTheDocument();
+    expect(mockPostText).toHaveBeenCalledWith(
+      { content: 'raw long content that is not an article envelope', className: undefined },
+      undefined,
+    );
   });
 
   it('renders CollectionCard (preview variant) when kind is collection', () => {

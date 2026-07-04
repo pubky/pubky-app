@@ -1,1 +1,1 @@
-export type ArticleJSON = { title: string; body: string };
+export type { ArticleContent as ArticleJSON } from '@/libs/post/articleContent';
