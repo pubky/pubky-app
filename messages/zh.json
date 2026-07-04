@@ -1401,7 +1401,7 @@
     },
     "addContentDialog": {
       "title": "添加帖子",
-      "description": "从你的信息流添加帖子或文章，或直接粘贴 URL。",
+      "description": "有几种方式可以将帖子添加到你的合集。",
       "fromFeedTitle": "从信息流添加",
       "fromFeedLead": "找到一个帖子",
       "fromFeedRest": "，然后点击收藏按钮将其添加。",

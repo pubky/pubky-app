@@ -1407,7 +1407,7 @@
     },
     "addContentDialog": {
       "title": "投稿を追加",
-      "description": "フィードから投稿または記事を追加するか、URLを直接貼り付けます。",
+      "description": "コレクションに投稿を追加する方法はいくつかあります。",
       "fromFeedTitle": "フィードから追加",
       "fromFeedLead": "投稿を見つけて",
       "fromFeedRest": "追加したい投稿のコレクションボタンをクリックします。",

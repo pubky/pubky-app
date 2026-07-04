@@ -1407,7 +1407,7 @@
     },
     "addContentDialog": {
       "title": "Ajouter une publication",
-      "description": "Ajoutez une publication ou un article depuis votre fil ou collez directement une URL.",
+      "description": "Il existe plusieurs façons d'ajouter des publications à votre collection.",
       "fromFeedTitle": "Ajouter depuis le fil",
       "fromFeedLead": "Trouvez une publication",
       "fromFeedRest": " que vous voulez ajouter et cliquez sur le bouton des collections.",

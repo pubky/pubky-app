@@ -1407,7 +1407,7 @@
     },
     "addContentDialog": {
       "title": "Adicionar post",
-      "description": "Adicione uma publicação ou artigo do seu feed ou cole uma URL diretamente.",
+      "description": "Há várias maneiras de adicionar posts à sua coleção.",
       "fromFeedTitle": "Adicionar do feed",
       "fromFeedLead": "Encontre uma publicação",
       "fromFeedRest": " que você quer adicionar e clique no botão de coleções.",

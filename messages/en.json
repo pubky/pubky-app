@@ -1410,7 +1410,7 @@
     },
     "addContentDialog": {
       "title": "Add Post",
-      "description": "Add a post or article from your feed or paste a url directly.",
+      "description": "There are several ways to add posts to your collection.",
       "fromFeedTitle": "Add from feed",
       "fromFeedLead": "Find a post",
       "fromFeedRest": " you want to add and click the collections button.",

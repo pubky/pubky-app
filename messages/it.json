@@ -1407,7 +1407,7 @@
     },
     "addContentDialog": {
       "title": "Aggiungi post",
-      "description": "Aggiungi un post o un articolo dal tuo feed oppure incolla direttamente un URL.",
+      "description": "Ci sono diversi modi per aggiungere post alla tua raccolta.",
       "fromFeedTitle": "Aggiungi dal feed",
       "fromFeedLead": "Trova un post",
       "fromFeedRest": " che vuoi aggiungere e clicca sul pulsante delle raccolte.",

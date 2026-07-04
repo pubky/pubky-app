@@ -1409,7 +1409,7 @@
     },
     "addContentDialog": {
       "title": "Beitrag hinzufügen",
-      "description": "Füge einen Beitrag oder Artikel aus deinem Feed hinzu oder füge direkt eine URL ein.",
+      "description": "Es gibt mehrere Möglichkeiten, Beiträge zu deiner Sammlung hinzuzufügen.",
       "fromFeedTitle": "Aus Feed hinzufügen",
       "fromFeedLead": "Finde einen Beitrag",
       "fromFeedRest": " den du hinzufügen möchtest und klicke auf die Sammlungen-Schaltfläche.",
