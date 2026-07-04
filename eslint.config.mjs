@@ -27,6 +27,8 @@ const eslintConfig = [
       'next-env.d.ts',
       // PWA generated files (serwist)
       'public/sw.js',
+      // TODO:[Locks] #2026 — vendored WASM SDK (generated); remove with the vendor dir
+      'src/vendor/locks-sdk/**',
     ],
   },
   {

@@ -18,6 +18,9 @@ coverage/
 # Logs
 *.log
 
+# TODO:[Locks] #2026 — vendored WASM SDK (generated); remove with the vendor dir
+src/vendor/locks-sdk/
+
 # OS files
 .DS_Store
 
