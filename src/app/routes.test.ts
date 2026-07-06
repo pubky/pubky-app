@@ -6,7 +6,6 @@ import {
   getCollectionRoute,
   getProfileRoute,
   getUserProfileUrl,
-  isAllowedUnauthenticatedRoute,
   isCollectionsOverviewRoute,
   isCoreExploreRoute,
   isDynamicPublicRoute,
@@ -172,23 +171,20 @@ describe('matchesAllowedRoute', () => {
   });
 
   it('blocks explore sub-routes when explore prefix restriction is enabled', () => {
+    expect(matchesAllowedRoute('/collections', APP_ROUTES.COLLECTIONS, { restrictExploreSubRoutes: true })).toBe(true);
     expect(
       matchesAllowedRoute('/collections/bookmarks', APP_ROUTES.COLLECTIONS, { restrictExploreSubRoutes: true }),
     ).toBe(false);
     expect(matchesAllowedRoute('/home/trending', APP_ROUTES.HOME, { restrictExploreSubRoutes: true })).toBe(false);
   });
-});
 
-describe('isAllowedUnauthenticatedRoute', () => {
-  it('matches explore routes exactly without prefix access', () => {
-    expect(isAllowedUnauthenticatedRoute('/collections', APP_ROUTES.COLLECTIONS)).toBe(true);
-    expect(isAllowedUnauthenticatedRoute('/collections/bookmarks', APP_ROUTES.COLLECTIONS)).toBe(false);
-    expect(isAllowedUnauthenticatedRoute('/home/trending', APP_ROUTES.HOME)).toBe(false);
-  });
-
-  it('keeps prefix matching for non-explore allowed routes', () => {
-    expect(isAllowedUnauthenticatedRoute('/onboarding/profile', ONBOARDING_ROUTES.PROFILE)).toBe(true);
-    expect(isAllowedUnauthenticatedRoute('/onboarding', ONBOARDING_ROUTES.INSTALL)).toBe(false);
+  it('keeps prefix matching for non-explore allowed routes when explore prefix restriction is enabled', () => {
+    expect(
+      matchesAllowedRoute('/onboarding/profile', ONBOARDING_ROUTES.PROFILE, { restrictExploreSubRoutes: true }),
+    ).toBe(true);
+    expect(matchesAllowedRoute('/onboarding', ONBOARDING_ROUTES.INSTALL, { restrictExploreSubRoutes: true })).toBe(
+      false,
+    );
   });
 });
 

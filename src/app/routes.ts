@@ -193,15 +193,6 @@ export function matchesAllowedRoute(
   return pathname.startsWith(`${route}/`);
 }
 
-/**
- * Whether an unauthenticated user may access `pathname` via a configured allowed route.
- *
- * Explore routes match exactly so guests cannot reach auth-only sub-routes.
- */
-export function isAllowedUnauthenticatedRoute(pathname: string, route: string): boolean {
-  return matchesAllowedRoute(pathname, route, { restrictExploreSubRoutes: true });
-}
-
 /** `/post/[userId]/[postId]` — browsable without auth; uses explore header chrome for guests. */
 export function isPostRoute(pathname: string): boolean {
   const segments = pathname.split('/').filter(Boolean);

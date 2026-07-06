@@ -2,18 +2,15 @@
 
 import { Bookmark } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { MouseEvent } from 'react';
 import { COLLECTION_ROUTES } from '@/app/routes';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmarksCollectionSummary } from '@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn } from '@/libs/utils/utils';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
-import { useAuthStore } from '@/stores/auth/auth.store';
 
 interface CollectionBookmarkCardProps {
   className?: string;
@@ -36,20 +33,10 @@ interface CollectionBookmarkCardProps {
  */
 export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProps) {
   const t = useTranslations('collections');
-  const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
-  const { requireAuth } = useRequireAuth();
   const { avatarName, avatarSeed, avatarUrl, bookmarkCount } = useBookmarksCollectionSummary();
 
   const title = t('bookmarks.title');
   const description = t('bookmarks.description');
-
-  const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (isAuthenticated) {
-      return;
-    }
-    event.preventDefault();
-    requireAuth(() => undefined);
-  };
 
   return (
     <Link
@@ -58,7 +45,6 @@ export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProp
       aria-label={title}
       data-cy="collection-bookmark-card"
       className={cn('block h-full w-full lg:max-w-187', className)}
-      onClick={handleLinkClick}
     >
       <Card className="h-full gap-3 rounded-md py-0">
         <CardContent className="flex h-full flex-col gap-3 p-6">

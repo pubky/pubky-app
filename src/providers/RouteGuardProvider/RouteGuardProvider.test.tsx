@@ -60,12 +60,6 @@ vi.mock('@/app/routes', () => ({
       (segments[0] === 'collections' && segments.length === 3 && segments[1] !== 'bookmarks')
     );
   },
-  isAllowedUnauthenticatedRoute: (pathname: string, route: string) => {
-    const EXPLORE_ROUTES = ['/home', '/hot', '/search', '/collections'];
-    if (pathname === route) return true;
-    if (EXPLORE_ROUTES.includes(route)) return false;
-    return pathname.startsWith(`${route}/`);
-  },
   matchesAllowedRoute: (pathname: string, route: string, options?: { restrictExploreSubRoutes?: boolean }) => {
     const EXPLORE_ROUTES = ['/home', '/hot', '/search', '/collections'];
     if (pathname === route) return true;
