@@ -1,4 +1,4 @@
-import { HOMEGATE_URL } from '@/config/network';
+import { getHomegateUrl } from '@/config/network';
 
 /**
  * Homegate API Endpoints
@@ -12,7 +12,7 @@ import { HOMEGATE_URL } from '@/config/network';
  * @returns Full Homegate URL
  */
 function buildHomegateUrl(endpoint: string): string {
-  return new URL(endpoint, HOMEGATE_URL).toString();
+  return new URL(endpoint, getHomegateUrl()).toString();
 }
 
 export const homegateApi = {

@@ -513,8 +513,7 @@ describe('usePost', () => {
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Post created',
-        dismissButton: true,
+        title: 'Post published',
       });
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(result.current.isSubmitting).toBe(false);
@@ -752,8 +751,7 @@ describe('usePost', () => {
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Post created',
-        dismissButton: true,
+        title: 'Post published',
       });
       expect(mockOnSuccess).toHaveBeenCalled();
     });
@@ -1230,6 +1228,26 @@ describe('usePost', () => {
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Reposted',
+        }),
+      );
+    });
+
+    it('should use successToastTitle override when provided, taking precedence over author name', async () => {
+      const { result } = renderHook(() => usePost());
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          originalAuthorName: 'John Doe',
+          successToastTitle: "You've shared the My Collection collection",
+          onSuccess: vi.fn(),
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "You've shared the My Collection collection",
         }),
       );
     });

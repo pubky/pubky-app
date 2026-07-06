@@ -145,7 +145,31 @@ describe('Toaster', () => {
     render(<Toaster />);
 
     const okButton = screen.getByRole('button', { name: 'OK' });
-    expect(okButton).toHaveClass('bg-secondary', 'text-secondary-foreground');
+    expect(okButton).toHaveClass('bg-toast-action-muted', 'text-foreground');
+  });
+
+  it('should apply actionVariant to dismiss ToastAction when it differs from toast variant', () => {
+    const mockDismiss = vi.fn();
+    mockUseToast.mockReturnValue({
+      toasts: [
+        {
+          id: 'action-variant-override-toast',
+          title: 'Failed',
+          description: 'Something went wrong',
+          dismissButton: true,
+          variant: 'error',
+          actionVariant: 'default',
+          open: true,
+        },
+      ],
+      dismiss: mockDismiss,
+    });
+
+    render(<Toaster />);
+
+    const okButton = screen.getByRole('button', { name: 'OK' });
+    expect(okButton).toHaveClass('border-brand', 'bg-brand/16', 'text-brand');
+    expect(okButton).not.toHaveClass('bg-toast-action-muted');
   });
 
   it.each([

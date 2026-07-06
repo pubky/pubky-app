@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DialogContent } from '@/atoms/Dialog/Dialog';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -21,22 +22,26 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
         {children}
       </div>
     ),
-    DialogContent: ({
-      children,
-      className,
-      hiddenTitle,
-      _onOpenAutoFocus,
-      ...props
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      hiddenTitle?: string;
-      _onOpenAutoFocus?: (e: Event) => void;
-      [key: string]: unknown;
-    }) => (
-      <div data-testid="dialog-content" className={className} aria-label={hiddenTitle} {...props}>
-        {children}
-      </div>
+    DialogContent: vi.fn(
+      ({
+        children,
+        className,
+        hiddenTitle,
+        avoidKeyboard: _avoidKeyboard,
+        _onOpenAutoFocus,
+        ...props
+      }: {
+        children: React.ReactNode;
+        className?: string;
+        hiddenTitle?: string;
+        avoidKeyboard?: boolean;
+        _onOpenAutoFocus?: (e: Event) => void;
+        [key: string]: unknown;
+      }) => (
+        <div data-testid="dialog-content" className={className} aria-label={hiddenTitle} {...props}>
+          {children}
+        </div>
+      ),
     ),
     DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
     DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
@@ -192,6 +197,13 @@ describe('DialogEditPost', () => {
       }),
       undefined,
     );
+  });
+
+  it('enables keyboard avoidance on DialogContent', () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogEditPost postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    expect(vi.mocked(DialogContent).mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ avoidKeyboard: true }));
   });
 
   it('renders PostInput with editIsArticle true and autoFocusTextarea false for long posts', () => {

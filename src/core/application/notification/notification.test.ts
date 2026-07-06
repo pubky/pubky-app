@@ -532,7 +532,7 @@ describe('NotificationApplication.markAllAsRead', () => {
 
   beforeEach(() => vi.clearAllMocks());
 
-  it('should send lastRead to homeserver', () => {
+  it('should send lastRead to homeserver', async () => {
     const mockLastReadResult = asOpaque<LastReadResult>({
       last_read: {
         timestamp: BigInt(mockTimestamp),
@@ -544,7 +544,7 @@ describe('NotificationApplication.markAllAsRead', () => {
 
     const homeserverSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
 
-    NotificationApplication.markAllAsRead(mockLastReadResult);
+    await NotificationApplication.markAllAsRead(mockLastReadResult);
 
     expect(homeserverSpy).toHaveBeenCalledWith({
       method: HttpMethod.PUT,
@@ -553,7 +553,7 @@ describe('NotificationApplication.markAllAsRead', () => {
     });
   });
 
-  it('should log warning if homeserver fails (fire and forget)', async () => {
+  it('should propagate homeserver failures to the caller', async () => {
     const mockLastReadResult = asOpaque<LastReadResult>({
       last_read: {
         timestamp: BigInt(mockTimestamp),
@@ -564,13 +564,8 @@ describe('NotificationApplication.markAllAsRead', () => {
     });
 
     vi.spyOn(HomeserverService, 'request').mockRejectedValue(new Error('homeserver-fail'));
-    const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
 
-    NotificationApplication.markAllAsRead(mockLastReadResult);
-
-    // Wait for the catch to execute
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(loggerWarnSpy).toHaveBeenCalledWith('Failed to update lastRead on homeserver', { error: expect.any(Error) });
+    await expect(NotificationApplication.markAllAsRead(mockLastReadResult)).rejects.toThrow('homeserver-fail');
   });
 });
 

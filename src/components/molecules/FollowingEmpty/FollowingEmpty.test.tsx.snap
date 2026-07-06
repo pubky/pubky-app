@@ -78,8 +78,10 @@ exports[`FollowingEmpty - Snapshots > matches snapshot with default props 1`] = 
   >
     <button
       class="gap-2"
+      data-cy="profile-following-empty-who-to-follow"
       data-testid="button"
       data-variant="secondary"
+      type="button"
     >
       <svg
         aria-hidden="true"
@@ -117,8 +119,10 @@ exports[`FollowingEmpty - Snapshots > matches snapshot with default props 1`] = 
     </button>
     <button
       class="gap-2"
+      data-cy="profile-following-empty-popular-users"
       data-testid="button"
       data-variant="secondary"
+      type="button"
     >
       <svg
         aria-hidden="true"

@@ -4,10 +4,15 @@ import { PostActionsBar } from './PostActionsBar';
 
 // Mock hooks
 const mockUsePostCounts = vi.fn();
+const mockUsePostDetails = vi.fn();
 const mockUseBookmark = vi.fn();
 
 vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
   usePostCounts: (postId: string) => mockUsePostCounts(postId),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: (postId: string) => mockUsePostDetails(postId),
 }));
 
 vi.mock('@/hooks/useBookmark/useBookmark', () => ({
@@ -30,6 +35,16 @@ vi.mock('@/organisms/PostMenuActions/PostMenuActions', () => {
       <div data-testid="post-menu-actions" data-post-id={postId}>
         {trigger}
       </div>
+    ),
+  };
+});
+
+vi.mock('../PostSavePicker/PostSavePicker', () => {
+  return {
+    PostSavePicker: ({ postId }: { postId: string }) => (
+      <button aria-label="Save post" data-testid="post-save-picker" data-post-id={postId}>
+        Save
+      </button>
     ),
   };
 });
@@ -113,6 +128,10 @@ describe('PostActionsBar', () => {
       isToggling: false,
       toggle: vi.fn(),
     });
+    mockUsePostDetails.mockReturnValue({
+      postDetails: { kind: 'short' },
+      isLoading: false,
+    });
   });
 
   it('shows skeleton loading state while counts are not available', () => {
@@ -133,7 +152,7 @@ describe('PostActionsBar', () => {
     expect(screen.getByRole('button', { name: 'Tag post (3)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reply to post (5)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Repost (2)' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /bookmark/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save post' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'More options' })).toBeInTheDocument();
   });
 
@@ -165,23 +184,31 @@ describe('PostActionsBar', () => {
     expect(onRepostClick).toHaveBeenCalledTimes(1);
   });
 
-  it('calls toggle when bookmark button is clicked', () => {
+  it('renders the save picker for bookmark and collection saves', () => {
     mockUsePostCounts.mockReturnValue({
       postCounts: { tags: 1, unique_tags: 1, replies: 1, reposts: 1 },
       isLoading: false,
     });
-    const mockToggle = vi.fn();
-    mockUseBookmark.mockReturnValue({
-      isBookmarked: false,
-      isLoading: false,
-      isToggling: false,
-      toggle: mockToggle,
-    });
-
     render(<PostActionsBar postId="post-bookmark" />);
 
-    fireEvent.click(screen.getByRole('button', { name: /bookmark/i }));
-    expect(mockToggle).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('post-save-picker')).toHaveAttribute('data-post-id', 'post-bookmark');
+  });
+
+  it('hides the save picker for collection posts', () => {
+    mockUsePostCounts.mockReturnValue({
+      postCounts: { tags: 1, unique_tags: 1, replies: 1, reposts: 1 },
+      isLoading: false,
+    });
+    mockUsePostDetails.mockReturnValue({
+      postDetails: { kind: 'collection' },
+      isLoading: false,
+    });
+
+    render(<PostActionsBar postId="collection-author:collection-post" />);
+
+    expect(screen.queryByTestId('post-save-picker')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tag post (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More options' })).toBeInTheDocument();
   });
 
   it('applies the visual variant classes to the action buttons', () => {
@@ -208,6 +235,10 @@ describe('PostActionsBar - Snapshots', () => {
       isLoading: false,
       isToggling: false,
       toggle: vi.fn(),
+    });
+    mockUsePostDetails.mockReturnValue({
+      postDetails: { kind: 'short' },
+      isLoading: false,
     });
   });
 

@@ -4,10 +4,10 @@ import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
 import { NotificationApplication } from '@/application/notification/notification';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
-import { Env } from '@/libs/env/env';
 import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { getTtlRetryDelayMs } from '@/libs/runtime-config/runtime-config';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
 import type { NotificationType } from '@/models/notification/notification.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
@@ -56,13 +56,14 @@ export class BootstrapApplication {
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
     if (!bootstrapData.indexed) {
+      const retryDelayMs = getTtlRetryDelayMs();
       Logger.warn('User is not indexed in Nexus. Scheduling TTL retry', {
         pubky,
-        retryDelayMs: Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS,
+        retryDelayMs,
       });
 
       // Write TTL record to become stale after configured retry delay
-      await LocalUserService.upsertTtlWithDelay(pubky, Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS);
+      await LocalUserService.upsertTtlWithDelay(pubky, retryDelayMs);
 
       // Subscribe to TTL coordinator for periodic staleness checks
       TtlCoordinator.getInstance().subscribeUser({ pubky });

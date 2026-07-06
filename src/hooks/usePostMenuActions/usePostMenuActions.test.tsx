@@ -251,10 +251,9 @@ describe('usePostMenuActions', () => {
       expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, true, 'Test Author');
     });
 
-    it('swallows follow rejection after useFollowUser handles the error', async () => {
-      const followError = new Error('Follow failed');
+    it('does not throw when the follow fails (useFollowUser handles feedback)', async () => {
       mockUseFollowUser.mockReturnValue({
-        toggleFollow: vi.fn().mockRejectedValue(followError),
+        toggleFollow: vi.fn().mockResolvedValue(false),
         isLoading: false,
         isUserLoading: defaultMocks.isUserLoading,
       });
@@ -518,6 +517,20 @@ describe('usePostMenuActions', () => {
     it('does not include copy text action for articles', () => {
       mockUsePostDetails.mockReturnValue({
         postDetails: { id: 'post456', content: 'Test article', kind: 'long' },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() =>
+        usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
+      );
+
+      const copyTextItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.COPY_TEXT);
+      expect(copyTextItem).toBeUndefined();
+    });
+
+    it('does not include copy text action for collections', () => {
+      mockUsePostDetails.mockReturnValue({
+        postDetails: { id: 'post789', content: '{"name":"My Collection"}', kind: 'collection' },
         isLoading: false,
       });
 

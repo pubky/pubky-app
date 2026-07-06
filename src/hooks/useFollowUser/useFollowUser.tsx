@@ -44,18 +44,21 @@ export function useFollowUser(): UseFollowUserResult {
     async (userId: Pubky, isCurrentlyFollowing: boolean, displayName?: string) => {
       if (!currentUserPubky) {
         setError('User not authenticated');
-        return;
+        return false;
       }
 
       if (userId === currentUserPubky) {
         setError('Cannot follow yourself');
-        return;
+        return false;
       }
 
       setLoadingAction(isCurrentlyFollowing ? 'unfollow' : 'follow');
       setIsLoading(true);
       setLoadingUserId(userId);
       setError(null);
+
+      // Resolved up front so the failure toast can name the user too.
+      const username = await resolveFollowToastDisplayName(userId, displayName);
 
       try {
         const action = isCurrentlyFollowing ? HttpMethod.DELETE : HttpMethod.PUT;
@@ -65,7 +68,6 @@ export function useFollowUser(): UseFollowUserResult {
           followee: userId,
         });
 
-        const username = await resolveFollowToastDisplayName(userId, displayName);
         toast({
           title: isCurrentlyFollowing ? t('unfollowed', { username }) : t('followed', { username }),
         });
@@ -73,15 +75,18 @@ export function useFollowUser(): UseFollowUserResult {
         Logger.debug(`[useFollowUser] Successfully ${isCurrentlyFollowing ? 'unfollowed' : 'followed'} user`, {
           userId,
         });
+
+        return true;
       } catch (err) {
-        const friendlyMessage = t('failed');
-        setError(friendlyMessage);
+        // Always a friendly, named message — raw transport/server text never reaches the user.
+        const message = isCurrentlyFollowing ? t('unfollowFailed', { username }) : t('followFailed', { username });
+        setError(message);
         toast({
           variant: 'error',
-          description: friendlyMessage,
+          description: message,
         });
         Logger.error('[useFollowUser] Failed to toggle follow:', err);
-        throw err;
+        return false;
       } finally {
         setIsLoading(false);
         setLoadingAction(null);

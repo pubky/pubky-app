@@ -1,9 +1,21 @@
-import { Env } from '@/libs/env/env';
+import {
+  getDefaultHttpRelay,
+  getExchangeRateApi,
+  getHomegateUrl,
+  getHomeserver,
+  getHomeserverUrl,
+  getPkarrRelays,
+  getTestnet,
+} from '@/libs/runtime-config/runtime-config';
 
-export const TESTNET = Env.NEXT_PUBLIC_TESTNET;
-export const PKARR_RELAYS = Env.NEXT_PUBLIC_PKARR_RELAYS;
-export const HOMESERVER = Env.NEXT_PUBLIC_HOMESERVER;
-export const HOMESERVER_URL = Env.NEXT_PUBLIC_HOMESERVER_URL;
-export const DEFAULT_HTTP_RELAY = Env.NEXT_PUBLIC_DEFAULT_HTTP_RELAY;
-export const EXCHANGE_RATE_API = Env.NEXT_PUBLIC_EXCHANGE_RATE_API;
-export const HOMEGATE_URL = Env.NEXT_PUBLIC_HOMEGATE_URL;
+// Runtime-configurable: read via getters at call time (values come from PUBKY_RUNTIME_* in
+// deployed environments, NEXT_PUBLIC_* defaults locally). See @/libs/runtime-config.
+export {
+  getDefaultHttpRelay,
+  getExchangeRateApi,
+  getHomegateUrl,
+  getHomeserver,
+  getHomeserverUrl,
+  getPkarrRelays,
+  getTestnet,
+};

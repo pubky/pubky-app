@@ -25,6 +25,24 @@ export class BookmarkApplication {
     return LocalBookmarkService.exists(postId);
   }
 
+  /**
+   * Get all locally-known bookmarked composite post IDs for the current
+   * user, sorted by `created_at` descending (most recently bookmarked
+   * first).
+   *
+   * Local-only read — does not fetch from Nexus. The bookmarks table is
+   * populated opportunistically as a side effect of any stream fetch whose
+   * response includes the viewer's `bookmark` field on a post (see
+   * `LocalStreamPostsService.persistPosts`). Consumers that need a fully
+   * hydrated picture should seed via a stream fetch first.
+   *
+   * @returns Composite post IDs (`authorId:postId`), newest-bookmarked
+   *   first.
+   */
+  static async getAll(): Promise<string[]> {
+    return LocalBookmarkService.getAllBookmarksSorted();
+  }
+
   static async persist(action: HttpMethod, params: TBookmarkPersistInput) {
     // Get current user ID for user counts update
     const userId = useAuthStore.getState().selectCurrentUserPubky();

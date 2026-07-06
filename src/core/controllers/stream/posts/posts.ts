@@ -79,8 +79,8 @@ export class StreamPostsController {
         viewerId,
       });
       // Second-pass: cache-miss details are now resolved,
-      // re-filter to catch posts that were fail-open in the first pass
-      const validIds = await PostStreamApplication.filterDeletedPosts(nextPageIds);
+      // re-filter to catch posts that were fail-open in the first pass.
+      const validIds = await PostStreamApplication.filterStreamPosts({ streamId, postIds: nextPageIds });
       return { nextPageIds: validIds, timestamp, reachedEnd };
     }
     return { nextPageIds, timestamp, reachedEnd };
@@ -174,5 +174,15 @@ export class StreamPostsController {
    */
   static async filterDeletedPosts(postIds: string[]): Promise<string[]> {
     return PostStreamApplication.filterDeletedPosts(postIds);
+  }
+
+  static async filterStreamPosts({
+    streamId,
+    postIds,
+  }: {
+    streamId: TStreamIdParams['streamId'];
+    postIds: string[];
+  }): Promise<string[]> {
+    return PostStreamApplication.filterStreamPosts({ streamId, postIds });
   }
 }

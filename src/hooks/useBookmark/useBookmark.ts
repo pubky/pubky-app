@@ -14,6 +14,26 @@ export interface UseBookmarkResult {
   toggle: () => Promise<void>;
 }
 
+export interface UseBookmarkOptions {
+  /**
+   * Override the success-path toast copy. Useful when the bookmark represents
+   * something other than a generic post (e.g. a collection "Follow"/"Unfollow").
+   * Failure-path toasts intentionally stay with the generic copy.
+   */
+  toastMessages?: {
+    added: string;
+    removed: string;
+  };
+  /**
+   * Seed the initial `isBookmarked` state when the caller already knows the
+   * answer (e.g. cards rendered inside the Followed-Collections section are
+   * by definition bookmarked). Prevents a brief `false`→`true` UI flash
+   * while the async `BookmarkController.exists` check resolves. The async
+   * verification still runs to catch out-of-band state changes.
+   */
+  initialIsBookmarked?: boolean;
+}
+
 /**
  * Custom hook to manage bookmark state for a post
  *
@@ -33,12 +53,17 @@ export interface UseBookmarkResult {
  * }
  * ```
  */
-export function useBookmark(postId: string): UseBookmarkResult {
+export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBookmarkResult {
   const { toast } = useToast();
   const tBookmark = useTranslations('toast.bookmark');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  // Resolve toast copy once per render so the `useCallback` dep array can track
+  // string identity rather than the (possibly inline-allocated) options object.
+  const addedTitle = options?.toastMessages?.added ?? tBookmark('added');
+  const removedTitle = options?.toastMessages?.removed ?? tBookmark('removed');
+
+  const [isBookmarked, setIsBookmarked] = useState(options?.initialIsBookmarked ?? false);
   const [isLoading, setIsLoading] = useState(true);
   const [isToggling, setIsToggling] = useState(false);
 
@@ -80,13 +105,13 @@ export function useBookmark(postId: string): UseBookmarkResult {
         await BookmarkController.commitDelete({ postId, userId: currentUserPubky });
         setIsBookmarked(false);
         toast({
-          title: tBookmark('removed'),
+          title: removedTitle,
         });
       } else {
         await BookmarkController.commitCreate({ postId, userId: currentUserPubky });
         setIsBookmarked(true);
         toast({
-          title: tBookmark('added'),
+          title: addedTitle,
         });
       }
     } catch (error) {
@@ -98,7 +123,7 @@ export function useBookmark(postId: string): UseBookmarkResult {
     } finally {
       setIsToggling(false);
     }
-  }, [postId, currentUserPubky, isBookmarked, isToggling, toast, tBookmark]);
+  }, [postId, currentUserPubky, isBookmarked, isToggling, toast, tBookmark, addedTitle, removedTitle]);
 
   return {
     isBookmarked,

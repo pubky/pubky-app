@@ -252,11 +252,11 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   </a>
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
-    data-cy="header-bookmarks-btn"
-    href="/bookmarks"
+    data-cy="header-collections-btn"
+    href="/collections"
   >
     <button
-      aria-label="Bookmarks"
+      aria-label="Collections"
       class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full shadow-xs text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md border bg-white/5"
       data-size="icon"
       data-slot="button"
@@ -264,7 +264,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-bookmark size-6"
+        class="lucide lucide-library size-6"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -276,7 +276,16 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+          d="m16 6 4 14"
+        />
+        <path
+          d="M12 6v14"
+        />
+        <path
+          d="M8 8v12"
+        />
+        <path
+          d="M4 4v16"
         />
       </svg>
     </button>
@@ -406,11 +415,11 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   </a>
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
-    data-cy="header-bookmarks-btn"
-    href="/bookmarks"
+    data-cy="header-collections-btn"
+    href="/collections"
   >
     <button
-      aria-label="Bookmarks"
+      aria-label="Collections"
       class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full shadow-xs text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md border bg-white/5"
       data-size="icon"
       data-slot="button"
@@ -418,7 +427,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-bookmark size-6"
+        class="lucide lucide-library size-6"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -430,7 +439,16 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+          d="m16 6 4 14"
+        />
+        <path
+          d="M12 6v14"
+        />
+        <path
+          d="M8 8v12"
+        />
+        <path
+          d="M4 4v16"
         />
       </svg>
     </button>
@@ -592,11 +610,11 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] =
     </a>
     <a
       class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
-      data-cy="header-bookmarks-btn"
-      href="/bookmarks"
+      data-cy="header-collections-btn"
+      href="/collections"
     >
       <button
-        aria-label="Bookmarks"
+        aria-label="Collections"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full shadow-xs text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md border bg-white/5"
         data-size="icon"
         data-slot="button"
@@ -604,7 +622,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] =
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-bookmark size-6"
+          class="lucide lucide-library size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -616,7 +634,16 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] =
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
-            d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+            d="m16 6 4 14"
+          />
+          <path
+            d="M12 6v14"
+          />
+          <path
+            d="M8 8v12"
+          />
+          <path
+            d="M4 4v16"
           />
         </svg>
       </button>

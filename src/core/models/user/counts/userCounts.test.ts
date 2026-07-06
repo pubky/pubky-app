@@ -19,6 +19,7 @@ describe('UserCountsModel', () => {
     unique_tags: 6,
     posts: 15,
     replies: 8,
+    collections: 4,
     following: 80,
     followers: 120,
     friends: 60,
@@ -40,6 +41,7 @@ describe('UserCountsModel', () => {
       expect(userCounts.unique_tags).toBe(mockUserCountsData.unique_tags);
       expect(userCounts.posts).toBe(mockUserCountsData.posts);
       expect(userCounts.replies).toBe(mockUserCountsData.replies);
+      expect(userCounts.collections).toBe(mockUserCountsData.collections);
       expect(userCounts.following).toBe(mockUserCountsData.following);
       expect(userCounts.followers).toBe(mockUserCountsData.followers);
       expect(userCounts.friends).toBe(mockUserCountsData.friends);

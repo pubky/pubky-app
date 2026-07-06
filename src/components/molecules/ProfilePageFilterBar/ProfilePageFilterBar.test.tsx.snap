@@ -372,6 +372,58 @@ exports[`ProfilePageFilterBar - Snapshots > matches snapshot with loading state 
         role="status"
       />
     </button>
+    <button
+      aria-pressed="false"
+      class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left text-muted-foreground hover:text-foreground/80 m-0 h-full w-full items-start justify-between px-0 py-1"
+      data-selected="false"
+      data-slot="filter-item"
+      data-testid="filter-item"
+      type="button"
+    >
+      <div
+        class="flex items-center gap-2"
+        data-cy="profile-filter-item-collections"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-library h-5 w-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m16 6 4 14"
+          />
+          <path
+            d="M12 6v14"
+          />
+          <path
+            d="M8 8v12"
+          />
+          <path
+            d="M4 4v16"
+          />
+        </svg>
+        <span
+          class=""
+        >
+          Collections
+        </span>
+      </div>
+      <div
+        aria-label="Loading"
+        class="animate-spin rounded-full border-b-2 border-brand size-4"
+        data-testid="spinner"
+        role="status"
+      />
+    </button>
   </div>
 </div>
 `;
@@ -712,6 +764,59 @@ exports[`ProfilePageFilterBar - Snapshots > matches snapshot with stats 1`] = `
         5
       </span>
     </button>
+    <button
+      aria-pressed="false"
+      class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left text-muted-foreground hover:text-foreground/80 m-0 h-full w-full items-start justify-between px-0 py-1"
+      data-selected="false"
+      data-slot="filter-item"
+      data-testid="filter-item"
+      type="button"
+    >
+      <div
+        class="flex items-center gap-2"
+        data-cy="profile-filter-item-collections"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-library h-5 w-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m16 6 4 14"
+          />
+          <path
+            d="M12 6v14"
+          />
+          <path
+            d="M8 8v12"
+          />
+          <path
+            d="M4 4v16"
+          />
+        </svg>
+        <span
+          class=""
+        >
+          Collections
+        </span>
+      </div>
+      <span
+        class="text-base font-medium text-muted-foreground"
+        data-cy="profile-filter-item-collections-count"
+        data-testid="typography"
+      >
+        3
+      </span>
+    </button>
   </div>
 </div>
 `;
@@ -1047,6 +1152,59 @@ exports[`ProfilePageFilterBar - Snapshots > matches snapshot with zero stats 1`]
       <span
         class="text-base font-medium text-muted-foreground"
         data-cy="profile-filter-item-tagged-count"
+        data-testid="typography"
+      >
+        0
+      </span>
+    </button>
+    <button
+      aria-pressed="false"
+      class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left text-muted-foreground hover:text-foreground/80 m-0 h-full w-full items-start justify-between px-0 py-1"
+      data-selected="false"
+      data-slot="filter-item"
+      data-testid="filter-item"
+      type="button"
+    >
+      <div
+        class="flex items-center gap-2"
+        data-cy="profile-filter-item-collections"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-library h-5 w-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m16 6 4 14"
+          />
+          <path
+            d="M12 6v14"
+          />
+          <path
+            d="M8 8v12"
+          />
+          <path
+            d="M4 4v16"
+          />
+        </svg>
+        <span
+          class=""
+        >
+          Collections
+        </span>
+      </div>
+      <span
+        class="text-base font-medium text-muted-foreground"
+        data-cy="profile-filter-item-collections-count"
         data-testid="typography"
       >
         0

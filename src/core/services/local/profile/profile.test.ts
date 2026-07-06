@@ -79,6 +79,7 @@ describe('LocalProfileService', () => {
         tagged: 3,
         tags: 2,
         unique_tags: 1,
+        collections: 0,
         bookmarks: 15,
       };
 
@@ -104,6 +105,7 @@ describe('LocalProfileService', () => {
         tagged: 1,
         tags: 1,
         unique_tags: 0,
+        collections: 0,
         bookmarks: 5,
       };
 
@@ -118,6 +120,7 @@ describe('LocalProfileService', () => {
         tagged: 5,
         tags: 4,
         unique_tags: 3,
+        collections: 0,
         bookmarks: 20,
       };
 
@@ -141,6 +144,7 @@ describe('LocalProfileService', () => {
         tagged: 0,
         tags: 0,
         unique_tags: 0,
+        collections: 0,
         bookmarks: 0,
       };
 

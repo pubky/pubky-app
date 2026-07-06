@@ -1,9 +1,9 @@
 import {
-  TTL_BATCH_INTERVAL_MS,
-  TTL_POST_MAX_BATCH_SIZE,
-  TTL_POST_MS,
-  TTL_USER_MAX_BATCH_SIZE,
-  TTL_USER_MS,
+  getTtlBatchIntervalMs,
+  getTtlPostMaxBatchSize,
+  getTtlPostMs,
+  getTtlUserMaxBatchSize,
+  getTtlUserMs,
 } from '@/config/sync';
 import { TtlController } from '@/controllers/ttl/ttl';
 import { Logger } from '@/libs/logger/logger';
@@ -46,11 +46,11 @@ export class TtlCoordinator {
 
   // Configuration
   private config: TtlCoordinatorConfig = {
-    postTtlMs: TTL_POST_MS,
-    userTtlMs: TTL_USER_MS,
-    batchIntervalMs: TTL_BATCH_INTERVAL_MS,
-    postMaxBatchSize: TTL_POST_MAX_BATCH_SIZE,
-    userMaxBatchSize: TTL_USER_MAX_BATCH_SIZE,
+    postTtlMs: getTtlPostMs(),
+    userTtlMs: getTtlUserMs(),
+    batchIntervalMs: getTtlBatchIntervalMs(),
+    postMaxBatchSize: getTtlPostMaxBatchSize(),
+    userMaxBatchSize: getTtlUserMaxBatchSize(),
   };
 
   // Internal state

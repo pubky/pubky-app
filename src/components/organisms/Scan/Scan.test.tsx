@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
-import { PUBKY_CORE_URL } from '@/config/externalLinks';
+import { getPubkyCoreLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
@@ -367,7 +367,7 @@ describe('ScanFooter', () => {
     const links = screen.getAllByRole('link');
     expect(links.length).toBeGreaterThanOrEqual(1);
 
-    const coreLink = links.find((link) => link.getAttribute('href') === PUBKY_CORE_URL);
+    const coreLink = links.find((link) => link.getAttribute('href') === getPubkyCoreLink());
     expect(coreLink).toBeDefined();
   });
 });

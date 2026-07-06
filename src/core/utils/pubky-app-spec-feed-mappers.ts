@@ -156,6 +156,8 @@ export function pubkyPostKindToHomeContent(postKind: PubkyAppPostKind): ContentT
       return CONTENT.LINKS;
     case PubkyAppPostKind.File:
       return CONTENT.FILES;
+    case PubkyAppPostKind.Collection:
+      return CONTENT.COLLECTIONS;
     default:
       return undefined;
   }
@@ -179,6 +181,8 @@ export function homeContentToPubkyPostKind(content: ContentType): PubkyAppPostKi
       return PubkyAppPostKind.Link;
     case CONTENT.FILES:
       return PubkyAppPostKind.File;
+    case CONTENT.COLLECTIONS:
+      return PubkyAppPostKind.Collection;
     case CONTENT.ALL:
       // No PubkyAppPostKind equivalent for ALL
       return undefined;

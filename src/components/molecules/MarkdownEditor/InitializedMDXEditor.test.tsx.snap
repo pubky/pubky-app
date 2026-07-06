@@ -90,6 +90,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
       </button>
     </div>
     <textarea
+      autocomplete="off"
       class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
@@ -317,6 +318,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
         </button>
       </div>
       <textarea
+        autocomplete="off"
         class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
         data-testid="markdown-textarea"
         maxlength="1000"
@@ -578,6 +580,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
       </button>
     </div>
     <textarea
+      autocomplete="off"
       class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
@@ -804,6 +807,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
       </button>
     </div>
     <textarea
+      autocomplete="off"
       class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
@@ -1030,6 +1034,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
       </button>
     </div>
     <textarea
+      autocomplete="off"
       class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
@@ -1265,6 +1270,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
       </button>
     </div>
     <textarea
+      autocomplete="off"
       class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"
@@ -1492,6 +1498,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
         </button>
       </div>
       <textarea
+        autocomplete="off"
         class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
         data-testid="markdown-textarea"
         maxlength="1000"
@@ -1755,6 +1762,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
       </button>
     </div>
     <textarea
+      autocomplete="off"
       class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
       data-testid="markdown-textarea"
       maxlength="1000"

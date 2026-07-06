@@ -13,7 +13,7 @@ import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
-import { PUBKY_CORE_URL, PUBKY_RING_URL } from '@/config/externalLinks';
+import { getPubkyCoreLink, getPubkyRingLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { Logger } from '@/libs/logger/logger';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
@@ -117,12 +117,12 @@ export const ScanFooter = () => {
     <FooterLinks className="py-6">
       {t.rich('authorizeSub', {
         pubkyRing: (chunks) => (
-          <Link href={PUBKY_RING_URL} target="_blank">
+          <Link href={getPubkyRingLink()} target="_blank">
             {chunks}
           </Link>
         ),
         pubkyCore: (chunks) => (
-          <Link href={PUBKY_CORE_URL} target="_blank">
+          <Link href={getPubkyCoreLink()} target="_blank">
             {chunks}
           </Link>
         ),

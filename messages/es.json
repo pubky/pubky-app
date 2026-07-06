@@ -77,6 +77,10 @@
         "tagging": {
           "title": "Etiqueta todo",
           "description": "Etiqueta publicaciones, medios y perfiles para añadir contexto, encontrar mejor contenido, descubrir personas y reaccionar rápido."
+        },
+        "collections": {
+          "title": "Colecciona lo que importa",
+          "description": "Guarda publicaciones que vale la pena conservar, cura tus propias ideas y comparte tus colecciones con otros."
         }
       }
     },
@@ -148,11 +152,13 @@
   "header": {
     "home": "Inicio",
     "hot": "Tendencias",
-    "bookmarks": "Favoritos",
     "settings": "Configuración",
     "newHere": "Nuevo aquí?",
     "signIn": "Iniciar sesión",
-    "feed": "Feed"
+    "feed": "Feed",
+    "search": "Buscar",
+    "collections": "Colecciones",
+    "new": "Nuevo"
   },
   "settings": {
     "title": "Configuración",
@@ -423,7 +429,8 @@
       "title": "Elige el metodo de respaldo",
       "subtitle": "Respalda y almacena de forma segura la semilla secreta de tu pubky. Que metodo de respaldo prefieres? Tambien puedes elegir hacerlo más tarde.",
       "recoveryPhrase": "Frase de recuperación",
-      "encryptedFile": "Archivo encriptado"
+      "encryptedFile": "Archivo encriptado",
+      "exportRing": "Exportar a Pubky Ring"
     },
     "backup": {
       "title": "Respalda tu <highlight>pubky.</highlight>",
@@ -468,13 +475,9 @@
       "createInBrowser": "Crear claves en el navegador",
       "continueWithRing": "Continuar con Pubky Ring",
       "inviteCodeApplied": "Código de invitación aplicado",
-      "inviteCodeAppliedDescription": "Tu código de invitación {inviteCode} se ha aplicado.",
       "invalidInviteCode": "Código de invitación no válido",
-      "invalidInviteCodeDescription": "Este código de invitación no es válido o ha expirado. Usa un código de invitación válido.",
       "usedInviteCode": "Código de invitación ya utilizado",
-      "usedInviteCodeDescription": "Este código de invitación ya se ha utilizado. Usa un código de invitación diferente.",
-      "verificationFailed": "No se pudo verificar el código de invitación",
-      "verificationFailedDescription": "No pudimos verificar tu código de invitación en este momento. Comprueba tu conexión e inténtalo de nuevo."
+      "verificationFailed": "No se pudo verificar el código de invitación"
     },
     "createProfile": {
       "title": "Crea tu <highlight>perfil.</highlight>",
@@ -505,9 +508,11 @@
       "followUser": "Seguir a {username}",
       "unfollowUser": "Dejar de seguir a {username}",
       "muteUser": "Silenciar a {username}",
-      "unmuteUser": "Desilenciar a {username}"
+      "unmuteUser": "Desilenciar a {username}",
+      "tagPost": "Etiquetar publicación ({count})"
     },
     "deleted": "Esta publicación ha sido eliminada por su autor.",
+    "missing": "Publicación no encontrada.",
     "dropFiles": "Suelta los archivos aqui",
     "articleTitle": "Titulo del articulo",
     "addTag": "agregar etiqueta",
@@ -546,6 +551,7 @@
     "tabs": {
       "notifications": "Notificaciones",
       "posts": "Publicaciones",
+      "collections": "Colecciones",
       "replies": "Respuestas",
       "followers": "Seguidores",
       "following": "Siguiendo",
@@ -633,6 +639,12 @@
     "deletePost": {
       "title": "¿Eliminar publicación?",
       "description": "Esta acción no se puede deshacer. La publicación se eliminará permanentemente.",
+      "confirmButton": "Eliminar",
+      "cancelButton": "Cancelar"
+    },
+    "deleteCollection": {
+      "title": "¿Eliminar colección?",
+      "description": "¿Seguro que quieres eliminar ''{name}''? Las personas que siguen esta colección ya no tendrán acceso a ella. Las publicaciones dentro de la colección no se eliminarán.",
       "confirmButton": "Eliminar",
       "cancelButton": "Cancelar"
     },
@@ -975,7 +987,7 @@
     "post": {
       "replyPosted": "Respuesta publicada",
       "replyFailed": "No se pudo publicar la respuesta. Inténtalo de nuevo.",
-      "postCreated": "Publicacion creada",
+      "postCreated": "Publicación publicada",
       "postFailed": "No se pudo crear la publicación. Inténtalo de nuevo.",
       "repostSuccess": "Republicaste la publicación de {author}",
       "repostSuccessFallback": "Republicado",
@@ -989,6 +1001,7 @@
       "attachmentsCleared": "Los artículos admiten una imagen de portada",
       "failedToLoadPosts": "No se pudieron cargar las publicaciones nuevas",
       "parseError": "No se pudo analizar el contenido del artículo",
+      "collectionParseError": "No se pudo analizar el contenido de la colección",
       "coverImageError": "No se pudo cargar la imagen de portada",
       "attachmentsLoadFailed": "No se pudieron cargar los archivos adjuntos"
     },
@@ -998,6 +1011,10 @@
       "addFailed": "No se pudo agregar el marcador",
       "removeFailed": "No se pudo eliminar el marcador",
       "loginRequired": "Inicia sesión para guardar publicaciones"
+    },
+    "collection": {
+      "collectionDeleted": "Tu colección ha sido eliminada",
+      "deleteFailed": "Error al eliminar la colección. Inténtalo de nuevo."
     },
     "copy": {
       "pubkyCopied": "Pubky copiado al portapapeles",
@@ -1010,7 +1027,8 @@
     "follow": {
       "followed": "Siguiendo a {username}",
       "unfollowed": "Dejaste de seguir a {username}",
-      "failed": "No se pudo actualizar el estado de seguimiento"
+      "followFailed": "No se pudo seguir a {username}",
+      "unfollowFailed": "No se pudo dejar de seguir a {username}"
     },
     "mute": {
       "muted": "{username} silenciado",
@@ -1150,7 +1168,8 @@
       "images": "Imagenes",
       "videos": "Videos",
       "links": "Enlaces",
-      "files": "Archivos"
+      "files": "Archivos",
+      "collections": "Colecciones"
     },
     "timeframe": {
       "title": "Periodo",
@@ -1304,5 +1323,139 @@
     "toolbarAriaLabel": "Barra de herramientas de edición Markdown",
     "warningApproaching": "Te estás acercando al límite máximo de caracteres.",
     "warningReached": "Has alcanzado el límite máximo de caracteres."
+  },
+  "collections": {
+    "deleted": "Esta colección ha sido eliminada por su autor.",
+    "missing": "Colección no encontrada.",
+    "postCount": "{count, plural, one {publicación} other {publicaciones}}",
+    "new": {
+      "cta": "Nueva colección",
+      "ctaShort": "Nueva",
+      "title": "Nueva colección",
+      "nameLabel": "Título",
+      "namePlaceholder": "Proof of Work",
+      "descriptionLabel": "Descripción",
+      "descriptionPlaceholder": "Lo mejor de los mayores contribuyentes de Bitcoin",
+      "backgroundLabel": "Fondo",
+      "addImage": "Añadir imagen",
+      "removeImage": "Quitar imagen",
+      "coverImageInvalid": "La imagen de portada debe ser un archivo de imagen.",
+      "coverImageTooLarge": "La imagen de portada es demasiado grande.",
+      "nameRequired": "El título de la colección es obligatorio.",
+      "cancel": "Cancelar",
+      "save": "Guardar colección",
+      "saving": "Guardando...",
+      "created": "Colección creada",
+      "createFailed": "No se pudo crear la colección."
+    },
+    "intro": {
+      "title": "Bienvenido a las Colecciones",
+      "description": "Guarda las publicaciones que vale la pena conservar. Recopila el mejor contenido de tu red. Organiza ideas, filtra la señal del ruido y comparte lo que importa.",
+      "imageAlt": "Colecciones",
+      "cancel": "Cancelar",
+      "continue": "Continuar"
+    },
+    "edit": {
+      "title": "Editar colección",
+      "save": "Guardar cambios",
+      "updated": "Colección actualizada",
+      "updateFailed": "No se pudo actualizar la colección."
+    },
+    "showMore": "Mostrar más",
+    "loadFailed": "Error al cargar las colecciones. Inténtalo de nuevo.",
+    "my": {
+      "title": "Mis colecciones",
+      "publicNote": "Ten en cuenta: todas las colecciones son públicas y se pueden descubrir.",
+      "publicNoteShort": "Todas las colecciones son públicas y se pueden descubrir."
+    },
+    "followed": {
+      "title": "Colecciones seguidas",
+      "empty": "Aún no sigues ninguna colección."
+    },
+    "discover": {
+      "title": "Descubrir colecciones",
+      "empty": "No hay colecciones para descubrir en este momento."
+    },
+    "bookmarks": {
+      "title": "Marcadores",
+      "description": "Todo lo que guardaste para más tarde."
+    },
+    "card": {
+      "follow": "Seguir",
+      "unfollow": "Dejar de seguir",
+      "delete": "Eliminar",
+      "toast": {
+        "followed": "Ahora sigues esta colección",
+        "unfollowed": "Has dejado de seguir esta colección",
+        "shared": "Has compartido esta colección"
+      }
+    },
+    "single": {
+      "share": "Compartir",
+      "shareTitle": "Compartir colección",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "follow": "Seguir",
+      "unfollow": "Dejar de seguir",
+      "content": "Añadir publicación",
+      "addContent": "Añadir publicación",
+      "empty": "Esta colección está vacía.",
+      "notFound": {
+        "title": "Colección no encontrada",
+        "subtitle1": "Esta colección no está disponible.",
+        "subtitle2": "Es posible que se haya eliminado o que el enlace ya no sea válido.",
+        "imageAlt": "Colección no encontrada",
+        "backToCollections": "Volver a colecciones",
+        "viewProfile": "Ver perfil"
+      }
+    },
+    "addContentDialog": {
+      "title": "Añadir publicación",
+      "description": "Añade una publicación o artículo desde tu feed o pega una URL directamente.",
+      "fromFeedTitle": "Añadir desde el feed",
+      "fromFeedLead": "Busca una publicación",
+      "fromFeedRest": " que quieras añadir y haz clic en el botón de colecciones.",
+      "pasteTitle": "Pegar URL de publicación",
+      "pasteDescription": "También puedes pegar una URL de publicación para añadirla rápidamente a tu colección.",
+      "createPostTitle": "Crear nueva publicación",
+      "createPostPlaceholder": "¿Qué tienes en mente?",
+      "createPostAvatarFallback": "Tú",
+      "adding": "Añadiendo...",
+      "errors": {
+        "required": "Pega una URL de publicación.",
+        "invalid": "Introduce una URL de publicación válida.",
+        "notFound": "No pudimos encontrar esa publicación.",
+        "alreadyAdded": "Esta publicación ya está añadida.",
+        "collectionNotAllowed": "No se puede añadir una colección a una colección.",
+        "failure": "No se pudo añadir esta publicación."
+      }
+    }
+  },
+  "fab": {
+    "newPost": "Nueva publicación",
+    "newCollection": "Nueva colección",
+    "newPostInCollection": "Nueva publicación en la colección",
+    "newBookmark": "Nuevo marcador",
+    "addedToCollection": "Publicación añadida a la colección."
+  },
+  "postSave": {
+    "title": "Guardar publicación",
+    "description": "Elige dónde guardar esta publicación.",
+    "open": "Guardar publicación",
+    "loading": "Cargando opciones de guardado",
+    "bookmarks": "Marcadores",
+    "newCollection": "Nueva colección",
+    "collectionNamePlaceholder": "Nombre de la colección",
+    "createCollection": "Crear colección",
+    "loadingCollections": "Cargando colecciones...",
+    "addedToCollection": "Publicación añadida a la colección.",
+    "removedFromCollection": "Publicación eliminada de la colección.",
+    "updateCollectionFailed": "No se pudo actualizar la colección.",
+    "collectionCreated": "Colección creada y publicación guardada.",
+    "createCollectionFailed": "No se pudo crear la colección."
+  },
+  "moderation": {
+    "postContentModerated": "Contenido de la publicación censurado.",
+    "collectionContentModerated": "Contenido de la colección censurado."
   }
 }

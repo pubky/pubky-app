@@ -3,7 +3,6 @@ env:
   pubky_stack_ref: 'staging'
   platforms: 'linux/amd64'
   registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
-  pubky-app_env: 'testnet'
 
 on:
   workflow_dispatch:
@@ -87,7 +86,6 @@ jobs:
       - name: Set Vars
         id: set_vars
         run: |
-          echo env=${{ env.pubky-app_env }} >> $GITHUB_OUTPUT
           echo platforms=${{ env.platforms }} >> $GITHUB_OUTPUT
 
   rebuild_pubky_app:
@@ -95,7 +93,6 @@ jobs:
     uses: ./.github/workflows/build-docker-image.yml
     with:
       platforms: ${{ needs.set_vars_pubky_app.outputs.platforms }}
-      env: ${{ needs.set_vars_pubky_app.outputs.env }}
     secrets: inherit
 
   e2e-test:

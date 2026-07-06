@@ -142,13 +142,13 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
       </svg>
     </a>
     <a
-      aria-label="Bookmarks"
+      aria-label="Collections"
       class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
-      href="/bookmarks"
+      href="/collections"
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-bookmark h-6 w-6"
+        class="lucide lucide-library h-6 w-6"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -160,7 +160,16 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+          d="m16 6 4 14"
+        />
+        <path
+          d="M12 6v14"
+        />
+        <path
+          d="M8 8v12"
+        />
+        <path
+          d="M4 4v16"
         />
       </svg>
     </a>
@@ -306,13 +315,13 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
       </svg>
     </a>
     <a
-      aria-label="Bookmarks"
+      aria-label="Collections"
       class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
-      href="/bookmarks"
+      href="/collections"
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-bookmark h-6 w-6"
+        class="lucide lucide-library h-6 w-6"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -324,7 +333,16 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+          d="m16 6 4 14"
+        />
+        <path
+          d="M12 6v14"
+        />
+        <path
+          d="M8 8v12"
+        />
+        <path
+          d="M4 4v16"
         />
       </svg>
     </a>
@@ -470,13 +488,13 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
       </svg>
     </a>
     <a
-      aria-label="Bookmarks"
+      aria-label="Collections"
       class="rounded-full p-3 transition-all border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
-      href="/bookmarks"
+      href="/collections"
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-bookmark h-6 w-6"
+        class="lucide lucide-library h-6 w-6"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -488,7 +506,16 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+          d="m16 6 4 14"
+        />
+        <path
+          d="M12 6v14"
+        />
+        <path
+          d="M8 8v12"
+        />
+        <path
+          d="M4 4v16"
         />
       </svg>
     </a>

@@ -53,7 +53,9 @@ describe('PostNormalizer', () => {
     attachments: null,
   });
 
-  const createMockBuilder = (overrides?: Partial<{ createPost: ReturnType<typeof vi.fn> }>) => ({
+  const createMockBuilder = (
+    overrides?: Partial<{ createPost: ReturnType<typeof vi.fn>; createCollectionPost: ReturnType<typeof vi.fn> }>,
+  ) => ({
     createPost: vi.fn((content, kind, parent, embed, attachments) =>
       asOpaque<PostResult>({
         post: {
@@ -62,6 +64,23 @@ describe('PostNormalizer', () => {
           parent: parent || undefined,
           embed: embed || undefined,
           attachments: attachments || undefined,
+        },
+        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${TEST_POST_IDS.POST_1}`) },
+      }),
+    ),
+    createCollectionPost: vi.fn((name, description, items, cover_image) =>
+      asOpaque<PostResult>({
+        post: {
+          content: JSON.stringify({
+            name,
+            description: description ?? '',
+            items: items ?? [],
+            cover_image: cover_image ?? null,
+          }),
+          kind: 'collection',
+          parent: undefined,
+          embed: undefined,
+          attachments: undefined,
         },
         meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${TEST_POST_IDS.POST_1}`) },
       }),
@@ -92,6 +111,8 @@ describe('PostNormalizer', () => {
       ['short', PubkyAppPostKind.Short],
       ['long', PubkyAppPostKind.Long],
       ['LONG', PubkyAppPostKind.Long],
+      ['collection', PubkyAppPostKind.Collection],
+      ['6', PubkyAppPostKind.Collection],
       ['unknown', PubkyAppPostKind.Short], // defaults to Short
     ])('should map "%s" to correct enum', (input, expected) => {
       expect(PostNormalizer.mapKindToEnum(input)).toBe(expected);
@@ -430,6 +451,67 @@ describe('PostNormalizer', () => {
     });
   });
 
+  describe('toCollection', () => {
+    let mockBuilder: ReturnType<typeof createMockBuilder>;
+
+    beforeEach(() => {
+      mockBuilder = createMockBuilder();
+      setupUnitTestMocks(mockBuilder);
+    });
+
+    afterEach(restoreMocks);
+
+    it('creates a collection post through pubky-app-specs', async () => {
+      await PostNormalizer.toCollection(
+        {
+          name: 'Proof of Work',
+          description: 'Bitcoin writing',
+          items: [buildPubkyUri(TEST_PUBKY.USER_2, 'posts/post-1')],
+        },
+        TEST_PUBKY.USER_1,
+      );
+
+      expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
+      expect(mockBuilder.createCollectionPost).toHaveBeenCalledWith(
+        'Proof of Work',
+        'Bitcoin writing',
+        [buildPubkyUri(TEST_PUBKY.USER_2, 'posts/post-1')],
+        undefined,
+      );
+    });
+
+    it('forwards an optional cover_image URL to pubky-app-specs', async () => {
+      await PostNormalizer.toCollection(
+        {
+          name: 'Proof of Work',
+          coverImage: 'https://cdn.example.com/cover.png',
+        },
+        TEST_PUBKY.USER_1,
+      );
+
+      expect(mockBuilder.createCollectionPost).toHaveBeenCalledWith(
+        'Proof of Work',
+        '',
+        [],
+        'https://cdn.example.com/cover.png',
+      );
+    });
+
+    it('validates the collection envelope before calling specs', async () => {
+      await expect(
+        PostNormalizer.toCollection(
+          {
+            name: '   ',
+            description: 'No name',
+          },
+          TEST_PUBKY.USER_1,
+        ),
+      ).rejects.toThrow('Collection name is required');
+
+      expect(mockBuilder.createCollectionPost).not.toHaveBeenCalled();
+    });
+  });
+
   /**
    * Tests for `toEdit` method - Edits existing post content
    */
@@ -520,6 +602,24 @@ describe('PostNormalizer', () => {
 
       it('should throw POST_NOT_FOUND when post does not exist', async () => {
         vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(null);
+
+        await expect(
+          PostNormalizer.toEdit({
+            compositePostId,
+            content: 'New content',
+            currentUserPubky: TEST_PUBKY.USER_1,
+          }),
+        ).rejects.toThrow('Post not found');
+      });
+
+      it('should throw POST_NOT_FOUND when the post is tombstoned (content === [DELETED])', async () => {
+        // Regression: pre-tombstone refactor `!postDetails` caught hard-deleted
+        // rows. Now they stick around as tombstones — without the content
+        // check, `toEdit` would try to build a `PubkyAppPost` whose content is
+        // the `[DELETED]` sentinel.
+        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(
+          asOpaque<PostDetailsModel>({ ...createMockPostDetails(compositePostId), content: '[DELETED]' }),
+        );
 
         await expect(
           PostNormalizer.toEdit({

@@ -6,6 +6,7 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useNotifications } from '@/hooks/useNotifications/useNotifications';
 import { NotificationsEmpty } from '@/molecules/NotificationsEmpty/NotificationsEmpty';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { NotificationsList } from '../NotificationsList/NotificationsList';
 import { NotificationsContainerSkeleton, NotificationsLoadMoreSkeleton } from './NotificationsContainer.skeleton';
 
@@ -27,11 +28,15 @@ export function NotificationsContainer() {
     isLoading: isLoadingMore,
   });
 
-  // Mark all notifications as read when entering the notifications page
-  // This allows the tab counter to show 0 while viewing notifications
+  // Re-run once the session is restored, since the write needs an authenticated session.
+  const isAuthenticated = useAuthStore((state) => state.session !== null);
+
+  // Mark all notifications as read when entering the page (once authenticated), so the
+  // tab counter shows 0 while viewing.
   useEffect(() => {
+    if (!isAuthenticated) return;
     markAllAsRead();
-  }, [markAllAsRead]);
+  }, [markAllAsRead, isAuthenticated]);
 
   if (isLoading) {
     return <NotificationsContainerSkeleton />;
