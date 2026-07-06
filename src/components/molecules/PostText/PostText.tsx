@@ -18,6 +18,7 @@ import {
   remarkHashtags,
   remarkMentions,
   remarkPlaintextCodeblock,
+  remarkPlaintextTables,
   truncatePostPreviewText,
 } from './PostText.utils';
 
@@ -47,6 +48,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
 
   const remarkPlugins = [
     remarkGfm,
+    remarkPlaintextTables,
     ...(isArticle ? (!onPostPage ? [remarkExtractFirstParagraph] : []) : [remarkDisallowMarkdownLinks]),
     remarkPlaintextCodeblock,
     remarkHashtags,

@@ -388,11 +388,14 @@ describe('PostText', () => {
       expect(img).not.toBeInTheDocument();
     });
 
-    it('unwraps tables but keeps content', () => {
-      render(<PostText content={'| Header |\n| ------ |\n| Cell |'} />);
+    it('renders unsupported tables as literal markdown text', () => {
+      render(<PostText content={'| Item | Category | Price |\n| :--- | :----: | ---: |\n| Apple | Fruit | $1.00 |'} />);
 
-      // Table should be unwrapped but content preserved
+      const container = screen.getByTestId('container');
       expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(container).toHaveTextContent('| Item | Category | Price |');
+      expect(container).toHaveTextContent('| :--- | :---: | ---: |');
+      expect(container).toHaveTextContent('| Apple | Fruit | $1.00 |');
     });
   });
 

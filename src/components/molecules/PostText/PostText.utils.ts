@@ -10,6 +10,8 @@ import type {
   PhrasingContent,
   Root,
   RootContent,
+  Table,
+  TableCell,
   Text,
 } from 'mdast';
 import { visit } from 'unist-util-visit';
@@ -37,6 +39,57 @@ const extractText = (node: RootContent | PhrasingContent): string => {
     return (node.children as (RootContent | PhrasingContent)[]).map(extractText).join('');
   }
   return '';
+};
+
+const getTableCellPlaintext = (cell: TableCell): string => {
+  return cell.children.map(extractText).join('').replace(/\s+/g, ' ').trim();
+};
+
+const getMarkdownTableDividerCell = (alignment: string | null | undefined): string => {
+  if (alignment === 'left') return ':---';
+  if (alignment === 'center') return ':---:';
+  if (alignment === 'right') return '---:';
+
+  return '---';
+};
+
+const formatMarkdownTableRow = (cells: string[], columnCount: number): string => {
+  const paddedCells = Array.from({ length: columnCount }, (_, index) => cells[index] ?? '');
+  return `| ${paddedCells.join(' | ')} |`;
+};
+
+const tableToPlaintext = (table: Table): string => {
+  const rows = table.children.map((row) => row.children.map(getTableCellPlaintext));
+  const columnCount = Math.max(table.align?.length ?? 0, ...rows.map((row) => row.length));
+
+  if (columnCount === 0) return '';
+
+  const [header = [], ...bodyRows] = rows;
+  const divider = Array.from({ length: columnCount }, (_, index) => getMarkdownTableDividerCell(table.align?.[index]));
+
+  return [
+    formatMarkdownTableRow(header, columnCount),
+    formatMarkdownTableRow(divider, columnCount),
+    ...bodyRows.map((row) => formatMarkdownTableRow(row, columnCount)),
+  ].join('\n');
+};
+
+// Tables are not supported by PostText. GFM still parses pipe-table syntax,
+// so convert table nodes back to literal markdown before React unwraps cells.
+// Note: Never was supported by PostText, but due the improvement of blank lines detection,
+// it's a specific case to not even parse it.
+export const remarkPlaintextTables = () => (tree: Root) => {
+  visit(tree, 'table', (node: Table, index: number | undefined, parent: Parent | undefined) => {
+    if (parent === undefined || index === undefined) return;
+
+    const plaintext = tableToPlaintext(node);
+    const replacement: Paragraph = {
+      type: 'paragraph',
+      children: [{ type: 'text', value: plaintext } as Text],
+    };
+
+    (parent.children as RootContent[]).splice(index, 1, replacement);
+  });
 };
 
 // Disallow markdown link syntax [text](url) to prevent deceptive links.
