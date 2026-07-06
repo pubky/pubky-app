@@ -243,7 +243,7 @@ function DialogAddContentBody({
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
       <DialogHeader className="pr-0">
         <DialogTitle>{t('title')}</DialogTitle>
-        <DialogDescription className="sr-only">{t('description')}</DialogDescription>
+        <DialogDescription className="text-muted-foreground">{t('description')}</DialogDescription>
       </DialogHeader>
       <Container overrideDefaults className="flex w-full flex-col gap-3">
         <FeedInstructionCard onOpenFeed={onOpenFeed} />
