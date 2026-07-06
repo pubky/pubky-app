@@ -13,9 +13,9 @@ const mocks = vi.hoisted(() => ({
 const translations: Record<string, string> = {
   'collections.new.title': 'New Collection',
   'collections.new.nameLabel': 'Title',
-  'collections.new.namePlaceholder': 'Proof of Work',
+  'collections.new.namePlaceholder': 'Name your collection',
   'collections.new.descriptionLabel': 'Description',
-  'collections.new.descriptionPlaceholder': 'The best from the biggest contributors in Bitcoin',
+  'collections.new.descriptionPlaceholder': 'What will people find here?',
   'collections.new.backgroundLabel': 'Background',
   'collections.new.addImage': 'Add image',
   'collections.new.removeImage': 'Remove image',
@@ -91,11 +91,8 @@ describe('DialogNewCollection', () => {
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'New Collection' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Title')).toHaveAttribute('placeholder', 'Proof of Work');
-    expect(screen.getByLabelText('Description')).toHaveAttribute(
-      'placeholder',
-      'The best from the biggest contributors in Bitcoin',
-    );
+    expect(screen.getByLabelText('Title')).toHaveAttribute('placeholder', 'Name your collection');
+    expect(screen.getByLabelText('Description')).toHaveAttribute('placeholder', 'What will people find here?');
   });
 
   it('disables save until a title is entered', () => {
