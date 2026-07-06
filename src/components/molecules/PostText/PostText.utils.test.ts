@@ -1756,6 +1756,31 @@ describe('remarkExtractFirstParagraph', () => {
       expect(secondPreview.endsWith('...\u00A0')).toBe(true);
     });
 
+    it('adds an ellipsis when a list item hides later paragraphs at a character boundary', () => {
+      const visibleParagraph = 'a'.repeat(TRUNCATION_LIMIT);
+      const hiddenParagraph = 'hidden';
+      const list: List = {
+        type: 'list',
+        ordered: false,
+        spread: false,
+        children: [
+          {
+            type: 'listItem',
+            spread: true,
+            children: [createParagraph(visibleParagraph), createParagraph(hiddenParagraph)],
+          },
+        ],
+      };
+      const tree = createRoot([list]);
+
+      runPlugin(tree);
+
+      const truncatedList = tree.children[0] as List;
+      const truncatedItem = truncatedList.children[0];
+      expect(truncatedItem.children).toHaveLength(1);
+      expect(getParagraphPlainText(truncatedItem.children[0] as Paragraph)).toBe(`${visibleParagraph}...\u00A0`);
+    });
+
     it('does not truncate when text is under the limit', () => {
       const tree = createRoot([createParagraph('Short text')]);
       runPlugin(tree);

@@ -433,9 +433,10 @@ const extractListItemText = (listItem: ListItem): string => {
   return listItem.children.map((child) => extractText(child as RootContent)).join('');
 };
 
-const truncateAstListItem = (listItem: ListItem, limit: number): void => {
+const truncateAstListItem = (listItem: ListItem, limit: number): boolean => {
   let remaining = limit;
   const children: ListItem['children'] = [];
+  let ellipsisAdded = false;
 
   for (const child of listItem.children) {
     if (remaining <= 0) break;
@@ -451,6 +452,7 @@ const truncateAstListItem = (listItem: ListItem, limit: number): void => {
         truncateAstParagraph(paragraph, { limit: remaining, wordBoundary: true });
         children.push(paragraph);
         remaining = 0;
+        ellipsisAdded = true;
       }
       continue;
     }
@@ -463,6 +465,7 @@ const truncateAstListItem = (listItem: ListItem, limit: number): void => {
   }
 
   listItem.children = children.length > 0 ? children : listItem.children;
+  return ellipsisAdded;
 };
 
 // Truncate text content within an AST paragraph node at a character limit,
@@ -589,11 +592,11 @@ const buildArticlePreviewChildren = (children: RootContent[], state: ArticlePrev
         const nextListItem = { ...listItem, children: [...listItem.children] } as ListItem;
 
         if (text.length > state.remainingChars) {
-          truncateAstListItem(nextListItem, state.remainingChars);
+          const listItemHasEllipsis = truncateAstListItem(nextListItem, state.remainingChars);
           listItems.push(nextListItem);
           state.remainingLines -= 1;
           state.remainingChars = 0;
-          state.previewHasEllipsis = true;
+          state.previewHasEllipsis = listItemHasEllipsis || state.previewHasEllipsis;
           listWasTruncated = true;
           break;
         }
