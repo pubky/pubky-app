@@ -25,6 +25,7 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
       effectiveLayout: 'columns',
       isVisualRequested: false,
       isVisualActive: false,
+      isGraphActive: false,
       isGridActive: true,
       isPhoneViewport: false,
     }),

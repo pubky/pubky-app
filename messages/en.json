@@ -158,7 +158,8 @@
     "feed": "Feed",
     "search": "Search",
     "collections": "Collections",
-    "new": "New"
+    "new": "New",
+    "graph": "Graph"
   },
   "settings": {
     "title": "Settings",
@@ -473,11 +474,8 @@
       "createInBrowser": "Create keys in browser",
       "continueWithRing": "Continue with Pubky Ring",
       "inviteCodeApplied": "Invite code applied",
-
       "invalidInviteCode": "Invalid invite code",
-
       "usedInviteCode": "Invite code already used",
-
       "verificationFailed": "Couldn't verify invite code"
     },
     "createProfile": {
@@ -585,7 +583,8 @@
       "mute": "Mute {username}",
       "unmute": "Unmute {username}",
       "viewProfile": "View {name}'s profile",
-      "thisIsYou": "This is you"
+      "thisIsYou": "This is you",
+      "openInGraph": "Open in graph"
     },
     "friendsWithYou": "(you follow each other)",
     "empty": {
@@ -1159,7 +1158,8 @@
       "title": "Layout",
       "columns": "Columns",
       "wide": "Wide",
-      "visual": "Visual"
+      "visual": "Visual",
+      "graph": "Graph"
     },
     "content": {
       "title": "Content",
@@ -1456,5 +1456,78 @@
   "moderation": {
     "postContentModerated": "Post content moderated.",
     "collectionContentModerated": "Collection content moderated."
+  },
+  "graph": {
+    "title": "Graph",
+    "legend": {
+      "title": "Legend",
+      "self": "You",
+      "friend": "Friend",
+      "following": "Following",
+      "follower": "Follower",
+      "extended": "Extended",
+      "user": "User",
+      "post": "Post",
+      "tag": "Tag",
+      "sameCommunity": "Same community",
+      "bridge": "Bridge",
+      "followAge": "Follow age",
+      "old": "old",
+      "new": "new"
+    },
+    "controls": {
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "fit": "Fit view",
+      "recenter": "Re-center",
+      "showPosts": "Show posts",
+      "showTags": "Show tags",
+      "declutter": "Declutter",
+      "communities": "Communities",
+      "timeMachine": "Time machine",
+      "pausePhysics": "Pause physics",
+      "resumePhysics": "Resume physics",
+      "releasePins": "Release pinned nodes"
+    },
+    "panel": {
+      "close": "Close",
+      "expand": "Expand",
+      "expanded": "Expanded",
+      "focus": "Focus",
+      "openProfile": "Profile",
+      "openPost": "Open post",
+      "emptyPost": "No text content",
+      "postBy": "Post by {name}",
+      "searchTag": "Search",
+      "tagUsage": "used {count, plural, one {# time} other {# times}}",
+      "reply": "Reply",
+      "tracePath": "How am I connected?",
+      "followedBy": "followed by {count} you follow"
+    },
+    "states": {
+      "error": "Could not load the graph.",
+      "retry": "Retry",
+      "empty": "Nothing to explore yet. Follow people to grow your graph.",
+      "emptyCta": "Find people to follow",
+      "noUser": "Sign in, or search for a user or tag to explore the graph.",
+      "tooManyNodes": "Graph is full: distant nodes were hidden.",
+      "expandError": "Could not expand this node.",
+      "noPath": "No follow path found within 6 hops.",
+      "autoDeclutter": "Dense graph: declutter is on. Toggle it in the controls."
+    },
+    "search": {
+      "placeholder": "Search users or tags"
+    },
+    "time": {
+      "play": "Play",
+      "pause": "Pause",
+      "scrub": "Scrub through time",
+      "now": "Now",
+      "close": "Close time machine"
+    },
+    "stream": {
+      "mergeMore": "Merge more",
+      "empty": "Nothing in this stream yet."
+    }
   }
 }

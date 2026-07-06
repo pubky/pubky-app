@@ -1,8 +1,9 @@
 'use client';
 
-import { Key, Link, Megaphone, MegaphoneOff, UserRoundMinus, UserRoundPlus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Key, Link, Megaphone, MegaphoneOff, UserRoundMinus, UserRoundPlus, Waypoints } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { PROFILE_ROUTES } from '@/app/routes';
+import { APP_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
@@ -28,6 +29,7 @@ import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './usePr
 export function useProfileMenuActions(userId: string): UseProfileMenuActionsResult {
   const t = useTranslations('profile.actions');
   const tToast = useTranslations('toast');
+  const router = useRouter();
   const { profile, isLoading: isProfileLoading } = useUserProfile(userId);
   const { isFollowing, isLoading: isFollowingLoading } = useIsFollowing(userId);
   const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser();
@@ -95,6 +97,16 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
           description: isAppError(error) ? error.message : tToast('copy.copyFailedDesc'),
         });
       }
+    },
+  });
+
+  // Open in graph explorer
+  menuItems.push({
+    id: PROFILE_MENU_ACTION_IDS.OPEN_IN_GRAPH,
+    label: t('openInGraph'),
+    icon: Waypoints,
+    onClick: async () => {
+      router.push(`${APP_ROUTES.GRAPH}?user=${userId}`);
     },
   });
 

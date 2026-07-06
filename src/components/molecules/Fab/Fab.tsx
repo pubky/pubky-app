@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Plus } from 'lucide-react';
+import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { useFabAction } from '@/hooks/useFabAction/useFabAction';
@@ -37,9 +39,13 @@ export function Fab() {
   const { isPublicExploreRoute } = usePublicRoute();
   const { requireAuth } = useRequireAuth();
   const action = useFabAction();
+  const pathname = usePathname();
 
-  // Show FAB for authenticated users OR unauthenticated users on public explore routes
-  const shouldShow = isFullyAuthenticated || isPublicExploreRoute;
+  // Show FAB for authenticated users OR unauthenticated users on public explore routes.
+  // The graph explorer is a full-bleed canvas, not a composer surface: the FAB
+  // would float over its inspector sheet and controls.
+  const isGraphRoute = pathname?.startsWith(APP_ROUTES.GRAPH) ?? false;
+  const shouldShow = (isFullyAuthenticated || isPublicExploreRoute) && !isGraphRoute;
   if (isLoading || !shouldShow) {
     return null;
   }

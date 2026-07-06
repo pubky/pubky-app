@@ -5,12 +5,13 @@ import {
   PUBKY_INVALID_BAD_CHAR,
   PUBKY_INVALID_TOO_LONG,
 } from '@/test-utils/pubky';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 import {
   canSubmitPost,
   clearCookies,
   cn,
   copyToClipboard,
+  cssColorToHex,
   daysAgo,
   extractInitials,
   formatInviteCode,
@@ -550,6 +551,44 @@ describe('Utils', () => {
     it('should handle edge case alpha values', () => {
       expect(hexToRgba('#123456', 0)).toBe('rgba(18, 52, 86, 0)');
       expect(hexToRgba('#123456', 1)).toBe('rgba(18, 52, 86, 1)');
+    });
+  });
+
+  describe('cssColorToHex', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should return null when the 2D canvas is unavailable (jsdom default)', () => {
+      // jsdom's canvas stub has no 2D context, so normalization is impossible
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+      expect(cssColorToHex('oklch(0.9 0.3 120)')).toBeNull();
+    });
+
+    it('should return null for empty input', () => {
+      expect(cssColorToHex('')).toBeNull();
+    });
+
+    it('should return the hex serialization the scratch canvas produces', () => {
+      const scratch = { fillStyle: '' };
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(asOpaque<CanvasRenderingContext2D>(scratch));
+      // The canvas spec serializes opaque colors back as #rrggbb
+      Object.defineProperty(scratch, 'fillStyle', {
+        get: () => '#c8ff00',
+        set: () => {},
+      });
+      expect(cssColorToHex('oklch(0.92 0.24 122)')).toBe('#c8ff00');
+    });
+
+    it('should return null when the serialization is not an opaque hex color', () => {
+      const scratch = { fillStyle: '' };
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(asOpaque<CanvasRenderingContext2D>(scratch));
+      // Translucent colors serialize as rgba(...), which callers cannot use
+      Object.defineProperty(scratch, 'fillStyle', {
+        get: () => 'rgba(200, 255, 0, 0.5)',
+        set: () => {},
+      });
+      expect(cssColorToHex('rgba(200, 255, 0, 0.5)')).toBeNull();
     });
   });
 

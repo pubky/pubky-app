@@ -160,7 +160,8 @@
     "feed": "Feed",
     "search": "Suchen",
     "collections": "Sammlungen",
-    "new": "Neu"
+    "new": "Neu",
+    "graph": "Graph"
   },
   "settings": {
     "title": "Einstellungen",
@@ -584,7 +585,8 @@
       "mute": "{username} stummschalten",
       "unmute": "Stummschaltung von {username} aufheben",
       "viewProfile": "Profil von {name} ansehen",
-      "thisIsYou": "Das sind Sie"
+      "thisIsYou": "Das sind Sie",
+      "openInGraph": "Im Graphen öffnen"
     },
     "friendsWithYou": "(ihr folgt euch gegenseitig)",
     "empty": {
@@ -1158,7 +1160,8 @@
       "title": "Layout",
       "columns": "Spalten",
       "wide": "Breit",
-      "visual": "Visuell"
+      "visual": "Visuell",
+      "graph": "Graph"
     },
     "content": {
       "title": "Inhalt",
@@ -1455,5 +1458,78 @@
   "moderation": {
     "postContentModerated": "Beitragsinhalt zensiert.",
     "collectionContentModerated": "Sammlungsinhalt zensiert."
+  },
+  "graph": {
+    "title": "Graph",
+    "legend": {
+      "title": "Legende",
+      "self": "Du",
+      "friend": "Freund",
+      "following": "Folge ich",
+      "follower": "Follower",
+      "extended": "Erweitert",
+      "user": "Nutzer",
+      "post": "Beitrag",
+      "tag": "Tag",
+      "sameCommunity": "Gleiche Community",
+      "bridge": "Brücke",
+      "followAge": "Follow-Alter",
+      "old": "alt",
+      "new": "neu"
+    },
+    "controls": {
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "fit": "Ansicht anpassen",
+      "recenter": "Zentrieren",
+      "showPosts": "Beiträge anzeigen",
+      "showTags": "Tags anzeigen",
+      "declutter": "Aufräumen",
+      "communities": "Communities",
+      "timeMachine": "Zeitmaschine",
+      "pausePhysics": "Physik pausieren",
+      "resumePhysics": "Physik fortsetzen",
+      "releasePins": "Fixierte Knoten lösen"
+    },
+    "panel": {
+      "close": "Schließen",
+      "expand": "Erweitern",
+      "expanded": "Erweitert",
+      "focus": "Fokussieren",
+      "openProfile": "Profil",
+      "openPost": "Beitrag öffnen",
+      "emptyPost": "Kein Textinhalt",
+      "postBy": "Beitrag von {name}",
+      "searchTag": "Suchen",
+      "tagUsage": "{count, plural, one {# Mal} other {# Mal}} verwendet",
+      "reply": "Antworten",
+      "tracePath": "Wie bin ich verbunden?",
+      "followedBy": "gefolgt von {count}, denen du folgst"
+    },
+    "states": {
+      "error": "Der Graph konnte nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "empty": "Noch nichts zu erkunden. Folge Leuten, um deinen Graphen wachsen zu lassen.",
+      "emptyCta": "Leute zum Folgen finden",
+      "noUser": "Melde dich an oder suche nach einem Nutzer oder Tag, um den Graphen zu erkunden.",
+      "tooManyNodes": "Graph ist voll: entfernte Knoten wurden ausgeblendet.",
+      "expandError": "Dieser Knoten konnte nicht erweitert werden.",
+      "noPath": "Kein Folgepfad innerhalb von 6 Schritten gefunden.",
+      "autoDeclutter": "Dichter Graph: Aufräumen ist aktiv. In den Steuerungen umschaltbar."
+    },
+    "search": {
+      "placeholder": "Nutzer oder Tags suchen"
+    },
+    "time": {
+      "play": "Abspielen",
+      "pause": "Pause",
+      "scrub": "Durch die Zeit scrollen",
+      "now": "Jetzt",
+      "close": "Zeitmaschine schließen"
+    },
+    "stream": {
+      "mergeMore": "Mehr laden",
+      "empty": "Noch nichts in diesem Stream."
+    }
   }
 }

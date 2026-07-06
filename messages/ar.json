@@ -160,7 +160,8 @@
     "feed": "فيد",
     "search": "بحث",
     "collections": "المجموعات",
-    "new": "جديد"
+    "new": "جديد",
+    "graph": "الرسم البياني"
   },
   "settings": {
     "title": "الاعدادات",
@@ -584,7 +585,8 @@
       "mute": "كتم {username}",
       "unmute": "الغاء كتم {username}",
       "viewProfile": "عرض ملف {name} الشخصي",
-      "thisIsYou": "هذا انت"
+      "thisIsYou": "هذا انت",
+      "openInGraph": "فتح في الرسم البياني"
     },
     "friendsWithYou": "(تتابعون بعضكم البعض)",
     "empty": {
@@ -1152,7 +1154,8 @@
       "title": "التخطيط",
       "columns": "اعمدة",
       "wide": "عريض",
-      "visual": "مرئي"
+      "visual": "مرئي",
+      "graph": "رسم بياني"
     },
     "content": {
       "title": "المحتوى",
@@ -1449,5 +1452,78 @@
   "moderation": {
     "postContentModerated": "تم حظر محتوى المنشور.",
     "collectionContentModerated": "تم حظر محتوى المجموعة."
+  },
+  "graph": {
+    "title": "الرسم البياني",
+    "legend": {
+      "title": "مفتاح الرموز",
+      "self": "أنت",
+      "friend": "صديق",
+      "following": "تتابعه",
+      "follower": "متابع",
+      "extended": "موسع",
+      "user": "مستخدم",
+      "post": "منشور",
+      "tag": "وسم",
+      "sameCommunity": "نفس المجتمع",
+      "bridge": "جسر",
+      "followAge": "عمر المتابعة",
+      "old": "قديم",
+      "new": "جديد"
+    },
+    "controls": {
+      "zoomIn": "تكبير",
+      "zoomOut": "تصغير",
+      "fit": "ملاءمة العرض",
+      "recenter": "إعادة التوسيط",
+      "showPosts": "عرض المنشورات",
+      "showTags": "عرض الوسوم",
+      "declutter": "ترتيب",
+      "communities": "مجتمعات",
+      "timeMachine": "آلة الزمن",
+      "pausePhysics": "إيقاف الفيزياء",
+      "resumePhysics": "استئناف الفيزياء",
+      "releasePins": "تحرير العقد المثبتة"
+    },
+    "panel": {
+      "close": "إغلاق",
+      "expand": "توسيع",
+      "expanded": "موسع",
+      "focus": "تركيز",
+      "openProfile": "الملف الشخصي",
+      "openPost": "فتح المنشور",
+      "emptyPost": "لا يوجد محتوى نصي",
+      "postBy": "منشور من {name}",
+      "searchTag": "بحث",
+      "tagUsage": "استُخدم {count, plural, one {مرة واحدة} two {مرتين} few {# مرات} other {# مرة}}",
+      "reply": "رد",
+      "tracePath": "كيف أنا متصل؟",
+      "followedBy": "يتابعه {count} ممن تتابعهم"
+    },
+    "states": {
+      "error": "تعذر تحميل الرسم البياني.",
+      "retry": "إعادة المحاولة",
+      "empty": "لا شيء لاستكشافه بعد. تابع أشخاصًا لتنمية الرسم البياني الخاص بك.",
+      "emptyCta": "ابحث عن أشخاص لمتابعتهم",
+      "noUser": "سجّل الدخول أو ابحث عن مستخدم أو وسم لاستكشاف الرسم البياني.",
+      "tooManyNodes": "الرسم البياني ممتلئ: تم إخفاء العقد البعيدة.",
+      "expandError": "تعذر توسيع هذه العقدة.",
+      "noPath": "لم يُعثر على مسار متابعة خلال 6 قفزات.",
+      "autoDeclutter": "رسم بياني كثيف: الترتيب مفعّل. يمكن تغييره من عناصر التحكم."
+    },
+    "search": {
+      "placeholder": "ابحث عن مستخدمين أو وسوم"
+    },
+    "time": {
+      "play": "تشغيل",
+      "pause": "إيقاف مؤقت",
+      "scrub": "التنقل عبر الزمن",
+      "now": "الآن",
+      "close": "إغلاق آلة الزمن"
+    },
+    "stream": {
+      "mergeMore": "دمج المزيد",
+      "empty": "لا يوجد شيء في هذا التدفق بعد."
+    }
   }
 }

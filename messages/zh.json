@@ -158,7 +158,8 @@
     "feed": "动态",
     "search": "搜索",
     "collections": "收藏集",
-    "new": "新"
+    "new": "新",
+    "graph": "关系图"
   },
   "settings": {
     "title": "设置",
@@ -582,7 +583,8 @@
       "mute": "静音 {username}",
       "unmute": "取消静音 {username}",
       "viewProfile": "查看 {name} 的个人资料",
-      "thisIsYou": "这是您"
+      "thisIsYou": "这是您",
+      "openInGraph": "在关系图中打开"
     },
     "friendsWithYou": "（互相关注）",
     "empty": {
@@ -1150,7 +1152,8 @@
       "title": "布局",
       "columns": "多列",
       "wide": "宽屏",
-      "visual": "视觉"
+      "visual": "视觉",
+      "graph": "关系图"
     },
     "content": {
       "title": "内容",
@@ -1447,5 +1450,78 @@
   "moderation": {
     "postContentModerated": "帖子内容已被审核。",
     "collectionContentModerated": "收藏集内容已被审核。"
+  },
+  "graph": {
+    "title": "关系图",
+    "legend": {
+      "title": "图例",
+      "self": "你",
+      "friend": "好友",
+      "following": "关注中",
+      "follower": "粉丝",
+      "extended": "扩展",
+      "user": "用户",
+      "post": "帖子",
+      "tag": "标签",
+      "sameCommunity": "同一社群",
+      "bridge": "桥接",
+      "followAge": "关注时间",
+      "old": "旧",
+      "new": "新"
+    },
+    "controls": {
+      "zoomIn": "放大",
+      "zoomOut": "缩小",
+      "fit": "适应视图",
+      "recenter": "回到中心",
+      "showPosts": "显示帖子",
+      "showTags": "显示标签",
+      "declutter": "整理",
+      "communities": "社区",
+      "timeMachine": "时光机",
+      "pausePhysics": "暂停物理",
+      "resumePhysics": "恢复物理",
+      "releasePins": "释放固定节点"
+    },
+    "panel": {
+      "close": "关闭",
+      "expand": "展开",
+      "expanded": "已展开",
+      "focus": "聚焦",
+      "openProfile": "个人主页",
+      "openPost": "打开帖子",
+      "emptyPost": "无文本内容",
+      "postBy": "{name}的帖子",
+      "searchTag": "搜索",
+      "tagUsage": "使用了{count}次",
+      "reply": "回复",
+      "tracePath": "我如何与其相连？",
+      "followedBy": "你关注的{count}人也关注了"
+    },
+    "states": {
+      "error": "无法加载关系图。",
+      "retry": "重试",
+      "empty": "暂无可探索的内容。关注他人以扩展你的关系图。",
+      "emptyCta": "寻找可关注的人",
+      "noUser": "登录或搜索用户或标签以探索关系图。",
+      "tooManyNodes": "关系图已满：远处节点已隐藏。",
+      "expandError": "无法展开该节点。",
+      "noPath": "6 跳以内未找到关注路径。",
+      "autoDeclutter": "关系图较密集，已开启整理。可在控制栏切换。"
+    },
+    "search": {
+      "placeholder": "搜索用户或标签"
+    },
+    "time": {
+      "play": "播放",
+      "pause": "暂停",
+      "scrub": "拖动时间轴",
+      "now": "现在",
+      "close": "关闭时光机"
+    },
+    "stream": {
+      "mergeMore": "合并更多",
+      "empty": "该流中还没有内容。"
+    }
   }
 }

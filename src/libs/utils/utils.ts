@@ -206,6 +206,28 @@ export function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/**
+ * Normalizes any valid CSS color (oklch(), rgb(), named colors, ...) to a
+ * `#rrggbb` hex string via a scratch 2D canvas: assigning fillStyle and
+ * reading it back serializes opaque colors as hex per the canvas spec.
+ *
+ * Returns null when normalization is unavailable (SSR, jsdom's stub canvas)
+ * or when the value does not serialize to an opaque hex color (parse
+ * failure, out-of-gamut serialization), so callers can keep their fallback.
+ *
+ * @param color - Any CSS color string
+ * @returns Hex color string (e.g., '#c8ff00') or null
+ */
+export function cssColorToHex(color: string): string | null {
+  if (!color || typeof document === 'undefined') return null;
+  const scratch = document.createElement('canvas').getContext?.('2d');
+  if (!scratch) return null;
+  scratch.fillStyle = '#000000';
+  scratch.fillStyle = color;
+  const normalized = scratch.fillStyle;
+  return typeof normalized === 'string' && /^#[0-9a-f]{6}$/i.test(normalized) ? normalized : null;
+}
+
 export function extractInitials({ name, maxLength = 2 }: ExtractInitialsProps) {
   if (!name || typeof name !== 'string') return '';
 

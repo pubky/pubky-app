@@ -158,7 +158,8 @@
     "feed": "Feed",
     "search": "Buscar",
     "collections": "Colecciones",
-    "new": "Nuevo"
+    "new": "Nuevo",
+    "graph": "Grafo"
   },
   "settings": {
     "title": "Configuración",
@@ -584,7 +585,8 @@
       "mute": "Silenciar a {username}",
       "unmute": "Desilenciar a {username}",
       "viewProfile": "Ver perfil de {name}",
-      "thisIsYou": "Eres tu"
+      "thisIsYou": "Eres tu",
+      "openInGraph": "Abrir en el grafo"
     },
     "friendsWithYou": "(se siguen mutuamente)",
     "empty": {
@@ -1158,7 +1160,8 @@
       "title": "Diseño",
       "columns": "Columnas",
       "wide": "Ancho",
-      "visual": "Visual"
+      "visual": "Visual",
+      "graph": "Grafo"
     },
     "content": {
       "title": "Contenido",
@@ -1457,5 +1460,78 @@
   "moderation": {
     "postContentModerated": "Contenido de la publicación censurado.",
     "collectionContentModerated": "Contenido de la colección censurado."
+  },
+  "graph": {
+    "title": "Grafo",
+    "legend": {
+      "title": "Leyenda",
+      "self": "Tú",
+      "friend": "Amigo",
+      "following": "Siguiendo",
+      "follower": "Seguidor",
+      "extended": "Extendido",
+      "user": "Usuario",
+      "post": "Publicación",
+      "tag": "Etiqueta",
+      "sameCommunity": "Misma comunidad",
+      "bridge": "Puente",
+      "followAge": "Antigüedad del follow",
+      "old": "antiguo",
+      "new": "nuevo"
+    },
+    "controls": {
+      "zoomIn": "Acercar",
+      "zoomOut": "Alejar",
+      "fit": "Ajustar vista",
+      "recenter": "Recentrar",
+      "showPosts": "Mostrar publicaciones",
+      "showTags": "Mostrar etiquetas",
+      "declutter": "Despejar",
+      "communities": "Comunidades",
+      "timeMachine": "Máquina del tiempo",
+      "pausePhysics": "Pausar física",
+      "resumePhysics": "Reanudar física",
+      "releasePins": "Soltar nodos fijados"
+    },
+    "panel": {
+      "close": "Cerrar",
+      "expand": "Expandir",
+      "expanded": "Expandido",
+      "focus": "Enfocar",
+      "openProfile": "Perfil",
+      "openPost": "Abrir publicación",
+      "emptyPost": "Sin contenido de texto",
+      "postBy": "Publicación de {name}",
+      "searchTag": "Buscar",
+      "tagUsage": "usada {count, plural, one {# vez} other {# veces}}",
+      "reply": "Responder",
+      "tracePath": "¿Cómo estoy conectado?",
+      "followedBy": "seguido por {count} que sigues"
+    },
+    "states": {
+      "error": "No se pudo cargar el grafo.",
+      "retry": "Reintentar",
+      "empty": "Nada que explorar todavía. Sigue a personas para hacer crecer tu grafo.",
+      "emptyCta": "Encuentra personas para seguir",
+      "noUser": "Inicia sesión o busca un usuario o etiqueta para explorar el grafo.",
+      "tooManyNodes": "Grafo lleno: se ocultaron nodos lejanos.",
+      "expandError": "No se pudo expandir este nodo.",
+      "noPath": "No se encontró un camino de seguimiento en 6 saltos.",
+      "autoDeclutter": "Grafo denso: el despeje está activado. Cámbialo en los controles."
+    },
+    "search": {
+      "placeholder": "Buscar usuarios o etiquetas"
+    },
+    "time": {
+      "play": "Reproducir",
+      "pause": "Pausar",
+      "scrub": "Recorrer el tiempo",
+      "now": "Ahora",
+      "close": "Cerrar la máquina del tiempo"
+    },
+    "stream": {
+      "mergeMore": "Añadir más",
+      "empty": "Aún no hay nada en este stream."
+    }
   }
 }

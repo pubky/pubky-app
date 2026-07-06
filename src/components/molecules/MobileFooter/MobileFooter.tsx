@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Flame, Home, Library, Search, Settings, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Search, Settings, UserRoundPlus, Waypoints } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APP_ROUTES, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
@@ -75,6 +75,12 @@ export function MobileFooter({ className }: MobileFooterProps) {
       activePrefix: APP_ROUTES.COLLECTIONS,
       icon: Library,
       label: tHeader('collections'),
+    },
+    {
+      href: APP_ROUTES.GRAPH,
+      activePrefix: APP_ROUTES.GRAPH,
+      icon: Waypoints,
+      label: tHeader('graph'),
     },
     {
       href: SETTINGS_ROUTES.ACCOUNT,

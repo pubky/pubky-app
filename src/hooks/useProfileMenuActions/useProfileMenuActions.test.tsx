@@ -28,6 +28,10 @@ const {
 }));
 
 // Mock next-intl
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock('next-intl', () => ({
   useTranslations: (namespace: string) => mockUseTranslations(namespace),
 }));
@@ -489,6 +493,7 @@ describe('useProfileMenuActions', () => {
         PROFILE_MENU_ACTION_IDS.FOLLOW,
         PROFILE_MENU_ACTION_IDS.COPY_PUBKY,
         PROFILE_MENU_ACTION_IDS.COPY_LINK,
+        PROFILE_MENU_ACTION_IDS.OPEN_IN_GRAPH,
         PROFILE_MENU_ACTION_IDS.MUTE,
       ]);
     });

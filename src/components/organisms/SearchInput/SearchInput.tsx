@@ -17,6 +17,7 @@ import { SearchInputBar } from '@/molecules/SearchInputBar/SearchInputBar';
 import { SearchSuggestions } from '@/molecules/SearchSuggestions/SearchSuggestions';
 import { toast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { useGraphStore } from '@/stores/graph/graph.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { SearchInputProps } from './SearchInput.types';
 import { parseTagsFromUrl } from './SearchInput.utils';
@@ -32,10 +33,20 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isMobile = useIsMobile();
 
+  // On the graph page this bar drives the canvas instead of navigating: picks
+  // are handed to the graph via the store, so desktop needs no second field
+  const isGraphPage = pathname?.startsWith(APP_ROUTES.GRAPH) ?? false;
+
   const handleEnter = (value: string) => {
     if (!isValidTagLabel(value.trim().toLowerCase())) {
       toast({ variant: 'error', description: t('invalidTag') });
       return false;
+    }
+
+    if (isGraphPage) {
+      useGraphStore.getState().requestSearch({ kind: 'tag', label: value.trim().toLowerCase() });
+      setFocus(false);
+      return;
     }
 
     addTagToSearch(value, { addToRecent: true });
@@ -74,10 +85,21 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     addUser(userId);
     clearInputValue();
     setFocus(false);
+    if (isGraphPage) {
+      useGraphStore.getState().requestSearch({ kind: 'user', pubky: userId });
+      return;
+    }
     router.push(getUserProfileUrl(userId, currentUserPubky));
   };
 
   const handleTagClick = (tag: string) => {
+    if (isGraphPage) {
+      useGraphStore.getState().requestSearch({ kind: 'tag', label: tag });
+      clearInputValue();
+      setFocus(false);
+      return;
+    }
+
     addTagToSearch(tag, { addToRecent: true });
     clearInputValue();
 

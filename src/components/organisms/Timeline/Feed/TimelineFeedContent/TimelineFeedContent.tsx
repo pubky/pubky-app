@@ -17,6 +17,7 @@ import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutConte
 import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
 import { TimelineGridPosts } from '../../Posts/GridPosts/GridPosts';
 import { TimelinePosts } from '../../Posts/Posts';
+import { StreamGraphPosts } from '../../Posts/StreamGraphPosts/StreamGraphPosts';
 import { NewPostsSection } from '../NewPostsSection/NewPostsSection';
 import type { TimelineFeedContextValue, TimelineFeedProps } from '../TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
@@ -117,6 +118,7 @@ function TimelineFeedContent({
   const previousMutedUserIdSetRef = useRef<Set<string> | null>(null);
 
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
+  const isGraphActive = layoutResolution?.isGraphActive ?? false;
   const isGridActive = layoutResolution?.isGridActive ?? false;
   const {
     postIds: rawPostIds,
@@ -203,7 +205,7 @@ function TimelineFeedContent({
   };
   const showGridEndMessage =
     variant !== TIMELINE_FEED_VARIANT.COLLECTION && variant !== TIMELINE_FEED_VARIANT.BOOKMARKS;
-  const shouldRenderChildren = !isVisualActive || isGridActive;
+  const shouldRenderChildren = (!isVisualActive && !isGraphActive) || isGridActive;
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
@@ -230,6 +232,14 @@ function TimelineFeedContent({
               showEndMessage={showGridEndMessage}
               emptyState={emptyState}
               trailingSlot={gridTrailingSlot}
+            />
+          ) : isGraphActive ? (
+            <StreamGraphPosts
+              postIds={postIds}
+              loading={loading}
+              loadingMore={loadingMore}
+              hasMore={hasMore}
+              loadMore={loadMore}
             />
           ) : isVisualActive ? (
             <VisualTimelinePosts

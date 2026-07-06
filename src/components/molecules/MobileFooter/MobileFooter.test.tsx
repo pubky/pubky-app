@@ -81,6 +81,7 @@ vi.mock('@/app/routes', async () => {
       COLLECTIONS: '/collections',
       SETTINGS: '/settings',
       PROFILE: '/profile',
+      GRAPH: '/graph',
     },
     SETTINGS_ROUTES: {
       ACCOUNT: '/settings/account',
@@ -491,6 +492,7 @@ describe('MobileFooter', () => {
       '/search',
       '/hot',
       '/collections',
+      '/graph',
       '/settings/account',
     ]);
     expect(document.querySelector('.lucide-library')).toBeInTheDocument();

@@ -3,6 +3,7 @@ export const LAYOUT = {
   COLUMNS: 'columns',
   WIDE: 'wide',
   VISUAL: 'visual',
+  GRAPH: 'graph',
 } as const;
 
 export const SORT = {

@@ -158,7 +158,8 @@
     "feed": "フィード",
     "search": "検索",
     "collections": "コレクション",
-    "new": "新着"
+    "new": "新着",
+    "graph": "グラフ"
   },
   "settings": {
     "title": "設定",
@@ -582,7 +583,8 @@
       "mute": "{username}をミュート",
       "unmute": "{username}のミュートを解除",
       "viewProfile": "{name}のプロフィールを見る",
-      "thisIsYou": "これはあなたです"
+      "thisIsYou": "これはあなたです",
+      "openInGraph": "グラフで開く"
     },
     "friendsWithYou": "（相互フォロー）",
     "empty": {
@@ -1156,7 +1158,8 @@
       "title": "レイアウト",
       "columns": "カラム",
       "wide": "ワイド",
-      "visual": "ビジュアル"
+      "visual": "ビジュアル",
+      "graph": "グラフ"
     },
     "content": {
       "title": "コンテンツ",
@@ -1453,5 +1456,78 @@
   "moderation": {
     "postContentModerated": "投稿内容は検閲されました。",
     "collectionContentModerated": "コレクションの内容は検閲されました。"
+  },
+  "graph": {
+    "title": "グラフ",
+    "legend": {
+      "title": "凡例",
+      "self": "あなた",
+      "friend": "友達",
+      "following": "フォロー中",
+      "follower": "フォロワー",
+      "extended": "拡張",
+      "user": "ユーザー",
+      "post": "投稿",
+      "tag": "タグ",
+      "sameCommunity": "同じコミュニティ",
+      "bridge": "ブリッジ",
+      "followAge": "フォローの新しさ",
+      "old": "古い",
+      "new": "新しい"
+    },
+    "controls": {
+      "zoomIn": "拡大",
+      "zoomOut": "縮小",
+      "fit": "全体表示",
+      "recenter": "中央に戻す",
+      "showPosts": "投稿を表示",
+      "showTags": "タグを表示",
+      "declutter": "整理",
+      "communities": "コミュニティ",
+      "timeMachine": "タイムマシン",
+      "pausePhysics": "物理を一時停止",
+      "resumePhysics": "物理を再開",
+      "releasePins": "固定ノードを解除"
+    },
+    "panel": {
+      "close": "閉じる",
+      "expand": "展開",
+      "expanded": "展開済み",
+      "focus": "フォーカス",
+      "openProfile": "プロフィール",
+      "openPost": "投稿を開く",
+      "emptyPost": "テキストなし",
+      "postBy": "{name}の投稿",
+      "searchTag": "検索",
+      "tagUsage": "{count}回使用",
+      "reply": "返信",
+      "tracePath": "どうつながっている？",
+      "followedBy": "フォロー中の{count}人がフォロー"
+    },
+    "states": {
+      "error": "グラフを読み込めませんでした。",
+      "retry": "再試行",
+      "empty": "まだ探索するものがありません。フォローしてグラフを育てましょう。",
+      "emptyCta": "フォローする人を探す",
+      "noUser": "サインインするか、ユーザーやタグを検索してグラフを探索してください。",
+      "tooManyNodes": "グラフが満杯です。遠いノードを非表示にしました。",
+      "expandError": "このノードを展開できませんでした。",
+      "noPath": "6ホップ以内にフォロー経路が見つかりません。",
+      "autoDeclutter": "密なグラフのため整理を有効にしました。コントロールで切替できます。"
+    },
+    "search": {
+      "placeholder": "ユーザーまたはタグを検索"
+    },
+    "time": {
+      "play": "再生",
+      "pause": "一時停止",
+      "scrub": "時間をスクラブ",
+      "now": "現在",
+      "close": "タイムマシンを閉じる"
+    },
+    "stream": {
+      "mergeMore": "さらに統合",
+      "empty": "このストリームにはまだ何もありません。"
+    }
   }
 }

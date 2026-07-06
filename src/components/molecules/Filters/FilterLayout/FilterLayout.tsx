@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Columns3, LayoutGrid, Menu } from 'lucide-react';
+import { Columns3, LayoutGrid, Menu, Waypoints } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
@@ -18,7 +18,8 @@ export function FilterLayout({
   showVisual = false,
 }: FilterLayoutProps) {
   const t = useTranslations('filters.layout');
-  const displaySelectedTab = !showVisual && selectedTab === LAYOUT.VISUAL ? LAYOUT.COLUMNS : selectedTab;
+  const displaySelectedTab =
+    !showVisual && (selectedTab === LAYOUT.VISUAL || selectedTab === LAYOUT.GRAPH) ? LAYOUT.COLUMNS : selectedTab;
   const items = React.useMemo(
     () =>
       [
@@ -43,6 +44,15 @@ export function FilterLayout({
               icon: LayoutGrid,
               disabled,
               dataCy: 'visual-layout-toggle',
+            }
+          : null,
+        showVisual
+          ? {
+              key: LAYOUT.GRAPH,
+              label: t('graph'),
+              icon: Waypoints,
+              disabled,
+              dataCy: 'graph-layout-toggle',
             }
           : null,
       ].filter(Boolean) as FilterListItem<LayoutType>[],

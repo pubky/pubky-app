@@ -68,6 +68,7 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
     effectiveLayout: 'columns',
     isVisualRequested: false,
     isVisualActive: false,
+    isGraphActive: false,
     isGridActive: false,
     isPhoneViewport: false,
   })),
@@ -207,6 +208,7 @@ const visualLayoutResolution = {
   effectiveLayout: 'visual' as const,
   isVisualRequested: true,
   isVisualActive: true,
+  isGraphActive: false,
   isGridActive: false,
   isPhoneViewport: false,
 };
@@ -216,6 +218,7 @@ const phoneColumnsLayoutResolution = {
   effectiveLayout: 'columns' as const,
   isVisualRequested: true,
   isVisualActive: false,
+  isGraphActive: false,
   isGridActive: false,
   isPhoneViewport: true,
 };
@@ -225,6 +228,7 @@ const columnsLayoutResolution = {
   effectiveLayout: 'columns' as const,
   isVisualRequested: false,
   isVisualActive: false,
+  isGraphActive: false,
   isGridActive: false,
   isPhoneViewport: false,
 };
@@ -288,6 +292,7 @@ describe('TimelineFeed', () => {
       effectiveLayout: 'columns',
       isVisualRequested: false,
       isVisualActive: false,
+      isGraphActive: false,
       isGridActive: false,
       isPhoneViewport: false,
     });
@@ -335,6 +340,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGraphActive: false,
         isGridActive: false,
         isPhoneViewport: false,
       });
@@ -351,6 +357,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'columns',
         isVisualRequested: true,
         isVisualActive: false,
+        isGraphActive: false,
         isGridActive: false,
         isPhoneViewport: true,
       });
@@ -371,6 +378,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGraphActive: false,
         isGridActive: false,
         isPhoneViewport: false,
       });
@@ -390,6 +398,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGraphActive: false,
         isGridActive: false,
         isPhoneViewport: false,
       });
@@ -407,6 +416,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGraphActive: false,
         isGridActive: false,
         isPhoneViewport: false,
       });
@@ -471,6 +481,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'columns',
         isVisualRequested: false,
         isVisualActive: false,
+        isGraphActive: false,
         isGridActive: true,
         isPhoneViewport: false,
       });
@@ -529,6 +540,7 @@ describe('TimelineFeed', () => {
         effectiveLayout: 'visual',
         isVisualRequested: true,
         isVisualActive: true,
+        isGraphActive: false,
         isGridActive: false,
         isPhoneViewport: false,
       });

@@ -19,6 +19,27 @@
 export const COLORS = {
   /** Core black - matches --background CSS variable */
   background: '#05050A',
+  /**
+   * Social graph canvas palette: hex mirrors of the OKLCH tokens in
+   * globals.css, for surfaces that cannot consume CSS variables (2D canvas).
+   */
+  graph: {
+    /** Matches --brand */
+    self: '#C8FF00',
+    /** Matches --chart-2 */
+    friend: '#31E581',
+    /** Matches --chart-3 */
+    following: '#4FD7E8',
+    /** Matches --chart-1 */
+    follower: '#4B48E5',
+    /** Matches --muted-foreground */
+    extended: '#89898F',
+    post: '#89898F',
+    edgeMuted: '#3B3B41',
+    label: '#FFFFFF',
+    /** Focus/selection halo - matches --brand */
+    halo: '#C8FF00',
+  },
 } as const;
 
 /**
@@ -55,3 +76,9 @@ export type Breakpoint = keyof typeof BREAKPOINTS;
 export function getBreakpoint(breakpoint: Breakpoint): number {
   return BREAKPOINTS[breakpoint];
 }
+
+/**
+ * Shared frosted-glass surface for panels floating over the graph canvas.
+ * One definition so a restyle is a single edit.
+ */
+export const GLASS_PANEL_CLASS = 'rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md';

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Flame, Home, Library, Settings, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Settings, UserRoundPlus, Waypoints } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APP_ROUTES, isCoreExploreRoute, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
@@ -118,6 +118,13 @@ const NAVIGATION_ITEMS: NavigationItemConfig[] = [
     labelKey: 'collections',
     dataCy: 'header-collections-btn',
     activePrefix: APP_ROUTES.COLLECTIONS,
+  },
+  {
+    href: APP_ROUTES.GRAPH,
+    icon: Waypoints,
+    labelKey: 'graph',
+    dataCy: 'header-graph-btn',
+    activePrefix: APP_ROUTES.GRAPH,
   },
   {
     href: SETTINGS_ROUTES.ACCOUNT,
