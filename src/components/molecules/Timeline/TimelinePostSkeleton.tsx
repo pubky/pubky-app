@@ -5,7 +5,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { PostCardSkeleton } from '@/organisms/PostCardSkeleton/PostCardSkeleton';
 import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
 import { getEffectiveTagsLayout } from '@/organisms/PostMain/PostMainLayoutRules';
-import { PostMainListRowSkeleton } from '@/organisms/PostMain/PostMainListRow.skeleton';
+import { PostMainListRowSkeleton } from '@/organisms/PostMain/PostMainListRow/PostMainListRow.skeleton';
 
 export function TimelinePostSkeleton() {
   const isMobile = useIsMobile();

@@ -25,7 +25,7 @@ import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import type { PostMainProps } from './PostMain.types';
 import { usePostMainLayout } from './PostMainLayoutContext';
 import { getEffectiveTagsLayout } from './PostMainLayoutRules';
-import { PostMainListRow } from './PostMainListRow';
+import { PostMainListRow } from './PostMainListRow/PostMainListRow';
 import { WIDE_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 
 // Stops click and middle-click from bubbling to the outer post-card navigation

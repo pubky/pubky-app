@@ -177,7 +177,7 @@ vi.mock('@/organisms/PostContent/PostContent', () => {
   };
 });
 
-vi.mock('./PostMainListRow', () => {
+vi.mock('./PostMainListRow/PostMainListRow', () => {
   return {
     PostMainListRow: ({ postId, showFullContent }: { postId: string; showFullContent: boolean }) => (
       <div data-testid="post-main-list-row" data-show-full-content={String(showFullContent)}>

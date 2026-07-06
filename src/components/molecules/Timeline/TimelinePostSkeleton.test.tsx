@@ -8,7 +8,7 @@ vi.mock('@/organisms/PostCardSkeleton/PostCardSkeleton', () => ({
   PostCardSkeleton: () => <div data-testid="post-card-skeleton">PostCardSkeleton</div>,
 }));
 
-vi.mock('@/organisms/PostMain/PostMainListRow.skeleton', () => ({
+vi.mock('@/organisms/PostMain/PostMainListRow/PostMainListRow.skeleton', () => ({
   PostMainListRowSkeleton: () => <div data-testid="post-main-list-row-skeleton">PostMainListRowSkeleton</div>,
 }));
 

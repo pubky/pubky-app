@@ -20,13 +20,13 @@ import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
 import { UserInfoPopover } from '@/molecules/UserInfoPopover/UserInfoPopover';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { ClickableTagsList } from '../ClickableTagsList/ClickableTagsList';
-import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
-import { PostContent } from '../PostContent/PostContent';
-import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
-import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
+import { ClickableTagsList } from '../../ClickableTagsList/ClickableTagsList';
+import { PostActionsBar } from '../../PostActionsBar/PostActionsBar';
+import { PostContent } from '../../PostContent/PostContent';
+import { PostTagsPanel } from '../../PostTagsPanel/PostTagsPanel';
+import type { PostTagsPanelHandle } from '../../PostTagsPanel/PostTagsPanel.types';
+import { LIST_POST_BODY_TEXT_CLASS } from '../PostMainTypography';
 import { PostMainListRowSkeleton } from './PostMainListRow.skeleton';
-import { LIST_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 
 const LIST_SNIPPET_MAX_CHARS = 120;
 

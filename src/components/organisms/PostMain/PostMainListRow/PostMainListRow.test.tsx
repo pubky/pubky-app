@@ -133,13 +133,13 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
   AvatarWithFallback: () => <div data-testid="avatar" />,
 }));
 
-vi.mock('../ClickableTagsList/ClickableTagsList', () => ({
+vi.mock('../../ClickableTagsList/ClickableTagsList', () => ({
   ClickableTagsList: ({ taggedId }: { taggedId: string }) => (
     <div data-testid="clickable-tags-list" data-tagged-id={taggedId} />
   ),
 }));
 
-vi.mock('../PostActionsBar/PostActionsBar', () => ({
+vi.mock('../../PostActionsBar/PostActionsBar', () => ({
   PostActionsBar: ({
     postId,
     onTagClick,
@@ -165,7 +165,7 @@ vi.mock('../PostActionsBar/PostActionsBar', () => ({
   ),
 }));
 
-vi.mock('../PostContent/PostContent', () => ({
+vi.mock('../../PostContent/PostContent', () => ({
   PostContent: ({
     postId,
     textClassName,
@@ -186,7 +186,7 @@ vi.mock('../PostContent/PostContent', () => ({
   ),
 }));
 
-vi.mock('../PostTagsPanel/PostTagsPanel', () => {
+vi.mock('../../PostTagsPanel/PostTagsPanel', () => {
   const PostTagsPanel = React.forwardRef<HTMLDivElement, { postId: string }>(({ postId }, ref) => (
     <div ref={ref} data-testid="post-tags-panel" data-post-id={postId} />
   ));
