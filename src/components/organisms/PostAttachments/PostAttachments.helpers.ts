@@ -1,14 +1,8 @@
 import { FileController } from '@/controllers/file/file';
 import { FileVariant } from '@/services/nexus/file/file.types';
-import type { AttachmentConstructed } from './PostAttachments.types';
+import type { AttachmentConstructed, CategorizedAttachments } from './PostAttachments.types';
 
 type FileMetadata = Awaited<ReturnType<typeof FileController.getMetadata>>[number];
-
-export type CategorizedAttachments = {
-  imagesAndVideos: AttachmentConstructed[];
-  audios: AttachmentConstructed[];
-  genericFiles: AttachmentConstructed[];
-};
 
 /** Split already-constructed attachments into media-type buckets. */
 export function categorizeAttachments(attachments: AttachmentConstructed[]): CategorizedAttachments {

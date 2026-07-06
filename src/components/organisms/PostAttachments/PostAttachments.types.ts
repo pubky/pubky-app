@@ -14,3 +14,9 @@ export type AttachmentConstructed = {
     feed?: string;
   };
 };
+
+export type CategorizedAttachments = {
+  imagesAndVideos: AttachmentConstructed[];
+  audios: AttachmentConstructed[];
+  genericFiles: AttachmentConstructed[];
+};

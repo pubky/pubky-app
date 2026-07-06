@@ -9,7 +9,11 @@ import {
 } from '@/organisms/PostAttachments/PostAttachments.helpers';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
-import type { UsePostAttachmentsMediaResult } from './usePostAttachmentsMedia.types';
+
+interface UsePostAttachmentsMediaResult {
+  /** Resolved image/video attachments for the post (local-first). Empty until resolved / on error. */
+  mediaItems: AttachmentConstructed[];
+}
 
 /**
  * Resolves a post's image/video attachments, local-first.
