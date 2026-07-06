@@ -15,7 +15,6 @@ vi.mock('next/navigation', () => ({
 describe('usePostNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
   });
 
   describe('navigateToPost', () => {
@@ -36,7 +35,6 @@ describe('usePostNavigation', () => {
 
       expect(mockPush).toHaveBeenCalledWith('/post/author123/post456');
       expect(mockPush).toHaveBeenCalledTimes(1);
-      expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
     });
 
     it('should handle multiple navigation calls', () => {
@@ -198,7 +196,6 @@ describe('usePostNavigation', () => {
     it('navigates on plain post-card click', () => {
       const { result } = renderHook(() => usePostNavigation());
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
 
       act(() => {
         result.current.handlePostClick(
@@ -212,13 +209,11 @@ describe('usePostNavigation', () => {
       expect(mockPush).toHaveBeenCalledWith('/post/author1/post1');
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(openSpy).not.toHaveBeenCalled();
-      expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
     });
 
     it('opens a new tab on modifier-click for non-interactive areas', () => {
       const { result } = renderHook(() => usePostNavigation());
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
 
       act(() => {
         result.current.handlePostClick(
@@ -232,7 +227,6 @@ describe('usePostNavigation', () => {
 
       expect(openSpy).toHaveBeenCalledWith('/post/author1/post1', '_blank', 'noopener,noreferrer');
       expect(mockPush).not.toHaveBeenCalled();
-      expect(scrollToSpy).not.toHaveBeenCalled();
     });
 
     it('does not hijack click on interactive elements in post content', () => {
@@ -256,9 +250,8 @@ describe('usePostNavigation', () => {
       expect(openSpy).not.toHaveBeenCalled();
     });
 
-    it('navigates and scrolls to top when interactive element explicitly allows post navigation', () => {
+    it('navigates when interactive element explicitly allows post navigation', () => {
       const { result } = renderHook(() => usePostNavigation());
-      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
       const showMoreButton = document.createElement('button');
       showMoreButton.setAttribute('data-allow-post-navigation', '');
       const buttonText = document.createElement('span');
@@ -275,7 +268,6 @@ describe('usePostNavigation', () => {
 
       expect(mockPush).toHaveBeenCalledWith('/post/author1/post1');
       expect(mockPush).toHaveBeenCalledTimes(1);
-      expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
     });
 
     it('does not navigate while selecting text inside the post card', () => {
