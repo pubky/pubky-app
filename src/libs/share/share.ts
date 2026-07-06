@@ -45,7 +45,7 @@ export interface ShareOptions {
  *       }
  *     },
  *     onError: (error) => {
- *       toast({ title: 'Share failed', description: error.message });
+ *       toast({ variant: 'error', title: 'Share failed', description: error.message });
  *     }
  *   }
  * );

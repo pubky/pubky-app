@@ -475,13 +475,9 @@
       "createInBrowser": "Crear claves en el navegador",
       "continueWithRing": "Continuar con Pubky Ring",
       "inviteCodeApplied": "Código de invitación aplicado",
-      "inviteCodeAppliedDescription": "Tu código de invitación {inviteCode} se ha aplicado.",
       "invalidInviteCode": "Código de invitación no válido",
-      "invalidInviteCodeDescription": "Este código de invitación no es válido o ha expirado. Usa un código de invitación válido.",
       "usedInviteCode": "Código de invitación ya utilizado",
-      "usedInviteCodeDescription": "Este código de invitación ya se ha utilizado. Usa un código de invitación diferente.",
-      "verificationFailed": "No se pudo verificar el código de invitación",
-      "verificationFailedDescription": "No pudimos verificar tu código de invitación en este momento. Comprueba tu conexión e inténtalo de nuevo."
+      "verificationFailed": "No se pudo verificar el código de invitación"
     },
     "createProfile": {
       "title": "Crea tu <highlight>perfil.</highlight>",
@@ -991,7 +987,7 @@
     "post": {
       "replyPosted": "Respuesta publicada",
       "replyFailed": "No se pudo publicar la respuesta. Inténtalo de nuevo.",
-      "postCreated": "Publicacion creada",
+      "postCreated": "Publicación publicada",
       "postFailed": "No se pudo crear la publicación. Inténtalo de nuevo.",
       "repostSuccess": "Republicaste la publicación de {author}",
       "repostSuccessFallback": "Republicado",
@@ -1331,6 +1327,7 @@
   "collections": {
     "deleted": "Esta colección ha sido eliminada por su autor.",
     "missing": "Colección no encontrada.",
+    "postCount": "{count, plural, one {publicación} other {publicaciones}}",
     "new": {
       "cta": "Nueva colección",
       "ctaShort": "Nueva",
@@ -1400,8 +1397,8 @@
       "delete": "Eliminar",
       "follow": "Seguir",
       "unfollow": "Dejar de seguir",
-      "content": "Contenido",
-      "addContent": "Añadir contenido",
+      "content": "Añadir publicación",
+      "addContent": "Añadir publicación",
       "empty": "Esta colección está vacía.",
       "notFound": {
         "title": "Colección no encontrada",
@@ -1413,7 +1410,7 @@
       }
     },
     "addContentDialog": {
-      "title": "Añadir contenido",
+      "title": "Añadir publicación",
       "description": "Añade una publicación o artículo desde tu feed o pega una URL directamente.",
       "fromFeedTitle": "Añadir desde el feed",
       "fromFeedLead": "Busca una publicación",

@@ -6,9 +6,13 @@ import { BookmarksHero } from './BookmarksHero';
 const BOOKMARKS_COPY = enMessages.collections.bookmarks;
 
 vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => {
+  useTranslations: (namespace?: string) => (key: string, values?: { count?: number }) => {
     if (namespace !== 'collections') {
       return `${namespace ?? ''}.${key}`;
+    }
+
+    if (key === 'postCount') {
+      return values?.count === 1 ? 'post' : 'posts';
     }
 
     const nestedKeys: Record<string, string> = {
@@ -72,7 +76,7 @@ describe('BookmarksHero', () => {
 
     expect(screen.getByRole('heading', { name: BOOKMARKS_COPY.title })).toBeInTheDocument();
     expect(screen.getByText(BOOKMARKS_COPY.description)).toBeInTheDocument();
-    expect(screen.queryByText('15')).toBeInTheDocument();
+    expect(screen.queryByText('15 posts')).toBeInTheDocument();
     expect(screen.getByTestId('hero-owner')).toHaveAttribute('data-name', 'Alice');
     expect(screen.getByText('Alice', { selector: 'div' })).toBeInTheDocument();
   });
@@ -95,7 +99,7 @@ describe('BookmarksHero', () => {
   it('omits the count label while the count is unresolved', () => {
     render(<BookmarksHero avatarName="Alice" avatarSeed="alice-pubky" isProfileResolved={true} />);
 
-    expect(screen.queryByText('15')).not.toBeInTheDocument();
+    expect(screen.queryByText('15 posts')).not.toBeInTheDocument();
   });
 
   it('renders a skeleton in place of the username until the profile resolves', () => {

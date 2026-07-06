@@ -57,18 +57,13 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
             />
           </svg>
           <span
-            class="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
             data-testid="typography"
           >
             Based Bitcoin
           </span>
-        </div>
-        <div
-          class="flex shrink-0 items-center justify-end gap-3"
-          data-testid="container"
-        >
           <div
-            class="flex items-center gap-1 text-muted-foreground"
+            class="flex shrink-0 items-center gap-1 text-secondary-foreground h-6 justify-center rounded-full bg-card px-2 py-1"
             data-testid="container"
           >
             <svg
@@ -96,8 +91,15 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
               data-testid="typography"
             >
               2
+               
+              posts
             </span>
           </div>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end"
+          data-testid="container"
+        >
           <div
             data-alt="Bitcoin Wizard"
             data-avatar-url="https://example.com/avatar.png"
@@ -275,18 +277,13 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
             />
           </svg>
           <span
-            class="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
             data-testid="typography"
           >
             Based Bitcoin
           </span>
-        </div>
-        <div
-          class="flex shrink-0 items-center justify-end gap-3"
-          data-testid="container"
-        >
           <div
-            class="flex items-center gap-1 text-muted-foreground"
+            class="flex shrink-0 items-center gap-1 text-secondary-foreground h-6 justify-center rounded-full bg-card px-2 py-1"
             data-testid="container"
           >
             <svg
@@ -314,8 +311,15 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
               data-testid="typography"
             >
               2
+               
+              posts
             </span>
           </div>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end"
+          data-testid="container"
+        >
           <div
             data-alt="Bitcoin Wizard"
             data-avatar-url="https://example.com/avatar.png"
@@ -495,18 +499,13 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
             />
           </svg>
           <span
-            class="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
             data-testid="typography"
           >
             Quiet collection
           </span>
-        </div>
-        <div
-          class="flex shrink-0 items-center justify-end gap-3"
-          data-testid="container"
-        >
           <div
-            class="flex items-center gap-1 text-muted-foreground"
+            class="flex shrink-0 items-center gap-1 text-secondary-foreground"
             data-testid="container"
           >
             <svg
@@ -534,8 +533,15 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
               data-testid="typography"
             >
               0
+               
+              posts
             </span>
           </div>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end"
+          data-testid="container"
+        >
           <div
             data-alt="Bitcoin Wizard"
             data-avatar-url="https://example.com/avatar.png"

@@ -12,9 +12,13 @@ const BOOKMARKS_COPY = enMessages.collections.bookmarks;
 // ---------------------------------------------------------------------------
 
 vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => {
+  useTranslations: (namespace?: string) => (key: string, values?: { count?: number }) => {
     if (namespace !== 'collections') {
       return `${namespace ?? ''}.${key}`;
+    }
+
+    if (key === 'postCount') {
+      return values?.count === 1 ? 'post' : 'posts';
     }
 
     const nestedKeys: Record<string, string> = {
@@ -126,7 +130,7 @@ describe('CollectionBookmarkCard', () => {
   it('renders the bookmark count label from the summary', () => {
     setup({ bookmarkCount: 42 });
     render(<CollectionBookmarkCard />);
-    expect(screen.getByText('42')).toBeInTheDocument();
+    expect(screen.getByText('42 posts')).toBeInTheDocument();
   });
 
   it('renders no count label when the bookmark count is undefined', () => {
