@@ -181,7 +181,7 @@ describe('NexusUserService', () => {
       await NexusUserService.ingest({ user_id: testUserId });
 
       expect(mockSafeFetch).toHaveBeenCalledWith(
-        `${NEXUS_URL}/v0/ingest/${testUserId}`,
+        `${getNexusUrl()}/v0/ingest/${testUserId}`,
         { method: HttpMethod.PUT },
         ErrorService.Nexus,
         'ingestUser',

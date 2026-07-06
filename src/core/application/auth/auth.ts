@@ -1,6 +1,6 @@
 import { userUriBuilder } from 'pubky-app-specs';
 import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
-import { HOMESERVER } from '@/config/network';
+import { getHomeserver } from '@/config/network';
 import type { TPubkyParams } from '@/controllers/auth/auth.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -193,24 +193,10 @@ export class AuthApplication {
     }
   }
 
-  private static homeserverId(homeserver: unknown): string {
-    if (typeof homeserver === 'string') return homeserver.replace(/^pk:/, '');
-    if (
-      homeserver &&
-      typeof homeserver === 'object' &&
-      'z32' in homeserver &&
-      typeof homeserver.z32 === 'function'
-    ) {
-      return homeserver.z32();
-    }
-    return String(homeserver);
-  }
-
   static async ingestExternalUserWithoutProfile({ pubky, session }: TPubkyParams & THomeserverSessionResult) {
     try {
-      const homeserver = await HomeserverService.getHomeserver({ publicKey: session.info.publicKey });
-      console.log('--> homeserver', homeserver);
-      if (this.homeserverId(homeserver) !== HOMESERVER) {
+      const homeserverId = await HomeserverService.getHomeserver({ publicKey: session.info.publicKey });
+      if (homeserverId !== getHomeserver()) {
         await NexusUserService.ingest({ user_id: pubky });
       }
     } catch (error) {

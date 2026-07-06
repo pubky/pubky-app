@@ -7,9 +7,11 @@ import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } fro
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { THomeserverSignUpParams } from '@/services/homeserver/homeserver.types';
+import { normalizeHomeserverId } from '@/services/homeserver/homeserver.utils';
 import { NexusUserService } from '@/services/nexus/user/user';
 import { mockSession } from '@/test-utils/pubky';
 import { mockAuthStore } from '@/test-utils/stores';
@@ -395,6 +397,42 @@ describe('AuthApplication', () => {
       await expect(AuthApplication.ingestExternalUserWithoutProfile({ pubky: testPubky, session })).resolves.toBe(
         undefined,
       );
+    });
+
+    it('should continue when getHomeserver fails', async () => {
+      vi.spyOn(HomeserverService, 'getHomeserver').mockRejectedValue(new Error('homeserver lookup failed'));
+      const ingestSpy = vi.spyOn(NexusUserService, 'ingest').mockResolvedValue(undefined);
+      const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+      await expect(AuthApplication.ingestExternalUserWithoutProfile({ pubky: testPubky, session })).resolves.toBe(
+        undefined,
+      );
+
+      expect(ingestSpy).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Failed to ingest external homeserver user during sign-in',
+        expect.objectContaining({ pubky: testPubky, error: expect.any(Error) }),
+      );
+    });
+
+    it('should skip ingest when user homeserver normalizes to configured homeserver (pk: prefix)', async () => {
+      vi.spyOn(HomeserverService, 'getHomeserver').mockResolvedValue(normalizeHomeserverId('pk:test-homeserver-key'));
+      const ingestSpy = vi.spyOn(NexusUserService, 'ingest').mockResolvedValue(undefined);
+
+      await AuthApplication.ingestExternalUserWithoutProfile({ pubky: testPubky, session });
+
+      expect(ingestSpy).not.toHaveBeenCalled();
+    });
+
+    it('should ingest when user homeserver normalizes from PublicKey-like object to external id', async () => {
+      vi.spyOn(HomeserverService, 'getHomeserver').mockResolvedValue(
+        normalizeHomeserverId({ z32: () => 'external-hs' }),
+      );
+      const ingestSpy = vi.spyOn(NexusUserService, 'ingest').mockResolvedValue(undefined);
+
+      await AuthApplication.ingestExternalUserWithoutProfile({ pubky: testPubky, session });
+
+      expect(ingestSpy).toHaveBeenCalledWith({ user_id: testPubky });
     });
   });
 });

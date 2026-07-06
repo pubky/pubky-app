@@ -204,6 +204,7 @@ describe('HomeserverService', () => {
       expect(HomeserverService).toBeDefined();
 
       const expectedMethods = [
+        'getHomeserver',
         'signUp',
         'verifySignupToken',
         'signIn',
@@ -220,6 +221,47 @@ describe('HomeserverService', () => {
 
       expectedMethods.forEach((method) => {
         expect(typeof HomeserverService[method]).toBe('function');
+      });
+    });
+  });
+
+  // ===========================================================================
+  // HOMESERVER LOOKUP
+  // ===========================================================================
+
+  describe('getHomeserver', () => {
+    const publicKey = { z32: () => 'user-pubky' };
+
+    it('returns a plain z32 string as-is', async () => {
+      mockState.getHomeserverOf.mockResolvedValue('plain-homeserver-key');
+
+      const result = await HomeserverService.getHomeserver({ publicKey: publicKey as never });
+
+      expect(result).toBe('plain-homeserver-key');
+      expect(mockState.getHomeserverOf).toHaveBeenCalledWith(publicKey);
+    });
+
+    it('strips pk: prefix from string homeserver ids', async () => {
+      mockState.getHomeserverOf.mockResolvedValue('pk:test-homeserver-key');
+
+      const result = await HomeserverService.getHomeserver({ publicKey: publicKey as never });
+
+      expect(result).toBe('test-homeserver-key');
+    });
+
+    it('returns z32 from PublicKey-like objects', async () => {
+      mockState.getHomeserverOf.mockResolvedValue({ z32: () => 'homeserver-z32' });
+
+      const result = await HomeserverService.getHomeserver({ publicKey: publicKey as never });
+
+      expect(result).toBe('homeserver-z32');
+    });
+
+    it('throws when no homeserver is assigned to the public key', async () => {
+      mockState.getHomeserverOf.mockResolvedValue(null);
+
+      await expect(HomeserverService.getHomeserver({ publicKey: publicKey as never })).rejects.toMatchObject({
+        category: ErrorCategory.Server,
       });
     });
   });
@@ -374,13 +416,13 @@ describe('HomeserverService', () => {
         expect(mockState.getHomeserverOf).toHaveBeenCalledWith(keypair.publicKey);
       });
 
-      it('should attempt to republish homeserver and return undefined when checkHomeserver fails', async () => {
+      it('should attempt to republish homeserver and return undefined when getHomeserver fails', async () => {
         // NOTE: This is intentional behavior - after republishing the homeserver,
         // the method returns undefined to signal the caller should retry signin.
         // The republish is a recovery mechanism when PKARR records are stale.
         const keypair = createMockKeypair();
 
-        // checkHomeserver throws because no homeserver found
+        // getHomeserver throws because no homeserver found
         mockState.getHomeserverOf.mockResolvedValue(null);
 
         const result = await HomeserverService.signIn({ keypair });
