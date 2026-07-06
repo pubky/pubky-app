@@ -9,11 +9,9 @@ import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImage
 
 interface PostListMediaThumbnailProps {
   postId: string;
-  className?: string;
-  onClick?: (event: React.MouseEvent) => void;
 }
 
-export function PostListMediaThumbnail({ postId, className, onClick }: PostListMediaThumbnailProps) {
+export function PostListMediaThumbnail({ postId }: PostListMediaThumbnailProps) {
   const { mediaItems } = usePostAttachmentsMedia(postId);
 
   const previewIndex = mediaItems.findIndex(
@@ -39,9 +37,9 @@ export function PostListMediaThumbnail({ postId, className, onClick }: PostListM
           overrideDefaults
           type="button"
           aria-label="Open media preview"
-          className={cn('relative shrink-0 cursor-pointer overflow-hidden', className)}
+          className={cn('relative shrink-0 cursor-pointer overflow-hidden', 'hidden h-10 w-[71px] rounded-sm md:block')}
           onClick={(event) => {
-            onClick?.(event);
+            event.stopPropagation();
             openPreview(previewIndex, event);
           }}
         >

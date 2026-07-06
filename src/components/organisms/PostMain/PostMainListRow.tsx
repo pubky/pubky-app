@@ -26,7 +26,7 @@ import { PostContent } from '../PostContent/PostContent';
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import { PostMainListRowSkeleton } from './PostMainListRow.skeleton';
-import { LIST_POST_BODY_TEXT_CLASS, LIST_POST_MEDIA_THUMBNAIL_CLASS } from './PostMainTypography';
+import { LIST_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 
 const LIST_SNIPPET_MAX_CHARS = 120;
 
@@ -202,13 +202,7 @@ export function PostMainListRow({
           />
         </Container>
 
-        {!showFullContent ? (
-          <PostListMediaThumbnail
-            postId={displayPostId}
-            className={cn('hidden rounded-sm md:block', LIST_POST_MEDIA_THUMBNAIL_CLASS)}
-            onClick={stopCardPropagation}
-          />
-        ) : null}
+        {!showFullContent ? <PostListMediaThumbnail postId={displayPostId} /> : null}
       </Container>
 
       {showFullContent ? (
