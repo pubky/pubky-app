@@ -1,4 +1,4 @@
-export interface ArticleContent {
+interface ArticleContent {
   title: string;
   body: string;
 }

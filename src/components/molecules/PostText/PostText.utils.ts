@@ -576,17 +576,44 @@ const truncateAstHeading = (heading: Heading, truncation: PreviewTruncation): vo
   heading.children = paragraph.children;
 };
 
-const truncatePreviewTextNode = (node: Heading | Paragraph, maxLines: number): boolean => {
-  const truncation = getPreviewTruncation(extractText(node), maxLines);
-  if (!truncation) return false;
+interface TextPreviewNodeConfig<TNode extends Heading | Paragraph> {
+  node: TNode;
+  previewChildren: RootContent[];
+  state: ArticlePreviewState;
+  consumedLineCount: number;
+  maxLineLimit: number;
+  truncateNode: (node: TNode, truncation: PreviewTruncation) => void;
+}
 
-  if (node.type === 'heading') {
-    truncateAstHeading(node, truncation);
-  } else {
-    truncateAstParagraph(node, truncation);
+const appendTextPreviewNode = <TNode extends Heading | Paragraph>({
+  node,
+  previewChildren,
+  state,
+  consumedLineCount,
+  maxLineLimit,
+  truncateNode,
+}: TextPreviewNodeConfig<TNode>): boolean => {
+  const text = extractText(node);
+
+  previewChildren.push(node as RootContent);
+  state.remainingLines -= Math.min(consumedLineCount, state.remainingLines);
+
+  if (text.length > state.remainingChars) {
+    truncateNode(node, { limit: state.remainingChars, wordBoundary: true });
+    state.previewHasEllipsis = true;
+    state.hiddenContent = true;
+    return true;
   }
 
-  return true;
+  state.remainingChars -= text.length;
+
+  const truncation = getPreviewTruncation(text, maxLineLimit);
+  if (truncation) {
+    truncateNode(node, truncation);
+    state.previewHasEllipsis = true;
+  }
+
+  return false;
 };
 
 const buildArticlePreviewChildren = (children: RootContent[], state: ArticlePreviewState): RootContent[] => {
@@ -599,34 +626,30 @@ const buildArticlePreviewChildren = (children: RootContent[], state: ArticlePrev
     }
 
     if (child.type === 'heading') {
-      const text = extractText(child);
-      previewChildren.push(child);
-      state.remainingLines -= 1;
-      if (text.length > state.remainingChars) {
-        truncateAstHeading(child, { limit: state.remainingChars, wordBoundary: true });
-        state.previewHasEllipsis = true;
-        state.hiddenContent = true;
-        break;
-      }
-      state.remainingChars -= text.length;
-      state.previewHasEllipsis = truncatePreviewTextNode(child, 1) || state.previewHasEllipsis;
+      const shouldStop = appendTextPreviewNode({
+        node: child,
+        previewChildren,
+        state,
+        consumedLineCount: 1,
+        maxLineLimit: 1,
+        truncateNode: truncateAstHeading,
+      });
+      if (shouldStop) break;
       continue;
     }
 
     if (child.type === 'paragraph') {
       const maxLinesForParagraph = state.remainingLines;
       const text = extractText(child);
-      const sourceLineCount = extractText(child).split(/\r\n|\n/).length;
-      previewChildren.push(child);
-      state.remainingLines -= Math.min(sourceLineCount, state.remainingLines);
-      if (text.length > state.remainingChars) {
-        truncateAstParagraph(child, { limit: state.remainingChars, wordBoundary: true });
-        state.previewHasEllipsis = true;
-        state.hiddenContent = true;
-        break;
-      }
-      state.remainingChars -= text.length;
-      state.previewHasEllipsis = truncatePreviewTextNode(child, maxLinesForParagraph) || state.previewHasEllipsis;
+      const shouldStop = appendTextPreviewNode({
+        node: child,
+        previewChildren,
+        state,
+        consumedLineCount: text.split(/\r\n|\n/).length,
+        maxLineLimit: maxLinesForParagraph,
+        truncateNode: truncateAstParagraph,
+      });
+      if (shouldStop) break;
       continue;
     }
 
