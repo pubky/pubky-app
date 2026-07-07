@@ -55,16 +55,21 @@ function isProductionBuildPhase(): boolean {
   return process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD;
 }
 
-/**
- * dev/test parse: read `PUBKY_RUNTIME_*` through the defaulted schema, so local `.env.local`
- * and test overrides are honored (partial values layer over staging defaults).
- */
-function parseFallbackConfig(): RuntimeConfig {
+/** Collect the raw `PUBKY_RUNTIME_*` string values keyed by config field name. */
+function readRuntimeEnvInput(): Record<string, string | undefined> {
   const input: Record<string, string | undefined> = {};
   for (const key of Object.keys(PUBKY_RUNTIME_ENV_NAMES) as (keyof RuntimeConfig)[]) {
     input[key] = process.env[PUBKY_RUNTIME_ENV_NAMES[key]];
   }
-  return runtimeEnvInputSchemaWithDefaults.parse(input);
+  return input;
+}
+
+/**
+ * dev/test parse: read `PUBKY_RUNTIME_*` through the defaulted schema, so local `.env.local`
+ * and test overrides are honored (partial values layer over staging defaults).
+ */
+function parseLenientConfig(): RuntimeConfig {
+  return runtimeEnvInputSchemaWithDefaults.parse(readRuntimeEnvInput());
 }
 
 /** Exported for unit tests; prefer `getRuntimeConfig()` in app code. */
@@ -72,11 +77,7 @@ export function readServerConfig(): RuntimeConfig {
   // Deployed/required mode: strict parse — ALL required network values must be set and valid.
   // Partial deploy config fails loudly instead of silently resolving to staging defaults.
   if (isRuntimeConfigRequired() && !isProductionBuildPhase()) {
-    const input: Record<string, string | undefined> = {};
-    for (const key of Object.keys(PUBKY_RUNTIME_ENV_NAMES) as (keyof RuntimeConfig)[]) {
-      input[key] = process.env[PUBKY_RUNTIME_ENV_NAMES[key]];
-    }
-    const result = runtimeEnvInputSchema.safeParse(input);
+    const result = runtimeEnvInputSchema.safeParse(readRuntimeEnvInput());
     if (!result.success) {
       throw new Error(`Runtime config is incomplete or invalid. ${REQUIRED_NETWORK_ENV_MESSAGE}`, {
         cause: result.error,
@@ -85,7 +86,7 @@ export function readServerConfig(): RuntimeConfig {
     return result.data;
   }
 
-  return parseFallbackConfig();
+  return parseLenientConfig();
 }
 
 /** Exported for unit tests; prefer `getRuntimeConfig()` in app code. */
@@ -99,7 +100,7 @@ export function readClientConfig(): RuntimeConfig {
     throw new Error('Runtime config is required but window.__PUBKY_CONFIG__ was not injected.');
   }
 
-  return parseFallbackConfig();
+  return parseLenientConfig();
 }
 
 /**

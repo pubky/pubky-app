@@ -194,6 +194,14 @@ export function SentryTestHarness() {
     }
   }, []);
 
+  const clientInitValue = clientInitialized === null ? 'checking…' : clientInitialized ? 'yes' : 'no';
+  // Warn only when Sentry claims to be enabled yet the browser SDK never initialized.
+  const clientInitTone = clientInitialized
+    ? 'ok'
+    : clientInitialized === false && diagnostics.enabled
+      ? 'warn'
+      : 'default';
+
   return (
     <Container size="md" className="gap-6 px-4 py-10">
       <header className="flex flex-col gap-2">
@@ -227,19 +235,7 @@ export function SentryTestHarness() {
             value={diagnostics.enabled ? 'yes' : 'no'}
             tone={diagnostics.enabled ? 'ok' : 'warn'}
           />
-          <DiagnosticRow
-            label="Client SDK initialized"
-            value={clientInitialized === null ? 'checking…' : clientInitialized ? 'yes' : 'no'}
-            tone={
-              clientInitialized === null
-                ? 'default'
-                : clientInitialized
-                  ? 'ok'
-                  : diagnostics.enabled
-                    ? 'warn'
-                    : 'default'
-            }
-          />
+          <DiagnosticRow label="Client SDK initialized" value={clientInitValue} tone={clientInitTone} />
           <DiagnosticRow label="Environment" value={diagnostics.environment} />
           <DiagnosticRow label="Release" value={diagnostics.release} />
           <DiagnosticRow label="DSN" value={describeDsn(diagnostics.dsn)} tone={diagnostics.dsn ? 'default' : 'warn'} />

@@ -13,10 +13,8 @@ import { z } from 'zod';
  *  - DEFAULTED app/deployer values: public operational, moderation, metadata, analytics,
  *    Prelude, and external-link values that deployers may override without rebuilding.
  *
- * This module is a leaf (zod only, no `Env`, no logger) so that:
- *  - `env.ts` and the runtime-config resolver cannot drift on what counts as valid, and
- *  - the runtime-config resolver never pulls in the heavy `env -> libs/error -> logger -> env`
- *    import cycle.
+ * This module is a leaf (zod only, no `Env`, no logger) so the runtime-config resolver never
+ * pulls in the heavy `env -> libs/error -> logger -> env` import cycle.
  *
  * Two schemas are intentionally provided because the two inputs differ in shape:
  *  - env vars arrive as STRINGS (e.g. `PKARR_RELAYS` is a JSON string, `TESTNET` is "true"/"false")
@@ -29,19 +27,16 @@ import { z } from 'zod';
 // Shared field validators (parsed-value shape)
 // ---------------------------------------------------------------------------
 
-export const urlValue = z.url();
-export const homeserverValue = z.string().min(1);
-export const pkarrRelaysValue = z.array(z.url()).min(1);
-export const testnetValue = z.boolean();
-export const sampleRateValue = z.number().min(0).max(1);
+const urlValue = z.url();
+const homeserverValue = z.string().min(1);
+const pkarrRelaysValue = z.array(z.url()).min(1);
+const testnetValue = z.boolean();
+const sampleRateValue = z.number().min(0).max(1);
 const positiveIntValue = z.number().int().positive();
 const nonEmptyStringValue = z.string().min(1);
 
-/**
- * Parse a `PKARR_RELAYS` JSON-array string into a string[]. Throws on malformed input.
- * Shared by both the strict runtime parse and env.ts (which wraps it with a lenient fallback).
- */
-export function parseJsonStringArray(val: string, label = 'value'): string[] {
+/** Parse a JSON-array-of-strings env value into a string[]. Throws on malformed input. */
+function parseJsonStringArray(val: string, label = 'value'): string[] {
   const parsed: unknown = JSON.parse(val);
   if (!Array.isArray(parsed)) {
     throw new Error(`${label} must be a JSON array`);
@@ -54,7 +49,7 @@ export function parseJsonStringArray(val: string, label = 'value'): string[] {
   return parsed as string[];
 }
 
-export function parsePkarrRelaysString(val: string): string[] {
+function parsePkarrRelaysString(val: string): string[] {
   return parseJsonStringArray(val, 'PKARR_RELAYS');
 }
 
@@ -412,7 +407,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
  * Runtime env var names (non-NEXT_PUBLIC, so Next does not inline them at build time).
  * Their VALUES are supplied at container runtime; they are PUBLIC values, not secrets.
  */
-export const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
+const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
   nexusUrl: 'PUBKY_RUNTIME_NEXUS_URL',
   cdnUrl: 'PUBKY_RUNTIME_CDN_URL',
   homeserver: 'PUBKY_RUNTIME_HOMESERVER',

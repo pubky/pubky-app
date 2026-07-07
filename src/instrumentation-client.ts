@@ -13,7 +13,7 @@ import {
 // so make the broken injection contract loud instead.
 if (window[RUNTIME_CONFIG_WINDOW_KEY] === undefined) {
   console.error(
-    `window.${RUNTIME_CONFIG_WINDOW_KEY} was not injected before client init — runtime-config injection is broken; client Sentry stays disabled.`,
+    `window.${RUNTIME_CONFIG_WINDOW_KEY} was not injected before client init — runtime-config injection is broken; ALL client runtime config (network URLs, moderation, analytics, ...) resolves to staging defaults and client Sentry stays disabled.`,
   );
 }
 
