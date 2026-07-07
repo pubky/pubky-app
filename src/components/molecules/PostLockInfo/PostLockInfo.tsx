@@ -14,6 +14,11 @@ const PASSWORD_MASK = '••••••';
  * TODO:[Locks] #1998 — only the password variant (shield + masked dots) is built;
  * the payment variant (price) lands with the unlock/payment flow, so non-password
  * verifiers currently render nothing.
+ *
+ * TODO:[Locks] #2003 — `PostLockInfo` is not self-descriptive: this should surface the
+ * lock-content status plus minimal info (title, thumbnail), not only the verifier badge.
+ * Consider renaming (and widening its responsibility) in a following PR under the parent
+ * Locks epic.
  */
 export function PostLockInfo({ verifierType, className }: PostLockInfoProps) {
   if (verifierType !== VerifierType.PASSWORD) return null;
