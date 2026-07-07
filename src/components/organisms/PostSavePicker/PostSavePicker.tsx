@@ -142,6 +142,7 @@ function CollectionRow({
     <SavePickerRow
       layout={layout}
       disabled={collection.isUpdating}
+      dataCy="post-save-collection-option"
       onActivate={() => void onToggleCollection(collection.id)}
     >
       <Library className="size-4" />
@@ -250,6 +251,7 @@ function SavePickerContent({
             placeholder={t('collectionNamePlaceholder')}
             className="h-auto border-none p-0 shadow-none"
             disabled={isCreatingCollection}
+            data-cy="post-save-new-collection-input"
           />
           <Button
             type="button"
@@ -259,6 +261,7 @@ function SavePickerContent({
             disabled={!canCreate}
             onClick={() => void handleCreate()}
             aria-label={t('createCollection')}
+            data-cy="post-save-new-collection-create-btn"
           >
             {isCreatingCollection ? <Loader2 className="animate-spin" /> : <Plus />}
           </Button>
