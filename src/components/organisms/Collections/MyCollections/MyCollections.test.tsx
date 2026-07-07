@@ -472,30 +472,6 @@ describe('MyCollections', () => {
     });
   });
 
-  describe('public note', () => {
-    it('does not render the public note by default', () => {
-      setup({
-        currentUserPubky: CURRENT_USER_PUBKY,
-        userDetails: { name: 'Alice', image: null, indexed_at: 0 },
-      });
-
-      render(<MyCollections />);
-
-      expect(screen.queryByText('collections.my.publicNote')).not.toBeInTheDocument();
-    });
-
-    it('renders the public note when showPublicNote is true', () => {
-      setup({
-        currentUserPubky: CURRENT_USER_PUBKY,
-        userDetails: { name: 'Alice', image: null, indexed_at: 0 },
-      });
-
-      render(<MyCollections showPublicNote />);
-
-      expect(screen.getByText('collections.my.publicNote')).toBeInTheDocument();
-    });
-  });
-
   describe('MyCollections - Snapshots', () => {
     it('matches the snapshot for the signed-out fallback state', () => {
       setup({ currentUserPubky: null });

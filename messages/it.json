@@ -1348,6 +1348,7 @@
       "title": "Benvenuto nelle Collezioni",
       "description": "Salva i post che vale la pena conservare. Raccogli i migliori contenuti dalla tua rete. Organizza idee, filtra il segnale dal rumore e condividi ciò che conta.",
       "imageAlt": "Collezioni",
+      "publicNote": "Nota: le collezioni sono pubbliche e individuabili.",
       "cancel": "Annulla",
       "continue": "Continua"
     },
@@ -1360,9 +1361,7 @@
     "showMore": "Mostra altro",
     "loadFailed": "Impossibile caricare le collezioni. Riprova.",
     "my": {
-      "title": "Le mie collezioni",
-      "publicNote": "Nota: tutte le collezioni sono pubbliche e individuabili.",
-      "publicNoteShort": "Tutte le collezioni sono pubbliche e individuabili."
+      "title": "Le mie collezioni"
     },
     "followed": {
       "title": "Collezioni seguite",

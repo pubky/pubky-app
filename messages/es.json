@@ -1352,6 +1352,7 @@
       "title": "Bienvenido a las Colecciones",
       "description": "Guarda las publicaciones que vale la pena conservar. Recopila el mejor contenido de tu red. Organiza ideas, filtra la señal del ruido y comparte lo que importa.",
       "imageAlt": "Colecciones",
+      "publicNote": "Ten en cuenta: las colecciones son públicas y se pueden descubrir.",
       "cancel": "Cancelar",
       "continue": "Continuar"
     },
@@ -1364,9 +1365,7 @@
     "showMore": "Mostrar más",
     "loadFailed": "Error al cargar las colecciones. Inténtalo de nuevo.",
     "my": {
-      "title": "Mis colecciones",
-      "publicNote": "Ten en cuenta: todas las colecciones son públicas y se pueden descubrir.",
-      "publicNoteShort": "Todas las colecciones son públicas y se pueden descubrir."
+      "title": "Mis colecciones"
     },
     "followed": {
       "title": "Colecciones seguidas",

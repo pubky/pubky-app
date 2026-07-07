@@ -8,7 +8,6 @@ import { MyCollections } from '@/organisms/Collections/MyCollections/MyCollectio
 
 interface CollectionsSectionsProps {
   className?: string;
-  showMyCollectionsPublicNote?: boolean;
 }
 
 /**
@@ -21,10 +20,10 @@ interface CollectionsSectionsProps {
  * shared fetch. Each section owns its own header and data flow per the
  * Phase 3 design.
  */
-export function CollectionsSections({ className, showMyCollectionsPublicNote = false }: CollectionsSectionsProps) {
+export function CollectionsSections({ className }: CollectionsSectionsProps) {
   return (
     <Container overrideDefaults className={cn('flex w-full flex-col gap-12', className)}>
-      <MyCollections showPublicNote={showMyCollectionsPublicNote} />
+      <MyCollections />
       <FollowedCollections />
       <DiscoverCollections />
     </Container>

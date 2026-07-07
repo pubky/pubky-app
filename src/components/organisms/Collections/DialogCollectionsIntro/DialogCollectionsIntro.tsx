@@ -56,6 +56,8 @@ export function DialogCollectionsIntro({ open, onOpenChange, onContinue }: Dialo
           className="mx-auto size-48"
         />
 
+        <p className="text-sm text-muted-foreground">{t('publicNote')}</p>
+
         <DialogFooter>
           <Button size="lg" onClick={onContinue} className="order-1 sm:order-2">
             {t('continue')}

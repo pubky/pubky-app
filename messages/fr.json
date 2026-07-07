@@ -1348,6 +1348,7 @@
       "title": "Bienvenue dans les Collections",
       "description": "Gardez les publications qui en valent la peine. Rassemblez le meilleur contenu de votre réseau. Organisez vos idées, filtrez le signal du bruit et partagez ce qui compte.",
       "imageAlt": "Collections",
+      "publicNote": "À noter : les collections sont publiques et visibles.",
       "cancel": "Annuler",
       "continue": "Continuer"
     },
@@ -1360,9 +1361,7 @@
     "showMore": "Afficher plus",
     "loadFailed": "Échec du chargement des collections. Veuillez réessayer.",
     "my": {
-      "title": "Mes collections",
-      "publicNote": "À noter : toutes les collections sont publiques et visibles.",
-      "publicNoteShort": "Toutes les collections sont publiques et visibles."
+      "title": "Mes collections"
     },
     "followed": {
       "title": "Collections suivies",
