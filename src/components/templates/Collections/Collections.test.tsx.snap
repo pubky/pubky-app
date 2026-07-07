@@ -9,7 +9,6 @@ exports[`Collections (template) > matches the snapshot 1`] = `
     data-testid="container"
   >
     <div
-      data-show-my-public-note="true"
       data-testid="collections-sections"
     />
   </div>

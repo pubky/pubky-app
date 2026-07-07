@@ -13,6 +13,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
@@ -153,6 +154,7 @@ function CollectionCardContent({
 
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isOwn = currentUserPubky === authorPubky;
+  const { requireAuth } = useRequireAuth();
 
   const collection = parseCollectionContent(postDetails.content);
 
@@ -193,7 +195,9 @@ function CollectionCardContent({
   const handleFollowToggle = (event: MouseEvent) => {
     suppressCardNavigation(event);
     if (isToggling) return;
-    void toggle();
+    requireAuth(() => {
+      void toggle();
+    });
   };
 
   // Collection-specific toast copy so success / failure reads as "Collection
