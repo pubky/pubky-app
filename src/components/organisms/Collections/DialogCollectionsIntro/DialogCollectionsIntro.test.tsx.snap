@@ -74,7 +74,8 @@ exports[`DialogCollectionsIntro - Snapshots > matches snapshot when open 1`] = `
         width="192"
       />
       <p
-        class="text-sm text-muted-foreground"
+        class="text-sm font-normal text-muted-foreground"
+        data-testid="typography"
       >
         Please note: collections are public and discoverable.
       </p>
