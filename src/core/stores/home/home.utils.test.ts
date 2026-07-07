@@ -257,6 +257,11 @@ describe('filters.utils', () => {
       expect(matchesFilters('timeline:all:image', SORT.TIMELINE, REACH.ALL, CONTENT.ALL)).toBe(false);
     });
 
+    it('should return false for Me reach instead of throwing', () => {
+      expect(matchesFilters('timeline:all:all', SORT.TIMELINE, REACH.ME, CONTENT.ALL)).toBe(false);
+      expect(matchesFilters(`author:${'x'.repeat(52)}`, SORT.TIMELINE, REACH.ME, CONTENT.ALL)).toBe(false);
+    });
+
     it('should work with PostStreamTypes enum values', () => {
       expect(matchesFilters(PostStreamTypes.TIMELINE_ALL_ALL, SORT.TIMELINE, REACH.ALL, CONTENT.ALL)).toBe(true);
       expect(matchesFilters(PostStreamTypes.TIMELINE_FOLLOWING_ALL, SORT.TIMELINE, REACH.FOLLOWING, CONTENT.ALL)).toBe(

@@ -149,6 +149,11 @@ export function getHomeStreamIdFromFilters(
  * matchesFilters('timeline:following:all', 'recent', 'all', 'all') // => false
  */
 export function matchesFilters(streamId: string, sort: SortType, reach: ReachType, content: ContentType): boolean {
+  // Me streams use author-based ids, never the sorting:source:kind shape.
+  if (reach === REACH.ME) {
+    return false;
+  }
+
   const expectedStreamId = getStreamIdFromFilters(sort, reach, content);
   return streamId === expectedStreamId;
 }
