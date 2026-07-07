@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import { useTranslations } from 'next-intl';
 import { useDebounceCallback } from 'usehooks-ts';
+import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
@@ -203,12 +204,23 @@ export function usePostInput({
         useLocalFilesStore.getState().setPostAttachments(createdPostId, localAttachments);
       }
 
-      // Only prepend to timeline for posts and reposts, not replies or edits
-      if (variant !== POST_INPUT_VARIANT.REPLY && variant !== POST_INPUT_VARIANT.EDIT) {
+      if (variant === POST_INPUT_VARIANT.REPLY || variant === POST_INPUT_VARIANT.EDIT) {
+        onSuccess?.(createdPostId);
+        return;
+      }
+
+      const feedVariant = timelineFeed?.variant;
+      const shouldPrepend =
+        variant === POST_INPUT_VARIANT.POST ||
+        (variant === POST_INPUT_VARIANT.REPOST &&
+          feedVariant != null &&
+          REPOST_OPTIMISTIC_PREPEND_VARIANTS.has(feedVariant));
+
+      if (shouldPrepend) {
         timelineFeed?.prependPosts(createdPostId);
         setIsExpanded(false);
       }
-      // Call original onSuccess callback if provided
+
       onSuccess?.(createdPostId);
     };
 

@@ -10,6 +10,7 @@ import {
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { usePostInput } from './usePostInput';
@@ -736,7 +737,7 @@ describe('usePostInput', () => {
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
     });
 
-    it('calls onSuccess and prependPosts when submission succeeds for repost variant', async () => {
+    it('calls onSuccess and prependPosts when submission succeeds for repost variant on home feed', async () => {
       mockContent = 'Test repost content';
       mockRepost.mockImplementation(async ({ onSuccess }) => {
         onSuccess('created-repost-id');
@@ -758,6 +759,39 @@ describe('usePostInput', () => {
       expect(mockPrependPosts).toHaveBeenCalledWith('created-repost-id');
       expect(mockOnSuccess).toHaveBeenCalledWith('created-repost-id');
     });
+
+    it.each([TIMELINE_FEED_VARIANT.COLLECTION, TIMELINE_FEED_VARIANT.BOOKMARKS])(
+      'calls onSuccess but does NOT prependPosts for repost variant on %s feed',
+      async (feedVariant) => {
+        vi.mocked(useTimelineFeedContext).mockReturnValueOnce({
+          variant: feedVariant,
+          prependPosts: mockPrependPosts,
+          prependOptimisticPosts: mockPrependOptimisticPosts,
+          removePosts: vi.fn(),
+        });
+
+        mockContent = 'Test repost content';
+        mockRepost.mockImplementation(async ({ onSuccess }) => {
+          onSuccess('created-repost-id');
+        });
+
+        const mockOnSuccess = vi.fn();
+        const { result } = renderHook(() =>
+          usePostInput({
+            variant: 'repost',
+            originalPostId: 'original-post-id',
+            onSuccess: mockOnSuccess,
+          }),
+        );
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockPrependPosts).not.toHaveBeenCalled();
+        expect(mockOnSuccess).toHaveBeenCalledWith('created-repost-id');
+      },
+    );
 
     it('calls onSuccess but does NOT prependPosts for reply variant', async () => {
       mockContent = 'Test reply content';
