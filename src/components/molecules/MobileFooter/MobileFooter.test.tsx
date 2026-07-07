@@ -351,9 +351,10 @@ describe('MobileFooter', () => {
     expect(screen.queryByText('New')).not.toBeInTheDocument();
     const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
     expect(collectionsLink).toBeTruthy();
+    expect(collectionsLink).toHaveAttribute('href', '/collections');
     fireEvent.click(collectionsLink!);
     expect(collectionsDiscoveryMock.markCollectionsNavSeen).not.toHaveBeenCalled();
-    expect(collectionsDiscoveryMock.setShowSignInDialog).toHaveBeenCalledWith(true);
+    expect(collectionsDiscoveryMock.setShowSignInDialog).not.toHaveBeenCalled();
   });
 
   it('highlights Settings when on any sibling settings page', () => {

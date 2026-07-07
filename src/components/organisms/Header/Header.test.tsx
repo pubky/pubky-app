@@ -629,6 +629,30 @@ describe('Header', () => {
       expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
     });
 
+    it('renders explore navigation when unauthenticated on the collections overview', () => {
+      mockCurrentUserPubky = null;
+      mockIsPublicRoute.mockReturnValue(false);
+      mockIsCoreExploreRoute.mockReturnValue(true);
+      mockUsePathname.mockReturnValue('/collections');
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
+    });
+
+    it('renders explore navigation when unauthenticated on a single collection page', () => {
+      mockCurrentUserPubky = null;
+      mockIsPublicRoute.mockReturnValue(true);
+      mockIsCoreExploreRoute.mockReturnValue(false);
+      mockUsePathname.mockReturnValue(
+        '/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G',
+      );
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-explore-navigation-buttons')).toBeInTheDocument();
+    });
+
     it('renders HeaderHome when unauthenticated on non-public route', () => {
       mockCurrentUserPubky = null;
       mockIsPublicRoute.mockReturnValue(false);
