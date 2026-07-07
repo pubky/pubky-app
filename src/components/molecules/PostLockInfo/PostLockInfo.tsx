@@ -18,6 +18,9 @@ const PASSWORD_MASK = '••••••';
 export function PostLockInfo({ verifierType, className }: PostLockInfoProps) {
   if (verifierType !== VerifierType.PASSWORD) return null;
 
+  // TODO:[Locks] #2003 — replace native HTML (`div` / `span`) with the design-system
+  // atoms (`Container` / `Typography`) to follow the atomic-design convention; tracked
+  // under the parent Locks epic.
   return (
     <div className={cn('flex items-center gap-1.5 text-brand', className)} data-testid="post-lock-info">
       <Shield className="size-4 shrink-0" aria-hidden />
