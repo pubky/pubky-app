@@ -11,6 +11,7 @@ const mockHomeStore = vi.hoisted(() => {
     sort: 'timeline',
     reach: 'all',
     content: 'all',
+    profileTags: [] as string[],
   };
   const state = {
     ...initialState,
@@ -23,10 +24,14 @@ const mockHomeStore = vi.hoisted(() => {
     setContent: (content: string) => {
       state.content = content;
     },
+    setProfileTags: (profileTags: string[]) => {
+      state.profileTags = profileTags;
+    },
     reset: () => {
       state.sort = initialState.sort;
       state.reach = initialState.reach;
       state.content = initialState.content;
+      state.profileTags = initialState.profileTags;
     },
   };
 
@@ -139,7 +144,7 @@ describe('useStreamIdFromFilters', () => {
     expect(result.current).toBe('total_engagement:friends:video');
   });
 
-  it('should return PostStreamTypes enum for all combinations', () => {
+  it('should return stable stream IDs for all combinations', () => {
     const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
 
     // TIMELINE_ALL_ALL
@@ -164,7 +169,7 @@ describe('useStreamIdFromFilters', () => {
     expect(result4.current).toBe(PostStreamTypes.TIMELINE_ALL_IMAGE);
   });
 
-  it('should return PostStreamTypes enum for all valid combinations', () => {
+  it('should return stable stream IDs for all valid combinations', () => {
     const { result: setSort } = renderHook(() => useHomeStore((state) => state.setSort));
     const { result: setContent } = renderHook(() => useHomeStore((state) => state.setContent));
 
@@ -206,6 +211,66 @@ describe('useStreamIdFromFilters', () => {
     const { result } = renderHook(() => useStreamIdFromFilters());
 
     expect(result.current).toBe('viewer-pubky:author:image');
+  });
+
+  it('should build wot_domain stream when profile tags are selected on network reach', () => {
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    const { result: setProfileTags } = renderHook(() => useHomeStore((state) => state.setProfileTags));
+
+    setReach.current(REACH.NETWORK);
+    setProfileTags.current(['dev', 'bitcoin']);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+
+    expect(result.current).toBe('timeline:wot_domain:2:all:bitcoin,dev');
+  });
+
+  it('should build depth-1 wot_domain stream for following and friends profile tag feeds', () => {
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    const { result: setProfileTags } = renderHook(() => useHomeStore((state) => state.setProfileTags));
+
+    setProfileTags.current(['bitcoin']);
+
+    setReach.current(REACH.FOLLOWING);
+    const { result: followingResult } = renderHook(() => useStreamIdFromFilters());
+
+    setReach.current(REACH.FRIENDS);
+    const { result: friendsResult } = renderHook(() => useStreamIdFromFilters());
+
+    expect(followingResult.current).toBe('timeline:wot_domain:1:all:bitcoin');
+    expect(friendsResult.current).toBe('timeline:wot_domain:1:all:bitcoin');
+  });
+
+  it('should keep profile tags disabled for all and me reach', () => {
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    const { result: setProfileTags } = renderHook(() => useHomeStore((state) => state.setProfileTags));
+
+    setProfileTags.current(['bitcoin']);
+
+    setReach.current(REACH.ALL);
+    const { result: allResult } = renderHook(() => useStreamIdFromFilters());
+
+    setReach.current(REACH.ME);
+    const { result: meResult } = renderHook(() => useStreamIdFromFilters());
+
+    expect(allResult.current).toBe('timeline:all:all');
+    expect(meResult.current).toBe('author:viewer-pubky');
+  });
+
+  it('should include content kind and emoji profile tags in wot_domain stream IDs', () => {
+    const { result: setSort } = renderHook(() => useHomeStore((state) => state.setSort));
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    const { result: setContent } = renderHook(() => useHomeStore((state) => state.setContent));
+    const { result: setProfileTags } = renderHook(() => useHomeStore((state) => state.setProfileTags));
+
+    setSort.current(SORT.ENGAGEMENT);
+    setReach.current(REACH.NETWORK);
+    setContent.current(CONTENT.IMAGES);
+    setProfileTags.current(['🔥']);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+
+    expect(result.current).toBe('total_engagement:wot_domain:2:image:🔥');
   });
 
   it('should handle all content types', () => {

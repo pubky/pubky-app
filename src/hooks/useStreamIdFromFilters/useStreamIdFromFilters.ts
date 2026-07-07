@@ -1,7 +1,7 @@
-import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { type ContentType, REACH } from '@/stores/home/home.types';
+import type { ContentType } from '@/stores/home/home.types';
 import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
 
 /**
@@ -10,9 +10,7 @@ import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
  * This hook reads the current filter state from the filters store and
  * generates the appropriate streamId following the pattern: sorting:source:kind
  *
- * All valid filter combinations map to PostStreamTypes enum values.
- *
- * @returns The current streamId as PostStreamTypes enum
+ * @returns The current streamId
  *
  * @example
  * ```tsx
@@ -28,13 +26,13 @@ import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
  * }
  * ```
  */
-export function useStreamIdFromFilters(contentOverride?: ContentType): PostStreamTypes {
+export function useStreamIdFromFilters(contentOverride?: ContentType): PostStreamId {
   const sort = useHomeStore((state) => state.sort);
   const reach = useHomeStore((state) => state.reach);
   const content = useHomeStore((state) => state.content);
+  const profileTags = useHomeStore((state) => state.profileTags);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const effectiveReach = currentUserPubky ? reach : REACH.ALL;
   const effectiveContent = contentOverride ?? content;
 
-  return getHomeStreamIdFromFilters(sort, effectiveReach, effectiveContent, currentUserPubky);
+  return getHomeStreamIdFromFilters(sort, reach, effectiveContent, currentUserPubky, profileTags);
 }

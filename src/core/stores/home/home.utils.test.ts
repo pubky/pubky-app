@@ -156,6 +156,12 @@ describe('filters.utils', () => {
       expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
     });
 
+    it('should ignore profile tags when no user is authenticated', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL, null, ['bitcoin']);
+
+      expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
+    });
+
     it('should build author stream for me reach with all content', () => {
       const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.ALL, 'viewer-pubky');
 
@@ -166,6 +172,73 @@ describe('filters.utils', () => {
       const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.IMAGES, 'viewer-pubky');
 
       expect(streamId).toBe('viewer-pubky:author:image');
+    });
+
+    it('should build depth 2 domain stream for Network with profile tags', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL, 'viewer-pubky', [
+        'dev',
+        'bitcoin',
+      ]);
+
+      expect(streamId).toBe('timeline:wot_domain:2:all:bitcoin,dev');
+    });
+
+    it('should build depth 1 domain stream for Following with profile tags', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.FOLLOWING, CONTENT.ALL, 'viewer-pubky', [
+        'bitcoin',
+      ]);
+
+      expect(streamId).toBe('timeline:wot_domain:1:all:bitcoin');
+    });
+
+    it('should share domain stream identity for Following and Friends with the same profile tags', () => {
+      const followingStreamId = getHomeStreamIdFromFilters(
+        SORT.TIMELINE,
+        REACH.FOLLOWING,
+        CONTENT.ALL,
+        'viewer-pubky',
+        ['bitcoin'],
+      );
+      const friendsStreamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.FRIENDS, CONTENT.ALL, 'viewer-pubky', [
+        'bitcoin',
+      ]);
+
+      expect(friendsStreamId).toBe(followingStreamId);
+      expect(friendsStreamId).toBe('timeline:wot_domain:1:all:bitcoin');
+    });
+
+    it('should preserve content kind in domain stream identity', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.COLLECTIONS, 'viewer-pubky', [
+        'bitcoin',
+      ]);
+
+      expect(streamId).toBe('timeline:wot_domain:2:collection:bitcoin');
+    });
+
+    it('should preserve emoji profile tags in domain stream identity', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.ENGAGEMENT, REACH.NETWORK, CONTENT.IMAGES, 'viewer-pubky', [
+        '🔥',
+      ]);
+
+      expect(streamId).toBe('total_engagement:wot_domain:2:image:🔥');
+    });
+
+    it('should ignore profile tags for gated All reach', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ALL, CONTENT.ALL, 'viewer-pubky', ['bitcoin']);
+
+      expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
+    });
+
+    it('should ignore profile tags for gated Me reach', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.ALL, 'viewer-pubky', ['bitcoin']);
+
+      expect(streamId).toBe('author:viewer-pubky');
+    });
+
+    it('should use plain Network stream when profile tags are empty', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL, 'viewer-pubky', []);
+
+      expect(streamId).toBe('timeline:wot:all');
     });
   });
 

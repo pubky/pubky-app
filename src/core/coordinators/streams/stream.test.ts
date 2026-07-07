@@ -40,6 +40,7 @@ interface HomeStoreOptions {
   sort?: SortType;
   reach?: ReachType;
   content?: ContentType;
+  profileTags?: string[];
 }
 
 /**
@@ -79,11 +80,13 @@ function setupHomeStore(options: HomeStoreOptions = {}): HomeStoreSetup {
     sort: options.sort ?? SORT.TIMELINE,
     reach: options.reach ?? REACH.ALL,
     content: options.content ?? CONTENT.ALL,
+    profileTags: options.profileTags ?? [],
     layout: LAYOUT.COLUMNS,
     setLayout: vi.fn(),
     setSort: vi.fn(),
     setReach: vi.fn(),
     setContent: vi.fn(),
+    setProfileTags: vi.fn(),
     reset: vi.fn(),
   });
 
@@ -338,11 +341,13 @@ describe('StreamCoordinator', () => {
         sort: SORT.TIMELINE,
         reach: REACH.ALL,
         content: CONTENT.ALL,
+        profileTags: [],
         layout: LAYOUT.COLUMNS,
         setLayout: vi.fn(),
         setSort: vi.fn(),
         setReach: vi.fn(),
         setContent: vi.fn(),
+        setProfileTags: vi.fn(),
         reset: vi.fn(),
       });
 
@@ -720,6 +725,56 @@ describe('StreamCoordinator', () => {
       // Should have re-evaluated (but engagement streams are skipped, so no additional poll)
       // The key is that evaluateAndStartPolling was called
       expect(getOrFetchStreamSliceSpy.mock.calls.length).toBeGreaterThanOrEqual(initialCallCount);
+    });
+
+    it('re-evaluates polling when home store profile tags change', async () => {
+      const { getOrFetchStreamSliceSpy, homeStoreState } = setupIntegrationTest({
+        homeStore: { reach: REACH.NETWORK },
+      });
+
+      type HomeStoreSubscriber = (state: HomeStore, prevState: HomeStore) => void;
+      let subscriptionCallback: HomeStoreSubscriber | null = null;
+      vi.spyOn(useHomeStore, 'subscribe').mockImplementation((callback) => {
+        subscriptionCallback = callback as HomeStoreSubscriber;
+        return vi.fn();
+      });
+
+      StreamCoordinator.resetInstance();
+      const newCoordinator = StreamCoordinator.getInstance();
+
+      newCoordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      newCoordinator.setRoute(APP_ROUTES.HOME);
+      newCoordinator.start();
+
+      await flushPromises();
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: 'timeline:wot:all',
+        }),
+      );
+
+      const updatedHomeState = {
+        ...homeStoreState,
+        profileTags: ['bitcoin'],
+      };
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(updatedHomeState);
+
+      if (subscriptionCallback) {
+        (subscriptionCallback as HomeStoreSubscriber)(updatedHomeState, homeStoreState);
+      }
+
+      await flushPromises();
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: 'timeline:wot_domain:2:all:bitcoin',
+        }),
+      );
     });
 
     it('does not re-evaluate when on non-home route', async () => {

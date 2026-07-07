@@ -100,6 +100,11 @@ export enum PostStreamTypes {
 export type ReplyStreamCompositeId = `${StreamSource.REPLIES}:${string}`;
 export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
+export type PostStreamKindSegment = 'all' | StreamKind;
+export type WotDomainDepth = 1 | 2;
+export type WotStreamId = `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}`;
+export type WotDomainStreamCompositeId =
+  `${StreamSorting}:${StreamSource.WOT_DOMAIN}:${WotDomainDepth}:${PostStreamKindSegment}:${string}`;
 
 // Collections feature (see `.plans/2026/may/collections-feature-foundation.md`).
 //
@@ -123,6 +128,16 @@ export type CollectionItemsStreamCompositeId = `${StreamSource.COLLECTION}:${str
 
 export function buildPostReplyStreamId(compositePostId: string): ReplyStreamCompositeId {
   return `${StreamSource.REPLIES}:${compositePostId}`;
+}
+
+export function buildWotDomainStreamId(
+  sorting: StreamSorting,
+  depth: WotDomainDepth,
+  kind: PostStreamKindSegment,
+  tags: string[],
+): WotDomainStreamCompositeId {
+  const canonicalTags = [...tags].sort().join(',');
+  return `${sorting}:${StreamSource.WOT_DOMAIN}:${depth}:${kind}:${canonicalTags}`;
 }
 
 export function buildAuthorCollectionsStreamId(authorPubky: Pubky): AuthorCollectionsStreamId {
@@ -159,6 +174,10 @@ export function isCollectionItemsStream(streamId: string): streamId is Collectio
   return streamId.startsWith(`${StreamSource.COLLECTION}:`);
 }
 
+export function isWotDomainStream(streamId: string): streamId is WotDomainStreamCompositeId {
+  return streamId.split(':')[1] === StreamSource.WOT_DOMAIN;
+}
+
 /**
  * Single-collection item feeds (`collection:<author>:<postId>`) and the
  * bookmarks post feeds (`<sorting>:bookmarks:<kind>`) intentionally keep deleted
@@ -179,6 +198,8 @@ export function isDeletedRetainingStream(streamId: string): boolean {
 
 export type PostStreamId =
   | PostStreamTypes
+  | WotStreamId
+  | WotDomainStreamCompositeId
   | ReplyStreamCompositeId
   | AuthorStreamCompositeId
   | AuthorRepliesStreamCompositeId

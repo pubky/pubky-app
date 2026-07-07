@@ -3,10 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserApplication } from '@/application/user/user';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
-import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
 import type { NexusTag, NexusTaggers, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -31,6 +32,7 @@ const createMockHomeState = () =>
     sort: SORT.TIMELINE,
     reach: REACH.ALL,
     content: CONTENT.ALL,
+    profileTags: [],
   });
 
 // Valid 52-character z-base32 encoded pubky IDs for testing
@@ -44,6 +46,7 @@ describe('UserController', () => {
     vi.clearAllMocks();
     mockUseHomeStore.mockReset();
     mockUseHomeStoreGetState.mockReset();
+    useAuthStore.getState().reset();
   });
 
   afterEach(() => {
@@ -485,7 +488,7 @@ describe('UserController', () => {
     it('should pass activeStreamId when on /home route', async () => {
       const follower = TEST_PUBKY.USER_1;
       const followee = TEST_PUBKY.USER_2;
-      const expectedStreamId = 'timeline:all:all' as PostStreamTypes;
+      const expectedStreamId = 'timeline:all:all' as PostStreamId;
 
       const mockFollowJson = { foo: 'bar' } as Record<string, unknown>;
       const mockToJson = vi.fn(() => mockFollowJson);
@@ -517,6 +520,42 @@ describe('UserController', () => {
         followee,
         activeStreamId: expectedStreamId,
       });
+    });
+
+    it('should pass wot_domain activeStreamId when profile tags are active on home', async () => {
+      const follower = TEST_PUBKY.USER_1;
+      const followee = TEST_PUBKY.USER_2;
+      const expectedStreamId = 'timeline:wot_domain:2:all:bitcoin' as PostStreamId;
+
+      vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
+        asOpaque<FollowResult>({
+          meta: { url: 'https://example.com/follow' },
+          follow: { toJson: () => ({}) },
+        }),
+      );
+
+      Object.defineProperty(window, 'location', {
+        value: { pathname: '/home' },
+        writable: true,
+      });
+      mockUseHomeStoreGetState.mockReturnValue(
+        asOpaque<ReturnType<typeof useHomeStore.getState>>({
+          sort: SORT.TIMELINE,
+          reach: REACH.NETWORK,
+          content: CONTENT.ALL,
+          profileTags: ['bitcoin'],
+        }),
+      );
+      useAuthStore.getState().setCurrentUserPubky(follower);
+      const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
+
+      await UserController.commitFollow(HttpMethod.PUT, { follower, followee });
+
+      expect(followSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          activeStreamId: expectedStreamId,
+        }),
+      );
     });
   });
 

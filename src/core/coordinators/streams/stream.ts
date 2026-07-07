@@ -178,9 +178,15 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
 
     // Home route: build from home store state
     if (this.state.currentRoute === APP_ROUTES.HOME) {
-      const { sort, reach, content } = useHomeStore.getState();
+      const { sort, reach, content, profileTags } = useHomeStore.getState();
       const currentUserPubky = useAuthStore.getState().currentUserPubky;
-      this.streamState.currentStreamId = getHomeStreamIdFromFilters(sort, reach, content, currentUserPubky);
+      this.streamState.currentStreamId = getHomeStreamIdFromFilters(
+        sort,
+        reach,
+        content,
+        currentUserPubky,
+        profileTags,
+      );
       Logger.debug(`Built ${APP_ROUTES.HOME} streamId`, { streamId: this.streamState.currentStreamId });
     }
     // Post route: extract from URL and build reply stream ID
@@ -380,7 +386,7 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
    */
   private isEngagementStream(streamId: PostStreamId): boolean {
     try {
-      const [sorting] = breakDownStreamId(streamId);
+      const { sorting } = breakDownStreamId(streamId);
       return sorting === StreamSorting.ENGAGEMENT;
     } catch (error) {
       Logger.warn('Failed to parse stream ID for engagement check', { streamId, error });
@@ -404,13 +410,17 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
       const currentState = this.getState();
       if (currentState.currentRoute === APP_ROUTES.HOME) {
         const stateChanged =
-          state.sort !== prevState.sort || state.reach !== prevState.reach || state.content !== prevState.content;
+          state.sort !== prevState.sort ||
+          state.reach !== prevState.reach ||
+          state.content !== prevState.content ||
+          state.profileTags !== prevState.profileTags;
 
         if (stateChanged) {
           Logger.debug('Home store changed, re-evaluating stream', {
             sort: state.sort,
             reach: state.reach,
             content: state.content,
+            profileTags: state.profileTags,
           });
 
           this.evaluateAndStartPolling();
