@@ -43,6 +43,57 @@ describe('FilterReach', () => {
     });
   });
 
+  it('renders V1 Network and Me reach options when enabled', () => {
+    const mockOnTabChange = vi.fn();
+    render(<FilterReach showNetwork showMe onTabChange={mockOnTabChange} />);
+
+    const tabs = [
+      { value: REACH.ALL, label: 'All' },
+      { value: REACH.NETWORK, label: 'Network' },
+      { value: REACH.FOLLOWING, label: 'Following' },
+      { value: REACH.FRIENDS, label: 'Friends' },
+      { value: REACH.ME, label: 'Me' },
+    ];
+
+    tabs.forEach(({ value, label }) => {
+      const element = screen.getByLabelText(label);
+      fireEvent.click(element);
+      expect(mockOnTabChange).toHaveBeenCalledWith(value);
+    });
+  });
+
+  it('renders profile tag selector footer when profile tag props are provided', () => {
+    render(
+      <FilterReach
+        showNetwork
+        showMe
+        selectedTab={REACH.NETWORK}
+        profileTags={['bitcoin']}
+        onProfileTagAdd={vi.fn()}
+        onProfileTagRemove={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('bitcoin')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('profile tag')).toBeInTheDocument();
+  });
+
+  it('disables profile tag selector footer when profileTagsDisabled is true', () => {
+    render(
+      <FilterReach
+        showNetwork
+        showMe
+        selectedTab={REACH.ALL}
+        profileTags={[]}
+        onProfileTagAdd={vi.fn()}
+        onProfileTagRemove={vi.fn()}
+        profileTagsDisabled
+      />,
+    );
+
+    expect(screen.getByPlaceholderText('profile tag')).toBeDisabled();
+  });
+
   it('has proper ARIA attributes for radio items', () => {
     render(<FilterReach selectedTab={REACH.FOLLOWING} />);
 

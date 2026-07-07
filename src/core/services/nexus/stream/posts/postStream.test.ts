@@ -45,6 +45,10 @@ function callStreamEndpoint(
       return postStreamApi.followers(params as TStreamWithObserverParams);
     case 'friends':
       return postStreamApi.friends(params as TStreamWithObserverParams);
+    case 'wot':
+      return postStreamApi.wot(params as TStreamWithObserverParams);
+    case 'wot_domain':
+      return postStreamApi.wot_domain(params as TStreamWithObserverParams);
     case 'bookmarks':
       return postStreamApi.bookmarks(params as TStreamWithObserverParams);
     case 'post_replies':
@@ -110,6 +114,18 @@ describe('Stream API URL Generation', () => {
         endpoint: 'friends' as const,
         params: { observer_id: mockObserverId, tags: 'dev,opensource', kind: StreamKind.SHORT },
         expectedInUrl: ['source=friends', `observer_id=${mockObserverId}`, 'tags=dev%2Copensource', 'kind=short'],
+      },
+      {
+        name: 'wot',
+        endpoint: 'wot' as const,
+        params: { observer_id: mockObserverId, depth: 2, kind: StreamKind.LONG },
+        expectedInUrl: ['source=wot', `observer_id=${mockObserverId}`, 'depth=2', 'kind=long'],
+      },
+      {
+        name: 'wot_domain',
+        endpoint: 'wot_domain' as const,
+        params: { observer_id: mockObserverId, depth: 2, domain_tags: 'bitcoiner,dev' },
+        expectedInUrl: ['source=wot_domain', `observer_id=${mockObserverId}`, 'depth=2', 'domain_tags=bitcoiner%2Cdev'],
       },
       {
         name: 'bookmarks',
@@ -397,6 +413,24 @@ describe('createPostStreamParams', () => {
       expect(result.params.viewer_id).toBe(mockViewerId);
       expect(result.params.limit).toBe(20);
       expect(result.invokeEndpoint).toBe(StreamSource.BOOKMARKS);
+    });
+  });
+
+  describe('WoT streams', () => {
+    it('should set default depth for timeline:wot streams', () => {
+      const result = createPostStreamParams({
+        streamId: 'timeline:wot:all' as PostStreamId,
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
+      expect(result.params.depth).toBe(2);
+      expect(result.params.viewer_id).toBe(mockViewerId);
+      expect(result.params.limit).toBe(20);
+      expect(result.invokeEndpoint).toBe(StreamSource.WOT);
     });
   });
 
@@ -723,6 +757,11 @@ describe('breakDownStreamId', () => {
       const result = breakDownStreamId('timeline:following:short' as PostStreamId);
       expect(result).toEqual(['timeline', StreamSource.FOLLOWING, 'short', undefined]);
     });
+
+    it('should parse wot source', () => {
+      const result = breakDownStreamId('timeline:wot:all' as PostStreamId);
+      expect(result).toEqual(['timeline', StreamSource.WOT, 'all', undefined]);
+    });
   });
 
   describe('Replies pattern', () => {
@@ -823,6 +862,13 @@ describe('NexusPostStreamService', () => {
         expectedInUrl: ['source=friends', 'observer_id=viewer-pubky-id', 'tags=tech%2Cdev'],
       },
       {
+        name: 'WOT',
+        invokeEndpoint: StreamSource.WOT,
+        params: { limit: 15, viewer_id: mockViewerId, depth: 2 },
+        extraParams: {},
+        expectedInUrl: ['source=wot', 'observer_id=viewer-pubky-id', 'depth=2'],
+      },
+      {
         name: 'BOOKMARKS',
         invokeEndpoint: StreamSource.BOOKMARKS,
         params: { limit: 25, viewer_id: mockViewerId, sorting: StreamSorting.TIMELINE },
@@ -905,6 +951,20 @@ describe('NexusPostStreamService', () => {
       {
         name: 'BOOKMARKS requires viewer_id',
         invokeEndpoint: StreamSource.BOOKMARKS,
+        params: { limit: 10 }, // Missing viewer_id
+        extraParams: {},
+        expectedError: 'Viewer ID is required',
+      },
+      {
+        name: 'WOT requires viewer_id',
+        invokeEndpoint: StreamSource.WOT,
+        params: { limit: 10 }, // Missing viewer_id
+        extraParams: {},
+        expectedError: 'Viewer ID is required',
+      },
+      {
+        name: 'WOT_DOMAIN requires viewer_id',
+        invokeEndpoint: StreamSource.WOT_DOMAIN,
         params: { limit: 10 }, // Missing viewer_id
         extraParams: {},
         expectedError: 'Viewer ID is required',

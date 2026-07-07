@@ -1,1 +1,2 @@
 export const POST_STREAM_TAG_DELIMITER = ',';
+export const POST_STREAM_WOT_DEFAULT_DEPTH = 2;

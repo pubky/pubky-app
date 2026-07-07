@@ -19,8 +19,9 @@ import { buildCompositeId } from '@/models/models.utils';
 import { buildPostReplyStreamId, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { breakDownStreamId } from '@/services/nexus/stream/posts/postStream.utils';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { getStreamId } from '@/stores/home/home.utils';
+import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
 
 /**
  * StreamCoordinator
@@ -178,7 +179,8 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
     // Home route: build from home store state
     if (this.state.currentRoute === APP_ROUTES.HOME) {
       const { sort, reach, content } = useHomeStore.getState();
-      this.streamState.currentStreamId = getStreamId(sort, reach, content);
+      const currentUserPubky = useAuthStore.getState().currentUserPubky;
+      this.streamState.currentStreamId = getHomeStreamIdFromFilters(sort, reach, content, currentUserPubky);
       Logger.debug(`Built ${APP_ROUTES.HOME} streamId`, { streamId: this.streamState.currentStreamId });
     }
     // Post route: extract from URL and build reply stream ID

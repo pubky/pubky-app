@@ -33,14 +33,28 @@ function HomeFeedFilters({
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
   variant = 'drawer',
 }: HomeFeedSidebarProps) {
-  const { layout, setLayout, reach, setReach, sort, setSort, content, setContent } = useHomeStore();
+  const {
+    layout,
+    setLayout,
+    reach,
+    setReach,
+    sort,
+    setSort,
+    content,
+    setContent,
+    profileTags,
+    addProfileTag,
+    removeProfileTag,
+  } = useHomeStore();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { requireAuth } = useRequireAuth();
   const isAuthenticated = Boolean(currentUserPubky);
   const effectiveReach = isAuthenticated ? reach : REACH.ALL;
+  const areProfileTagsDisabled = effectiveReach === REACH.ALL || effectiveReach === REACH.ME;
+  const effectiveProfileTags = isAuthenticated && !areProfileTagsDisabled ? profileTags : [];
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
 
-  // "All" reach is public; "Following"/"Friends" require an account, so prompt Join Pubky in Explore mode.
+  // "All" reach is public; other reach options require an account, so prompt Join Pubky in Explore mode.
   const handleReachChange = (value: ReachType) => {
     if (value === REACH.ALL) {
       setReach(value);
@@ -59,7 +73,18 @@ function HomeFeedFilters({
 
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
-      {!hideReachFilter && <FilterReach selectedTab={effectiveReach} onTabChange={handleReachChange} />}
+      {!hideReachFilter && (
+        <FilterReach
+          selectedTab={effectiveReach}
+          onTabChange={handleReachChange}
+          showNetwork
+          showMe
+          profileTags={effectiveProfileTags}
+          onProfileTagAdd={addProfileTag}
+          onProfileTagRemove={removeProfileTag}
+          profileTagsDisabled={areProfileTagsDisabled}
+        />
+      )}
       <FilterSort selectedTab={sort} onTabChange={setSort} />
       {variant === 'sidebar' ? (
         <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">

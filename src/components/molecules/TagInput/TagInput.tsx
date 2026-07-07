@@ -25,6 +25,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     existingTags = [],
     viewerTags,
     showCloseButton = false,
+    showEmojiButton = true,
     onClose,
     disabled = false,
     maxTags,
@@ -38,6 +39,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     autoFocus = false,
     containerVariant = 'dashed',
     className,
+    inputClassName,
     style,
   },
   ref,
@@ -196,23 +198,26 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
                 isAtLimit ? 'placeholder:text-destructive' : 'placeholder:text-input',
                 inputValue ? 'text-foreground' : 'text-input',
                 isDisabled && onClick && 'pointer-events-none',
+                inputClassName,
               )}
             />
 
-            <Button
-              overrideDefaults={true}
-              onMouseDown={preventBlur}
-              onClick={() => setShowEmojiPicker(true)}
-              className={cn(
-                'inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1',
-                isDashedVariant && 'shadow-xs-dark hover:shadow-xs-dark',
-                isDisabled && onClick && 'pointer-events-none',
-              )}
-              aria-label="Open emoji picker"
-              disabled={isDisabled}
-            >
-              <Smile className="size-4" strokeWidth={2} />
-            </Button>
+            {showEmojiButton && (
+              <Button
+                overrideDefaults={true}
+                onMouseDown={preventBlur}
+                onClick={() => setShowEmojiPicker(true)}
+                className={cn(
+                  'inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1',
+                  isDashedVariant && 'shadow-xs-dark hover:shadow-xs-dark',
+                  isDisabled && onClick && 'pointer-events-none',
+                )}
+                aria-label="Open emoji picker"
+                disabled={isDisabled}
+              >
+                <Smile className="size-4" strokeWidth={2} />
+              </Button>
+            )}
 
             {showCloseButton && (
               <Button

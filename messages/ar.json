@@ -1142,8 +1142,12 @@
     "reach": {
       "title": "النطاق",
       "all": "الكل",
+      "network": "الشبكة",
       "following": "المتابَعون",
-      "friends": "الاصدقاء"
+      "friends": "الاصدقاء",
+      "me": "انا",
+      "profileTag": "وسم الملف الشخصي",
+      "profileTagLimitReached": "5 وسوم كحد اقصى"
     },
     "sort": {
       "title": "الترتيب",

@@ -1146,8 +1146,12 @@
     "reach": {
       "title": "Reach",
       "all": "All",
+      "network": "Network",
       "following": "Following",
-      "friends": "Friends"
+      "friends": "Friends",
+      "me": "Me",
+      "profileTag": "profile tag",
+      "profileTagLimitReached": "5 tags max"
     },
     "sort": {
       "title": "Sort",

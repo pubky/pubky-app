@@ -1148,8 +1148,12 @@
     "reach": {
       "title": "Reichweite",
       "all": "Alle",
+      "network": "Netzwerk",
       "following": "Folge ich",
-      "friends": "Freunde"
+      "friends": "Freunde",
+      "me": "Ich",
+      "profileTag": "Profil-Tag",
+      "profileTagLimitReached": "Max. 5 Tags"
     },
     "sort": {
       "title": "Sortieren",

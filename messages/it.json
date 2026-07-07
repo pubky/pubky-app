@@ -1146,8 +1146,12 @@
     "reach": {
       "title": "Portata",
       "all": "Tutti",
+      "network": "Rete",
       "following": "Seguiti",
-      "friends": "Amici"
+      "friends": "Amici",
+      "me": "Io",
+      "profileTag": "tag profilo",
+      "profileTagLimitReached": "max 5 tag"
     },
     "sort": {
       "title": "Ordina",

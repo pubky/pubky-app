@@ -20,6 +20,7 @@ export const useHomeStore = create<HomeStore>()(
           sort: state.sort,
           reach: state.reach,
           content: state.content,
+          profileTags: state.profileTags,
         }),
       },
     ),

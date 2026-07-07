@@ -1146,8 +1146,12 @@
     "reach": {
       "title": "Portee",
       "all": "Tous",
+      "network": "Reseau",
       "following": "Abonnements",
-      "friends": "Amis"
+      "friends": "Amis",
+      "me": "Moi",
+      "profileTag": "tag de profil",
+      "profileTagLimitReached": "5 tags max"
     },
     "sort": {
       "title": "Trier",
