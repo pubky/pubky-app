@@ -1151,7 +1151,7 @@
       "friends": "友達",
       "me": "自分",
       "profileTag": "プロフィールタグ",
-      "profileTagLimitReached": "最大5タグ"
+      "profileTagLimitReached": "最大{max}タグ"
     },
     "sort": {
       "title": "並べ替え",

@@ -1153,7 +1153,7 @@
       "friends": "Freunde",
       "me": "Ich",
       "profileTag": "Profil-Tag",
-      "profileTagLimitReached": "Max. 5 Tags"
+      "profileTagLimitReached": "Max. {max} Tags"
     },
     "sort": {
       "title": "Sortieren",

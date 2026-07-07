@@ -1147,7 +1147,7 @@
       "friends": "الاصدقاء",
       "me": "انا",
       "profileTag": "وسم الملف الشخصي",
-      "profileTagLimitReached": "5 وسوم كحد اقصى"
+      "profileTagLimitReached": "{max} وسوم كحد اقصى"
     },
     "sort": {
       "title": "الترتيب",

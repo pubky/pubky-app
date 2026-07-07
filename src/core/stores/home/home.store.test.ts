@@ -179,12 +179,28 @@ describe('HomeStore', () => {
       expect(useHomeStore.getState().profileTags).toHaveLength(HOME_PROFILE_TAGS_MAX_SELECTED);
     });
 
+    it('should strip Nexus-invalid tag label characters and preserve emoji', () => {
+      const store = useHomeStore.getState();
+
+      store.setProfileTags(['Bit:coin', 'dev,tag', 'light ning', '🔥']);
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'devtag', 'lightning', '🔥']);
+    });
+
     it('should add a normalized profile tag', () => {
       const store = useHomeStore.getState();
 
       store.addProfileTag('Bitcoin');
 
       expect(useHomeStore.getState().profileTags).toEqual(['bitcoin']);
+    });
+
+    it('should strip Nexus-invalid characters when adding a profile tag', () => {
+      const store = useHomeStore.getState();
+
+      store.addProfileTag('Bit:coin,🔥');
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin🔥']);
     });
 
     it('should prevent duplicate profile tags', () => {

@@ -55,4 +55,12 @@ describe('FilterProfileTags', () => {
 
     expect(screen.getByPlaceholderText('5 tags max')).toBeDisabled();
   });
+
+  it('uses the configured max tag count in the limit placeholder', () => {
+    render(
+      <FilterProfileTags selectedTags={['one', 'two', 'three']} onTagAdd={vi.fn()} onTagRemove={vi.fn()} maxTags={3} />,
+    );
+
+    expect(screen.getByPlaceholderText('3 tags max')).toBeDisabled();
+  });
 });

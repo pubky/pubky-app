@@ -1151,7 +1151,7 @@
       "friends": "Amis",
       "me": "Moi",
       "profileTag": "tag de profil",
-      "profileTagLimitReached": "5 tags max"
+      "profileTagLimitReached": "{max} tags max"
     },
     "sort": {
       "title": "Trier",

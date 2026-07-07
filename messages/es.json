@@ -1153,7 +1153,7 @@
       "friends": "Amigos",
       "me": "Yo",
       "profileTag": "etiqueta de perfil",
-      "profileTagLimitReached": "máximo 5 etiquetas"
+      "profileTagLimitReached": "máximo {max} etiquetas"
     },
     "sort": {
       "title": "Ordenar",

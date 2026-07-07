@@ -1151,7 +1151,7 @@
       "friends": "Amici",
       "me": "Io",
       "profileTag": "tag profilo",
-      "profileTagLimitReached": "max 5 tag"
+      "profileTagLimitReached": "max {max} tag"
     },
     "sort": {
       "title": "Ordina",

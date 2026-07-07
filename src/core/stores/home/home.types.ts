@@ -23,6 +23,10 @@ export const REACH = {
 // Nexus domain_tags API limit.
 export const HOME_PROFILE_TAGS_MAX_SELECTED = 5;
 
+export function isProfileTagGatedReach(reach: ReachType): boolean {
+  return reach === REACH.ALL || reach === REACH.ME;
+}
+
 export enum CONTENT {
   ALL = 'all',
   SHORT = 'short',

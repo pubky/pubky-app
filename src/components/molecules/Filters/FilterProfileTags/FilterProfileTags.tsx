@@ -42,7 +42,7 @@ export function FilterProfileTags({
         disabled={isInputDisabled}
         maxTags={maxTags}
         currentTagsCount={selectedTags.length}
-        limitReachedPlaceholder={t('profileTagLimitReached')}
+        limitReachedPlaceholder={t('profileTagLimitReached', { max: maxTags })}
         enableApiSuggestions
         excludeFromApiSuggestions={selectedTags}
         addOnSuggestionClick

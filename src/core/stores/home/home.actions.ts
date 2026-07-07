@@ -1,3 +1,4 @@
+import { sanitizeTagInput } from '@/libs/utils/utils';
 import { ZustandSet } from '../stores.types';
 import {
   HOME_PROFILE_TAGS_MAX_SELECTED,
@@ -5,12 +6,11 @@ import {
   HomeActionTypes,
   homeInitialState,
   HomeStore,
-  REACH,
-  type ReachType,
+  isProfileTagGatedReach,
 } from './home.types';
 
 function normalizeProfileTag(profileTag: string): string {
-  return profileTag.trim().toLowerCase();
+  return sanitizeTagInput(profileTag.trim()).toLowerCase();
 }
 
 function normalizeProfileTags(profileTags: string[]): string[] {
@@ -29,10 +29,6 @@ function normalizeProfileTags(profileTags: string[]): string[] {
   return Array.from(normalizedTags);
 }
 
-function shouldClearProfileTagsForReach(reach: ReachType): boolean {
-  return reach === REACH.ALL || reach === REACH.ME;
-}
-
 // Actions/Mutators - State modification functions
 export const createHomeActions = (set: ZustandSet<HomeStore>): HomeActions => ({
   setLayout: (layout) => {
@@ -45,7 +41,7 @@ export const createHomeActions = (set: ZustandSet<HomeStore>): HomeActions => ({
 
   setReach: (reach) => {
     set(
-      { reach, ...(shouldClearProfileTagsForReach(reach) ? { profileTags: [] } : {}) },
+      { reach, ...(isProfileTagGatedReach(reach) ? { profileTags: [] } : {}) },
       false,
       HomeActionTypes.SET_HOME_REACH,
     );
@@ -66,7 +62,7 @@ export const createHomeActions = (set: ZustandSet<HomeStore>): HomeActions => ({
         if (
           !normalizedTag ||
           state.profileTags.length >= HOME_PROFILE_TAGS_MAX_SELECTED ||
-          state.profileTags.some((tag) => tag.toLowerCase() === normalizedTag)
+          state.profileTags.includes(normalizedTag)
         ) {
           return { profileTags: state.profileTags };
         }
@@ -81,7 +77,7 @@ export const createHomeActions = (set: ZustandSet<HomeStore>): HomeActions => ({
     set(
       (state) => {
         const normalizedTag = normalizeProfileTag(profileTag);
-        return { profileTags: state.profileTags.filter((tag) => tag.toLowerCase() !== normalizedTag) };
+        return { profileTags: state.profileTags.filter((tag) => tag !== normalizedTag) };
       },
       false,
       HomeActionTypes.REMOVE_HOME_PROFILE_TAG,

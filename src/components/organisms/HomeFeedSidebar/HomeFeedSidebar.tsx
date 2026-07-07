@@ -10,7 +10,7 @@ import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { REACH, type ReachType } from '@/stores/home/home.types';
+import { isProfileTagGatedReach, REACH, type ReachType } from '@/stores/home/home.types';
 import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
@@ -50,7 +50,7 @@ function HomeFeedFilters({
   const { requireAuth } = useRequireAuth();
   const isAuthenticated = Boolean(currentUserPubky);
   const effectiveReach = isAuthenticated ? reach : REACH.ALL;
-  const areProfileTagsDisabled = effectiveReach === REACH.ALL || effectiveReach === REACH.ME;
+  const areProfileTagsDisabled = isProfileTagGatedReach(effectiveReach);
   const effectiveProfileTags = isAuthenticated && !areProfileTagsDisabled ? profileTags : [];
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
 
