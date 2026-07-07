@@ -86,7 +86,7 @@ exports[`DialogNewCollection - Snapshots > matches snapshot when open 1`] = `
               id="name"
               maxlength="100"
               name="name"
-              placeholder="Proof of Work"
+              placeholder="Name your collection"
               type="text"
               value=""
             />
@@ -114,7 +114,7 @@ exports[`DialogNewCollection - Snapshots > matches snapshot when open 1`] = `
               id="description"
               maxlength="500"
               name="description"
-              placeholder="The best from the biggest contributors in Bitcoin"
+              placeholder="What will people find here?"
               type="text"
               value=""
             />

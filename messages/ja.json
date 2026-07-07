@@ -1330,9 +1330,9 @@
       "ctaShort": "新規",
       "title": "新しいコレクション",
       "nameLabel": "タイトル",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "コレクションに名前を付ける",
       "descriptionLabel": "説明",
-      "descriptionPlaceholder": "ビットコインの主要な貢献者のベスト",
+      "descriptionPlaceholder": "ここで何が見つかりますか？",
       "backgroundLabel": "背景",
       "addImage": "画像を追加",
       "removeImage": "画像を削除",
@@ -1349,6 +1349,7 @@
       "title": "コレクションへようこそ",
       "description": "保存する価値のある投稿を集めましょう。ネットワークから最高のコンテンツを集め、アイデアを整理し、ノイズからシグナルを選り分け、大切なものを共有しましょう。",
       "imageAlt": "コレクション",
+      "publicNote": "ご注意: コレクションは公開され、発見可能です。",
       "cancel": "キャンセル",
       "continue": "続ける"
     },
@@ -1361,9 +1362,7 @@
     "showMore": "もっと見る",
     "loadFailed": "コレクションの読み込みに失敗しました。もう一度お試しください。",
     "my": {
-      "title": "マイコレクション",
-      "publicNote": "ご注意: すべてのコレクションは公開され、発見可能です。",
-      "publicNoteShort": "すべてのコレクションは公開され、発見可能です。"
+      "title": "マイコレクション"
     },
     "followed": {
       "title": "フォロー中のコレクション",
@@ -1408,7 +1407,7 @@
     },
     "addContentDialog": {
       "title": "投稿を追加",
-      "description": "フィードから投稿または記事を追加するか、URLを直接貼り付けます。",
+      "description": "コレクションに投稿を追加する方法はいくつかあります。",
       "fromFeedTitle": "フィードから追加",
       "fromFeedLead": "投稿を見つけて",
       "fromFeedRest": "追加したい投稿のコレクションボタンをクリックします。",

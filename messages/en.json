@@ -1333,9 +1333,9 @@
       "ctaShort": "New",
       "title": "New Collection",
       "nameLabel": "Title",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "Name your collection",
       "descriptionLabel": "Description",
-      "descriptionPlaceholder": "The best from the biggest contributors in Bitcoin",
+      "descriptionPlaceholder": "What will people find here?",
       "backgroundLabel": "Background",
       "addImage": "Add image",
       "removeImage": "Remove image",
@@ -1352,6 +1352,7 @@
       "title": "Welcome to Collections",
       "description": "Save posts worth keeping. Collect the best content from your network. Curate ideas, filter signal from noise, and share what matters.",
       "imageAlt": "Collections",
+      "publicNote": "Please note: collections are public and discoverable.",
       "cancel": "Cancel",
       "continue": "Continue"
     },
@@ -1364,9 +1365,7 @@
     "showMore": "Show more",
     "loadFailed": "Failed to load collections. Please try again.",
     "my": {
-      "title": "My Collections",
-      "publicNote": "Please note: all collections are public and discoverable.",
-      "publicNoteShort": "All collections are public and discoverable."
+      "title": "My Collections"
     },
     "followed": {
       "title": "Followed Collections",
@@ -1411,7 +1410,7 @@
     },
     "addContentDialog": {
       "title": "Add Post",
-      "description": "Add a post or article from your feed or paste a url directly.",
+      "description": "There are several ways to add posts to your collection.",
       "fromFeedTitle": "Add from feed",
       "fromFeedLead": "Find a post",
       "fromFeedRest": " you want to add and click the collections button.",

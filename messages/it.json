@@ -1330,9 +1330,9 @@
       "ctaShort": "Nuova",
       "title": "Nuova collezione",
       "nameLabel": "Titolo",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "Dai un nome alla tua raccolta",
       "descriptionLabel": "Descrizione",
-      "descriptionPlaceholder": "Il meglio dai maggiori contributori di Bitcoin",
+      "descriptionPlaceholder": "Cosa troveranno le persone qui?",
       "backgroundLabel": "Sfondo",
       "addImage": "Aggiungi immagine",
       "removeImage": "Rimuovi immagine",
@@ -1349,6 +1349,7 @@
       "title": "Benvenuto nelle Collezioni",
       "description": "Salva i post che vale la pena conservare. Raccogli i migliori contenuti dalla tua rete. Organizza idee, filtra il segnale dal rumore e condividi ciò che conta.",
       "imageAlt": "Collezioni",
+      "publicNote": "Nota: le collezioni sono pubbliche e individuabili.",
       "cancel": "Annulla",
       "continue": "Continua"
     },
@@ -1361,9 +1362,7 @@
     "showMore": "Mostra altro",
     "loadFailed": "Impossibile caricare le collezioni. Riprova.",
     "my": {
-      "title": "Le mie collezioni",
-      "publicNote": "Nota: tutte le collezioni sono pubbliche e individuabili.",
-      "publicNoteShort": "Tutte le collezioni sono pubbliche e individuabili."
+      "title": "Le mie collezioni"
     },
     "followed": {
       "title": "Collezioni seguite",
@@ -1408,7 +1407,7 @@
     },
     "addContentDialog": {
       "title": "Aggiungi post",
-      "description": "Aggiungi un post o un articolo dal tuo feed oppure incolla direttamente un URL.",
+      "description": "Ci sono diversi modi per aggiungere post alla tua raccolta.",
       "fromFeedTitle": "Aggiungi dal feed",
       "fromFeedLead": "Trova un post",
       "fromFeedRest": " che vuoi aggiungere e clicca sul pulsante delle raccolte.",

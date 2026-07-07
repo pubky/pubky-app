@@ -73,6 +73,12 @@ exports[`DialogCollectionsIntro - Snapshots > matches snapshot when open 1`] = `
         style="color: transparent;"
         width="192"
       />
+      <p
+        class="text-sm font-normal text-muted-foreground"
+        data-testid="typography"
+      >
+        Please note: collections are public and discoverable.
+      </p>
       <div
         class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
         data-slot="dialog-footer"

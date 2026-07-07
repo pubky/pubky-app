@@ -275,8 +275,7 @@ export function HeaderExploreNavigationButtons({
     <Container className={cn('hidden min-w-0 flex-1 flex-row items-center justify-end gap-3 lg:flex', className)}>
       {showSearch && <SearchInput />}
       {NAVIGATION_ITEMS.map((item) => {
-        // Home/Hot are public explore routes and navigate freely. Collections/Settings (and any
-        // other non-explore route) require an account, so they prompt Join Pubky via requireAuth.
+        // Core explore routes navigate freely; Settings requires an account.
         const requiresAuth = !isCoreExploreRoute(item.href);
         return (
           <NavigationButton
@@ -285,7 +284,7 @@ export function HeaderExploreNavigationButtons({
             onClick={requiresAuth ? () => requireAuth(() => router.push(item.href)) : undefined}
             icon={item.icon}
             label={tHeader(item.labelKey)}
-            isActive={pathname === item.href}
+            isActive={isNavItemActive(pathname, item)}
             dataCy={item.dataCy}
           />
         );

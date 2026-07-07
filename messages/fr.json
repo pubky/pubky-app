@@ -1330,9 +1330,9 @@
       "ctaShort": "Nouveau",
       "title": "Nouvelle collection",
       "nameLabel": "Titre",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "Nommez votre collection",
       "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Le meilleur des plus grands contributeurs Bitcoin",
+      "descriptionPlaceholder": "Que trouveront les gens ici ?",
       "backgroundLabel": "Arrière-plan",
       "addImage": "Ajouter une image",
       "removeImage": "Supprimer l'image",
@@ -1349,6 +1349,7 @@
       "title": "Bienvenue dans les Collections",
       "description": "Gardez les publications qui en valent la peine. Rassemblez le meilleur contenu de votre réseau. Organisez vos idées, filtrez le signal du bruit et partagez ce qui compte.",
       "imageAlt": "Collections",
+      "publicNote": "À noter : les collections sont publiques et visibles.",
       "cancel": "Annuler",
       "continue": "Continuer"
     },
@@ -1361,9 +1362,7 @@
     "showMore": "Afficher plus",
     "loadFailed": "Échec du chargement des collections. Veuillez réessayer.",
     "my": {
-      "title": "Mes collections",
-      "publicNote": "À noter : toutes les collections sont publiques et visibles.",
-      "publicNoteShort": "Toutes les collections sont publiques et visibles."
+      "title": "Mes collections"
     },
     "followed": {
       "title": "Collections suivies",
@@ -1408,7 +1407,7 @@
     },
     "addContentDialog": {
       "title": "Ajouter une publication",
-      "description": "Ajoutez une publication ou un article depuis votre fil ou collez directement une URL.",
+      "description": "Il existe plusieurs façons d'ajouter des publications à votre collection.",
       "fromFeedTitle": "Ajouter depuis le fil",
       "fromFeedLead": "Trouvez une publication",
       "fromFeedRest": " que vous voulez ajouter et cliquez sur le bouton des collections.",
