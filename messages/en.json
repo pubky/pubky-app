@@ -1351,6 +1351,7 @@
       "title": "Welcome to Collections",
       "description": "Save posts worth keeping. Collect the best content from your network. Curate ideas, filter signal from noise, and share what matters.",
       "imageAlt": "Collections",
+      "publicNote": "Please note: collections are public and discoverable.",
       "cancel": "Cancel",
       "continue": "Continue"
     },
@@ -1363,9 +1364,7 @@
     "showMore": "Show more",
     "loadFailed": "Failed to load collections. Please try again.",
     "my": {
-      "title": "My Collections",
-      "publicNote": "Please note: all collections are public and discoverable.",
-      "publicNoteShort": "All collections are public and discoverable."
+      "title": "My Collections"
     },
     "followed": {
       "title": "Followed Collections",

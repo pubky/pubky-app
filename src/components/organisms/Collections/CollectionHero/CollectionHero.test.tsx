@@ -45,6 +45,11 @@ vi.mock('@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs', () => ({
   usePostReplyRepostDialogs: vi.fn(),
 }));
 
+const mockRequireAuth = vi.fn(<T,>(action: () => T) => action());
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ requireAuth: mockRequireAuth }),
+}));
+
 const mockRouterReplace = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockRouterReplace, push: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
@@ -616,7 +621,34 @@ describe('CollectionHero', () => {
       expect(screen.getByText('collections.single.share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
       fireEvent.click(screen.getByLabelText('collections.single.share'));
 
+      expect(mockRequireAuth).toHaveBeenCalledTimes(1);
       expect(openRepostDialog).toHaveBeenCalledTimes(1);
+    });
+
+    it('prompts sign-in instead of toggling bookmark when a guest clicks Follow', () => {
+      setAuthStore(null);
+      const toggle = setBookmark({ isBookmarked: false });
+      mockRequireAuth.mockImplementation(<T,>(_action: () => T) => undefined as T);
+
+      renderHero();
+
+      fireEvent.click(screen.getByLabelText('collections.single.follow'));
+
+      expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+      expect(toggle).not.toHaveBeenCalled();
+    });
+
+    it('prompts sign-in instead of opening the share dialog when a guest clicks Share', () => {
+      setAuthStore(null);
+      const { openRepostDialog } = setRepostDialogs();
+      mockRequireAuth.mockImplementation(<T,>(_action: () => T) => undefined as T);
+
+      renderHero();
+
+      fireEvent.click(screen.getByLabelText('collections.single.share'));
+
+      expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+      expect(openRepostDialog).not.toHaveBeenCalled();
     });
   });
 

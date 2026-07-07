@@ -18,6 +18,9 @@ describe('DialogCollectionsIntro', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByAltText('Collections')).toBeInTheDocument();
+    const publicNote = screen.getByText('Please note: collections are public and discoverable.');
+    expect(publicNote).toBeInTheDocument();
+    expect(publicNote).toHaveClass('text-sm', 'text-muted-foreground');
     expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });

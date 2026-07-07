@@ -531,9 +531,9 @@ describe('Header Components', () => {
     it('renders full navigation with account routes gated behind the Join dialog', () => {
       render(<HeaderExploreNavigationButtons />);
 
-      // Home and Hot are public explore routes → real navigation links.
+      // Home, Hot, and Collections are public explore routes → real navigation links.
       const links = screen.getAllByRole('link');
-      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot']);
+      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot', '/collections']);
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
 
       // All four nav icons are shown.
@@ -542,11 +542,10 @@ describe('Header Components', () => {
       expect(document.querySelector('.lucide-library')).toBeInTheDocument();
       expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
 
-      // Collections/Settings require an account, so they render as auth-gated buttons, not links.
-      expect(document.querySelector('.lucide-library')?.closest('a')).toBeNull();
+      // Settings require an account, so it renders as an auth-gated button, not a link.
       expect(document.querySelector('.lucide-settings')?.closest('a')).toBeNull();
-      expect(document.querySelector('[data-cy="header-collections-btn"]')?.tagName).toBe('BUTTON');
       expect(document.querySelector('[data-cy="header-settings-btn"]')?.tagName).toBe('BUTTON');
+      expect(document.querySelector('.lucide-library')?.closest('a')).toHaveAttribute('href', '/collections');
     });
 
     it('opens sign-in dialog from the Join button', () => {
@@ -555,6 +554,17 @@ describe('Header Components', () => {
       fireEvent.click(screen.getByTestId('header-explore-join-button'));
 
       expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
+    });
+
+    it('highlights Collections on single collection pages for guests', () => {
+      const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+      vi.mocked(usePathname).mockReturnValue(`/collections/${pubky}/0034BBBDFK83G`);
+
+      render(<HeaderExploreNavigationButtons />);
+
+      const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
+      expect(collectionsButton).toHaveClass('bg-secondary');
+      expect(collectionsButton).not.toHaveClass('bg-white/5');
     });
   });
 
