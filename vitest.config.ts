@@ -85,6 +85,9 @@ export default defineConfig({
                 comparatorOptions: {
                   allowedMismatchedPixelRatio: 0.001,
                 },
+                // Home feed desktop (WebKit/Linux) needs extra headroom for
+                // layout to settle after fonts/images decode.
+                timeout: 10_000,
               },
             },
             // `viewport` below is the INITIAL browser size only. Each test
