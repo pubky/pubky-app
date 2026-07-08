@@ -115,7 +115,7 @@ export function DialogCollectionForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent
-        className="w-3xl border-border bg-popover"
+        className="w-xl border-border bg-popover"
         onOpenAutoFocus={disableOpenAutoFocus ? (event) => event.preventDefault() : undefined}
       >
         <DialogHeader>

@@ -311,18 +311,6 @@ vi.mock('@/atoms/Typography/Typography', () => {
   };
 });
 
-// Mock env — real implementations with Env override
-vi.mock('@/libs/env/env', async () => {
-  const actual = await vi.importActual<typeof import('@/libs/env/env')>('@/libs/env/env');
-  return {
-    ...actual,
-    Env: {
-      ...actual.Env,
-      NEXT_MAX_STREAM_TAGS: 5,
-    },
-  };
-});
-
 // --- Test Helpers ---
 
 const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema => ({

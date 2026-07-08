@@ -308,7 +308,7 @@ export function PostInput({
 
         {/* Show original post preview for reposts */}
         {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
-          <PostPreviewCard postId={originalPostId} className="bg-card" />
+          <PostPreviewCard postId={originalPostId} className="bg-card" interactiveActions={false} />
         )}
 
         <PostInputExpandableSection

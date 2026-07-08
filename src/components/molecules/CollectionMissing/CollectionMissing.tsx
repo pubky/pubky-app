@@ -27,7 +27,7 @@ export const CollectionMissing = ({ className }: CollectionMissingProps) => {
   const t = useTranslations('collections');
 
   return (
-    <Container overrideDefaults className={cn('relative block h-full w-full lg:max-w-187', className)}>
+    <Container overrideDefaults className={cn('relative block h-full w-full', className)}>
       <Card className="relative h-full gap-0 overflow-hidden rounded-md py-0">
         <CardContent className="flex h-full flex-col items-center justify-center gap-3 p-6">
           <Typography size="sm" className="text-center font-normal text-muted-foreground">

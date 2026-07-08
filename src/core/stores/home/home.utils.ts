@@ -128,3 +128,31 @@ export function parseStreamId(streamId: string): {
 
   return { sort, reach, content };
 }
+
+const POST_KIND_TO_CONTENT = {
+  short: CONTENT.SHORT,
+  long: CONTENT.LONG,
+  image: CONTENT.IMAGES,
+  video: CONTENT.VIDEOS,
+  link: CONTENT.LINKS,
+  file: CONTENT.FILES,
+  collection: CONTENT.COLLECTIONS,
+} as const satisfies Record<string, ContentType>;
+
+/**
+ * Returns whether a post kind belongs in a timeline stream identified by streamId.
+ * Unparseable stream ids (profile, author collections, etc.) accept all kinds.
+ */
+export function postKindBelongsToStream(postKind: string, streamId: string): boolean {
+  const parsed = parseStreamId(streamId);
+  if (!parsed || parsed.content === CONTENT.ALL) {
+    return true;
+  }
+
+  const postContent = POST_KIND_TO_CONTENT[postKind as keyof typeof POST_KIND_TO_CONTENT];
+  if (!postContent) {
+    return false;
+  }
+
+  return postContent === parsed.content;
+}

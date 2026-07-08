@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Minus, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { APP_ROUTES } from '@/app/routes';
+import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -98,6 +98,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
 
   const ownerName = ownerProfile?.name || authorPubky;
   const ownerAvatarUrl = ownerProfile?.avatarUrl;
+  const ownerProfileHref = getUserProfileUrl(authorPubky, currentUserPubky);
 
   // Override the generic bookmark toast copy so Follow / Unfollow reads as a
   // collection action (matches `CollectionCard`).
@@ -206,8 +207,9 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
             isResolved={isOwnerResolved}
             size="md"
             className="min-w-0 flex-1 gap-2 lg:flex-none"
+            profileHref={ownerProfileHref}
           />
-          <CollectionCountBadge count={itemCount} onCover={!!coverImage} />
+          <CollectionCountBadge count={itemCount} />
         </Container>
 
         {/* Description */}

@@ -16,6 +16,7 @@ import {
   POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
   POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
+import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
@@ -26,6 +27,7 @@ import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+import { postKindBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
 
@@ -205,8 +207,22 @@ export function usePostInput({
 
       // Only prepend to timeline for posts and reposts, not replies or edits
       if (variant !== POST_INPUT_VARIANT.REPLY && variant !== POST_INPUT_VARIANT.EDIT) {
-        timelineFeed?.prependPosts(createdPostId);
-        setIsExpanded(false);
+        void (async () => {
+          try {
+            const streamId = timelineFeed?.streamId;
+            if (!streamId) {
+              await timelineFeed?.prependPosts(createdPostId);
+              return;
+            }
+
+            const details = await PostController.getDetails({ compositeId: createdPostId });
+            if (!details?.kind || postKindBelongsToStream(details.kind, streamId)) {
+              await timelineFeed.prependPosts(createdPostId);
+            }
+          } finally {
+            setIsExpanded(false);
+          }
+        })();
       }
       // Call original onSuccess callback if provided
       onSuccess?.(createdPostId);
