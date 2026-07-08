@@ -263,7 +263,7 @@ describe('FollowedCollections', () => {
     expect(result).not.toContain('a:p2');
   });
 
-  it('renders the empty state when seed finished and live query yields no ids', async () => {
+  it('renders nothing when seed finished and live query yields no ids', async () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
     mockUseLiveQuery.mockReturnValue([]);
     mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true }));
@@ -273,11 +273,11 @@ describe('FollowedCollections', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('collections.followed.empty')).toBeInTheDocument();
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalled();
     });
+    expect(screen.queryByText('collections.followed.empty')).not.toBeInTheDocument();
+    expect(screen.queryByText('collections.followed.title')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
-    // Section title still present.
-    expect(screen.getByText('collections.followed.title')).toBeInTheDocument();
   });
 
   it('hides Show More when reachedEnd is true', async () => {
@@ -366,10 +366,10 @@ describe('FollowedCollections', () => {
 
       const { container } = await act(async () => render(<FollowedCollections />));
       await waitFor(() => {
-        expect(screen.getByText('collections.followed.empty')).toBeInTheDocument();
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalled();
       });
 
-      expect(container.firstChild).toMatchSnapshot();
+      expect(container.firstChild).toBeNull();
     });
   });
 });

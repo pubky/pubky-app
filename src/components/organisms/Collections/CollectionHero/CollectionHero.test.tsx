@@ -345,11 +345,21 @@ describe('CollectionHero', () => {
 
     expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-    expect(screen.getByText('2 posts')).toBeInTheDocument(); // compact-formatted item count
+    expect(screen.getByLabelText('2 posts')).toBeInTheDocument(); // compact-formatted item count
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
     expect(avatar).toHaveAttribute('data-fallback-seed', AUTHOR_PUBKY);
+  });
+
+  it('links the owner avatar and name to the author profile', () => {
+    renderHero();
+
+    const profileHref = `/profile/${AUTHOR_PUBKY}`;
+    const profileLinks = screen.getAllByRole('link').filter((link) => link.getAttribute('href') === profileHref);
+    expect(profileLinks).toHaveLength(2);
+    expect(profileLinks[0]).toContainElement(screen.getByTestId('avatar-with-fallback'));
+    expect(profileLinks[1]).toHaveTextContent('Bitcoin Wizard');
   });
 
   it('wires ClickableTagsList to the composite id with POST kind and the add button enabled', () => {
@@ -384,7 +394,7 @@ describe('CollectionHero', () => {
     renderHero();
 
     expect(screen.queryByText('A bit of Bitcoin purity amidst all of the madness.')).not.toBeInTheDocument();
-    expect(screen.getByText('0 posts')).toBeInTheDocument(); // empty items count still renders
+    expect(screen.getByLabelText('0 posts')).toBeInTheDocument(); // empty items count still renders
   });
 
   it('renders the hero skeleton while post details have not loaded yet', () => {

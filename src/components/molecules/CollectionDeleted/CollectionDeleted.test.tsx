@@ -51,12 +51,12 @@ describe('CollectionDeleted', () => {
     expect(screen.getByTestId('card-content')).toBeInTheDocument();
   });
 
-  it('matches the regular CollectionCard outer footprint (full width, lg max-width)', () => {
+  it('matches the regular CollectionCard outer footprint (full width)', () => {
     render(<CollectionDeleted />);
     const container = screen.getByTestId('container');
     // Must mirror CollectionCard's outer wrapper so the deleted slot has
     // the same footprint in any grid it lands in.
-    expect(container).toHaveClass('block', 'h-full', 'w-full', 'lg:max-w-187');
+    expect(container).toHaveClass('block', 'h-full', 'w-full');
   });
 
   it('centers the deleted message within the card', () => {
