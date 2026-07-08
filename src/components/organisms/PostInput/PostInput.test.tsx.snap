@@ -1154,6 +1154,7 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
     </div>
     <div
       class="bg-card"
+      data-interactive-actions="false"
       data-post-id="test-post-123"
       data-testid="post-preview-card"
     >

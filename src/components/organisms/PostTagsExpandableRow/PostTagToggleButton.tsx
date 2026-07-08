@@ -15,9 +15,18 @@ interface PostTagToggleButtonProps {
   onToggle: (event: MouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
   className?: string;
+  /** Elevated `bg-card` treatment for CTAs on a `bg-muted` embed surface. */
+  onMutedSurface?: boolean;
 }
 
-export function PostTagToggleButton({ postId, expanded, onToggle, disabled, className }: PostTagToggleButtonProps) {
+export function PostTagToggleButton({
+  postId,
+  expanded,
+  onToggle,
+  disabled,
+  className,
+  onMutedSurface = false,
+}: PostTagToggleButtonProps) {
   const t = useTranslations('post.actions');
   const { postCounts, isLoading } = usePostCounts(postId);
   const tagCount = postCounts?.unique_tags ?? 0;
@@ -35,10 +44,18 @@ export function PostTagToggleButton({ postId, expanded, onToggle, disabled, clas
       aria-expanded={expanded}
       aria-label={t('tagPost', { count: tagCount })}
       data-cy="post-tag-btn"
-      className={cn('border-none shadow-xs', className)}
+      className={cn(
+        'border-none shadow-xs',
+        onMutedSurface && 'border-card bg-card text-foreground hover:bg-card/90',
+        className,
+      )}
     >
       <Tag />
-      <Typography as="span" overrideDefaults className="text-xs leading-4 font-bold text-muted-foreground">
+      <Typography
+        as="span"
+        overrideDefaults
+        className={cn('text-xs leading-4 font-bold', onMutedSurface ? 'text-foreground' : 'text-muted-foreground')}
+      >
         {tagCount}
       </Typography>
     </Button>

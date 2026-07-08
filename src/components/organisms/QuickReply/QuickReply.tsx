@@ -10,16 +10,15 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
 import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
@@ -122,9 +121,7 @@ export function QuickReply({
   // Account for spacing between main post and QuickReply in connector calculation
   const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_SPACER_HEIGHT : undefined;
 
-  const isMobile = useIsMobile();
-  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
-  const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
+  const isWideLayout = useEffectiveTagsLayout() === 'side';
 
   return (
     <Container overrideDefaults className="relative flex" data-testid="quick-reply" aria-busy={isSubmitting}>

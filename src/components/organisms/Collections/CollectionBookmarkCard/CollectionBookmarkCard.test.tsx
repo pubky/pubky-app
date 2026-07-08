@@ -129,7 +129,7 @@ describe('CollectionBookmarkCard', () => {
   it('renders the bookmark count label from the summary', () => {
     setup({ bookmarkCount: 42 });
     render(<CollectionBookmarkCard />);
-    expect(screen.getByText('42 posts')).toBeInTheDocument();
+    expect(screen.getByLabelText('42 posts')).toBeInTheDocument();
   });
 
   it('renders no count label when the bookmark count is undefined', () => {

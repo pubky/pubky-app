@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
@@ -9,7 +9,10 @@ import {
   POST_ATTACHMENT_MAX_FILES,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
+import { PostController } from '@/controllers/post/post';
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { usePostInput } from './usePostInput';
@@ -86,16 +89,24 @@ vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   })),
 }));
 
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    getDetails: vi.fn(),
+  },
+}));
+
 // Mock TimelineFeed context
 const mockPrependPosts = vi.fn();
 const mockPrependOptimisticPosts = vi.fn();
+const mockTimelineFeedContext = {
+  variant: TIMELINE_FEED_VARIANT.HOME,
+  streamId: PostStreamTypes.TIMELINE_ALL_ALL,
+  prependPosts: mockPrependPosts,
+  prependOptimisticPosts: mockPrependOptimisticPosts,
+  removePosts: vi.fn(),
+};
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
-  useTimelineFeedContext: vi.fn(() => ({
-    variant: TIMELINE_FEED_VARIANT.HOME,
-    prependPosts: mockPrependPosts,
-    prependOptimisticPosts: mockPrependOptimisticPosts,
-    removePosts: vi.fn(),
-  })),
+  useTimelineFeedContext: vi.fn(() => mockTimelineFeedContext),
 }));
 
 // Mock useToast
@@ -135,6 +146,8 @@ describe('usePostInput', () => {
     mockEdit.mockClear();
     mockSetPostAttachments.mockClear();
     mockCreateObjectURL.mockClear();
+    vi.mocked(useTimelineFeedContext).mockReturnValue(mockTimelineFeedContext);
+    vi.mocked(PostController.getDetails).mockResolvedValue({ kind: 'short' } as never);
   });
 
   describe('initial state', () => {
@@ -622,8 +635,71 @@ describe('usePostInput', () => {
         await result.current.handleSubmit();
       });
 
-      expect(mockPrependPosts).toHaveBeenCalledWith('created-post-id');
+      await waitFor(() => {
+        expect(mockPrependPosts).toHaveBeenCalledWith('created-post-id');
+      });
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('does not prependPosts when the created post kind does not match the stream content filter', async () => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+      vi.mocked(useTimelineFeedContext).mockReturnValue({
+        ...mockTimelineFeedContext,
+        streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION,
+      });
+      vi.mocked(PostController.getDetails).mockResolvedValue({ kind: 'short' } as never);
+
+      const mockOnSuccess = vi.fn();
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+          onSuccess: mockOnSuccess,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(PostController.getDetails).toHaveBeenCalledWith({ compositeId: 'created-post-id' });
+      });
+      expect(mockPrependPosts).not.toHaveBeenCalled();
+      expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('collapses PostInput when the created post kind does not match the stream content filter', async () => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+      vi.mocked(useTimelineFeedContext).mockReturnValue({
+        ...mockTimelineFeedContext,
+        streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION,
+      });
+      vi.mocked(PostController.getDetails).mockResolvedValue({ kind: 'short' } as never);
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+
+      act(() => {
+        result.current.handleExpand();
+      });
+      expect(result.current.isExpanded).toBe(true);
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isExpanded).toBe(false);
+      });
     });
 
     it('collapses PostInput after successful post submission', async () => {
@@ -647,7 +723,9 @@ describe('usePostInput', () => {
         await result.current.handleSubmit();
       });
 
-      expect(result.current.isExpanded).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isExpanded).toBe(false);
+      });
     });
 
     it('does not collapse PostInput after successful reply submission', async () => {
@@ -755,7 +833,9 @@ describe('usePostInput', () => {
         await result.current.handleSubmit();
       });
 
-      expect(mockPrependPosts).toHaveBeenCalledWith('created-repost-id');
+      await waitFor(() => {
+        expect(mockPrependPosts).toHaveBeenCalledWith('created-repost-id');
+      });
       expect(mockOnSuccess).toHaveBeenCalledWith('created-repost-id');
     });
 
