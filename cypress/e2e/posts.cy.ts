@@ -458,19 +458,26 @@ describe('posts', () => {
     const postContent1 = `This post will be bookmarked! ${Date.now()}`;
     const postContent2 = `This post will also be bookmarked! ${Date.now()}`;
 
+    const bookmarkPost = (postContent: string) => {
+      cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+        cy.get('[data-cy="post-bookmark-btn"]').click();
+      });
+      cy.get('[data-cy="post-save-bookmarks-option"]').should('be.visible');
+      cy.intercept('PUT', '**/pub/pubky.app/bookmarks/**').as('createBookmark');
+      cy.get('[data-cy="post-save-bookmarks-option"]').click();
+      cy.wait('@createBookmark').its('response.statusCode').should('eq', 201);
+      // click away to dismiss collections popover list
+      cy.get('body').click({ force: true });
+      cy.get('[data-cy="post-save-bookmarks-option"]').should('not.exist');
+    };
+
     createQuickPost(postContent1);
-    cy.findFirstPostInFeedFiltered(postContent1, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
-      cy.get('[data-cy="post-bookmark-btn"]').click();
-    });
-    cy.get('[data-cy="post-save-bookmarks-option"]').click();
+    bookmarkPost(postContent1);
 
     createQuickPost(postContent2);
-    cy.findFirstPostInFeedFiltered(postContent2, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
-      cy.get('[data-cy="post-bookmark-btn"]').click();
-    });
-    cy.get('[data-cy="post-save-bookmarks-option"]').click();
+    bookmarkPost(postContent2);
 
-    cy.get('a[href="/collections"]').first().click();
+    cy.get('[data-cy="header-collections-btn"]').click();
     cy.location('pathname').should('eq', '/collections');
     cy.get('[data-cy="collection-bookmark-card"]').click();
     cy.location('pathname').should('eq', '/collections/bookmarks');
@@ -485,16 +492,16 @@ describe('posts', () => {
       .then(($posts) => {
         $posts.each((_idx, element) => {
           cy.wrap(element).find('[data-cy="post-bookmark-btn"]').click();
+          cy.intercept('DELETE', '**/pub/pubky.app/bookmarks/**').as('deleteBookmark');
           cy.get('[data-cy="post-save-bookmarks-option"]').click();
-          // The save picker stays open after toggling (multi-save UX), so close
-          // it before the next post — otherwise clicking the next trigger is an
-          // outside-dismiss on the still-open menu instead of opening it.
-          cy.get('body').type('{esc}');
+          cy.wait('@deleteBookmark').its('response.statusCode').should('eq', 204);
+          // click away to dismiss collections popover list
+          cy.get('body').click({ force: true });
         });
       });
 
     cy.reload();
-    cy.contains('No bookmarks yet').should('be.visible');
+    cy.contains('This collection is empty').should('be.visible');
   });
 
   it('can repost with content then delete the repost', () => {
@@ -522,16 +529,23 @@ describe('posts', () => {
     const postContent = `This post will be reposted without content! ${Date.now()}`;
     createQuickPost(postContent);
 
+    // Wait for the new post toast to dismiss before reposting
+    cy.contains('[data-cy="toast"]', 'Post published').should('not.exist');
+
     repostPost({ filterText: postContent });
 
-    // After repost, the toast should appear with "Reposted!" and an Undo button
+    cy.intercept('DELETE', '**/pub/pubky.app/posts/**').as('postDeleted');
+
+    // After repost, success toast has clickable Undo button
     cy.get('[data-cy="toast"]')
       .should('be.visible')
-      .and('contain', 'Reposted!')
+      .should('contain', 'Reposted')
       .and('contain', 'Undo')
       .within(() => {
         cy.contains('button', 'Undo').click();
       });
+
+    cy.wait('@postDeleted').its('response.statusCode').should('eq', 204);
 
     // After clicking Undo, the repost should be removed from the feed
     cy.findFirstPostInFeed().within(() => {

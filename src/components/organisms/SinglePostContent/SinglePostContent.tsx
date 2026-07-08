@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { isArticleContent } from '@/libs/post/articleContent';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
 import { PostArticleDetail } from '@/organisms/PostArticleDetail/PostArticleDetail';
@@ -31,7 +32,7 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
   // Check if parent post is deleted to determine replyability
   const isDeleted = isPostDeleted(postDetails.content);
 
-  const isArticle = postDetails.kind === 'long';
+  const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
 
   return (
     <PostMainLayoutProvider tagsLayout={tagsLayout}>

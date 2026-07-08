@@ -2,6 +2,7 @@
 
 import { Container } from '@/atoms/Container/Container';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { isArticleContent } from '@/libs/post/articleContent';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
@@ -42,7 +43,7 @@ export function PostContentBase({
   const isDeleted = isPostDeleted(postDetails.content);
   const hasContent = postDetails.content.trim().length > 0;
   const isBlurred = postDetails.is_blurred;
-  const isArticle = postDetails.kind === 'long';
+  const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
   const hasAttachments = (postDetails.attachments?.length ?? 0) > 0 || (localAttachments?.length ?? 0) > 0;
   const isCollection = postDetails.kind === 'collection';
 
