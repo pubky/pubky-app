@@ -1,5 +1,5 @@
 import type { Metadata as NextMetadata } from 'next';
-import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
+import { parseArticleContent } from '@/libs/post/articleContent';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
 import { isPostDeleted } from '@/libs/utils/utils';
@@ -12,15 +12,6 @@ export interface PostPageProps {
     userId: string;
     postId: string;
   }>;
-}
-
-function parseArticleTitle(content: string): string | null {
-  try {
-    const parsed = JSON.parse(content) as ArticleJSON;
-    return parsed.title || null;
-  } catch {
-    return null;
-  }
 }
 
 // Reuse a single Segmenter instance across requests.
@@ -44,7 +35,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     const postPreview = isDeleted
       ? 'This post has been deleted by its author.'
       : kind === 'long'
-        ? (parseArticleTitle(content) ?? content)
+        ? parseArticleContent(content)?.title || content
         : kind === 'collection'
           ? (parseCollectionContent(content)?.name ?? content)
           : content;

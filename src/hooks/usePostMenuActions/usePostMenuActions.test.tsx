@@ -516,7 +516,7 @@ describe('usePostMenuActions', () => {
 
     it('does not include copy text action for articles', () => {
       mockUsePostDetails.mockReturnValue({
-        postDetails: { id: 'post456', content: 'Test article', kind: 'long' },
+        postDetails: { id: 'post456', content: JSON.stringify({ title: 'Test article', body: 'Body' }), kind: 'long' },
         isLoading: false,
       });
 
@@ -526,6 +526,26 @@ describe('usePostMenuActions', () => {
 
       const copyTextItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.COPY_TEXT);
       expect(copyTextItem).toBeUndefined();
+    });
+
+    it('includes copy text action for malformed long posts', async () => {
+      mockUsePostDetails.mockReturnValue({
+        postDetails: { id: 'post456', content: 'Raw long content', kind: 'long' },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() =>
+        usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
+      );
+
+      const copyTextItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.COPY_TEXT);
+      expect(copyTextItem).toBeDefined();
+
+      await act(async () => {
+        await copyTextItem?.onClick();
+      });
+
+      expect(defaultMocks.copyToClipboard).toHaveBeenCalledWith('Raw long content');
     });
 
     it('does not include copy text action for collections', () => {
