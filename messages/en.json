@@ -656,6 +656,30 @@
       "newPost": "New Post",
       "description": "{title} dialog"
     },
+    "lockContent": {
+      "title": "Lock Content",
+      "tabs": {
+        "password": "Password",
+        "payment": "Payment"
+      },
+      "password": {
+        "description": "Please set a password for this content. Anyone with the password can unlock your content. The first few words will be visible for everyone.",
+        "label": "Password",
+        "repeatLabel": "Repeat Password",
+        "mismatch": "Passwords do not match.",
+        "rules": {
+          "length": "At least 8 characters",
+          "number": "At least 1 number",
+          "special": "At least 1 special character"
+        }
+      },
+      "payment": {
+        "toBeDeveloped": "To be developed"
+      },
+      "appliedToast": "Content locked",
+      "cancel": "Cancel",
+      "apply": "Apply Lock"
+    },
     "reply": {
       "title": "Reply",
       "hiddenTitle": "Reply to post",

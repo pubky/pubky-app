@@ -14,7 +14,9 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
+import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
+import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
 import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
@@ -139,6 +141,12 @@ export function PostInput({
     handleArticleTitleChange,
     handleArticleBodyChange,
     handleArticleClick,
+  });
+
+  const isPostVariant = variant === POST_INPUT_VARIANT.POST;
+  const { lockSwitch, isLockDialogOpen, closeLockDialog, handleLockPublished } = usePostInputLock({
+    isEnabled: isPostVariant,
+    onSuccess,
   });
 
   const isValid = () => {
@@ -331,8 +339,13 @@ export function PostInput({
           submitIcon={submitIcon}
           parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
           characterLimit={characterLimit}
+          lockSwitch={lockSwitch}
         />
       </Container>
+
+      {isPostVariant && (
+        <DialogLockContent open={isLockDialogOpen} onOpenChange={closeLockDialog} onPublished={handleLockPublished} />
+      )}
     </Container>
   );
 }

@@ -656,6 +656,30 @@
       "newPost": "新しい投稿",
       "description": "{title}ダイアログ"
     },
+    "lockContent": {
+      "title": "コンテンツをロック",
+      "tabs": {
+        "password": "パスワード",
+        "payment": "支払い"
+      },
+      "password": {
+        "description": "このコンテンツにパスワードを設定してください。パスワードを知っている人は誰でもコンテンツのロックを解除できます。最初の数語はすべての人に表示されます。",
+        "label": "パスワード",
+        "repeatLabel": "パスワードを再入力",
+        "mismatch": "パスワードが一致しません。",
+        "rules": {
+          "length": "8文字以上",
+          "number": "数字を1つ以上",
+          "special": "特殊文字を1つ以上"
+        }
+      },
+      "payment": {
+        "toBeDeveloped": "開発中"
+      },
+      "appliedToast": "コンテンツをロックしました",
+      "cancel": "キャンセル",
+      "apply": "ロックを適用"
+    },
     "reply": {
       "title": "返信",
       "hiddenTitle": "投稿に返信",

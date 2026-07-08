@@ -658,6 +658,30 @@
       "newPost": "Neuer Beitrag",
       "description": "{title}-Dialog"
     },
+    "lockContent": {
+      "title": "Inhalt sperren",
+      "tabs": {
+        "password": "Passwort",
+        "payment": "Zahlung"
+      },
+      "password": {
+        "description": "Bitte lege ein Passwort für diesen Inhalt fest. Jeder mit dem Passwort kann deinen Inhalt freischalten. Die ersten Wörter sind für alle sichtbar.",
+        "label": "Passwort",
+        "repeatLabel": "Passwort wiederholen",
+        "mismatch": "Die Passwörter stimmen nicht überein.",
+        "rules": {
+          "length": "Mindestens 8 Zeichen",
+          "number": "Mindestens 1 Zahl",
+          "special": "Mindestens 1 Sonderzeichen"
+        }
+      },
+      "payment": {
+        "toBeDeveloped": "In Entwicklung"
+      },
+      "appliedToast": "Inhalt gesperrt",
+      "cancel": "Abbrechen",
+      "apply": "Sperre anwenden"
+    },
     "reply": {
       "title": "Antwort",
       "hiddenTitle": "Auf Beitrag antworten",

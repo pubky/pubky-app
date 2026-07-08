@@ -39,6 +39,7 @@ export function PostInputExpandableSection({
   className,
   parentGapPx = 0,
   characterLimit,
+  lockSwitch,
 }: PostInputExpandableSectionProps) {
   const hasContent = content.trim().length > 0;
   const isUiDisabled = isSubmitting || isDisabled;
@@ -136,6 +137,7 @@ export function PostInputExpandableSection({
                   isEdit={isEdit}
                   postButtonIcon={submitIcon ?? IconsButton[submitMode]}
                   characterLimit={characterLimit}
+                  lockSwitch={lockSwitch}
                 />
               </Container>
             </Container>

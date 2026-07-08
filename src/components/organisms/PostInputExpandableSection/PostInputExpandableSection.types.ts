@@ -1,5 +1,9 @@
 import type { ComponentType } from 'react';
-import type { CharacterLimit, PostInputActionSubmitMode } from '../PostInputActionBar/PostInputActionBar.types';
+import type {
+  CharacterLimit,
+  PostInputActionBarProps,
+  PostInputActionSubmitMode,
+} from '../PostInputActionBar/PostInputActionBar.types';
 
 export interface PostInputExpandableSectionProps {
   isExpanded: boolean;
@@ -33,4 +37,6 @@ export interface PostInputExpandableSectionProps {
    */
   parentGapPx?: number;
   characterLimit?: CharacterLimit;
+  /** Creator-only "lock content" toggle in the action bar. Rendered only when provided. */
+  lockSwitch?: PostInputActionBarProps['lockSwitch'];
 }

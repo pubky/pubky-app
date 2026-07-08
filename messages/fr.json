@@ -656,6 +656,30 @@
       "newPost": "Nouvelle publication",
       "description": "Dialogue de {title}"
     },
+    "lockContent": {
+      "title": "Verrouiller le contenu",
+      "tabs": {
+        "password": "Mot de passe",
+        "payment": "Paiement"
+      },
+      "password": {
+        "description": "Définissez un mot de passe pour ce contenu. Toute personne disposant du mot de passe pourra le déverrouiller. Les premiers mots seront visibles par tous.",
+        "label": "Mot de passe",
+        "repeatLabel": "Répéter le mot de passe",
+        "mismatch": "Les mots de passe ne correspondent pas.",
+        "rules": {
+          "length": "Au moins 8 caractères",
+          "number": "Au moins 1 chiffre",
+          "special": "Au moins 1 caractère spécial"
+        }
+      },
+      "payment": {
+        "toBeDeveloped": "En cours de développement"
+      },
+      "appliedToast": "Contenu verrouillé",
+      "cancel": "Annuler",
+      "apply": "Appliquer le verrouillage"
+    },
     "reply": {
       "title": "Réponse",
       "hiddenTitle": "Repondre a la publication",

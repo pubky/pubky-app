@@ -656,6 +656,30 @@
       "newPost": "新帖子",
       "description": "{title} 对话框"
     },
+    "lockContent": {
+      "title": "锁定内容",
+      "tabs": {
+        "password": "密码",
+        "payment": "付款"
+      },
+      "password": {
+        "description": "请为此内容设置密码。任何拥有密码的人都可以解锁你的内容。开头的几个字将对所有人可见。",
+        "label": "密码",
+        "repeatLabel": "重复密码",
+        "mismatch": "两次输入的密码不一致。",
+        "rules": {
+          "length": "至少 8 个字符",
+          "number": "至少 1 个数字",
+          "special": "至少 1 个特殊字符"
+        }
+      },
+      "payment": {
+        "toBeDeveloped": "开发中"
+      },
+      "appliedToast": "内容已锁定",
+      "cancel": "取消",
+      "apply": "应用锁定"
+    },
     "reply": {
       "title": "回复",
       "hiddenTitle": "回复帖子",

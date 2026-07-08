@@ -656,6 +656,30 @@
       "newPost": "Nuovo post",
       "description": "Dialogo {title}"
     },
+    "lockContent": {
+      "title": "Blocca contenuto",
+      "tabs": {
+        "password": "Password",
+        "payment": "Pagamento"
+      },
+      "password": {
+        "description": "Imposta una password per questo contenuto. Chiunque abbia la password potrà sbloccarlo. Le prime parole saranno visibili a tutti.",
+        "label": "Password",
+        "repeatLabel": "Ripeti password",
+        "mismatch": "Le password non corrispondono.",
+        "rules": {
+          "length": "Almeno 8 caratteri",
+          "number": "Almeno 1 numero",
+          "special": "Almeno 1 carattere speciale"
+        }
+      },
+      "payment": {
+        "toBeDeveloped": "In sviluppo"
+      },
+      "appliedToast": "Contenuto bloccato",
+      "cancel": "Annulla",
+      "apply": "Applica blocco"
+    },
     "reply": {
       "title": "Risposta",
       "hiddenTitle": "Rispondi al post",

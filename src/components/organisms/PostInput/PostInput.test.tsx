@@ -9,6 +9,7 @@ import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
@@ -527,6 +528,18 @@ describe('PostInput', () => {
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText("What's on your mind?")).toBeInTheDocument();
+  });
+
+  it('uses the same submit handler for Ctrl/Cmd+Enter and the Post button', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    // The handler given to useEnterSubmit (keyboard submit) must be the exact same reference passed
+    // to the action bar's Post button, so toggling the lock switch gates both entry points.
+    const actionBarProps = vi.mocked(PostInputActionBar).mock.calls.at(-1)?.[0];
+    const enterSubmitHandlerArg = mockUseEnterSubmit.mock.calls.at(-1)?.[1];
+
+    expect(enterSubmitHandlerArg).toBeDefined();
+    expect(enterSubmitHandlerArg).toBe(actionBarProps?.onPostClick);
   });
 
   it('passes characterLimit to header and action bar for non-article mode', () => {

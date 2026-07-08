@@ -248,6 +248,23 @@ describe('PostInputActionBar', () => {
 
     expect(screen.getByTestId('custom-post-icon')).toBeInTheDocument();
   });
+
+  it('does not render the lock switch when lockSwitch is not provided', () => {
+    render(<PostInputActionBar hideArticleButton={false} />);
+    expect(screen.queryByRole('switch', { name: 'Lock content' })).not.toBeInTheDocument();
+  });
+
+  it('renders the lock switch when lockSwitch is provided', () => {
+    render(<PostInputActionBar hideArticleButton={false} lockSwitch={{ checked: false, onCheckedChange: vi.fn() }} />);
+    expect(screen.getByRole('switch', { name: 'Lock content' })).toBeInTheDocument();
+  });
+
+  it('calls lockSwitch.onCheckedChange when the lock switch is toggled', () => {
+    const onCheckedChange = vi.fn();
+    render(<PostInputActionBar hideArticleButton={false} lockSwitch={{ checked: false, onCheckedChange }} />);
+    fireEvent.click(screen.getByRole('switch', { name: 'Lock content' }));
+    expect(onCheckedChange).toHaveBeenCalledWith(true);
+  });
 });
 
 describe('PostInputActionBar - Snapshots', () => {
