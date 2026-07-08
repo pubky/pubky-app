@@ -10,6 +10,7 @@ import {
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
+import { Logger } from '@/libs/logger/logger';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
@@ -94,6 +95,14 @@ vi.mock('@/controllers/post/post', () => ({
     getDetails: vi.fn(),
   },
 }));
+
+vi.mock('@/libs/logger/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
+  return {
+    ...actual,
+    Logger: { ...actual.Logger, error: vi.fn() },
+  };
+});
 
 // Mock TimelineFeed context
 const mockPrependPosts = vi.fn();
@@ -699,6 +708,44 @@ describe('usePostInput', () => {
 
       await waitFor(() => {
         expect(result.current.isExpanded).toBe(false);
+      });
+    });
+
+    it('collapses PostInput and logs when getDetails rejects during stream-gated prepend', async () => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+      vi.mocked(useTimelineFeedContext).mockReturnValue({
+        ...mockTimelineFeedContext,
+        streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION,
+      });
+      const getDetailsError = new Error('getDetails failed');
+      vi.mocked(PostController.getDetails).mockRejectedValue(getDetailsError);
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+
+      act(() => {
+        result.current.handleExpand();
+      });
+      expect(result.current.isExpanded).toBe(true);
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isExpanded).toBe(false);
+      });
+      expect(mockPrependPosts).not.toHaveBeenCalled();
+      expect(Logger.error).toHaveBeenCalledWith('[usePostInput] Failed to prepend created post to timeline', {
+        error: getDetailsError,
+        createdPostId: 'created-post-id',
+        streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION,
       });
     });
 

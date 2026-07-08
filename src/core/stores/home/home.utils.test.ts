@@ -287,6 +287,11 @@ describe('filters.utils', () => {
       expect(postKindBelongsToStream('collection', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
     });
 
+    it('rejects unknown post kinds when the stream has a specific content filter', () => {
+      expect(postKindBelongsToStream('unknown', PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(false);
+      expect(postKindBelongsToStream('unknown', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
+    });
+
     it('allows any kind for unparseable stream ids', () => {
       expect(postKindBelongsToStream('short', 'author:pubky123')).toBe(true);
       expect(postKindBelongsToStream('collection', 'pubky123:author:collection')).toBe(true);

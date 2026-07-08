@@ -51,7 +51,7 @@ interface PostPreviewCardProps {
  * - Reply previews: post being replied to in `DialogReply` (non-collection posts only)
  */
 export function PostPreviewCard({ postId, className, interactiveActions = true }: PostPreviewCardProps) {
-  const { navigateToPost, navigateToCollection } = usePostNavigation();
+  const { navigateToPost } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
   const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
@@ -63,27 +63,17 @@ export function PostPreviewCard({ postId, className, interactiveActions = true }
   // PostMissing as a direct Card child (it IS a CardContent) so it isn't nested
   // inside the inner CardContent — matching how PostMain renders PostDeleted.
   const isMissing = postDetails === null && !isLoading;
-  const isCollection = postDetails?.kind === 'collection';
-
-  const navigateToPreview = () => {
-    if (isCollection) {
-      navigateToCollection(postId);
-      return;
-    }
-
-    navigateToPost(postId);
-  };
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigateToPreview();
+    navigateToPost(postId);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.stopPropagation();
       e.preventDefault();
-      navigateToPreview();
+      navigateToPost(postId);
     }
   };
 
@@ -111,7 +101,7 @@ export function PostPreviewCard({ postId, className, interactiveActions = true }
       onKeyDown={handleKeyDown}
       role="link"
       tabIndex={0}
-      aria-label={isCollection ? 'View collection' : 'View original post'}
+      aria-label="View original post"
     >
       {isMissing ? (
         <PostMissing />

@@ -90,7 +90,6 @@ export function CollectionCard({
   interactiveActions = true,
 }: CollectionCardProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
-  const isEmbed = presentation === 'embed';
   const isWideLayout = useEffectiveTagsLayout() === 'side';
   const { postDetails, isLoading } = usePostDetails(compositeId);
 
@@ -126,7 +125,6 @@ export function CollectionCard({
       className={className}
       initialIsBookmarked={initialIsBookmarked}
       presentation={presentation}
-      isEmbed={isEmbed}
       isWideLayout={isWideLayout}
       interactiveActions={interactiveActions}
     />
@@ -141,7 +139,6 @@ interface CollectionCardContentProps {
   className?: string;
   initialIsBookmarked?: boolean;
   presentation: CollectionCardPresentation;
-  isEmbed: boolean;
   isWideLayout: boolean;
   interactiveActions: boolean;
 }
@@ -154,10 +151,10 @@ function CollectionCardContent({
   className,
   initialIsBookmarked,
   presentation,
-  isEmbed,
   isWideLayout,
   interactiveActions,
 }: CollectionCardContentProps) {
+  const isEmbed = presentation === 'embed';
   const t = useTranslations('collections.card');
   const tCardToast = useTranslations('collections.card.toast');
 

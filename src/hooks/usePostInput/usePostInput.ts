@@ -25,6 +25,7 @@ import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentio
 import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
 import { usePost } from '@/hooks/usePost/usePost';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
+import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
@@ -231,6 +232,12 @@ export function usePostInput({
             if (!details?.kind || postKindBelongsToStream(details.kind, streamId)) {
               await timelineFeed.prependPosts(createdPostId);
             }
+          } catch (error) {
+            Logger.error('[usePostInput] Failed to prepend created post to timeline', {
+              error,
+              createdPostId,
+              streamId: timelineFeed?.streamId,
+            });
           } finally {
             setIsExpanded(false);
           }
