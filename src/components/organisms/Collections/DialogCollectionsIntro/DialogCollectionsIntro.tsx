@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/atoms/Dialog/Dialog';
+import { Typography } from '@/atoms/Typography/Typography';
 
 /** Library illustration shown in the first-collection onboarding intro. */
 const COLLECTIONS_INTRO_IMAGE = '/images/collections-onboarding.webp';
@@ -55,6 +56,10 @@ export function DialogCollectionsIntro({ open, onOpenChange, onContinue }: Dialo
           unoptimized
           className="mx-auto size-48"
         />
+
+        <Typography size="sm" className="font-normal text-muted-foreground">
+          {t('publicNote')}
+        </Typography>
 
         <DialogFooter>
           <Button size="lg" onClick={onContinue} className="order-1 sm:order-2">

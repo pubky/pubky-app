@@ -81,22 +81,29 @@ const eslintConfig = [
           varsIgnorePattern: '^_',
         },
       ],
-      // Deployer-facing public values are runtime-configurable. Reading them directly from
-      // `Env` or `process.env` (which Next inlines at build time) would freeze the build-time
-      // value and defeat runtime config. Read them via the getters in @/libs/runtime-config instead.
+      // Deployer-facing public values are runtime-configurable (PUBKY_RUNTIME_*). Only the four
+      // build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) may be
+      // read directly; everything else must go through the getters in @/libs/runtime-config, and
+      // only the runtime-config resolver may touch process.env.PUBKY_RUNTIME_*.
       'no-restricted-syntax': [
         'error',
         {
           selector:
-            'MemberExpression[object.name="Env"][property.name=/^(NEXT_PUBLIC_(NEXUS_URL|CDN_URL|HOMESERVER|HOMESERVER_URL|HOMEGATE_URL|DEFAULT_HTTP_RELAY|PKARR_RELAYS|TESTNET|SENTRY_DSN|SENTRY_ENVIRONMENT|SENTRY_TRACES_SAMPLE_RATE|SENTRY_REPLAYS_SESSION_SAMPLE_RATE|SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE|NOTIFICATION_POLL_INTERVAL_MS|NOTIFICATION_POLL_ON_START|NOTIFICATION_RESPECT_PAGE_VISIBILITY|STREAM_POLL_INTERVAL_MS|STREAM_POLL_ON_START|STREAM_RESPECT_PAGE_VISIBILITY|STREAM_FETCH_LIMIT|STREAM_CACHE_MAX_AGE_MS|TTL_POST_MS|TTL_USER_MS|TTL_BATCH_INTERVAL_MS|TTL_POST_MAX_BATCH_SIZE|TTL_USER_MAX_BATCH_SIZE|TTL_RETRY_DELAY_MS|MODERATION_ID|MODERATED_TAGS|EXCHANGE_RATE_API|PRELUDE_SDK_KEY|PRELUDE_SDK_TIMEOUT_MS|PLAUSIBLE_DOMAIN|PLAUSIBLE_SCRIPT_URL|PREVIEW_IMAGE|SITE_NAME|LOCALE|AUTHOR|KEYWORDS|TYPE|CREATOR|DEFAULT_URL|PUBKY_RING_URL|PUBKY_CORE_URL|TWITTER_URL|TWITTER_GETPUBKY_URL|TELEGRAM_URL|GITHUB_URL|EMAIL|APP_STORE_URL|PLAY_STORE_URL)|NEXT_MAX_STREAM_TAGS)$/]',
+            'MemberExpression[object.name="Env"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION)$)/]',
           message:
-            'Do not read runtime-configurable values from Env (build-time inlined). Use the runtime-config getters from @/libs/runtime-config/runtime-config.',
+            'Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) exist on Env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config.',
         },
         {
           selector:
-            'MemberExpression[object.type="MemberExpression"][object.object.name="process"][object.property.name="env"][property.name=/^(NEXT_PUBLIC_(NEXUS_URL|CDN_URL|HOMESERVER|HOMESERVER_URL|HOMEGATE_URL|DEFAULT_HTTP_RELAY|PKARR_RELAYS|TESTNET|SENTRY_DSN|SENTRY_ENVIRONMENT|SENTRY_TRACES_SAMPLE_RATE|SENTRY_REPLAYS_SESSION_SAMPLE_RATE|SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE|NOTIFICATION_POLL_INTERVAL_MS|NOTIFICATION_POLL_ON_START|NOTIFICATION_RESPECT_PAGE_VISIBILITY|STREAM_POLL_INTERVAL_MS|STREAM_POLL_ON_START|STREAM_RESPECT_PAGE_VISIBILITY|STREAM_FETCH_LIMIT|STREAM_CACHE_MAX_AGE_MS|TTL_POST_MS|TTL_USER_MS|TTL_BATCH_INTERVAL_MS|TTL_POST_MAX_BATCH_SIZE|TTL_USER_MAX_BATCH_SIZE|TTL_RETRY_DELAY_MS|MODERATION_ID|MODERATED_TAGS|EXCHANGE_RATE_API|PRELUDE_SDK_KEY|PRELUDE_SDK_TIMEOUT_MS|PLAUSIBLE_DOMAIN|PLAUSIBLE_SCRIPT_URL|PREVIEW_IMAGE|SITE_NAME|LOCALE|AUTHOR|KEYWORDS|TYPE|CREATOR|DEFAULT_URL|PUBKY_RING_URL|PUBKY_CORE_URL|TWITTER_URL|TWITTER_GETPUBKY_URL|TELEGRAM_URL|GITHUB_URL|EMAIL|APP_STORE_URL|PLAY_STORE_URL)|NEXT_MAX_STREAM_TAGS)$/]',
+            'MemberExpression[object.type="MemberExpression"][object.object.name="process"][object.property.name="env"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION)$)/]',
           message:
-            'Do not read NEXT_PUBLIC_ runtime-configurable values from process.env (build-time inlined). Use the runtime-config getters from @/libs/runtime-config/runtime-config.',
+            'Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) may be read from process.env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config.',
+        },
+        {
+          selector:
+            'MemberExpression[object.type="MemberExpression"][object.object.name="process"][object.property.name="env"][property.name=/^PUBKY_RUNTIME_/]',
+          message:
+            'Do not read process.env.PUBKY_RUNTIME_* directly. Resolve runtime config through the getters from @/libs/runtime-config/runtime-config.',
         },
       ],
     },
@@ -107,9 +114,9 @@ const eslintConfig = [
     },
   },
   {
-    // The runtime-config module and env schema are the only places allowed to read these values
-    // directly. src/config/test.ts assigns NEXT_PUBLIC_* test defaults (assignment, not a read).
-    files: ['src/libs/env/env.ts', 'src/libs/runtime-config/**/*.{ts,tsx}', 'src/config/test.ts'],
+    // The runtime-config resolver is the only place allowed to read PUBKY_RUNTIME_* directly.
+    // src/config/test.ts assigns PUBKY_RUNTIME_* test defaults (assignment, not a read).
+    files: ['src/libs/runtime-config/**/*.{ts,tsx}', 'src/config/test.ts'],
     rules: {
       'no-restricted-syntax': 'off',
     },

@@ -12,6 +12,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { cn } from '@/libs/utils/utils';
@@ -80,6 +81,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
 
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isOwn = currentUserPubky === authorPubky;
+  const { requireAuth } = useRequireAuth();
 
   const collection = parseCollectionContent(postDetails.content);
 
@@ -108,7 +110,9 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
 
   const handleFollowToggle = () => {
     if (isToggling) return;
-    void toggle();
+    requireAuth(() => {
+      void toggle();
+    });
   };
 
   // Sharing a collection = reposting the underlying post; reuse the standard
@@ -120,7 +124,9 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
     submitIcon: StickyNote,
     successToastTitle: tCardToast('shared'),
   });
-  const handleShare = openRepostDialog;
+  const handleShare = () => {
+    requireAuth(openRepostDialog);
+  };
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const handleEdit = () => setIsEditDialogOpen(true);

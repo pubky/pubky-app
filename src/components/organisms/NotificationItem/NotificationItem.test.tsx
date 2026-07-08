@@ -395,7 +395,7 @@ describe('NotificationItem', () => {
     });
   });
 
-  it('falls back to raw content and shows toast when article JSON parsing fails', async () => {
+  it('falls back to raw content without toast when article JSON parsing fails', async () => {
     const invalidJson = 'not valid json content';
 
     mockGetOrFetch.mockResolvedValue({
@@ -413,13 +413,10 @@ describe('NotificationItem', () => {
 
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
 
-    // Wait for the async post fetch to complete and toast to be called
     await vi.waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        variant: 'error',
-        description: 'Could not parse article content',
-      });
+      expect(screen.getByText(/not valid json/)).toBeInTheDocument();
     });
+    expect(mockToast).not.toHaveBeenCalled();
   });
 
   it('extracts name from collection post content in notifications', async () => {

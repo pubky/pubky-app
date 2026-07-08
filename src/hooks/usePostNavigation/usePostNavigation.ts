@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type React from 'react';
-import { POST_ROUTES } from '@/app/routes';
+import { getCollectionRoute, POST_ROUTES } from '@/app/routes';
 import { parseCompositeId } from '@/models/models.utils';
 import type { UsePostNavigationResult } from './usePostNavigation.types';
 
@@ -33,62 +32,67 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 export function usePostNavigation(): UsePostNavigationResult {
   const router = useRouter();
 
-  const getPostHref = useCallback((postId: string) => {
+  const getPostHref = (postId: string) => {
     const { pubky: userId, id: pId } = parseCompositeId(postId);
     return `${POST_ROUTES.POST}/${userId}/${pId}`;
-  }, []);
+  };
 
-  const navigateToPost = useCallback(
-    (postId: string) => {
-      router.push(getPostHref(postId));
-    },
-    [router, getPostHref],
-  );
+  const navigateToPost = (postId: string) => {
+    router.push(getPostHref(postId));
+  };
 
-  const handlePostClick = useCallback(
-    (postId: string, event: React.MouseEvent) => {
-      if (isInteractiveTarget(event.target)) return;
+  const getCollectionHref = (postId: string) => {
+    const { pubky, id } = parseCompositeId(postId);
+    return getCollectionRoute(pubky, id);
+  };
 
-      // Don't navigate if the user is selecting text inside the card.
-      const selection = typeof window !== 'undefined' ? window.getSelection() : null;
-      if (selection && selection.toString().length > 0) return;
+  const navigateToCollection = (postId: string) => {
+    router.push(getCollectionHref(postId));
+  };
 
-      const href = getPostHref(postId);
-      if (event.metaKey || event.ctrlKey || event.shiftKey) {
-        window.open(href, '_blank', 'noopener,noreferrer');
-        return;
-      }
-      router.push(href);
-    },
-    [router, getPostHref],
-  );
+  const handlePostClick = (postId: string, event: React.MouseEvent) => {
+    if (isInteractiveTarget(event.target)) return;
 
-  const handlePostAuxClick = useCallback(
-    (postId: string, event: React.MouseEvent) => {
-      if (event.button !== 1) return;
-      if (isInteractiveTarget(event.target)) return;
-      event.preventDefault();
-      window.open(getPostHref(postId), '_blank', 'noopener,noreferrer');
-    },
-    [getPostHref],
-  );
+    // Don't navigate if the user is selecting text inside the card.
+    const selection = typeof window !== 'undefined' ? window.getSelection() : null;
+    if (selection && selection.toString().length > 0) return;
 
-  const handlePostKeyDown = useCallback(
-    (postId: string, event: React.KeyboardEvent) => {
-      // Only act when the wrapper itself has focus, not a descendant (button, link, input).
-      if (event.target !== event.currentTarget) return;
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
+    const href = getPostHref(postId);
+    if (event.metaKey || event.ctrlKey || event.shiftKey) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    router.push(href);
+  };
 
-      const href = getPostHref(postId);
-      if (event.metaKey || event.ctrlKey || event.shiftKey) {
-        window.open(href, '_blank', 'noopener,noreferrer');
-        return;
-      }
-      router.push(href);
-    },
-    [router, getPostHref],
-  );
+  const handlePostAuxClick = (postId: string, event: React.MouseEvent) => {
+    if (event.button !== 1) return;
+    if (isInteractiveTarget(event.target)) return;
+    event.preventDefault();
+    window.open(getPostHref(postId), '_blank', 'noopener,noreferrer');
+  };
 
-  return { getPostHref, navigateToPost, handlePostClick, handlePostAuxClick, handlePostKeyDown };
+  const handlePostKeyDown = (postId: string, event: React.KeyboardEvent) => {
+    // Only act when the wrapper itself has focus, not a descendant (button, link, input).
+    if (event.target !== event.currentTarget) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+
+    const href = getPostHref(postId);
+    if (event.metaKey || event.ctrlKey || event.shiftKey) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    router.push(href);
+  };
+
+  return {
+    getPostHref,
+    navigateToPost,
+    getCollectionHref,
+    navigateToCollection,
+    handlePostClick,
+    handlePostAuxClick,
+    handlePostKeyDown,
+  };
 }

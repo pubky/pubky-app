@@ -1331,9 +1331,9 @@
       "ctaShort": "Neu",
       "title": "Neue Sammlung",
       "nameLabel": "Titel",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "Geben Sie Ihrer Sammlung einen Namen",
       "descriptionLabel": "Beschreibung",
-      "descriptionPlaceholder": "Das Beste von den größten Beitragenden in Bitcoin",
+      "descriptionPlaceholder": "Was werden Menschen hier finden?",
       "backgroundLabel": "Hintergrund",
       "addImage": "Bild hinzufügen",
       "removeImage": "Bild entfernen",
@@ -1350,6 +1350,7 @@
       "title": "Willkommen bei Sammlungen",
       "description": "Bewahre Beiträge auf, die es wert sind. Sammle die besten Inhalte aus deinem Netzwerk. Ordne Ideen, filtere das Signal vom Rauschen und teile, was zählt.",
       "imageAlt": "Sammlungen",
+      "publicNote": "Hinweis: Sammlungen sind öffentlich und auffindbar.",
       "cancel": "Abbrechen",
       "continue": "Weiter"
     },
@@ -1362,9 +1363,7 @@
     "showMore": "Mehr anzeigen",
     "loadFailed": "Sammlungen konnten nicht geladen werden. Bitte erneut versuchen.",
     "my": {
-      "title": "Meine Sammlungen",
-      "publicNote": "Hinweis: Alle Sammlungen sind öffentlich und auffindbar.",
-      "publicNoteShort": "Alle Sammlungen sind öffentlich und auffindbar."
+      "title": "Meine Sammlungen"
     },
     "followed": {
       "title": "Gefolgte Sammlungen",
@@ -1409,7 +1408,7 @@
     },
     "addContentDialog": {
       "title": "Beitrag hinzufügen",
-      "description": "Füge einen Beitrag oder Artikel aus deinem Feed hinzu oder füge direkt eine URL ein.",
+      "description": "Es gibt mehrere Möglichkeiten, Beiträge zu deiner Sammlung hinzuzufügen.",
       "fromFeedTitle": "Aus Feed hinzufügen",
       "fromFeedLead": "Finde einen Beitrag",
       "fromFeedRest": " den du hinzufügen möchtest und klicke auf die Sammlungen-Schaltfläche.",

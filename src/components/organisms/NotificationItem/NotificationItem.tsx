@@ -7,10 +7,10 @@ import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { PostController } from '@/controllers/post/post';
-import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { Logger } from '@/libs/logger/logger';
+import { parseArticleContent } from '@/libs/post/articleContent';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { formatNotificationTime, isPostDeleted } from '@/libs/utils/utils';
 import { NotificationType } from '@/models/notification/notification.types';
@@ -74,16 +74,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
           if (isPostDeleted(post.content)) {
             setPostContent(tPost('deleted'));
           } else if (post.kind === 'long') {
-            try {
-              const parsed = JSON.parse(post.content) as ArticleJSON;
-              setPostContent(parsed.title || '');
-            } catch {
-              setPostContent(post.content);
-              toast({
-                variant: 'error',
-                description: tPostToast('parseError'),
-              });
-            }
+            setPostContent(parseArticleContent(post.content)?.title || post.content);
           } else if (post.kind === 'collection') {
             const parsed = parseCollectionContent(post.content);
             if (parsed) {

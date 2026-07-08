@@ -11,9 +11,9 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
+import { parseArticleContent } from '@/libs/post/articleContent';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
@@ -161,11 +161,11 @@ export function PostInput({
       if (editIsArticle) {
         setIsArticle(true);
 
-        try {
-          const parsed = JSON.parse(editContent) as ArticleJSON;
-          setArticleTitle(parsed.title || '');
-          setContent(parsed.body || '');
-        } catch {
+        const parsed = parseArticleContent(editContent);
+        if (parsed) {
+          setArticleTitle(parsed.title);
+          setContent(parsed.body);
+        } else {
           toast({
             variant: 'error',
             description: tToast('parseError'),

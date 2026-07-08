@@ -207,7 +207,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
             collections.addContentDialog.title
           </h2>
           <p
-            class="text-sm leading-normal font-medium text-muted-foreground sr-only"
+            class="text-sm leading-normal font-medium text-muted-foreground"
             data-slot="dialog-description"
             id="radix-normalized"
           >

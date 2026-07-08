@@ -6,6 +6,7 @@ import enMessages from '../../../../../messages/en.json';
 import { CollectionBookmarkCard } from './CollectionBookmarkCard';
 
 const BOOKMARKS_COPY = enMessages.collections.bookmarks;
+const CURRENT_USER_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -67,8 +68,6 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
 // ---------------------------------------------------------------------------
 // Fixtures + helpers
 // ---------------------------------------------------------------------------
-
-const CURRENT_USER_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
 const mockUseBookmarksCollectionSummary = vi.mocked(useBookmarksCollectionSummary);
 

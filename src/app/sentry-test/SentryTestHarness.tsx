@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   AppWindow,
   CheckCircle2,
@@ -24,6 +24,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isSentryInitialized } from '@/libs/observability/sentry';
 import { getSentryDiagnostics } from '@/libs/observability/sentry-test-harness';
 import { toast } from '@/molecules/Toaster/use-toast';
 
@@ -128,7 +129,15 @@ function StatusLabel({ status }: { status: ServerStatus }) {
 
 export function SentryTestHarness() {
   const [diagnostics] = useState(getSentryDiagnostics);
+  // Evaluated after mount (not during render) so SSR — where the SERVER SDK state would leak
+  // into the markup — and the browser never disagree. By effect time instrumentation-client
+  // has long run, so this reflects whether the BROWSER Sentry.init() actually happened.
+  const [clientInitialized, setClientInitialized] = useState<boolean | null>(null);
   const [throwOnRender, setThrowOnRender] = useState(false);
+
+  useEffect(() => {
+    setClientInitialized(isSentryInitialized());
+  }, []);
   const [serverStatus, setServerStatus] = useState<Record<ServerTriggerType, ServerStatus>>({
     unhandled: { state: 'idle' },
     factory: { state: 'idle' },
@@ -185,6 +194,14 @@ export function SentryTestHarness() {
     }
   }, []);
 
+  const clientInitValue = clientInitialized === null ? 'checking…' : clientInitialized ? 'yes' : 'no';
+  // Warn only when Sentry claims to be enabled yet the browser SDK never initialized.
+  const clientInitTone = clientInitialized
+    ? 'ok'
+    : clientInitialized === false && diagnostics.enabled
+      ? 'warn'
+      : 'default';
+
   return (
     <Container size="md" className="gap-6 px-4 py-10">
       <header className="flex flex-col gap-2">
@@ -218,6 +235,7 @@ export function SentryTestHarness() {
             value={diagnostics.enabled ? 'yes' : 'no'}
             tone={diagnostics.enabled ? 'ok' : 'warn'}
           />
+          <DiagnosticRow label="Client SDK initialized" value={clientInitValue} tone={clientInitTone} />
           <DiagnosticRow label="Environment" value={diagnostics.environment} />
           <DiagnosticRow label="Release" value={diagnostics.release} />
           <DiagnosticRow label="DSN" value={describeDsn(diagnostics.dsn)} tone={diagnostics.dsn ? 'default' : 'warn'} />
@@ -231,6 +249,17 @@ export function SentryTestHarness() {
           <Typography size="sm" className="text-destructive">
             Sentry is disabled in this environment, so triggers will fire but no events are sent. Ensure a DSN is
             configured and testnet is off to validate capture.
+          </Typography>
+        </div>
+      )}
+
+      {diagnostics.enabled && clientInitialized === false && (
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/8 p-4">
+          <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
+          <Typography size="sm" className="text-destructive">
+            Sentry is enabled but the browser SDK never initialized — browser triggers will send nothing. This means
+            window.__PUBKY_CONFIG__ was not available when instrumentation-client.ts evaluated (runtime-config injection
+            ordering is broken).
           </Typography>
         </div>
       )}
