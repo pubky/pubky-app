@@ -1,4 +1,9 @@
-import { IMAGE_ENCODE_QUALITY, IMAGE_MAX_DIMENSION, IMAGE_MAX_RAW_SIZE } from '@/config/images';
+import {
+  IMAGE_COMPRESSION_DIMENSION_STEPS,
+  IMAGE_COMPRESSION_QUALITY_STEPS,
+  IMAGE_MAX_RAW_SIZE,
+  IMAGE_MAX_UPLOAD_SIZE,
+} from '@/config/images';
 
 const IMAGE_MIME_TYPE_TO_EXTENSION: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -439,14 +444,14 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-async function loadHtmlImage(file: File): Promise<LoadedRasterImage> {
+async function loadHtmlImage(file: File, maxDimension: number): Promise<LoadedRasterImage> {
   const objectUrl = URL.createObjectURL(file);
 
   try {
     const image = await loadImage(objectUrl);
     const naturalWidth = image.naturalWidth || image.width;
     const naturalHeight = image.naturalHeight || image.height;
-    const { width, height } = getScaledDimensions(naturalWidth, naturalHeight, IMAGE_MAX_DIMENSION);
+    const { width, height } = getScaledDimensions(naturalWidth, naturalHeight, maxDimension);
 
     return {
       source: image,
@@ -458,10 +463,6 @@ async function loadHtmlImage(file: File): Promise<LoadedRasterImage> {
     URL.revokeObjectURL(objectUrl);
     throw error;
   }
-}
-
-function getCanvasEncodeQuality(mimeType: string): number | undefined {
-  return MIME_TYPES_WITH_LOSSY_REENCODING.has(mimeType) ? IMAGE_ENCODE_QUALITY : undefined;
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality?: number): Promise<Blob> {
@@ -495,7 +496,11 @@ function getScaledDimensions(width: number, height: number, maxDimension: number
   };
 }
 
-async function loadResizedImageBitmap(file: File, mimeType: string): Promise<LoadedRasterImage | null> {
+async function loadResizedImageBitmap(
+  file: File,
+  mimeType: string,
+  maxDimension: number,
+): Promise<LoadedRasterImage | null> {
   if (typeof createImageBitmap !== 'function') {
     return null;
   }
@@ -505,7 +510,7 @@ async function loadResizedImageBitmap(file: File, mimeType: string): Promise<Loa
     return null;
   }
 
-  const { width, height } = getScaledDimensions(dimensions.width, dimensions.height, IMAGE_MAX_DIMENSION);
+  const { width, height } = getScaledDimensions(dimensions.width, dimensions.height, maxDimension);
 
   try {
     const bitmap = await createImageBitmap(file, {
@@ -527,23 +532,37 @@ async function loadResizedImageBitmap(file: File, mimeType: string): Promise<Loa
 }
 
 async function sanitizeRasterImage(file: File, mimeType: string): Promise<Blob> {
-  const image = (await loadResizedImageBitmap(file, mimeType)) ?? (await loadHtmlImage(file));
-  const canvas = document.createElement('canvas');
-  canvas.width = image.width;
-  canvas.height = image.height;
+  const isLossy = MIME_TYPES_WITH_LOSSY_REENCODING.has(mimeType);
+  const qualitySteps = isLossy ? IMAGE_COMPRESSION_QUALITY_STEPS : [undefined];
 
-  try {
-    const context = canvas.getContext('2d');
-    if (!context) {
-      throw new Error('Failed to get canvas context for metadata stripping');
+  for (const maxDimension of IMAGE_COMPRESSION_DIMENSION_STEPS) {
+    const image =
+      (await loadResizedImageBitmap(file, mimeType, maxDimension)) ?? (await loadHtmlImage(file, maxDimension));
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+
+    try {
+      const context = canvas.getContext('2d');
+      if (!context) {
+        throw new Error('Failed to get canvas context for metadata stripping');
+      }
+
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(image.source, 0, 0, image.width, image.height);
+
+      for (const quality of qualitySteps) {
+        const blob = await canvasToBlob(canvas, mimeType, quality);
+        if (blob.size <= IMAGE_MAX_UPLOAD_SIZE) {
+          return blob;
+        }
+      }
+    } finally {
+      image.cleanup();
     }
-
-    context.imageSmoothingQuality = 'high';
-    context.drawImage(image.source, 0, 0, image.width, image.height);
-    return await canvasToBlob(canvas, mimeType, getCanvasEncodeQuality(mimeType));
-  } finally {
-    image.cleanup();
   }
+
+  throw new Error('Image could not be compressed below upload size limit');
 }
 
 function isSvgParserError(document: Document): boolean {
@@ -642,7 +661,8 @@ async function sanitizeSvgImage(file: File): Promise<Blob> {
 /**
  * Removes sensitive metadata from supported image formats before upload.
  * - JPEG/PNG/WebP: re-encodes via canvas to strip metadata (fail-closed on errors)
- * - JPEG/WebP: encoded at configured quality to reduce upload size
+ * - JPEG/WebP: progressively re-encoded at lower quality and dimensions until under 5MB
+ * - PNG: progressively downscaled until under 5MB
  * - Oversized raster images: downscaled preserving aspect ratio
  * - Animated WebP: skips canvas (keeps frames) but strips EXIF/XMP chunks
  * - GIF and other raster types: keep bytes to avoid visual regressions
@@ -675,6 +695,10 @@ export async function stripImageMetadata(file: File): Promise<File> {
     // Animated WebP bypasses canvas re-encoding; strip its EXIF/XMP chunks so
     // metadata (e.g. GPS) never reaches the homeserver while keeping frames.
     const body = isAnimatedWebpUpload ? stripWebpMetadataChunks(new Uint8Array(await file.arrayBuffer())) : file;
+    const outputSize = body instanceof File ? body.size : body.byteLength;
+    if (outputSize > IMAGE_MAX_UPLOAD_SIZE) {
+      throw new Error('Image file size exceeds upload limits after sanitization');
+    }
     return new File([body], obfuscatedName, {
       type: imageMimeType,
       lastModified: file.lastModified,
