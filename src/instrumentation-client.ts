@@ -3,10 +3,20 @@ import { getSentryInitBase, shouldEnableSentry } from '@/libs/observability/sent
 import {
   getSentryReplaysOnErrorSampleRate,
   getSentryReplaysSessionSampleRate,
+  RUNTIME_CONFIG_WINDOW_KEY,
 } from '@/libs/runtime-config/runtime-config';
 
-// Safe to read runtime config here: ContainerRoot emits `window.__PUBKY_CONFIG__` with
-// next/script strategy="beforeInteractive", which Next injects into <head> before app bundles.
+// Safe to read runtime config here: ContainerRoot emits `window.__PUBKY_CONFIG__` as a raw
+// inline <script> at the top of <body>, which the browser executes during HTML parsing —
+// before this module (bundled into the main app chunks) evaluates. If the config is missing,
+// shouldEnableSentry() would swallow the resolution error and silently disable client Sentry,
+// so make the broken injection contract loud instead.
+if (window[RUNTIME_CONFIG_WINDOW_KEY] === undefined) {
+  console.error(
+    `window.${RUNTIME_CONFIG_WINDOW_KEY} was not injected before client init — runtime-config injection is broken; ALL client runtime config (network URLs, moderation, analytics, ...) resolves to staging defaults and client Sentry stays disabled.`,
+  );
+}
+
 if (shouldEnableSentry()) {
   Sentry.init({
     ...getSentryInitBase(),

@@ -40,7 +40,7 @@ function parseTags(tagsParam: string | null): string[] {
  * Example: timeline:all:all:pubky,bitcoin
  *
  * Note: Reach filter is always 'all' for search (we search all posts with the given tags).
- * Tags are limited to NEXT_MAX_STREAM_TAGS (default 5).
+ * Tags are limited to PUBKY_RUNTIME_MAX_STREAM_TAGS (default 5).
  *
  * @returns The search streamId or undefined if no tags provided
  *

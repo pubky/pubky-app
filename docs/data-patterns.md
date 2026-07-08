@@ -80,7 +80,7 @@ const head = await StreamPostsController.getStreamHead({ streamId });
 ```typescript
 // TTL-based staleness check (no stream_ttl table — streams use post/user TTL)
 // Real: src/core/application/ttl/ttl.ts
-const stalePostIds = await TtlApplication.findStalePostsByIds({ postIds, ttlMs: Env.NEXT_PUBLIC_TTL_POST_MS });
+const stalePostIds = await TtlApplication.findStalePostsByIds({ postIds, ttlMs: getTtlPostMs() });
 ```
 
 ## TTL Management (ADR-0005)
@@ -124,10 +124,11 @@ await TtlApplication.forceRefreshUsersByIds({ userIds: staleUserIds, viewerId })
 ### TTL Constants
 
 ```typescript
-// Real: src/libs/env/env.ts (configurable via environment variables)
-NEXT_PUBLIC_TTL_POST_MS: 300_000,  // 5 minutes (posts)
-NEXT_PUBLIC_TTL_USER_MS: 600_000,  // 10 minutes (users)
-NEXT_PUBLIC_TTL_BATCH_INTERVAL_MS: 5_000, // 5 seconds between batches
+// Real: src/libs/runtime-config/runtime-config.schema.ts (runtime-configurable via
+// PUBKY_RUNTIME_TTL_*; read through getters like getTtlPostMs() from @/config/sync)
+ttlPostMs: 300_000,  // 5 minutes (posts)
+ttlUserMs: 600_000,  // 10 minutes (users)
+ttlBatchIntervalMs: 5_000, // 5 seconds between batches
 ```
 
 ## Pipes Normalization (ADR-0006)
