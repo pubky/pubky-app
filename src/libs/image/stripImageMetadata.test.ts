@@ -398,6 +398,20 @@ describe('stripImageMetadata', () => {
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
+  it('rejects SVG files over the upload limit after sanitization', async () => {
+    const padding = 'x'.repeat(IMAGE_MAX_UPLOAD_SIZE + 1);
+    const inputFile = new File(
+      [`<svg xmlns="http://www.w3.org/2000/svg"><!--${padding}--><circle cx="8" cy="8" r="4"/></svg>`],
+      'large-icon.svg',
+      { type: 'image/svg+xml' },
+    );
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow(
+      'Image file size exceeds upload limits after sanitization',
+    );
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
   it('sanitizes SVG files declared via file.type', async () => {
     const inputFile = new File(
       [

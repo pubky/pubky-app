@@ -664,9 +664,9 @@ async function sanitizeSvgImage(file: File): Promise<Blob> {
  * - JPEG/WebP: progressively re-encoded at lower quality and dimensions until under 5MB
  * - PNG: progressively downscaled until under 5MB
  * - Oversized raster images: downscaled preserving aspect ratio
- * - Animated WebP: skips canvas (keeps frames) but strips EXIF/XMP chunks
- * - GIF and other raster types: keep bytes to avoid visual regressions
- * - SVG: best-effort XML rewrite that removes active content and risky references
+ * - GIF: keep bytes to preserve animation; reject when still over 5MB
+ * - Animated WebP: skips canvas (keeps frames) but strips EXIF/XMP chunks; reject when still over 5MB
+ * - SVG: best-effort XML rewrite that removes active content and risky references; reject when still over 5MB
  * - All image types: replace original filename with an obfuscated one
  */
 export async function stripImageMetadata(file: File): Promise<File> {
@@ -683,6 +683,9 @@ export async function stripImageMetadata(file: File): Promise<File> {
 
   if (imageMimeType === SVG_MIME_TYPE) {
     const sanitizedBlob = await sanitizeSvgImage(file);
+    if (sanitizedBlob.size > IMAGE_MAX_UPLOAD_SIZE) {
+      throw new Error('Image file size exceeds upload limits after sanitization');
+    }
 
     return new File([sanitizedBlob], obfuscatedName, {
       type: sanitizedBlob.type || imageMimeType,
