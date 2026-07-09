@@ -9,41 +9,54 @@ import { cn } from '@/libs/utils/utils';
 interface CollectionCountBadgeProps {
   count: number;
   /**
-   * Renders the count as a filled `bg-card` pill so it stays legible over a
-   * collection cover image. Left off (the default) on background-less surfaces
-   * — a plain `bg-card` pill would be invisible on a `bg-card` card and, worse,
-   * show a stray pill on the `preview` CollectionCard (which sits on
-   * `bg-muted`/`bg-accent`).
+   * Pill contrast against the parent surface. Always rendered as a pill.
+   *
+   * - `on-card` (default): `bg-background` on `bg-card` parents (landing, hero,
+   *   bookmarks, embeds with a cover image).
+   * - `on-muted`: `bg-card` on `bg-muted` embed chrome (`presentation="embed"`
+   *   without a cover — see `embeddedOnMuted` in `CollectionCard`).
    */
-  onCover?: boolean;
+  tone?: 'on-card' | 'on-muted';
 }
 
 /**
  * CollectionCountBadge
  *
- * Compact item-count badge (sticky-note icon + "N POSTS" label) shared across
- * the collections surfaces — the bookmarks hero, the pinned bookmarks card, the
+ * Compact item-count badge (sticky-note icon + count; "N POSTS" label from `sm`
+ * upward) shared across the collections surfaces — the bookmarks hero, the pinned
  * collection grid card, and the single-collection hero — so they all stay
  * visually in sync.
  *
+ * Renders as a pill so the count stays legible against the parent surface.
+ * Default tone is `on-card` (`bg-background`). `CollectionCard` passes `on-muted`
+ * (`bg-card`) for interactive embeds on `bg-muted` when the collection has no
+ * cover image.
+ *
  * Compact notation (e.g. 1.2K, 3M) keeps long counts from blowing out the
- * header row. Pass `onCover` to render the pill treatment over a cover image.
+ * header row.
  */
-export function CollectionCountBadge({ count, onCover = false }: CollectionCountBadgeProps) {
+export function CollectionCountBadge({ count, tone = 'on-card' }: CollectionCountBadgeProps) {
   const format = useFormatter();
   const t = useTranslations('collections');
+  const isOnMuted = tone === 'on-muted';
+  const compactCount = format.number(count, { notation: 'compact' });
+  const countLabel = t('postCount', { count });
 
   return (
     <Container
       overrideDefaults
+      aria-label={`${compactCount} ${countLabel}`}
       className={cn(
-        'flex shrink-0 items-center gap-1 text-secondary-foreground',
-        onCover && 'h-6 justify-center rounded-full bg-card px-2 py-1',
+        'flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground',
+        isOnMuted ? 'bg-card' : 'bg-background',
       )}
     >
-      <StickyNote className="size-3 shrink-0" />
-      <Typography as="span" overrideDefaults className="text-xs leading-4 font-medium tracking-[1.2px] uppercase">
-        {format.number(count, { notation: 'compact' })} {t('postCount', { count })}
+      <StickyNote className="size-3 shrink-0" aria-hidden />
+      <Typography as="span" overrideDefaults className="text-xs leading-4 font-medium tracking-widest uppercase">
+        {compactCount}
+        <Typography as="span" overrideDefaults className="hidden sm:inline">
+          {` ${countLabel}`}
+        </Typography>
       </Typography>
     </Container>
   );

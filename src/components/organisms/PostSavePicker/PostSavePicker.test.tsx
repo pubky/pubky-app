@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { PostSavePicker } from './PostSavePicker';
@@ -86,6 +87,8 @@ vi.mock('next-intl', () => ({
     (key: string): string =>
       translations[`${namespace}.${key}`] ?? key,
 }));
+
+const TEST_STREAM_ID = 'timeline:all:all' as PostStreamId;
 
 describe('PostSavePicker', () => {
   beforeEach(() => {
@@ -240,6 +243,7 @@ describe('PostSavePicker', () => {
 
     renderPicker({
       variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+      streamId: TEST_STREAM_ID,
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
       removePosts,
@@ -258,6 +262,7 @@ describe('PostSavePicker', () => {
     const removePosts = vi.fn();
     const { rerenderPicker } = renderPicker({
       variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+      streamId: TEST_STREAM_ID,
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
       removePosts,
@@ -284,6 +289,7 @@ describe('PostSavePicker', () => {
 
     renderPicker({
       variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+      streamId: TEST_STREAM_ID,
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
       removePosts,
@@ -303,6 +309,7 @@ describe('PostSavePicker', () => {
     renderPicker({
       variant: TIMELINE_FEED_VARIANT.COLLECTION,
       collectionId: 'author:collection1',
+      streamId: TEST_STREAM_ID,
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
       removePosts,
@@ -322,6 +329,7 @@ describe('PostSavePicker', () => {
     const { rerenderPicker } = renderPicker({
       variant: TIMELINE_FEED_VARIANT.COLLECTION,
       collectionId: 'author:collection1',
+      streamId: TEST_STREAM_ID,
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
       removePosts,
@@ -348,6 +356,7 @@ describe('PostSavePicker', () => {
     renderPicker({
       variant: TIMELINE_FEED_VARIANT.COLLECTION,
       collectionId: 'author:collection1',
+      streamId: TEST_STREAM_ID,
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
       removePosts,
@@ -369,6 +378,7 @@ describe('PostSavePicker', () => {
 
     renderPicker({
       variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
+      streamId: TEST_STREAM_ID,
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
       removePosts,
@@ -388,6 +398,7 @@ describe('PostSavePicker', () => {
 
     renderPicker({
       variant: TIMELINE_FEED_VARIANT.HOME,
+      streamId: TEST_STREAM_ID,
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
       removePosts,

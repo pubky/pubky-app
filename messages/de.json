@@ -1080,7 +1080,12 @@
       "maxFiles": "Maximal {max} Dateien erlaubt",
       "maxFilesPartial": "Maximal {max} Dateien erlaubt. Einige Dateien wurden nicht hinzugefügt.",
       "unsupportedType": "Nicht unterstützter Dateityp für {name}. Unterstützt: {formats}.",
-      "fileTooLarge": "{name} überschreitet das Limit von {maxSize}."
+      "fileTooLarge": "{name} überschreitet das Limit von {maxSize}.",
+      "imageTooLargeRaw": "Bild ist zu groß. Maximale Größe ist {maxSize}.",
+      "imageTooLargeGif": "Dieses GIF überschreitet das Upload-Limit von {maxSize} und kann nicht komprimiert werden. Bitte verwende ein kleineres GIF.",
+      "imageTooLargeAnimatedWebp": "Dieses animierte WebP überschreitet das Upload-Limit von {maxSize} und kann nicht komprimiert werden. Bitte verwende eine kleinere Datei.",
+      "imageTooLargeSvg": "Dieses SVG überschreitet nach der Bereinigung das Upload-Limit von {maxSize}. Bitte verwende eine kleinere Datei.",
+      "imageTooLargeRaster": "Bild konnte nicht unter {maxSize} komprimiert werden. Bitte verwende ein kleineres oder niedriger aufgelöstes Bild."
     },
     "status": {
       "updateFailed": "Status konnte nicht aktualisiert werden. Versuchen Sie es erneut.",
@@ -1338,7 +1343,7 @@
       "addImage": "Bild hinzufügen",
       "removeImage": "Bild entfernen",
       "coverImageInvalid": "Das Coverbild muss eine Bilddatei sein.",
-      "coverImageTooLarge": "Das Coverbild ist zu groß.",
+      "coverImageTooLarge": "Das Coverbild ist zu groß. Maximale Größe ist {maxSize}.",
       "nameRequired": "Sammlungstitel ist erforderlich.",
       "cancel": "Abbrechen",
       "save": "Sammlung speichern",
@@ -1350,6 +1355,7 @@
       "title": "Willkommen bei Sammlungen",
       "description": "Bewahre Beiträge auf, die es wert sind. Sammle die besten Inhalte aus deinem Netzwerk. Ordne Ideen, filtere das Signal vom Rauschen und teile, was zählt.",
       "imageAlt": "Sammlungen",
+      "publicNote": "Hinweis: Sammlungen sind öffentlich und auffindbar.",
       "cancel": "Abbrechen",
       "continue": "Weiter"
     },
@@ -1362,9 +1368,7 @@
     "showMore": "Mehr anzeigen",
     "loadFailed": "Sammlungen konnten nicht geladen werden. Bitte erneut versuchen.",
     "my": {
-      "title": "Meine Sammlungen",
-      "publicNote": "Hinweis: Alle Sammlungen sind öffentlich und auffindbar.",
-      "publicNoteShort": "Alle Sammlungen sind öffentlich und auffindbar."
+      "title": "Meine Sammlungen"
     },
     "followed": {
       "title": "Gefolgte Sammlungen",

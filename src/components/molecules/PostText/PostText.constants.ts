@@ -1,1 +1,2 @@
 export const TRUNCATION_LIMIT = 300;
+export const POST_TEXT_PREVIEW_MAX_LINES = 6;

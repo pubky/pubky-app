@@ -11,7 +11,6 @@ import { cn } from '@/libs/utils/utils';
 import { PostMentions } from '@/organisms/PostMentions/PostMentions';
 import { PostCodeBlock } from '../PostCodeBlock/PostCodeBlock';
 import { PostHashtags } from '../PostHashtags/PostHashtags';
-import { TRUNCATION_LIMIT } from './PostText.constants';
 import { PostTextProps, RemarkAnchorProps } from './PostText.types';
 import {
   remarkDisallowMarkdownLinks,
@@ -19,7 +18,8 @@ import {
   remarkHashtags,
   remarkMentions,
   remarkPlaintextCodeblock,
-  truncateAtWordBoundary,
+  remarkPlaintextTables,
+  truncatePostPreviewText,
 } from './PostText.utils';
 
 /**
@@ -34,7 +34,7 @@ import {
  * - Hashtag parsing (#tag → clickable search link)
  * - Mention parsing (pk:... or pubky... → clickable profile link)
  * - URL detection and linking
- * - Content truncation with "Show more" on non-post pages (TRUNCATION_LIMIT char limit)
+ * - Content truncation with "Show more" on non-post pages
  *
  * Memoization prevents unnecessary re-renders when TTL refreshes update IndexedDB records
  * without changes to the actual post content.
@@ -43,13 +43,12 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
   const pathname = usePathname();
   const onPostPage = pathname.startsWith(POST_ROUTES.POST);
 
-  const contentTruncated =
-    !isArticle && !onPostPage && content.length > TRUNCATION_LIMIT
-      ? truncateAtWordBoundary(content, TRUNCATION_LIMIT)
-      : null;
+  const contentTruncated = !isArticle && !onPostPage ? truncatePostPreviewText(content) : null;
+  const showMoreButton = Boolean(contentTruncated);
 
   const remarkPlugins = [
     remarkGfm,
+    remarkPlaintextTables,
     ...(isArticle ? (!onPostPage ? [remarkExtractFirstParagraph] : []) : [remarkDisallowMarkdownLinks]),
     remarkPlaintextCodeblock,
     remarkHashtags,
@@ -205,7 +204,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
       </Markdown>
 
       {/* No stopPropagation on this element therefore click takes user to post via parent element */}
-      {contentTruncated && (
+      {showMoreButton && (
         <Button
           overrideDefaults
           aria-label="Show full post content"

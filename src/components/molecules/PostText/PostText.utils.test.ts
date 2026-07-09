@@ -1,8 +1,8 @@
-import type { Code, Emphasis, Link, Paragraph, Root, Text } from 'mdast';
+import type { Blockquote, Code, Emphasis, Heading, Link, List, Paragraph, Root, RootContent, Text } from 'mdast';
 import { describe, expect, it } from 'vitest';
 import { TAG_MAX_LENGTH } from '@/config/posts';
 import { asInvalid } from '@/test-utils/type-assertions';
-import { TRUNCATION_LIMIT } from './PostText.constants';
+import { POST_TEXT_PREVIEW_MAX_LINES, TRUNCATION_LIMIT } from './PostText.constants';
 import {
   extractTextFromChildren,
   remarkDisallowMarkdownLinks,
@@ -11,6 +11,7 @@ import {
   remarkMentions,
   remarkPlaintextCodeblock,
   truncateAtWordBoundary,
+  truncatePostPreviewText,
 } from './PostText.utils';
 
 // Helper to create a simple paragraph node with text
@@ -20,7 +21,7 @@ const createParagraph = (text: string): Paragraph => ({
 });
 
 // Helper to create a root node with children
-const createRoot = (children: (Paragraph | Code)[]): Root => ({
+const createRoot = (children: RootContent[]): Root => ({
   type: 'root',
   children,
 });
@@ -1521,27 +1522,82 @@ describe('truncateAtWordBoundary', () => {
   });
 });
 
+describe('truncatePostPreviewText', () => {
+  it('returns null when content fits within character and line limits', () => {
+    expect(truncatePostPreviewText('Line 1\nLine 2')).toBeNull();
+  });
+
+  it('truncates content over the line limit', () => {
+    const content = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7'].join('\n');
+
+    expect(truncatePostPreviewText(content)).toBe('Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6...\u00A0');
+  });
+
+  it('normalizes CRLF when applying the line limit', () => {
+    const content = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7'].join('\r\n');
+
+    expect(truncatePostPreviewText(content)).toBe('Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6...\u00A0');
+  });
+
+  it('does not truncate when only trailing blank lines exceed the line limit', () => {
+    const content = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', '', ''].join('\n');
+
+    expect(truncatePostPreviewText(content)).toBeNull();
+  });
+
+  it('does not count fenced code delimiters against the line limit', () => {
+    const content = ['This text', '', '```ad', '', '', 'da', '```'].join('\n');
+
+    expect(truncatePostPreviewText(content)).toBeNull();
+  });
+
+  it('does not count blank markdown separators against the line limit', () => {
+    const content = ['ad', '', '', '', '', '', 'da'].join('\n');
+
+    expect(truncatePostPreviewText(content)).toBeNull();
+  });
+
+  it('truncates fenced code when rendered content exceeds the line limit', () => {
+    const content = ['This text', '', '```ad', 'Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', '```'].join(
+      '\n',
+    );
+
+    expect(truncatePostPreviewText(content)).toBe(
+      ['This text', '', '```ad', 'Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5'].join('\n') + '...\u00A0',
+    );
+  });
+
+  it('applies the character limit after the line limit', () => {
+    const content = ['word '.repeat(100), 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7'].join('\n');
+
+    const result = truncatePostPreviewText(content);
+    expect(result?.length).toBeLessThanOrEqual(TRUNCATION_LIMIT + 4);
+    expect(result?.endsWith('...\u00A0')).toBe(true);
+  });
+});
+
 describe('remarkExtractFirstParagraph', () => {
   const runPlugin = (tree: Root) => {
     remarkExtractFirstParagraph()(tree);
     return tree;
   };
 
-  describe('First paragraph extraction', () => {
-    it('extracts first paragraph when multiple paragraphs exist', () => {
+  describe('Preview extraction', () => {
+    it('keeps multiple paragraphs when they fit within the preview line limit', () => {
       const tree = createRoot([
         createParagraph('First paragraph'),
         createParagraph('Second paragraph'),
         createParagraph('Third paragraph'),
       ]);
       runPlugin(tree);
-      expect(tree.children.length).toBe(1);
+      expect(tree.children.length).toBe(3);
       expect(tree.children[0].type).toBe('paragraph');
-      const textNodes = getTextNodes(tree.children[0] as Paragraph);
-      expect(textNodes[0].value).toBe('First paragraph');
+      expect(getTextNodes(tree.children[0] as Paragraph)[0].value).toBe('First paragraph');
+      expect(getTextNodes(tree.children[1] as Paragraph)[0].value).toBe('Second paragraph');
+      expect(getTextNodes(tree.children[2] as Paragraph)[0].value).toBe('Third paragraph');
     });
 
-    it('extracts first paragraph when headings precede it', () => {
+    it('keeps headings when they precede paragraphs', () => {
       const heading = {
         type: 'heading' as const,
         depth: 1 as const,
@@ -1552,10 +1608,10 @@ describe('remarkExtractFirstParagraph', () => {
         children: [heading, createParagraph('Intro text'), createParagraph('More text')],
       };
       runPlugin(tree);
-      expect(tree.children.length).toBe(1);
-      expect(tree.children[0].type).toBe('paragraph');
-      const textNodes = getTextNodes(tree.children[0] as Paragraph);
-      expect(textNodes[0].value).toBe('Intro text');
+      expect(tree.children.length).toBe(3);
+      expect(tree.children[0].type).toBe('heading');
+      expect(tree.children[1].type).toBe('paragraph');
+      expect(getTextNodes(tree.children[1] as Paragraph)[0].value).toBe('Intro text');
     });
 
     it('returns original tree when no paragraphs exist', () => {
@@ -1572,6 +1628,79 @@ describe('remarkExtractFirstParagraph', () => {
       const textNodes = getTextNodes(tree.children[0] as Paragraph);
       expect(textNodes[0].value).toBe('Only paragraph');
     });
+
+    it('keeps the first list when no paragraphs exist', () => {
+      const list: List = {
+        type: 'list',
+        ordered: false,
+        spread: false,
+        children: [
+          { type: 'listItem', spread: false, children: [createParagraph('First item')] },
+          { type: 'listItem', spread: false, children: [createParagraph('Second item')] },
+        ],
+      };
+      const tree = createRoot([list]);
+
+      runPlugin(tree);
+
+      expect(tree.children).toEqual([list]);
+    });
+
+    it('keeps code blocks between article paragraphs', () => {
+      const code: Code = {
+        type: 'code',
+        lang: 'js',
+        value: 'const value = 1;',
+      };
+      const tree = createRoot([createParagraph('Para 1'), code, createParagraph('Para 2')]);
+
+      runPlugin(tree);
+
+      expect(tree.children).toHaveLength(3);
+      expect(tree.children[0].type).toBe('paragraph');
+      expect(tree.children[1]).toEqual(code);
+      expect(tree.children[2].type).toBe('paragraph');
+    });
+
+    it('keeps leading code blocks before article paragraphs', () => {
+      const code: Code = {
+        type: 'code',
+        lang: 'ts',
+        value: 'const first = true;',
+      };
+      const tree = createRoot([code, createParagraph('After code')]);
+
+      runPlugin(tree);
+
+      expect(tree.children).toHaveLength(2);
+      expect(tree.children[0]).toEqual(code);
+      expect(getParagraphPlainText(tree.children[1] as Paragraph)).toBe('After code');
+    });
+
+    it('keeps blockquotes between article paragraphs', () => {
+      const blockquote: Blockquote = {
+        type: 'blockquote',
+        children: [createParagraph('Quoted text')],
+      };
+      const tree = createRoot([createParagraph('Para 1'), blockquote, createParagraph('Para 2')]);
+
+      runPlugin(tree);
+
+      expect(tree.children).toHaveLength(3);
+      expect(tree.children[1].type).toBe('blockquote');
+      expect(getParagraphPlainText((tree.children[1] as Blockquote).children[0] as Paragraph)).toBe('Quoted text');
+    });
+
+    it('keeps thematic breaks between article paragraphs', () => {
+      const thematicBreak: RootContent = { type: 'thematicBreak' };
+      const tree = createRoot([createParagraph('Para 1'), thematicBreak, createParagraph('Para 2')]);
+
+      runPlugin(tree);
+
+      expect(tree.children).toHaveLength(3);
+      expect(tree.children[1]).toEqual(thematicBreak);
+      expect(getParagraphPlainText(tree.children[2] as Paragraph)).toBe('Para 2');
+    });
   });
 
   describe('Truncation', () => {
@@ -1584,11 +1713,171 @@ describe('remarkExtractFirstParagraph', () => {
       expect(textNode.value.endsWith('...\u00A0')).toBe(true);
     });
 
+    it('truncates article previews at the aggregate character limit across paragraphs', () => {
+      const firstParagraph = 'a'.repeat(160);
+      const secondParagraph = 'b'.repeat(160);
+      const tree = createRoot([
+        createParagraph(firstParagraph),
+        createParagraph(secondParagraph),
+        createParagraph('hidden'),
+      ]);
+
+      runPlugin(tree);
+
+      expect(tree.children).toHaveLength(2);
+      expect(getParagraphPlainText(tree.children[0] as Paragraph)).toBe(firstParagraph);
+      const secondPreview = getParagraphPlainText(tree.children[1] as Paragraph);
+      expect(secondPreview.length).toBeLessThan(secondParagraph.length);
+      expect(secondPreview.endsWith('...\u00A0')).toBe(true);
+    });
+
+    it('truncates article previews at the aggregate character limit across list items', () => {
+      const firstItem = 'a'.repeat(160);
+      const secondItem = 'b'.repeat(160);
+      const list: List = {
+        type: 'list',
+        ordered: false,
+        spread: false,
+        children: [firstItem, secondItem, 'hidden'].map((item) => ({
+          type: 'listItem' as const,
+          spread: false,
+          children: [createParagraph(item)],
+        })),
+      };
+      const tree = createRoot([list]);
+
+      runPlugin(tree);
+
+      const truncatedList = tree.children[0] as List;
+      expect(truncatedList.children).toHaveLength(2);
+      expect(getParagraphPlainText(truncatedList.children[0].children[0] as Paragraph)).toBe(firstItem);
+      const secondPreview = getParagraphPlainText(truncatedList.children[1].children[0] as Paragraph);
+      expect(secondPreview.length).toBeLessThan(secondItem.length);
+      expect(secondPreview.endsWith('...\u00A0')).toBe(true);
+    });
+
+    it('adds an ellipsis when a list item hides later paragraphs at a character boundary', () => {
+      const visibleParagraph = 'a'.repeat(TRUNCATION_LIMIT);
+      const hiddenParagraph = 'hidden';
+      const list: List = {
+        type: 'list',
+        ordered: false,
+        spread: false,
+        children: [
+          {
+            type: 'listItem',
+            spread: true,
+            children: [createParagraph(visibleParagraph), createParagraph(hiddenParagraph)],
+          },
+        ],
+      };
+      const tree = createRoot([list]);
+
+      runPlugin(tree);
+
+      const truncatedList = tree.children[0] as List;
+      const truncatedItem = truncatedList.children[0];
+      expect(truncatedItem.children).toHaveLength(1);
+      expect(getParagraphPlainText(truncatedItem.children[0] as Paragraph)).toBe(`${visibleParagraph}...\u00A0`);
+    });
+
     it('does not truncate when text is under the limit', () => {
       const tree = createRoot([createParagraph('Short text')]);
       runPlugin(tree);
       const textNode = (tree.children[0] as Paragraph).children[0] as Text;
       expect(textNode.value).toBe('Short text');
+    });
+
+    it('truncates first paragraph text when it exceeds the line limit', () => {
+      const content = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7'].join('\n');
+      const tree = createRoot([createParagraph(content)]);
+
+      runPlugin(tree);
+
+      const textNode = (tree.children[0] as Paragraph).children[0] as Text;
+      expect(textNode.value).toBe('Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6...\u00A0');
+    });
+
+    it('truncates list-only articles to the top-level line limit', () => {
+      const list: List = {
+        type: 'list',
+        ordered: false,
+        spread: false,
+        children: Array.from({ length: POST_TEXT_PREVIEW_MAX_LINES + 1 }, (_, index) => ({
+          type: 'listItem' as const,
+          spread: false,
+          children: [createParagraph(`Item ${index + 1}`)],
+        })),
+      };
+      const tree = createRoot([list]);
+
+      runPlugin(tree);
+
+      const truncatedList = tree.children[0] as List;
+      expect(truncatedList.children).toHaveLength(POST_TEXT_PREVIEW_MAX_LINES);
+      const lastParagraph = truncatedList.children[POST_TEXT_PREVIEW_MAX_LINES - 1].children[0] as Paragraph;
+      expect(getParagraphPlainText(lastParagraph)).toBe('Item 6...\u00A0');
+    });
+
+    it('counts headings against the top-level line limit before list items', () => {
+      const heading: Heading = {
+        type: 'heading',
+        depth: 1,
+        children: [{ type: 'text', value: 'Changelog' } as Text],
+      };
+      const list: List = {
+        type: 'list',
+        ordered: false,
+        spread: false,
+        children: Array.from({ length: POST_TEXT_PREVIEW_MAX_LINES }, (_, index) => ({
+          type: 'listItem' as const,
+          spread: false,
+          children: [createParagraph(`Feature ${index + 1}`)],
+        })),
+      };
+      const tree = createRoot([heading, list]);
+
+      runPlugin(tree);
+
+      expect(tree.children).toHaveLength(2);
+      const truncatedList = tree.children[1] as List;
+      expect(truncatedList.children).toHaveLength(POST_TEXT_PREVIEW_MAX_LINES - 1);
+      const lastParagraph = truncatedList.children[POST_TEXT_PREVIEW_MAX_LINES - 2].children[0] as Paragraph;
+      expect(getParagraphPlainText(lastParagraph)).toBe('Feature 5...\u00A0');
+    });
+
+    it('truncates articles that only contain a long code block', () => {
+      const code: Code = {
+        type: 'code',
+        lang: 'js',
+        value: ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7'].join('\n'),
+      };
+      const tree = createRoot([code]);
+
+      runPlugin(tree);
+
+      expect(tree.children).toHaveLength(1);
+      const truncatedCode = tree.children[0] as Code;
+      expect(truncatedCode.value).toBe('Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6...\u00A0');
+    });
+
+    it('truncates articles that only contain a long blockquote', () => {
+      const blockquote: Blockquote = {
+        type: 'blockquote',
+        children: Array.from({ length: POST_TEXT_PREVIEW_MAX_LINES + 1 }, (_, index) =>
+          createParagraph(`Quote ${index + 1}`),
+        ),
+      };
+      const tree = createRoot([blockquote]);
+
+      runPlugin(tree);
+
+      expect(tree.children).toHaveLength(1);
+      const truncatedBlockquote = tree.children[0] as Blockquote;
+      expect(truncatedBlockquote.children).toHaveLength(POST_TEXT_PREVIEW_MAX_LINES);
+      expect(getParagraphPlainText(truncatedBlockquote.children[POST_TEXT_PREVIEW_MAX_LINES - 1] as Paragraph)).toBe(
+        'Quote 6...\u00A0',
+      );
     });
 
     it('preserves formatting structure during truncation', () => {

@@ -68,7 +68,7 @@ export enum DEV_ROUTES {
   SENTRY_TEST = '/sentry-test',
 }
 
-export const EXPLORE_ROUTES: string[] = [APP_ROUTES.HOME, APP_ROUTES.HOT, APP_ROUTES.SEARCH];
+export const EXPLORE_ROUTES: string[] = [APP_ROUTES.HOME, APP_ROUTES.HOT, APP_ROUTES.SEARCH, APP_ROUTES.COLLECTIONS];
 
 // Public routes are accessible regardless of authentication status.
 // This includes routes that need to be accessible during auth transitions (like logout).
@@ -147,6 +147,7 @@ export const HOME_ROUTES = {
  * Dynamic public routes:
  * - /post/[userId]/[postId] - viewing a single post
  * - /profile/[pubky] - viewing another user's profile
+ * - /collections/[userId]/[postId] - viewing a single collection
  */
 export function isDynamicPublicRoute(pathname: string): boolean {
   const segments = pathname.split('/').filter(Boolean);
@@ -155,10 +156,41 @@ export function isDynamicPublicRoute(pathname: string): boolean {
     case segments[0] === 'invite' && segments.length === 2:
     case segments[0] === 'post' && segments.length === 3:
     case segments[0] === 'profile' && segments.length === 2 && isPubkyIdentifier(segments[1]):
+    case matchSingleCollectionRoute(pathname) !== null:
       return true;
     default:
       return false;
   }
+}
+
+type MatchesAllowedRouteOptions = {
+  /**
+   * When true, explore routes (`EXPLORE_ROUTES`) match exactly so `/collections`
+   * does not expose auth-only sub-routes like `/collections/bookmarks` to guests.
+   * Authenticated route checks should leave this false so prefix matching still
+   * applies (e.g. `/collections/bookmarks` via the `/collections` allowed route).
+   */
+  restrictExploreSubRoutes?: boolean;
+};
+
+/**
+ * Whether `pathname` is reachable via an allowed route entry.
+ *
+ * Non-explore routes keep prefix matching (e.g. onboarding sub-steps). Explore
+ * routes optionally match exactly — see `restrictExploreSubRoutes`.
+ */
+export function matchesAllowedRoute(
+  pathname: string,
+  route: string,
+  { restrictExploreSubRoutes = false }: MatchesAllowedRouteOptions = {},
+): boolean {
+  if (pathname === route) {
+    return true;
+  }
+  if (restrictExploreSubRoutes && EXPLORE_ROUTES.includes(route)) {
+    return false;
+  }
+  return pathname.startsWith(`${route}/`);
 }
 
 /** `/post/[userId]/[postId]` — browsable without auth; uses explore header chrome for guests. */

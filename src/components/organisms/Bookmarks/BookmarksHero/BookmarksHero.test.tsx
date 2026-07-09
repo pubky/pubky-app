@@ -76,7 +76,7 @@ describe('BookmarksHero', () => {
 
     expect(screen.getByRole('heading', { name: BOOKMARKS_COPY.title })).toBeInTheDocument();
     expect(screen.getByText(BOOKMARKS_COPY.description)).toBeInTheDocument();
-    expect(screen.queryByText('15 posts')).toBeInTheDocument();
+    expect(screen.getByLabelText('15 posts')).toBeInTheDocument();
     expect(screen.getByTestId('hero-owner')).toHaveAttribute('data-name', 'Alice');
     expect(screen.getByText('Alice', { selector: 'div' })).toBeInTheDocument();
   });

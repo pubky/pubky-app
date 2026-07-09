@@ -3,11 +3,12 @@
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { isDynamicPublicRoute, PUBLIC_ROUTES } from '@/app/routes';
+import { isDynamicPublicRoute, matchesAllowedRoute, PUBLIC_ROUTES } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { AuthController } from '@/controllers/auth/auth';
 import { MigrationController } from '@/controllers/migration/migration';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
+import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -141,10 +142,12 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     // Get the allowed routes for the current authentication status
     const routeAccess = ROUTE_ACCESS_MAP[status];
 
-    // Check if current pathname matches any allowed route (exact match or sub-route)
-    return routeAccess.allowedRoutes.some((route) => {
-      return pathname === route || pathname.startsWith(route + '/');
-    });
+    // Explore routes match exactly for guests only; authenticated users keep prefix access.
+    const restrictExploreSubRoutes = status === AuthStatus.UNAUTHENTICATED;
+
+    return routeAccess.allowedRoutes.some((route) =>
+      matchesAllowedRoute(pathname, route, { restrictExploreSubRoutes }),
+    );
   }, [isLoading, pathname, status]);
 
   // Handle automatic redirects when user tries to access unauthorized routes

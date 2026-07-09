@@ -20,6 +20,10 @@ interface PostTagsExpandableRowProps {
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
   showTagToggle?: boolean;
+  /** Forwarded to `ClickableTagsList` — hides the `[+]` add-tag control. */
+  showAddButton?: boolean;
+  /** Forwarded to `ClickableTagsList` — tags display without toggle/add. */
+  tagsReadOnly?: boolean;
   panelWidthMode?: PostTagsPanelProps['widthMode'];
 }
 
@@ -33,6 +37,8 @@ export function PostTagsExpandableRow({
   expanded,
   onExpandedChange,
   showTagToggle = true,
+  showAddButton = true,
+  tagsReadOnly = false,
   panelWidthMode = 'fit',
 }: PostTagsExpandableRowProps) {
   const [internalExpanded, setInternalExpanded] = useState(false);
@@ -84,8 +90,9 @@ export function PostTagsExpandableRow({
             maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
             showCount={true}
             showInput={false}
-            showAddButton={true}
-            addMode={true}
+            showAddButton={showAddButton}
+            addMode={showAddButton}
+            readOnly={tagsReadOnly}
           />
         )}
       </Container>

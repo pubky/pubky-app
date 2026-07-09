@@ -4,6 +4,10 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import {
+  getImageUploadSizeLimitKind,
+  IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY,
+} from '@/libs/image/imageUploadSizeLimit';
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
@@ -29,10 +33,14 @@ export class FileApplication {
     try {
       sanitizedFile = await stripImageMetadata(file);
     } catch (error) {
+      // Tag size-limit failures so UI can show a localized toast (GIF/animated
+      // WebP/SVG cannot be compressed under the homeserver cap).
+      const sizeLimitKind = getImageUploadSizeLimitKind(error);
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Image sanitization failed', {
         service: ErrorService.Local,
         operation: 'toFileAttachment',
         cause: error,
+        context: sizeLimitKind ? { [IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY]: sizeLimitKind } : undefined,
       });
     }
     let blobData: Uint8Array;

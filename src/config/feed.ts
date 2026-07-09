@@ -28,6 +28,17 @@ export const GRID_LAYOUT_VARIANTS = new Set<TimelineFeedVariant>([
 ]);
 
 /**
+ * Feed variants where a repost may be optimistically prepended via the active
+ * `TimelineFeedContext`. Reposts belong on the user's timeline, not on
+ * membership feeds (collection, bookmarks) or someone else's profile.
+ */
+export const REPOST_OPTIMISTIC_PREPEND_VARIANTS = new Set<TimelineFeedVariant>([
+  TIMELINE_FEED_VARIANT.HOME,
+  TIMELINE_FEED_VARIANT.CUSTOM,
+  TIMELINE_FEED_VARIANT.HOT,
+]);
+
+/**
  * Responsive column classes for the shared card grid (`TimelineGridPosts`).
  * One column on phones, two at `md`, three at `xl` — mirrors the 3-up Figma grid.
  * Breakpoints may be retuned in the Phase C spike once the real cell width is measured.

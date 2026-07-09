@@ -2,6 +2,7 @@
 
 import { Container } from '@/atoms/Container/Container';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { isArticleContent } from '@/libs/post/articleContent';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
@@ -18,10 +19,12 @@ import type { PostContentBaseProps } from './PostContentBase.types';
 
 /**
  * PostContentBase - Base component that renders post content without repost handling.
- * This component is used internally by PostContent and PostPreviewCard.
- * It only renders the content elements: text, link embeds, and attachments.
+ *
+ * Used internally by `PostContent` and `PostPreviewCard`. Renders text, link embeds,
+ * and attachments for regular posts; delegates `kind=collection` posts to
+ * `CollectionCard` with `presentation="embed"`.
  */
-export function PostContentBase({ postId, className, textClassName, contrast }: PostContentBaseProps) {
+export function PostContentBase({ postId, className, textClassName }: PostContentBaseProps) {
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
@@ -36,7 +39,7 @@ export function PostContentBase({ postId, className, textClassName, contrast }: 
   const isDeleted = isPostDeleted(postDetails.content);
   const hasContent = postDetails.content.trim().length > 0;
   const isBlurred = postDetails.is_blurred;
-  const isArticle = postDetails.kind === 'long';
+  const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
   const isCollection = postDetails.kind === 'collection';
 
   if (isDeleted) return <PostDeleted />;
@@ -55,9 +58,7 @@ export function PostContentBase({ postId, className, textClassName, contrast }: 
 
   if (isCollection) {
     const { pubky, id } = parseCompositeId(postId);
-    return (
-      <CollectionCard authorPubky={pubky} postId={id} variant="preview" contrast={contrast} className={className} />
-    );
+    return <CollectionCard authorPubky={pubky} postId={id} presentation="embed" className={className} />;
   }
 
   if (!hasContent && !postDetails.attachments?.length && !localAttachments) return null;

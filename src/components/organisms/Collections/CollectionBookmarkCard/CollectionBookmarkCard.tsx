@@ -44,7 +44,7 @@ export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProp
       href={COLLECTION_ROUTES.BOOKMARKS}
       aria-label={title}
       data-cy="collection-bookmark-card"
-      className={cn('block h-full w-full lg:max-w-187', className)}
+      className={cn('block h-full w-full', className)}
     >
       <Card className="h-full gap-3 rounded-md py-0">
         <CardContent className="flex h-full flex-col gap-3 p-6">

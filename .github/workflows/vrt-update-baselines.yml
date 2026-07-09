@@ -1,0 +1,15 @@
+name: VRT Update Baselines
+
+# Placeholder workflow. Regenerates visual regression test baselines on Linux and macOS.
+# Real implementation is developed on a separate branch.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    name: Placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: No-op
+        run: echo "VRT baseline workflow placeholder - implementation pending."

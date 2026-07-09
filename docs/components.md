@@ -53,11 +53,11 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 
 Guests can open routes that do not require a session:
 
-| Kind           | Paths                                                           | `@/app/routes` helper  | `usePublicRoute()` flag |
-| -------------- | --------------------------------------------------------------- | ---------------------- | ----------------------- |
-| Core explore   | `/home`, `/hot`, `/search`                                      | `isCoreExploreRoute`   | `isCoreExploreRoute`    |
-| Dynamic public | `/post/[userId]/[postId]`, `/profile/[pubky]`, `/invite/[code]` | `isDynamicPublicRoute` | `isDynamicPublicRoute`  |
-| Either         | —                                                               | `isPublicExploreRoute` | `isPublicExploreRoute`  |
+| Kind           | Paths                                                                                             | `@/app/routes` helper  | `usePublicRoute()` flag |
+| -------------- | ------------------------------------------------------------------------------------------------- | ---------------------- | ----------------------- |
+| Core explore   | `/home`, `/hot`, `/search`, `/collections`                                                        | `isCoreExploreRoute`   | `isCoreExploreRoute`    |
+| Dynamic public | `/post/[userId]/[postId]`, `/profile/[pubky]`, `/invite/[code]`, `/collections/[userId]/[postId]` | `isDynamicPublicRoute` | `isDynamicPublicRoute`  |
+| Either         | —                                                                                                 | `isPublicExploreRoute` | `isPublicExploreRoute`  |
 
 - **Route guard:** `EXPLORE_ROUTES` is included in `UNAUTHENTICATED_ROUTES`; dynamic public paths are allowed via `isDynamicPublicRoute()` in `RouteGuardProvider`.
 - **UI chrome:** use `usePublicRoute()` for layout (e.g. explore header, mobile footer on `/home`). `isPublicRoute` on the hook result is a **legacy alias** for `isDynamicPublicRoute` only—it is `false` on `/home` even though the page is browsable.
