@@ -223,6 +223,8 @@ describe('PostActionsBar', () => {
       'border-white/10',
       'bg-black/40',
       'text-white',
+      'hover:border-white/30',
+      'hover:bg-black/70',
     );
     expect(screen.getAllByTestId('typography')[0]).toHaveClass('text-white/80');
   });
