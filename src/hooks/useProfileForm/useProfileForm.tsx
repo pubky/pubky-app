@@ -11,6 +11,7 @@ import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
 import { AppError } from '@/libs/error/error';
 import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
+import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import { generateRandomUsername } from '@/libs/utils/utils';
 import { useToast } from '@/molecules/Toaster/use-toast';
@@ -43,6 +44,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const router = useRouter();
   const { toast } = useToast();
   const tProfile = useTranslations('toast.profile');
+  const tFile = useTranslations('toast.file');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Generate a stable initial username for create mode (only generated once)
@@ -348,6 +350,16 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         router.push(PROFILE_ROUTES.PROFILE);
       }
     } catch (error) {
+      const sizeLimitMessage = getImageUploadSizeLimitToastMessage(error, tFile);
+      if (sizeLimitMessage) {
+        setSubmitTextKey('tryAgain');
+        toast({
+          variant: 'error',
+          description: sizeLimitMessage,
+        });
+        return;
+      }
+
       if (error instanceof AppError) {
         // Handle session expiration - user needs to re-authenticate
         if (requiresLogin(error)) {
@@ -391,6 +403,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     setShowWelcomeDialog,
     router,
     toast,
+    tFile,
     tProfile,
   ]);
 
