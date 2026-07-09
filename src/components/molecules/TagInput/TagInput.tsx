@@ -163,7 +163,6 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               isDashedVariant && 'border border-dashed border-input shadow-sm transition-all duration-300',
               onClick && 'cursor-pointer',
               className,
-              isAtLimit && 'w-40',
             )}
             style={style}
             // Adding / typing a tag is the only intent here — never navigation.
@@ -195,7 +194,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
                 '-mt-0.5 h-full flex-1 bg-transparent p-0 text-sm leading-8 font-bold caret-white',
                 'border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none',
                 'placeholder:font-bold',
-                isAtLimit ? 'placeholder:text-destructive' : 'placeholder:text-input',
+                isAtLimit ? 'placeholder:text-destructive disabled:opacity-100' : 'placeholder:text-input',
                 inputValue ? 'text-foreground' : 'text-input',
                 isDisabled && onClick && 'pointer-events-none',
                 inputClassName,

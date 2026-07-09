@@ -2,6 +2,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { FilterProfileTags } from './FilterProfileTags';
 
+function getTagInputContainer(container: HTMLElement) {
+  return container.querySelector('div.relative');
+}
+
 describe('FilterProfileTags', () => {
   it('adds a normalized profile tag from the input', async () => {
     const onTagAdd = vi.fn();
@@ -40,6 +44,82 @@ describe('FilterProfileTags', () => {
     render(<FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} disabled />);
 
     expect(screen.getByPlaceholderText('profile tag')).toBeDisabled();
+  });
+
+  it('collapses the whole tags block when disabled', () => {
+    const { container } = render(
+      <FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} disabled />,
+    );
+
+    const wrapper = container.firstChild;
+    expect(wrapper).toHaveClass('grid-rows-[0fr]', 'opacity-0', 'pointer-events-none', 'duration-300', 'ease-in-out');
+    expect(wrapper).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('expands the tags block when active', () => {
+    const { container } = render(<FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} />);
+
+    const wrapper = container.firstChild;
+    expect(wrapper).toHaveClass('grid-rows-[1fr]', 'opacity-100', 'duration-300', 'ease-in-out');
+    expect(wrapper).not.toHaveClass('pointer-events-none');
+  });
+
+  it('keeps rendering the last selected tags while disabled so they collapse with the block', () => {
+    const { rerender } = render(
+      <FilterProfileTags selectedTags={['bitcoin', 'nostr']} onTagAdd={vi.fn()} onTagRemove={vi.fn()} />,
+    );
+
+    // Parent clears tags and disables at the same time (e.g. switching reach to All/Me).
+    rerender(<FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} disabled />);
+
+    expect(screen.getByText('bitcoin')).toBeInTheDocument();
+    expect(screen.getByText('nostr')).toBeInTheDocument();
+
+    // Re-enabling syncs back to the real (cleared) selection.
+    rerender(<FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} />);
+
+    expect(screen.queryByText('bitcoin')).not.toBeInTheDocument();
+    expect(screen.queryByText('nostr')).not.toBeInTheDocument();
+  });
+
+  it('keeps the at-limit input the same width as tag chips', () => {
+    const { container } = render(
+      <FilterProfileTags
+        selectedTags={['one', 'two', 'three', 'four', 'five']}
+        onTagAdd={vi.fn()}
+        onTagRemove={vi.fn()}
+      />,
+    );
+
+    const tagInputContainer = getTagInputContainer(container);
+    expect(tagInputContainer).toHaveClass('w-32');
+    expect(tagInputContainer).not.toHaveClass('w-40', 'opacity-60');
+  });
+
+  it('hides the emoji selector when at the tag limit', () => {
+    render(
+      <FilterProfileTags
+        selectedTags={['one', 'two', 'three', 'four', 'five']}
+        onTagAdd={vi.fn()}
+        onTagRemove={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByLabelText('Open emoji picker')).not.toBeInTheDocument();
+  });
+
+  it('renders the at-limit placeholder at full opacity', () => {
+    render(
+      <FilterProfileTags
+        selectedTags={['one', 'two', 'three', 'four', 'five']}
+        onTagAdd={vi.fn()}
+        onTagRemove={vi.fn()}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText('5 tags max');
+    expect(input).toBeDisabled();
+    expect(input).toHaveClass('placeholder:text-destructive', 'disabled:opacity-100');
   });
 
   it('prevents adding more than five tags', () => {
