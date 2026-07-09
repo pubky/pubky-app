@@ -48,7 +48,7 @@ export function PostInputActionBar({
   const postButtonText = isSubmitting ? 'Posting...' : postButtonLabel;
   const postButtonIconClassName = isSubmitting ? 'animate-spin' : undefined;
   return (
-    <Container className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center" overrideDefaults>
+    <Container className="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center" overrideDefaults>
       <Container className="flex items-center gap-2" overrideDefaults>
         {!isArticle ? (
           <Button
