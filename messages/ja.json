@@ -1078,7 +1078,12 @@
       "maxFiles": "最大{max}ファイルまで許可されています",
       "maxFilesPartial": "最大{max}ファイルまで許可されています。一部のファイルは追加されませんでした。",
       "unsupportedType": "{name}のファイル形式はサポートされていません。対応: {formats}。",
-      "fileTooLarge": "{name}は{maxSize}の制限を超えています。"
+      "fileTooLarge": "{name}は{maxSize}の制限を超えています。",
+      "imageTooLargeRaw": "画像が大きすぎます。最大サイズは{maxSize}です。",
+      "imageTooLargeGif": "このGIFは{maxSize}のアップロード制限を超えており、圧縮できません。より小さいGIFを使用してください。",
+      "imageTooLargeAnimatedWebp": "このアニメーションWebPは{maxSize}のアップロード制限を超えており、圧縮できません。より小さいファイルを使用してください。",
+      "imageTooLargeSvg": "このSVGはサニタイズ後に{maxSize}のアップロード制限を超えています。より小さいファイルを使用してください。",
+      "imageTooLargeRaster": "画像を{maxSize}未満に圧縮できませんでした。より小さい、または解像度の低い画像を使用してください。"
     },
     "status": {
       "updateFailed": "ステータスを更新できませんでした。もう一度お試しください。",
@@ -1336,7 +1341,7 @@
       "addImage": "画像を追加",
       "removeImage": "画像を削除",
       "coverImageInvalid": "カバー画像は画像ファイルである必要があります。",
-      "coverImageTooLarge": "カバー画像が大きすぎます。",
+      "coverImageTooLarge": "カバー画像が大きすぎます。最大サイズは{maxSize}です。",
       "nameRequired": "コレクションのタイトルは必須です。",
       "cancel": "キャンセル",
       "save": "コレクションを保存",

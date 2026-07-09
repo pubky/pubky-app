@@ -1080,7 +1080,12 @@
       "maxFiles": "Máximo {max} archivos permitidos",
       "maxFilesPartial": "Máximo {max} archivos permitidos. Algunos archivos no se agregaron.",
       "unsupportedType": "Tipo de archivo no compatible para {name}. Compatible: {formats}.",
-      "fileTooLarge": "{name} supera el límite de {maxSize}."
+      "fileTooLarge": "{name} supera el límite de {maxSize}.",
+      "imageTooLargeRaw": "La imagen es demasiado grande. El tamaño máximo es {maxSize}.",
+      "imageTooLargeGif": "Este GIF supera el límite de carga de {maxSize} y no se puede comprimir. Usa un GIF más pequeño.",
+      "imageTooLargeAnimatedWebp": "Este WebP animado supera el límite de carga de {maxSize} y no se puede comprimir. Usa un archivo más pequeño.",
+      "imageTooLargeSvg": "Este SVG supera el límite de carga de {maxSize} tras la sanitización. Usa un archivo más pequeño.",
+      "imageTooLargeRaster": "No se pudo comprimir la imagen por debajo de {maxSize}. Usa una imagen más pequeña o de menor resolución."
     },
     "status": {
       "updateFailed": "No se pudo actualizar el estado. Inténtalo de nuevo.",
@@ -1340,7 +1345,7 @@
       "addImage": "Añadir imagen",
       "removeImage": "Quitar imagen",
       "coverImageInvalid": "La imagen de portada debe ser un archivo de imagen.",
-      "coverImageTooLarge": "La imagen de portada es demasiado grande.",
+      "coverImageTooLarge": "La imagen de portada es demasiado grande. El tamaño máximo es {maxSize}.",
       "nameRequired": "El título de la colección es obligatorio.",
       "cancel": "Cancelar",
       "save": "Guardar colección",

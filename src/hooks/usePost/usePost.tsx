@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ToastAction } from '@/atoms/Toast/Toast';
 import { PostController } from '@/controllers/post/post';
+import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -49,6 +50,7 @@ export function usePost(): UsePostReturn {
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const { toast } = useToast();
   const tPost = useTranslations('toast.post');
+  const tFile = useTranslations('toast.file');
 
   const reply = async ({ postId, onSuccess }: UsePostReplyOptions) => {
     // allow empty content and attachments
@@ -74,7 +76,10 @@ export function usePost(): UsePostReturn {
       onSuccess?.(createdPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to submit reply:', err);
-      toast({ variant: 'error', description: tPost('replyFailed') });
+      toast({
+        variant: 'error',
+        description: getImageUploadSizeLimitToastMessage(err, tFile) ?? tPost('replyFailed'),
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -110,7 +115,10 @@ export function usePost(): UsePostReturn {
       onSuccess?.(createdPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to create post:', err);
-      toast({ variant: 'error', description: tPost('postFailed') });
+      toast({
+        variant: 'error',
+        description: getImageUploadSizeLimitToastMessage(err, tFile) ?? tPost('postFailed'),
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -162,7 +170,10 @@ export function usePost(): UsePostReturn {
       onSuccess?.(createdPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to repost:', err);
-      toast({ variant: 'error', description: tPost('repostFailed') });
+      toast({
+        variant: 'error',
+        description: getImageUploadSizeLimitToastMessage(err, tFile) ?? tPost('repostFailed'),
+      });
     } finally {
       setIsSubmitting(false);
     }

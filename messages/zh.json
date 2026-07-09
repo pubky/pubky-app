@@ -1078,7 +1078,12 @@
       "maxFiles": "最多允许 {max} 个文件",
       "maxFilesPartial": "最多允许 {max} 个文件。部分文件未添加。",
       "unsupportedType": "{name} 的文件类型不受支持。支持：{formats}。",
-      "fileTooLarge": "{name} 超过 {maxSize} 限制。"
+      "fileTooLarge": "{name} 超过 {maxSize} 限制。",
+      "imageTooLargeRaw": "图片太大。最大尺寸为 {maxSize}。",
+      "imageTooLargeGif": "此 GIF 超过 {maxSize} 上传限制且无法压缩。请使用更小的 GIF。",
+      "imageTooLargeAnimatedWebp": "此动画 WebP 超过 {maxSize} 上传限制且无法压缩。请使用更小的文件。",
+      "imageTooLargeSvg": "此 SVG 在清理后超过 {maxSize} 上传限制。请使用更小的文件。",
+      "imageTooLargeRaster": "无法将图片压缩到 {maxSize} 以下。请使用更小或更低分辨率的图片。"
     },
     "status": {
       "updateFailed": "无法更新状态。请重试。",
@@ -1330,7 +1335,7 @@
       "addImage": "添加图片",
       "removeImage": "移除图片",
       "coverImageInvalid": "封面图片必须是图片文件。",
-      "coverImageTooLarge": "封面图片太大。",
+      "coverImageTooLarge": "封面图片太大。最大尺寸为 {maxSize}。",
       "nameRequired": "收藏集标题为必填项。",
       "cancel": "取消",
       "save": "保存收藏",
