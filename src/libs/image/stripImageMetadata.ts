@@ -4,6 +4,7 @@ import {
   IMAGE_MAX_RAW_SIZE,
   IMAGE_MAX_UPLOAD_SIZE,
 } from '@/config/images';
+import { throwImageUploadSizeLimit } from '@/libs/image/imageUploadSizeLimit';
 
 const IMAGE_MIME_TYPE_TO_EXTENSION: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -562,7 +563,7 @@ async function sanitizeRasterImage(file: File, mimeType: string): Promise<Blob> 
     }
   }
 
-  throw new Error('Image could not be compressed below upload size limit');
+  throwImageUploadSizeLimit('raster');
 }
 
 function isSvgParserError(document: Document): boolean {
@@ -676,7 +677,7 @@ export async function stripImageMetadata(file: File): Promise<File> {
   }
 
   if (file.size > IMAGE_MAX_RAW_SIZE) {
-    throw new Error('Image file size exceeds upload limits');
+    throwImageUploadSizeLimit('raw');
   }
 
   const obfuscatedName = generateObfuscatedImageFileName(file, imageMimeType);
@@ -684,7 +685,7 @@ export async function stripImageMetadata(file: File): Promise<File> {
   if (imageMimeType === SVG_MIME_TYPE) {
     const sanitizedBlob = await sanitizeSvgImage(file);
     if (sanitizedBlob.size > IMAGE_MAX_UPLOAD_SIZE) {
-      throw new Error('Image file size exceeds upload limits after sanitization');
+      throwImageUploadSizeLimit('svg');
     }
 
     return new File([sanitizedBlob], obfuscatedName, {
@@ -700,7 +701,8 @@ export async function stripImageMetadata(file: File): Promise<File> {
     const body = isAnimatedWebpUpload ? stripWebpMetadataChunks(new Uint8Array(await file.arrayBuffer())) : file;
     const outputSize = body instanceof File ? body.size : body.byteLength;
     if (outputSize > IMAGE_MAX_UPLOAD_SIZE) {
-      throw new Error('Image file size exceeds upload limits after sanitization');
+      const kind = isAnimatedWebpUpload ? 'animated-webp' : imageMimeType === 'image/gif' ? 'gif' : 'raster';
+      throwImageUploadSizeLimit(kind);
     }
     return new File([body], obfuscatedName, {
       type: imageMimeType,

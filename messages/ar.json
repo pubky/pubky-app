@@ -1080,7 +1080,12 @@
       "maxFiles": "الحد الأقصى {max} ملفات",
       "maxFilesPartial": "الحد الأقصى {max} ملفات. لم تتم إضافة بعض الملفات.",
       "unsupportedType": "نوع ملف غير مدعوم لـ {name}. المدعوم: {formats}.",
-      "fileTooLarge": "{name} يتجاوز حد {maxSize}."
+      "fileTooLarge": "{name} يتجاوز حد {maxSize}.",
+      "imageTooLargeRaw": "الصورة كبيرة جداً. الحد الأقصى للحجم هو {maxSize}.",
+      "imageTooLargeGif": "يتجاوز ملف GIF هذا حد الرفع البالغ {maxSize} ولا يمكن ضغطه. يرجى استخدام ملف GIF أصغر.",
+      "imageTooLargeAnimatedWebp": "يتجاوز ملف WebP المتحرك هذا حد الرفع البالغ {maxSize} ولا يمكن ضغطه. يرجى استخدام ملف أصغر.",
+      "imageTooLargeSvg": "يتجاوز ملف SVG هذا حد الرفع البالغ {maxSize} بعد التنظيف. يرجى استخدام ملف أصغر.",
+      "imageTooLargeRaster": "تعذر ضغط الصورة إلى أقل من {maxSize}. يرجى استخدام صورة أصغر أو بدقة أقل."
     },
     "status": {
       "updateFailed": "تعذر تحديث الحالة. حاول مرة أخرى.",
@@ -1332,7 +1337,7 @@
       "addImage": "إضافة صورة",
       "removeImage": "إزالة الصورة",
       "coverImageInvalid": "يجب أن تكون صورة الغلاف ملف صورة.",
-      "coverImageTooLarge": "صورة الغلاف كبيرة جداً.",
+      "coverImageTooLarge": "صورة الغلاف كبيرة جداً. الحد الأقصى للحجم هو {maxSize}.",
       "nameRequired": "عنوان المجموعة مطلوب.",
       "cancel": "إلغاء",
       "save": "حفظ المجموعة",

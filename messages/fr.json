@@ -1078,7 +1078,12 @@
       "maxFiles": "Maximum {max} fichiers autorisés",
       "maxFilesPartial": "Maximum {max} fichiers autorisés. Certains fichiers n'ont pas été ajoutés.",
       "unsupportedType": "Type de fichier non pris en charge pour {name}. Pris en charge : {formats}.",
-      "fileTooLarge": "{name} dépasse la limite de {maxSize}."
+      "fileTooLarge": "{name} dépasse la limite de {maxSize}.",
+      "imageTooLargeRaw": "L'image est trop grande. La taille maximale est {maxSize}.",
+      "imageTooLargeGif": "Ce GIF dépasse la limite d'envoi de {maxSize} et ne peut pas être compressé. Veuillez utiliser un GIF plus petit.",
+      "imageTooLargeAnimatedWebp": "Ce WebP animé dépasse la limite d'envoi de {maxSize} et ne peut pas être compressé. Veuillez utiliser un fichier plus petit.",
+      "imageTooLargeSvg": "Ce SVG dépasse la limite d'envoi de {maxSize} après assainissement. Veuillez utiliser un fichier plus petit.",
+      "imageTooLargeRaster": "L'image n'a pas pu être compressée en dessous de {maxSize}. Veuillez utiliser une image plus petite ou de plus basse résolution."
     },
     "status": {
       "updateFailed": "Impossible de mettre à jour le statut. Réessayez.",
@@ -1336,7 +1341,7 @@
       "addImage": "Ajouter une image",
       "removeImage": "Supprimer l'image",
       "coverImageInvalid": "L'image de couverture doit être un fichier image.",
-      "coverImageTooLarge": "L'image de couverture est trop grande.",
+      "coverImageTooLarge": "L'image de couverture est trop grande. La taille maximale est {maxSize}.",
       "nameRequired": "Le titre de la collection est requis.",
       "cancel": "Annuler",
       "save": "Enregistrer la collection",

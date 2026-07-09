@@ -266,7 +266,7 @@ describe('stripImageMetadata', () => {
     const inputFile = new File(['raw-image-bytes'], 'huge-photo.jpg', { type: 'image/jpeg' });
     Object.defineProperty(inputFile, 'size', { value: IMAGE_MAX_RAW_SIZE + 1 });
 
-    await expect(stripImageMetadata(inputFile)).rejects.toThrow('Image file size exceeds upload limits');
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('IMAGE_UPLOAD_SIZE_LIMIT:raw');
     expect(URL.createObjectURL).not.toHaveBeenCalled();
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
@@ -406,9 +406,7 @@ describe('stripImageMetadata', () => {
       { type: 'image/svg+xml' },
     );
 
-    await expect(stripImageMetadata(inputFile)).rejects.toThrow(
-      'Image file size exceeds upload limits after sanitization',
-    );
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('IMAGE_UPLOAD_SIZE_LIMIT:svg');
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
@@ -525,18 +523,14 @@ describe('stripImageMetadata', () => {
     mockToBlobSizes([IMAGE_MAX_UPLOAD_SIZE + 1]);
     const inputFile = new File(['raw-image-bytes'], 'stubborn.jpg', { type: 'image/jpeg' });
 
-    await expect(stripImageMetadata(inputFile)).rejects.toThrow(
-      'Image could not be compressed below upload size limit',
-    );
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('IMAGE_UPLOAD_SIZE_LIMIT:raster');
   });
 
   it('rejects GIF files over the upload limit after sanitization', async () => {
     const inputFile = new File(['original-content'], 'animated.gif', { type: 'image/gif' });
     Object.defineProperty(inputFile, 'size', { value: IMAGE_MAX_UPLOAD_SIZE + 1 });
 
-    await expect(stripImageMetadata(inputFile)).rejects.toThrow(
-      'Image file size exceeds upload limits after sanitization',
-    );
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('IMAGE_UPLOAD_SIZE_LIMIT:gif');
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
@@ -547,9 +541,7 @@ describe('stripImageMetadata', () => {
     ]);
     const inputFile = new File([animatedWebp], 'loop.webp', { type: 'image/webp' });
 
-    await expect(stripImageMetadata(inputFile)).rejects.toThrow(
-      'Image file size exceeds upload limits after sanitization',
-    );
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('IMAGE_UPLOAD_SIZE_LIMIT:animated-webp');
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 });
