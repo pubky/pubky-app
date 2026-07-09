@@ -146,7 +146,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
     >
       <Container
         overrideDefaults
-        className="pointer-events-none drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] group-focus-within:pointer-events-auto group-hover:pointer-events-auto"
+        className="pointer-events-none group-focus-within:pointer-events-auto group-hover:pointer-events-auto"
       >
         <Container
           overrideDefaults
@@ -175,7 +175,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
               <PostText
                 content={truncatedContent}
                 className={cn(
-                  'text-white drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] [&_*]:text-white [&_blockquote]:border-white/30 [&_button]:text-white [&_button]:hover:text-white/80',
+                  'text-white [&_*]:text-white [&_blockquote]:border-white/30 [&_button]:text-white [&_button]:hover:text-white/80',
                   isCompact ? 'text-sm leading-5' : 'text-base leading-6',
                 )}
               />
@@ -189,7 +189,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
         onClick={stopPropagation}
         onPointerDown={stopPropagation}
         className={cn(
-          'pointer-events-none w-full drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] group-focus-within:pointer-events-auto group-hover:pointer-events-auto',
+          'pointer-events-none w-full group-focus-within:pointer-events-auto group-hover:pointer-events-auto',
           isCompact ? 'mt-4 flex flex-col gap-4' : 'mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-4',
         )}
       >
@@ -201,7 +201,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
           showAddButton={!tagsExpanded}
           addMode={true}
           maxTags={isCompact ? 3 : 4}
-          className={cn('text-white [&_[role=button]]:border-white/20', isCompact ? 'max-w-full' : 'min-w-0 flex-1')}
+          className={cn('text-white', isCompact ? 'max-w-full' : 'min-w-0 flex-1')}
         />
 
         <PostActionsBar
