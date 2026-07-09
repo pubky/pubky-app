@@ -47,7 +47,7 @@ exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] 
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -141,7 +141,7 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -222,7 +222,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -304,7 +304,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -406,7 +406,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -500,7 +500,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -598,7 +598,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -692,7 +692,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -784,7 +784,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -878,7 +878,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -971,7 +971,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -1068,7 +1068,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
@@ -1170,7 +1170,7 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
         data-testid="container"
       >
         <div
-          class="justify-between gap-4 md:flex-row md:gap-0"
+          class="gap-4"
           data-testid="container"
         >
           <div
