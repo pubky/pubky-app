@@ -107,7 +107,9 @@ const optionalStringArrayFromString = (label: string) =>
         return z.NEVER;
       }
     })
-    .pipe(z.array(nonEmptyStringValue).min(1).optional());
+    // Empty arrays are intentional (e.g. MODERATED_TAGS=[] means no moderated tags).
+    // Unset / blank strings stay `undefined` so the value-schema default still applies.
+    .pipe(z.array(nonEmptyStringValue).optional());
 
 /**
  * Optional-tier env strings: a missing OR empty/whitespace value means "unset".
@@ -230,10 +232,7 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   ttlUserMaxBatchSize: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlUserMaxBatchSize),
   ttlRetryDelayMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlRetryDelayMs),
   moderationId: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.moderationId),
-  moderatedTags: z
-    .array(nonEmptyStringValue)
-    .min(1)
-    .default([...APP_RUNTIME_DEFAULTS.moderatedTags]),
+  moderatedTags: z.array(nonEmptyStringValue).default([...APP_RUNTIME_DEFAULTS.moderatedTags]),
   exchangeRateApi: urlValue.default(APP_RUNTIME_DEFAULTS.exchangeRateApi),
   preludeSdkKey: nonEmptyStringValue.optional(),
   preludeSdkTimeoutMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.preludeSdkTimeoutMs),
