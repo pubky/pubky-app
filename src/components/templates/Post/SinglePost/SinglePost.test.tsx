@@ -18,6 +18,10 @@ const SHORT_POST_DETAILS = {
   is_blurred: false,
 } satisfies EnrichedPostDetails;
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+}));
+
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
 }));
