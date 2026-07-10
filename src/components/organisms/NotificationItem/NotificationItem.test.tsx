@@ -810,7 +810,7 @@ describe('NotificationItem', () => {
 
     rerender(<NotificationItem notification={collectionEditedNotification} isUnread={false} />);
 
-    // Stale short kind must not keep a /post link for the new collection target
+    // Kind is keyed by composite ID, so the first paint after target change has no link
     expect(screen.getByText('edited a post you have interacted with').closest('a')).toBeNull();
 
     await vi.waitFor(() => {

@@ -49,10 +49,16 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     return postUri ? pubkyUriToCompositeId(postUri) : null;
   }, [notification]);
 
-  // State for post content and kind (fetched via controller).
-  // postKind: undefined = still loading, string = known kind, null = fetch failed/unavailable
-  const [postContent, setPostContent] = useState<string | null>(null);
-  const [postKind, setPostKind] = useState<string | null | undefined>(undefined);
+  // Post fetch state keyed by composite ID so a reused row never paints with a stale kind
+  // before the effect resets. Kind: undefined = loading, string = known, null = failed.
+  const [fetchedPost, setFetchedPost] = useState<{
+    compositeId: string;
+    kind: string | null;
+    content: string | null;
+  } | null>(null);
+
+  const postKind = fetchedPost && fetchedPost.compositeId === postCompositeId ? fetchedPost.kind : undefined;
+  const postContent = fetchedPost && fetchedPost.compositeId === postCompositeId ? fetchedPost.content : null;
 
   // Use existing hook for user profile data
   const { profile } = useUserProfile(actorUserId || '');
@@ -65,50 +71,50 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     if (!viewerId) return;
 
     let isCancelled = false;
-    setPostKind(undefined);
-    setPostContent(null);
+    const targetCompositeId = postCompositeId;
 
     // PostController.getOrFetch handles the caching strategy:
     // 1. Check local DB first
     // 2. If missing, fetch from Nexus
     // 3. Write to local DB
-    PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
+    PostController.getOrFetch({ compositeId: targetCompositeId, viewerId })
       .then(async (post) => {
         if (isCancelled) return;
 
         if (!post) {
-          setPostKind(null);
+          setFetchedPost({ compositeId: targetCompositeId, kind: null, content: null });
           return;
         }
 
-        setPostKind(post.kind);
-
-        if (!post.content) return;
-
-        if (isPostDeleted(post.content)) {
-          setPostContent(tPost('deleted'));
-        } else if (post.kind === 'long') {
-          setPostContent(parseArticleContent(post.content)?.title || post.content);
-        } else if (post.kind === 'collection') {
-          const parsed = parseCollectionContent(post.content);
-          if (parsed) {
-            setPostContent(parsed.name);
+        let content: string | null = null;
+        if (post.content) {
+          if (isPostDeleted(post.content)) {
+            content = tPost('deleted');
+          } else if (post.kind === 'long') {
+            content = parseArticleContent(post.content)?.title || post.content;
+          } else if (post.kind === 'collection') {
+            const parsed = parseCollectionContent(post.content);
+            if (parsed) {
+              content = parsed.name;
+            } else {
+              content = post.content;
+              toast({
+                variant: 'error',
+                description: tPostToast('collectionParseError'),
+              });
+            }
           } else {
-            setPostContent(post.content);
-            toast({
-              variant: 'error',
-              description: tPostToast('collectionParseError'),
-            });
+            content = await resolvePubkyToNames(post.content);
+            if (isCancelled) return;
           }
-        } else {
-          const content = await resolvePubkyToNames(post.content);
-          if (!isCancelled) setPostContent(content);
         }
+
+        setFetchedPost({ compositeId: targetCompositeId, kind: post.kind, content });
       })
       .catch((error) => {
         if (!isCancelled) {
-          setPostKind(null);
-          Logger.warn('Failed to fetch notification post:', { postCompositeId, error });
+          setFetchedPost({ compositeId: targetCompositeId, kind: null, content: null });
+          Logger.warn('Failed to fetch notification post:', { postCompositeId: targetCompositeId, error });
         }
       });
 
