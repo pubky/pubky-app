@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getCollectionRoute } from '@/app/routes';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE, PUBKY_INVALID_TOO_LONG } from '@/test-utils/pubky';
@@ -17,6 +18,17 @@ const SHORT_POST_DETAILS = {
   is_moderated: false,
   is_blurred: false,
 } satisfies EnrichedPostDetails;
+
+const COLLECTION_POST_DETAILS = {
+  ...SHORT_POST_DETAILS,
+  kind: 'collection' as const,
+} satisfies EnrichedPostDetails;
+
+const mockRouterReplace = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: mockRouterReplace }),
+}));
 
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
@@ -54,6 +66,8 @@ describe('SinglePostPage', () => {
   it('does not render a layout shell', () => {
     const { container } = render(<SinglePostPage postId={VALID_COMPOSITE_POST_ID} />);
     expect(container.firstChild).not.toHaveAttribute('data-testid', 'content-layout');
+    expect(mockRouterReplace).not.toHaveBeenCalled();
+    expect(screen.getByTestId('single-post-content')).toBeInTheDocument();
   });
 
   it('renders not found without fetching invalid composite ids', () => {
@@ -62,5 +76,20 @@ describe('SinglePostPage', () => {
 
     expect(screen.getByTestId('post-not-found-discovery')).toBeInTheDocument();
     expect(usePostDetails).toHaveBeenCalledWith(invalidComposite, { enabled: false });
+  });
+
+  it('redirects collections to the collection route and does not render post content', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: COLLECTION_POST_DETAILS,
+      isLoading: false,
+    });
+
+    render(<SinglePostPage postId={VALID_COMPOSITE_POST_ID} />);
+
+    expect(mockRouterReplace).toHaveBeenCalledWith(
+      getCollectionRoute(PUBKY_52_STAGING_FIXTURE, POST_ID_STAGING_FIXTURE),
+    );
+    expect(screen.getByTestId('single-post-content-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('single-post-content')).not.toBeInTheDocument();
   });
 });
