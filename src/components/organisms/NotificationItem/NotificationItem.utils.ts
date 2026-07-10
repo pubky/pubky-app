@@ -1,4 +1,4 @@
-import { APP_ROUTES, POST_ROUTES, PROFILE_ROUTES } from '@/app/routes';
+import { APP_ROUTES, getCollectionRoute, POST_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { Logger } from '@/libs/logger/logger';
 import { truncateString } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
@@ -30,7 +30,10 @@ const NOTIFICATION_ACTION_KEY: Record<NotificationType, string> = {
  * Get notification action translation key (without the username) based on type
  * Returns the i18n key to be used with useTranslations('notifications.actions')
  */
-export function getNotificationActionKey(notification: FlatNotification): string {
+export function getNotificationActionKey(notification: FlatNotification, postKind?: string | null): string {
+  if (notification.type === NotificationType.PostEdited && postKind === 'collection') {
+    return 'updatedCollection';
+  }
   return NOTIFICATION_ACTION_KEY[notification.type] ?? 'fallback';
 }
 
@@ -102,7 +105,7 @@ function uriToUrlPath(uri: string | undefined): string | null {
  * Get the appropriate post link for a notification based on its type
  * Uses TypeScript's discriminated union type narrowing for type safety
  */
-function getPostLink(notification: FlatNotification): string | null {
+function getPostLink(notification: FlatNotification, postKind?: string | null): string | null {
   let uri: string | undefined;
 
   switch (notification.type) {
@@ -146,7 +149,16 @@ function getPostLink(notification: FlatNotification): string | null {
 
   // Convert URI to URL path format
   const urlPath = uriToUrlPath(uri);
-  return urlPath ? `${POST_ROUTES.POST}/${urlPath}` : null;
+  if (!urlPath) return null;
+
+  if (notification.type === NotificationType.PostEdited && postKind === 'collection') {
+    const [authorPubky, postId] = urlPath.split('/');
+    if (authorPubky && postId) {
+      return getCollectionRoute(authorPubky, postId);
+    }
+  }
+
+  return `${POST_ROUTES.POST}/${urlPath}`;
 }
 
 /**
@@ -168,9 +180,10 @@ function shouldUsePrimaryUserLink(notification: FlatNotification): boolean {
  * Pure function that separates business logic from presentation layer.
  *
  * @param notification - The notification to process
+ * @param postKind - Optional post kind for kind-aware routing (e.g. collection edits)
  * @returns Object with notificationLink and userProfileLink
  */
-export function getNotificationLink(notification: FlatNotification) {
+export function getNotificationLink(notification: FlatNotification, postKind?: string | null) {
   // Get user ID to create profile link
   const userId = getUserIdFromNotification(notification);
   const userProfileLink = userId ? getUserProfileLink(userId) : null;
@@ -178,7 +191,7 @@ export function getNotificationLink(notification: FlatNotification) {
   // Determine the main notification link
   // For user-centric notifications (follow/unfollow/friend), use profile link
   // For post-centric notifications, use post link
-  const postLink = getPostLink(notification);
+  const postLink = getPostLink(notification, postKind);
   const usePrimaryUserLink = shouldUsePrimaryUserLink(notification);
   const notificationLink = usePrimaryUserLink ? userProfileLink : postLink;
 

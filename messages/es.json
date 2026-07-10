@@ -852,6 +852,7 @@
       "mentionedYou": "te mencionó en una publicación",
       "deletedPost": "eliminó una publicación",
       "editedPost": "editó una publicación con la que interactuaste",
+      "updatedCollection": "updated a Collection",
       "fallback": "Nueva notificación"
     },
     "settings": {

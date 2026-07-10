@@ -850,6 +850,7 @@
       "mentionedYou": "mentioned you in post",
       "deletedPost": "deleted a post",
       "editedPost": "edited a post you have interacted with",
+      "updatedCollection": "updated a Collection",
       "fallback": "New notification"
     },
     "settings": {

@@ -850,6 +850,7 @@
       "mentionedYou": "在帖子中提到了您",
       "deletedPost": "删除了一条帖子",
       "editedPost": "编辑了您互动过的帖子",
+      "updatedCollection": "updated a Collection",
       "fallback": "新通知"
     },
     "settings": {

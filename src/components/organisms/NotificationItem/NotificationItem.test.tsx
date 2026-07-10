@@ -675,6 +675,69 @@ describe('NotificationItem', () => {
 
     expect(screen.getByText('User').closest('a')).not.toHaveClass('hover:underline');
   });
+
+  it('shows updated a Collection and links to collection page for PostEdited collection', async () => {
+    const collectionContent = JSON.stringify({
+      name: 'My Collection',
+      description: 'Some description',
+      items: ['user1:post1'],
+    });
+
+    mockGetOrFetch.mockResolvedValue({
+      kind: 'collection',
+      content: collectionContent,
+    });
+
+    const editedNotification = {
+      id: 'post_edited:123:author1',
+      type: NotificationType.PostEdited,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      edit_source: 'repost',
+      edited_by: 'author1',
+      edited_uri: 'pubky://author1/pub/pubky.app/posts/collection123',
+      linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost456',
+    } as FlatNotification;
+
+    render(<NotificationItem notification={editedNotification} isUnread={false} />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('updated a Collection')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('updated a Collection').closest('a')).toHaveAttribute(
+      'href',
+      '/collections/author1/collection123',
+    );
+  });
+
+  it('shows edited a post and links to post page for PostEdited short post', async () => {
+    mockGetOrFetch.mockResolvedValue({
+      kind: 'short',
+      content: 'Hello world',
+    });
+
+    const editedNotification = {
+      id: 'post_edited:123:author1',
+      type: NotificationType.PostEdited,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      edit_source: 'repost',
+      edited_by: 'author1',
+      edited_uri: 'pubky://author1/pub/pubky.app/posts/post123',
+      linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost456',
+    } as FlatNotification;
+
+    render(<NotificationItem notification={editedNotification} isUnread={false} />);
+
+    await vi.waitFor(() => {
+      expect(mockGetOrFetch).toHaveBeenCalled();
+    });
+
+    expect(screen.getByText('edited a post you have interacted with')).toBeInTheDocument();
+    expect(screen.getByText('edited a post you have interacted with').closest('a')).toHaveAttribute(
+      'href',
+      '/post/author1/post123',
+    );
+  });
 });
 
 describe('NotificationItem - Snapshots', () => {

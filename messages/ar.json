@@ -852,6 +852,7 @@
       "mentionedYou": "ذكرك في منشور",
       "deletedPost": "حذف منشورا",
       "editedPost": "عدّل منشوراً تفاعلت معه",
+      "updatedCollection": "updated a Collection",
       "fallback": "إشعار جديد"
     },
     "settings": {

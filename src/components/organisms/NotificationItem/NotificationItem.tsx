@@ -49,8 +49,9 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     return postUri ? pubkyUriToCompositeId(postUri) : null;
   }, [notification]);
 
-  // State for post content (fetched via controller)
+  // State for post content and kind (fetched via controller)
   const [postContent, setPostContent] = useState<string | null>(null);
+  const [postKind, setPostKind] = useState<string | null>(null);
 
   // Use existing hook for user profile data
   const { profile } = useUserProfile(actorUserId || '');
@@ -70,26 +71,30 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     // 3. Write to local DB
     PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
       .then(async (post) => {
-        if (!isCancelled && post?.content) {
-          if (isPostDeleted(post.content)) {
-            setPostContent(tPost('deleted'));
-          } else if (post.kind === 'long') {
-            setPostContent(parseArticleContent(post.content)?.title || post.content);
-          } else if (post.kind === 'collection') {
-            const parsed = parseCollectionContent(post.content);
-            if (parsed) {
-              setPostContent(parsed.name);
-            } else {
-              setPostContent(post.content);
-              toast({
-                variant: 'error',
-                description: tPostToast('collectionParseError'),
-              });
-            }
+        if (isCancelled || !post) return;
+
+        setPostKind(post.kind);
+
+        if (!post.content) return;
+
+        if (isPostDeleted(post.content)) {
+          setPostContent(tPost('deleted'));
+        } else if (post.kind === 'long') {
+          setPostContent(parseArticleContent(post.content)?.title || post.content);
+        } else if (post.kind === 'collection') {
+          const parsed = parseCollectionContent(post.content);
+          if (parsed) {
+            setPostContent(parsed.name);
           } else {
-            const content = await resolvePubkyToNames(post.content);
-            if (!isCancelled) setPostContent(content);
+            setPostContent(post.content);
+            toast({
+              variant: 'error',
+              description: tPostToast('collectionParseError'),
+            });
           }
+        } else {
+          const content = await resolvePubkyToNames(post.content);
+          if (!isCancelled) setPostContent(content);
         }
       })
       .catch((error) => {
@@ -109,7 +114,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const avatarUrl = profile?.avatarUrl;
 
   // Get notification action text (without username, for separate rendering)
-  const actionKey = getNotificationActionKey(notification);
+  const actionKey = getNotificationActionKey(notification, postKind);
   const actionText = t(actionKey);
 
   // Get post preview text
@@ -120,7 +125,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const timestampLong = formatNotificationTime(notification.timestamp, true);
 
   // Calculate notification links (business logic separated in pure function)
-  const { notificationLink, userProfileLink } = getNotificationLink(notification);
+  const { notificationLink, userProfileLink } = getNotificationLink(notification, postKind);
 
   // Handle tag click - navigate to search with the tag
   const handleTagClick = (tagLabel: string) => (e: React.MouseEvent) => {

@@ -852,6 +852,7 @@
       "mentionedYou": "hat Sie in einem Beitrag erwaehnt",
       "deletedPost": "hat einen Beitrag gelöscht",
       "editedPost": "hat einen Beitrag bearbeitet, mit dem Sie interagiert haben",
+      "updatedCollection": "updated a Collection",
       "fallback": "Neue Benachrichtigung"
     },
     "settings": {
