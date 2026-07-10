@@ -761,6 +761,65 @@ describe('NotificationItem', () => {
       );
     });
   });
+
+  it('resets post kind when PostEdited target changes so stale kind cannot leak', async () => {
+    mockGetOrFetch.mockResolvedValueOnce({
+      kind: 'short',
+      content: 'Hello world',
+    });
+
+    const shortEditedNotification = {
+      id: 'post_edited:123:author1',
+      type: NotificationType.PostEdited,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      edit_source: 'repost',
+      edited_by: 'author1',
+      edited_uri: 'pubky://author1/pub/pubky.app/posts/post123',
+      linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost456',
+    } as FlatNotification;
+
+    const { rerender } = render(<NotificationItem notification={shortEditedNotification} isUnread={false} />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('edited a post you have interacted with').closest('a')).toHaveAttribute(
+        'href',
+        '/post/author1/post123',
+      );
+    });
+
+    const collectionContent = JSON.stringify({
+      name: 'My Collection',
+      description: 'Some description',
+      items: ['user1:post1'],
+    });
+
+    mockGetOrFetch.mockResolvedValueOnce({
+      kind: 'collection',
+      content: collectionContent,
+    });
+
+    const collectionEditedNotification = {
+      id: 'post_edited:456:author1',
+      type: NotificationType.PostEdited,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      edit_source: 'repost',
+      edited_by: 'author1',
+      edited_uri: 'pubky://author1/pub/pubky.app/posts/collection123',
+      linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost789',
+    } as FlatNotification;
+
+    rerender(<NotificationItem notification={collectionEditedNotification} isUnread={false} />);
+
+    // Stale short kind must not keep a /post link for the new collection target
+    expect(screen.getByText('edited a post you have interacted with').closest('a')).toBeNull();
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('updated a Collection').closest('a')).toHaveAttribute(
+        'href',
+        '/collections/author1/collection123',
+      );
+    });
+  });
 });
 
 describe('NotificationItem - Snapshots', () => {

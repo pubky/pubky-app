@@ -65,6 +65,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     if (!viewerId) return;
 
     let isCancelled = false;
+    setPostKind(undefined);
+    setPostContent(null);
 
     // PostController.getOrFetch handles the caching strategy:
     // 1. Check local DB first
