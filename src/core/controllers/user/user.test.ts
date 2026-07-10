@@ -9,7 +9,6 @@ import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
 import type { NexusTag, NexusTaggers, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
-import { getStreamId } from '@/stores/home/home.utils';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { UserController } from './user';
 
@@ -24,17 +23,8 @@ vi.mock('@/stores/home/home.store', async (importOriginal) => {
   };
 });
 
-vi.mock('@/stores/home/home.utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/stores/home/home.utils')>();
-  return {
-    ...actual,
-    getStreamId: vi.fn(),
-  };
-});
-
 const mockUseHomeStore = vi.mocked(useHomeStore);
 const mockUseHomeStoreGetState = vi.mocked(useHomeStore.getState);
-const mockGetStreamId = vi.mocked(getStreamId);
 
 const createMockHomeState = () =>
   asOpaque<ReturnType<typeof useHomeStore.getState>>({
@@ -54,7 +44,6 @@ describe('UserController', () => {
     vi.clearAllMocks();
     mockUseHomeStore.mockReset();
     mockUseHomeStoreGetState.mockReset();
-    mockGetStreamId.mockReset();
   });
 
   afterEach(() => {
@@ -496,7 +485,7 @@ describe('UserController', () => {
     it('should pass activeStreamId when on /home route', async () => {
       const follower = TEST_PUBKY.USER_1;
       const followee = TEST_PUBKY.USER_2;
-      const mockStreamId = 'home:all:all' as PostStreamTypes;
+      const expectedStreamId = 'timeline:all:all' as PostStreamTypes;
 
       const mockFollowJson = { foo: 'bar' } as Record<string, unknown>;
       const mockToJson = vi.fn(() => mockFollowJson);
@@ -514,9 +503,8 @@ describe('UserController', () => {
         value: { pathname: '/home' },
         writable: true,
       });
-      // Mock useHomeStore and getStreamId to return the mock stream ID
+      // Mock useHomeStore so the controller can derive the active stream ID.
       mockUseHomeStoreGetState.mockReturnValue(createMockHomeState());
-      mockGetStreamId.mockReturnValue(mockStreamId);
       const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
 
       await UserController.commitFollow(HttpMethod.PUT, { follower, followee });
@@ -527,7 +515,7 @@ describe('UserController', () => {
         followJson: mockFollowJson,
         follower,
         followee,
-        activeStreamId: mockStreamId,
+        activeStreamId: expectedStreamId,
       });
     });
   });

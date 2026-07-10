@@ -3,35 +3,70 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFeedSidebar';
 
-const { mockSetContent, mockUseHomeStore, mockFilterContent, mockUseFeedLayoutResolution, mockCurrentUserPubky } =
-  vi.hoisted(() => ({
-    mockSetContent: vi.fn(),
-    mockUseHomeStore: vi.fn(),
-    mockFilterContent: vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
+const {
+  mockSetContent,
+  mockUseHomeStore,
+  mockFilterContent,
+  mockFilterReach,
+  mockUseFeedLayoutResolution,
+  mockCurrentUserPubky,
+} = vi.hoisted(() => ({
+  mockSetContent: vi.fn(),
+  mockUseHomeStore: vi.fn(),
+  mockFilterContent: vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
+    <div
+      data-testid="filter-content"
+      data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
+      data-selected-tab={selectedTab}
+    >
+      FilterContent
+    </div>
+  )),
+  mockFilterReach: vi.fn(
+    ({
+      selectedTab,
+      showNetwork,
+      showMe,
+      profileTags,
+      profileTagsDisabled,
+    }: {
+      selectedTab?: string;
+      showNetwork?: boolean;
+      showMe?: boolean;
+      profileTags?: string[];
+      profileTagsDisabled?: boolean;
+    }) => (
       <div
-        data-testid="filter-content"
-        data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
+        data-testid="filter-reach"
         data-selected-tab={selectedTab}
+        data-show-network={showNetwork ? 'true' : undefined}
+        data-show-me={showMe ? 'true' : undefined}
+        data-profile-tags={(profileTags ?? []).join(',')}
+        data-profile-tags-disabled={profileTagsDisabled ? 'true' : undefined}
       >
-        FilterContent
+        FilterReach
       </div>
-    )),
-    mockUseFeedLayoutResolution: vi.fn(() => ({
-      requestedLayout: 'columns',
-      effectiveLayout: 'columns',
-      isVisualRequested: false,
-      isVisualActive: false,
-      isPhoneViewport: false,
-    })),
-    mockCurrentUserPubky: { value: 'viewer-pubky' as string | null },
-  }));
+    ),
+  ),
+  mockUseFeedLayoutResolution: vi.fn(() => ({
+    requestedLayout: 'columns',
+    effectiveLayout: 'columns',
+    isVisualRequested: false,
+    isVisualActive: false,
+    isPhoneViewport: false,
+  })),
+  mockCurrentUserPubky: { value: 'viewer-pubky' as string | null },
+}));
 
 // Mock useHomeStore
 vi.mock('@/stores/home/home.types', () => ({
+  isProfileTagGatedReach: (reach: string) => reach === 'all' || reach === 'me',
   REACH: {
     ALL: 'all',
+    NETWORK: 'network',
     FOLLOWING: 'following',
     FRIENDS: 'friends',
+    ME: 'me',
   },
   CONTENT: {
     ALL: 'all',
@@ -86,11 +121,13 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
 
 vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
-    FilterReach: ({ selectedTab }: { selectedTab?: string }) => (
-      <div data-testid="filter-reach" data-selected-tab={selectedTab}>
-        FilterReach
-      </div>
-    ),
+    FilterReach: (props: {
+      selectedTab?: string;
+      showNetwork?: boolean;
+      showMe?: boolean;
+      profileTags?: string[];
+      profileTagsDisabled?: boolean;
+    }) => mockFilterReach(props),
   };
 });
 
@@ -112,8 +149,12 @@ beforeEach(() => {
     setSort: vi.fn(),
     content: 'all',
     setContent: mockSetContent,
+    profileTags: [],
+    addProfileTag: vi.fn(),
+    removeProfileTag: vi.fn(),
   });
   mockFilterContent.mockClear();
+  mockFilterReach.mockClear();
   mockUseFeedLayoutResolution.mockReturnValue({
     requestedLayout: 'columns',
     effectiveLayout: 'columns',
@@ -187,6 +228,71 @@ describe('HomeFeedSidebar', () => {
     render(<HomeFeedSidebar />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
+  });
+
+  it('opts Home reach into V1 Network, Me, and profile tag controls', () => {
+    mockUseHomeStore.mockReturnValue({
+      layout: 'columns',
+      setLayout: vi.fn(),
+      reach: 'network',
+      setReach: vi.fn(),
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'all',
+      setContent: mockSetContent,
+      profileTags: ['bitcoin', 'dev'],
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+    });
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-network', 'true');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-me', 'true');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', 'bitcoin,dev');
+  });
+
+  it('hides and disables profile tags while effective reach is all', () => {
+    mockUseHomeStore.mockReturnValue({
+      layout: 'columns',
+      setLayout: vi.fn(),
+      reach: 'all',
+      setReach: vi.fn(),
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'all',
+      setContent: mockSetContent,
+      profileTags: ['bitcoin'],
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+    });
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', '');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags-disabled', 'true');
+  });
+
+  it('hides and disables profile tags while effective reach is me until Nexus support ships', () => {
+    mockUseHomeStore.mockReturnValue({
+      layout: 'columns',
+      setLayout: vi.fn(),
+      reach: 'me',
+      setReach: vi.fn(),
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'all',
+      setContent: mockSetContent,
+      profileTags: ['bitcoin'],
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+    });
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'me');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', '');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags-disabled', 'true');
   });
 });
 

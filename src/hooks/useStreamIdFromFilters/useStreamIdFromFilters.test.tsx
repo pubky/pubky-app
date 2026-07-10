@@ -183,8 +183,10 @@ describe('useStreamIdFromFilters', () => {
     // Test each reach option
     const reachOptions = [
       { reach: REACH.ALL, expected: 'timeline:all:all' },
+      { reach: REACH.NETWORK, expected: 'timeline:wot:all' },
       { reach: REACH.FOLLOWING, expected: 'timeline:following:all' },
       { reach: REACH.FRIENDS, expected: 'timeline:friends:all' },
+      { reach: REACH.ME, expected: 'author:viewer-pubky' },
     ];
 
     reachOptions.forEach(({ reach, expected }) => {
@@ -192,6 +194,18 @@ describe('useStreamIdFromFilters', () => {
       const { result } = renderHook(() => useStreamIdFromFilters());
       expect(result.current).toBe(expected);
     });
+  });
+
+  it('should build content-specific author stream when reach is me', () => {
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    const { result: setContent } = renderHook(() => useHomeStore((state) => state.setContent));
+
+    setReach.current(REACH.ME);
+    setContent.current(CONTENT.IMAGES);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+
+    expect(result.current).toBe('viewer-pubky:author:image');
   });
 
   it('should handle all content types', () => {

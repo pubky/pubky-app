@@ -1146,8 +1146,12 @@
     "reach": {
       "title": "Alcance",
       "all": "Todos",
+      "network": "Red",
       "following": "Siguiendo",
-      "friends": "Amigos"
+      "friends": "Amigos",
+      "me": "Yo",
+      "profileTag": "etiqueta de perfil",
+      "profileTagLimitReached": "máximo {max} etiquetas"
     },
     "sort": {
       "title": "Ordenar",

@@ -6,7 +6,10 @@ import type {
   TSetStreamPaginationParams,
 } from '@/services/local/stream/posts/post.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
-import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
+import {
+  POST_STREAM_TAG_DELIMITER,
+  POST_STREAM_WOT_DEFAULT_DEPTH,
+} from '@/services/nexus/stream/posts/postStream.constants';
 import {
   StreamKind,
   StreamOrder,
@@ -39,6 +42,9 @@ export function createPostStreamParams({
   params.viewer_id = viewerId ?? undefined;
   params.sorting = parseSorting(sorting);
   params.tags = tags;
+  if (invokeEndpoint === StreamSource.WOT || invokeEndpoint === StreamSource.WOT_DOMAIN) {
+    params.depth = POST_STREAM_WOT_DEFAULT_DEPTH;
+  }
   // REPLIES and COLLECTION use the third segment for an entity id (postId), not a kind.
   if (content && invokeEndpoint !== StreamSource.REPLIES && invokeEndpoint !== StreamSource.COLLECTION) {
     params.kind = parseContent(content);

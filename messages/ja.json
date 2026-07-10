@@ -1144,8 +1144,12 @@
     "reach": {
       "title": "範囲",
       "all": "すべて",
+      "network": "ネットワーク",
       "following": "フォロー中",
-      "friends": "友達"
+      "friends": "友達",
+      "me": "自分",
+      "profileTag": "プロフィールタグ",
+      "profileTagLimitReached": "最大{max}タグ"
     },
     "sort": {
       "title": "並べ替え",

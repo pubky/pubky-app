@@ -2,7 +2,7 @@ import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { type ContentType, REACH } from '@/stores/home/home.types';
-import { getStreamId } from '@/stores/home/home.utils';
+import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
 
 /**
  * Custom hook that returns the current streamId based on global filter state
@@ -36,5 +36,5 @@ export function useStreamIdFromFilters(contentOverride?: ContentType): PostStrea
   const effectiveReach = currentUserPubky ? reach : REACH.ALL;
   const effectiveContent = contentOverride ?? content;
 
-  return getStreamId(sort, effectiveReach, effectiveContent);
+  return getHomeStreamIdFromFilters(sort, effectiveReach, effectiveContent, currentUserPubky);
 }

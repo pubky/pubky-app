@@ -18,8 +18,9 @@ import type {
   NexusUserRelationship,
 } from '@/services/nexus/nexus.types';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { getStreamId } from '@/stores/home/home.utils';
+import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
 
 export class UserController {
   private constructor() {} // Prevent instantiation
@@ -202,7 +203,8 @@ export class UserController {
 
     try {
       const homeState = useHomeStore.getState();
-      return getStreamId(homeState.sort, homeState.reach, homeState.content);
+      const currentUserPubky = useAuthStore.getState().currentUserPubky;
+      return getHomeStreamIdFromFilters(homeState.sort, homeState.reach, homeState.content, currentUserPubky);
     } catch (error) {
       Logger.warn('Failed to get active stream ID', { error });
       return null;

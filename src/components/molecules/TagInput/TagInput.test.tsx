@@ -95,6 +95,24 @@ describe('TagInput', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockOnTagAdd).toHaveBeenCalledWith('bitcoin');
   });
+
+  it('does not widen the container when max tags are reached', () => {
+    const { container } = render(
+      <TagInput onTagAdd={mockOnTagAdd} maxTags={5} currentTagsCount={5} className="w-32" />,
+    );
+    const tagInputContainer = container.querySelector('div.relative');
+
+    expect(tagInputContainer).toHaveClass('w-32');
+    expect(tagInputContainer).not.toHaveClass('w-40');
+  });
+
+  it('renders the at-limit placeholder at full opacity', () => {
+    render(<TagInput onTagAdd={mockOnTagAdd} maxTags={5} currentTagsCount={5} limitReachedPlaceholder="5 tags max" />);
+
+    const input = screen.getByPlaceholderText('5 tags max');
+    expect(input).toBeDisabled();
+    expect(input).toHaveClass('placeholder:text-destructive', 'disabled:opacity-100');
+  });
 });
 
 describe('TagInput - Banned Character Sanitization', () => {

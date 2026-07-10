@@ -1,4 +1,6 @@
+import type { Pubky } from '@/models/models.types';
 import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { CONTENT, type ContentType, REACH, type ReachType, SORT, type SortType } from './home.types';
 
 // ============================================
@@ -23,11 +25,14 @@ const SORT_TO_SORTING = {
 const SORTING_TO_SORT = reverseMapping(SORT_TO_SORTING);
 
 /** Maps REACH filter to streamId SOURCE part */
+type SourceMappedReachType = Exclude<ReachType, typeof REACH.ME>;
+
 const REACH_TO_SOURCE = {
   [REACH.ALL]: 'all',
+  [REACH.NETWORK]: 'wot',
   [REACH.FOLLOWING]: 'following',
   [REACH.FRIENDS]: 'friends',
-} as const satisfies Record<ReachType, string>;
+} as const satisfies Record<SourceMappedReachType, string>;
 
 /** Maps streamId SOURCE part to REACH filter (auto-generated) */
 const SOURCE_TO_REACH = reverseMapping(REACH_TO_SOURCE);
@@ -61,6 +66,10 @@ const KIND_TO_CONTENT = reverseMapping(CONTENT_TO_KIND);
  * getStreamIdFromFilters('recent', 'friends', 'posts') // => 'timeline:friends:short'
  */
 export function getStreamIdFromFilters(sort: SortType, reach: ReachType, content: ContentType): string {
+  if (reach === REACH.ME) {
+    throw new Error('Me reach requires the current user id. Use getHomeStreamIdFromFilters instead.');
+  }
+
   const sorting = SORT_TO_SORTING[sort];
   const source = REACH_TO_SOURCE[reach];
   const kind = CONTENT_TO_KIND[content];
@@ -83,6 +92,26 @@ export function getStreamId(sort: SortType, reach: ReachType, content: ContentTy
 
   // The streamId string matches the enum value exactly, so we can cast directly
   return streamId as PostStreamTypes;
+}
+
+export function getHomeStreamIdFromFilters(
+  sort: SortType,
+  reach: ReachType,
+  content: ContentType,
+  currentUserPubky?: Pubky | null,
+): PostStreamTypes {
+  const effectiveReach = currentUserPubky ? reach : REACH.ALL;
+
+  if (effectiveReach === REACH.ME) {
+    const kind = CONTENT_TO_KIND[content];
+    const streamId =
+      kind === 'all'
+        ? `${StreamSource.AUTHOR}:${currentUserPubky}`
+        : `${currentUserPubky}:${StreamSource.AUTHOR}:${kind}`;
+    return streamId as PostStreamTypes;
+  }
+
+  return getStreamId(sort, effectiveReach, content);
 }
 
 /**

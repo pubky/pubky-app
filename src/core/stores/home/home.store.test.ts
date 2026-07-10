@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useHomeStore } from './home.store';
-import { CONTENT, homeInitialState, LAYOUT, REACH, SORT } from './home.types';
+import { CONTENT, HOME_PROFILE_TAGS_MAX_SELECTED, homeInitialState, LAYOUT, REACH, SORT } from './home.types';
 
 describe('HomeStore', () => {
   beforeEach(() => {
@@ -16,6 +16,7 @@ describe('HomeStore', () => {
       expect(state.sort).toBe(SORT.TIMELINE);
       expect(state.reach).toBe(REACH.ALL);
       expect(state.content).toBe(CONTENT.ALL);
+      expect(state.profileTags).toEqual([]);
     });
 
     it('should match homeInitialState', () => {
@@ -25,6 +26,7 @@ describe('HomeStore', () => {
       expect(state.sort).toBe(homeInitialState.sort);
       expect(state.reach).toBe(homeInitialState.reach);
       expect(state.content).toBe(homeInitialState.content);
+      expect(state.profileTags).toEqual(homeInitialState.profileTags);
     });
   });
 
@@ -102,11 +104,25 @@ describe('HomeStore', () => {
       expect(useHomeStore.getState().reach).toBe(REACH.FOLLOWING);
     });
 
+    it('should set reach to network', () => {
+      const store = useHomeStore.getState();
+
+      store.setReach(REACH.NETWORK);
+      expect(useHomeStore.getState().reach).toBe(REACH.NETWORK);
+    });
+
     it('should set reach to friends', () => {
       const store = useHomeStore.getState();
 
       store.setReach(REACH.FRIENDS);
       expect(useHomeStore.getState().reach).toBe(REACH.FRIENDS);
+    });
+
+    it('should set reach to me', () => {
+      const store = useHomeStore.getState();
+
+      store.setReach(REACH.ME);
+      expect(useHomeStore.getState().reach).toBe(REACH.ME);
     });
 
     it('should change reach multiple times', () => {
@@ -120,6 +136,106 @@ describe('HomeStore', () => {
 
       store.setReach(REACH.ALL);
       expect(useHomeStore.getState().reach).toBe(REACH.ALL);
+    });
+
+    it('should clear profile tags when reach changes to all', () => {
+      const store = useHomeStore.getState();
+
+      store.setReach(REACH.NETWORK);
+      store.addProfileTag('bitcoin');
+      store.addProfileTag('dev');
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'dev']);
+
+      store.setReach(REACH.ALL);
+
+      expect(useHomeStore.getState().reach).toBe(REACH.ALL);
+      expect(useHomeStore.getState().profileTags).toEqual([]);
+    });
+
+    it('should clear profile tags when reach changes to me while profile tags are gated', () => {
+      const store = useHomeStore.getState();
+
+      store.setReach(REACH.NETWORK);
+      store.addProfileTag('bitcoin');
+      store.addProfileTag('dev');
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'dev']);
+
+      store.setReach(REACH.ME);
+
+      expect(useHomeStore.getState().reach).toBe(REACH.ME);
+      expect(useHomeStore.getState().profileTags).toEqual([]);
+    });
+  });
+
+  describe('Profile Tag Management', () => {
+    it('should set normalized unique profile tags up to the max', () => {
+      const store = useHomeStore.getState();
+
+      store.setProfileTags(['Bitcoin', 'bitcoin', 'Nostr', 'Dev', 'Design', 'Lightning', 'Extra']);
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'nostr', 'dev', 'design', 'lightning']);
+      expect(useHomeStore.getState().profileTags).toHaveLength(HOME_PROFILE_TAGS_MAX_SELECTED);
+    });
+
+    it('should strip Nexus-invalid tag label characters and preserve emoji', () => {
+      const store = useHomeStore.getState();
+
+      store.setProfileTags(['Bit:coin', 'dev,tag', 'light ning', '🔥']);
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'devtag', 'lightning', '🔥']);
+    });
+
+    it('should add a normalized profile tag', () => {
+      const store = useHomeStore.getState();
+
+      store.addProfileTag('Bitcoin');
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin']);
+    });
+
+    it('should strip Nexus-invalid characters when adding a profile tag', () => {
+      const store = useHomeStore.getState();
+
+      store.addProfileTag('Bit:coin,🔥');
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin🔥']);
+    });
+
+    it('should prevent duplicate profile tags', () => {
+      const store = useHomeStore.getState();
+
+      store.addProfileTag('Bitcoin');
+      store.addProfileTag('bitcoin');
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin']);
+    });
+
+    it('should prevent adding more than five profile tags', () => {
+      const store = useHomeStore.getState();
+
+      ['one', 'two', 'three', 'four', 'five', 'six'].forEach((tag) => store.addProfileTag(tag));
+
+      expect(useHomeStore.getState().profileTags).toEqual(['one', 'two', 'three', 'four', 'five']);
+    });
+
+    it('should remove a profile tag case-insensitively', () => {
+      const store = useHomeStore.getState();
+
+      store.setProfileTags(['bitcoin', 'nostr']);
+      store.removeProfileTag('BITCOIN');
+
+      expect(useHomeStore.getState().profileTags).toEqual(['nostr']);
+    });
+
+    it('should clear profile tags', () => {
+      const store = useHomeStore.getState();
+
+      store.setProfileTags(['bitcoin', 'nostr']);
+      store.clearProfileTags();
+
+      expect(useHomeStore.getState().profileTags).toEqual([]);
     });
   });
 

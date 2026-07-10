@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { CONTENT, ContentType, REACH, ReachType, SORT, SortType } from './home.types';
-import { getStreamId, getStreamIdFromFilters, matchesFilters, parseStreamId } from './home.utils';
+import {
+  getHomeStreamIdFromFilters,
+  getStreamId,
+  getStreamIdFromFilters,
+  matchesFilters,
+  parseStreamId,
+} from './home.utils';
 
 describe('filters.utils', () => {
   describe('getStreamIdFromFilters', () => {
@@ -28,9 +34,20 @@ describe('filters.utils', () => {
         expect(streamId).toBe('timeline:following:all');
       });
 
+      it('should map "network" reach to wot source', () => {
+        const streamId = getStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL);
+        expect(streamId).toBe('timeline:wot:all');
+      });
+
       it('should map "friends" reach', () => {
         const streamId = getStreamIdFromFilters(SORT.TIMELINE, REACH.FRIENDS, CONTENT.ALL);
         expect(streamId).toBe('timeline:friends:all');
+      });
+
+      it('should require viewer-aware helper for "me" reach', () => {
+        expect(() => getStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.ALL)).toThrow(
+          'Me reach requires the current user id',
+        );
       });
     });
 
@@ -108,6 +125,11 @@ describe('filters.utils', () => {
       expect(streamId).toBe('timeline:friends:all');
     });
 
+    it('should return wot source stream id for Network reach', () => {
+      const streamId = getStreamId(SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL);
+      expect(streamId).toBe('timeline:wot:all');
+    });
+
     it('should return PostStreamTypes.TIMELINE_ALL_IMAGE', () => {
       const streamId = getStreamId(SORT.TIMELINE, REACH.ALL, CONTENT.IMAGES);
       expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_IMAGE);
@@ -124,6 +146,26 @@ describe('filters.utils', () => {
       const streamId = getStreamId(SORT.ENGAGEMENT, REACH.FOLLOWING, CONTENT.VIDEOS);
       expect(streamId).toBe(PostStreamTypes.POPULARITY_FOLLOWING_VIDEO);
       expect(streamId).toBe('total_engagement:following:video');
+    });
+  });
+
+  describe('getHomeStreamIdFromFilters', () => {
+    it('should force all reach when no user is authenticated', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL, null);
+
+      expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
+    });
+
+    it('should build author stream for me reach with all content', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.ALL, 'viewer-pubky');
+
+      expect(streamId).toBe('author:viewer-pubky');
+    });
+
+    it('should build author stream with content kind for me reach', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.IMAGES, 'viewer-pubky');
+
+      expect(streamId).toBe('viewer-pubky:author:image');
     });
   });
 
@@ -183,6 +225,15 @@ describe('filters.utils', () => {
           sort: SORT.ENGAGEMENT,
           reach: REACH.FRIENDS,
           content: CONTENT.IMAGES,
+        });
+      });
+
+      it('should parse timeline:wot:all as Network reach', () => {
+        const result = parseStreamId('timeline:wot:all');
+        expect(result).toEqual({
+          sort: SORT.TIMELINE,
+          reach: REACH.NETWORK,
+          content: CONTENT.ALL,
         });
       });
 
@@ -253,6 +304,7 @@ describe('filters.utils', () => {
     it('should convert filters -> streamId -> filters consistently', () => {
       const testCases: Array<[typeof SORT.TIMELINE | typeof SORT.ENGAGEMENT, string, string]> = [
         [SORT.TIMELINE, REACH.ALL, CONTENT.ALL],
+        [SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL],
         [SORT.TIMELINE, REACH.FOLLOWING, CONTENT.IMAGES],
         [SORT.ENGAGEMENT, REACH.FRIENDS, CONTENT.VIDEOS],
         [SORT.ENGAGEMENT, REACH.ALL, CONTENT.LINKS],

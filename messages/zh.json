@@ -1138,8 +1138,12 @@
     "reach": {
       "title": "范围",
       "all": "全部",
+      "network": "网络",
       "following": "关注",
-      "friends": "好友"
+      "friends": "好友",
+      "me": "我",
+      "profileTag": "个人资料标签",
+      "profileTagLimitReached": "最多{max}个标签"
     },
     "sort": {
       "title": "排序",

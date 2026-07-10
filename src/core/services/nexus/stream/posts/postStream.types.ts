@@ -12,6 +12,8 @@ export enum StreamSource {
   FOLLOWING = 'following',
   FOLLOWERS = 'followers',
   FRIENDS = 'friends',
+  WOT = 'wot',
+  WOT_DOMAIN = 'wot_domain',
   BOOKMARKS = 'bookmarks',
   REPLIES = 'post_replies',
   AUTHOR = 'author',
@@ -51,6 +53,8 @@ export type TStreamBase = TPaginationParams &
     kind?: StreamKind;
     order?: StreamOrder;
     tags?: string; // Max 5 tags
+    depth?: number;
+    domain_tags?: string; // Max 5 profile/domain tags
   };
 
 // Specific parameter types for each source
