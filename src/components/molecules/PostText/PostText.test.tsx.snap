@@ -1,5 +1,93 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`PostText - Snapshots > matches snapshot for article preview with headings and paragraphs 1`] = `
+<div
+  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
+  data-override-defaults="true"
+  data-testid="container"
+>
+  <h1
+    class="text-2xl leading-8 font-bold text-white"
+  >
+    Article Title
+  </h1>
+  
+
+  <p>
+    This is the introduction paragraph.
+  </p>
+  
+
+  <h2
+    class="text-xl leading-7 font-bold text-white"
+  >
+    Section
+  </h2>
+  
+
+  <p>
+    More content here.
+  </p>
+</div>
+`;
+
+exports[`PostText - Snapshots > matches snapshot for article preview with long content 1`] = `
+<div
+  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
+  data-override-defaults="true"
+  data-testid="container"
+>
+  <p>
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse... 
+  </p>
+</div>
+`;
+
+exports[`PostText - Snapshots > matches snapshot for article preview with multiple headings 1`] = `
+<div
+  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
+  data-override-defaults="true"
+  data-testid="container"
+>
+  <h1
+    class="text-2xl leading-8 font-bold text-white"
+  >
+    Article Title
+  </h1>
+  
+
+  <h2
+    class="text-xl leading-7 font-bold text-white"
+  >
+    Introduction
+  </h2>
+  
+
+  <p>
+    Some introductory text here.
+  </p>
+  
+
+  <h3
+    class="text-lg leading-7 font-bold text-white"
+  >
+    Details
+  </h3>
+  
+
+  <p>
+    More detailed content.
+  </p>
+  
+
+  <h4
+    class="text-[17px] leading-6 font-bold text-white"
+  >
+    Sub-details... 
+  </h4>
+</div>
+`;
+
 exports[`PostText - Snapshots > matches snapshot for article showing full content on post page 1`] = `
 <div
   class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
@@ -31,18 +119,6 @@ exports[`PostText - Snapshots > matches snapshot for article showing full conten
 </div>
 `;
 
-exports[`PostText - Snapshots > matches snapshot for article showing only first paragraph in feed 1`] = `
-<div
-  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
-  data-override-defaults="true"
-  data-testid="container"
->
-  <p>
-    This is the introduction paragraph.
-  </p>
-</div>
-`;
-
 exports[`PostText - Snapshots > matches snapshot for article with h1 heading 1`] = `
 <div
   class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
@@ -54,30 +130,6 @@ exports[`PostText - Snapshots > matches snapshot for article with h1 heading 1`]
   >
     Main Title
   </h1>
-</div>
-`;
-
-exports[`PostText - Snapshots > matches snapshot for article with long content (first paragraph extracted and truncated in feed) 1`] = `
-<div
-  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
-  data-override-defaults="true"
-  data-testid="container"
->
-  <p>
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse... 
-  </p>
-</div>
-`;
-
-exports[`PostText - Snapshots > matches snapshot for article with multiple headings (first paragraph extracted in feed) 1`] = `
-<div
-  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
-  data-override-defaults="true"
-  data-testid="container"
->
-  <p>
-    Some introductory text here.
-  </p>
 </div>
 `;
 

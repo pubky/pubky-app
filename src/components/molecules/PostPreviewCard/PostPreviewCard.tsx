@@ -32,7 +32,7 @@ import type { PostPreviewCardProps } from './PostPreviewCard.types';
  * - Any nested context where a compact post preview is needed
  */
 export function PostPreviewCard({ postId, className, contrast }: PostPreviewCardProps) {
-  const { navigateToPost } = usePostNavigation();
+  const { navigateToPost, navigateToCollection } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
   const { ref: ttlRef } = useTtlSubscription({
     type: 'post',
@@ -44,17 +44,27 @@ export function PostPreviewCard({ postId, className, contrast }: PostPreviewCard
   // PostMissing as a direct Card child (it IS a CardContent) so it isn't nested
   // inside the inner CardContent — matching how PostMain renders PostDeleted.
   const isMissing = postDetails === null && !isLoading;
+  const isCollection = postDetails?.kind === 'collection';
+
+  const navigateToPreview = () => {
+    if (isCollection) {
+      navigateToCollection(postId);
+      return;
+    }
+
+    navigateToPost(postId);
+  };
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigateToPost(postId);
+    navigateToPreview();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.stopPropagation();
       e.preventDefault();
-      navigateToPost(postId);
+      navigateToPreview();
     }
   };
 
@@ -67,7 +77,7 @@ export function PostPreviewCard({ postId, className, contrast }: PostPreviewCard
       onKeyDown={handleKeyDown}
       role="link"
       tabIndex={0}
-      aria-label="View original post"
+      aria-label={isCollection ? 'View collection' : 'View original post'}
     >
       {isMissing ? (
         <PostMissing />

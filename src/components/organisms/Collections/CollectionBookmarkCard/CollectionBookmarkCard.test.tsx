@@ -6,15 +6,20 @@ import enMessages from '../../../../../messages/en.json';
 import { CollectionBookmarkCard } from './CollectionBookmarkCard';
 
 const BOOKMARKS_COPY = enMessages.collections.bookmarks;
+const CURRENT_USER_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
 vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => {
+  useTranslations: (namespace?: string) => (key: string, values?: { count?: number }) => {
     if (namespace !== 'collections') {
       return `${namespace ?? ''}.${key}`;
+    }
+
+    if (key === 'postCount') {
+      return values?.count === 1 ? 'post' : 'posts';
     }
 
     const nestedKeys: Record<string, string> = {
@@ -63,8 +68,6 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
 // ---------------------------------------------------------------------------
 // Fixtures + helpers
 // ---------------------------------------------------------------------------
-
-const CURRENT_USER_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
 const mockUseBookmarksCollectionSummary = vi.mocked(useBookmarksCollectionSummary);
 
@@ -126,7 +129,7 @@ describe('CollectionBookmarkCard', () => {
   it('renders the bookmark count label from the summary', () => {
     setup({ bookmarkCount: 42 });
     render(<CollectionBookmarkCard />);
-    expect(screen.getByText('42')).toBeInTheDocument();
+    expect(screen.getByText('42 posts')).toBeInTheDocument();
   });
 
   it('renders no count label when the bookmark count is undefined', () => {

@@ -157,7 +157,8 @@
     "signIn": "Sign in",
     "feed": "Feed",
     "search": "Search",
-    "collections": "Collections"
+    "collections": "Collections",
+    "new": "New"
   },
   "settings": {
     "title": "Settings",
@@ -426,7 +427,8 @@
       "title": "Choose backup method",
       "subtitle": "Safely back up and store the secret seed for your pubky. Which backup method do you prefer? You can also choose to do this later.",
       "recoveryPhrase": "Recovery phrase",
-      "encryptedFile": "Encrypted file"
+      "encryptedFile": "Encrypted file",
+      "exportRing": "Export to Pubky Ring"
     },
     "backup": {
       "title": "Back up your <highlight>pubky.</highlight>",
@@ -471,13 +473,12 @@
       "createInBrowser": "Create keys in browser",
       "continueWithRing": "Continue with Pubky Ring",
       "inviteCodeApplied": "Invite code applied",
-      "inviteCodeAppliedDescription": "Your invite code {inviteCode} has been applied.",
+
       "invalidInviteCode": "Invalid invite code",
-      "invalidInviteCodeDescription": "This invite code is not recognized. Please use a different invite code.",
+
       "usedInviteCode": "Invite code already used",
-      "usedInviteCodeDescription": "This invite code has already been used. Please use a different invite code.",
-      "verificationFailed": "Couldn't verify invite code",
-      "verificationFailedDescription": "We couldn't verify your invite code right now. Please check your connection and try again."
+
+      "verificationFailed": "Couldn't verify invite code"
     },
     "createProfile": {
       "title": "Create your <highlight>profile.</highlight>",
@@ -644,7 +645,7 @@
     },
     "deleteCollection": {
       "title": "Delete collection?",
-      "description": "Are you sure you want to delete {name}? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.",
+      "description": "Are you sure you want to delete ''{name}''? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.",
       "confirmButton": "Delete",
       "cancelButton": "Cancel"
     },
@@ -987,7 +988,7 @@
     "post": {
       "replyPosted": "Reply posted",
       "replyFailed": "Could not post reply. Try again.",
-      "postCreated": "Post created",
+      "postCreated": "Post published",
       "postFailed": "Could not create post. Try again.",
       "repostSuccess": "Reposted {author}'s post",
       "repostSuccessFallback": "Reposted",
@@ -1329,14 +1330,15 @@
   "collections": {
     "deleted": "This collection has been deleted by its author.",
     "missing": "Collection not found.",
+    "postCount": "{count, plural, one {post} other {posts}}",
     "new": {
       "cta": "New Collection",
       "ctaShort": "New",
       "title": "New Collection",
       "nameLabel": "Title",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "Name your collection",
       "descriptionLabel": "Description",
-      "descriptionPlaceholder": "The best from the biggest contributors in Bitcoin",
+      "descriptionPlaceholder": "What will people find here?",
       "backgroundLabel": "Background",
       "addImage": "Add image",
       "removeImage": "Remove image",
@@ -1344,7 +1346,7 @@
       "coverImageTooLarge": "Cover image is too large.",
       "nameRequired": "Collection title is required.",
       "cancel": "Cancel",
-      "save": "Save changes",
+      "save": "Save collection",
       "saving": "Saving...",
       "created": "Collection created",
       "createFailed": "Failed to create collection."
@@ -1353,6 +1355,7 @@
       "title": "Welcome to Collections",
       "description": "Save posts worth keeping. Collect the best content from your network. Curate ideas, filter signal from noise, and share what matters.",
       "imageAlt": "Collections",
+      "publicNote": "Please note: collections are public and discoverable.",
       "cancel": "Cancel",
       "continue": "Continue"
     },
@@ -1365,9 +1368,7 @@
     "showMore": "Show more",
     "loadFailed": "Failed to load collections. Please try again.",
     "my": {
-      "title": "My Collections",
-      "publicNote": "Please note: all collections are public and discoverable.",
-      "publicNoteShort": "All collections are public and discoverable."
+      "title": "My Collections"
     },
     "followed": {
       "title": "Followed Collections",
@@ -1398,8 +1399,8 @@
       "delete": "Delete",
       "follow": "Follow",
       "unfollow": "Unfollow",
-      "content": "Content",
-      "addContent": "Add Content",
+      "content": "Add Post",
+      "addContent": "Add Post",
       "empty": "This collection is empty.",
       "notFound": {
         "title": "Collection Not Found",
@@ -1411,8 +1412,8 @@
       }
     },
     "addContentDialog": {
-      "title": "Add Content",
-      "description": "Add a post or article from your feed or paste a url directly.",
+      "title": "Add Post",
+      "description": "There are several ways to add posts to your collection.",
       "fromFeedTitle": "Add from feed",
       "fromFeedLead": "Find a post",
       "fromFeedRest": " you want to add and click the collections button.",

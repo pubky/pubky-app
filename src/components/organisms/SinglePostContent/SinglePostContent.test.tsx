@@ -50,10 +50,15 @@ const ARTICLE_POST_DETAILS = {
   indexed_at: Date.now(),
   kind: 'long' as const,
   uri: 'pubky://author/pub/pubky.app/posts/post123',
-  content: '# Article Title\n\nArticle content',
+  content: JSON.stringify({ title: 'Article Title', body: '# Article Title\n\nArticle content' }),
   attachments: [],
   is_moderated: false,
   is_blurred: false,
+} satisfies EnrichedPostDetails;
+
+const MALFORMED_LONG_POST_DETAILS = {
+  ...ARTICLE_POST_DETAILS,
+  content: 'Raw long post content',
 } satisfies EnrichedPostDetails;
 
 const DELETED_SHORT_POST_DETAILS = {
@@ -299,6 +304,15 @@ describe('SinglePostContent', () => {
 
       expect(screen.getByTestId('post-article-detail')).toBeInTheDocument();
       expect(screen.queryByTestId('post-main')).not.toBeInTheDocument();
+    });
+
+    it('renders malformed long posts through PostMain', () => {
+      const { container } = render(<SinglePostContent postId={mockPostId} postDetails={MALFORMED_LONG_POST_DETAILS} />);
+
+      expect(container.querySelector('[data-cy="single-post-card"]')).toBeInTheDocument();
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-post-id', mockPostId);
+      expect(screen.queryByTestId('post-article-detail')).not.toBeInTheDocument();
+      expect(screen.queryByText('Replies')).not.toBeInTheDocument();
     });
 
     it('renders Replies heading for authenticated article posts', () => {

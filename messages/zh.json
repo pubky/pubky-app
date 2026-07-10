@@ -157,7 +157,8 @@
     "signIn": "登录",
     "feed": "动态",
     "search": "搜索",
-    "collections": "收藏集"
+    "collections": "收藏集",
+    "new": "新"
   },
   "settings": {
     "title": "设置",
@@ -426,7 +427,8 @@
       "title": "选择备份方式",
       "subtitle": "安全地备份和存储您 pubky 的秘密种子。您更喜欢哪种备份方式？您也可以选择稍后进行。",
       "recoveryPhrase": "恢复短语",
-      "encryptedFile": "加密文件"
+      "encryptedFile": "加密文件",
+      "exportRing": "导出到 Pubky Ring"
     },
     "backup": {
       "title": "备份您的 <highlight>pubky。</highlight>",
@@ -471,13 +473,9 @@
       "createInBrowser": "在浏览器中创建密钥",
       "continueWithRing": "继续使用 Pubky Ring",
       "inviteCodeApplied": "邀请码已应用",
-      "inviteCodeAppliedDescription": "您的邀请码 {inviteCode} 已应用。",
       "invalidInviteCode": "无效的邀请码",
-      "invalidInviteCodeDescription": "此邀请码无效或已过期。请使用有效的邀请码。",
       "usedInviteCode": "邀请码已被使用",
-      "usedInviteCodeDescription": "此邀请码已被使用。请使用其他邀请码。",
-      "verificationFailed": "无法验证邀请码",
-      "verificationFailedDescription": "我们目前无法验证您的邀请码。请检查您的网络连接后重试。"
+      "verificationFailed": "无法验证邀请码"
     },
     "createProfile": {
       "title": "创建您的<highlight>个人资料。</highlight>",
@@ -644,7 +642,7 @@
     },
     "deleteCollection": {
       "title": "删除收藏集？",
-      "description": "您确定要删除 {name} 吗？关注此收藏集的用户将无法再访问它。收藏集内的帖子不会被删除。",
+      "description": "您确定要删除「{name}」吗？关注此收藏集的用户将无法再访问它。收藏集内的帖子不会被删除。",
       "confirmButton": "删除",
       "cancelButton": "取消"
     },
@@ -987,7 +985,7 @@
     "post": {
       "replyPosted": "回复已发布",
       "replyFailed": "无法发布回复。请重试。",
-      "postCreated": "帖子已创建",
+      "postCreated": "帖子已发布",
       "postFailed": "无法创建帖子。请重试。",
       "repostSuccess": "已转发！",
       "repostUndo": "撤销",
@@ -1323,14 +1321,15 @@
   "collections": {
     "deleted": "此收藏集已被作者删除。",
     "missing": "未找到收藏集。",
+    "postCount": "{count, plural, other {帖子}}",
     "new": {
       "cta": "新建收藏集",
       "ctaShort": "新建",
       "title": "新建收藏集",
       "nameLabel": "标题",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "为你的合集命名",
       "descriptionLabel": "描述",
-      "descriptionPlaceholder": "来自比特币最大贡献者的精选",
+      "descriptionPlaceholder": "人们会在这里找到什么？",
       "backgroundLabel": "背景",
       "addImage": "添加图片",
       "removeImage": "移除图片",
@@ -1338,7 +1337,7 @@
       "coverImageTooLarge": "封面图片太大。",
       "nameRequired": "收藏集标题为必填项。",
       "cancel": "取消",
-      "save": "保存更改",
+      "save": "保存收藏",
       "saving": "保存中...",
       "created": "收藏集已创建",
       "createFailed": "创建收藏集失败。"
@@ -1347,6 +1346,7 @@
       "title": "欢迎使用收藏集",
       "description": "保存值得收藏的帖子。收集你网络中最优质的内容。整理想法，从噪声中筛选信号，并分享重要的内容。",
       "imageAlt": "收藏集",
+      "publicNote": "请注意：收藏集均为公开且可被发现。",
       "cancel": "取消",
       "continue": "继续"
     },
@@ -1359,9 +1359,7 @@
     "showMore": "显示更多",
     "loadFailed": "加载收藏集失败，请重试。",
     "my": {
-      "title": "我的收藏集",
-      "publicNote": "请注意：所有收藏集均为公开且可被发现。",
-      "publicNoteShort": "所有收藏集均为公开且可被发现。"
+      "title": "我的收藏集"
     },
     "followed": {
       "title": "已关注的收藏集",
@@ -1392,8 +1390,8 @@
       "delete": "删除",
       "follow": "关注",
       "unfollow": "取消关注",
-      "content": "内容",
-      "addContent": "添加内容",
+      "content": "添加帖子",
+      "addContent": "添加帖子",
       "empty": "此收藏为空。",
       "notFound": {
         "title": "未找到收藏",
@@ -1405,8 +1403,8 @@
       }
     },
     "addContentDialog": {
-      "title": "添加内容",
-      "description": "从你的信息流添加帖子或文章，或直接粘贴 URL。",
+      "title": "添加帖子",
+      "description": "有几种方式可以将帖子添加到你的合集。",
       "fromFeedTitle": "从信息流添加",
       "fromFeedLead": "找到一个帖子",
       "fromFeedRest": "，然后点击收藏按钮将其添加。",

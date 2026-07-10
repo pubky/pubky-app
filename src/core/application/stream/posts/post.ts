@@ -16,12 +16,14 @@ import {
 } from '@/controllers/stream/posts/post.constants';
 import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
+import { BookmarkModel } from '@/models/bookmark/bookmark';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import {
   isAuthorStreamSkippingMuteFilter,
+  isBookmarkStream,
   isDeletedRetainingStream,
   isSkipPaginatedStream,
   type PostStreamId,
@@ -60,19 +62,19 @@ export class PostStreamApplication {
         return NOT_FOUND_CACHED_STREAM;
       }
 
-      // Iterate backwards through the stream to find the last post that has details
-      // This handles cases where the last PostDetails might be missing
+      // Iterate backwards through the stream to find the last entry we can resolve
+      // a pagination cursor for. This handles cases where the last PostDetails (or
+      // bookmark row) might be missing.
       for (let i = postStream.stream.length - 1; i >= 0; i--) {
-        const postId = postStream.stream[i];
-        const postDetails = await LocalPostService.readDetails({ postId });
+        const cursor = await this.getStreamCursorTimestamp(streamId, postStream.stream[i]);
 
-        if (postDetails) {
-          return postDetails.indexed_at;
+        if (cursor !== undefined) {
+          return cursor;
         }
       }
 
-      // No posts in the stream have details, cache is not useful
-      Logger.warn('No post details found in cached stream', { streamId, streamLength: postStream.stream.length });
+      // No stream entry yielded a cursor, cache is not useful
+      Logger.warn('No cursor found in cached stream', { streamId, streamLength: postStream.stream.length });
       return NOT_FOUND_CACHED_STREAM;
     } catch (error) {
       Logger.warn('Failed to get timeline initial cursor', { streamId, error });
@@ -209,6 +211,15 @@ export class PostStreamApplication {
     if (!postCompositeId) {
       return FORCE_FETCH_NEW_POSTS;
     }
+    // Bookmark streams stale-check against bookmark time, not the (possibly old)
+    // bookmarked post's `indexed_at` — otherwise bookmarking an old post would mark
+    // the whole cache stale on every load and defeat local-first caching.
+    if (isBookmarkStream(streamId)) {
+      const bookmarkedAt = await this.getBookmarkTimestamp(postCompositeId as string);
+      if (bookmarkedAt !== undefined) {
+        return bookmarkedAt;
+      }
+    }
     const postDetails = await PostDetailsModel.findById(postCompositeId);
     return postDetails?.indexed_at ?? SKIP_FETCH_NEW_POSTS;
   }
@@ -220,6 +231,12 @@ export class PostStreamApplication {
     const unreadCompositePostId = await UnreadPostStreamModel.getStreamHead(streamId);
     if (!unreadCompositePostId) {
       return FORCE_FETCH_NEW_POSTS;
+    }
+    if (isBookmarkStream(streamId)) {
+      const bookmarkedAt = await this.getBookmarkTimestamp(unreadCompositePostId as string);
+      if (bookmarkedAt !== undefined) {
+        return bookmarkedAt;
+      }
     }
     const postDetails = await PostDetailsModel.findById(unreadCompositePostId);
     return postDetails?.indexed_at ?? SKIP_FETCH_NEW_POSTS;
@@ -247,8 +264,7 @@ export class PostStreamApplication {
 
     // Author streams and bookmarks intentionally include posts from muted users:
     // bookmarks are explicit saves (#1804); profile is someone's full timeline.
-    const shouldFilterMuted =
-      !isAuthorStreamSkippingMuteFilter(streamId) && !streamId.includes(`:${StreamSource.BOOKMARKS}:`);
+    const shouldFilterMuted = !isAuthorStreamSkippingMuteFilter(streamId) && !isBookmarkStream(streamId);
     const mutedUserIds = shouldFilterMuted
       ? new Set((await LocalStreamUsersService.findById(UserStreamTypes.MUTED))?.stream ?? [])
       : new Set<Pubky>();
@@ -330,6 +346,43 @@ export class PostStreamApplication {
   }
 
   /**
+   * Bookmark time (`created_at`) for a post, or undefined if it isn't bookmarked
+   * locally. Bookmark streams are ordered by this on Nexus — not the post's own
+   * `indexed_at` — so it is the correct key for both pagination cursors and the
+   * stream-head staleness check.
+   */
+  private static async getBookmarkTimestamp(postId: string): Promise<number | undefined> {
+    try {
+      const bookmark = await BookmarkModel.findById(postId);
+      return typeof bookmark?.created_at === 'number' ? bookmark.created_at : undefined;
+    } catch (error) {
+      Logger.warn('Failed to get bookmark timestamp', { postId, error });
+      return undefined;
+    }
+  }
+
+  /**
+   * Resolve the pagination cursor timestamp for a post within a given stream.
+   *
+   * Bookmark streams must page by bookmark time (see `getBookmarkTimestamp`) rather
+   * than the post's `indexed_at`. Seeding the cursor from the post timestamp desyncs
+   * the cache→Nexus pagination seam — a post bookmarked recently but created long ago
+   * would send an old `start`, skipping or repeating bookmarks. Every other stream
+   * paginates by the post's `indexed_at`.
+   *
+   * Falls open to the post timestamp if the bookmark row is missing.
+   */
+  private static async getStreamCursorTimestamp(streamId: PostStreamId, postId: string): Promise<number | undefined> {
+    if (isBookmarkStream(streamId)) {
+      const bookmarkedAt = await this.getBookmarkTimestamp(postId);
+      if (bookmarkedAt !== undefined) {
+        return bookmarkedAt;
+      }
+    }
+    return this.getPostTimestamp(postId);
+  }
+
+  /**
    * Internal method that performs the actual fetch without mute filtering.
    * This is the original getOrFetchStreamSlice logic, now used as a building block.
    */
@@ -353,7 +406,7 @@ export class PostStreamApplication {
         // Full cache hit, return with proper timestamp for pagination
         if (cachedStreamChunk.length === limit) {
           const lastCachedPostId = cachedStreamChunk[cachedStreamChunk.length - 1];
-          const timestamp = await this.getPostTimestamp(lastCachedPostId);
+          const timestamp = await this.getStreamCursorTimestamp(streamId, lastCachedPostId);
           return { nextPageIds: cachedStreamChunk, cacheMissPostIds: [], timestamp, reachedEnd: false };
         }
 
@@ -477,8 +530,8 @@ export class PostStreamApplication {
     const lastCachedPostId = cachedStreamChunk[cachedStreamChunk.length - 1];
     const remainingLimit = limit - cachedStreamChunk.length;
 
-    // Get timestamp from last cached post for pagination cursor
-    const nextStreamTail = (await this.getPostTimestamp(lastCachedPostId)) ?? streamTail;
+    // Get cursor from last cached post for pagination (bookmark-time for bookmark streams)
+    const nextStreamTail = (await this.getStreamCursorTimestamp(streamId, lastCachedPostId)) ?? streamTail;
 
     // Fetch remaining posts from Nexus
     const { nextPageIds, cacheMissPostIds, timestamp, reachedEnd } = await this.fetchStreamFromNexus({

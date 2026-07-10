@@ -12,8 +12,8 @@ export type { UsePublicRouteResult } from './usePublicRoute.types';
 /**
  * Pathname-based route classification for explore mode and public chrome.
  *
- * Unauthenticated users may browse **core explore routes** (`/home`, `/hot`, `/search`)
- * and **dynamic public routes** (single post, another user's profile, invite links).
+ * Unauthenticated users may browse **core explore routes** (`/home`, `/hot`, `/search`, `/collections`)
+ * and **dynamic public routes** (single post, another user's profile, single collection, invite links).
  * `RouteGuardProvider` allows those paths via `EXPLORE_ROUTES` and `isDynamicPublicRoute()`
  * in `@/app/routes`; this hook mirrors that split for UI (header, footer, CTAs).
  *

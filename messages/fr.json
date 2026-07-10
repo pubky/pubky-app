@@ -157,7 +157,8 @@
     "signIn": "Se connecter",
     "feed": "Fil",
     "search": "Rechercher",
-    "collections": "Collections"
+    "collections": "Collections",
+    "new": "Nouveau"
   },
   "settings": {
     "title": "Paramètres",
@@ -426,7 +427,8 @@
       "title": "Choisir la methode de sauvegarde",
       "subtitle": "Sauvegardez et stockez en toute sécurité la graine secrete de votre pubky. Quelle methode de sauvegarde préférez-vous ? Vous pouvez aussi choisir de le faire plus tard.",
       "recoveryPhrase": "Phrase de récupération",
-      "encryptedFile": "Fichier chiffre"
+      "encryptedFile": "Fichier chiffre",
+      "exportRing": "Exporter vers Pubky Ring"
     },
     "backup": {
       "title": "Sauvegardez votre <highlight>pubky.</highlight>",
@@ -471,13 +473,9 @@
       "createInBrowser": "Créér les cles dans le navigateur",
       "continueWithRing": "Continuer avec Pubky Ring",
       "inviteCodeApplied": "Code d'invitation appliqué",
-      "inviteCodeAppliedDescription": "Votre code d'invitation {inviteCode} a été appliqué.",
       "invalidInviteCode": "Code d'invitation invalide",
-      "invalidInviteCodeDescription": "Ce code d'invitation est invalide ou a expiré. Veuillez utiliser un code d'invitation valide.",
       "usedInviteCode": "Code d'invitation déjà utilisé",
-      "usedInviteCodeDescription": "Ce code d'invitation a déjà été utilisé. Veuillez utiliser un autre code d'invitation.",
-      "verificationFailed": "Impossible de vérifier le code d'invitation",
-      "verificationFailedDescription": "Nous n'avons pas pu vérifier votre code d'invitation pour le moment. Veuillez vérifier votre connexion et réessayer."
+      "verificationFailed": "Impossible de vérifier le code d'invitation"
     },
     "createProfile": {
       "title": "Créez votre <highlight>profil.</highlight>",
@@ -644,7 +642,7 @@
     },
     "deleteCollection": {
       "title": "Supprimer la collection ?",
-      "description": "Voulez-vous vraiment supprimer {name} ? Les personnes qui suivent cette collection n'y auront plus accès. Les publications dans la collection ne seront pas supprimées.",
+      "description": "Voulez-vous vraiment supprimer « {name} » ? Les personnes qui suivent cette collection n'y auront plus accès. Les publications dans la collection ne seront pas supprimées.",
       "confirmButton": "Supprimer",
       "cancelButton": "Annuler"
     },
@@ -987,7 +985,7 @@
     "post": {
       "replyPosted": "Réponse publiee",
       "replyFailed": "Impossible de publier la réponse. Réessayez.",
-      "postCreated": "Publication créée",
+      "postCreated": "Publication publiée",
       "postFailed": "Impossible de créer la publication. Réessayez.",
       "repostSuccess": "Republié !",
       "repostUndo": "Annuler",
@@ -1329,14 +1327,15 @@
   "collections": {
     "deleted": "Cette collection a été supprimée par son auteur.",
     "missing": "Collection introuvable.",
+    "postCount": "{count, plural, one {publication} other {publications}}",
     "new": {
       "cta": "Nouvelle collection",
       "ctaShort": "Nouveau",
       "title": "Nouvelle collection",
       "nameLabel": "Titre",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "Nommez votre collection",
       "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Le meilleur des plus grands contributeurs Bitcoin",
+      "descriptionPlaceholder": "Que trouveront les gens ici ?",
       "backgroundLabel": "Arrière-plan",
       "addImage": "Ajouter une image",
       "removeImage": "Supprimer l'image",
@@ -1344,7 +1343,7 @@
       "coverImageTooLarge": "L'image de couverture est trop grande.",
       "nameRequired": "Le titre de la collection est requis.",
       "cancel": "Annuler",
-      "save": "Enregistrer les modifications",
+      "save": "Enregistrer la collection",
       "saving": "Enregistrement...",
       "created": "Collection créée",
       "createFailed": "Échec de la création de la collection."
@@ -1353,6 +1352,7 @@
       "title": "Bienvenue dans les Collections",
       "description": "Gardez les publications qui en valent la peine. Rassemblez le meilleur contenu de votre réseau. Organisez vos idées, filtrez le signal du bruit et partagez ce qui compte.",
       "imageAlt": "Collections",
+      "publicNote": "À noter : les collections sont publiques et visibles.",
       "cancel": "Annuler",
       "continue": "Continuer"
     },
@@ -1365,9 +1365,7 @@
     "showMore": "Afficher plus",
     "loadFailed": "Échec du chargement des collections. Veuillez réessayer.",
     "my": {
-      "title": "Mes collections",
-      "publicNote": "À noter : toutes les collections sont publiques et visibles.",
-      "publicNoteShort": "Toutes les collections sont publiques et visibles."
+      "title": "Mes collections"
     },
     "followed": {
       "title": "Collections suivies",
@@ -1398,8 +1396,8 @@
       "delete": "Supprimer",
       "follow": "Suivre",
       "unfollow": "Ne plus suivre",
-      "content": "Contenu",
-      "addContent": "Ajouter du contenu",
+      "content": "Ajouter une publication",
+      "addContent": "Ajouter une publication",
       "empty": "Cette collection est vide.",
       "notFound": {
         "title": "Collection introuvable",
@@ -1411,8 +1409,8 @@
       }
     },
     "addContentDialog": {
-      "title": "Ajouter du contenu",
-      "description": "Ajoutez une publication ou un article depuis votre fil ou collez directement une URL.",
+      "title": "Ajouter une publication",
+      "description": "Il existe plusieurs façons d'ajouter des publications à votre collection.",
       "fromFeedTitle": "Ajouter depuis le fil",
       "fromFeedLead": "Trouvez une publication",
       "fromFeedRest": " que vous voulez ajouter et cliquez sur le bouton des collections.",

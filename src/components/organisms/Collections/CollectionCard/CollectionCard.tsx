@@ -13,6 +13,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
@@ -26,6 +27,7 @@ import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFal
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { CollectionCardBlurred } from '@/organisms/Collections/CollectionCard/CollectionCardBlurred';
 import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
+import { PostTagToggleButton } from '@/organisms/PostTagsExpandableRow/PostTagToggleButton';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
@@ -152,6 +154,7 @@ function CollectionCardContent({
 
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isOwn = currentUserPubky === authorPubky;
+  const { requireAuth } = useRequireAuth();
 
   const collection = parseCollectionContent(postDetails.content);
 
@@ -192,7 +195,9 @@ function CollectionCardContent({
   const handleFollowToggle = (event: MouseEvent) => {
     suppressCardNavigation(event);
     if (isToggling) return;
-    void toggle();
+    requireAuth(() => {
+      void toggle();
+    });
   };
 
   // Collection-specific toast copy so success / failure reads as "Collection
@@ -208,10 +213,16 @@ function CollectionCardContent({
     },
   });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
 
   const handleDelete = (event: MouseEvent) => {
     suppressCardNavigation(event);
     setDeleteConfirmOpen(true);
+  };
+
+  const handleTagToggle = (event: MouseEvent<HTMLButtonElement>) => {
+    suppressCardNavigation(event);
+    setTagsExpanded((prev) => !prev);
   };
 
   const handleDeleteConfirm = () => {
@@ -253,22 +264,21 @@ function CollectionCardContent({
           )}
 
           <CardContent className="flex h-full flex-col gap-3 p-6">
-            {/* Header row: icon + title (left, grows) | item-count + avatar (right) */}
+            {/* Header row: icon + title + item-count (left, grows) | avatar (right) */}
             <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
               <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">
                 <Library className="size-6 shrink-0 text-foreground" />
                 <Typography
                   as="span"
                   overrideDefaults
-                  className="min-w-0 flex-1 truncate text-xl leading-7 font-bold text-foreground"
+                  className="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
                 >
                   {title}
                 </Typography>
+                <CollectionCountBadge count={itemCount} onCover={!!coverImage} />
               </Container>
 
-              <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-3">
-                <CollectionCountBadge count={itemCount} />
-
+              <Container overrideDefaults className="flex shrink-0 items-center justify-end">
                 <AvatarWithFallback
                   avatarUrl={ownerAvatarUrl}
                   name={ownerName}
@@ -294,8 +304,36 @@ function CollectionCardContent({
               previews) match how normal reposts render — no inline tags, no
               actions on the previewed post. */}
             {!isPreview && (
-              <Container overrideDefaults className="mt-auto w-full">
-                <PostTagsExpandableRow postId={compositeId} preventDefaultOnClick>
+              <Container
+                overrideDefaults
+                data-cy="collection-card-bottom-row"
+                className="mt-auto flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+              >
+                <PostTagsExpandableRow
+                  postId={compositeId}
+                  preventDefaultOnClick
+                  expanded={tagsExpanded}
+                  onExpandedChange={setTagsExpanded}
+                  showTagToggle={false}
+                  // Full mode keeps the expanded tag UI from being squeezed on
+                  // mobile collection cards. It also preserves PostTagsPanel's
+                  // existing "See all" behavior when there are more than 3 tags.
+                  panelWidthMode="full"
+                  className="w-full min-w-0 sm:w-auto sm:flex-1"
+                />
+                <Container
+                  overrideDefaults
+                  data-cy="collection-card-tag-actions"
+                  className="flex shrink-0 items-center gap-2 self-start sm:self-end"
+                  onClick={suppressCardNavigation}
+                  onAuxClick={suppressCardNavigation}
+                >
+                  <PostTagToggleButton
+                    postId={compositeId}
+                    expanded={tagsExpanded}
+                    onToggle={handleTagToggle}
+                    disabled={isOwn && isDeleting}
+                  />
                   {isOwn ? (
                     <Button
                       variant="secondary"
@@ -320,7 +358,7 @@ function CollectionCardContent({
                       {isBookmarked ? t('unfollow') : t('follow')}
                     </Button>
                   )}
-                </PostTagsExpandableRow>
+                </Container>
               </Container>
             )}
           </CardContent>

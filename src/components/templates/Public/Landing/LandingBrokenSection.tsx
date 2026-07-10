@@ -79,7 +79,7 @@ export function LandingBrokenSection() {
                 <span className={`absolute size-5 rotate-45 bg-brand ${tipClassName}`} aria-hidden="true" />
               </div>
               <div className="mt-6 min-w-0 lg:hidden">
-                <Typography size="md" className="text-muted-foreground">
+                <Typography size="sm" className="text-muted-foreground sm:text-base">
                   {t(`features.${key}.description`)}
                 </Typography>
               </div>

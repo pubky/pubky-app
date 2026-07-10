@@ -157,7 +157,8 @@
     "signIn": "Entrar",
     "feed": "Feed",
     "search": "Pesquisar",
-    "collections": "Coleções"
+    "collections": "Coleções",
+    "new": "Novo"
   },
   "settings": {
     "title": "Configurações",
@@ -426,7 +427,8 @@
       "title": "Escolha o método de backup",
       "subtitle": "Faca backup e armazene com segurança a semente secreta do seu pubky. Qual método de backup você prefere? Voce tambem pode escolher fazer isso mais tarde.",
       "recoveryPhrase": "Frase de recuperação",
-      "encryptedFile": "Arquivo criptografado"
+      "encryptedFile": "Arquivo criptografado",
+      "exportRing": "Exportar para Pubky Ring"
     },
     "backup": {
       "title": "Faça backup do seu <highlight>pubky.</highlight>",
@@ -471,13 +473,9 @@
       "createInBrowser": "Criar chaves no navegador",
       "continueWithRing": "Continuar com Pubky Ring",
       "inviteCodeApplied": "Código de convite aplicado",
-      "inviteCodeAppliedDescription": "Seu código de convite {inviteCode} foi aplicado.",
       "invalidInviteCode": "Código de convite inválido",
-      "invalidInviteCodeDescription": "Este código de convite é inválido ou expirou. Use um código de convite válido.",
       "usedInviteCode": "Código de convite já utilizado",
-      "usedInviteCodeDescription": "Este código de convite já foi utilizado. Use um código de convite diferente.",
-      "verificationFailed": "Não foi possível verificar o código de convite",
-      "verificationFailedDescription": "Não conseguimos verificar seu código de convite agora. Verifique sua conexão e tente novamente."
+      "verificationFailed": "Não foi possível verificar o código de convite"
     },
     "createProfile": {
       "title": "Crie seu <highlight>perfil.</highlight>",
@@ -644,7 +642,7 @@
     },
     "deleteCollection": {
       "title": "Excluir coleção?",
-      "description": "Tem certeza de que deseja excluir {name}? As pessoas que seguem esta coleção não terão mais acesso a ela. As postagens dentro da coleção não serão excluídas.",
+      "description": "Tem certeza de que deseja excluir ''{name}''? As pessoas que seguem esta coleção não terão mais acesso a ela. As postagens dentro da coleção não serão excluídas.",
       "confirmButton": "Excluir",
       "cancelButton": "Cancelar"
     },
@@ -987,7 +985,7 @@
     "post": {
       "replyPosted": "Resposta publicada",
       "replyFailed": "Não foi possível publicar a resposta. Tente novamente.",
-      "postCreated": "Post criado",
+      "postCreated": "Post publicado",
       "postFailed": "Não foi possível criar a publicação. Tente novamente.",
       "repostSuccess": "Repostado!",
       "repostUndo": "Desfazer",
@@ -1329,14 +1327,15 @@
   "collections": {
     "deleted": "Esta coleção foi excluída pelo autor.",
     "missing": "Coleção não encontrada.",
+    "postCount": "{count, plural, one {post} other {posts}}",
     "new": {
       "cta": "Nova coleção",
       "ctaShort": "Nova",
       "title": "Nova coleção",
       "nameLabel": "Título",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "Dê um nome à sua coleção",
       "descriptionLabel": "Descrição",
-      "descriptionPlaceholder": "O melhor dos maiores contribuidores do Bitcoin",
+      "descriptionPlaceholder": "O que as pessoas encontrarão aqui?",
       "backgroundLabel": "Plano de fundo",
       "addImage": "Adicionar imagem",
       "removeImage": "Remover imagem",
@@ -1344,7 +1343,7 @@
       "coverImageTooLarge": "A imagem de capa é muito grande.",
       "nameRequired": "O título da coleção é obrigatório.",
       "cancel": "Cancelar",
-      "save": "Salvar alterações",
+      "save": "Salvar coleção",
       "saving": "Salvando...",
       "created": "Coleção criada",
       "createFailed": "Falha ao criar a coleção."
@@ -1353,6 +1352,7 @@
       "title": "Bem-vindo às Coleções",
       "description": "Salve as publicações que valem a pena. Reúna o melhor conteúdo da sua rede. Organize ideias, filtre o sinal do ruído e compartilhe o que importa.",
       "imageAlt": "Coleções",
+      "publicNote": "Atenção: coleções são públicas e podem ser descobertas.",
       "cancel": "Cancelar",
       "continue": "Continuar"
     },
@@ -1365,9 +1365,7 @@
     "showMore": "Mostrar mais",
     "loadFailed": "Falha ao carregar as coleções. Tente novamente.",
     "my": {
-      "title": "Minhas coleções",
-      "publicNote": "Atenção: todas as coleções são públicas e podem ser descobertas.",
-      "publicNoteShort": "Todas as coleções são públicas e podem ser descobertas."
+      "title": "Minhas coleções"
     },
     "followed": {
       "title": "Coleções seguidas",
@@ -1398,8 +1396,8 @@
       "delete": "Excluir",
       "follow": "Seguir",
       "unfollow": "Deixar de seguir",
-      "content": "Conteúdo",
-      "addContent": "Adicionar conteúdo",
+      "content": "Adicionar post",
+      "addContent": "Adicionar post",
       "empty": "Esta coleção está vazia.",
       "notFound": {
         "title": "Coleção não encontrada",
@@ -1411,8 +1409,8 @@
       }
     },
     "addContentDialog": {
-      "title": "Adicionar conteúdo",
-      "description": "Adicione uma publicação ou artigo do seu feed ou cole uma URL diretamente.",
+      "title": "Adicionar post",
+      "description": "Há várias maneiras de adicionar posts à sua coleção.",
       "fromFeedTitle": "Adicionar do feed",
       "fromFeedLead": "Encontre uma publicação",
       "fromFeedRest": " que você quer adicionar e clique no botão de coleções.",

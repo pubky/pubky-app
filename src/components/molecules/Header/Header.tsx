@@ -12,6 +12,7 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
+import { useCollectionsNavDiscovery } from '@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Github2, Telegram, XTwitter } from '@/icons';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
@@ -137,6 +138,8 @@ type NavigationButtonProps = {
   isActive: boolean;
   dataCy?: string;
   isFeedRoute?: boolean;
+  showNew?: boolean;
+  newLabel?: string;
 };
 const NavigationButton = ({
   href,
@@ -146,31 +149,54 @@ const NavigationButton = ({
   isActive,
   dataCy,
   isFeedRoute,
+  showNew = false,
+  newLabel,
 }: NavigationButtonProps) => {
+  const accessibleLabel = showNew && newLabel ? `${label}, ${newLabel}` : label;
   const button = (
     <Button
       data-cy={href ? undefined : dataCy}
-      className={cn('h-12 w-12 backdrop-blur-md', isActive ? '' : 'border bg-white/5')}
+      className={cn(
+        'h-12 w-12 backdrop-blur-md',
+        isActive ? '' : 'border bg-white/5',
+        showNew && 'border-brand bg-white/5 text-brand hover:bg-brand/10',
+      )}
       variant="secondary"
       size="icon"
-      aria-label={label}
-      onClick={onClick}
+      aria-label={accessibleLabel}
+      onClick={href ? undefined : onClick}
     >
       <Icon className="size-6" />
     </Button>
+  );
+  const content = (
+    <>
+      {button}
+      {showNew && newLabel ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute top-14 left-1/2 -translate-x-1/2 text-xs font-semibold text-brand uppercase"
+        >
+          {newLabel}
+        </span>
+      ) : null}
+    </>
   );
   return href ? (
     <Link
       href={href}
       data-cy={dataCy}
-      onClick={
-        isFeedRoute ? (event) => handleFeedNavClick(event, { isActive, smoothScrollWhenActive: true }) : undefined
-      }
+      className={showNew ? 'relative inline-flex' : undefined}
+      onClick={(event) => {
+        onClick?.();
+        if (!isFeedRoute) return;
+        handleFeedNavClick(event, { isActive, smoothScrollWhenActive: true });
+      }}
     >
-      {button}
+      {content}
     </Link>
   ) : (
-    button
+    <span className={showNew ? 'relative inline-flex' : undefined}>{content}</span>
   );
 };
 export function HeaderNavigationButtons({
@@ -183,20 +209,27 @@ export function HeaderNavigationButtons({
   const pathname = usePathname();
   const t = useTranslations('header');
   const tCommon = useTranslations('common');
+  const { showCollectionsNew, markCollectionsNavSeen } = useCollectionsNavDiscovery();
   const counterString = counter > 21 ? '21+' : counter.toString();
   return (
     <Container className={cn('hidden w-auto flex-row items-center justify-start gap-3 lg:flex', className)}>
-      {NAVIGATION_ITEMS.map((item) => (
-        <NavigationButton
-          key={item.href}
-          href={item.href}
-          icon={item.icon}
-          label={t(item.labelKey)}
-          isActive={isNavItemActive(pathname, item)}
-          dataCy={item.dataCy}
-          isFeedRoute={item.isFeedRoute}
-        />
-      ))}
+      {NAVIGATION_ITEMS.map((item) => {
+        const isCollectionsItem = item.href === APP_ROUTES.COLLECTIONS;
+        return (
+          <NavigationButton
+            key={item.href}
+            href={item.href}
+            onClick={isCollectionsItem ? markCollectionsNavSeen : undefined}
+            icon={item.icon}
+            label={t(item.labelKey)}
+            isActive={isNavItemActive(pathname, item)}
+            dataCy={item.dataCy}
+            isFeedRoute={item.isFeedRoute}
+            showNew={isCollectionsItem && showCollectionsNew}
+            newLabel={t('new')}
+          />
+        );
+      })}
 
       <Link data-cy="header-nav-profile-btn" className="relative" href={APP_ROUTES.PROFILE}>
         <AvatarWithFallback
@@ -242,8 +275,7 @@ export function HeaderExploreNavigationButtons({
     <Container className={cn('hidden min-w-0 flex-1 flex-row items-center justify-end gap-3 lg:flex', className)}>
       {showSearch && <SearchInput />}
       {NAVIGATION_ITEMS.map((item) => {
-        // Home/Hot are public explore routes and navigate freely. Collections/Settings (and any
-        // other non-explore route) require an account, so they prompt Join Pubky via requireAuth.
+        // Core explore routes navigate freely; Settings requires an account.
         const requiresAuth = !isCoreExploreRoute(item.href);
         return (
           <NavigationButton
@@ -252,7 +284,7 @@ export function HeaderExploreNavigationButtons({
             onClick={requiresAuth ? () => requireAuth(() => router.push(item.href)) : undefined}
             icon={item.icon}
             label={tHeader(item.labelKey)}
-            isActive={pathname === item.href}
+            isActive={isNavItemActive(pathname, item)}
             dataCy={item.dataCy}
           />
         );

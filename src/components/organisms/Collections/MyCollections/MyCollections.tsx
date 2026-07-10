@@ -22,8 +22,8 @@ import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFal
 import { CollectionBookmarkCard } from '@/organisms/Collections/CollectionBookmarkCard/CollectionBookmarkCard';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
+import { DialogNewCollection } from '@/organisms/Collections/DialogNewCollection/DialogNewCollection';
 import { NewCollectionCardCTA } from '@/organisms/Collections/NewCollectionCardCTA/NewCollectionCardCTA';
-import { NewCollectionDialog } from '@/organisms/NewCollectionDialog/NewCollectionDialog';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 /**
@@ -38,11 +38,7 @@ import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
  * Pagination = "Show more" button (no infinite scroll on the landing).
  * No empty state — the pinned card is always present.
  */
-interface MyCollectionsProps {
-  showPublicNote?: boolean;
-}
-
-export function MyCollections({ showPublicNote = false }: MyCollectionsProps = {}) {
+export function MyCollections() {
   const t = useTranslations('collections');
 
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
@@ -75,7 +71,7 @@ export function MyCollections({ showPublicNote = false }: MyCollectionsProps = {
           ) : (
             <AvatarStackSkeleton count={1} size="md" />
           )}
-          <NewCollectionDialog>
+          <DialogNewCollection>
             <Button variant="secondary" size="sm">
               <Plus />
               <Typography as="span" overrideDefaults className="text-sm font-bold lg:hidden">
@@ -85,18 +81,8 @@ export function MyCollections({ showPublicNote = false }: MyCollectionsProps = {
                 {t('new.ctaShort')}
               </Typography>
             </Button>
-          </NewCollectionDialog>
+          </DialogNewCollection>
         </Container>
-        {showPublicNote && (
-          <>
-            <Typography as="span" overrideDefaults className="text-base font-medium text-input lg:hidden">
-              {t('my.publicNoteShort')}
-            </Typography>
-            <Typography as="span" overrideDefaults className="hidden text-base font-medium text-input lg:inline">
-              {t('my.publicNote')}
-            </Typography>
-          </>
-        )}
       </Container>
 
       {/* Body */}

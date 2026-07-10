@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { ToastActionElement, ToastProps } from '@/atoms/Toast/Toast';
+import type { ToastActionElement, ToastProps, ToastVariant } from '@/atoms/Toast/Toast';
 
 // Max number of toasts visible at once
 const TOAST_LIMIT = 1;
@@ -16,6 +16,8 @@ type ToasterToast = Omit<ToastProps, 'title'> & {
   description?: React.ReactNode;
   action?: ToastActionElement;
   dismissButton?: boolean;
+  // Overrides the toast variant for the action button styling only
+  actionVariant?: ToastVariant;
 };
 
 export const actionTypes = {

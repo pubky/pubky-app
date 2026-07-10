@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
-import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog';
+import { DialogAddContent } from '@/organisms/Collections/DialogAddContent/DialogAddContent';
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 
 interface BookmarksHeroProps {
@@ -62,7 +62,7 @@ export function BookmarksHero({
         </Typography>
 
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">
-          <AddContentDialog target={{ type: 'bookmarks' }} dataCy="bookmarks-add-content" />
+          <DialogAddContent target={{ type: 'bookmarks' }} dataCy="bookmarks-add-content" />
         </Container>
       </CardContent>
     </Card>

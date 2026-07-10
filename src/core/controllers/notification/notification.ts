@@ -3,6 +3,8 @@ import type { TGetOrFetchNotificationsResponse } from '@/application/notificatio
 import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
+import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
@@ -44,29 +46,36 @@ export class NotificationController {
   }
 
   /**
-   * Marks all notifications as read by updating the lastRead timestamp on the homeserver.
-   * This resets the unread count to 0 and updates the local store.
-   * Should be called when the user enters the notifications page.
+   * Marks all notifications as read by persisting the lastRead timestamp on the homeserver
+   * and resetting the local unread count.
+   *
+   * Requires a restored session, since the write must target the session's own `/pub/*` path.
+   * Only updates the local store after the write succeeds, so a failed write never clears the
+   * badge while the server still reports unread notifications.
    */
-  static markAllAsRead() {
+  static async markAllAsRead(): Promise<void> {
     const authStore = useAuthStore.getState();
     const pubky = authStore.currentUserPubky;
+    const session = authStore.selectSession();
 
-    // Skip if user is not authenticated (e.g., during logout)
-    if (!pubky) return;
+    // Need a restored, owned session to perform the write.
+    if (!pubky || !session) return;
 
     // Skip if there are no unread notifications
     const notificationStore = useNotificationStore.getState();
     if (notificationStore.selectUnread() === 0) return;
 
-    // Create new lastRead with current timestamp using normalizer
-    const lastRead = LastReadNormalizer.to(pubky);
-
-    NotificationApplication.markAllAsRead(lastRead);
-
-    // Update local store
-    notificationStore.setLastRead(Number(lastRead.last_read.timestamp));
-    notificationStore.setUnread(0);
+    try {
+      // Create new lastRead with current timestamp using normalizer
+      const lastRead = LastReadNormalizer.to(pubky);
+      await NotificationApplication.markAllAsRead(lastRead);
+      notificationStore.setLastRead(Number(lastRead.last_read.timestamp));
+      notificationStore.setUnread(0);
+    } catch (error) {
+      if (!isAppError(error)) {
+        Logger.warn('Failed to mark notifications as read on homeserver', { error });
+      }
+    }
   }
 
   /**

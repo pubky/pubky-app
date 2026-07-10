@@ -12,16 +12,17 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { cn } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
-import { AddContentDialog } from '@/organisms/AddContentDialog/AddContentDialog';
 import { CollectionHeroSkeleton } from '@/organisms/Collections/CollectionHero/CollectionHero.skeleton';
 import { CollectionHeroBlurred } from '@/organisms/Collections/CollectionHero/CollectionHeroBlurred';
-import { EditCollectionDialog } from '@/organisms/EditCollectionDialog/EditCollectionDialog';
+import { DialogAddContent } from '@/organisms/Collections/DialogAddContent/DialogAddContent';
+import { DialogEditCollection } from '@/organisms/Collections/DialogEditCollection/DialogEditCollection';
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
 import { PostTagToggleButton } from '@/organisms/PostTagsExpandableRow/PostTagToggleButton';
@@ -80,6 +81,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
 
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isOwn = currentUserPubky === authorPubky;
+  const { requireAuth } = useRequireAuth();
 
   const collection = parseCollectionContent(postDetails.content);
 
@@ -108,7 +110,9 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
 
   const handleFollowToggle = () => {
     if (isToggling) return;
-    void toggle();
+    requireAuth(() => {
+      void toggle();
+    });
   };
 
   // Sharing a collection = reposting the underlying post; reuse the standard
@@ -120,7 +124,9 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
     submitIcon: StickyNote,
     successToastTitle: tCardToast('shared'),
   });
-  const handleShare = openRepostDialog;
+  const handleShare = () => {
+    requireAuth(openRepostDialog);
+  };
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const handleEdit = () => setIsEditDialogOpen(true);
@@ -192,7 +198,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         </Typography>
 
         {/* Owner + item count — mobile: count on the right; lg+: inline next to owner */}
-        <Container overrideDefaults className="flex w-full items-center gap-6">
+        <Container overrideDefaults className="flex w-full items-center gap-3">
           <HeroOwner
             name={ownerName}
             fallbackSeed={authorPubky}
@@ -201,7 +207,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
             size="md"
             className="min-w-0 flex-1 gap-2 lg:flex-none"
           />
-          <CollectionCountBadge count={itemCount} />
+          <CollectionCountBadge count={itemCount} onCover={!!coverImage} />
         </Container>
 
         {/* Description */}
@@ -226,7 +232,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">
           {isOwn ? (
             <>
-              <AddContentDialog
+              <DialogAddContent
                 target={{ type: 'collection', collectionId: compositeId }}
                 dataCy="collection-add-content"
                 disabled={isDeleting}
@@ -308,7 +314,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
       {dialogs}
       {isOwn && (
         <>
-          <EditCollectionDialog
+          <DialogEditCollection
             open={isEditDialogOpen}
             onOpenChange={setIsEditDialogOpen}
             compositeCollectionId={compositeId}

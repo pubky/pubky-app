@@ -94,7 +94,7 @@ export const HomeSectionTitle = () => {
   const t = useTranslations('landing');
   return (
     <Container className="flex-row items-start gap-2">
-      <Typography as="h2" size="md" className="self-center font-light text-muted-foreground sm:text-3xl">
+      <Typography as="h2" overrideDefaults className="self-center text-xl font-light text-muted-foreground sm:text-3xl">
         {t('subtitle')}
       </Typography>
     </Container>

@@ -4,9 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Collections } from './Collections';
 
 vi.mock('@/organisms/Collections/CollectionsSections/CollectionsSections', () => ({
-  CollectionsSections: ({ showMyCollectionsPublicNote }: { showMyCollectionsPublicNote?: boolean }) => (
-    <div data-testid="collections-sections" data-show-my-public-note={String(showMyCollectionsPublicNote ?? false)} />
-  ),
+  CollectionsSections: () => <div data-testid="collections-sections" />,
 }));
 
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
@@ -22,12 +20,6 @@ describe('Collections (template)', () => {
     expect(layout).toBeInTheDocument();
     expect(sections).toBeInTheDocument();
     expect(layout).toContainElement(sections);
-  });
-
-  it('enables the My Collections public note on the /collections route', () => {
-    render(<Collections />);
-
-    expect(screen.getByTestId('collections-sections')).toHaveAttribute('data-show-my-public-note', 'true');
   });
 
   it('matches the snapshot', () => {

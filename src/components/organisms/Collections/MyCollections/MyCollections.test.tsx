@@ -39,7 +39,7 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
 
-// `NewCollectionDialog` (rendered via the header button and `NewCollectionCardCTA`)
+// `DialogNewCollection` (rendered via the header button and `NewCollectionCardCTA`)
 // reads the viewer's authored collections to gate the onboarding intro. Stub it so
 // it doesn't register its own `useLiveQuery` call, which would otherwise clobber the
 // deleted-filter live query this suite captures.
@@ -469,30 +469,6 @@ describe('MyCollections', () => {
 
       expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-avatar-url', 'blob:local-avatar');
       expect(mockGetAvatarUrl).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('public note', () => {
-    it('does not render the public note by default', () => {
-      setup({
-        currentUserPubky: CURRENT_USER_PUBKY,
-        userDetails: { name: 'Alice', image: null, indexed_at: 0 },
-      });
-
-      render(<MyCollections />);
-
-      expect(screen.queryByText('collections.my.publicNote')).not.toBeInTheDocument();
-    });
-
-    it('renders the public note when showPublicNote is true', () => {
-      setup({
-        currentUserPubky: CURRENT_USER_PUBKY,
-        userDetails: { name: 'Alice', image: null, indexed_at: 0 },
-      });
-
-      render(<MyCollections showPublicNote />);
-
-      expect(screen.getByText('collections.my.publicNote')).toBeInTheDocument();
     });
   });
 

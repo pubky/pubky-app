@@ -159,7 +159,8 @@
     "signIn": "Anmelden",
     "feed": "Feed",
     "search": "Suchen",
-    "collections": "Sammlungen"
+    "collections": "Sammlungen",
+    "new": "Neu"
   },
   "settings": {
     "title": "Einstellungen",
@@ -428,7 +429,8 @@
       "title": "Backup-Methode wählen",
       "subtitle": "Sichern und speichern Sie den geheimen Seed für Ihren Pubky sicher. Welche Backup-Methode bevorzugen Sie? Sie können dies auch später tun.",
       "recoveryPhrase": "Wiederherstellungsphrase",
-      "encryptedFile": "Verschlüsselte Datei"
+      "encryptedFile": "Verschlüsselte Datei",
+      "exportRing": "Zu Pubky Ring exportieren"
     },
     "backup": {
       "title": "Sichern Sie Ihren <highlight>Pubky.</highlight>",
@@ -473,13 +475,9 @@
       "createInBrowser": "Schlüssel im Browser erstellen",
       "continueWithRing": "Mit Pubky Ring fortfahren",
       "inviteCodeApplied": "Einladungscode angewendet",
-      "inviteCodeAppliedDescription": "Dein Einladungscode {inviteCode} wurde angewendet.",
       "invalidInviteCode": "Ungültiger Einladungscode",
-      "invalidInviteCodeDescription": "Dieser Einladungscode ist ungültig oder abgelaufen. Bitte verwende einen gültigen Einladungscode.",
       "usedInviteCode": "Einladungscode bereits verwendet",
-      "usedInviteCodeDescription": "Dieser Einladungscode wurde bereits verwendet. Bitte verwende einen anderen Einladungscode.",
-      "verificationFailed": "Einladungscode konnte nicht überprüft werden",
-      "verificationFailedDescription": "Wir konnten deinen Einladungscode gerade nicht überprüfen. Bitte überprüfe deine Verbindung und versuche es erneut."
+      "verificationFailed": "Einladungscode konnte nicht überprüft werden"
     },
     "createProfile": {
       "title": "Erstellen Sie Ihr <highlight>Profil.</highlight>",
@@ -646,7 +644,7 @@
     },
     "deleteCollection": {
       "title": "Sammlung löschen?",
-      "description": "Sind Sie sicher, dass Sie {name} löschen möchten? Personen, die dieser Sammlung folgen, haben keinen Zugriff mehr darauf. Beiträge in der Sammlung werden nicht gelöscht.",
+      "description": "Sind Sie sicher, dass Sie ''{name}'' löschen möchten? Personen, die dieser Sammlung folgen, haben keinen Zugriff mehr darauf. Beiträge in der Sammlung werden nicht gelöscht.",
       "confirmButton": "Löschen",
       "cancelButton": "Abbrechen"
     },
@@ -989,7 +987,7 @@
     "post": {
       "replyPosted": "Antwort gepostet",
       "replyFailed": "Antwort konnte nicht gepostet werden. Versuchen Sie es erneut.",
-      "postCreated": "Beitrag erstellt",
+      "postCreated": "Beitrag veröffentlicht",
       "postFailed": "Beitrag konnte nicht erstellt werden. Versuchen Sie es erneut.",
       "repostSuccess": "Repostet!",
       "repostUndo": "Rückgängig",
@@ -1331,14 +1329,15 @@
   "collections": {
     "deleted": "Diese Sammlung wurde vom Autor gelöscht.",
     "missing": "Sammlung nicht gefunden.",
+    "postCount": "{count, plural, one {Beitrag} other {Beiträge}}",
     "new": {
       "cta": "Neue Sammlung",
       "ctaShort": "Neu",
       "title": "Neue Sammlung",
       "nameLabel": "Titel",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "Geben Sie Ihrer Sammlung einen Namen",
       "descriptionLabel": "Beschreibung",
-      "descriptionPlaceholder": "Das Beste von den größten Beitragenden in Bitcoin",
+      "descriptionPlaceholder": "Was werden Menschen hier finden?",
       "backgroundLabel": "Hintergrund",
       "addImage": "Bild hinzufügen",
       "removeImage": "Bild entfernen",
@@ -1346,7 +1345,7 @@
       "coverImageTooLarge": "Das Coverbild ist zu groß.",
       "nameRequired": "Sammlungstitel ist erforderlich.",
       "cancel": "Abbrechen",
-      "save": "Änderungen speichern",
+      "save": "Sammlung speichern",
       "saving": "Wird gespeichert...",
       "created": "Sammlung erstellt",
       "createFailed": "Sammlung konnte nicht erstellt werden."
@@ -1355,6 +1354,7 @@
       "title": "Willkommen bei Sammlungen",
       "description": "Bewahre Beiträge auf, die es wert sind. Sammle die besten Inhalte aus deinem Netzwerk. Ordne Ideen, filtere das Signal vom Rauschen und teile, was zählt.",
       "imageAlt": "Sammlungen",
+      "publicNote": "Hinweis: Sammlungen sind öffentlich und auffindbar.",
       "cancel": "Abbrechen",
       "continue": "Weiter"
     },
@@ -1367,9 +1367,7 @@
     "showMore": "Mehr anzeigen",
     "loadFailed": "Sammlungen konnten nicht geladen werden. Bitte erneut versuchen.",
     "my": {
-      "title": "Meine Sammlungen",
-      "publicNote": "Hinweis: Alle Sammlungen sind öffentlich und auffindbar.",
-      "publicNoteShort": "Alle Sammlungen sind öffentlich und auffindbar."
+      "title": "Meine Sammlungen"
     },
     "followed": {
       "title": "Gefolgte Sammlungen",
@@ -1400,8 +1398,8 @@
       "delete": "Löschen",
       "follow": "Folgen",
       "unfollow": "Entfolgen",
-      "content": "Inhalt",
-      "addContent": "Inhalt hinzufügen",
+      "content": "Beitrag hinzufügen",
+      "addContent": "Beitrag hinzufügen",
       "empty": "Diese Sammlung ist leer.",
       "notFound": {
         "title": "Sammlung nicht gefunden",
@@ -1413,8 +1411,8 @@
       }
     },
     "addContentDialog": {
-      "title": "Inhalt hinzufügen",
-      "description": "Füge einen Beitrag oder Artikel aus deinem Feed hinzu oder füge direkt eine URL ein.",
+      "title": "Beitrag hinzufügen",
+      "description": "Es gibt mehrere Möglichkeiten, Beiträge zu deiner Sammlung hinzuzufügen.",
       "fromFeedTitle": "Aus Feed hinzufügen",
       "fromFeedLead": "Finde einen Beitrag",
       "fromFeedRest": " den du hinzufügen möchtest und klicke auf die Sammlungen-Schaltfläche.",

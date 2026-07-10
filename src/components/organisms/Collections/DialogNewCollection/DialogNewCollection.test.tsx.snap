@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`EditCollectionDialog - Snapshots > matches snapshot when open with the envelope prefilled 1`] = `
+exports[`DialogNewCollection - Snapshots > matches snapshot when open 1`] = `
 <body
   data-scroll-locked="1"
   style="pointer-events: none;"
@@ -15,7 +15,14 @@ exports[`EditCollectionDialog - Snapshots > matches snapshot when open with the 
   <div
     aria-hidden="true"
     data-aria-hidden="true"
-  />
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-10 gap-1 px-4 py-2 has-[>svg]:px-4"
+      data-slot="button"
+    >
+      Open dialog
+    </button>
+  </div>
   <div
     aria-hidden="true"
     class="fixed inset-0 z-40 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0"
@@ -50,7 +57,7 @@ exports[`EditCollectionDialog - Snapshots > matches snapshot when open with the 
           data-testid="dialog-title"
           id="radix-normalized"
         >
-          Edit Collection
+          New Collection
         </h2>
       </div>
       <div
@@ -79,9 +86,9 @@ exports[`EditCollectionDialog - Snapshots > matches snapshot when open with the 
               id="name"
               maxlength="100"
               name="name"
-              placeholder="Proof of Work"
+              placeholder="Name your collection"
               type="text"
-              value="Proof of Work"
+              value=""
             />
           </div>
         </div>
@@ -107,9 +114,9 @@ exports[`EditCollectionDialog - Snapshots > matches snapshot when open with the 
               id="description"
               maxlength="500"
               name="description"
-              placeholder="The best from the biggest contributors in Bitcoin"
+              placeholder="What will people find here?"
               type="text"
-              value="Bitcoin essays"
+              value=""
             />
           </div>
         </div>
@@ -120,13 +127,13 @@ exports[`EditCollectionDialog - Snapshots > matches snapshot when open with the 
           <label
             class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
             data-slot="label"
-            for="edit-collection-cover-image"
+            for="new-collection-cover-image"
           >
             Background
           </label>
           <div
             class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-md bg-card bg-cover bg-center"
-            data-testid="edit-collection-cover-image"
+            data-testid="new-collection-cover-image"
           >
             <button
               aria-label="Add image"
@@ -175,7 +182,7 @@ exports[`EditCollectionDialog - Snapshots > matches snapshot when open with the 
             <input
               accept="image/*"
               class="hidden"
-              id="edit-collection-cover-image"
+              id="new-collection-cover-image"
               type="file"
             />
           </div>
@@ -189,8 +196,9 @@ exports[`EditCollectionDialog - Snapshots > matches snapshot when open with the 
           class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal order-1 sm:order-2"
           data-size="lg"
           data-slot="button"
+          disabled=""
         >
-          Save changes
+          Save collection
         </button>
         <button
           class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal order-2 sm:order-1"
