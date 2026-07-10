@@ -739,7 +739,7 @@ describe('NotificationItem', () => {
     });
   });
 
-  it('falls back to post link for PostEdited when post fetch fails', async () => {
+  it('keeps PostEdited unlinked when post fetch fails', async () => {
     mockGetOrFetch.mockRejectedValue(new Error('network error'));
 
     const editedNotification = {
@@ -755,11 +755,10 @@ describe('NotificationItem', () => {
     render(<NotificationItem notification={editedNotification} isUnread={false} />);
 
     await vi.waitFor(() => {
-      expect(screen.getByText('edited a post you have interacted with').closest('a')).toHaveAttribute(
-        'href',
-        '/post/author1/post123',
-      );
+      expect(mockGetOrFetch).toHaveBeenCalled();
     });
+
+    expect(screen.getByText('edited a post you have interacted with').closest('a')).toBeNull();
   });
 
   it('resets post kind when PostEdited target changes so stale kind cannot leak', async () => {

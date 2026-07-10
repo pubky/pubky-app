@@ -33,6 +33,11 @@ describe('getNotificationLink', () => {
     expect(notificationLink).toBeNull();
   });
 
+  it('defers PostEdited link when post kind fetch failed', () => {
+    const { notificationLink } = getNotificationLink(postEditedNotification, null);
+    expect(notificationLink).toBeNull();
+  });
+
   it('links PostEdited collection notifications to the collection route', () => {
     const { notificationLink } = getNotificationLink(postEditedNotification, 'collection');
     expect(notificationLink).toBe('/collections/author1/item123');
@@ -40,11 +45,6 @@ describe('getNotificationLink', () => {
 
   it('links PostEdited non-collection notifications to the post route', () => {
     const { notificationLink } = getNotificationLink(postEditedNotification, 'short');
-    expect(notificationLink).toBe('/post/author1/item123');
-  });
-
-  it('falls back to the post route when post kind fetch failed', () => {
-    const { notificationLink } = getNotificationLink(postEditedNotification, null);
     expect(notificationLink).toBe('/post/author1/item123');
   });
 });

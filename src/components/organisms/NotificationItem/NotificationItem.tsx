@@ -50,7 +50,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   }, [notification]);
 
   // Post fetch state keyed by composite ID so a reused row never paints with a stale kind
-  // before the effect resets. Kind: undefined = loading, string = known, null = failed.
+  // before the effect resets. Effective kind is undefined until this matches postCompositeId.
+  // Stored kind: string = known, null = fetch failed/unavailable (link stays deferred).
   const [fetchedPost, setFetchedPost] = useState<{
     compositeId: string;
     kind: string | null;

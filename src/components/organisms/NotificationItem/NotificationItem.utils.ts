@@ -105,8 +105,8 @@ function uriToUrlPath(uri: string | undefined): string | null {
  * Get the appropriate post link for a notification based on its type
  * Uses TypeScript's discriminated union type narrowing for type safety
  *
- * @param postKind - `undefined` means kind is still loading (PostEdited defers the link);
- *   `null` means resolved/unavailable (fall back to post route); a string is the known kind
+ * @param postKind - `undefined`/`null` means kind is unknown (PostEdited defers the link);
+ *   a string is the known kind
  */
 function getPostLink(notification: FlatNotification, postKind?: string | null): string | null {
   let uri: string | undefined;
@@ -134,8 +134,8 @@ function getPostLink(notification: FlatNotification, postKind?: string | null): 
       break;
 
     case NotificationType.PostEdited:
-      // Defer until kind is known so collection edits never briefly point at /post
-      if (postKind === undefined) return null;
+      // Defer until kind is known so we never guess /post vs /collections
+      if (postKind == null) return null;
       uri = notification.edited_uri;
       break;
 
@@ -185,9 +185,9 @@ function shouldUsePrimaryUserLink(notification: FlatNotification): boolean {
  * Pure function that separates business logic from presentation layer.
  *
  * @param notification - The notification to process
- * @param postKind - Post kind for kind-aware routing. For PostEdited: `undefined` defers
- *   the link while loading; `null` falls back to the post route; `'collection'` uses
- *   the collection route.
+ * @param postKind - Post kind for kind-aware routing. For PostEdited: `undefined`/`null`
+ *   defer the link (loading or unknown); `'collection'` uses the collection route;
+ *   any other string uses the post route.
  * @returns Object with notificationLink and userProfileLink
  */
 export function getNotificationLink(notification: FlatNotification, postKind?: string | null) {
