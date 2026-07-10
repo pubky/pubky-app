@@ -1010,6 +1010,7 @@ describe('PostController', () => {
         }),
       );
       const commitFileCreateSpy = vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
+      const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
 
       try {
         const { PostController } = await import('./post');
@@ -1032,6 +1033,7 @@ describe('PostController', () => {
           }),
           currentUserPubky: testData.authorPubky,
         });
+        expect(commitFileDeleteSpy).toHaveBeenCalledWith(['pubky://author/pub/pubky.app/files/oldcover']);
       } finally {
         cleanupAuthUser();
       }
@@ -1042,6 +1044,7 @@ describe('PostController', () => {
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
       const toEditSpy = stubToEdit();
       vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+      const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
 
       try {
         const { PostController } = await import('./post');
@@ -1059,6 +1062,89 @@ describe('PostController', () => {
         // the CollectionPostContent normalizer drops it from the envelope.
         expect(parsedContent).not.toHaveProperty('cover_image');
         expect(parsedContent.items).toEqual([existingItemUri]);
+        expect(commitFileDeleteSpy).toHaveBeenCalledWith(['pubky://author/pub/pubky.app/files/oldcover']);
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('does not delete the cover when the cover URL is unchanged', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      stubToEdit();
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+      const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEditCollection({
+          compositeCollectionId: collectionPostId,
+          name: 'Renamed',
+          description: 'Updated description',
+          coverImage: 'pubky://author/pub/pubky.app/files/oldcover',
+        });
+
+        expect(commitFileDeleteSpy).not.toHaveBeenCalled();
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('does not delete an external https cover when clearing', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(
+        createCollectionDetails({
+          name: 'Original name',
+          description: 'Original description',
+          items: [existingItemUri],
+          cover_image: 'https://example.com/cover.png',
+        }),
+      );
+      stubToEdit();
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+      const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEditCollection({
+          compositeCollectionId: collectionPostId,
+          name: 'Renamed',
+          description: 'Updated description',
+          coverImage: null,
+        });
+
+        expect(commitFileDeleteSpy).not.toHaveBeenCalled();
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rolls back a newly uploaded cover when commitEdit fails', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      stubToEdit();
+      vi.spyOn(PostApplication, 'commitEdit').mockRejectedValue(new Error('homeserver put failed'));
+      vi.spyOn(FileApplication, 'toFileAttachment').mockResolvedValue(
+        asOpaque<TFileAttachmentResult>({
+          fileResult: { meta: { url: 'pubky://author/pub/pubky.app/files/newcover' } },
+        }),
+      );
+      vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined);
+      const commitFileDeleteSpy = vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: 'Updated description',
+            coverImage: new File(['x'], 'cover.png', { type: 'image/png' }),
+          }),
+        ).rejects.toThrow('homeserver put failed');
+
+        expect(commitFileDeleteSpy).toHaveBeenCalledWith(['pubky://author/pub/pubky.app/files/newcover']);
+        expect(commitFileDeleteSpy).not.toHaveBeenCalledWith(['pubky://author/pub/pubky.app/files/oldcover']);
       } finally {
         cleanupAuthUser();
       }
