@@ -290,7 +290,10 @@ export class PostController {
   }
 
   /**
-   * Edit a collection's name, description, and optional cover image.
+   * Edit a collection's name, description, and cover image.
+   *
+   * `coverImage` is required: pass a `File` to replace, the current cover URL
+   * string to keep it, or `null` to clear. Callers must not omit it.
    *
    * Cover cleanup: after the envelope is persisted, if the previous `cover_image`
    * was a homeserver file URI and is no longer referenced (replaced or cleared),
