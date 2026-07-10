@@ -49,9 +49,10 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     return postUri ? pubkyUriToCompositeId(postUri) : null;
   }, [notification]);
 
-  // State for post content and kind (fetched via controller)
+  // State for post content and kind (fetched via controller).
+  // postKind: undefined = still loading, string = known kind, null = fetch failed/unavailable
   const [postContent, setPostContent] = useState<string | null>(null);
-  const [postKind, setPostKind] = useState<string | null>(null);
+  const [postKind, setPostKind] = useState<string | null | undefined>(undefined);
 
   // Use existing hook for user profile data
   const { profile } = useUserProfile(actorUserId || '');
@@ -71,7 +72,12 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     // 3. Write to local DB
     PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
       .then(async (post) => {
-        if (isCancelled || !post) return;
+        if (isCancelled) return;
+
+        if (!post) {
+          setPostKind(null);
+          return;
+        }
 
         setPostKind(post.kind);
 
@@ -99,6 +105,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
       })
       .catch((error) => {
         if (!isCancelled) {
+          setPostKind(null);
           Logger.warn('Failed to fetch notification post:', { postCompositeId, error });
         }
       });

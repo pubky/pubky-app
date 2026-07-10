@@ -700,6 +700,9 @@ describe('NotificationItem', () => {
 
     render(<NotificationItem notification={editedNotification} isUnread={false} />);
 
+    // While kind is loading, action text must not link to the generic post page
+    expect(screen.getByText('edited a post you have interacted with').closest('a')).toBeNull();
+
     await vi.waitFor(() => {
       expect(screen.getByText('updated a Collection')).toBeInTheDocument();
     });
@@ -729,14 +732,34 @@ describe('NotificationItem', () => {
     render(<NotificationItem notification={editedNotification} isUnread={false} />);
 
     await vi.waitFor(() => {
-      expect(mockGetOrFetch).toHaveBeenCalled();
+      expect(screen.getByText('edited a post you have interacted with').closest('a')).toHaveAttribute(
+        'href',
+        '/post/author1/post123',
+      );
     });
+  });
 
-    expect(screen.getByText('edited a post you have interacted with')).toBeInTheDocument();
-    expect(screen.getByText('edited a post you have interacted with').closest('a')).toHaveAttribute(
-      'href',
-      '/post/author1/post123',
-    );
+  it('falls back to post link for PostEdited when post fetch fails', async () => {
+    mockGetOrFetch.mockRejectedValue(new Error('network error'));
+
+    const editedNotification = {
+      id: 'post_edited:123:author1',
+      type: NotificationType.PostEdited,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      edit_source: 'repost',
+      edited_by: 'author1',
+      edited_uri: 'pubky://author1/pub/pubky.app/posts/post123',
+      linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost456',
+    } as FlatNotification;
+
+    render(<NotificationItem notification={editedNotification} isUnread={false} />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('edited a post you have interacted with').closest('a')).toHaveAttribute(
+        'href',
+        '/post/author1/post123',
+      );
+    });
   });
 });
 
