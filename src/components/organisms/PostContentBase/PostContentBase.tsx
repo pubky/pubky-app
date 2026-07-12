@@ -19,16 +19,12 @@ import type { PostContentBaseProps } from './PostContentBase.types';
 
 /**
  * PostContentBase - Base component that renders post content without repost handling.
- * This component is used internally by PostContent and PostPreviewCard.
- * It only renders the content elements: text, link embeds, and attachments.
+ *
+ * Used internally by `PostContent` and `PostPreviewCard`. Renders text, link embeds,
+ * and attachments for regular posts; delegates `kind=collection` posts to
+ * `CollectionCard` with `presentation="embed"`.
  */
-export function PostContentBase({
-  postId,
-  className,
-  textClassName,
-  mediaVariant = 'default',
-  contrast,
-}: PostContentBaseProps) {
+export function PostContentBase({ postId, className, textClassName, mediaVariant = 'default' }: PostContentBaseProps) {
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
@@ -63,9 +59,7 @@ export function PostContentBase({
 
   if (isCollection) {
     const { pubky, id } = parseCompositeId(postId);
-    return (
-      <CollectionCard authorPubky={pubky} postId={id} variant="preview" contrast={contrast} className={className} />
-    );
+    return <CollectionCard authorPubky={pubky} postId={id} presentation="embed" className={className} />;
   }
 
   if (!hasContent && !hasAttachments) return null;

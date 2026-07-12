@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## Services
 
-No external database or backend server needed — the app uses browser IndexedDB (Dexie) for local data, and the Next.js dev server handles all API routes. All external services (Nexus API, Homeserver, CDN, HTTP Relay, Pkarr Relays, Homegate) have **staging defaults** baked into the Zod schema at `src/libs/env/env.ts`, so the app runs without a `.env` file. Copy `.env.example` to `.env` only if you need to override defaults.
+No external database or backend server needed — the app uses browser IndexedDB (Dexie) for local data, and the Next.js dev server handles all API routes. All external services (Nexus API, Homeserver, CDN, HTTP Relay, Pkarr Relays, Homegate) have **staging defaults** baked into the runtime-config Zod schema at `src/libs/runtime-config/runtime-config.schema.ts`, so the app runs without a `.env` file. In dev/test, partial `PUBKY_RUNTIME_*` overrides layer over those defaults. Copy `.env.example` to `.env` only if you need to override defaults.
 
 ## Running
 

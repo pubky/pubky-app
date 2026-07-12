@@ -36,7 +36,7 @@ export function DialogCollectionsIntro({ open, onOpenChange, onContinue }: Dialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-3xl border-border bg-popover">
+      <DialogContent className="w-xl border-border bg-popover">
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>

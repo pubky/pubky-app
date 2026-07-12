@@ -53,7 +53,7 @@ export function PostInputActionBar({
       className={cn(
         separateActions
           ? 'flex min-w-0 flex-1 flex-row items-center justify-between gap-6'
-          : 'flex flex-col justify-between gap-4 sm:flex-row sm:items-center',
+          : 'flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center',
       )}
       overrideDefaults
     >

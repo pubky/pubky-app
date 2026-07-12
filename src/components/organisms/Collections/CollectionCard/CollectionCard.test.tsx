@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { CollectionCard } from './CollectionCard';
 
@@ -30,6 +32,10 @@ vi.mock('next-intl', () => ({
 
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: vi.fn(() => false),
 }));
 
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
@@ -130,16 +136,19 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => ({
     taggedId,
     taggedKind,
     showAddButton,
+    readOnly,
   }: {
     taggedId: string;
     taggedKind: TagKind;
     showAddButton: boolean;
+    readOnly?: boolean;
   }) => (
     <div
       data-testid="clickable-tags-list"
       data-tagged-id={taggedId}
       data-tagged-kind={String(taggedKind)}
       data-show-add-button={String(showAddButton)}
+      data-read-only={String(readOnly ?? false)}
     />
   ),
 }));
@@ -263,6 +272,7 @@ function setPostCounts(uniqueTags = 3) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(useIsMobile).mockReturnValue(false);
   for (const key of Object.keys(mockLocalCollections)) delete mockLocalCollections[key];
   setAuthStore(null);
   setPostDetails(COLLECTION_CONTENT);
@@ -281,7 +291,7 @@ describe('CollectionCard', () => {
 
     expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-    expect(screen.getByText('2 posts')).toBeInTheDocument(); // items length
+    expect(screen.getByLabelText('2 posts')).toBeInTheDocument(); // items length
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
@@ -310,9 +320,54 @@ describe('CollectionCard', () => {
 
     const actionRow = container.querySelector('[data-cy="collection-card-bottom-row"]');
 
-    expect(actionRow).toHaveClass('mt-auto', 'flex-col', 'sm:flex-row');
+    expect(actionRow).toHaveClass('mt-auto', 'flex-row', 'items-end', 'justify-between');
     expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).not.toBeInTheDocument();
-    expect(container.querySelector('[data-cy="collection-card-tag-actions"]')).toHaveClass('self-start', 'sm:self-end');
+    expect(container.querySelector('[data-cy="collection-card-tag-actions"]')).toHaveClass('self-end');
+  });
+
+  describe('wide timeline layout', () => {
+    it('applies wide padding, typography, avatar size, and full width when tags layout is side on desktop', () => {
+      const { container } = render(
+        <PostMainLayoutProvider tagsLayout="side">
+          <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
+        </PostMainLayoutProvider>,
+      );
+
+      const link = screen.getByRole('link', { name: 'Based Bitcoin' });
+      expect(link).toHaveAttribute('data-layout', 'wide');
+      expect(link).toHaveClass('w-full');
+
+      expect(screen.getByText('Based Bitcoin')).toHaveClass('text-2xl', 'leading-8');
+      expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-size', 'lg');
+      expect(container.querySelector('[data-slot="card-content"]')).toHaveClass('p-12');
+    });
+
+    it('falls back to the compact card when side layout is active on mobile', () => {
+      vi.mocked(useIsMobile).mockReturnValue(true);
+
+      render(
+        <PostMainLayoutProvider tagsLayout="side">
+          <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
+        </PostMainLayoutProvider>,
+      );
+
+      const link = screen.getByRole('link', { name: 'Based Bitcoin' });
+      expect(link).toHaveAttribute('data-layout', 'default');
+      expect(screen.getByText('Based Bitcoin')).toHaveClass('text-xl', 'leading-7');
+      expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-size', 'sm');
+    });
+
+    it('uses full width when tags layout is inline on desktop', () => {
+      render(
+        <PostMainLayoutProvider tagsLayout="inline">
+          <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
+        </PostMainLayoutProvider>,
+      );
+
+      const link = screen.getByRole('link', { name: 'Based Bitcoin' });
+      expect(link).toHaveAttribute('data-layout', 'default');
+      expect(link).toHaveClass('w-full');
+    });
   });
 
   it('falls back to the author pubky as the owner name when the profile is missing', () => {
@@ -329,7 +384,7 @@ describe('CollectionCard', () => {
     render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
     expect(screen.queryByText('A bit of Bitcoin purity amidst all of the madness.')).not.toBeInTheDocument();
-    expect(screen.getByText('0 posts')).toBeInTheDocument(); // empty items count still renders
+    expect(screen.getByLabelText('0 posts')).toBeInTheDocument(); // empty items count still renders
   });
 
   describe('cover image — local-files store fallback', () => {
@@ -495,10 +550,7 @@ describe('CollectionCard', () => {
       expect(panel).toHaveAttribute('data-enable-loading-skeleton', 'false');
       expect(document.querySelector('[data-cy="post-tags-expandable-row"]')).toHaveClass('items-end');
       expect(document.querySelector('[data-cy="post-tags-expandable-row-actions"]')).not.toBeInTheDocument();
-      expect(document.querySelector('[data-cy="collection-card-tag-actions"]')).toHaveClass(
-        'self-start',
-        'sm:self-end',
-      );
+      expect(document.querySelector('[data-cy="collection-card-tag-actions"]')).toHaveClass('self-end');
       expect(onParentClick).not.toHaveBeenCalled();
     });
 
@@ -642,49 +694,92 @@ describe('CollectionCard', () => {
     });
   });
 
-  describe('variant="preview"', () => {
+  describe('embed presentation', () => {
     it('renders title, description, item count, and owner avatar', () => {
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} variant="preview" />);
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
 
       expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
       expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-      expect(screen.getByText('2 posts')).toBeInTheDocument();
+      expect(screen.getByLabelText('2 posts')).toBeInTheDocument();
       expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-name', 'Bitcoin Wizard');
     });
 
-    it('hides the inline tags row, Follow/Unfollow, and Delete actions for non-owners', () => {
+    it('shows tags, Follow, and the tag-toggle CTA for non-owners', () => {
       setAuthStore('some-other-user');
+      setBookmark({ isBookmarked: false });
 
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} variant="preview" />);
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
 
-      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('collections.card.unfollow')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('post.actions.tagPost')).not.toBeInTheDocument();
+      expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+      expect(screen.getByLabelText('collections.card.follow')).toBeInTheDocument();
+      expect(screen.getByLabelText('post.actions.tagPost')).toBeInTheDocument();
     });
 
-    it('hides the inline tags row and Delete action for the owner', () => {
+    it('shows tags, Delete, and the tag-toggle CTA for the owner', () => {
       setAuthStore(AUTHOR_PUBKY);
 
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} variant="preview" />);
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
 
-      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('post.actions.tagPost')).not.toBeInTheDocument();
+      expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+      expect(screen.getByLabelText('collections.card.delete')).toBeInTheDocument();
+      expect(screen.getByLabelText('post.actions.tagPost')).toBeInTheDocument();
     });
-  });
 
-  describe('preview contrast', () => {
-    it('keeps the action row hidden regardless of contrast value', () => {
+    it('clips the cover at the link boundary in preview embeds', () => {
+      const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
+
+      const link = container.querySelector('a[data-cy="collection-card"]');
+      const card = container.querySelector('[data-slot="card"]');
+
+      expect(link).toHaveClass('overflow-hidden', 'rounded-md');
+      expect(card).toHaveClass('rounded-none');
+    });
+
+    it('keeps rounded corners on the card shell outside preview embeds', () => {
+      const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      const link = container.querySelector('a[data-cy="collection-card"]');
+      const card = container.querySelector('[data-slot="card"]');
+
+      expect(link).not.toHaveClass('overflow-hidden');
+      expect(card).toHaveClass('rounded-md');
+      expect(card).not.toHaveClass('rounded-none');
+    });
+
+    it('elevates action CTAs on embeds without a cover', () => {
       setAuthStore('some-other-user');
+      setBookmark({ isBookmarked: false });
+      setPostDetails(
+        JSON.stringify({
+          name: 'Based Bitcoin',
+          description: 'A bit of Bitcoin purity amidst all of the madness.',
+          items: ['pubky://author/pub/pubky.app/posts/a', 'pubky://author/pub/pubky.app/posts/b'],
+        }),
+      );
 
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} variant="preview" contrast="strong" />);
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
 
-      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+      const countBadge = screen.getByLabelText('2 posts');
+      expect(countBadge).toHaveClass('bg-card');
+
+      expect(screen.getByLabelText('collections.card.follow')).toHaveClass('bg-card', 'text-foreground');
+      expect(screen.getByLabelText('post.actions.tagPost', { exact: false })).toHaveClass('bg-card', 'text-foreground');
+    });
+
+    it('hides CTAs and renders read-only tags when interactiveActions is false', () => {
+      setAuthStore('some-other-user');
+      setBookmark({ isBookmarked: false });
+
+      render(
+        <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" interactiveActions={false} />,
+      );
+
+      const tagsList = screen.getByTestId('clickable-tags-list');
+      expect(tagsList).toHaveAttribute('data-show-add-button', 'false');
+      expect(tagsList).toHaveAttribute('data-read-only', 'true');
       expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('post.actions.tagPost')).not.toBeInTheDocument();
+      expect(document.querySelector('[data-cy="collection-card-tag-actions"]')).not.toBeInTheDocument();
     });
   });
 });
@@ -710,6 +805,18 @@ describe('CollectionCard - Snapshots', () => {
     setAuthStore('viewer-pubky');
 
     const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches the snapshot for the wide timeline layout', () => {
+    setAuthStore('viewer-pubky');
+    setBookmark({ isBookmarked: false });
+
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

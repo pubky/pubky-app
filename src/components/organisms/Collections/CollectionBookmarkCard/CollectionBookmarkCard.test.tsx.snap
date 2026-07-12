@@ -3,7 +3,7 @@
 exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-in user with full state 1`] = `
 <a
   aria-label="Bookmarks"
-  class="block h-full w-full lg:max-w-187"
+  class="block h-full w-full"
   data-cy="collection-bookmark-card"
   href="/collections/bookmarks"
 >
@@ -48,7 +48,8 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
             Bookmarks
           </span>
           <div
-            class="flex shrink-0 items-center gap-1 text-secondary-foreground"
+            aria-label="123 posts"
+            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
             data-testid="container"
           >
             <svg
@@ -72,12 +73,16 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
               />
             </svg>
             <span
-              class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+              class="text-xs leading-4 font-medium tracking-widest uppercase"
               data-testid="typography"
             >
               123
-               
-              posts
+              <span
+                class="hidden sm:inline"
+                data-testid="typography"
+              >
+                 posts
+              </span>
             </span>
           </div>
         </div>
@@ -111,7 +116,7 @@ exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for a signed-
 exports[`CollectionBookmarkCard - Snapshots > matches the snapshot for the signed-out / no-data fallback state 1`] = `
 <a
   aria-label="Bookmarks"
-  class="block h-full w-full lg:max-w-187"
+  class="block h-full w-full"
   data-cy="collection-bookmark-card"
   href="/collections/bookmarks"
 >

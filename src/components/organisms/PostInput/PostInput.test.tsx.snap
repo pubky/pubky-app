@@ -47,51 +47,44 @@ exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] 
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="0"
+            data-character-max="2000"
+            data-post-disabled="true"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="false"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="0"
-              data-character-max="2000"
-              data-post-disabled="true"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-                disabled=""
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+              disabled=""
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -148,48 +141,41 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-post-disabled="false"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="false"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-post-disabled="false"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -236,50 +222,43 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="true"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="21"
+            data-character-max="2000"
+            data-post-disabled="false"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="true"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="21"
-              data-character-max="2000"
-              data-post-disabled="false"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -325,48 +304,41 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="true"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-post-disabled="false"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="true"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-post-disabled="false"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -434,51 +406,44 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="0"
+            data-character-max="2000"
+            data-post-disabled="true"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="false"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="0"
-              data-character-max="2000"
-              data-post-disabled="true"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-                disabled=""
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+              disabled=""
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -535,51 +500,44 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="true"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="0"
+            data-character-max="2000"
+            data-post-disabled="true"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="true"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="0"
-              data-character-max="2000"
-              data-post-disabled="true"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Posting..."
-                data-testid="post-button"
-                disabled=""
-              >
-                Posting...
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Posting..."
+              data-testid="post-button"
+              disabled=""
+            >
+              Posting...
+            </button>
           </div>
         </div>
       </div>
@@ -640,50 +598,43 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="0"
+            data-character-max="2000"
+            data-post-disabled="false"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="false"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="0"
-              data-character-max="2000"
-              data-post-disabled="false"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -741,50 +692,43 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="12"
+            data-character-max="2000"
+            data-post-disabled="false"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="false"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="12"
-              data-character-max="2000"
-              data-post-disabled="false"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -840,51 +784,44 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="0"
+            data-character-max="2000"
+            data-post-disabled="true"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="false"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="0"
-              data-character-max="2000"
-              data-post-disabled="true"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-                disabled=""
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+              disabled=""
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -941,51 +878,44 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="0"
+            data-character-max="2000"
+            data-post-disabled="true"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="false"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="0"
-              data-character-max="2000"
-              data-post-disabled="true"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-                disabled=""
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+              disabled=""
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -1041,51 +971,44 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="0"
+            data-character-max="2000"
+            data-post-disabled="true"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="false"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="0"
-              data-character-max="2000"
-              data-post-disabled="true"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-                disabled=""
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+              disabled=""
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -1145,51 +1068,44 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="0"
+            data-character-max="2000"
+            data-post-disabled="true"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="false"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="0"
-              data-character-max="2000"
-              data-post-disabled="true"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-                disabled=""
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+              disabled=""
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -1238,6 +1154,7 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
     </div>
     <div
       class="bg-card"
+      data-interactive-actions="false"
       data-post-id="test-post-123"
       data-testid="post-preview-card"
     >
@@ -1253,50 +1170,43 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
         data-testid="container"
       >
         <div
-          class="flex flex-col gap-6"
-          data-override-defaults="true"
+          class="gap-4"
           data-testid="container"
         >
           <div
-            class="justify-between gap-4 md:flex-row md:gap-0"
-            data-override-defaults="false"
-            data-testid="container"
+            data-disabled="false"
+            data-testid="post-input-tags"
+          />
+          <div
+            data-character-count="0"
+            data-character-max="2000"
+            data-post-disabled="false"
+            data-testid="post-input-action-bar"
           >
-            <div
-              data-disabled="false"
-              data-testid="post-input-tags"
-            />
-            <div
-              data-character-count="0"
-              data-character-max="2000"
-              data-post-disabled="false"
-              data-testid="post-input-action-bar"
+            <button
+              aria-label="Add emoji"
+              data-testid="emoji-button"
             >
-              <button
-                aria-label="Add emoji"
-                data-testid="emoji-button"
-              >
-                Emoji
-              </button>
-              <button
-                aria-label="Add image"
-                data-testid="image-button"
-              >
-                Image
-              </button>
-              <button
-                aria-label="Add article"
-                data-testid="article-button"
-              >
-                Article
-              </button>
-              <button
-                aria-label="Post"
-                data-testid="post-button"
-              >
-                Post
-              </button>
-            </div>
+              Emoji
+            </button>
+            <button
+              aria-label="Add image"
+              data-testid="image-button"
+            >
+              Image
+            </button>
+            <button
+              aria-label="Add article"
+              data-testid="article-button"
+            >
+              Article
+            </button>
+            <button
+              aria-label="Post"
+              data-testid="post-button"
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>

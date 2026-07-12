@@ -9,14 +9,13 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
 import { QuickReplyDefaultContent } from './QuickReplyDefaultContent';
@@ -118,10 +117,9 @@ export function QuickReply({
   // Account for spacing between main post and QuickReply in connector calculation
   const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_SPACER_HEIGHT : undefined;
 
-  const isMobile = useIsMobile();
-  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
-  const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
-  const isListLayout = !isMobile && inheritedTagsLayout === 'list';
+  const effectiveTagsLayout = useEffectiveTagsLayout();
+  const isWideLayout = effectiveTagsLayout === 'side';
+  const isListLayout = effectiveTagsLayout === 'list';
 
   const contentProps: QuickReplyContentProps = {
     avatarUrl,

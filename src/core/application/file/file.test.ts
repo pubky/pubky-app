@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY } from '@/libs/image/imageUploadSizeLimit';
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { FileDetailsModel } from '@/models/file/fileDetails';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
@@ -166,6 +167,27 @@ describe('FileApplication', () => {
           service: ErrorService.Local,
           operation: 'toFileAttachment',
           message: 'Image sanitization failed',
+        });
+      }
+      expect(FileNormalizer.toFileAttachment).not.toHaveBeenCalled();
+    });
+
+    it('tags size-limit sanitization failures in AppError context', async () => {
+      const rawFile = new File(['raw'], 'animated.gif', { type: 'image/gif' });
+      vi.mocked(stripImageMetadata).mockRejectedValueOnce(new Error('IMAGE_UPLOAD_SIZE_LIMIT:gif'));
+
+      try {
+        await FileApplication.toFileAttachment({ file: rawFile, pubky: TEST_PUBKY });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toMatchObject({
+          name: 'AppError',
+          category: ErrorCategory.Validation,
+          code: ValidationErrorCode.INVALID_INPUT,
+          service: ErrorService.Local,
+          operation: 'toFileAttachment',
+          message: 'Image sanitization failed',
+          context: { [IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY]: 'gif' },
         });
       }
       expect(FileNormalizer.toFileAttachment).not.toHaveBeenCalled();

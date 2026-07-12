@@ -31,25 +31,36 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
         class="flex items-center min-w-0 flex-1 gap-2 lg:flex-none"
         data-testid="container"
       >
-        <div
-          data-alt="Bitcoin Wizard"
-          data-avatar-url="https://example.com/avatar.png"
-          data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
-          data-name="Bitcoin Wizard"
-          data-size="md"
-          data-testid="avatar-with-fallback"
+        <a
+          class="shrink-0"
+          href="/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
         >
-          Bitcoin Wizard
-        </div>
-        <span
-          class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
-          data-testid="typography"
+          <div
+            data-alt="Bitcoin Wizard"
+            data-avatar-url="https://example.com/avatar.png"
+            data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+            data-name="Bitcoin Wizard"
+            data-size="md"
+            data-testid="avatar-with-fallback"
+          >
+            Bitcoin Wizard
+          </div>
+        </a>
+        <a
+          class="block max-w-full min-w-0"
+          href="/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
         >
-          Bitcoin Wizard
-        </span>
+          <span
+            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
+            data-testid="typography"
+          >
+            Bitcoin Wizard
+          </span>
+        </a>
       </div>
       <div
-        class="flex shrink-0 items-center gap-1 text-secondary-foreground h-6 justify-center rounded-full bg-card px-2 py-1"
+        aria-label="2 posts"
+        class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
         data-testid="container"
       >
         <svg
@@ -73,12 +84,16 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
           />
         </svg>
         <span
-          class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+          class="text-xs leading-4 font-medium tracking-widest uppercase"
           data-testid="typography"
         >
           2
-           
-          posts
+          <span
+            class="hidden sm:inline"
+            data-testid="typography"
+          >
+             posts
+          </span>
         </span>
       </div>
     </div>
@@ -250,25 +265,36 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
         class="flex items-center min-w-0 flex-1 gap-2 lg:flex-none"
         data-testid="container"
       >
-        <div
-          data-alt="Bitcoin Wizard"
-          data-avatar-url="https://example.com/avatar.png"
-          data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
-          data-name="Bitcoin Wizard"
-          data-size="md"
-          data-testid="avatar-with-fallback"
+        <a
+          class="shrink-0"
+          href="/profile"
         >
-          Bitcoin Wizard
-        </div>
-        <span
-          class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
-          data-testid="typography"
+          <div
+            data-alt="Bitcoin Wizard"
+            data-avatar-url="https://example.com/avatar.png"
+            data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+            data-name="Bitcoin Wizard"
+            data-size="md"
+            data-testid="avatar-with-fallback"
+          >
+            Bitcoin Wizard
+          </div>
+        </a>
+        <a
+          class="block max-w-full min-w-0"
+          href="/profile"
         >
-          Bitcoin Wizard
-        </span>
+          <span
+            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
+            data-testid="typography"
+          >
+            Bitcoin Wizard
+          </span>
+        </a>
       </div>
       <div
-        class="flex shrink-0 items-center gap-1 text-secondary-foreground h-6 justify-center rounded-full bg-card px-2 py-1"
+        aria-label="2 posts"
+        class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
         data-testid="container"
       >
         <svg
@@ -292,12 +318,16 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
           />
         </svg>
         <span
-          class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+          class="text-xs leading-4 font-medium tracking-widest uppercase"
           data-testid="typography"
         >
           2
-           
-          posts
+          <span
+            class="hidden sm:inline"
+            data-testid="typography"
+          >
+             posts
+          </span>
         </span>
       </div>
     </div>
@@ -518,25 +548,36 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
         class="flex items-center min-w-0 flex-1 gap-2 lg:flex-none"
         data-testid="container"
       >
-        <div
-          data-alt="Bitcoin Wizard"
-          data-avatar-url="https://example.com/avatar.png"
-          data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
-          data-name="Bitcoin Wizard"
-          data-size="md"
-          data-testid="avatar-with-fallback"
+        <a
+          class="shrink-0"
+          href="/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
         >
-          Bitcoin Wizard
-        </div>
-        <span
-          class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
-          data-testid="typography"
+          <div
+            data-alt="Bitcoin Wizard"
+            data-avatar-url="https://example.com/avatar.png"
+            data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+            data-name="Bitcoin Wizard"
+            data-size="md"
+            data-testid="avatar-with-fallback"
+          >
+            Bitcoin Wizard
+          </div>
+        </a>
+        <a
+          class="block max-w-full min-w-0"
+          href="/profile/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
         >
-          Bitcoin Wizard
-        </span>
+          <span
+            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
+            data-testid="typography"
+          >
+            Bitcoin Wizard
+          </span>
+        </a>
       </div>
       <div
-        class="flex shrink-0 items-center gap-1 text-secondary-foreground"
+        aria-label="0 posts"
+        class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
         data-testid="container"
       >
         <svg
@@ -560,12 +601,16 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
           />
         </svg>
         <span
-          class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+          class="text-xs leading-4 font-medium tracking-widest uppercase"
           data-testid="typography"
         >
           0
-           
-          posts
+          <span
+            class="hidden sm:inline"
+            data-testid="typography"
+          >
+             posts
+          </span>
         </span>
       </div>
     </div>

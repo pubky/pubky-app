@@ -5,8 +5,8 @@ import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
@@ -23,8 +23,6 @@ import { PostInlineTagsActions } from '../PostInlineTagsActions/PostInlineTagsAc
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import type { PostMainProps } from './PostMain.types';
-import { usePostMainLayout } from './PostMainLayoutContext';
-import { getEffectiveTagsLayout } from './PostMainLayoutRules';
 import { PostMainListRow } from './PostMainListRow/PostMainListRow';
 import { WIDE_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 
@@ -41,9 +39,7 @@ export function PostMain({
   isNavigable = true,
   showFullContentInListLayout = false,
 }: PostMainProps) {
-  const isMobile = useIsMobile();
-  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
-  const effectiveTagsLayout = getEffectiveTagsLayout(inheritedTagsLayout, isMobile);
+  const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const isListLayout = effectiveTagsLayout === 'list';
   const { postDetails, isLoading } = usePostDetails(postId);

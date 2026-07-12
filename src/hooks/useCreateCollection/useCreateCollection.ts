@@ -6,6 +6,7 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { PostController } from '@/controllers/post/post';
 import { useCoverImagePicker, type UseCoverImagePickerResult } from '@/hooks/useCoverImagePicker/useCoverImagePicker';
 import { isAppError } from '@/libs/error/error.utils';
+import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -49,6 +50,7 @@ type UseCreateCollectionResult = {
  */
 export function useCreateCollection(): UseCreateCollectionResult {
   const t = useTranslations('collections.new');
+  const tFile = useTranslations('toast.file');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { toast } = useToast();
   const cover = useCoverImagePicker();
@@ -92,7 +94,9 @@ export function useCreateCollection(): UseCreateCollectionResult {
         Logger.error('[useCreateCollection] Failed to create collection', { error });
         toast({
           variant: 'error',
-          description: isAppError(error) ? error.message : t('createFailed'),
+          description:
+            getImageUploadSizeLimitToastMessage(error, tFile) ??
+            (isAppError(error) ? error.message : t('createFailed')),
         });
       }
     })();
