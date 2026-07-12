@@ -128,6 +128,8 @@ vi.mock('../PostInput/PostInput', () => ({
 // Use real libs - use actual implementations
 
 describe('DialogEditPost', () => {
+  const articleContent = JSON.stringify({ title: 'Test article title', body: 'Test article content' });
+
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset to default mock implementation
@@ -155,7 +157,7 @@ describe('DialogEditPost', () => {
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
-        content: 'Test article content',
+        content: articleContent,
         kind: 'long',
       } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
@@ -210,7 +212,7 @@ describe('DialogEditPost', () => {
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
-        content: 'Test article content',
+        content: articleContent,
         kind: 'long',
       } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
@@ -272,7 +274,7 @@ describe('DialogEditPost', () => {
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-article-123',
-        content: 'Test article content',
+        content: articleContent,
         kind: 'long',
       } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
@@ -302,6 +304,8 @@ describe('DialogEditPost', () => {
 });
 
 describe('DialogEditPost - Snapshots', () => {
+  const articleContent = JSON.stringify({ title: 'Snapshot article title', body: 'Snapshot article content' });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(usePostDetails).mockReturnValue({
@@ -326,7 +330,7 @@ describe('DialogEditPost - Snapshots', () => {
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'snapshot-article-id',
-        content: 'Snapshot article content',
+        content: articleContent,
         kind: 'long',
       } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,

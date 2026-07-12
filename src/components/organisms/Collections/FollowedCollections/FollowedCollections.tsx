@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
-import { Typography } from '@/atoms/Typography/Typography';
 import { COLLECTIONS_SECTION_PAGE_SIZE, COLLECTIONS_SECTION_SKELETON_COUNT } from '@/config/collections';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
@@ -168,7 +167,11 @@ export function FollowedCollections() {
   // Skeleton only while the seed is in flight AND we have no cached bookmarks
   // yet — warm-cache visits paint the live-query result immediately.
   const showSkeletons = seedLoading && visibleIds.length === 0;
-  const showEmpty = !seedLoading && visibleIds.length === 0;
+
+  // Hide the entire section (title + empty copy) when there is nothing to show.
+  if (!seedLoading && visibleIds.length === 0) {
+    return null;
+  }
 
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-4">
@@ -179,24 +182,22 @@ export function FollowedCollections() {
         {showSkeletons ? <AvatarStackSkeleton count={3} size="md" /> : <AvatarStack pubkys={headerPubkys} />}
       </Container>
 
-      {showEmpty ? (
-        <Typography overrideDefaults className="text-sm text-muted-foreground">
-          {t('followed.empty')}
-        </Typography>
+      {showSkeletons ? (
+        <Container overrideDefaults className="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6">
+          {Array.from({ length: COLLECTIONS_SECTION_SKELETON_COUNT }).map((_, index) => (
+            <CollectionCardSkeleton key={`followed-collections-skeleton-${index}`} />
+          ))}
+        </Container>
       ) : (
         <Container overrideDefaults className="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6">
-          {showSkeletons
-            ? Array.from({ length: COLLECTIONS_SECTION_SKELETON_COUNT }).map((_, index) => (
-                <CollectionCardSkeleton key={`followed-collections-skeleton-${index}`} />
-              ))
-            : visibleIds.map((compositeId) => {
-                const { pubky, id } = parseCompositeId(compositeId);
-                // Every card in this section is, by definition, a followed
-                // collection. Seed the bookmark hook so the CTA renders as
-                // "Unfollow" on the first paint instead of briefly flashing
-                // "Follow" while the async existence check resolves.
-                return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} initialIsBookmarked />;
-              })}
+          {visibleIds.map((compositeId) => {
+            const { pubky, id } = parseCompositeId(compositeId);
+            // Every card in this section is, by definition, a followed
+            // collection. Seed the bookmark hook so the CTA renders as
+            // "Unfollow" on the first paint instead of briefly flashing
+            // "Follow" while the async existence check resolves.
+            return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} initialIsBookmarked />;
+          })}
         </Container>
       )}
 

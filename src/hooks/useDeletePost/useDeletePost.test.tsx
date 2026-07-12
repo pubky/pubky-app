@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { PostController } from '@/controllers/post/post';
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useDeletePost } from './useDeletePost';
 
@@ -31,6 +32,7 @@ const mockPrependPosts = vi.fn();
 const mockPrependOptimisticPosts = vi.fn();
 const mockTimelineFeed = {
   variant: TIMELINE_FEED_VARIANT.HOME,
+  streamId: PostStreamTypes.TIMELINE_ALL_ALL,
   removePosts: mockRemovePosts,
   prependPosts: mockPrependPosts,
   prependOptimisticPosts: mockPrependOptimisticPosts,

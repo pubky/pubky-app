@@ -1,5 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { useCreateCollection } from './useCreateCollection';
 import { CREATE_COLLECTION_FORM_FIELDS } from './useCreateCollection.types';
 
@@ -25,6 +28,8 @@ const translations: Record<string, string> = {
   'collections.new.nameRequired': 'Collection title is required.',
   'collections.new.created': 'Collection created',
   'collections.new.createFailed': 'Failed to create collection.',
+  'toast.file.imageTooLargeGif':
+    'This GIF exceeds the {maxSize} upload limit and cannot be compressed. Please use a smaller GIF.',
   'toast.success': 'Success',
   'toast.error': 'Error',
 };
@@ -180,6 +185,33 @@ describe('useCreateCollection', () => {
     expect(mocks.toast).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to create collection.',
+    });
+  });
+
+  it('toasts a localized size-limit message when cover upload exceeds the limit', async () => {
+    mocks.commitCreateCollection.mockRejectedValue(
+      Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
+        service: ErrorService.Local,
+        operation: 'commitCreateCollection',
+        cause: Err.validation(ValidationErrorCode.INVALID_INPUT, 'Image sanitization failed', {
+          service: ErrorService.Local,
+          operation: 'toFileAttachment',
+          context: { imageUploadSizeLimitKind: 'gif' },
+          cause: new Error('IMAGE_UPLOAD_SIZE_LIMIT:gif'),
+        }),
+      }),
+    );
+
+    const { result } = renderHook(() => useCreateCollection());
+    act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, 'Reading list'));
+
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    expect(mocks.toast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.',
     });
   });
 

@@ -10,12 +10,12 @@ import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
+import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
+import { parseArticleContent } from '@/libs/post/articleContent';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
@@ -26,7 +26,6 @@ import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInput
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
-import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
 import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
 import { inferPostKindForCreate } from '@/pipes/post/post.kind';
 import { PostHeader } from '../PostHeader/PostHeader';
@@ -257,11 +256,11 @@ export function PostInput({
       if (editIsArticle) {
         setIsArticle(true);
 
-        try {
-          const parsed = JSON.parse(editContent) as ArticleJSON;
-          setArticleTitle(parsed.title || '');
-          setContent(parsed.body || '');
-        } catch {
+        const parsed = parseArticleContent(editContent);
+        if (parsed) {
+          setArticleTitle(parsed.title);
+          setContent(parsed.body);
+        } else {
           toast({
             variant: 'error',
             description: tToast('parseError'),
@@ -296,9 +295,7 @@ export function PostInput({
     onLockModeChange?.(isLockEnabled);
   }, [isLockEnabled, onLockModeChange]);
 
-  const isMobile = useIsMobile();
-  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
-  const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
+  const isWideLayout = useEffectiveTagsLayout() === 'side';
 
   return (
     <>
@@ -422,7 +419,7 @@ export function PostInput({
 
           {/* Show original post preview for reposts */}
           {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
-            <PostPreviewCard postId={originalPostId} className="bg-card" />
+            <PostPreviewCard postId={originalPostId} className="bg-card" interactiveActions={false} />
           )}
 
           <PostInputExpandableSection

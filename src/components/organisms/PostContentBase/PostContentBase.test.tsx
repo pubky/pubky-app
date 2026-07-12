@@ -83,23 +83,12 @@ vi.mock('../PostArticle/PostArticle', () => ({
 
 vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
   CollectionCard: vi.fn(
-    ({
-      authorPubky,
-      postId,
-      variant,
-      contrast,
-    }: {
-      authorPubky: string;
-      postId: string;
-      variant?: string;
-      contrast?: string;
-    }) => (
+    ({ authorPubky, postId, presentation }: { authorPubky: string; postId: string; presentation?: string }) => (
       <div
         data-testid="collection-card"
         data-author-pubky={authorPubky}
         data-post-id={postId}
-        data-variant={variant}
-        data-contrast={contrast ?? ''}
+        data-presentation={presentation ?? 'landing'}
       />
     ),
   ),
@@ -124,6 +113,7 @@ const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
 const mockPostAttachments = vi.mocked(PostAttachments);
 const mockPostContentBlurred = vi.mocked(PostContentBlurred);
 const mockPostArticle = vi.mocked(PostArticle);
+const mockPostText = vi.mocked(PostText);
 
 // Helper to create complete PostDetails mock
 const createMockPostDetails = (
@@ -305,7 +295,26 @@ describe('PostContentBase', () => {
     expect(screen.queryByTestId('container')).not.toBeInTheDocument();
   });
 
-  it('renders CollectionCard (preview variant) when kind is collection', () => {
+  it('renders malformed long posts as normal post text', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({
+        content: 'raw long content that is not an article envelope',
+        kind: 'long',
+      }),
+      isLoading: false,
+    });
+
+    render(<PostContentBase postId="post-123" />);
+
+    expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
+    expect(screen.getByTestId('container')).toBeInTheDocument();
+    expect(mockPostText).toHaveBeenCalledWith(
+      { content: 'raw long content that is not an article envelope', className: undefined },
+      undefined,
+    );
+  });
+
+  it('renders CollectionCard with embed presentation when kind is collection', () => {
     mockUsePostDetails.mockReturnValue({
       postDetails: createMockPostDetails({
         content: '{"name":"My Collection"}',
@@ -320,25 +329,9 @@ describe('PostContentBase', () => {
     expect(card).toBeInTheDocument();
     expect(card).toHaveAttribute('data-author-pubky', 'author-pubky');
     expect(card).toHaveAttribute('data-post-id', 'raw-post-id');
-    expect(card).toHaveAttribute('data-variant', 'preview');
+    expect(card).toHaveAttribute('data-presentation', 'embed');
     expect(screen.queryByTestId('container')).not.toBeInTheDocument();
     expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
-  });
-
-  it('forwards contrast to CollectionCard for the collection branch', () => {
-    mockUsePostDetails.mockReturnValue({
-      postDetails: createMockPostDetails({
-        content: '{"name":"My Collection"}',
-        kind: 'collection',
-      }),
-      isLoading: false,
-    });
-
-    render(<PostContentBase postId="author-pubky:raw-post-id" contrast="strong" />);
-
-    const card = screen.getByTestId('collection-card');
-    expect(card).toHaveAttribute('data-variant', 'preview');
-    expect(card).toHaveAttribute('data-contrast', 'strong');
   });
 
   it('prioritizes is_blurred over kind for blurred articles', () => {

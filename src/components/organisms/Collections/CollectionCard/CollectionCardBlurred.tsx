@@ -34,7 +34,7 @@ export function CollectionCardBlurred({ compositeId, className }: CollectionCard
         e.stopPropagation();
         ModerationController.unBlur(compositeId);
       }}
-      className={cn('group relative block h-full w-full cursor-pointer text-left lg:max-w-187', className)}
+      className={cn('group relative block h-full w-full cursor-pointer text-left', className)}
     >
       <Card className="relative isolate h-full gap-0 overflow-hidden rounded-md py-0">
         {/* Blurred mock of the real card layout */}

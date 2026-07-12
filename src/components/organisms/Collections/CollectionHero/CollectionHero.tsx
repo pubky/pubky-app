@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Minus, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { APP_ROUTES } from '@/app/routes';
+import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -12,6 +12,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { cn } from '@/libs/utils/utils';
@@ -80,6 +81,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
 
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isOwn = currentUserPubky === authorPubky;
+  const { requireAuth } = useRequireAuth();
 
   const collection = parseCollectionContent(postDetails.content);
 
@@ -96,6 +98,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
 
   const ownerName = ownerProfile?.name || authorPubky;
   const ownerAvatarUrl = ownerProfile?.avatarUrl;
+  const ownerProfileHref = getUserProfileUrl(authorPubky, currentUserPubky);
 
   // Override the generic bookmark toast copy so Follow / Unfollow reads as a
   // collection action (matches `CollectionCard`).
@@ -108,7 +111,9 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
 
   const handleFollowToggle = () => {
     if (isToggling) return;
-    void toggle();
+    requireAuth(() => {
+      void toggle();
+    });
   };
 
   // Sharing a collection = reposting the underlying post; reuse the standard
@@ -120,7 +125,9 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
     submitIcon: StickyNote,
     successToastTitle: tCardToast('shared'),
   });
-  const handleShare = openRepostDialog;
+  const handleShare = () => {
+    requireAuth(openRepostDialog);
+  };
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const handleEdit = () => setIsEditDialogOpen(true);
@@ -200,8 +207,9 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
             isResolved={isOwnerResolved}
             size="md"
             className="min-w-0 flex-1 gap-2 lg:flex-none"
+            profileHref={ownerProfileHref}
           />
-          <CollectionCountBadge count={itemCount} onCover={!!coverImage} />
+          <CollectionCountBadge count={itemCount} />
         </Container>
 
         {/* Description */}

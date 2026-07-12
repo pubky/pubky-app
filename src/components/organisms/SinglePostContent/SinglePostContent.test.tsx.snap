@@ -54,9 +54,7 @@ exports[`SinglePostContent > SinglePostContent - Snapshots > matches snapshot wi
     PostPageHeader
   </div>
   <div
-    data-content="# Article Title
-
-Article content"
+    data-content="{\\"title\\":\\"Article Title\\",\\"body\\":\\"# Article Title\\\\n\\\\nArticle content\\"}"
     data-is-blurred="false"
     data-post-id="author:post123"
     data-testid="post-article-detail"

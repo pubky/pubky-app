@@ -3,12 +3,15 @@
 exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Follow state 1`] = `
 <a
   aria-label="Based Bitcoin"
-  class="group relative block h-full w-full lg:max-w-187"
+  class="group relative block h-full w-full"
   data-cy="collection-card"
+  data-interactive-actions="true"
+  data-layout="default"
+  data-presentation="landing"
   href="/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G"
 >
   <div
-    class="flex flex-col text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden rounded-md py-0 border-transparent bg-card/40"
+    class="flex flex-col text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden py-0 rounded-md border-transparent bg-card/40"
     data-slot="card"
     data-testid="card"
   >
@@ -57,13 +60,14 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
             />
           </svg>
           <span
-            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
+            class="min-w-0 truncate font-bold text-foreground text-xl leading-7"
             data-testid="typography"
           >
             Based Bitcoin
           </span>
           <div
-            class="flex shrink-0 items-center gap-1 text-secondary-foreground h-6 justify-center rounded-full bg-card px-2 py-1"
+            aria-label="2 posts"
+            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
             data-testid="container"
           >
             <svg
@@ -87,12 +91,16 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
               />
             </svg>
             <span
-              class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+              class="text-xs leading-4 font-medium tracking-widest uppercase"
               data-testid="typography"
             >
               2
-               
-              posts
+              <span
+                class="hidden sm:inline"
+                data-testid="typography"
+              >
+                 posts
+              </span>
             </span>
           </div>
         </div>
@@ -119,12 +127,12 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
         A bit of Bitcoin purity amidst all of the madness.
       </p>
       <div
-        class="mt-auto flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+        class="mt-auto flex w-full flex-row items-end justify-between gap-3"
         data-cy="collection-card-bottom-row"
         data-testid="container"
       >
         <div
-          class="flex flex-wrap justify-between gap-3 sm:flex-nowrap items-center w-full min-w-0 sm:w-auto sm:flex-1"
+          class="flex w-full flex-wrap justify-between gap-3 sm:flex-nowrap items-center min-w-0 flex-1"
           data-cy="post-tags-expandable-row"
           data-testid="container"
         >
@@ -133,6 +141,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
             data-testid="container"
           >
             <div
+              data-read-only="false"
               data-show-add-button="true"
               data-tagged-id="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:0034BBBDFK83G"
               data-tagged-kind="post"
@@ -141,7 +150,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
           </div>
         </div>
         <div
-          class="flex shrink-0 items-center gap-2 self-start sm:self-end"
+          class="flex shrink-0 items-center gap-2 self-end"
           data-cy="collection-card-tag-actions"
           data-testid="container"
         >
@@ -223,12 +232,15 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
 exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete state 1`] = `
 <a
   aria-label="Based Bitcoin"
-  class="group relative block h-full w-full lg:max-w-187"
+  class="group relative block h-full w-full"
   data-cy="collection-card"
+  data-interactive-actions="true"
+  data-layout="default"
+  data-presentation="landing"
   href="/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G"
 >
   <div
-    class="flex flex-col text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden rounded-md py-0 border-transparent bg-card/40"
+    class="flex flex-col text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden py-0 rounded-md border-transparent bg-card/40"
     data-slot="card"
     data-testid="card"
   >
@@ -277,13 +289,14 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
             />
           </svg>
           <span
-            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
+            class="min-w-0 truncate font-bold text-foreground text-xl leading-7"
             data-testid="typography"
           >
             Based Bitcoin
           </span>
           <div
-            class="flex shrink-0 items-center gap-1 text-secondary-foreground h-6 justify-center rounded-full bg-card px-2 py-1"
+            aria-label="2 posts"
+            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
             data-testid="container"
           >
             <svg
@@ -307,12 +320,16 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
               />
             </svg>
             <span
-              class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+              class="text-xs leading-4 font-medium tracking-widest uppercase"
               data-testid="typography"
             >
               2
-               
-              posts
+              <span
+                class="hidden sm:inline"
+                data-testid="typography"
+              >
+                 posts
+              </span>
             </span>
           </div>
         </div>
@@ -339,12 +356,12 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
         A bit of Bitcoin purity amidst all of the madness.
       </p>
       <div
-        class="mt-auto flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+        class="mt-auto flex w-full flex-row items-end justify-between gap-3"
         data-cy="collection-card-bottom-row"
         data-testid="container"
       >
         <div
-          class="flex flex-wrap justify-between gap-3 sm:flex-nowrap items-center w-full min-w-0 sm:w-auto sm:flex-1"
+          class="flex w-full flex-wrap justify-between gap-3 sm:flex-nowrap items-center min-w-0 flex-1"
           data-cy="post-tags-expandable-row"
           data-testid="container"
         >
@@ -353,6 +370,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
             data-testid="container"
           >
             <div
+              data-read-only="false"
               data-show-add-button="true"
               data-tagged-id="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:0034BBBDFK83G"
               data-tagged-kind="post"
@@ -361,7 +379,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
           </div>
         </div>
         <div
-          class="flex shrink-0 items-center gap-2 self-start sm:self-end"
+          class="flex shrink-0 items-center gap-2 self-end"
           data-cy="collection-card-tag-actions"
           data-testid="container"
         >
@@ -448,15 +466,247 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
 </a>
 `;
 
-exports[`CollectionCard - Snapshots > matches the snapshot when no cover image and no description are set 1`] = `
+exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline layout 1`] = `
 <a
-  aria-label="Quiet collection"
-  class="group relative block h-full w-full lg:max-w-187"
+  aria-label="Based Bitcoin"
+  class="group relative block h-full w-full"
   data-cy="collection-card"
+  data-interactive-actions="true"
+  data-layout="wide"
+  data-presentation="landing"
   href="/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G"
 >
   <div
-    class="flex flex-col bg-card text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden rounded-md py-0"
+    class="flex flex-col text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden py-0 rounded-md border-transparent bg-card/40"
+    data-slot="card"
+    data-testid="card"
+  >
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+      data-testid="container"
+      style="background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.35)), url(\\"https://example.com/cover.png\\");"
+    />
+    <div
+      class="flex h-full flex-col gap-3 p-12"
+      data-slot="card-content"
+    >
+      <div
+        class="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap"
+        data-testid="container"
+      >
+        <div
+          class="flex min-w-0 flex-1 items-center gap-2"
+          data-testid="container"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-library size-6 shrink-0 text-foreground"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m16 6 4 14"
+            />
+            <path
+              d="M12 6v14"
+            />
+            <path
+              d="M8 8v12"
+            />
+            <path
+              d="M4 4v16"
+            />
+          </svg>
+          <span
+            class="min-w-0 truncate font-bold text-foreground text-2xl leading-8"
+            data-testid="typography"
+          >
+            Based Bitcoin
+          </span>
+          <div
+            aria-label="2 posts"
+            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+            data-testid="container"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-sticky-note size-3 shrink-0"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+              />
+              <path
+                d="M15 3v5a1 1 0 0 0 1 1h5"
+              />
+            </svg>
+            <span
+              class="text-xs leading-4 font-medium tracking-widest uppercase"
+              data-testid="typography"
+            >
+              2
+              <span
+                class="hidden sm:inline"
+                data-testid="typography"
+              >
+                 posts
+              </span>
+            </span>
+          </div>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end"
+          data-testid="container"
+        >
+          <div
+            data-alt="Bitcoin Wizard"
+            data-avatar-url="https://example.com/avatar.png"
+            data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+            data-name="Bitcoin Wizard"
+            data-size="lg"
+            data-testid="avatar-with-fallback"
+          >
+            Bitcoin Wizard
+          </div>
+        </div>
+      </div>
+      <p
+        class="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+        data-testid="typography"
+      >
+        A bit of Bitcoin purity amidst all of the madness.
+      </p>
+      <div
+        class="mt-auto flex w-full flex-row items-end justify-between gap-3"
+        data-cy="collection-card-bottom-row"
+        data-testid="container"
+      >
+        <div
+          class="flex w-full flex-wrap justify-between gap-3 sm:flex-nowrap items-center min-w-0 flex-1"
+          data-cy="post-tags-expandable-row"
+          data-testid="container"
+        >
+          <div
+            class="min-w-0 flex-1"
+            data-testid="container"
+          >
+            <div
+              data-read-only="false"
+              data-show-add-button="true"
+              data-tagged-id="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:0034BBBDFK83G"
+              data-tagged-kind="post"
+              data-testid="clickable-tags-list"
+            />
+          </div>
+        </div>
+        <div
+          class="flex shrink-0 items-center gap-2 self-end"
+          data-cy="collection-card-tag-actions"
+          data-testid="container"
+        >
+          <button
+            aria-expanded="false"
+            aria-label="post.actions.tagPost"
+            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+            data-cy="post-tag-btn"
+            data-size="sm"
+            data-slot="button"
+            data-variant="secondary"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-tag"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+              />
+              <circle
+                cx="7.5"
+                cy="7.5"
+                fill="currentColor"
+                r=".5"
+              />
+            </svg>
+            <span
+              class="text-xs leading-4 font-bold text-muted-foreground"
+              data-testid="typography"
+            >
+              3
+            </span>
+          </button>
+          <button
+            aria-label="collections.card.follow"
+            class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
+            data-size="sm"
+            data-slot="button"
+            data-variant="secondary"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-plus size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M5 12h14"
+              />
+              <path
+                d="M12 5v14"
+              />
+            </svg>
+            collections.card.follow
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</a>
+`;
+
+exports[`CollectionCard - Snapshots > matches the snapshot when no cover image and no description are set 1`] = `
+<a
+  aria-label="Quiet collection"
+  class="group relative block h-full w-full"
+  data-cy="collection-card"
+  data-interactive-actions="true"
+  data-layout="default"
+  data-presentation="landing"
+  href="/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G"
+>
+  <div
+    class="flex flex-col bg-card text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden py-0 rounded-md"
     data-slot="card"
     data-testid="card"
   >
@@ -499,13 +749,14 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
             />
           </svg>
           <span
-            class="min-w-0 truncate text-xl leading-7 font-bold text-foreground"
+            class="min-w-0 truncate font-bold text-foreground text-xl leading-7"
             data-testid="typography"
           >
             Quiet collection
           </span>
           <div
-            class="flex shrink-0 items-center gap-1 text-secondary-foreground"
+            aria-label="0 posts"
+            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
             data-testid="container"
           >
             <svg
@@ -529,12 +780,16 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
               />
             </svg>
             <span
-              class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+              class="text-xs leading-4 font-medium tracking-widest uppercase"
               data-testid="typography"
             >
               0
-               
-              posts
+              <span
+                class="hidden sm:inline"
+                data-testid="typography"
+              >
+                 posts
+              </span>
             </span>
           </div>
         </div>
@@ -555,12 +810,12 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
         </div>
       </div>
       <div
-        class="mt-auto flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+        class="mt-auto flex w-full flex-row items-end justify-between gap-3"
         data-cy="collection-card-bottom-row"
         data-testid="container"
       >
         <div
-          class="flex flex-wrap justify-between gap-3 sm:flex-nowrap items-center w-full min-w-0 sm:w-auto sm:flex-1"
+          class="flex w-full flex-wrap justify-between gap-3 sm:flex-nowrap items-center min-w-0 flex-1"
           data-cy="post-tags-expandable-row"
           data-testid="container"
         >
@@ -569,6 +824,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
             data-testid="container"
           >
             <div
+              data-read-only="false"
               data-show-add-button="true"
               data-tagged-id="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:0034BBBDFK83G"
               data-tagged-kind="post"
@@ -577,7 +833,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
           </div>
         </div>
         <div
-          class="flex shrink-0 items-center gap-2 self-start sm:self-end"
+          class="flex shrink-0 items-center gap-2 self-end"
           data-cy="collection-card-tag-actions"
           data-testid="container"
         >

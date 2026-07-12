@@ -10,6 +10,7 @@ const {
   mockUseInfiniteScroll,
   mockUseVisualFeedTiles,
   mockUseIsTouchDevice,
+  mockClickableTagsList,
 } = vi.hoisted(() => ({
   mockNavigateToPost: vi.fn(),
   mockPostHeaderUserInfo: vi.fn(({ timeAgo }: { timeAgo?: string }) => (
@@ -18,6 +19,11 @@ const {
   mockUseInfiniteScroll: vi.fn(),
   mockUseVisualFeedTiles: vi.fn(),
   mockUseIsTouchDevice: vi.fn(() => false),
+  mockClickableTagsList: vi.fn(({ className }: { className?: string }) => (
+    <div data-testid="visual-overlay-tags" className={className}>
+      Tags
+    </div>
+  )),
 }));
 
 vi.mock('./useVisualFeedTiles', () => ({
@@ -157,7 +163,7 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
 
 vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
   return {
-    ClickableTagsList: () => <div data-testid="visual-overlay-tags">Tags</div>,
+    ClickableTagsList: mockClickableTagsList,
   };
 });
 
@@ -565,6 +571,29 @@ describe('VisualTimelinePosts', () => {
     );
 
     expect(screen.getByTestId('visual-overlay-content-stack')).toHaveClass('flex', 'flex-col', 'gap-4');
+  });
+
+  it('does not force a selected-looking border on overlay tags', () => {
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    const tags = screen.getByTestId('visual-overlay-tags');
+    expect(tags).toHaveClass('text-white');
+    expect(tags.className).not.toContain('[&_[role=button]]:border-white/20');
+    expect(mockClickableTagsList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        className: expect.not.stringContaining('[&_[role=button]]:border-white/20'),
+      }),
+      undefined,
+    );
   });
 
   describe('Infinite scroll configuration', () => {

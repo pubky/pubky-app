@@ -197,6 +197,7 @@ function TimelineFeedContent({
   const contextValue: TimelineFeedContextValue = {
     variant,
     collectionId,
+    streamId,
     prependPosts,
     prependOptimisticPosts,
     removePosts,

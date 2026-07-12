@@ -88,6 +88,33 @@ describe('usePostNavigation', () => {
     });
   });
 
+  describe('navigateToCollection', () => {
+    it('should return navigateToCollection function', () => {
+      const { result } = renderHook(() => usePostNavigation());
+
+      expect(result.current.navigateToCollection).toBeDefined();
+      expect(typeof result.current.navigateToCollection).toBe('function');
+    });
+
+    it('should navigate to collection detail page with composite ID', () => {
+      const { result } = renderHook(() => usePostNavigation());
+      const compositeCollectionId = 'author123:collection456';
+
+      act(() => {
+        result.current.navigateToCollection(compositeCollectionId);
+      });
+
+      expect(mockPush).toHaveBeenCalledWith('/collections/author123/collection456');
+      expect(mockPush).toHaveBeenCalledTimes(1);
+    });
+
+    it('should build collection href with getCollectionHref', () => {
+      const { result } = renderHook(() => usePostNavigation());
+
+      expect(result.current.getCollectionHref('author123:collection456')).toBe('/collections/author123/collection456');
+    });
+  });
+
   describe('Integration', () => {
     it('should work correctly when used multiple times in different components', () => {
       const { result: result1 } = renderHook(() => usePostNavigation());

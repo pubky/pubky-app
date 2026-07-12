@@ -83,7 +83,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       label: tHeader('settings'),
     },
   ];
-  const protectedNavHrefs = new Set<string>([APP_ROUTES.COLLECTIONS, SETTINGS_ROUTES.ACCOUNT]);
+  const protectedNavHrefs = new Set<string>([SETTINGS_ROUTES.ACCOUNT]);
   // Hide footer for guests only on non-explore routes. Core explore and dynamic public
   // routes (/home, /post/..., /profile/...) use the public explore footer.
   if (!isAuthenticated && !isPublicExploreRoute) {

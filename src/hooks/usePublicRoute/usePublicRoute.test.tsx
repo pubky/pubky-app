@@ -85,6 +85,29 @@ describe('usePublicRoute', () => {
       expect(result.current.isPublicExploreRoute).toBe(true);
     });
 
+    it('returns core explore state for collections overview page', () => {
+      mockPathname.mockReturnValue('/collections');
+
+      const { result } = renderHook(() => usePublicRoute());
+
+      expect(result.current.isPublicRoute).toBe(false);
+      expect(result.current.isDynamicPublicRoute).toBe(false);
+      expect(result.current.isCoreExploreRoute).toBe(true);
+      expect(result.current.isPublicExploreRoute).toBe(true);
+    });
+
+    it('returns dynamic public state for single collection page', () => {
+      const pubky = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
+      mockPathname.mockReturnValue(`/collections/${pubky}/0034BBBDFK83G`);
+
+      const { result } = renderHook(() => usePublicRoute());
+
+      expect(result.current.isPublicRoute).toBe(true);
+      expect(result.current.isDynamicPublicRoute).toBe(true);
+      expect(result.current.isCoreExploreRoute).toBe(false);
+      expect(result.current.isPublicExploreRoute).toBe(true);
+    });
+
     it('returns isPublicRoute: false for own profile page', () => {
       mockPathname.mockReturnValue('/profile');
 

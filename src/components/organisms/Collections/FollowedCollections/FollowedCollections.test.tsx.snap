@@ -1,34 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`FollowedCollections > FollowedCollections - Snapshots > matches the snapshot for the empty state (live query empty, seed resolved) 1`] = `
-<div
-  class="flex w-full flex-col gap-4"
-  data-testid="container"
->
-  <div
-    class="flex items-center gap-3"
-    data-testid="container"
-  >
-    <h2
-      class="text-2xl font-light text-muted-foreground"
-      data-testid="heading-2"
-    >
-      collections.followed.title
-    </h2>
-    <div
-      data-pubkys=""
-      data-testid="avatar-stack"
-    />
-  </div>
-  <p
-    class="text-sm text-muted-foreground"
-    data-testid="typography"
-  >
-    collections.followed.empty
-  </p>
-</div>
-`;
-
 exports[`FollowedCollections > FollowedCollections - Snapshots > matches the snapshot for the populated state with cards + Show More 1`] = `
 <div
   class="flex w-full flex-col gap-4"

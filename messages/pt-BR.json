@@ -1123,7 +1123,12 @@
       "maxFiles": "Máximo de {max} arquivos permitidos",
       "maxFilesPartial": "Máximo de {max} arquivos permitidos. Alguns arquivos não foram adicionados.",
       "unsupportedType": "Tipo de arquivo não suportado para {name}. Suportados: {formats}.",
-      "fileTooLarge": "{name} excede o limite de {maxSize}."
+      "fileTooLarge": "{name} excede o limite de {maxSize}.",
+      "imageTooLargeRaw": "A imagem é muito grande. O tamanho máximo é {maxSize}.",
+      "imageTooLargeGif": "Este GIF excede o limite de upload de {maxSize} e não pode ser compactado. Use um GIF menor.",
+      "imageTooLargeAnimatedWebp": "Este WebP animado excede o limite de upload de {maxSize} e não pode ser compactado. Use um arquivo menor.",
+      "imageTooLargeSvg": "Este SVG excede o limite de upload de {maxSize} após a sanitização. Use um arquivo menor.",
+      "imageTooLargeRaster": "Não foi possível compactar a imagem abaixo de {maxSize}. Use uma imagem menor ou de menor resolução."
     },
     "status": {
       "updateFailed": "Não foi possível atualizar o status. Tente novamente.",
@@ -1374,14 +1379,14 @@
       "ctaShort": "Nova",
       "title": "Nova coleção",
       "nameLabel": "Título",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "Dê um nome à sua coleção",
       "descriptionLabel": "Descrição",
-      "descriptionPlaceholder": "O melhor dos maiores contribuidores do Bitcoin",
+      "descriptionPlaceholder": "O que as pessoas encontrarão aqui?",
       "backgroundLabel": "Plano de fundo",
       "addImage": "Adicionar imagem",
       "removeImage": "Remover imagem",
       "coverImageInvalid": "A imagem de capa deve ser um arquivo de imagem.",
-      "coverImageTooLarge": "A imagem de capa é muito grande.",
+      "coverImageTooLarge": "A imagem de capa é muito grande. O tamanho máximo é {maxSize}.",
       "nameRequired": "O título da coleção é obrigatório.",
       "cancel": "Cancelar",
       "save": "Salvar coleção",
@@ -1393,6 +1398,7 @@
       "title": "Bem-vindo às Coleções",
       "description": "Salve as publicações que valem a pena. Reúna o melhor conteúdo da sua rede. Organize ideias, filtre o sinal do ruído e compartilhe o que importa.",
       "imageAlt": "Coleções",
+      "publicNote": "Atenção: coleções são públicas e podem ser descobertas.",
       "cancel": "Cancelar",
       "continue": "Continuar"
     },
@@ -1405,9 +1411,7 @@
     "showMore": "Mostrar mais",
     "loadFailed": "Falha ao carregar as coleções. Tente novamente.",
     "my": {
-      "title": "Minhas coleções",
-      "publicNote": "Atenção: todas as coleções são públicas e podem ser descobertas.",
-      "publicNoteShort": "Todas as coleções são públicas e podem ser descobertas."
+      "title": "Minhas coleções"
     },
     "followed": {
       "title": "Coleções seguidas",
@@ -1452,7 +1456,7 @@
     },
     "addContentDialog": {
       "title": "Adicionar post",
-      "description": "Adicione uma publicação ou artigo do seu feed ou cole uma URL diretamente.",
+      "description": "Há várias maneiras de adicionar posts à sua coleção.",
       "fromFeedTitle": "Adicionar do feed",
       "fromFeedLead": "Encontre uma publicação",
       "fromFeedRest": " que você quer adicionar e clique no botão de coleções.",
