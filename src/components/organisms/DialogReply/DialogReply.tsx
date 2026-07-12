@@ -28,7 +28,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
           <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription className="sr-only">{t('description')}</DialogDescription>
         </DialogHeader>
-        <Container className="min-h-0 flex-1 gap-3 overflow-x-hidden overflow-y-auto overscroll-contain pr-1">
+        <Container className="min-h-0 flex-1 gap-3 overflow-x-hidden overscroll-contain pr-1">
           {/* Post being replied to */}
           <PostPreviewCard postId={postId} />
 
