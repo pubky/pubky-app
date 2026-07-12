@@ -513,6 +513,12 @@
     "missing": "Post not found.",
     "dropFiles": "Drop files here",
     "articleTitle": "Article Title",
+    "lock": {
+      "unlock": "Unlock",
+      "defaultTitle": "Locked post",
+      "titlePlaceholder": "Title",
+      "teaserPlaceholder": "Write a short announcement to tease your content."
+    },
     "addTag": "add tag",
     "limitReached": "limit reached",
     "addEmoji": "Add emoji",
@@ -654,6 +660,7 @@
     "newPost": {
       "newArticle": "New Article",
       "newPost": "New Post",
+      "newLockedPost": "New Locked Post",
       "description": "{title} dialog"
     },
     "lockContent": {
@@ -663,7 +670,7 @@
         "payment": "Payment"
       },
       "password": {
-        "description": "Please set a password for this content. Anyone with the password can unlock your content. The first few words will be visible for everyone.",
+        "description": "Set the password people need to enter to unlock your content.",
         "label": "Password",
         "repeatLabel": "Repeat Password",
         "mismatch": "Passwords do not match.",
@@ -676,7 +683,6 @@
       "payment": {
         "toBeDeveloped": "To be developed"
       },
-      "appliedToast": "Content locked",
       "cancel": "Cancel",
       "apply": "Apply Lock"
     },
@@ -1032,6 +1038,7 @@
       "replyFailed": "Could not post reply. Try again.",
       "postCreated": "Post published",
       "postFailed": "Could not create post. Try again.",
+      "lockError": "Something went wrong. Try again.",
       "repostSuccess": "Reposted {author}'s post",
       "repostSuccessFallback": "Reposted",
       "repostUndo": "Undo",

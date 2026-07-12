@@ -11,6 +11,9 @@ export interface LocksAuthState {
   session: LocksSdkSession | null;
   /** Persisted bearer secret; the live session is rebuilt from it on load. */
   locksSessionSecret: string | null;
+  // TODO: when locks-sdk exposes the creator pubky on `Session`, store it here as `creatorPubky`
+  // (mirroring the homeserver store's `currentUserPubky`). Callers then read it from the store
+  // instead of extracting `creator` from Lock Server responses (`LocksContentService`).
   hasHydrated: boolean;
 }
 

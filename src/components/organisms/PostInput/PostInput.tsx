@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
@@ -9,6 +9,7 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/Post
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
@@ -17,14 +18,17 @@ import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePo
 import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
+import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
 import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
+import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
 import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
 import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { inferPostKindForCreate } from '@/pipes/post/post.kind';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
@@ -48,6 +52,7 @@ export function PostInput({
   expanded = false,
   onContentChange,
   onArticleModeChange,
+  onLockModeChange,
   editContent,
   editIsArticle,
   autoFocusTextarea = false,
@@ -144,16 +149,99 @@ export function PostInput({
   });
 
   const isPostVariant = variant === POST_INPUT_VARIANT.POST;
-  const { lockSwitch, isLockDialogOpen, closeLockDialog, handleLockPublished } = usePostInputLock({
-    isEnabled: isPostVariant,
-    onSuccess,
-  });
 
-  const isValid = () => {
-    return canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
+  // Lock flow only — normal posts clear themselves inside `usePost`. Empties the composer body but
+  // keeps the tags (they belong to the announcement). Used by the switch-on capture and the
+  // lock-publish cleanup.
+  const clearComposerForLock = () => {
+    setContent('');
+    setAttachments([]);
+    setIsArticle(false);
+    setArticleTitle('');
   };
 
-  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitWithAuth, {
+  const {
+    lockSwitch,
+    isLockEnabled,
+    lockServerPubky,
+    isAuthDialogOpen,
+    closeAuthDialog,
+    handleAuthSuccess,
+    isLockDialogOpen,
+    closeLockDialog,
+    isLockConfigured,
+    handleLockApplied,
+    lockDraft,
+    lockTitle,
+    setLockTitle,
+    resetLock,
+    handleAuthExpired,
+  } = usePostInputLock({
+    isEnabled: isPostVariant,
+    captureComposer: () => ({ content, attachments, isArticle, articleTitle }),
+    restoreComposer: (draft) => {
+      setContent(draft.content);
+      setAttachments(draft.attachments);
+      setIsArticle(draft.isArticle);
+      setArticleTitle(draft.articleTitle);
+    },
+    clearComposer: clearComposerForLock,
+  });
+
+  // Once the switch is on the composer holds the announcement; the locked post is the captured draft.
+  // The locked post may be any kind, so infer it exactly as a normal post would (link / image / video / …).
+  const { publish: publishLock, isPublishing: isPublishingLock } = useCreateLockContent({
+    lockedPost: {
+      content: lockDraft?.content ?? '',
+      kind: inferPostKindForCreate({
+        content: lockDraft?.content ?? '',
+        attachments: lockDraft?.attachments,
+        isArticle: lockDraft?.isArticle,
+      }),
+      attachments: lockDraft?.attachments ?? [],
+    },
+    announcement: {
+      teaser: { lock_title: lockTitle, teaser_description: content },
+      attachments,
+      tags,
+    },
+  });
+
+  // Post publishes the locked content once the lock is configured; otherwise it posts normally.
+  const handleSubmitOrPublishLock = async () => {
+    // Gate on the switch, not on `isLockConfigured`: while the switch is on the body is the content
+    // to be locked, so falling through here would publish that content in the clear.
+    if (!isLockEnabled) {
+      handleSubmitWithAuth();
+      return;
+    }
+    if (!isLockConfigured) return; // switch on, unlock method never applied — publish nothing
+
+    const result = await publishLock();
+    if (result.status === 'auth-expired') {
+      // Recoverable: reopen sign-in and keep the configured lock so the creator only re-authenticates.
+      handleAuthExpired();
+      return;
+    }
+    if (result.status === 'failed') {
+      toast({ variant: 'error', description: tToast('lockError') });
+      return;
+    }
+    resetLock();
+    // Empty the composer like a normal post does; tags are cleared here because the announcement
+    // that owned them is now published.
+    clearComposerForLock();
+    setTags([]);
+    onSuccess?.(result.postId);
+  };
+
+  const isValid = () => {
+    // `isPublishingLock` counts as submitting: the action-bar button only disables through this check,
+    // so leaving it out lets a second click publish a duplicate lock while the first is in flight.
+    return canSubmitPost(variant, content, attachments, isSubmitting || isPublishingLock, isArticle, articleTitle);
+  };
+
+  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitOrPublishLock, {
     requireModifier: true,
   });
 
@@ -164,7 +252,7 @@ export function PostInput({
 
   const { toast } = useToast();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isEdit) {
       if (editIsArticle) {
         setIsArticle(true);
@@ -187,7 +275,7 @@ export function PostInput({
   }, [variant, editContent, editIsArticle]);
 
   // Pre-fill content from share target or other external sources
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialContent && !isEdit) {
       setContent(initialContent);
     }
@@ -195,7 +283,7 @@ export function PostInput({
   }, []);
 
   // Pre-fill attachments from share target or other external sources
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialAttachments && initialAttachments.length > 0 && !isEdit) {
       handleFilesAdded(initialAttachments);
     }
@@ -204,148 +292,180 @@ export function PostInput({
 
   const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
+  useEffect(() => {
+    onLockModeChange?.(isLockEnabled);
+  }, [isLockEnabled, onLockModeChange]);
+
   const isMobile = useIsMobile();
   const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
   const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
 
   return (
-    <Container
-      data-cy={dataCy}
-      id={id}
-      ref={containerRef}
-      className={cn(
-        'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
-        isWideLayout ? 'p-12' : 'p-4',
-        !isAuthenticated ? 'px-6' : '',
-        isDragging ? 'border-brand' : 'border-input',
+    <>
+      {/* `lock_title` — the announcement's card heading, typed above the composer. */}
+      {isLockEnabled && (
+        <Input
+          value={lockTitle}
+          onChange={(event) => setLockTitle(event.target.value)}
+          placeholder={t('lock.titlePlaceholder')}
+          disabled={isPublishingLock}
+          className="mb-4 h-14 rounded-md border border-dashed border-input px-6 py-4 text-base"
+          data-cy="lock-title-input"
+          // Marks the input for the composer's outside-click collapse exclusion (usePostInput).
+          data-lock-title-input=""
+        />
       )}
-      onClick={handleExpandWithAuth}
-      onDragEnter={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragEnter)}
-      onDragLeave={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragLeave)}
-      onDragOver={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragOver)}
-      onDrop={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDrop)}
-    >
-      {/* Drag overlay */}
-      {isDragging && (
-        <Container
-          className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
-          overrideDefaults
-        >
-          <Typography className="text-brand">{t('dropFiles')}</Typography>
-        </Container>
-      )}
-
-      {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
-      <Container className="gap-4 contain-inline-size">
-        {isArticle && (
-          <Input
-            placeholder={t('articleTitle')}
-            defaultValue={articleTitle}
-            onChange={handleArticleTitleChangeWithAuth}
-            maxLength={ARTICLE_TITLE_MAX_CHARACTER_LENGTH}
-            disabled={isSubmitting || !isAuthenticated}
-            className="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
-          />
+      <Container
+        data-cy={dataCy}
+        id={id}
+        ref={containerRef}
+        className={cn(
+          'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
+          isWideLayout ? 'p-12' : 'p-4',
+          !isAuthenticated ? 'px-6' : '',
+          isDragging ? 'border-brand' : 'border-input',
         )}
-
-        {currentUserPubky && (
-          <PostHeader
-            postId={currentUserPubky}
-            isReplyInput={true}
-            characterLimit={characterLimit}
-            showPopover={false}
-            size={isWideLayout ? 'large' : 'normal'}
-          />
-        )}
-
-        {!isArticle && (
-          <Container overrideDefaults className="relative">
-            <Textarea
-              ref={textareaRef}
-              placeholder={displayPlaceholder}
-              variant="inline"
-              className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
-              value={content}
-              onChange={handleChangeWithAuth}
-              onFocus={handleExpandWithAuth}
-              onKeyDown={handleKeyDown}
-              onPaste={isEdit ? undefined : handlePasteWithAuth}
-              maxLength={POST_MAX_CHARACTER_LENGTH}
-              rows={1}
-              disabled={isSubmitting}
-              readOnly={!isAuthenticated}
-              aria-haspopup="listbox"
-              autoFocus={autoFocusTextarea}
-              // Suppress the iOS keyboard autofill accessory bar (passwords/cards/contacts)
-              autoComplete="off"
-            />
-
-            {/* Mention autocomplete popover */}
-            {mentionIsOpen && (
-              <MentionPopover
-                users={mentionUsers}
-                selectedIndex={mentionSelectedIndex}
-                onSelect={handleMentionSelect}
-                onHover={setMentionSelectedIndex}
-              />
-            )}
+        onClick={handleExpandWithAuth}
+        onDragEnter={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragEnter)}
+        onDragLeave={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragLeave)}
+        onDragOver={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragOver)}
+        onDrop={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDrop)}
+      >
+        {/* Drag overlay */}
+        {isDragging && (
+          <Container
+            className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
+            overrideDefaults
+          >
+            <Typography className="text-brand">{t('dropFiles')}</Typography>
           </Container>
         )}
 
-        {!isEdit && (
-          <PostInputAttachments
-            ref={fileInputRef}
-            attachments={attachments}
-            setAttachments={setAttachmentsWithAuth}
-            handleFilesAdded={handleFilesAddedWithAuth}
-            isSubmitting={isSubmitting}
+        {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
+        <Container className="gap-4 contain-inline-size">
+          {isArticle && (
+            <Input
+              placeholder={t('articleTitle')}
+              defaultValue={articleTitle}
+              onChange={handleArticleTitleChangeWithAuth}
+              maxLength={ARTICLE_TITLE_MAX_CHARACTER_LENGTH}
+              disabled={isSubmitting || !isAuthenticated}
+              className="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
+            />
+          )}
+
+          {currentUserPubky && (
+            <PostHeader
+              postId={currentUserPubky}
+              isReplyInput={true}
+              characterLimit={characterLimit}
+              showPopover={false}
+              size={isWideLayout ? 'large' : 'normal'}
+            />
+          )}
+
+          {!isArticle && (
+            <Container overrideDefaults className="relative">
+              <Textarea
+                ref={textareaRef}
+                placeholder={isLockEnabled ? t('lock.teaserPlaceholder') : displayPlaceholder}
+                variant="inline"
+                className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
+                value={content}
+                onChange={handleChangeWithAuth}
+                onFocus={handleExpandWithAuth}
+                onKeyDown={handleKeyDown}
+                onPaste={isEdit ? undefined : handlePasteWithAuth}
+                maxLength={POST_MAX_CHARACTER_LENGTH}
+                rows={1}
+                disabled={isSubmitting}
+                readOnly={!isAuthenticated}
+                aria-haspopup="listbox"
+                autoFocus={autoFocusTextarea}
+                // Suppress the iOS keyboard autofill accessory bar (passwords/cards/contacts)
+                autoComplete="off"
+              />
+
+              {/* Mention autocomplete popover */}
+              {mentionIsOpen && (
+                <MentionPopover
+                  users={mentionUsers}
+                  selectedIndex={mentionSelectedIndex}
+                  onSelect={handleMentionSelect}
+                  onHover={setMentionSelectedIndex}
+                />
+              )}
+            </Container>
+          )}
+
+          {!isEdit && (
+            <PostInputAttachments
+              ref={fileInputRef}
+              attachments={attachments}
+              setAttachments={setAttachmentsWithAuth}
+              handleFilesAdded={handleFilesAddedWithAuth}
+              isSubmitting={isSubmitting}
+              isArticle={isArticle}
+              handleFileClick={handleFileClickWithAuth}
+            />
+          )}
+
+          {isArticle && (
+            <MarkdownEditor
+              ref={markdownEditorRef}
+              autoFocus
+              markdown={sanitizeCodeBlockLanguages(content)}
+              onChange={handleArticleBodyChangeWithAuth}
+              readOnly={isSubmitting || !isAuthenticated}
+            />
+          )}
+
+          {/* Show original post preview for reposts */}
+          {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
+            <PostPreviewCard postId={originalPostId} className="bg-card" />
+          )}
+
+          <PostInputExpandableSection
+            isExpanded={isExpanded}
+            content={content}
+            tags={tags}
+            isSubmitting={isSubmitting || isPublishingLock}
             isArticle={isArticle}
-            handleFileClick={handleFileClickWithAuth}
+            isDisabled={!isAuthenticated}
+            setTags={setTagsWithAuth}
+            onSubmit={handleSubmitOrPublishLock}
+            showEmojiPicker={showEmojiPicker}
+            setShowEmojiPicker={setShowEmojiPicker}
+            onEmojiSelect={handleEmojiSelectWithAuth}
+            onImageClick={handleFileClickWithAuth}
+            onArticleClick={handleArticleClickWithAuth}
+            isPostDisabled={isAuthenticated ? !isValid() : false}
+            submitMode={variant}
+            submitLabel={submitLabel}
+            submitIcon={submitIcon}
+            parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
+            characterLimit={characterLimit}
+            lockSwitch={lockSwitch}
+            lockCard={isLockEnabled ? <LockedPostCard title={lockTitle} /> : undefined}
           />
-        )}
+        </Container>
 
-        {isArticle && (
-          <MarkdownEditor
-            ref={markdownEditorRef}
-            autoFocus
-            markdown={sanitizeCodeBlockLanguages(content)}
-            onChange={handleArticleBodyChangeWithAuth}
-            readOnly={isSubmitting || !isAuthenticated}
-          />
+        {isPostVariant && (
+          <>
+            {lockServerPubky && (
+              <DialogLocksAuth
+                open={isAuthDialogOpen}
+                onOpenChange={(open) => {
+                  if (!open) closeAuthDialog();
+                }}
+                lockServerPubky={lockServerPubky}
+                onSuccess={handleAuthSuccess}
+              />
+            )}
+            <DialogLockContent open={isLockDialogOpen} onOpenChange={closeLockDialog} onApplied={handleLockApplied} />
+          </>
         )}
-
-        {/* Show original post preview for reposts */}
-        {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
-          <PostPreviewCard postId={originalPostId} className="bg-card" />
-        )}
-
-        <PostInputExpandableSection
-          isExpanded={isExpanded}
-          content={content}
-          tags={tags}
-          isSubmitting={isSubmitting}
-          isArticle={isArticle}
-          isDisabled={!isAuthenticated}
-          setTags={setTagsWithAuth}
-          onSubmit={handleSubmitWithAuth}
-          showEmojiPicker={showEmojiPicker}
-          setShowEmojiPicker={setShowEmojiPicker}
-          onEmojiSelect={handleEmojiSelectWithAuth}
-          onImageClick={handleFileClickWithAuth}
-          onArticleClick={handleArticleClickWithAuth}
-          isPostDisabled={isAuthenticated ? !isValid() : false}
-          submitMode={variant}
-          submitLabel={submitLabel}
-          submitIcon={submitIcon}
-          parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
-          characterLimit={characterLimit}
-          lockSwitch={lockSwitch}
-        />
       </Container>
-
-      {isPostVariant && (
-        <DialogLockContent open={isLockDialogOpen} onOpenChange={closeLockDialog} onPublished={handleLockPublished} />
-      )}
-    </Container>
+    </>
   );
 }

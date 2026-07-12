@@ -1,6 +1,10 @@
 import { PubkyAppPostKind } from 'pubky-app-specs';
 import { describe, expect, it } from 'vitest';
-import { inferPostKindForCreate, resolveTagTargetCompositeIdForPostCreate } from '@/pipes/post/post.kind';
+import {
+  inferAnnouncementKind,
+  inferPostKindForCreate,
+  resolveTagTargetCompositeIdForPostCreate,
+} from '@/pipes/post/post.kind';
 
 describe('inferPostKindForCreate', () => {
   it('returns video when at least one video attachment exists', () => {
@@ -155,5 +159,16 @@ describe('resolveTagTargetCompositeIdForPostCreate', () => {
         attachments: [new File(['x'], 'a.png', { type: 'image/png' })],
       }),
     ).toBe(`${authorId}:${newPostId}`);
+  });
+});
+
+describe('inferAnnouncementKind', () => {
+  it('rejects a long post — a lock announcement is a teaser, never the content', () => {
+    expect(() => inferAnnouncementKind({ content: 'body', isArticle: true })).toThrow();
+  });
+
+  it('allows the kinds a teaser can take', () => {
+    expect(inferAnnouncementKind({ content: 'hello' })).toBe(PubkyAppPostKind.Short);
+    expect(inferAnnouncementKind({ content: 'see https://pubky.app' })).toBe(PubkyAppPostKind.Link);
   });
 });

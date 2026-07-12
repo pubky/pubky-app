@@ -1,11 +1,10 @@
 'use client';
 
-// TODO:[Locks] #2026 — temporary dev/staging test harness for the Lock-auth flow. Exposes
-// `window.locksdk.start()` to open the auth modal (gated to dev/staging). Delete when the real
-// lock switch (#2026) drives the modal from the post composer.
+// TODO:[Locks] #2040 — staging manual-test harness for the Lock-auth flow. Exposes
+// `window.locksdk.start()` to open the auth modal (gated to dev/staging). Kept as a staging
+// test aid now that the composer lock switch exists; delete before release.
 import { useEffect, useState } from 'react';
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
-import { useRestoreLocksAuth } from '@/hooks/useRestoreLocksAuth/useRestoreLocksAuth';
 import { Env } from '@/libs/env/env';
 import { isLocksAuthTestEnabled } from '@/libs/locks/isLocksAuthTestEnabled';
 import { Logger } from '@/libs/logger/logger';
@@ -25,9 +24,6 @@ export function LocksAuthTestHarness() {
   const enabled = isLocksAuthTestEnabled();
   const lockServer = Env.NEXT_PUBLIC_LOCK_SERVER ?? '';
   const [open, setOpen] = useState(false);
-
-  // Restore a persisted Locks session on load.
-  useRestoreLocksAuth(enabled && lockServer ? lockServer : null);
 
   useEffect(() => {
     if (!enabled) return;

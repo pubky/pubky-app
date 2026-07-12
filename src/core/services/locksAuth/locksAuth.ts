@@ -1,5 +1,3 @@
-// TODO:[Locks] #2026 — '@pubky/locks-sdk' resolves to a local tarball (`file:` dep in
-// package.json) until the SDK is published to npm; then only the version range changes.
 import {
   ConnectUrlOptions,
   ExchangeFrontendSessionCodeOptions,

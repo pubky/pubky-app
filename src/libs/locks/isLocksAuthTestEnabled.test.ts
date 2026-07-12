@@ -1,4 +1,4 @@
-// TODO:[Locks] #2026 — delete with isLocksAuthTestEnabled when the test hook is removed.
+// TODO:[Locks] #2040 — delete with isLocksAuthTestEnabled when the test hook is removed.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Env } from '@/libs/env/env';
 import { isLocksAuthTestEnabled } from './isLocksAuthTestEnabled';

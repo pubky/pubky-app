@@ -87,7 +87,14 @@ export class PostNormalizer {
         attachments = post.attachments.map((attachment) => attachment.fileResult.meta.url);
       }
 
-      return builder.createPost(post.content, post.kind, post.parentUri ?? null, embedObject, attachments);
+      return builder.createPost(
+        post.content,
+        post.kind,
+        post.parentUri ?? null,
+        embedObject,
+        attachments,
+        post.lock ?? null,
+      );
     } catch (error) {
       if (error instanceof AppError) {
         throw error;

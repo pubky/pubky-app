@@ -146,6 +146,11 @@ export function usePostInput({
       const dialogContent = document.querySelector('[data-slot="dialog-content"]');
       if (dialogContent?.contains(target)) return;
 
+      // The lock-title input renders just above the composer container but belongs to it: focusing it
+      // must not collapse the composer. `closest` on the target (not a document query) so multiple
+      // mounted composers cannot shadow each other.
+      if (target instanceof Element && target.closest('[data-lock-title-input]')) return;
+
       // Collapse only if there's no content
       if (!content.trim() && tags.length === 0 && attachments.length === 0 && !articleTitle.trim()) {
         setIsExpanded(false);

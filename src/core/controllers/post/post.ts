@@ -29,7 +29,11 @@ import type { PostRelationshipsModelSchema } from '@/models/post/relationships/p
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
-import { inferPostKindForCreate, resolveTagTargetCompositeIdForPostCreate } from '@/pipes/post/post.kind';
+import {
+  inferAnnouncementKind,
+  inferPostKindForCreate,
+  resolveTagTargetCompositeIdForPostCreate,
+} from '@/pipes/post/post.kind';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { PostValidators } from '@/pipes/post/post.validators';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
@@ -175,6 +179,7 @@ export class PostController {
     attachments,
     parentPostId,
     originalPostId,
+    lock,
   }: TCreatePostParams): Promise<string> {
     let parentUri: string | undefined = undefined;
     let repostedUri: string | undefined = undefined;
@@ -188,7 +193,11 @@ export class PostController {
       repostedUri = await PostValidators.validatePostId({ postId: originalPostId, message: 'Original post' });
     }
 
-    const postKind = inferPostKindForCreate({ content, attachments, isArticle });
+    // A `lock` marks this post as the public announcement of locked content, which may never be a
+    // `long` or `collection` post — the locked content behind it still may.
+    const postKind = lock
+      ? inferAnnouncementKind({ content, attachments, isArticle })
+      : inferPostKindForCreate({ content, attachments, isArticle });
 
     // TODO: In the future, we could decouple that action and do it asyncronously in the moment that we add a file to the post
     const fileAttachments = attachments ? await this.normalizeFileAttachments({ attachments, pubky: authorId }) : [];
@@ -200,6 +209,7 @@ export class PostController {
         parentUri,
         embed: repostedUri,
         attachments: fileAttachments,
+        lock,
       },
       authorId,
     );

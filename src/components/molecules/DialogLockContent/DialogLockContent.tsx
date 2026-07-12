@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Minus } from 'lucide-react';
+import { Minus, Shield, Wallet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/atoms/Button/Button';
+import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Input } from '@/atoms/Input/Input';
@@ -12,7 +12,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/atoms/Tabs/Tabs';
 import { Typography } from '@/atoms/Typography/Typography';
 import { calculatePasswordStrength } from '@/libs/password/password';
 import { cn } from '@/libs/utils/utils';
-import { useToast } from '@/molecules/Toaster/use-toast';
 import type { DialogLockContentProps, LockMethod } from './DialogLockContent.types';
 
 const PASSWORD_RULES = ['length', 'number', 'special'] as const;
@@ -20,9 +19,8 @@ const PASSWORD_RULES = ['length', 'number', 'special'] as const;
 const PASSWORD_FIELD_CLASS = 'h-14 rounded-md border border-dashed border-input py-4 pr-5 pl-6 text-base shadow-xs';
 const FIELD_LABEL_CLASS = 'text-xs font-medium tracking-widest text-muted-foreground uppercase';
 
-export function DialogLockContent({ open, onOpenChange, onPublished }: DialogLockContentProps) {
+export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockContentProps) {
   const t = useTranslations('dialogs.lockContent');
-  const { toast } = useToast();
 
   const [method, setMethod] = useState<LockMethod>('password');
   const [password, setPassword] = useState('');
@@ -52,19 +50,18 @@ export function DialogLockContent({ open, onOpenChange, onPublished }: DialogLoc
     onOpenChange(next);
   };
 
+  // Applying a lock only records the unlock method. Publishing — guarded resources, the content lock
+  // and the announcement — belongs to the composer's Post button, so never add a network call here.
   const handleApply = () => {
     if (!canApply) return;
-    // TODO:[Locks] #1998 — UI-only stub. Real password submission (publish the lock to the Locks BE
-    // via the Pubky SDK, like the homeserver) is deferred to the Wiring sub-issue #2026.
-    toast({ title: t('appliedToast') });
+    onApplied(password);
     resetFields();
-    onPublished();
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="max-w-md rounded-2xl border-x-0 border-y border-brand bg-card sm:max-w-2xl"
+        className="max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
         hiddenTitle={t('title')}
       >
         <DialogHeader>
@@ -74,9 +71,11 @@ export function DialogLockContent({ open, onOpenChange, onPublished }: DialogLoc
         <Tabs value={method} onValueChange={(value) => setMethod(value as LockMethod)}>
           <TabsList>
             <TabsTrigger value="password" id="lock-tab-password">
+              <Shield className="size-5 shrink-0" />
               {t('tabs.password')}
             </TabsTrigger>
             <TabsTrigger value="payment" id="lock-tab-payment">
+              <Wallet className="size-5 shrink-0" />
               {t('tabs.payment')}
             </TabsTrigger>
           </TabsList>
@@ -92,8 +91,10 @@ export function DialogLockContent({ open, onOpenChange, onPublished }: DialogLoc
             role="tabpanel"
             aria-labelledby={isPassword ? 'lock-tab-password' : 'lock-tab-payment'}
           >
-            <Container
-              overrideDefaults
+            {/* A `form` ancestor keeps browsers from warning that a password field stands alone; the
+             * lock is applied from the dialog footer, so submission itself is a no-op. */}
+            <form
+              onSubmit={(event) => event.preventDefault()}
               aria-hidden={!isPassword}
               className={cn('col-start-1 row-start-1 flex flex-col gap-6', !isPassword && 'invisible')}
             >
@@ -109,7 +110,9 @@ export function DialogLockContent({ open, onOpenChange, onPublished }: DialogLoc
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className={PASSWORD_FIELD_CLASS}
-                  autoComplete="new-password"
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
                   tabIndex={isPassword ? undefined : -1}
                 />
 
@@ -140,7 +143,9 @@ export function DialogLockContent({ open, onOpenChange, onPublished }: DialogLoc
                   value={repeatPassword}
                   onChange={(event) => setRepeatPassword(event.target.value)}
                   className={cn(PASSWORD_FIELD_CLASS, showMismatch && 'border-destructive')}
-                  autoComplete="new-password"
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
                   aria-invalid={showMismatch}
                   tabIndex={isPassword ? undefined : -1}
                 />
@@ -150,7 +155,7 @@ export function DialogLockContent({ open, onOpenChange, onPublished }: DialogLoc
                   </Typography>
                 )}
               </Container>
-            </Container>
+            </form>
 
             {!isPassword && (
               <Container overrideDefaults className="col-start-1 row-start-1 flex items-center justify-center">
@@ -161,10 +166,21 @@ export function DialogLockContent({ open, onOpenChange, onPublished }: DialogLoc
         </Tabs>
 
         <DialogFooter>
-          <Button variant="outline" size="lg" onClick={() => handleOpenChange(false)} data-cy="lock-content-cancel">
+          <Button
+            variant={ButtonVariant.OUTLINE}
+            size="lg"
+            onClick={() => handleOpenChange(false)}
+            data-cy="lock-content-cancel"
+          >
             {t('cancel')}
           </Button>
-          <Button variant="default" size="lg" onClick={handleApply} disabled={!canApply} data-cy="lock-content-apply">
+          <Button
+            variant={ButtonVariant.DEFAULT}
+            size="lg"
+            onClick={handleApply}
+            disabled={!canApply}
+            data-cy="lock-content-apply"
+          >
             {t('apply')}
           </Button>
         </DialogFooter>

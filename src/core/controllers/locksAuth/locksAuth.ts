@@ -68,6 +68,17 @@ export class LocksAuthController {
   }
 
   /**
+   * Clears the Locks session locally. Does not call the Lock Server.
+   *
+   * Call this when the server rejects the session (HTTP 401) — `signout` would be rejected too.
+   * Restoring a session makes no network call, so a stale secret keeps the UI looking signed in until
+   * the next creator call fails.
+   */
+  static clearSession(): void {
+    useLocksAuthStore.getState().reset();
+  }
+
+  /**
    * On app load, rebuilds the live Locks session from the persisted bearer secret.
    * No-op if nothing to restore or a session is already live. A malformed/stale secret is cleared so
    * the UI shows unauthenticated rather than a broken session. Restore is local (no network), so no

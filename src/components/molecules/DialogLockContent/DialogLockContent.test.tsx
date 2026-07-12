@@ -11,14 +11,11 @@ vi.mock('@/atoms/Dialog/Dialog', () => ({
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-const mockToast = vi.hoisted(() => vi.fn());
-vi.mock('@/molecules/Toaster/use-toast', () => ({ useToast: () => ({ toast: mockToast }) }));
-
 const setup = (override?: Partial<React.ComponentProps<typeof DialogLockContent>>) => {
   const onOpenChange = vi.fn();
-  const onPublished = vi.fn();
-  render(<DialogLockContent open onOpenChange={onOpenChange} onPublished={onPublished} {...override} />);
-  return { onOpenChange, onPublished };
+  const onApplied = vi.fn();
+  render(<DialogLockContent open onOpenChange={onOpenChange} onApplied={onApplied} {...override} />);
+  return { onOpenChange, onApplied };
 };
 
 beforeEach(() => {
@@ -75,23 +72,21 @@ describe('DialogLockContent', () => {
     expect(screen.queryByText('At least 1 number')).not.toBeInTheDocument();
   });
 
-  it('toasts and calls onPublished when Apply Lock is clicked with a valid password', () => {
-    const { onPublished } = setup();
+  it('passes the password to onApplied on Apply Lock', () => {
+    const { onApplied } = setup();
     fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'Secret12!' } });
     fireEvent.change(screen.getByLabelText('Repeat Password', { selector: 'input' }), {
       target: { value: 'Secret12!' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
 
-    expect(mockToast).toHaveBeenCalled();
-    expect(onPublished).toHaveBeenCalled();
+    expect(onApplied).toHaveBeenCalledWith('Secret12!');
   });
 
   it('closes without applying on Cancel', () => {
-    const { onOpenChange, onPublished } = setup();
+    const { onOpenChange, onApplied } = setup();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(mockToast).not.toHaveBeenCalled();
-    expect(onPublished).not.toHaveBeenCalled();
+    expect(onApplied).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

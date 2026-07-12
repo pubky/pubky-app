@@ -31,6 +31,7 @@ export function PostInputExpandableSection({
   submitIcon,
   setTags,
   onSubmit,
+  lockCard,
   showEmojiPicker,
   setShowEmojiPicker,
   onEmojiSelect,
@@ -106,6 +107,9 @@ export function PostInputExpandableSection({
             <Container className="gap-6">
               {hasContent && !isArticle && <PostLinkEmbeds content={content} />}
 
+              {/* Stands in for the content the lock switch stashed away. */}
+              {lockCard}
+
               {tags.length > 0 && (
                 <Container className="flex flex-wrap items-center gap-2" overrideDefaults>
                   {tags.map((tag, index) => (
@@ -132,7 +136,7 @@ export function PostInputExpandableSection({
                   isSubmitting={isSubmitting}
                   postButtonLabel={postButtonLabel}
                   postButtonAriaLabel={postButtonAriaLabel}
-                  hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle}
+                  hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle || !!lockCard}
                   isArticle={isArticle}
                   isEdit={isEdit}
                   postButtonIcon={submitIcon ?? IconsButton[submitMode]}

@@ -8,6 +8,8 @@ export type PostValidatorData = {
   parentUri?: string;
   embed?: string;
   attachments?: TFileAttachmentResult[];
+  /** `pubky://` URL of a Locks lock file. Present only on a lock post's public announcement. */
+  lock?: string;
 };
 
 export type UserValidatorData = Omit<NexusUserDetails, 'id' | 'indexed_at'>;

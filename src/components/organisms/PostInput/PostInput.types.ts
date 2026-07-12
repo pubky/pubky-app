@@ -34,6 +34,8 @@ interface PostInputBaseProps {
   onContentChange?: (content: string, tags: string[], attachments: File[], articleTitle: string) => void;
   /** Callback when article mode changes */
   onArticleModeChange?: (isArticle: boolean) => void;
+  /** Fires when the lock switch flips, so the compose dialog can retitle itself. */
+  onLockModeChange?: (isLockEnabled: boolean) => void;
   /** Data Cy for the post input */
   dataCy?: string;
   /** ID to access the post input */

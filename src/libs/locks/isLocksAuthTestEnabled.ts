@@ -1,5 +1,5 @@
-// TODO:[Locks] #2026 — temporary dev/staging gate for the Lock-auth test hook
-// (`window.locksdk.start()`). Delete with the test hook once #2026 wires the real lock switch.
+// TODO:[Locks] #2040 — staging-only gate for the Lock-auth manual-test hook
+// (`window.locksdk.start()`). Kept as a staging test aid; delete before release.
 //
 // Every deployed build is a production build (`next build`, NODE_ENV=production) — staging and prod
 // alike; only local `next dev`/tests are non-production. So NODE_ENV can't tell staging from prod;
