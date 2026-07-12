@@ -151,6 +151,9 @@ export const getDefaultHttpRelay = (): string => getRuntimeConfig().defaultHttpR
 export const getPkarrRelays = (): string[] => getRuntimeConfig().pkarrRelays;
 export const getTestnet = (): boolean => getRuntimeConfig().testnet;
 
+// Optional Lock Server pubky the composer's lock flow signs into (undefined = Locks disabled).
+export const getLockServer = (): string | undefined => getRuntimeConfig().lockServer;
+
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getSentryDsn = (): string | undefined => getRuntimeConfig().sentryDsn;
 export const getSentryEnvironment = (): string | undefined => getRuntimeConfig().sentryEnvironment;

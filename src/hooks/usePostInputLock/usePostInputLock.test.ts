@@ -5,12 +5,8 @@ import type { TLockDraft } from './usePostInputLock.types';
 
 const mocks = vi.hoisted(() => ({ isAuthed: false, lockServer: 'lockpubky' as string | undefined }));
 
-vi.mock('@/libs/env/env', () => ({
-  Env: {
-    get NEXT_PUBLIC_LOCK_SERVER() {
-      return mocks.lockServer;
-    },
-  },
+vi.mock('@/config/network', () => ({
+  getLockServer: () => mocks.lockServer,
 }));
 
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({

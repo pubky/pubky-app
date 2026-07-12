@@ -256,6 +256,8 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   email: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.email),
   appStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.appStoreUrl),
   playStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.playStoreUrl),
+  /** Lock Server pubky the composer's lock flow signs into. Absent = Locks disabled. */
+  lockServer: nonEmptyStringValue.optional(),
 });
 
 export type RuntimeConfig = z.infer<typeof runtimeConfigValueSchema>;
@@ -277,6 +279,7 @@ export const runtimeEnvInputSchema = z
     defaultHttpRelay: urlValue,
     pkarrRelays: pkarrRelaysFromString,
     testnet: testnetFromString,
+    lockServer: optionalTrimmedString,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -352,6 +355,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     defaultHttpRelay: urlValue.default(NETWORK_RUNTIME_DEFAULTS.defaultHttpRelay),
     pkarrRelays: z.string().default(JSON.stringify(NETWORK_RUNTIME_DEFAULTS.pkarrRelays)).pipe(pkarrRelaysFromString),
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
+    lockServer: optionalTrimmedString,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -420,6 +424,7 @@ const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
 
 export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ...NETWORK_RUNTIME_ENV_NAMES,
+  lockServer: 'PUBKY_RUNTIME_LOCK_SERVER',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',
   sentryEnvironment: 'PUBKY_RUNTIME_SENTRY_ENVIRONMENT',
   sentryTracesSampleRate: 'PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE',

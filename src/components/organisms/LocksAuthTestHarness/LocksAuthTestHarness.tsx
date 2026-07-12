@@ -5,7 +5,7 @@
 // test aid now that the composer lock switch exists; delete before release.
 import { useEffect, useState } from 'react';
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
-import { Env } from '@/libs/env/env';
+import { getLockServer } from '@/config/network';
 import { isLocksAuthTestEnabled } from '@/libs/locks/isLocksAuthTestEnabled';
 import { Logger } from '@/libs/logger/logger';
 import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
@@ -22,7 +22,7 @@ const maskSecret = (secret: string): string =>
 
 export function LocksAuthTestHarness() {
   const enabled = isLocksAuthTestEnabled();
-  const lockServer = Env.NEXT_PUBLIC_LOCK_SERVER ?? '';
+  const lockServer = getLockServer() ?? '';
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export function LocksAuthTestHarness() {
     window.locksdk = {
       start: () => {
         if (!lockServer) {
-          Logger.warn('[locksdk] NEXT_PUBLIC_LOCK_SERVER is not set');
+          Logger.warn('[locksdk] Lock Server is not configured (PUBKY_RUNTIME_LOCK_SERVER)');
           return;
         }
         setOpen(true);

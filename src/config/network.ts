@@ -4,6 +4,7 @@ import {
   getHomegateUrl,
   getHomeserver,
   getHomeserverUrl,
+  getLockServer,
   getPkarrRelays,
   getTestnet,
 } from '@/libs/runtime-config/runtime-config';
@@ -16,6 +17,7 @@ export {
   getHomegateUrl,
   getHomeserver,
   getHomeserverUrl,
+  getLockServer,
   getPkarrRelays,
   getTestnet,
 };

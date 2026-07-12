@@ -42,7 +42,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   useLocksAuthStore: { getState: () => ({ selectIsLocksAuthenticated: () => true }) },
 }));
-vi.mock('@/libs/env/env', () => ({ Env: { NEXT_PUBLIC_LOCK_SERVER: 'lockpubky' } }));
+vi.mock('@/config/network', () => ({ getLockServer: () => 'lockpubky' }));
 vi.mock('@/molecules/Toaster/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
 
 // Fake composer: real state for the fields the lock flow captures/clears, no-ops for the rest.

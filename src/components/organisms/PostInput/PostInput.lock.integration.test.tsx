@@ -49,12 +49,8 @@ vi.mock('@/stores/auth/auth.store', () => ({
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   useLocksAuthStore: { getState: () => ({ selectIsLocksAuthenticated: () => mocks.locksAuthed }) },
 }));
-vi.mock('@/libs/env/env', () => ({
-  Env: {
-    get NEXT_PUBLIC_LOCK_SERVER() {
-      return mocks.lockServer;
-    },
-  },
+vi.mock('@/config/network', () => ({
+  getLockServer: () => mocks.lockServer,
 }));
 vi.mock('@/molecules/Toaster/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
 

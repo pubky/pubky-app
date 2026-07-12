@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Env } from '@/libs/env/env';
+import { getLockServer } from '@/config/network';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import type { TLockDraft, UsePostInputLockOptions, UsePostInputLockReturn } from './usePostInputLock.types';
 
@@ -32,7 +32,7 @@ export function usePostInputLock({
   // lets the close handler tell them apart so success advances instead of reverting the switch.
   const advancingFromAuth = useRef(false);
 
-  const lockServerPubky = Env.NEXT_PUBLIC_LOCK_SERVER ?? '';
+  const lockServerPubky = getLockServer() ?? '';
 
   const resetLock = () => {
     setLockEnabled(false);
