@@ -33,6 +33,16 @@ vi.mock('@/atoms/Button/Button', () => {
         {children}
       </button>
     )),
+    // Consumed by DialogLockContent, which renders inside PostInput.
+    ButtonVariant: {
+      DEFAULT: 'default',
+      DESTRUCTIVE: 'destructive',
+      OUTLINE: 'outline',
+      SECONDARY: 'secondary',
+      GHOST: 'ghost',
+      BRAND: 'brand',
+      LINK: 'link',
+    },
   };
 });
 
