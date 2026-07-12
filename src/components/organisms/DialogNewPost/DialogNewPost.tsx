@@ -35,6 +35,9 @@ export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: Dialo
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
     useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
+      // With the lock switch on, the written body is held in lock state and the composer only shows
+      // the (possibly empty) teaser — flag it so closing still prompts before discarding the draft.
+      hasContent: () => isLockEnabled,
     });
 
   const handlePostSuccess = (createdPostId: string) => {

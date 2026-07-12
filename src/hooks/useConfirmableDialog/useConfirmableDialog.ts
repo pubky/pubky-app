@@ -54,7 +54,9 @@ export function useConfirmableDialog({
       setShowConfirmDialog(false);
       contentRef.current = { content: '', tags: [], attachments: [], articleTitle: '' };
     } else {
-      const contentExists = externalHasContent ? externalHasContent() : internalHasContent();
+      // Guard the close if EITHER source reports content: the tracked fields, or the caller's own
+      // signal. An external check adds to the internal one, it does not replace it.
+      const contentExists = internalHasContent() || (externalHasContent?.() ?? false);
       if (contentExists) {
         setShowConfirmDialog(true);
       } else {

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogContent } from '@/atoms/Dialog/Dialog';
+import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { DialogNewPost } from './DialogNewPost';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -89,12 +90,14 @@ vi.mock('@/organisms/PostInput/PostInput', () => {
         expanded,
         onContentChange,
         onArticleModeChange,
+        onLockModeChange,
       }: {
         variant: string;
         onSuccess?: (createdPostId: string) => void;
         expanded?: boolean;
         onContentChange?: (content: string, tags: string[]) => void;
         onArticleModeChange?: (isArticle: boolean) => void;
+        onLockModeChange?: (isLockEnabled: boolean) => void;
       }) => (
         <div data-testid="post-input" data-variant={variant} data-expanded={expanded}>
           <button data-testid="mock-success-btn" onClick={() => onSuccess?.('author:post123')}>
@@ -108,6 +111,9 @@ vi.mock('@/organisms/PostInput/PostInput', () => {
           </button>
           <button data-testid="mock-article-mode-off-btn" onClick={() => onArticleModeChange?.(false)}>
             Disable Article Mode
+          </button>
+          <button data-testid="mock-lock-mode-btn" onClick={() => onLockModeChange?.(true)}>
+            Enable Lock Mode
           </button>
         </div>
       ),
@@ -255,6 +261,22 @@ describe('DialogNewPost', () => {
     render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
 
     expect(vi.mocked(DialogContent).mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ avoidKeyboard: true }));
+  });
+
+  // With the lock switch on, the written body lives in lock state and the composer shows only the
+  // (empty) teaser. DialogNewPost must tell the discard guard that lock mode counts as content so the
+  // close still prompts. (The guard's own OR behavior is covered by useConfirmableDialog's tests.)
+  it('reports lock mode to the discard guard as unsaved content', () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogNewPost open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    const hasContentBefore = vi.mocked(useConfirmableDialog).mock.lastCall?.[0].hasContent;
+    expect(hasContentBefore?.()).toBe(false); // lock off + empty composer → nothing to guard
+
+    fireEvent.click(screen.getByTestId('mock-lock-mode-btn')); // switch the lock on
+
+    const hasContentAfter = vi.mocked(useConfirmableDialog).mock.lastCall?.[0].hasContent;
+    expect(hasContentAfter?.()).toBe(true); // now the captured draft must be guarded
   });
 });
 

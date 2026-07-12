@@ -65,6 +65,11 @@ exports[`DialogNewPost - Snapshots > matches snapshot with open prop 1`] = `
           >
             Disable Article Mode
           </button>
+          <button
+            data-testid="mock-lock-mode-btn"
+          >
+            Enable Lock Mode
+          </button>
         </div>
       </div>
       <div

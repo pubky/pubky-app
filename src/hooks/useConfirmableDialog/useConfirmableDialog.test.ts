@@ -259,7 +259,7 @@ describe('useConfirmableDialog with external hasContent', () => {
     vi.clearAllMocks();
   });
 
-  it('uses external hasContent callback instead of internal tracking', () => {
+  it('prompts when the external hasContent callback returns true', () => {
     const externalHasContent = vi.fn(() => true);
 
     const { result } = renderHook(() =>
@@ -297,7 +297,7 @@ describe('useConfirmableDialog with external hasContent', () => {
     expect(result.current.showConfirmDialog).toBe(false);
   });
 
-  it('ignores internal content tracking when external hasContent is provided', () => {
+  it('still prompts on internal content even when external hasContent is false', () => {
     const externalHasContent = vi.fn(() => false);
 
     const { result } = renderHook(() =>
@@ -307,7 +307,8 @@ describe('useConfirmableDialog with external hasContent', () => {
       }),
     );
 
-    // Add content via internal tracking — should be ignored
+    // Internal tracking has content; external adds no signal. The two are OR-ed, so the internal
+    // content must still block the close (this is the lock-draft-discard fix).
     act(() => {
       result.current.handleContentChange('Some content', ['tag'], [], '');
     });
@@ -316,9 +317,28 @@ describe('useConfirmableDialog with external hasContent', () => {
       result.current.handleOpenChange(false);
     });
 
-    // External says no content, so should close directly
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
-    expect(result.current.showConfirmDialog).toBe(false);
+    expect(mockOnClose).not.toHaveBeenCalled();
+    expect(result.current.showConfirmDialog).toBe(true);
+  });
+
+  it('prompts when external hasContent is true even with empty internal tracking', () => {
+    const externalHasContent = vi.fn(() => true);
+
+    const { result } = renderHook(() =>
+      useConfirmableDialog({
+        onClose: mockOnClose,
+        hasContent: externalHasContent,
+      }),
+    );
+
+    // Internal is empty (e.g. the composer only holds an empty teaser), but the external signal
+    // (lock state) still guards the close.
+    act(() => {
+      result.current.handleOpenChange(false);
+    });
+
+    expect(mockOnClose).not.toHaveBeenCalled();
+    expect(result.current.showConfirmDialog).toBe(true);
   });
 
   it('handleDiscard works the same with external hasContent', () => {
