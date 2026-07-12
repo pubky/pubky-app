@@ -177,6 +177,8 @@ export function PostInput({
     handleAuthExpired,
   } = usePostInputLock({
     isEnabled: isPostVariant,
+    // Something to lock: any body text or at least one attachment.
+    canEnable: content.trim().length > 0 || attachments.length > 0,
     captureComposer: () => ({ content, attachments, isArticle, articleTitle }),
     restoreComposer: (draft) => {
       setContent(draft.content);

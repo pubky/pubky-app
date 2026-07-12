@@ -18,6 +18,7 @@ import type { TLockDraft, UsePostInputLockOptions, UsePostInputLockReturn } from
  */
 export function usePostInputLock({
   isEnabled,
+  canEnable,
   captureComposer,
   restoreComposer,
   clearComposer,
@@ -54,6 +55,9 @@ export function usePostInputLock({
       revertToNormalPost();
       return;
     }
+
+    // Defensive: the switch is disabled while empty, but never wrap an empty body in a lock.
+    if (!canEnable) return;
 
     // The composer currently holds the content to be locked. Stash it and hand back an empty composer
     // for the announcement teaser.
@@ -102,9 +106,12 @@ export function usePostInputLock({
   const handleAuthExpired = () => setIsAuthDialogOpen(true);
 
   return {
-    // No Lock Server configured → no switch: turning it on would capture and empty the composer
-    // with no auth modal to continue through, stranding the draft.
-    lockSwitch: isEnabled && lockServerPubky ? { checked: lockEnabled, onCheckedChange } : undefined,
+    // No Lock Server → no switch. Disable turning it ON while the composer is empty (nothing to lock);
+    // once ON the composer is empty by design (holds the teaser), so keep it toggleable to turn off.
+    lockSwitch:
+      isEnabled && lockServerPubky
+        ? { checked: lockEnabled, onCheckedChange, disabled: !lockEnabled && !canEnable }
+        : undefined,
     isLockEnabled: lockEnabled,
     lockServerPubky,
     isAuthDialogOpen,

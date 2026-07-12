@@ -13,6 +13,9 @@ export type TLockDraft = {
 
 export interface UsePostInputLockOptions {
   isEnabled: boolean;
+  /** Whether the composer has something to lock. The switch is disabled while it is empty, so a lock
+   * can never wrap an empty body. */
+  canEnable: boolean;
   /** Reads the composer as it stands, to be locked. Called when the switch goes on. */
   captureComposer: () => TLockDraft;
   /**
@@ -28,6 +31,8 @@ export interface UsePostInputLockReturn {
   lockSwitch?: {
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
+    /** Disabled while the composer is empty — nothing to lock yet. */
+    disabled: boolean;
   };
   /** The lock switch is on: this post must never be published as a normal, public post. */
   isLockEnabled: boolean;

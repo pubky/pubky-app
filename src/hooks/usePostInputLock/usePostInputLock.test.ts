@@ -18,11 +18,13 @@ vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
 const file = new File(['x'], 'secret.png', { type: 'image/png' });
 const draft: TLockDraft = { content: 'my secret', attachments: [file], isArticle: true, articleTitle: 'Essay' };
 
-const setup = (isEnabled = true) => {
+const setup = (isEnabled = true, canEnable = true) => {
   const captureComposer = vi.fn(() => draft);
   const restoreComposer = vi.fn();
   const clearComposer = vi.fn();
-  const view = renderHook(() => usePostInputLock({ isEnabled, captureComposer, restoreComposer, clearComposer }));
+  const view = renderHook(() =>
+    usePostInputLock({ isEnabled, canEnable, captureComposer, restoreComposer, clearComposer }),
+  );
   return { ...view, captureComposer, restoreComposer, clearComposer };
 };
 
@@ -55,6 +57,27 @@ describe('usePostInputLock', () => {
   it('exposes the configured Lock Server for the auth modal', () => {
     const { result } = setup();
     expect(result.current.lockServerPubky).toBe('lockpubky');
+  });
+
+  // The switch must not wrap an empty body in a lock.
+  it('disables the switch while the composer is empty', () => {
+    const { result } = setup(true, false);
+    expect(result.current.lockSwitch?.disabled).toBe(true);
+  });
+
+  it('does not turn on when the composer is empty', () => {
+    const { result, captureComposer } = setup(true, false);
+
+    act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+    expect(result.current.isLockEnabled).toBe(false);
+    expect(captureComposer).not.toHaveBeenCalled();
+    expect(result.current.isAuthDialogOpen).toBe(false);
+  });
+
+  it('enables the switch once the composer has content', () => {
+    const { result } = setup(true, true);
+    expect(result.current.lockSwitch?.disabled).toBe(false);
   });
 
   describe('switching on', () => {

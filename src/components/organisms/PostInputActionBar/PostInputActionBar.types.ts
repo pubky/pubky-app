@@ -23,5 +23,5 @@ export interface PostInputActionBarProps {
   isEdit?: boolean;
   characterLimit?: CharacterLimit;
   /** Creator-only "lock content" toggle. Rendered only when provided. */
-  lockSwitch?: { checked: boolean; onCheckedChange: (checked: boolean) => void };
+  lockSwitch?: { checked: boolean; onCheckedChange: (checked: boolean) => void; disabled?: boolean };
 }

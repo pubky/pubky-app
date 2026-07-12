@@ -92,7 +92,7 @@ export function PostInputActionBar({
               data-cy="post-input-action-bar-lock-switch"
               checked={lockSwitch.checked}
               onCheckedChange={lockSwitch.onCheckedChange}
-              disabled={isSubmitting}
+              disabled={isSubmitting || lockSwitch.disabled}
               aria-label="Lock content"
               className="data-[state=unchecked]:bg-accent"
             />
