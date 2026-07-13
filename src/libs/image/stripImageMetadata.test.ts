@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { IMAGE_ENCODE_QUALITY, IMAGE_MAX_DIMENSION, IMAGE_MAX_RAW_SIZE } from '@/config/images';
+import {
+  IMAGE_COMPRESSION_QUALITY_STEPS,
+  IMAGE_ENCODE_QUALITY,
+  IMAGE_MAX_DIMENSION,
+  IMAGE_MAX_RAW_SIZE,
+  IMAGE_MAX_UPLOAD_SIZE,
+} from '@/config/images';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { stripImageMetadata } from './stripImageMetadata';
 
@@ -85,6 +91,19 @@ describe('stripImageMetadata', () => {
       delete (globalThis as { createImageBitmap?: typeof createImageBitmap }).createImageBitmap;
     }
   });
+
+  function buildSizedBlob(size: number, mimeType: string): Blob {
+    return new Blob([new Uint8Array(size)], { type: mimeType });
+  }
+
+  function mockToBlobSizes(sizes: number[]): void {
+    let callIndex = 0;
+    (mockCanvas.toBlob as ReturnType<typeof vi.fn>).mockImplementation((callback, mimeType) => {
+      const size = sizes[Math.min(callIndex, sizes.length - 1)];
+      callIndex += 1;
+      callback(buildSizedBlob(size, mimeType as string));
+    });
+  }
 
   function setMockImageDimensions(width: number, height: number): void {
     Object.assign(mockImage, {
@@ -247,7 +266,7 @@ describe('stripImageMetadata', () => {
     const inputFile = new File(['raw-image-bytes'], 'huge-photo.jpg', { type: 'image/jpeg' });
     Object.defineProperty(inputFile, 'size', { value: IMAGE_MAX_RAW_SIZE + 1 });
 
-    await expect(stripImageMetadata(inputFile)).rejects.toThrow('Image file size exceeds upload limits');
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('IMAGE_UPLOAD_SIZE_LIMIT:raw');
     expect(URL.createObjectURL).not.toHaveBeenCalled();
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
@@ -379,6 +398,18 @@ describe('stripImageMetadata', () => {
     expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 
+  it('rejects SVG files over the upload limit after sanitization', async () => {
+    const padding = 'x'.repeat(IMAGE_MAX_UPLOAD_SIZE + 1);
+    const inputFile = new File(
+      [`<svg xmlns="http://www.w3.org/2000/svg"><!--${padding}--><circle cx="8" cy="8" r="4"/></svg>`],
+      'large-icon.svg',
+      { type: 'image/svg+xml' },
+    );
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('IMAGE_UPLOAD_SIZE_LIMIT:svg');
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
   it('sanitizes SVG files declared via file.type', async () => {
     const inputFile = new File(
       [
@@ -459,5 +490,58 @@ describe('stripImageMetadata', () => {
 
     await expect(stripImageMetadata(inputFile)).rejects.toThrow('Failed to encode sanitized image');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:input-image');
+  });
+
+  it('progressively downscales PNG when the first encode still exceeds the upload limit', async () => {
+    setMockImageDimensions(1920, 1920);
+    mockToBlobSizes([IMAGE_MAX_UPLOAD_SIZE + 1, IMAGE_MAX_UPLOAD_SIZE - 1]);
+    const inputFile = new File(['raw-image-bytes'], 'large-photo.png', { type: 'image/png' });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result.type).toBe('image/png');
+    expect(mockCanvas.width).toBe(1536);
+    expect(mockCanvas.height).toBe(1536);
+    expect(mockContext.drawImage).toHaveBeenCalledTimes(2);
+    expect(mockCanvas.toBlob).toHaveBeenCalledTimes(2);
+  });
+
+  it('reduces JPEG quality before downscaling dimensions', async () => {
+    mockToBlobSizes([IMAGE_MAX_UPLOAD_SIZE + 1, IMAGE_MAX_UPLOAD_SIZE - 1]);
+    const inputFile = new File(['raw-image-bytes'], 'large-photo.jpg', { type: 'image/jpeg' });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result.type).toBe('image/jpeg');
+    expect(mockContext.drawImage).toHaveBeenCalledTimes(1);
+    expect(mockCanvas.toBlob).toHaveBeenCalledTimes(2);
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[0][2]).toBe(IMAGE_ENCODE_QUALITY);
+    expect((mockCanvas.toBlob as ReturnType<typeof vi.fn>).mock.calls[1][2]).toBe(IMAGE_COMPRESSION_QUALITY_STEPS[1]);
+  });
+
+  it('throws when progressive compression cannot get below the upload limit', async () => {
+    mockToBlobSizes([IMAGE_MAX_UPLOAD_SIZE + 1]);
+    const inputFile = new File(['raw-image-bytes'], 'stubborn.jpg', { type: 'image/jpeg' });
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('IMAGE_UPLOAD_SIZE_LIMIT:raster');
+  });
+
+  it('rejects GIF files over the upload limit after sanitization', async () => {
+    const inputFile = new File(['original-content'], 'animated.gif', { type: 'image/gif' });
+    Object.defineProperty(inputFile, 'size', { value: IMAGE_MAX_UPLOAD_SIZE + 1 });
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('IMAGE_UPLOAD_SIZE_LIMIT:gif');
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
+  });
+
+  it('rejects animated WebP over the upload limit after sanitization', async () => {
+    const animatedWebp = buildWebpBytes([
+      { type: 'ANIM', payload: new Uint8Array([0, 0, 0, 0, 0, 0]) },
+      { type: 'VP8 ', payload: new Uint8Array(IMAGE_MAX_UPLOAD_SIZE + 1) },
+    ]);
+    const inputFile = new File([animatedWebp], 'loop.webp', { type: 'image/webp' });
+
+    await expect(stripImageMetadata(inputFile)).rejects.toThrow('IMAGE_UPLOAD_SIZE_LIMIT:animated-webp');
+    expect(mockCanvas.toBlob).not.toHaveBeenCalled();
   });
 });

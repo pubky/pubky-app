@@ -18,7 +18,7 @@ const postActionsButtonVariants = cva('', {
   variants: {
     variant: {
       default: 'border-none shadow-xs',
-      visual: 'border-white/10 bg-black/40 text-white shadow-none hover:bg-black/55',
+      visual: 'border-white/10 bg-black/40 text-white shadow-none hover:border-white/30 hover:bg-black/70',
     },
   },
   defaultVariants: {

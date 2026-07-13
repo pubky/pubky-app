@@ -473,11 +473,8 @@
       "createInBrowser": "Create keys in browser",
       "continueWithRing": "Continue with Pubky Ring",
       "inviteCodeApplied": "Invite code applied",
-
       "invalidInviteCode": "Invalid invite code",
-
       "usedInviteCode": "Invite code already used",
-
       "verificationFailed": "Couldn't verify invite code"
     },
     "createProfile": {
@@ -1081,7 +1078,12 @@
       "maxFiles": "Maximum {max} files allowed",
       "maxFilesPartial": "Maximum {max} files allowed. Some files were not added.",
       "unsupportedType": "Unsupported file type for {name}. Supported: {formats}.",
-      "fileTooLarge": "{name} exceeds the {maxSize} limit."
+      "fileTooLarge": "{name} exceeds the {maxSize} limit.",
+      "imageTooLargeRaw": "Image is too large. Maximum size is {maxSize}.",
+      "imageTooLargeGif": "This GIF exceeds the {maxSize} upload limit and cannot be compressed. Please use a smaller GIF.",
+      "imageTooLargeAnimatedWebp": "This animated WebP exceeds the {maxSize} upload limit and cannot be compressed. Please use a smaller file.",
+      "imageTooLargeSvg": "This SVG exceeds the {maxSize} upload limit after sanitization. Please use a smaller file.",
+      "imageTooLargeRaster": "Image could not be compressed below {maxSize}. Please use a smaller or lower-resolution image."
     },
     "status": {
       "updateFailed": "Could not update status. Try again.",
@@ -1339,7 +1341,7 @@
       "addImage": "Add image",
       "removeImage": "Remove image",
       "coverImageInvalid": "Cover image must be an image file.",
-      "coverImageTooLarge": "Cover image is too large.",
+      "coverImageTooLarge": "Cover image is too large. Maximum size is {maxSize}.",
       "nameRequired": "Collection title is required.",
       "cancel": "Cancel",
       "save": "Save collection",

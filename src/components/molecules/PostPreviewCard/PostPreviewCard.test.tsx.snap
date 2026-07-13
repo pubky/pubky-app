@@ -1,5 +1,22 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`PostPreviewCard - Snapshots > matches snapshot for a collection original 1`] = `
+<div
+  class="min-w-0"
+  data-cy="post-preview-card"
+  data-testid="container"
+>
+  <div
+    class="w-full"
+    data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+    data-interactive-actions="true"
+    data-post-id="0034BBBDFK83G"
+    data-presentation="embed"
+    data-testid="collection-card"
+  />
+</div>
+`;
+
 exports[`PostPreviewCard - Snapshots > matches snapshot with default props 1`] = `
 <div
   aria-label="View original post"

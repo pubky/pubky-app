@@ -9,9 +9,9 @@ import type { PostContentOrganismProps } from './PostContent.types';
  * PostContent - Renders post content with repost preview support.
  *
  * **Rendering logic:**
- * - **Regular post**: Renders PostContentBase (text, embeds, attachments)
- * - **Repost with content (quote)**: Renders PostContentBase (quote text) + PostPreviewCard (original post)
- * - **Repost without content (plain repost)**: PostContentBase returns null + PostPreviewCard (original post)
+ * - **Repost with content (quote)**: PostContentBase (quote text) + PostPreviewCard (original)
+ * - **Repost without content (plain repost)**: PostContentBase returns null + PostPreviewCard
+ * - **Collection original**: PostPreviewCard renders embed `CollectionCard` (no post shell)
  */
 export function PostContent({ postId, className, textClassName }: PostContentOrganismProps) {
   // Get repost information
@@ -26,9 +26,7 @@ export function PostContent({ postId, className, textClassName }: PostContentOrg
       <PostContentBase postId={postId} className={className} textClassName={textClassName} />
 
       {/* Show original post preview for reposts */}
-      {shouldRenderRepostPreview && (
-        <PostPreviewCard postId={originalPostId} className={'bg-muted'} contrast="strong" />
-      )}
+      {shouldRenderRepostPreview && <PostPreviewCard postId={originalPostId} className="bg-muted" />}
     </>
   );
 }

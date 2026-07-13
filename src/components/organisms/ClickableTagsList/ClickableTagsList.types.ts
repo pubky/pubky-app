@@ -30,6 +30,8 @@ export interface ClickableTagsListProps {
   showAddButton?: boolean;
   /** Start in add button mode and open input on click (used with showAddButton) */
   addMode?: boolean;
+  /** When true, tags render without toggle/add interactions (display only). */
+  readOnly?: boolean;
   /** Show close button on tags */
   showTagClose?: boolean;
   /** Custom className */

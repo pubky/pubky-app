@@ -11,8 +11,8 @@ interface PostMainLayoutProviderProps {
 }
 
 /**
- * Provides the surface-level tags layout to every PostMain rendered beneath it,
- * including those reached via the recursive ThreadTree -> ReplyWithNested chain.
+ * Provides the surface-level tags layout to every post renderer beneath it,
+ * including PostMain, CollectionCard, QuickReply, and PostInput.
  */
 export function PostMainLayoutProvider({ tagsLayout, children }: PostMainLayoutProviderProps) {
   return <PostMainLayoutContext.Provider value={tagsLayout}>{children}</PostMainLayoutContext.Provider>;
