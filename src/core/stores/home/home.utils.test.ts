@@ -7,6 +7,7 @@ import {
   getStreamIdFromFilters,
   matchesFilters,
   parseStreamId,
+  postKindBelongsToStream,
 } from './home.utils';
 
 describe('filters.utils', () => {
@@ -317,6 +318,30 @@ describe('filters.utils', () => {
 
         expect(parsed).toEqual({ sort, reach, content });
       });
+    });
+  });
+
+  describe('postKindBelongsToStream', () => {
+    it('allows any kind when the stream content filter is all', () => {
+      expect(postKindBelongsToStream('short', PostStreamTypes.TIMELINE_ALL_ALL)).toBe(true);
+      expect(postKindBelongsToStream('collection', PostStreamTypes.TIMELINE_ALL_ALL)).toBe(true);
+    });
+
+    it('matches post kind to the stream content filter', () => {
+      expect(postKindBelongsToStream('collection', PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(true);
+      expect(postKindBelongsToStream('short', PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(false);
+      expect(postKindBelongsToStream('short', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(true);
+      expect(postKindBelongsToStream('collection', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
+    });
+
+    it('rejects unknown post kinds when the stream has a specific content filter', () => {
+      expect(postKindBelongsToStream('unknown', PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(false);
+      expect(postKindBelongsToStream('unknown', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
+    });
+
+    it('allows any kind for unparseable stream ids', () => {
+      expect(postKindBelongsToStream('short', 'author:pubky123')).toBe(true);
+      expect(postKindBelongsToStream('collection', 'pubky123:author:collection')).toBe(true);
     });
   });
 });

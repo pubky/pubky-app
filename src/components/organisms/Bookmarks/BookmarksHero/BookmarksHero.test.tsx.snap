@@ -37,7 +37,8 @@ exports[`BookmarksHero - Snapshots > matches the snapshot with count and avatar 
         Alice
       </div>
       <div
-        class="flex shrink-0 items-center gap-1 text-secondary-foreground"
+        aria-label="15 posts"
+        class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
         data-testid="container"
       >
         <svg
@@ -61,12 +62,16 @@ exports[`BookmarksHero - Snapshots > matches the snapshot with count and avatar 
           />
         </svg>
         <span
-          class="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+          class="text-xs leading-4 font-medium tracking-widest uppercase"
           data-testid="typography"
         >
           15
-           
-          posts
+          <span
+            class="hidden sm:inline"
+            data-testid="typography"
+          >
+             posts
+          </span>
         </span>
       </div>
     </div>

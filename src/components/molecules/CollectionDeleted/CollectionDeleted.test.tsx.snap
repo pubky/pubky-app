@@ -2,7 +2,7 @@
 
 exports[`CollectionDeleted - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="relative block h-full w-full lg:max-w-187"
+  class="relative block h-full w-full"
   data-testid="container"
 >
   <div

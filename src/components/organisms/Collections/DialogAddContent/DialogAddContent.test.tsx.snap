@@ -174,7 +174,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
   >
     <div
       aria-labelledby="radix-normalized"
-      class="relative z-50 duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 rounded-t-lg border border-b-0 p-6 sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 flex w-3xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
+      class="relative z-50 duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 rounded-t-lg border border-b-0 p-6 sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 flex w-xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
       data-cy="dialog-content"
       data-slot="dialog-content"
       data-state="open"

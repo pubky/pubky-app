@@ -1,5 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { usePost } from './usePost';
 
 // Hoist mock data and functions
@@ -666,6 +669,34 @@ describe('usePost', () => {
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to create post:', mockError);
       expect(result.current.isSubmitting).toBe(false);
       expect(result.current.content).toBe('Post content'); // Content should not be cleared on error
+    });
+
+    it('should toast a localized size-limit message when an attachment exceeds the upload limit', async () => {
+      const { result } = renderHook(() => usePost());
+      mockPostControllerCreate.mockRejectedValueOnce(
+        Err.validation(ValidationErrorCode.INVALID_INPUT, 'Image sanitization failed', {
+          service: ErrorService.Local,
+          operation: 'toFileAttachment',
+          context: { imageUploadSizeLimitKind: 'gif' },
+          cause: new Error('IMAGE_UPLOAD_SIZE_LIMIT:gif'),
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('Post content');
+        result.current.setAttachments([new File(['x'], 'animated.gif', { type: 'image/gif' })]);
+      });
+
+      await act(async () => {
+        await result.current.post({
+          onSuccess: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.',
+      });
     });
 
     it('should set isSubmitting to true during post submission and set to false after submission', async () => {

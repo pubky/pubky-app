@@ -1,7 +1,5 @@
 import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 import {
-  NETWORK_RUNTIME_ENV_NAMES,
-  NEXT_PUBLIC_ENV_NAMES,
   PUBKY_RUNTIME_ENV_NAMES,
   type RuntimeConfig,
   runtimeConfigValueSchema,
@@ -15,7 +13,8 @@ import {
  * - Server: reads non-inlined `PUBKY_RUNTIME_*` env at request time, validates, and memoizes.
  *   The same memoized object is serialized into the HTML (see `serializeRuntimeConfig`).
  * - Client: reads the injected `window.__PUBKY_CONFIG__`, validates, and memoizes.
- * - dev/test: falls back to `NEXT_PUBLIC_*` (honoring `.env.local` / `src/config/test.ts`).
+ * - dev/test: reads the same `PUBKY_RUNTIME_*` names leniently (honoring `.env.local` /
+ *   `src/config/test.ts` partial overrides), with staging defaults filling the gaps.
  *
  * This module must NOT import `Env` (keeps the import graph a leaf, avoids the env<->logger cycle).
  */
@@ -56,43 +55,29 @@ function isProductionBuildPhase(): boolean {
   return process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD;
 }
 
-/**
- * dev/test fallback: parse `NEXT_PUBLIC_*` (readable at runtime under `next dev` and Vitest)
- * through the defaulted schema, so local `.env.local` and test overrides are honored and
- * staging defaults fill the gaps.
- */
-function parseFallbackConfig(
-  runtimeOverrides: Partial<Record<keyof RuntimeConfig, string | undefined>> = {},
-): RuntimeConfig {
-  const input: Record<string, string | undefined> = {};
-  for (const key of Object.keys(NEXT_PUBLIC_ENV_NAMES) as (keyof RuntimeConfig)[]) {
-    input[key] = process.env[NEXT_PUBLIC_ENV_NAMES[key]];
-  }
-  for (const key of Object.keys(runtimeOverrides) as (keyof RuntimeConfig)[]) {
-    const value = runtimeOverrides[key];
-    if (value !== undefined) input[key] = value;
-  }
-  return runtimeEnvInputSchemaWithDefaults.parse(input);
-}
-
-/** Exported for unit tests; prefer `getRuntimeConfig()` in app code. */
-export function readServerConfig(): RuntimeConfig {
+/** Collect the raw `PUBKY_RUNTIME_*` string values keyed by config field name. */
+function readRuntimeEnvInput(): Record<string, string | undefined> {
   const input: Record<string, string | undefined> = {};
   for (const key of Object.keys(PUBKY_RUNTIME_ENV_NAMES) as (keyof RuntimeConfig)[]) {
     input[key] = process.env[PUBKY_RUNTIME_ENV_NAMES[key]];
   }
+  return input;
+}
 
-  const anyRequiredNetworkPresent = (
-    Object.keys(NETWORK_RUNTIME_ENV_NAMES) as (keyof typeof NETWORK_RUNTIME_ENV_NAMES)[]
-  ).some((key) => {
-    const value = process.env[NETWORK_RUNTIME_ENV_NAMES[key]];
-    return value !== undefined && value !== '';
-  });
+/**
+ * dev/test parse: read `PUBKY_RUNTIME_*` through the defaulted schema, so local `.env.local`
+ * and test overrides are honored (partial values layer over staging defaults).
+ */
+function parseLenientConfig(): RuntimeConfig {
+  return runtimeEnvInputSchemaWithDefaults.parse(readRuntimeEnvInput());
+}
 
-  // Any required network PUBKY_RUNTIME_* present means we require the whole network tier.
-  // Optional/defaulted runtime values can be set independently and must not trigger this rule.
-  if (anyRequiredNetworkPresent) {
-    const result = runtimeEnvInputSchema.safeParse(input);
+/** Exported for unit tests; prefer `getRuntimeConfig()` in app code. */
+export function readServerConfig(): RuntimeConfig {
+  // Deployed/required mode: strict parse — ALL required network values must be set and valid.
+  // Partial deploy config fails loudly instead of silently resolving to staging defaults.
+  if (isRuntimeConfigRequired() && !isProductionBuildPhase()) {
+    const result = runtimeEnvInputSchema.safeParse(readRuntimeEnvInput());
     if (!result.success) {
       throw new Error(`Runtime config is incomplete or invalid. ${REQUIRED_NETWORK_ENV_MESSAGE}`, {
         cause: result.error,
@@ -101,13 +86,7 @@ export function readServerConfig(): RuntimeConfig {
     return result.data;
   }
 
-  if (isRuntimeConfigRequired() && !isProductionBuildPhase()) {
-    throw new Error(
-      `Runtime config is required but no required PUBKY_RUNTIME_* network variables are set. ${REQUIRED_NETWORK_ENV_MESSAGE}`,
-    );
-  }
-
-  return parseFallbackConfig(input);
+  return parseLenientConfig();
 }
 
 /** Exported for unit tests; prefer `getRuntimeConfig()` in app code. */
@@ -121,7 +100,7 @@ export function readClientConfig(): RuntimeConfig {
     throw new Error('Runtime config is required but window.__PUBKY_CONFIG__ was not injected.');
   }
 
-  return parseFallbackConfig();
+  return parseLenientConfig();
 }
 
 /**

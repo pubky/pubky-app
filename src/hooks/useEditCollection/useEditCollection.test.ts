@@ -1,6 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CREATE_COLLECTION_FORM_FIELDS } from '@/hooks/useCreateCollection/useCreateCollection.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { useEditCollection } from './useEditCollection';
 
 const mocks = vi.hoisted(() => ({
@@ -27,6 +30,8 @@ const translations: Record<string, string> = {
   'collections.new.nameRequired': 'Collection title is required.',
   'collections.edit.updated': 'Collection updated',
   'collections.edit.updateFailed': 'Failed to update collection.',
+  'toast.file.imageTooLargeGif':
+    'This GIF exceeds the {maxSize} upload limit and cannot be compressed. Please use a smaller GIF.',
   'toast.success': 'Success',
   'toast.error': 'Error',
 };
@@ -187,6 +192,33 @@ describe('useEditCollection', () => {
     expect(mocks.toast).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to update collection.',
+    });
+  });
+
+  it('toasts a localized size-limit message when cover upload exceeds the limit', async () => {
+    mocks.commitEditCollection.mockRejectedValue(
+      Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
+        service: ErrorService.Local,
+        operation: 'commitEditCollection',
+        cause: Err.validation(ValidationErrorCode.INVALID_INPUT, 'Image sanitization failed', {
+          service: ErrorService.Local,
+          operation: 'toFileAttachment',
+          context: { imageUploadSizeLimitKind: 'gif' },
+          cause: new Error('IMAGE_UPLOAD_SIZE_LIMIT:gif'),
+        }),
+      }),
+    );
+
+    const { result } = renderHook(() => useEditCollection({ compositeCollectionId: COMPOSITE_ID }));
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    expect(mocks.toast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.',
     });
   });
 

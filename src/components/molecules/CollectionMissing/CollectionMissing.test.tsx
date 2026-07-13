@@ -51,12 +51,12 @@ describe('CollectionMissing', () => {
     expect(screen.getByTestId('card-content')).toBeInTheDocument();
   });
 
-  it('matches the regular CollectionCard outer footprint (full width, lg max-width)', () => {
+  it('matches the regular CollectionCard outer footprint (full width)', () => {
     render(<CollectionMissing />);
     const container = screen.getByTestId('container');
     // Must mirror CollectionCard's outer wrapper so the not-found slot has
     // the same footprint in any grid it lands in.
-    expect(container).toHaveClass('block', 'h-full', 'w-full', 'lg:max-w-187');
+    expect(container).toHaveClass('block', 'h-full', 'w-full');
   });
 
   it('centers the not-found message within the card', () => {
