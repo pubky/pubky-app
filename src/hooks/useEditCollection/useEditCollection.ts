@@ -14,6 +14,7 @@ import {
 } from '@/hooks/useCreateCollection/useCreateCollection.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isAppError } from '@/libs/error/error.utils';
+import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
 import { useToast } from '@/molecules/Toaster/use-toast';
@@ -49,6 +50,7 @@ type UseEditCollectionResult = {
 export function useEditCollection({ compositeCollectionId }: UseEditCollectionParams): UseEditCollectionResult {
   const tEdit = useTranslations('collections.edit');
   const tForm = useTranslations('collections.new');
+  const tFile = useTranslations('toast.file');
   const { toast } = useToast();
 
   const { postDetails } = usePostDetails(compositeCollectionId);
@@ -140,7 +142,9 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
         Logger.error('[useEditCollection] Failed to edit collection', { error });
         toast({
           variant: 'error',
-          description: isAppError(error) ? error.message : tEdit('updateFailed'),
+          description:
+            getImageUploadSizeLimitToastMessage(error, tFile) ??
+            (isAppError(error) ? error.message : tEdit('updateFailed')),
         });
       }
     })();

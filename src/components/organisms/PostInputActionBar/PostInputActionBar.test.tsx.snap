@@ -2,7 +2,7 @@
 
 exports[`PostInputActionBar - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div
-  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+  class="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -180,7 +180,7 @@ exports[`PostInputActionBar - Mobile Snapshots > matches snapshot on mobile view
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with all callbacks 1`] = `
 <div
-  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+  class="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -354,7 +354,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with all callbacks 1`
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+  class="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -532,7 +532,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with default props 1`
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with disabled post button 1`] = `
 <div
-  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+  class="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -710,7 +710,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with disabled post bu
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with hideArticleButton prop 1`] = `
 <div
-  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+  class="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -851,7 +851,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with hideArticleButto
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with isArticle prop 1`] = `
 <div
-  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+  class="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -951,7 +951,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with isArticle prop 1
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with isEdit prop 1`] = `
 <div
-  class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+  class="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center"
   data-override-defaults="true"
   data-testid="container"
 >

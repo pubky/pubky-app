@@ -56,6 +56,16 @@ export function shouldEnableSentry(): boolean {
 }
 
 /**
+ * Whether `Sentry.init()` actually ran in the CURRENT runtime (browser or Node).
+ * `shouldEnableSentry()` says whether Sentry SHOULD be enabled; this says whether init
+ * really happened. The two diverge when init is skipped or fails — e.g. the client init
+ * evaluating before `window.__PUBKY_CONFIG__` was injected — which otherwise fails silently.
+ */
+export function isSentryInitialized(): boolean {
+  return Sentry.getClient() !== undefined;
+}
+
+/**
  * Resolved environment tag attached to every event.
  * Falls back to NODE_ENV when the runtime sentryEnvironment is unset.
  * Internal: consumed only by getSentryInitBase() in the same file (which only runs after

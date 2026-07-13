@@ -6,9 +6,9 @@ import { getModeratedTags, getModerationId } from '@/config/moderation';
  */
 export const detectModerationFromTags = (tags: { label: string; taggers: string[] }[] | null | undefined): boolean => {
   if (!tags) return false;
-  const moderatedTagSet = new Set(getModeratedTags());
+  const moderatedTags = getModeratedTags();
   const moderationId = getModerationId();
-  return tags.some((tag) => moderatedTagSet.has(tag.label) && tag.taggers.includes(moderationId));
+  return tags.some((tag) => moderatedTags.includes(tag.label) && tag.taggers.includes(moderationId));
 };
 
 /**

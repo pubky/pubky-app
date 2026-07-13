@@ -28,16 +28,16 @@ export function RootContainer({ children, locale = 'en' }: RootContainerProps) {
     <Container as="html" lang={locale} dir={dir}>
       <Container as="body" className={`${interTight.variable} antialiased`}>
         {/*
-          Publish runtime config before any Next.js bundle executes. Next injects
-          beforeInteractive scripts into <head>, even when declared in the body.
+          Publish runtime config before any Next.js bundle executes. This must stay a RAW
+          <script> element rendered first in <body>: App Router's next/script with
+          strategy="beforeInteractive" serializes inline content into the `self.__next_s`
+          queue, which the client runtime executes only AFTER the main bundle's module scope
+          — i.e. after instrumentation-client.ts has already evaluated (and missed the
+          config, silently disabling client Sentry). A raw inline script is emitted as-is in
+          the SSR HTML and executes during document parsing, before any async bundle.
           NOTE: if a Content-Security-Policy is added later, this inline script needs a nonce.
         */}
-        {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
-        <Script
-          id="pubky-runtime-config"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: serializeRuntimeConfig() }}
-        />
+        <script id="pubky-runtime-config" dangerouslySetInnerHTML={{ __html: serializeRuntimeConfig() }} />
         {plausibleDomain && plausibleScriptUrl && (
           <Script data-domain={plausibleDomain} src={plausibleScriptUrl} strategy="afterInteractive" />
         )}

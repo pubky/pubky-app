@@ -50,6 +50,35 @@ vi.mock('@/organisms/PostHeader/PostHeader', () => {
   };
 });
 
+vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => {
+  return {
+    CollectionCard: vi.fn(
+      ({
+        authorPubky,
+        postId,
+        presentation,
+        interactiveActions,
+        className,
+      }: {
+        authorPubky: string;
+        postId: string;
+        presentation?: string;
+        interactiveActions?: boolean;
+        className?: string;
+      }) => (
+        <div
+          data-testid="collection-card"
+          data-author-pubky={authorPubky}
+          data-post-id={postId}
+          data-presentation={presentation}
+          data-interactive-actions={String(interactiveActions ?? true)}
+          className={className}
+        />
+      ),
+    ),
+  };
+});
+
 // Mock atoms
 vi.mock('@/atoms/Card/Card', () => {
   return {
@@ -98,12 +127,16 @@ const mockUsePostDetails = vi.mocked(usePostDetails);
 // Minimal resolved post — PostHeader / PostContentBase are mocked, so only the
 // non-null `postDetails` (and `isLoading: false`) matters for the missing check.
 const resolvedPost = {
-  postDetails: { id: 'test-post-123' } as never,
+  postDetails: { id: 'test-post-123', kind: 'short' } as never,
   isLoading: false,
 };
 
-const resolvedCollectionPost = {
-  postDetails: { id: 'owner123:collection456', kind: 'collection' } as never,
+const AUTHOR_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+const COLLECTION_POST_ID = '0034BBBDFK83G';
+const COLLECTION_COMPOSITE_ID = `${AUTHOR_PUBKY}:${COLLECTION_POST_ID}`;
+
+const collectionPost = {
+  postDetails: { id: COLLECTION_COMPOSITE_ID, kind: 'collection' } as never,
   isLoading: false,
 };
 
@@ -168,46 +201,6 @@ describe('PostPreviewCard', () => {
     expect(mockNavigateToCollection).not.toHaveBeenCalled();
   });
 
-  it('navigates collection previews to the collection page on click', () => {
-    mockUsePostDetails.mockReturnValue(resolvedCollectionPost);
-    render(<PostPreviewCard postId="owner123:collection456" />);
-
-    const card = screen.getByTestId('card');
-    fireEvent.click(card);
-
-    expect(mockNavigateToCollection).toHaveBeenCalledWith('owner123:collection456');
-    expect(mockNavigateToPost).not.toHaveBeenCalled();
-  });
-
-  it('navigates collection previews to the collection page on Enter key', () => {
-    mockUsePostDetails.mockReturnValue(resolvedCollectionPost);
-    render(<PostPreviewCard postId="owner123:collection456" />);
-
-    const card = screen.getByTestId('card');
-    fireEvent.keyDown(card, { key: 'Enter' });
-
-    expect(mockNavigateToCollection).toHaveBeenCalledWith('owner123:collection456');
-    expect(mockNavigateToPost).not.toHaveBeenCalled();
-  });
-
-  it('navigates collection previews to the collection page on Space key', () => {
-    mockUsePostDetails.mockReturnValue(resolvedCollectionPost);
-    render(<PostPreviewCard postId="owner123:collection456" />);
-
-    const card = screen.getByTestId('card');
-    fireEvent.keyDown(card, { key: ' ' });
-
-    expect(mockNavigateToCollection).toHaveBeenCalledWith('owner123:collection456');
-    expect(mockNavigateToPost).not.toHaveBeenCalled();
-  });
-
-  it('labels collection previews as collection links', () => {
-    mockUsePostDetails.mockReturnValue(resolvedCollectionPost);
-    render(<PostPreviewCard postId="owner123:collection456" />);
-
-    expect(screen.getByTestId('card')).toHaveAttribute('aria-label', 'View collection');
-  });
-
   it('does not navigate on other keys', () => {
     render(<PostPreviewCard postId="test-post-123" />);
 
@@ -238,9 +231,36 @@ describe('PostPreviewCard', () => {
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('post-content-base')).toBeInTheDocument();
   });
+
+  it('renders CollectionCard directly for collection originals without the post preview shell', () => {
+    mockUsePostDetails.mockReturnValue(collectionPost);
+
+    render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} className="bg-card" />);
+
+    expect(screen.getByTestId('collection-card')).toHaveAttribute('data-presentation', 'embed');
+    expect(screen.getByTestId('collection-card')).toHaveAttribute('data-interactive-actions', 'true');
+    expect(screen.getByTestId('collection-card')).toHaveAttribute('data-author-pubky', AUTHOR_PUBKY);
+    expect(screen.getByTestId('collection-card')).toHaveAttribute('data-post-id', COLLECTION_POST_ID);
+    expect(screen.getByTestId('collection-card')).toHaveClass('w-full');
+    expect(screen.queryByTestId('card')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-content-base')).not.toBeInTheDocument();
+  });
+
+  it('passes interactiveActions={false} to CollectionCard when set', () => {
+    mockUsePostDetails.mockReturnValue(collectionPost);
+
+    render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} interactiveActions={false} />);
+
+    expect(screen.getByTestId('collection-card')).toHaveAttribute('data-interactive-actions', 'false');
+  });
 });
 
 describe('PostPreviewCard - Snapshots', () => {
+  beforeEach(() => {
+    mockUsePostDetails.mockReturnValue(resolvedPost);
+  });
+
   it('matches snapshot with default props', () => {
     const { container } = render(<PostPreviewCard postId="snapshot-post-id" />);
     expect(container.firstChild).toMatchSnapshot();
@@ -248,6 +268,13 @@ describe('PostPreviewCard - Snapshots', () => {
 
   it('matches snapshot with extra className', () => {
     const { container } = render(<PostPreviewCard postId="snapshot-post-id" className="bg-muted" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for a collection original', () => {
+    mockUsePostDetails.mockReturnValue(collectionPost);
+
+    const { container } = render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
