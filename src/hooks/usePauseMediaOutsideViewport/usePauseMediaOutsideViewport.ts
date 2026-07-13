@@ -40,6 +40,7 @@ export const usePauseMediaOutsideViewport = () => {
 
   useEffect(() => {
     if (!container) return;
+    if (typeof IntersectionObserver === 'undefined') return;
 
     let mediaObserver: MutationObserver | null = null;
     const stopWatchingMedia = () => {
@@ -58,7 +59,7 @@ export const usePauseMediaOutsideViewport = () => {
 
         // Some embeds mount their media asynchronously. Keep newly added
         // players paused until the card returns to the viewport.
-        if (!mediaObserver) {
+        if (!mediaObserver && typeof MutationObserver !== 'undefined') {
           mediaObserver = new MutationObserver(() => pauseMedia(container));
           mediaObserver.observe(container, { childList: true, subtree: true });
         }

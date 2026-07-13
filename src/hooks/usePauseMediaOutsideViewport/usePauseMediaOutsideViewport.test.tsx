@@ -40,7 +40,25 @@ const markNativeMediaAsPlaying = (container: HTMLElement) => {
 describe('usePauseMediaOutsideViewport', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     intersectionCallback = null;
+  });
+
+  it('renders without viewport handling when IntersectionObserver is unavailable', () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
+
+    expect(() => render(<MediaEmbed />)).not.toThrow();
+  });
+
+  it('pauses existing media without observing late mounts when MutationObserver is unavailable', () => {
+    vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+    vi.stubGlobal('MutationObserver', undefined);
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+    const { container } = render(<MediaEmbed />);
+    markNativeMediaAsPlaying(container);
+
+    expect(() => intersectionCallback?.([{ isIntersecting: false } as IntersectionObserverEntry])).not.toThrow();
+    expect(pause).toHaveBeenCalledTimes(2);
   });
 
   it('pauses native and supported iframe media when outside the viewport', () => {
