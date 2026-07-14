@@ -15,6 +15,6 @@ export function useRestoreLocksAuth(lockServerPubky: string | null): void {
 
   useEffect(() => {
     if (!hasHydrated || !lockServerPubky) return;
-    LocksAuthController.restorePersistedLocksSession({ lockServerPubky });
+    void LocksAuthController.restorePersistedLocksSession({ lockServerPubky });
   }, [hasHydrated, lockServerPubky]);
 }

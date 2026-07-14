@@ -84,13 +84,13 @@ export class LocksAuthController {
    * the UI shows unauthenticated rather than a broken session. Restore is local (no network), so no
    * retry is needed.
    */
-  static restorePersistedLocksSession({ lockServerPubky }: TLocksServerParams): void {
+  static async restorePersistedLocksSession({ lockServerPubky }: TLocksServerParams): Promise<void> {
     const store = useLocksAuthStore.getState();
     const secret = store.selectLocksSessionSecret();
     if (!secret || store.selectLocksSession() !== null) return;
 
     try {
-      store.setSession(LocksAuthApplication.restoreSession({ lockServerPubky, secret }));
+      store.setSession(await LocksAuthApplication.restoreSession({ lockServerPubky, secret }));
     } catch {
       // Malformed/stale secret — already reported by the service Err factory; clear it so the UI
       // shows unauthenticated rather than a broken session.

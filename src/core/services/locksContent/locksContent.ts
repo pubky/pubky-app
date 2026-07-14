@@ -3,6 +3,7 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
+import { ensureLocksSdkReady } from '@/libs/locks/locksSdk';
 import type {
   TCreateContentLockParams,
   TCreateContentLockResult,
@@ -53,6 +54,7 @@ export class LocksContentService {
     bytes,
   }: TRegisterGuardedResourceParams): Promise<TRegisterGuardedResourceResult> {
     try {
+      await ensureLocksSdkReady();
       // TODO:[Locks] #2040 — same untyped-SDK cast as `createContentLock` below.
       const response = (await session.creator.registerGuardedResource(
         new RegisterGuardedResourceOptions(path, contentType, bytes),
@@ -88,6 +90,7 @@ export class LocksContentService {
     lockServer,
   }: TCreateContentLockParams): Promise<TCreateContentLockResult> {
     try {
+      await ensureLocksSdkReady();
       // primaryResource is the JSON file holding the `PubkyAppPost` object (the lock's entry point).
       let builder = new CreateContentLockRequestBuilder().primaryResource(primaryResource);
       for (const resource of secondaryResources) {

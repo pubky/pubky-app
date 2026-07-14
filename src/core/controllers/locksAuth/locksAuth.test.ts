@@ -138,11 +138,11 @@ describe('LocksAuthController', () => {
   });
 
   describe('restorePersistedLocksSession', () => {
-    it('rebuilds and sets the live session from a persisted secret', () => {
+    it('rebuilds and sets the live session from a persisted secret', async () => {
       useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
       mocks.restoreSession.mockReturnValue(fakeSession);
 
-      LocksAuthController.restorePersistedLocksSession({ lockServerPubky: 'lockpubky' });
+      await LocksAuthController.restorePersistedLocksSession({ lockServerPubky: 'lockpubky' });
 
       expect(mocks.restoreSession).toHaveBeenCalledWith({ lockServerPubky: 'lockpubky', secret: 'secret-abc' });
       expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);

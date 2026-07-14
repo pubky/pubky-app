@@ -122,7 +122,7 @@ export function DialogLocksAuth({ open, onOpenChange, lockServerPubky, onSuccess
                 // The other flags let /connect run JS, submit its approval form, and open Pubky Ring.
                 // TODO:[Locks] #2001 — verify this sandbox set against the live /connect flow.
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                className="h-[420px] w-full rounded-md border-0 bg-white"
+                className="h-[420px] w-full"
               />
             ) : (
               <LoaderCircle className="size-8 animate-spin text-brand" />

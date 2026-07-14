@@ -9,6 +9,7 @@ import {
 import { getHomeserver, getPkarrRelays, getTestnet } from '@/config/network';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
+import { ensureLocksSdkReady } from '@/libs/locks/locksSdk';
 import type {
   TExchangeSessionCodeParams,
   TGenerateConnectUrlParams,
@@ -45,6 +46,7 @@ export class LocksAuthService {
    */
   static async generateConnectUrl({ lockServerPubky, returnTo, state }: TGenerateConnectUrlParams): Promise<string> {
     try {
+      await ensureLocksSdkReady();
       const locks = this.buildLocksClient(lockServerPubky);
       const url = await locks.createConnectUrl(new ConnectUrlOptions(returnTo, state));
       const withDelivery = new URL(url);
@@ -62,6 +64,7 @@ export class LocksAuthService {
     state,
   }: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
     try {
+      await ensureLocksSdkReady();
       const locks = this.buildLocksClient(lockServerPubky);
       const session = await locks.exchangeFrontendSessionCode(new ExchangeFrontendSessionCodeOptions(code, state));
       // secret is freshly minted here — export it so the caller can persist it.
@@ -72,8 +75,9 @@ export class LocksAuthService {
   }
 
   /** Restores a Locks session from a persisted bearer secret. */
-  static restoreSession({ lockServerPubky, secret }: TRestoreLocksSessionParams): LocksSdkSession {
+  static async restoreSession({ lockServerPubky, secret }: TRestoreLocksSessionParams): Promise<LocksSdkSession> {
     try {
+      await ensureLocksSdkReady();
       return this.buildLocksClient(lockServerPubky).restoreSession(secret);
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksAuthService.restoreSession');
@@ -96,6 +100,7 @@ export class LocksAuthService {
    */
   static async setLockServiceConfig(session: LocksSdkSession, defaultLockServer: string): Promise<void> {
     try {
+      await ensureLocksSdkReady();
       await session.creator.setLockServicePointer(new SetLockServicePointerOptions(defaultLockServer));
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksAuthService.setLockServiceConfig');

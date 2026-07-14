@@ -21,7 +21,7 @@ export class LocksAuthApplication {
     return LocksAuthService.exchangeSessionCode(params);
   }
 
-  static restoreSession(params: TRestoreLocksSessionParams): LocksSdkSession {
+  static restoreSession(params: TRestoreLocksSessionParams): Promise<LocksSdkSession> {
     return LocksAuthService.restoreSession(params);
   }
 

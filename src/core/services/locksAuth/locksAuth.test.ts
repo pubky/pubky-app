@@ -106,8 +106,8 @@ describe('LocksAuthService', () => {
     );
   });
 
-  it('restoreSession rebuilds a session from a persisted secret', () => {
-    const session = LocksAuthService.restoreSession({ lockServerPubky: 'lockserverpubky', secret: 'secret-abc' });
+  it('restoreSession rebuilds a session from a persisted secret', async () => {
+    const session = await LocksAuthService.restoreSession({ lockServerPubky: 'lockserverpubky', secret: 'secret-abc' });
     expect(session).toBe(mocks.fakeSession);
     expect(mocks.fakeLocks.restoreSession).toHaveBeenCalledWith('secret-abc');
   });
