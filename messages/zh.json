@@ -483,6 +483,10 @@
     }
   },
   "post": {
+    "lock": {
+      "unlock": "解锁",
+      "unavailable": "锁定内容不可用"
+    },
     "placeholder": {
       "reply": "写一条回复...",
       "post": "您在想什么？",

@@ -15,10 +15,9 @@ const PASSWORD_MASK = '••••••';
  * creator wrote is stashed away and this card takes its place, so the composer is free for the public
  * announcement teaser. Purely presentational — nothing here is clickable.
  *
- * TODO:[Locks] #2003 — this duplicates the card shell of the reader's `PostContentLock`
- * (`feat/2003-locks-reader`). That component is bound to `usePostLock` (fetches the lock file, resolves
- * the verifier), which cannot run here: the lock does not exist until Post. Once the reader lands on
- * `dev`, extract one presentational card and have both render it.
+ * This is now the shared lock card — the reader (`PostContentBase` lock branch) renders it too.
+ * TODO:[Locks] #2003 — the unlock flow will add interactive props (`disabled` / `onUnlock` / price)
+ * so the viewer variant can actually unlock, while the composer keeps this inert variant.
  */
 export function LockedPostCard({ title, className }: LockedPostCardProps) {
   const t = useTranslations('post.lock');

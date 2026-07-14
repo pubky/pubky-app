@@ -517,7 +517,8 @@
       "unlock": "Unlock",
       "defaultTitle": "Locked post",
       "titlePlaceholder": "Title",
-      "teaserPlaceholder": "Write a short announcement to tease your content."
+      "teaserPlaceholder": "Write a short announcement to tease your content.",
+      "unavailable": "Lock content is not available"
     },
     "addTag": "add tag",
     "limitReached": "limit reached",

@@ -209,6 +209,13 @@ export type NexusPostDetails = {
   kind: string;
   uri: string;
   attachments: string[] | null;
+  /**
+   * TODO:[Locks] #1998 — top-level URL to the post's public `lock.json`; marks the
+   * post as a lock teaser and is the single source for lock detection
+   * (`!!postDetails.lock`). Nexus does not return this yet (pubky-app-specs#136) —
+   * only the FE mock seeds it today. Remove this note once spec/Nexus deliver it.
+   */
+  lock?: string | null;
 };
 
 /** Aggregate counts for post engagement */

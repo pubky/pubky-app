@@ -25,10 +25,10 @@ export enum ErrorService {
   Nexus = 'nexus',
   Homeserver = 'homeserver',
   Homegate = 'homegate',
+  Locks = 'locks',
   Exchangerate = 'exchangerate',
   Chatwoot = 'chatwoot',
   PubkyAppSpecs = 'pubky-app-specs',
-  Locks = 'locks', // Lock Server (locks-sdk) operations
   Local = 'local', // Client-side operations
   NextJsServer = 'nextjs-server', // Server-side operations
 }

@@ -5,14 +5,14 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
+import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
-import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
 import { PostMissing } from '@/molecules/PostMissing/PostMissing';
-import { PostText } from '@/molecules/PostText/PostText';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
+import { LockContentParser } from '@/pipes/locks/locks.parser';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { PostArticle } from '../PostArticle/PostArticle';
-import { PostAttachments } from '../PostAttachments/PostAttachments';
+import { PostBody } from '../PostBody/PostBody';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
 import { PostContentBaseSkeleton } from './PostContentBase.skeleton';
 import type { PostContentBaseProps } from './PostContentBase.types';
@@ -41,10 +41,39 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
   const isBlurred = postDetails.is_blurred;
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
   const isCollection = postDetails.kind === 'collection';
+  // The announcement's content is the lock teaser envelope ({ lock_title, teaser_description }).
+  // Parse once for both detection and the card/body below; null for non-lock posts.
+  const lockTeaser = LockContentParser.parse(postDetails.content);
+  // TODO:[Locks] #1998 — real detection reads the top-level `lock` URL (the public lock.json),
+  // which Nexus/pubky-app-specs will deliver (see NexusPostDetails.lock). Detection is by `lock`
+  // presence, not `kind` (which now holds the teaser's real type).
+  //
+  // TODO:[Locks][MOCK] — REMOVE. Temporary reader trigger for local visual testing while Nexus
+  // does not send `.lock`: also treat a post whose content is a lock teaser envelope (non-empty
+  // `lock_title`) as a lock post, so the card renders on live Nexus data. Delete `isMockLock` and
+  // the `|| isMockLock`, keeping only `!!postDetails.lock`.
+  const isMockLock = !!lockTeaser?.lock_title;
+  const isLock = !!postDetails.lock || isMockLock;
 
   if (isDeleted) return <PostDeleted />;
 
   if (isBlurred) return <PostContentBlurred postId={postId} className={className} />;
+
+  if (isLock)
+    return (
+      <Container className={cn('min-w-0 gap-3', className)}>
+        {/* Teaser body — rendered like a normal post (PostBody), keyed on the teaser description. */}
+        <PostBody
+          content={lockTeaser?.teaser_description ?? ''}
+          attachments={postDetails.attachments}
+          localAttachments={localAttachments}
+          textClassName={textClassName}
+        />
+        {/* TODO:[Locks] #2003 — inert card for now; the unlock flow adds interactive props
+            (disabled / onUnlock / price) so the viewer can actually unlock. */}
+        <LockedPostCard title={lockTeaser?.lock_title ?? ''} />
+      </Container>
+    );
 
   if (isArticle)
     return (
@@ -65,14 +94,12 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
 
   return (
     <Container className={cn('min-w-0 gap-3', className)}>
-      {/* Post text */}
-      {hasContent && <PostText content={postDetails.content} className={textClassName} />}
-
-      {/* Link previews from text */}
-      {hasContent && <PostLinkEmbeds content={postDetails.content} />}
-
-      {/* Attachments on this post */}
-      <PostAttachments attachments={postDetails.attachments} localAttachments={localAttachments} />
+      <PostBody
+        content={postDetails.content}
+        attachments={postDetails.attachments}
+        localAttachments={localAttachments}
+        textClassName={textClassName}
+      />
     </Container>
   );
 }

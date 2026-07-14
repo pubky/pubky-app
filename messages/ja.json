@@ -535,6 +535,10 @@
       "backToFeed": "フィードに戻る",
       "viewProfile": "プロフィールを見る",
       "exploreTags": "タグを見る"
+    },
+    "lock": {
+      "unlock": "ロック解除",
+      "unavailable": "ロックコンテンツは利用できません"
     }
   },
   "profile": {

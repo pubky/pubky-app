@@ -9,6 +9,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `src/core/`             | `architecture.md`, `local-first.md`, `error-handling.md`, `data-patterns.md`      |
 | `src/components/`       | `components.md`, `skeleton-architecture.md`, `z-index.md`, `component-testing.md` |
 | `src/libs/env/`         | `environment.md`                                                                  |
+| Lock posts              | `Locks.md`                                                                        |
 | Writing tests           | `component-testing.md`                                                            |
 | Making commits          | `commit-message.md`                                                               |
 | Architectural decisions | `adr-guidelines.md`, `adr/`                                                       |
@@ -28,6 +29,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `commit-message.md`        | Conventional commit format                                                                            |
 | `environment.md`           | Environment variable configuration                                                                    |
 | `adr-guidelines.md`        | When and how to write ADRs                                                                            |
+| `Locks.md`                 | Frontend for lock posts — password-gated content (reader and creator)                                 |
 
 ## Architecture Decision Records
 
