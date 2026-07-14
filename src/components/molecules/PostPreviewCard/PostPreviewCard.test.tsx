@@ -162,6 +162,13 @@ describe('PostPreviewCard', () => {
     expect(screen.getByTestId('post-header')).toHaveAttribute('data-time-ago-placement', 'bottom-left');
   });
 
+  it('constrains the preview card surface so long author names can truncate', () => {
+    render(<PostPreviewCard postId="test-post-123" />);
+
+    expect(screen.getByTestId('card')).toHaveClass('w-full', 'max-w-full', 'min-w-0');
+    expect(screen.getByTestId('card-content')).toHaveClass('w-full', 'max-w-full', 'min-w-0');
+  });
+
   it('has correct accessibility attributes', () => {
     render(<PostPreviewCard postId="test-post-123" />);
 

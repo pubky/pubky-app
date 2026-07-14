@@ -456,6 +456,15 @@ describe('PostInputExpandableSection', () => {
     expect(actionBar).toHaveAttribute('data-character-max', '300');
   });
 
+  it('stacks tags above the action bar at all breakpoints', () => {
+    render(<PostInputExpandableSection {...defaultProps} />);
+
+    const layout = screen.getByTestId('post-input-tags').parentElement;
+    expect(layout).toHaveClass('gap-4');
+    expect(layout).not.toHaveClass('md:flex-row');
+    expect(layout).not.toHaveClass('md:gap-0');
+  });
+
   it('does not pass characterLimit when not provided', () => {
     render(<PostInputExpandableSection {...defaultProps} />);
 
