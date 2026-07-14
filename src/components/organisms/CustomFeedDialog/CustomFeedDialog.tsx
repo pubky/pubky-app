@@ -32,6 +32,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
+import { Typography } from '@/atoms/Typography/Typography';
 import { isProfileTagReachSupported } from '@/config/feed';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useCustomFeedMutation } from '@/hooks/useCustomFeedMutation/useCustomFeedMutation';
@@ -442,7 +443,11 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         </Container>
 
         <Container className="gap-y-2">
-          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('filterTags')}</Label>
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('postTags')}</Label>
+
+          <Typography overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
+            {tDialog('postTagsDescription')}
+          </Typography>
 
           <TagInput
             onTagAdd={(tag) => setTags([...tags, tag])}
@@ -475,7 +480,11 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         </Container>
 
         <Container className="gap-y-2">
-          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tFilter('reach.profileTag')}</Label>
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('profileTags')}</Label>
+
+          <Typography overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
+            {tDialog('profileTagsDescription')}
+          </Typography>
 
           <TagInput
             onTagAdd={handleDomainTagAdd}

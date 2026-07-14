@@ -394,6 +394,19 @@ describe('CustomFeedDialog', () => {
     expect(input).toHaveAttribute('placeholder', 'Not your keys...');
   });
 
+  it('renders the post and profile tag section copy from the design', () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    expect(screen.getByText('Post Tags')).toBeInTheDocument();
+    expect(screen.getByText('Filter by what posts are about.')).toBeInTheDocument();
+    expect(screen.getByText('Profile Tags')).toBeInTheDocument();
+    expect(screen.getByText('Filter by how people are tagged.')).toBeInTheDocument();
+  });
+
   it('renders feed name input as enabled in edit mode when customFeed is defined', () => {
     const mockFeed = createMockFeed();
     mockUseCustomFeed.mockReturnValue(mockFeed);

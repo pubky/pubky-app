@@ -796,8 +796,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        Filter on Content Tags
+        Post Tags
       </label>
+      <span
+        class="text-base leading-6 font-medium text-secondary-foreground"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Filter by what posts are about.
+      </span>
       <div
         class="w-48"
         data-current-tags-count="0"
@@ -818,8 +825,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        profile tag
+        Profile Tags
       </label>
+      <span
+        class="text-base leading-6 font-medium text-secondary-foreground"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Filter by how people are tagged.
+      </span>
       <div
         class="w-48"
         data-current-tags-count="0"
@@ -1665,8 +1679,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        Filter on Content Tags
+        Post Tags
       </label>
+      <span
+        class="text-base leading-6 font-medium text-secondary-foreground"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Filter by what posts are about.
+      </span>
       <div
         class="w-48"
         data-current-tags-count="0"
@@ -1687,8 +1708,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        profile tag
+        Profile Tags
       </label>
+      <span
+        class="text-base leading-6 font-medium text-secondary-foreground"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Filter by how people are tagged.
+      </span>
       <div
         class="w-48"
         data-current-tags-count="0"
@@ -2532,8 +2560,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        Filter on Content Tags
+        Post Tags
       </label>
+      <span
+        class="text-base leading-6 font-medium text-secondary-foreground"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Filter by what posts are about.
+      </span>
       <div
         class="w-48"
         data-current-tags-count="2"
@@ -2591,8 +2626,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        profile tag
+        Profile Tags
       </label>
+      <span
+        class="text-base leading-6 font-medium text-secondary-foreground"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Filter by how people are tagged.
+      </span>
       <div
         class="w-48"
         data-current-tags-count="0"
@@ -3466,8 +3508,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        Filter on Content Tags
+        Post Tags
       </label>
+      <span
+        class="text-base leading-6 font-medium text-secondary-foreground"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Filter by what posts are about.
+      </span>
       <div
         class="w-48"
         data-current-tags-count="1"
@@ -3509,8 +3558,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        profile tag
+        Profile Tags
       </label>
+      <span
+        class="text-base leading-6 font-medium text-secondary-foreground"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Filter by how people are tagged.
+      </span>
       <div
         class="w-48"
         data-current-tags-count="0"
@@ -4381,8 +4437,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        Filter on Content Tags
+        Post Tags
       </label>
+      <span
+        class="text-base leading-6 font-medium text-secondary-foreground"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Filter by what posts are about.
+      </span>
       <div
         class="w-48"
         data-current-tags-count="0"
@@ -4403,8 +4466,15 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        profile tag
+        Profile Tags
       </label>
+      <span
+        class="text-base leading-6 font-medium text-secondary-foreground"
+        data-override-defaults="true"
+        data-testid="typography"
+      >
+        Filter by how people are tagged.
+      </span>
       <div
         class="w-48"
         data-current-tags-count="0"
