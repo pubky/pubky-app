@@ -1,3 +1,4 @@
+import type { PubkyAppFeedReach } from 'pubky-app-specs';
 import validationLimits from 'pubky-app-specs/validationLimits.json';
 import {
   isFeedDeleteParams,
@@ -5,9 +6,12 @@ import {
   type TFeedPersistDeleteParams,
   type TFeedPersistParams,
 } from '@/application/feed/feed.types';
+import { isProfileTagReachSupported } from '@/config/feed';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { reachToString } from '@/models/feed/feed.helpers';
+import { normalizeTagList } from './feed.utils';
 
 const MIN_TAGS = 1;
 const MAX_TAGS = validationLimits.feedTagsMaxCount;
@@ -15,42 +19,43 @@ const MAX_TAGS = validationLimits.feedTagsMaxCount;
 export class FeedValidators {
   private constructor() {}
 
-  /**
-   * Validates and normalizes tags for a feed.
-   * Throws an error if validation fails.
-   *
-   * @param tags - Array of tag strings to validate
-   * @returns Normalized array of unique, lowercase tags
-   * @throws Error if tags are invalid
-   */
-  static validateTags(tags: string[] | undefined | null): string[] {
-    if (!tags || tags.length < MIN_TAGS) {
+  /** Validates that a feed has a supported reach and valid independent tag scopes. */
+  static validateTagScope(
+    tags: string[] | undefined | null,
+    domainTags: string[] | undefined | null,
+    reach: PubkyAppFeedReach,
+  ): void {
+    const normalizedTags = normalizeTagList(tags);
+    const normalizedDomainTags = normalizeTagList(domainTags);
+
+    if (normalizedTags.length < MIN_TAGS && normalizedDomainTags.length < MIN_TAGS) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'At least one tag is required', {
         service: ErrorService.PubkyAppSpecs,
-        operation: 'validateTags',
-        context: { tags },
+        operation: 'validateTagScope',
+        context: { tags, domainTags },
       });
     }
 
+    this.validateTagListLimit(normalizedTags, 'post tags');
+    this.validateTagListLimit(normalizedDomainTags, 'profile tags');
+
+    if (normalizedDomainTags.length > 0 && !isProfileTagReachSupported(reachToString(reach))) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Profile tags are not supported for this feed reach', {
+        service: ErrorService.PubkyAppSpecs,
+        operation: 'validateTagScope',
+        context: { reach: reachToString(reach), domainTags },
+      });
+    }
+  }
+
+  private static validateTagListLimit(tags: string[], fieldName: string): void {
     if (tags.length > MAX_TAGS) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, `Maximum ${MAX_TAGS} tags allowed`, {
         service: ErrorService.PubkyAppSpecs,
-        operation: 'validateTags',
-        context: { tags },
+        operation: 'validateTagScope',
+        context: { tags, fieldName },
       });
     }
-
-    const normalizedTags = [...new Set(tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0))];
-
-    if (normalizedTags.length < MIN_TAGS) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'At least one unique tag is required', {
-        service: ErrorService.PubkyAppSpecs,
-        operation: 'validateTags',
-        context: { tags },
-      });
-    }
-
-    return normalizedTags;
   }
 
   /**

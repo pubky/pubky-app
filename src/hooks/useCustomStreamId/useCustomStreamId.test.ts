@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useCustomStreamId } from './useCustomStreamId';
 
 const mockUseCustomFeed = vi.hoisted(() => vi.fn());
@@ -16,6 +17,7 @@ const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSche
   id: 'feed-abc123',
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],
+  domain_tags: [],
   reach: PubkyAppFeedReach.All,
   sort: PubkyAppFeedSort.Recent,
   content: null,
@@ -31,6 +33,7 @@ describe('useCustomStreamId', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseCustomFeed.mockReturnValue(undefined);
+    useAuthStore.setState({ currentUserPubky: 'viewer-pubky' });
   });
 
   // ============================================================================
@@ -49,12 +52,12 @@ describe('useCustomStreamId', () => {
   // Mapping failures → undefined
   // ============================================================================
 
-  it('returns undefined when reach cannot be mapped (e.g. Followers has no home equivalent)', () => {
+  it('builds the existing Followers stream without relying on Home reach mapping', () => {
     mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Followers }));
 
     const { result } = renderHook(() => useCustomStreamId());
 
-    expect(result.current).toBeUndefined();
+    expect(result.current).toBe('timeline:followers:all:bitcoin,lightning');
   });
 
   it('returns undefined when sort cannot be mapped (unknown sort value)', () => {
@@ -73,8 +76,18 @@ describe('useCustomStreamId', () => {
     expect(result.current).toBeUndefined();
   });
 
-  it('returns undefined when tags array is empty', () => {
+  it('returns undefined when both tag lists are empty', () => {
     mockUseCustomFeed.mockReturnValue(createMockFeed({ tags: [] }));
+
+    const { result } = renderHook(() => useCustomStreamId());
+
+    expect(result.current).toBeUndefined();
+  });
+
+  it('returns undefined when a malformed feed cannot produce a stream ID', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({ reach: PubkyAppFeedReach.All, tags: [], domain_tags: ['bitcoiner'] }),
+    );
 
     const { result } = renderHook(() => useCustomStreamId());
 
@@ -162,6 +175,39 @@ describe('useCustomStreamId', () => {
     const { result } = renderHook(() => useCustomStreamId());
 
     expect(result.current).toBe('timeline:friends:all:bitcoin');
+  });
+
+  it('builds a profile-only Network stream', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({
+        reach: PubkyAppFeedReach.Wot,
+        tags: [],
+        domain_tags: ['developer', 'bitcoiner'],
+      }),
+    );
+
+    const { result } = renderHook(() => useCustomStreamId());
+
+    expect(result.current).toBe('timeline:wot_domain:2:all:bitcoiner,developer');
+  });
+
+  it('builds a sorting-aware Me stream for the current viewer', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({ reach: PubkyAppFeedReach.Me, sort: PubkyAppFeedSort.Popularity, tags: ['bitcoin'] }),
+    );
+
+    const { result } = renderHook(() => useCustomStreamId());
+
+    expect(result.current).toBe('total_engagement:author:viewer-pubky:all:bitcoin');
+  });
+
+  it('returns undefined without an authenticated viewer', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed());
+    useAuthStore.setState({ currentUserPubky: null });
+
+    const { result } = renderHook(() => useCustomStreamId());
+
+    expect(result.current).toBeUndefined();
   });
 
   it('handles Image content mapping correctly', () => {

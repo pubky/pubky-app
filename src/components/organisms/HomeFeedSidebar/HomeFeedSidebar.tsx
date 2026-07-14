@@ -1,7 +1,7 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { isProfileTagReachSupported, TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
@@ -10,7 +10,7 @@ import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { isProfileTagGatedReach, REACH, type ReachType } from '@/stores/home/home.types';
+import { REACH, type ReachType } from '@/stores/home/home.types';
 import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
@@ -50,7 +50,7 @@ function HomeFeedFilters({
   const { requireAuth } = useRequireAuth();
   const isAuthenticated = Boolean(currentUserPubky);
   const effectiveReach = isAuthenticated ? reach : REACH.ALL;
-  const areProfileTagsDisabled = isProfileTagGatedReach(effectiveReach);
+  const areProfileTagsDisabled = !isProfileTagReachSupported(effectiveReach);
   const effectiveProfileTags = isAuthenticated && !areProfileTagsDisabled ? profileTags : [];
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
 

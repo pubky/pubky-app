@@ -1,3 +1,4 @@
+import { isProfileTagReachSupported } from '@/config/feed';
 import type { Pubky } from '@/models/models.types';
 import {
   buildWotDomainStreamId,
@@ -7,15 +8,7 @@ import {
 } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
-import {
-  CONTENT,
-  type ContentType,
-  isProfileTagGatedReach,
-  REACH,
-  type ReachType,
-  SORT,
-  type SortType,
-} from './home.types';
+import { CONTENT, type ContentType, REACH, type ReachType, SORT, type SortType } from './home.types';
 
 // ============================================
 // Bidirectional Mappings (DRY principle)
@@ -125,7 +118,7 @@ export function getHomeStreamIdFromFilters(
   const effectiveReach = currentUserPubky ? reach : REACH.ALL;
   const kind = CONTENT_TO_KIND[content];
 
-  if (currentUserPubky && profileTags.length > 0 && !isProfileTagGatedReach(effectiveReach)) {
+  if (currentUserPubky && profileTags.length > 0 && isProfileTagReachSupported(effectiveReach)) {
     const depth = WOT_DOMAIN_DEPTH_BY_REACH[effectiveReach];
     return buildWotDomainStreamId(SORT_TO_SORTING[sort], depth, kind, profileTags);
   }

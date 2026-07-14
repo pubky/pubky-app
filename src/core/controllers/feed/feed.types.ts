@@ -3,6 +3,7 @@ import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKi
 export type TFeedCreateParams = {
   name: string;
   tags: string[];
+  domain_tags: string[];
   reach: PubkyAppFeedReach;
   sort: PubkyAppFeedSort;
   content: PubkyAppPostKind | null;

@@ -113,8 +113,56 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
                   r="2"
                 />
               </svg>
-               
               All
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-waypoints"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m10.586 5.414-5.172 5.172"
+                />
+                <path
+                  d="m18.586 13.414-5.172 5.172"
+                />
+                <path
+                  d="M6 12h12"
+                />
+                <circle
+                  cx="12"
+                  cy="20"
+                  r="2"
+                />
+                <circle
+                  cx="12"
+                  cy="4"
+                  r="2"
+                />
+                <circle
+                  cx="20"
+                  cy="12"
+                  r="2"
+                />
+                <circle
+                  cx="4"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
+              Network
             </div>
             <div
               data-testid="select-item-0"
@@ -135,7 +183,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
                   stroke-width="1.5"
                 />
               </svg>
-               
               Following
             </div>
             <div
@@ -159,8 +206,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
                   d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"
                 />
               </svg>
-               
               Friends
+            </div>
+            <div
+              data-testid="select-item-5"
+              data-value="5"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-user-round"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="8"
+                  r="5"
+                />
+                <path
+                  d="M20 21a8 8 0 0 0-16 0"
+                />
+              </svg>
+              Me
             </div>
           </div>
           <input
@@ -733,6 +807,29 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
       >
         <input
           data-testid="tag-input-field"
+        />
+      </div>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        profile tag
+      </label>
+      <div
+        class="w-48"
+        data-current-tags-count="0"
+        data-disabled="true"
+        data-max-tags="5"
+        data-show-emoji-button="true"
+        data-testid="feed-profile-tag-input"
+      >
+        <input
+          data-testid="profile-tag-input-field"
         />
       </div>
     </div>
@@ -885,8 +982,56 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
                   r="2"
                 />
               </svg>
-               
               All
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-waypoints"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m10.586 5.414-5.172 5.172"
+                />
+                <path
+                  d="m18.586 13.414-5.172 5.172"
+                />
+                <path
+                  d="M6 12h12"
+                />
+                <circle
+                  cx="12"
+                  cy="20"
+                  r="2"
+                />
+                <circle
+                  cx="12"
+                  cy="4"
+                  r="2"
+                />
+                <circle
+                  cx="20"
+                  cy="12"
+                  r="2"
+                />
+                <circle
+                  cx="4"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
+              Network
             </div>
             <div
               data-testid="select-item-0"
@@ -907,7 +1052,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
                   stroke-width="1.5"
                 />
               </svg>
-               
               Following
             </div>
             <div
@@ -931,8 +1075,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
                   d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"
                 />
               </svg>
-               
               Friends
+            </div>
+            <div
+              data-testid="select-item-5"
+              data-value="5"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-user-round"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="8"
+                  r="5"
+                />
+                <path
+                  d="M20 21a8 8 0 0 0-16 0"
+                />
+              </svg>
+              Me
             </div>
           </div>
           <input
@@ -1509,6 +1680,29 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
       </div>
     </div>
     <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        profile tag
+      </label>
+      <div
+        class="w-48"
+        data-current-tags-count="0"
+        data-disabled="true"
+        data-max-tags="5"
+        data-show-emoji-button="true"
+        data-testid="feed-profile-tag-input"
+      >
+        <input
+          data-testid="profile-tag-input-field"
+        />
+      </div>
+    </div>
+    <div
       data-testid="dialog-footer"
     >
       <button
@@ -1655,8 +1849,56 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
                   r="2"
                 />
               </svg>
-               
               All
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-waypoints"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m10.586 5.414-5.172 5.172"
+                />
+                <path
+                  d="m18.586 13.414-5.172 5.172"
+                />
+                <path
+                  d="M6 12h12"
+                />
+                <circle
+                  cx="12"
+                  cy="20"
+                  r="2"
+                />
+                <circle
+                  cx="12"
+                  cy="4"
+                  r="2"
+                />
+                <circle
+                  cx="20"
+                  cy="12"
+                  r="2"
+                />
+                <circle
+                  cx="4"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
+              Network
             </div>
             <div
               data-testid="select-item-0"
@@ -1677,7 +1919,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
                   stroke-width="1.5"
                 />
               </svg>
-               
               Following
             </div>
             <div
@@ -1701,8 +1942,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
                   d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"
                 />
               </svg>
-               
               Friends
+            </div>
+            <div
+              data-testid="select-item-5"
+              data-value="5"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-user-round"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="8"
+                  r="5"
+                />
+                <path
+                  d="M20 21a8 8 0 0 0-16 0"
+                />
+              </svg>
+              Me
             </div>
           </div>
           <input
@@ -2316,6 +2584,29 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
       </div>
     </div>
     <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        profile tag
+      </label>
+      <div
+        class="w-48"
+        data-current-tags-count="0"
+        data-disabled="false"
+        data-max-tags="5"
+        data-show-emoji-button="true"
+        data-testid="feed-profile-tag-input"
+      >
+        <input
+          data-testid="profile-tag-input-field"
+        />
+      </div>
+    </div>
+    <div
       data-testid="dialog-footer"
     >
       <button
@@ -2492,8 +2783,56 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
                   r="2"
                 />
               </svg>
-               
               All
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-waypoints"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m10.586 5.414-5.172 5.172"
+                />
+                <path
+                  d="m18.586 13.414-5.172 5.172"
+                />
+                <path
+                  d="M6 12h12"
+                />
+                <circle
+                  cx="12"
+                  cy="20"
+                  r="2"
+                />
+                <circle
+                  cx="12"
+                  cy="4"
+                  r="2"
+                />
+                <circle
+                  cx="20"
+                  cy="12"
+                  r="2"
+                />
+                <circle
+                  cx="4"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
+              Network
             </div>
             <div
               data-testid="select-item-0"
@@ -2514,7 +2853,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
                   stroke-width="1.5"
                 />
               </svg>
-               
               Following
             </div>
             <div
@@ -2538,8 +2876,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
                   d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"
                 />
               </svg>
-               
               Friends
+            </div>
+            <div
+              data-testid="select-item-5"
+              data-value="5"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-user-round"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="8"
+                  r="5"
+                />
+                <path
+                  d="M20 21a8 8 0 0 0-16 0"
+                />
+              </svg>
+              Me
             </div>
           </div>
           <input
@@ -3137,6 +3502,29 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
       </div>
     </div>
     <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        profile tag
+      </label>
+      <div
+        class="w-48"
+        data-current-tags-count="0"
+        data-disabled="false"
+        data-max-tags="5"
+        data-show-emoji-button="true"
+        data-testid="feed-profile-tag-input"
+      >
+        <input
+          data-testid="profile-tag-input-field"
+        />
+      </div>
+    </div>
+    <div
       data-testid="dialog-footer"
     >
       <button
@@ -3313,8 +3701,56 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
                   r="2"
                 />
               </svg>
-               
               All
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-waypoints"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m10.586 5.414-5.172 5.172"
+                />
+                <path
+                  d="m18.586 13.414-5.172 5.172"
+                />
+                <path
+                  d="M6 12h12"
+                />
+                <circle
+                  cx="12"
+                  cy="20"
+                  r="2"
+                />
+                <circle
+                  cx="12"
+                  cy="4"
+                  r="2"
+                />
+                <circle
+                  cx="20"
+                  cy="12"
+                  r="2"
+                />
+                <circle
+                  cx="4"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
+              Network
             </div>
             <div
               data-testid="select-item-0"
@@ -3335,7 +3771,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
                   stroke-width="1.5"
                 />
               </svg>
-               
               Following
             </div>
             <div
@@ -3359,8 +3794,35 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
                   d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"
                 />
               </svg>
-               
               Friends
+            </div>
+            <div
+              data-testid="select-item-5"
+              data-value="5"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-user-round"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="8"
+                  r="5"
+                />
+                <path
+                  d="M20 21a8 8 0 0 0-16 0"
+                />
+              </svg>
+              Me
             </div>
           </div>
           <input
@@ -3930,6 +4392,29 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
       >
         <input
           data-testid="tag-input-field"
+        />
+      </div>
+    </div>
+    <div
+      class="gap-y-2"
+      data-testid="container"
+    >
+      <label
+        class="text-xs tracking-wide text-muted-foreground uppercase"
+        data-testid="label"
+      >
+        profile tag
+      </label>
+      <div
+        class="w-48"
+        data-current-tags-count="0"
+        data-disabled="true"
+        data-max-tags="5"
+        data-show-emoji-button="true"
+        data-testid="feed-profile-tag-input"
+      >
+        <input
+          data-testid="profile-tag-input-field"
         />
       </div>
     </div>

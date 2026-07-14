@@ -1167,6 +1167,7 @@ describe('StreamCoordinator', () => {
       id: 'feed123',
       name: 'Test Feed',
       tags: ['bitcoin'],
+      domain_tags: [],
       reach: PubkyAppFeedReach.All,
       sort: PubkyAppFeedSort.Recent,
       content: null,

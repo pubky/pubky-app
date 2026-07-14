@@ -39,6 +39,20 @@ export const REPOST_OPTIMISTIC_PREPEND_VARIANTS = new Set<TimelineFeedVariant>([
 ]);
 
 /**
+ * Reach values enabled for V1 profile/domain tag filtering. Me remains gated
+ * until #2150 flips the shared capability policy.
+ * Both aliases are included because Home calls the feature "network" while
+ * pubky-app-specs serializes the same reach as "wot".
+ */
+const PROFILE_TAG_SUPPORTED_REACHES = ['network', 'wot', 'following', 'friends'] as const;
+
+type ProfileTagSupportedReach = (typeof PROFILE_TAG_SUPPORTED_REACHES)[number];
+
+export function isProfileTagReachSupported(reach: string): reach is ProfileTagSupportedReach {
+  return PROFILE_TAG_SUPPORTED_REACHES.some((supportedReach) => supportedReach === reach);
+}
+
+/**
  * Responsive column classes for the shared card grid (`TimelineGridPosts`).
  * One column on phones, two at `md`, three at `xl` — mirrors the 3-up Figma grid.
  * Breakpoints may be retuned in the Phase C spike once the real cell width is measured.

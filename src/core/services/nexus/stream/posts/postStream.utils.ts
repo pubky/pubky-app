@@ -36,7 +36,7 @@ export function createPostStreamParams({
   viewerId,
   order,
 }: TFetchStreamParams): TPostStreamFetchParams {
-  const { sorting, invokeEndpoint, kind, tags, wotDepth, domainTags } = breakDownStreamId(streamId);
+  const { sorting, invokeEndpoint, authorId, kind, tags, wotDepth, domainTags } = breakDownStreamId(streamId);
 
   const params: TStreamBase = {};
   params.viewer_id = viewerId ?? undefined;
@@ -46,6 +46,9 @@ export function createPostStreamParams({
       params.depth = wotDepth;
     }
     params.domain_tags = domainTags;
+    if (tags) {
+      params.tags = tags;
+    }
   } else {
     params.tags = tags;
   }
@@ -58,7 +61,7 @@ export function createPostStreamParams({
   }
   params.limit = limit;
   params.order = order;
-  const extraParams = handleNotCommonStreamParams({ authorId: sorting, postId: kind, invokeEndpoint });
+  const extraParams = handleNotCommonStreamParams({ authorId: authorId ?? sorting, postId: kind, invokeEndpoint });
   setStreamPagination({ params, streamTail, streamHead, invokeEndpoint });
   return { params, invokeEndpoint, extraParams };
 }
@@ -143,12 +146,22 @@ function parseWotDomainDepth(depth: string | undefined): 1 | 2 {
  * @param streamId - The stream ID to break down
  */
 export function breakDownStreamId(streamId: PostStreamId): TStreamIdBreakdown {
-  const [sorting, invokeEndpoint, thirdSegment, fourthSegment, fifthSegment] = streamId.split(':');
+  const [sorting, invokeEndpoint, thirdSegment, fourthSegment, fifthSegment, sixthSegment] = streamId.split(':');
   // Tags are separated by ',' character. Only the first MAX_STREAM_TAGS are considered.
   const limitTags = (tags: string | undefined): string | undefined =>
     tags
       ? tags.split(POST_STREAM_TAG_DELIMITER).slice(0, getMaxStreamTags()).join(POST_STREAM_TAG_DELIMITER)
       : undefined;
+
+  if (invokeEndpoint === StreamSource.AUTHOR && parseSorting(sorting) && thirdSegment) {
+    return {
+      sorting,
+      invokeEndpoint: StreamSource.AUTHOR,
+      authorId: thirdSegment,
+      kind: fourthSegment,
+      tags: limitTags(fifthSegment),
+    };
+  }
 
   if (invokeEndpoint === StreamSource.WOT_DOMAIN) {
     return {
@@ -157,6 +170,7 @@ export function breakDownStreamId(streamId: PostStreamId): TStreamIdBreakdown {
       kind: fourthSegment,
       wotDepth: parseWotDomainDepth(thirdSegment),
       domainTags: limitTags(fifthSegment),
+      tags: limitTags(sixthSegment),
     };
   }
 

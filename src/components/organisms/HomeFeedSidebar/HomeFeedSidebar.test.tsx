@@ -60,7 +60,6 @@ const {
 
 // Mock useHomeStore
 vi.mock('@/stores/home/home.types', () => ({
-  isProfileTagGatedReach: (reach: string) => reach === 'all' || reach === 'me',
   REACH: {
     ALL: 'all',
     NETWORK: 'network',

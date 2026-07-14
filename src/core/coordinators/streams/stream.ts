@@ -342,7 +342,14 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
         return;
       }
 
-      const streamId = buildFeedStreamId(feed);
+      const currentUserPubky = useAuthStore.getState().currentUserPubky;
+      if (!currentUserPubky) {
+        Logger.warn('Cannot resolve custom feed stream without an authenticated viewer', { feedId });
+        this.pendingFeedResolution = false;
+        return;
+      }
+
+      const streamId = buildFeedStreamId(feed, currentUserPubky);
       this.feedStreamCache = { feedId, streamId };
       Logger.debug('Resolved feed stream ID', { feedId, streamId });
 

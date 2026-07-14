@@ -26,11 +26,20 @@ describe('FeedNormalizer', () => {
   // Mock builder factory
   const createMockBuilder = () => ({
     createFeed: vi.fn(
-      (tags: string[], reach: string, layout: string, sort: string, content: string | null, name: string) => {
+      (
+        tags: string[],
+        reach: string,
+        layout: string,
+        sort: string,
+        content: string | null,
+        name: string,
+        domainTags?: string[],
+      ) => {
         const mockFeed = {
           name,
           feed: {
             tags,
+            domain_tags: domainTags,
             reach: PubkyAppFeedReach.All,
             layout: 0,
             sort: PubkyAppFeedSort.Recent,
@@ -66,6 +75,7 @@ describe('FeedNormalizer', () => {
     const createValidParams = (): TFeedCreateParams => ({
       name: testData.feedName,
       tags: testData.tags,
+      domain_tags: [],
       reach: PubkyAppFeedReach.All,
       sort: PubkyAppFeedSort.Recent,
       content: null,
@@ -84,6 +94,7 @@ describe('FeedNormalizer', () => {
         'recent',
         null,
         testData.feedName,
+        undefined,
       );
       expect(result).toBeTruthy();
     });
@@ -101,6 +112,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         expect.any(Object),
         expect.any(String),
+        undefined,
       );
     });
 
@@ -117,6 +129,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         expect.any(Object),
         expect.any(String),
+        undefined,
       );
     });
 
@@ -133,6 +146,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         expect.any(Object),
         expect.any(String),
+        undefined,
       );
     });
 
@@ -149,6 +163,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         expect.any(Object),
         'Bitcoin News',
+        undefined,
       );
     });
 
@@ -165,6 +180,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         expect.any(Object),
         expect.any(String),
+        undefined,
       );
     });
 
@@ -181,6 +197,7 @@ describe('FeedNormalizer', () => {
         'popularity',
         expect.any(Object),
         expect.any(String),
+        undefined,
       );
     });
 
@@ -197,6 +214,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         'image',
         expect.any(String),
+        undefined,
       );
     });
 
@@ -213,6 +231,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         null,
         expect.any(String),
+        undefined,
       );
     });
 
@@ -223,7 +242,15 @@ describe('FeedNormalizer', () => {
 
         const result = FeedNormalizer.to({ params, userId: testData.userPubky });
 
-        expect(mockBuilder.createFeed).toHaveBeenCalledWith([], 'all', 'columns', 'recent', null, testData.feedName);
+        expect(mockBuilder.createFeed).toHaveBeenCalledWith(
+          [],
+          'all',
+          'columns',
+          'recent',
+          null,
+          testData.feedName,
+          undefined,
+        );
         expect(result).toBeTruthy();
       });
 
@@ -240,6 +267,7 @@ describe('FeedNormalizer', () => {
           'recent',
           null,
           testData.feedName,
+          undefined,
         );
       });
 
@@ -256,6 +284,7 @@ describe('FeedNormalizer', () => {
           'recent',
           null,
           testData.feedName,
+          undefined,
         );
       });
 
@@ -272,7 +301,92 @@ describe('FeedNormalizer', () => {
           'recent',
           null,
           testData.feedName,
+          undefined,
         );
+      });
+
+      it('normalizes profile tags independently and forwards them as domain_tags', () => {
+        const params = createValidParams();
+        params.domain_tags = ['🔥', '  BITCOINER ', 'bitcoiner'];
+
+        FeedNormalizer.to({ params, userId: testData.userPubky });
+
+        expect(mockBuilder.createFeed).toHaveBeenCalledWith(
+          ['bitcoin', 'lightning'],
+          'all',
+          'columns',
+          'recent',
+          null,
+          testData.feedName,
+          ['bitcoiner', '🔥'],
+        );
+      });
+    });
+
+    describe('pubky-app-specs integration', () => {
+      it('keeps app-created feeds ID-stable across renames', () => {
+        const builder = new PubkySpecsBuilder(testData.userPubky);
+        vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(builder);
+        const params = createValidParams();
+        params.reach = PubkyAppFeedReach.Wot;
+        params.domain_tags = ['🔥', 'Bitcoiner'];
+
+        const created = FeedNormalizer.to({ params, userId: testData.userPubky });
+        const renamed = FeedNormalizer.to({
+          params: { ...params, name: 'Renamed Feed' },
+          userId: testData.userPubky,
+        });
+
+        expect(renamed.meta.id).toBe(created.meta.id);
+        expect(created.feed.toJson().feed.domain_tags).toEqual(['bitcoiner', '🔥']);
+      });
+
+      it('keeps legacy feed IDs unchanged when domain_tags is absent', () => {
+        const builder = new PubkySpecsBuilder(testData.userPubky);
+        vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(builder);
+        const params = createValidParams();
+        const legacy = builder.createFeed(params.tags, 'all', 'columns', 'recent', null, params.name, undefined);
+
+        const normalized = FeedNormalizer.to({ params, userId: testData.userPubky });
+
+        expect(normalized.meta.id).toBe(legacy.meta.id);
+        expect(normalized.feed.toJson().feed).not.toHaveProperty('domain_tags');
+      });
+
+      it('converges a foreign absent-tags feed once on its first edit', () => {
+        const builder = new PubkySpecsBuilder(testData.userPubky);
+        vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(builder);
+        const foreign = builder.createFeed(undefined, 'wot', 'columns', 'recent', null, 'Foreign Feed', ['bitcoiner']);
+        const canonicalParams = createValidParams();
+        canonicalParams.tags = [];
+        canonicalParams.domain_tags = ['bitcoiner'];
+        canonicalParams.reach = PubkyAppFeedReach.Wot;
+
+        const firstEdit = FeedNormalizer.to({ params: canonicalParams, userId: testData.userPubky });
+        const secondRename = FeedNormalizer.to({
+          params: { ...canonicalParams, name: 'Second Rename' },
+          userId: testData.userPubky,
+        });
+
+        expect(firstEdit.meta.id).not.toBe(foreign.meta.id);
+        expect(secondRename.meta.id).toBe(firstEdit.meta.id);
+      });
+
+      it('accepts emoji profile tags and rejects canonical invalid labels', () => {
+        const builder = new PubkySpecsBuilder(testData.userPubky);
+        vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(builder);
+        const params = createValidParams();
+        params.tags = [];
+        params.domain_tags = ['🔥'];
+        params.reach = PubkyAppFeedReach.Wot;
+
+        expect(() => FeedNormalizer.to({ params, userId: testData.userPubky })).not.toThrow();
+        expect(() =>
+          FeedNormalizer.to({ params: { ...params, domain_tags: ['bad,tag'] }, userId: testData.userPubky }),
+        ).toThrow();
+        expect(() =>
+          FeedNormalizer.to({ params: { ...params, domain_tags: ['bad:tag'] }, userId: testData.userPubky }),
+        ).toThrow();
       });
     });
 
