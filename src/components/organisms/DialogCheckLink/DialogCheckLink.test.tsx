@@ -231,6 +231,23 @@ describe('DialogCheckLink', () => {
     expect(onOpenChangeAction).toHaveBeenCalledWith(false);
   });
 
+  it('refuses to open an unsafe URL when Continue is clicked', () => {
+    const onOpenChangeAction = vi.fn();
+    render(
+      <DialogCheckLink
+        {...defaultProps}
+        linkUrl={' \u0000java\tscript:alert(1)'}
+        onOpenChangeAction={onOpenChangeAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Continue'));
+
+    expect(mockWindowOpen).not.toHaveBeenCalled();
+    expect(mockSetShowConfirm).not.toHaveBeenCalled();
+    expect(onOpenChangeAction).toHaveBeenCalledWith(false);
+  });
+
   it('does not call setShowConfirm when checkbox is unchecked and Continue is clicked', () => {
     render(<DialogCheckLink {...defaultProps} />);
 

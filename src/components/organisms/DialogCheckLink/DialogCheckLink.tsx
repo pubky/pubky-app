@@ -15,6 +15,7 @@ import {
 } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
 import { URL_TRUNCATE_LENGTH } from '@/config/urls';
+import { getSafeExternalUrl } from '@/libs/utils/safeExternalUrl';
 import { truncateMiddle } from '@/libs/utils/utils';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { DialogCheckLinkProps } from './DialogCheckLink.types';
@@ -30,13 +31,19 @@ export function DialogCheckLink({ open, onOpenChangeAction, linkUrl }: DialogChe
     }
   }, [open]);
   const handleContinue = () => {
+    const safeUrl = getSafeExternalUrl(linkUrl);
+    if (!safeUrl) {
+      onOpenChangeAction(false);
+      return;
+    }
+
     // If "Don't show this again" is checked, disable the check
     if (dontShowAgain) {
       setShowConfirm(false);
     }
 
     // Open link in new tab
-    window.open(linkUrl, '_blank', 'noopener,noreferrer');
+    window.open(safeUrl, '_blank', 'noopener,noreferrer');
 
     // Close dialog
     onOpenChangeAction(false);

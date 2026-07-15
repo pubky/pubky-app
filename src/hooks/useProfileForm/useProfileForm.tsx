@@ -13,6 +13,7 @@ import { AppError } from '@/libs/error/error';
 import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
+import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
 import { generateRandomUsername } from '@/libs/utils/utils';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { UserValidator } from '@/pipes/user/user.validator';
@@ -24,7 +25,6 @@ const DEFAULT_LINKS: ProfileLink[] = [
   { label: 'X (TWITTER)', url: '' },
 ];
 
-const urlSchema = z.string().trim().url('Invalid URL');
 const nameSchema = z
   .string()
   .trim()
@@ -136,7 +136,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     if (value.trim().length === 0) {
       setLinkUrlErrors((prev) => ({ ...prev, [index]: null }));
     } else {
-      const res = urlSchema.safeParse(value);
+      const res = safeExternalUrlSchema.safeParse(value);
       setLinkUrlErrors((prev) => ({
         ...prev,
         [index]: res.success ? null : (res.error.issues[0]?.message ?? 'Invalid URL'),

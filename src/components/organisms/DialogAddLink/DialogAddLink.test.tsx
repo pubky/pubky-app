@@ -1,5 +1,5 @@
-import { render } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogAddLink } from './DialogAddLink';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -143,6 +143,37 @@ vi.mock('@/atoms/Label/Label', () => {
       </label>
     ),
   };
+});
+
+describe('DialogAddLink', () => {
+  const mockOnSave = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('saves a supported external URL', () => {
+    render(<DialogAddLink onSave={mockOnSave} />);
+    const [labelInput, urlInput] = screen.getAllByTestId('input');
+
+    fireEvent.change(labelInput, { target: { value: 'Website' } });
+    fireEvent.change(urlInput, { target: { value: '  https://example.com  ' } });
+    fireEvent.click(screen.getByText('Save link'));
+
+    expect(mockOnSave).toHaveBeenCalledWith('Website', 'https://example.com');
+  });
+
+  it('does not save an executable URL scheme', () => {
+    render(<DialogAddLink onSave={mockOnSave} />);
+    const [labelInput, urlInput] = screen.getAllByTestId('input');
+
+    fireEvent.change(labelInput, { target: { value: 'Website' } });
+    fireEvent.change(urlInput, { target: { value: 'javascript:alert(1)' } });
+
+    expect(screen.getByText('Invalid URL')).toBeInTheDocument();
+    expect(screen.getByText('Save link')).toBeDisabled();
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
 });
 
 describe('DialogAddLink - Snapshots', () => {
