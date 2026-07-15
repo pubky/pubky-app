@@ -193,6 +193,20 @@ describe('LocksService (auth)', () => {
     );
   });
 
+  // Session-backed auth calls share the content calls' 401 → typed-auth-error promotion.
+  it.each([
+    ['signout', () => LocksService.signout(), () => mocks.fakeSession.signout],
+    ['setLockServiceConfig', () => LocksService.setLockServiceConfig(), () => mocks.setLockServicePointer],
+  ])('%s promotes an HTTP 401 to an auth error', async (_name, call, mock) => {
+    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    mock().mockRejectedValueOnce(new Error('Lock Server request failed with HTTP 401'));
+
+    const error = await call().catch((caught: unknown) => caught);
+
+    expect(isAppError(error)).toBe(true);
+    expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Auth);
+  });
+
   it('maps a failed lock-service-config write to an AppError under the Locks service', async () => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     mocks.setLockServicePointer.mockRejectedValueOnce(new Error('creator authority unavailable'));

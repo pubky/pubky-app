@@ -34,6 +34,8 @@ const DELIVERY_POSTMESSAGE = 'postmessage';
  * The SDK reports HTTP failures as `Lock Server request failed with HTTP <status>` and exposes no
  * status field, so the string is the only signal. Parse it here, at the IO boundary, and promote a
  * rejected session to a typed auth error the UI can act on (`category === Auth` → re-authenticate).
+ * Used by every session-backed call; session-less calls (connect URL, code exchange, restore) keep
+ * plain `toAppError` — a 401 there does not mean an expired session.
  */
 function toLocksError(error: unknown, operation: string) {
   const message = error instanceof Error ? error.message : String(error);
@@ -193,7 +195,7 @@ export class LocksService {
     try {
       await session.signout();
     } catch (error) {
-      throw toAppError(error, ErrorService.Locks, 'LocksService.signout');
+      throw toLocksError(error, 'LocksService.signout');
     }
   }
 
@@ -209,7 +211,7 @@ export class LocksService {
       await this.ensureLocksSdkReady();
       await session.creator.setLockServicePointer(new SetLockServicePointerOptions(this.requireLockServer()));
     } catch (error) {
-      throw toAppError(error, ErrorService.Locks, 'LocksService.setLockServiceConfig');
+      throw toLocksError(error, 'LocksService.setLockServiceConfig');
     }
   }
 
