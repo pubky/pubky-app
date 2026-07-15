@@ -98,7 +98,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       </div>
     </div>
     <p
-      class="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-muted-foreground lg:text-2xl"
+      class="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-secondary-foreground lg:text-2xl"
       data-testid="typography"
     >
       A bit of Bitcoin purity amidst all of the madness.
@@ -332,7 +332,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       </div>
     </div>
     <p
-      class="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-muted-foreground lg:text-2xl"
+      class="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-secondary-foreground lg:text-2xl"
       data-testid="typography"
     >
       A bit of Bitcoin purity amidst all of the madness.

@@ -224,6 +224,17 @@ describe('DialogReply', () => {
     );
   });
 
+  it('constrains the reply input wrapper for long usernames', () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogReply postId="test-post-123" open={false} onOpenChangeAction={onOpenChangeAction} />);
+
+    const replyInputWrapper = screen
+      .getAllByTestId('container')
+      .find((container) => container.className.includes('pl-6'));
+
+    expect(replyInputWrapper).toHaveClass('w-full', 'min-w-0');
+  });
+
   it('passes onOpenChangeAction to Dialog', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);

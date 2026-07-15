@@ -33,7 +33,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
           <PostPreviewCard postId={postId} />
 
           {/* Reply input */}
-          <Container className="relative min-w-0 pl-6" overrideDefaults>
+          <Container className="relative w-full min-w-0 pl-6" overrideDefaults>
             <PostInput
               dataCy="reply-post-input"
               id="reply-post-input"

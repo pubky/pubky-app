@@ -313,7 +313,7 @@ function CollectionCardContent({
             {description && (
               <Typography
                 overrideDefaults
-                className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+                className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-secondary-foreground"
               >
                 {description}
               </Typography>
