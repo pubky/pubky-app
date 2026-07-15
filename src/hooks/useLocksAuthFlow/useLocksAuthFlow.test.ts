@@ -20,7 +20,7 @@ vi.mock('@/controllers/locks/locks', () => ({
   },
 }));
 
-vi.mock('@/libs/locks/locksAuthBridge', () => ({
+vi.mock('./useLocksAuthFlow.utils', () => ({
   readLocksAuthBridgeMessage: mocks.readBridge,
 }));
 

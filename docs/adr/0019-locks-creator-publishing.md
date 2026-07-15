@@ -149,7 +149,7 @@ validates the `lock` URL only, and apps own their preview shape (collections set
 
 - Publish orchestration: `src/hooks/useCreateLockContent/`; composer phases:
   `src/hooks/usePostInputLock/` + `PostInput`; auth flow: `src/hooks/useLocksAuthFlow/`,
-  `DialogLocksAuth` (iframe), `src/libs/locks/locksAuthBridge.ts`.
+  `DialogLocksAuth` (iframe), `useLocksAuthFlow.utils` (postMessage bridge validator).
 - Layers: `src/core/{controllers,application,services}/locks/`; session
   store: `src/core/stores/locksAuth/`.
 - Composer wiring is covered by `PostInput.lock.test.tsx` (probes) and

@@ -8,8 +8,8 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
-import { readLocksAuthBridgeMessage } from '@/libs/locks/locksAuthBridge';
 import { LocksAuthFlowStatus, type UseLocksAuthFlowReturn } from './useLocksAuthFlow.types';
+import { readLocksAuthBridgeMessage } from './useLocksAuthFlow.utils';
 
 /**
  * Drives the iframe-based Lock Server auth flow.
