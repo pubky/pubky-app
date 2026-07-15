@@ -110,12 +110,13 @@ export type TPostStreamFetchParams = {
 };
 
 /**
- * Breakdown of a stream ID into its components
- * [sorting, invokeEndpoint, kind, tags]
+ * Breakdown of a stream ID into logical request components.
  */
-export type TStreamIdBreakdown = [
-  sorting: string,
-  invokeEndpoint: StreamSource,
-  kind: string | undefined,
-  tags: string | undefined,
-];
+export type TStreamIdBreakdown = {
+  sorting: string;
+  invokeEndpoint: StreamSource;
+  kind?: string;
+  tags?: string;
+  wotDepth?: 1 | 2;
+  domainTags?: string;
+};

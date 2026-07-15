@@ -378,6 +378,8 @@ describe('Stream API URL Generation', () => {
         'following',
         'followers',
         'friends',
+        'wot',
+        'wot_domain',
         'bookmarks',
         'post_replies',
         'author',
@@ -431,6 +433,40 @@ describe('createPostStreamParams', () => {
       expect(result.params.viewer_id).toBe(mockViewerId);
       expect(result.params.limit).toBe(20);
       expect(result.invokeEndpoint).toBe(StreamSource.WOT);
+    });
+
+    it('should set domain_tags and requested depth for wot_domain streams', () => {
+      const result = createPostStreamParams({
+        streamId: 'timeline:wot_domain:1:all:bitcoiner,dev' as PostStreamId,
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
+      expect(result.params.depth).toBe(1);
+      expect(result.params.domain_tags).toBe('bitcoiner,dev');
+      expect(result.params.tags).toBeUndefined();
+      expect(result.params.viewer_id).toBe(mockViewerId);
+      expect(result.invokeEndpoint).toBe(StreamSource.WOT_DOMAIN);
+    });
+
+    it('should preserve collection kind for wot_domain collection streams', () => {
+      const result = createPostStreamParams({
+        streamId: 'total_engagement:wot_domain:2:collection:bitcoiner' as PostStreamId,
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.params.sorting).toBe(StreamSorting.ENGAGEMENT);
+      expect(result.params.depth).toBe(2);
+      expect(result.params.domain_tags).toBe('bitcoiner');
+      expect(result.params.kind).toBe(StreamKind.COLLECTION);
+      expect(result.params.tags).toBeUndefined();
+      expect(result.invokeEndpoint).toBe(StreamSource.WOT_DOMAIN);
     });
   });
 
@@ -750,80 +786,161 @@ describe('breakDownStreamId', () => {
   describe('Timeline pattern', () => {
     it('should parse timeline:endpoint:kind:tags', () => {
       const result = breakDownStreamId('timeline:bookmarks:all:tech,ai' as PostStreamId);
-      expect(result).toEqual(['timeline', StreamSource.BOOKMARKS, 'all', 'tech,ai']);
+      expect(result).toEqual({
+        sorting: 'timeline',
+        invokeEndpoint: StreamSource.BOOKMARKS,
+        kind: 'all',
+        tags: 'tech,ai',
+      });
     });
 
     it('should parse without tags', () => {
       const result = breakDownStreamId('timeline:following:short' as PostStreamId);
-      expect(result).toEqual(['timeline', StreamSource.FOLLOWING, 'short', undefined]);
+      expect(result).toEqual({
+        sorting: 'timeline',
+        invokeEndpoint: StreamSource.FOLLOWING,
+        kind: 'short',
+        tags: undefined,
+      });
     });
 
     it('should parse wot source', () => {
       const result = breakDownStreamId('timeline:wot:all' as PostStreamId);
-      expect(result).toEqual(['timeline', StreamSource.WOT, 'all', undefined]);
+      expect(result).toEqual({
+        sorting: 'timeline',
+        invokeEndpoint: StreamSource.WOT,
+        kind: 'all',
+        tags: undefined,
+      });
+    });
+
+    it('should parse wot_domain source with depth and domain tags', () => {
+      const result = breakDownStreamId('timeline:wot_domain:2:image:🔥,bitcoiner' as PostStreamId);
+      expect(result).toEqual({
+        sorting: 'timeline',
+        invokeEndpoint: StreamSource.WOT_DOMAIN,
+        kind: 'image',
+        wotDepth: 2,
+        domainTags: '🔥,bitcoiner',
+      });
+    });
+
+    it('should reject malformed wot_domain depth', () => {
+      expect(() => breakDownStreamId('timeline:wot_domain:3:all:bitcoin' as PostStreamId)).toThrow(
+        'Invalid wot_domain depth: 3',
+      );
     });
   });
 
   describe('Replies pattern', () => {
     it('should parse post_replies:pubky:postId', () => {
       const result = breakDownStreamId('post_replies:pubky:post123' as PostStreamId);
-      expect(result).toEqual(['pubky', StreamSource.REPLIES, 'post123', undefined]);
+      expect(result).toEqual({
+        sorting: 'pubky',
+        invokeEndpoint: StreamSource.REPLIES,
+        kind: 'post123',
+        tags: undefined,
+      });
     });
 
     it('should parse with tags', () => {
       const result = breakDownStreamId('post_replies:pubky:post123:tag1,tag2' as PostStreamId);
-      expect(result).toEqual(['pubky', StreamSource.REPLIES, 'post123', 'tag1,tag2']);
+      expect(result).toEqual({
+        sorting: 'pubky',
+        invokeEndpoint: StreamSource.REPLIES,
+        kind: 'post123',
+        tags: 'tag1,tag2',
+      });
     });
   });
 
   describe('Author patterns', () => {
     it('should parse author:pubky', () => {
       const result = breakDownStreamId('author:pubky' as PostStreamId);
-      expect(result).toEqual(['pubky', StreamSource.AUTHOR, undefined, undefined]);
+      expect(result).toEqual({
+        sorting: 'pubky',
+        invokeEndpoint: StreamSource.AUTHOR,
+        tags: undefined,
+      });
     });
 
     it('should parse author_replies:pubky', () => {
       const result = breakDownStreamId('author_replies:pubky' as PostStreamId);
-      expect(result).toEqual(['pubky', StreamSource.AUTHOR_REPLIES, undefined, undefined]);
+      expect(result).toEqual({
+        sorting: 'pubky',
+        invokeEndpoint: StreamSource.AUTHOR_REPLIES,
+        tags: undefined,
+      });
     });
   });
 
   describe('Collections patterns', () => {
     it('should parse <pubky>:author:collection (My Collections)', () => {
       const result = breakDownStreamId('pubky:author:collection' as PostStreamId);
-      expect(result).toEqual(['pubky', StreamSource.AUTHOR, 'collection', undefined]);
+      expect(result).toEqual({
+        sorting: 'pubky',
+        invokeEndpoint: StreamSource.AUTHOR,
+        kind: 'collection',
+        tags: undefined,
+      });
     });
 
     it('should parse timeline:bookmarks:collection (Followed Collections)', () => {
       const result = breakDownStreamId('timeline:bookmarks:collection' as PostStreamId);
-      expect(result).toEqual(['timeline', StreamSource.BOOKMARKS, 'collection', undefined]);
+      expect(result).toEqual({
+        sorting: 'timeline',
+        invokeEndpoint: StreamSource.BOOKMARKS,
+        kind: 'collection',
+        tags: undefined,
+      });
     });
 
     it('should parse total_engagement:all:collection (Discover Collections)', () => {
       const result = breakDownStreamId('total_engagement:all:collection' as PostStreamId);
-      expect(result).toEqual(['total_engagement', StreamSource.ALL, 'collection', undefined]);
+      expect(result).toEqual({
+        sorting: 'total_engagement',
+        invokeEndpoint: StreamSource.ALL,
+        kind: 'collection',
+        tags: undefined,
+      });
     });
 
     it('should parse collection:<pubky>:<postId> (single collection items, source-first composite)', () => {
       const result = breakDownStreamId('collection:pubky:post123' as PostStreamId);
-      expect(result).toEqual(['pubky', StreamSource.COLLECTION, 'post123', undefined]);
+      expect(result).toEqual({
+        sorting: 'pubky',
+        invokeEndpoint: StreamSource.COLLECTION,
+        kind: 'post123',
+        tags: undefined,
+      });
     });
 
     it('should parse collection:<pubky>:<postId> with tags', () => {
       const result = breakDownStreamId('collection:pubky:post123:tag1,tag2' as PostStreamId);
-      expect(result).toEqual(['pubky', StreamSource.COLLECTION, 'post123', 'tag1,tag2']);
+      expect(result).toEqual({
+        sorting: 'pubky',
+        invokeEndpoint: StreamSource.COLLECTION,
+        kind: 'post123',
+        tags: 'tag1,tag2',
+      });
     });
   });
 
   describe('Tag limiting', () => {
     it('should limit to 5 tags', () => {
       const result = breakDownStreamId('timeline:all:all:tag1,tag2,tag3,tag4,tag5,tag6,tag7' as PostStreamId);
-      expect(result[3]).toBe('tag1,tag2,tag3,tag4,tag5');
+      expect(result.tags).toBe('tag1,tag2,tag3,tag4,tag5');
     });
 
     it('should handle empty tags string', () => {
       const result = breakDownStreamId('timeline:all:all:' as PostStreamId);
-      expect(result[3]).toBeUndefined();
+      expect(result.tags).toBeUndefined();
+    });
+
+    it('should limit wot_domain tags independently from post tags', () => {
+      const result = breakDownStreamId('timeline:wot_domain:2:all:tag1,tag2,tag3,tag4,tag5,tag6,tag7' as PostStreamId);
+      expect(result.domainTags).toBe('tag1,tag2,tag3,tag4,tag5');
+      expect(result.tags).toBeUndefined();
     });
   });
 });

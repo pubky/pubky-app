@@ -11,7 +11,7 @@ import {
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
 import { Logger } from '@/libs/logger/logger';
-import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
@@ -658,6 +658,36 @@ describe('usePostInput', () => {
       vi.mocked(useTimelineFeedContext).mockReturnValue({
         ...mockTimelineFeedContext,
         streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION,
+      });
+      vi.mocked(PostController.getDetails).mockResolvedValue({ kind: 'short' } as never);
+
+      const mockOnSuccess = vi.fn();
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+          onSuccess: mockOnSuccess,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(PostController.getDetails).toHaveBeenCalledWith({ compositeId: 'created-post-id' });
+      });
+      expect(mockPrependPosts).not.toHaveBeenCalled();
+      expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('does not prependPosts when the created post kind does not match a wot_domain stream kind', async () => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+      vi.mocked(useTimelineFeedContext).mockReturnValue({
+        ...mockTimelineFeedContext,
+        streamId: 'timeline:wot_domain:2:image:bitcoin' as PostStreamId,
       });
       vi.mocked(PostController.getDetails).mockResolvedValue({ kind: 'short' } as never);
 
