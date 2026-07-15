@@ -121,7 +121,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
         </div>
       </div>
       <p
-        class="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+        class="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-secondary-foreground"
         data-testid="typography"
       >
         A bit of Bitcoin purity amidst all of the madness.
@@ -350,7 +350,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
         </div>
       </div>
       <p
-        class="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+        class="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-secondary-foreground"
         data-testid="typography"
       >
         A bit of Bitcoin purity amidst all of the madness.
@@ -587,7 +587,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
         </div>
       </div>
       <p
-        class="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+        class="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-secondary-foreground"
         data-testid="typography"
       >
         A bit of Bitcoin purity amidst all of the madness.
