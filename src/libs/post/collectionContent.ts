@@ -55,35 +55,6 @@ export function parseCollectionContent(raw: string | null | undefined): PubkyApp
 }
 
 /**
- * Returns true when `uri` is a homeserver file resource
- * (`pubky://<user>/pub/pubky.app/files/<fileId>`) that can be deleted via
- * `FileApplication.commitDelete`. External http(s) URLs and malformed
- * pubky URIs return false.
- *
- * Collection envelope allows a free-form string, so it can be:
- * a homeserver pubky://…/files/… URI (ours to delete) an external
- * https://… URL (not ours — must not call homeserver DELETE) or
- * something malformed
- *
- * Pure — safe to call from any layer.
- */
-export function isHomeserverFileUri(uri: string | null | undefined): uri is string {
-  const trimmed = uri?.trim();
-  if (!trimmed?.startsWith('pubky://')) return false;
-
-  try {
-    return (
-      buildCompositeIdFromPubkyUri({
-        uri: trimmed as Pubky,
-        domain: CompositeIdDomain.FILES,
-      }) !== null
-    );
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Resolves a Collection envelope's `cover_image` field into a URL the
  * browser can actually load.
  *

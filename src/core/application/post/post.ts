@@ -20,9 +20,9 @@ import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/str
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { isHomeserverFileUri } from '@/libs/post/collectionContent';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';

@@ -20,8 +20,9 @@ import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { toAppError } from '@/libs/error/error.utils';
+import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
-import { isHomeserverFileUri } from '@/libs/post/collectionContent';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
@@ -302,8 +303,9 @@ export class PostController {
    * not surface as an edit failure (the old file may remain orphaned). External
    * http(s) covers are never deleted.
    *
-   * If a new cover File was uploaded and then `commitEdit` fails, the new file is
-   * deleted before rethrowing so the failed edit does not leave an unreferenced upload.
+   * If a new cover File was uploaded and then edit normalization or `commitEdit`
+   * fails, the new file is deleted before rethrowing so the failed edit does not
+   * leave an unreferenced upload.
    */
   static async commitEditCollection({
     compositeCollectionId,
@@ -368,20 +370,20 @@ export class PostController {
       coverImageUrl = coverImage;
     }
 
-    const nextContent = CollectionPostContent.toJson({
-      name,
-      description,
-      items: currentContent.items ?? [],
-      coverImage: coverImageUrl,
-    });
-
-    const { post, meta } = await PostNormalizer.toEdit({
-      compositePostId: compositeCollectionId,
-      content: nextContent,
-      currentUserPubky,
-    });
-
     try {
+      const nextContent = CollectionPostContent.toJson({
+        name,
+        description,
+        items: currentContent.items ?? [],
+        coverImage: coverImageUrl,
+      });
+
+      const { post, meta } = await PostNormalizer.toEdit({
+        compositePostId: compositeCollectionId,
+        content: nextContent,
+        currentUserPubky,
+      });
+
       await PostApplication.commitEdit({
         compositePostId: compositeCollectionId,
         post,
@@ -399,7 +401,7 @@ export class PostController {
           });
         });
       }
-      throw error;
+      throw toAppError(error, ErrorService.Local, 'commitEditCollection');
     }
 
     // Previous cover is no longer referenced by the envelope (replaced or cleared).
