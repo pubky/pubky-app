@@ -152,6 +152,10 @@ validates the `lock` URL only, and apps own their preview shape (collections set
   `DialogLocksAuth` (iframe), `useLocksAuthFlow.utils` (postMessage bridge validator).
 - Layers: `src/core/{controllers,application,services}/locks/`; session
   store: `src/core/stores/locksAuth/`.
+- Naming: `Locks` (plural) refers to the Locks system/domain — auth, session, SDK
+  (`useLocksAuthFlow`, `useRestoreLocksAuth`, `LocksService`); `Lock` (singular) refers to one
+  post's lock (`usePostInputLock`, `useCreateLockContent`, `useLockFile`). The plural/singular
+  split is deliberate, not drift.
 - Composer wiring is covered by `PostInput.lock.test.tsx` (probes) and
   `PostInput.lock.integration.test.tsx` (real composer UI); every layer has unit tests.
 
