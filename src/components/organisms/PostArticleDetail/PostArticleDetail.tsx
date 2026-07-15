@@ -56,22 +56,33 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
 
   return (
     <>
-      <Container className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <Container className="mb-6 gap-6">
         <Container className="lg:col-span-2">
-          <Typography as="h1" size="2xl" className="mb-6 wrap-anywhere">
-            {title}
-          </Typography>
+          <Container className="">
+            <Typography as="h1" size="2xl" className="mb-6 wrap-anywhere">
+              {title}
+            </Typography>
 
-          <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
+            <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
 
-          <PostActionsBar
-            postId={postId}
-            onTagClick={handleTagClick}
-            onReplyClick={openReplyDialog}
-            onRepostClick={openRepostDialog}
-            className="mt-3 mb-6"
-          />
-
+            <PostActionsBar
+              postId={postId}
+              onTagClick={handleTagClick}
+              onReplyClick={openReplyDialog}
+              onRepostClick={openRepostDialog}
+              className="mt-3 mb-6"
+            />
+          </Container>
+          <Container overrideDefaults className="mx-0 max-w-2/4">
+            <PostTagsPanel
+              ref={desktopTagsPanelRef}
+              postId={postId}
+              widthMode={'full'}
+              className="mx-0 hidden lg:flex"
+            />
+          </Container>
+        </Container>
+        <Container>
           {isBlurred ? (
             <PostContentBlurred postId={postId} />
           ) : (
@@ -86,8 +97,6 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
 
           <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="mt-6 flex lg:hidden" />
         </Container>
-
-        <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="hidden lg:flex" />
       </Container>
 
       {dialogs}
