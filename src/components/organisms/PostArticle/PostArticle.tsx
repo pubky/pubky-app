@@ -42,7 +42,7 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
             {title}
           </Typography>
 
-          <PostText content={body} isArticle onLinkClick={handleLinkClick} className="text-secondary-foreground" />
+          <PostText content={body} isArticle onLinkClick={handleLinkClick} />
         </Container>
 
         {finalCoverImage && (
