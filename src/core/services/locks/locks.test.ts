@@ -2,6 +2,8 @@ import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
+import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
+import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LocksService } from './locks';
 
@@ -22,6 +24,7 @@ const mocks = vi.hoisted(() => {
     setLocalTestnetHomeserver: vi.fn(),
     forServerWithOptions: vi.fn(() => fakeLocks),
     getTestnet: vi.fn(() => true),
+    getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
     setLockServicePointer,
     fakeSession,
     fakeLocks,
@@ -34,6 +37,7 @@ vi.mock('@/config/network', () => ({
   getPkarrRelays: () => ['https://pkarr.example/inbox'],
   getTestnet: mocks.getTestnet,
   getHomeserver: () => 'homeservertestpubky',
+  getLockServer: mocks.getLockServer,
 }));
 
 vi.mock('@pubky/locks-sdk', () => {
@@ -102,11 +106,14 @@ vi.mock('@pubky/locks-sdk', () => {
 describe('LocksService (auth)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getLockServer.mockReturnValue('lockserverpubky');
+    useLocksAuthStore.setState(locksAuthInitialState);
+    // The client is a cached singleton; tests below assert construction, so build fresh per test.
+    LocksService['locksClient'] = null;
   });
 
-  it('generateConnectUrl builds a client from network config and returns the /connect URL with delivery=postmessage', async () => {
+  it('generateConnectUrl builds a client bound to the configured Lock Server and returns the /connect URL with delivery=postmessage', async () => {
     const url = await LocksService.generateConnectUrl({
-      lockServerPubky: 'lockserverpubky',
       returnTo: 'https://staging.pubky.app',
       state: 'opaque-state',
     });
@@ -120,10 +127,19 @@ describe('LocksService (auth)', () => {
     );
   });
 
+  it('builds the client once and reuses it across calls (singleton)', async () => {
+    // Each public method calls the private getLocksClient() internally — so two client lookups here.
+    await LocksService.generateConnectUrl({ returnTo: 'https://staging.pubky.app', state: 'state-1' });
+    await LocksService.exchangeSessionCode({ code: 'CODE', state: 'state-2' });
+
+    expect(mocks.forServerWithOptions).toHaveBeenCalledTimes(1);
+    expect(mocks.fakeLocks.createConnectUrl).toHaveBeenCalledTimes(1);
+    expect(mocks.fakeLocks.exchangeFrontendSessionCode).toHaveBeenCalledTimes(1); // both calls served by the one client
+  });
+
   it('does not set a testnet homeserver on mainnet (testnet=false)', async () => {
     mocks.getTestnet.mockReturnValueOnce(false);
     await LocksService.generateConnectUrl({
-      lockServerPubky: 'lockserverpubky',
       returnTo: 'https://staging.pubky.app',
       state: 'opaque-state',
     });
@@ -131,48 +147,60 @@ describe('LocksService (auth)', () => {
     expect(mocks.addPkarrRelay).toHaveBeenCalledWith('https://pkarr.example/inbox'); // relays still set
   });
 
+  it('rejects without touching the SDK when no Lock Server is configured', async () => {
+    mocks.getLockServer.mockReturnValue(undefined);
+    await expect(
+      LocksService.generateConnectUrl({ returnTo: 'https://staging.pubky.app', state: 'opaque-state' }),
+    ).rejects.toThrow('No Lock Server configured');
+    expect(mocks.forServerWithOptions).not.toHaveBeenCalled();
+  });
+
   it('exchangeSessionCode returns the session and freshly exported secret', async () => {
-    const result = await LocksService.exchangeSessionCode({
-      lockServerPubky: 'lockserverpubky',
-      code: 'CODE',
-      state: 'STATE',
-    });
+    const result = await LocksService.exchangeSessionCode({ code: 'CODE', state: 'STATE' });
     expect(result).toEqual({ session: mocks.fakeSession, secret: 'secret-abc' });
     expect(mocks.fakeLocks.exchangeFrontendSessionCode).toHaveBeenCalledWith(
       expect.objectContaining({ code: 'CODE', state: 'STATE' }),
     );
   });
 
-  it('restoreSession rebuilds a session from a persisted secret', async () => {
-    const session = await LocksService.restoreSession({ lockServerPubky: 'lockserverpubky', secret: 'secret-abc' });
+  it('restoreSession rebuilds a session from the persisted secret in the store', async () => {
+    useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
+    const session = await LocksService.restoreSession();
     expect(session).toBe(mocks.fakeSession);
     expect(mocks.fakeLocks.restoreSession).toHaveBeenCalledWith('secret-abc');
   });
 
-  it('signout delegates to the session', async () => {
-    await LocksService.signout(mocks.fakeSession as never);
+  it('restoreSession throws an auth error when the store holds no secret', async () => {
+    const error = await LocksService.restoreSession().catch((e: unknown) => e);
+    expect(isAppError(error)).toBe(true);
+    expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Auth);
+    expect(mocks.fakeLocks.restoreSession).not.toHaveBeenCalled();
+  });
+
+  it('signout delegates to the store session', async () => {
+    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    await LocksService.signout();
     expect(mocks.fakeSession.signout).toHaveBeenCalled();
   });
 
-  it('setLockServiceConfig writes the pointer through the session creator with the default lock server', async () => {
-    await LocksService.setLockServiceConfig(mocks.fakeSession as never, 'lockserverpubky');
+  it('setLockServiceConfig writes the pointer through the store session with the configured lock server', async () => {
+    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    await LocksService.setLockServiceConfig();
     expect(mocks.setLockServicePointer).toHaveBeenCalledWith(
       expect.objectContaining({ default_lock_server: 'lockserverpubky' }),
     );
   });
 
   it('maps a failed lock-service-config write to an AppError under the Locks service', async () => {
+    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     mocks.setLockServicePointer.mockRejectedValueOnce(new Error('creator authority unavailable'));
-    const error = await LocksService.setLockServiceConfig(mocks.fakeSession as never, 'lockserverpubky').catch(
-      (e: unknown) => e,
-    );
+    const error = await LocksService.setLockServiceConfig().catch((e: unknown) => e);
     expect(isAppError(error)).toBe(true);
   });
 
   it('maps SDK failures to an AppError under the Locks service', async () => {
     mocks.fakeLocks.createConnectUrl.mockRejectedValueOnce(new Error('pkarr resolve failed'));
     const error = await LocksService.generateConnectUrl({
-      lockServerPubky: 'lockserverpubky',
       returnTo: 'https://staging.pubky.app/locks/callback',
       state: 'opaque-state',
     }).catch((e: unknown) => e);
@@ -182,27 +210,29 @@ describe('LocksService (auth)', () => {
 
 const session = asOpaque<LocksSdkSession>({
   creator: { registerGuardedResource: mocks.registerGuardedResource, createContentLock: mocks.createContentLock },
+  lockServer: () => 'lockpubky',
 });
 
 const descriptor = { path: '/priv/locks.app/content/id-1', hash: 'H', content_type: 'image/png', size: 1 };
 
 const lockParams = {
-  session,
   primaryResource: descriptor,
   criteria: [],
   lockLogic: { type: 'all', criteria: [] },
   accessPolicy: { requested_credential_ttl_seconds: 900 },
-  lockServer: { override: 'lockpubky' },
 };
 
 describe('LocksService (content)', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useLocksAuthStore.setState(locksAuthInitialState);
+    useLocksAuthStore.getState().init({ session, secret: 'secret-abc' });
+  });
 
   it('registerGuardedResource returns the descriptor and the owner pubky', async () => {
     mocks.registerGuardedResource.mockResolvedValue({ guarded_resource: descriptor, creator: 'pubkybob' });
 
     const result = await LocksService.registerGuardedResource({
-      session,
       path: 'id-1',
       contentType: 'image/png',
       bytes: new Uint8Array([1]),
@@ -223,17 +253,30 @@ describe('LocksService (content)', () => {
     expect(result).toEqual({ lock_id: 'LOCK1', content_lock_path: '/pub/locks.app/LOCK1.json', creator: 'pubkybob' });
   });
 
+  it.each([
+    [
+      'registerGuardedResource',
+      () =>
+        LocksService.registerGuardedResource({ path: 'id-1', contentType: 'image/png', bytes: new Uint8Array([1]) }),
+      mocks.registerGuardedResource,
+    ],
+    ['createContentLock', () => LocksService.createContentLock(lockParams), mocks.createContentLock],
+  ])('%s throws an auth error without touching the server when no Locks session exists', async (_name, call, mock) => {
+    useLocksAuthStore.getState().reset();
+
+    const error = await call().catch((caught: unknown) => caught);
+
+    expect(isAppError(error)).toBe(true);
+    expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Auth);
+    expect(mock).not.toHaveBeenCalled();
+  });
+
   // The SDK exposes no status field — an HTTP 401 only shows up in the message.
   it.each([
     [
       'registerGuardedResource',
       () =>
-        LocksService.registerGuardedResource({
-          session,
-          path: 'id-1',
-          contentType: 'image/png',
-          bytes: new Uint8Array([1]),
-        }),
+        LocksService.registerGuardedResource({ path: 'id-1', contentType: 'image/png', bytes: new Uint8Array([1]) }),
       mocks.registerGuardedResource,
     ],
     ['createContentLock', () => LocksService.createContentLock(lockParams), mocks.createContentLock],
@@ -261,7 +304,6 @@ describe('LocksService (content)', () => {
     );
 
     const error = await LocksService.registerGuardedResource({
-      session,
       path: 'id-1',
       contentType: 'image/png',
       bytes: new Uint8Array([1]),

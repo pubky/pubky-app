@@ -19,7 +19,7 @@ import { LocksAuthFlowStatus, type UseLocksAuthFlowReturn } from './useLocksAuth
  * to the parent; the message is validated (origin / iframe source / schema), `state` is checked,
  * and the code is exchanged for a session.
  */
-export function useLocksAuthFlow(lockServerPubky: string): UseLocksAuthFlowReturn {
+export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
   const [status, setStatus] = useState<LocksAuthFlowStatus>(LocksAuthFlowStatus.IDLE);
   const [connectUrl, setConnectUrl] = useState<string | null>(null);
   const [session, setSession] = useState<LocksSdkSession | null>(null);
@@ -48,7 +48,7 @@ export function useLocksAuthFlow(lockServerPubky: string): UseLocksAuthFlowRetur
     stateRef.current = authState;
 
     try {
-      const url = await LocksController.getConnectUrl({ lockServerPubky, state: authState });
+      const url = await LocksController.getConnectUrl({ state: authState });
       lockServerOriginRef.current = new URL(url).origin;
       setConnectUrl(url);
       setStatus(LocksAuthFlowStatus.AWAITING_APPROVAL);
@@ -56,7 +56,7 @@ export function useLocksAuthFlow(lockServerPubky: string): UseLocksAuthFlowRetur
       setError(toAppError(caught, ErrorService.Locks, 'useLocksAuthFlow.start'));
       setStatus(LocksAuthFlowStatus.ERROR);
     }
-  }, [lockServerPubky]);
+  }, []);
 
   useEffect(() => {
     if (status !== LocksAuthFlowStatus.AWAITING_APPROVAL) return;
@@ -86,7 +86,7 @@ export function useLocksAuthFlow(lockServerPubky: string): UseLocksAuthFlowRetur
           });
         }
         setStatus(LocksAuthFlowStatus.EXCHANGING);
-        const result = await LocksController.completeAuthFromCallback({ lockServerPubky, code, state });
+        const result = await LocksController.completeAuthFromCallback({ code, state });
         setSession(result.session);
         setStatus(LocksAuthFlowStatus.SUCCESS);
       } catch (caught) {
@@ -98,7 +98,7 @@ export function useLocksAuthFlow(lockServerPubky: string): UseLocksAuthFlowRetur
 
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [status, lockServerPubky]);
+  }, [status]);
 
   return { status, connectUrl, session, error, iframeRef, start, reset };
 }

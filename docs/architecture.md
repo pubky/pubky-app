@@ -82,7 +82,8 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - `chatwoot/` — Chatwoot integration
 - `exchangerate/` — Exchange rate service
 - **NEVER** call application or controllers
-- **NEVER** access stores
+- **NEVER** access stores — one exception (ADR 0004): session-owning services read their session
+  store via `getState()` (`homeserver` → `useAuthStore`, `locks` → `useLocksAuthStore`); reads only, never writes
 
 ### Pipes (`src/core/pipes/`)
 

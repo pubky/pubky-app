@@ -8,12 +8,14 @@ import {
   type Session as LocksSdkSession,
   SetLockServicePointerOptions,
 } from '@pubky/locks-sdk';
-import { getHomeserver, getPkarrRelays, getTestnet } from '@/config/network';
+import { getHomeserver, getLockServer, getPkarrRelays, getTestnet } from '@/config/network';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
 import { ensureLocksSdkReady } from '@/libs/locks/locksSdk';
+import { Logger } from '@/libs/logger/logger';
+import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import type {
   TCreateContentLockParams,
   TCreateContentLockResult,
@@ -23,7 +25,6 @@ import type {
   TLocksSessionResult,
   TRegisterGuardedResourceParams,
   TRegisterGuardedResourceResult,
-  TRestoreLocksSessionParams,
 } from './locks.types';
 
 /** Opt-in flag telling the Lock Server `/connect` shell to deliver the code via postMessage
@@ -50,35 +51,82 @@ function toLocksError(error: unknown, operation: string) {
 /**
  * IO boundary for the Lock Server via the locks-sdk.
  *
- * Auth methods open sessions, so they build a Locks client from the app's network config
- * (pkarr relays / testnet homeserver, like `HomeserverService`). Content methods publish locked
- * content through a live `session` (bound to its Lock Server), so they need no network config —
- * two calls compose one lock: N × `registerGuardedResource` (raw bytes per file) then
- * 1 × `createContentLock` (bundles the returned descriptors + unlock rules).
+ * Auth methods open sessions, so they build a Locks client from runtime config (Lock Server pubky,
+ * pkarr relays / testnet homeserver — like `HomeserverService`). Content methods publish locked
+ * content through the live session, so they need no client — two calls compose one lock:
+ * N × `registerGuardedResource` (raw bytes per file) then 1 × `createContentLock` (bundles the
+ * returned descriptors + unlock rules).
+ *
+ * Like `HomeserverService`, this service reads the session (and its persisted secret) straight from
+ * `useLocksAuthStore` instead of receiving it as a param — the documented ADR 0004 store exception.
+ * Reads only; every store write stays in the controller.
  */
 export class LocksService {
   private constructor() {} // Prevent instantiation
 
-  /** Builds a Locks client bound to the given Lock Server, using the app's network config. */
-  private static buildLocksClient(lockServerPubky: string): Locks {
-    const options = new LocksOptions();
-    for (const relay of getPkarrRelays()) {
-      options.addPkarrRelay(relay);
+  /** Cached SDK client (singleton, like `HomeserverService.getPubkySdk`); runtime config never changes. */
+  private static locksClient: Locks | null = null;
+
+  /**
+   * The runtime-configured Lock Server pubky. Locks is a feature that can simply be off (no config),
+   * and every Locks entry point is gated on the config, so this never fires in a healthy build —
+   * a warning is enough; no typed error, no Sentry noise for a disabled feature.
+   */
+  private static requireLockServer(): string {
+    const lockServerPubky = getLockServer();
+    if (!lockServerPubky) {
+      Logger.warn('[LocksService] No Lock Server configured (Locks disabled); call should be unreachable');
+      throw new Error('No Lock Server configured');
     }
-    if (getTestnet()) {
-      options.setLocalTestnetHomeserver(getHomeserver());
+    return lockServerPubky;
+  }
+
+  /**
+   * The live Locks session, read from the store (ADR 0004 exception, see the class doc).
+   *
+   * The composer UI checks the session only once — at the moment the lock switch is flipped. The
+   * session can disappear between that check and the actual publish (e.g. logging out in another
+   * tab while the Lock Content dialog is still open), so that early check cannot be trusted here.
+   * Always re-read the store at call time; a missing session becomes a typed auth error the UI
+   * answers by reopening sign-in.
+   */
+  private static requireSession(): LocksSdkSession {
+    const session = useLocksAuthStore.getState().selectLocksSession();
+    if (!session) {
+      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No Locks session; sign into the Lock Server first', {
+        service: ErrorService.Locks,
+        operation: 'LocksService.requireSession',
+      });
     }
-    return Locks.forServerWithOptions(lockServerPubky, options);
+    return session;
+  }
+
+  /**
+   * Awaits the one-time wasm init and returns the Locks client bound to the runtime-configured
+   * Lock Server (built once from the app's network config, then reused).
+   */
+  private static async getLocksClient(): Promise<Locks> {
+    await ensureLocksSdkReady();
+    if (!this.locksClient) {
+      const options = new LocksOptions();
+      for (const relay of getPkarrRelays()) {
+        options.addPkarrRelay(relay);
+      }
+      if (getTestnet()) {
+        options.setLocalTestnetHomeserver(getHomeserver());
+      }
+      this.locksClient = Locks.forServerWithOptions(this.requireLockServer(), options);
+    }
+    return this.locksClient;
   }
 
   /**
    * Builds the Lock-Server-hosted `/connect` URL (resolves the server via pkarr) and opts into
    * postMessage delivery so the shell posts the code to the parent instead of redirecting.
    */
-  static async generateConnectUrl({ lockServerPubky, returnTo, state }: TGenerateConnectUrlParams): Promise<string> {
+  static async generateConnectUrl({ returnTo, state }: TGenerateConnectUrlParams): Promise<string> {
     try {
-      await ensureLocksSdkReady();
-      const locks = this.buildLocksClient(lockServerPubky);
+      const locks = await this.getLocksClient();
       const url = await locks.createConnectUrl(new ConnectUrlOptions(returnTo, state));
       const withDelivery = new URL(url);
       withDelivery.searchParams.set('delivery', DELIVERY_POSTMESSAGE);
@@ -89,14 +137,9 @@ export class LocksService {
   }
 
   /** Exchanges the one-time callback code for a Locks session. */
-  static async exchangeSessionCode({
-    lockServerPubky,
-    code,
-    state,
-  }: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
+  static async exchangeSessionCode({ code, state }: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
     try {
-      await ensureLocksSdkReady();
-      const locks = this.buildLocksClient(lockServerPubky);
+      const locks = await this.getLocksClient();
       const session = await locks.exchangeFrontendSessionCode(new ExchangeFrontendSessionCodeOptions(code, state));
       // secret is freshly minted here — export it so the caller can persist it.
       return { session, secret: session.exportSecret() };
@@ -105,18 +148,25 @@ export class LocksService {
     }
   }
 
-  /** Restores a Locks session from a persisted bearer secret. */
-  static async restoreSession({ lockServerPubky, secret }: TRestoreLocksSessionParams): Promise<LocksSdkSession> {
+  /** Restores a Locks session from the persisted bearer secret (read from the store). */
+  static async restoreSession(): Promise<LocksSdkSession> {
+    const secret = useLocksAuthStore.getState().selectLocksSessionSecret();
+    if (!secret) {
+      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No persisted Locks secret to restore', {
+        service: ErrorService.Locks,
+        operation: 'LocksService.restoreSession',
+      });
+    }
     try {
-      await ensureLocksSdkReady();
-      return this.buildLocksClient(lockServerPubky).restoreSession(secret);
+      return (await this.getLocksClient()).restoreSession(secret);
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.restoreSession');
     }
   }
 
   /** Signs the Locks session out on the Lock Server. */
-  static async signout(session: LocksSdkSession): Promise<void> {
+  static async signout(): Promise<void> {
+    const session = this.requireSession();
     try {
       await session.signout();
     } catch (error) {
@@ -125,14 +175,16 @@ export class LocksService {
   }
 
   /**
-   * Registers the creator's default Lock Server by writing the lock-service pointer
-   * (`/pub/locks.app/config.json`). The Lock Server performs the homeserver write; the SDK session
-   * carries the frontend-session bearer, so the FE attaches no `Authorization` header by hand.
+   * Registers the creator's default Lock Server (the runtime-configured one) by writing the
+   * lock-service pointer (`/pub/locks.app/config.json`). The Lock Server performs the homeserver
+   * write; the SDK session carries the frontend-session bearer, so the FE attaches no
+   * `Authorization` header by hand.
    */
-  static async setLockServiceConfig(session: LocksSdkSession, defaultLockServer: string): Promise<void> {
+  static async setLockServiceConfig(): Promise<void> {
+    const session = this.requireSession();
     try {
       await ensureLocksSdkReady();
-      await session.creator.setLockServicePointer(new SetLockServicePointerOptions(defaultLockServer));
+      await session.creator.setLockServicePointer(new SetLockServicePointerOptions(this.requireLockServer()));
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.setLockServiceConfig');
     }
@@ -146,11 +198,11 @@ export class LocksService {
    * nothing is ever clobbered.
    */
   static async registerGuardedResource({
-    session,
     path,
     contentType,
     bytes,
   }: TRegisterGuardedResourceParams): Promise<TRegisterGuardedResourceResult> {
+    const session = this.requireSession();
     try {
       await ensureLocksSdkReady();
       // TODO:[Locks] #2040 — same untyped-SDK cast as `createContentLock` below.
@@ -179,14 +231,13 @@ export class LocksService {
    * uploaded resources are still valid and their hashes unchanged.
    */
   static async createContentLock({
-    session,
     primaryResource,
     secondaryResources = [],
     criteria,
     lockLogic,
     accessPolicy,
-    lockServer,
   }: TCreateContentLockParams): Promise<TCreateContentLockResult> {
+    const session = this.requireSession();
     try {
       await ensureLocksSdkReady();
       // primaryResource is the JSON file holding the `PubkyAppPost` object (the lock's entry point).
@@ -198,7 +249,9 @@ export class LocksService {
         .criteria(criteria)
         .lockLogic(lockLogic)
         .accessPolicy(accessPolicy)
-        .lockServer(lockServer)
+        // Pin the lock to the session's Lock Server — the only one holding the bytes we just uploaded.
+        // Leaving this null would defer to the creator's default pointer, which can later change.
+        .lockServer({ override: session.lockServer() })
         .build();
 
       // TODO:[Locks] #2040 — the SDK declares `Promise<any>` (wasm-bindgen cannot type JSON), so the

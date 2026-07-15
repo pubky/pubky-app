@@ -1,14 +1,9 @@
-import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { LocksApplication } from '@/application/locks/locks';
-import { AuthErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import type {
   TCreateContentLockResult,
   TExchangeSessionCodeParams,
   TGetConnectUrlParams,
   TGuardedResource,
-  TLocksServerParams,
   TLocksSessionResult,
   TRegisterGuardedResourceResult,
 } from '@/services/locks/locks.types';
@@ -43,9 +38,9 @@ export class LocksController {
    * `returnTo` is the parent origin. There is no navigation to it — the Lock Server uses it to target
    * the `postMessage` and the `frame-ancestors` CSP, so it must be in `allowed_return_origins`.
    */
-  static getConnectUrl({ lockServerPubky, state }: TGetConnectUrlParams): Promise<string> {
+  static getConnectUrl({ state }: TGetConnectUrlParams): Promise<string> {
     const returnTo = window.location.origin;
-    return LocksApplication.generateConnectUrl({ lockServerPubky, returnTo, state });
+    return LocksApplication.generateConnectUrl({ returnTo, state });
   }
 
   /**
@@ -57,15 +52,16 @@ export class LocksController {
     useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
     // Register the creator's default Lock Server pointer in the background on every auth, mirroring
     // the homeserver's post-auth write. Fire-and-forget: a failure must not drop the established
-    // session (the pointer write is idempotent and retried on the next auth).
-    void this.registerLockServiceConfig(result.session, params.lockServerPubky);
+    // session (the pointer write is idempotent and retried on the next auth). Runs after `init` —
+    // the service reads the session it just persisted.
+    void this.registerLockServiceConfig();
     return result;
   }
 
   /** Background lock-service-config write; reports failures to Sentry but never drops the session. */
-  private static async registerLockServiceConfig(session: LocksSdkSession, defaultLockServer: string): Promise<void> {
+  private static async registerLockServiceConfig(): Promise<void> {
     try {
-      await LocksApplication.setLockServiceConfig(session, defaultLockServer);
+      await LocksApplication.setLockServiceConfig();
     } catch {
       // Already reported to Sentry by the service Err factory; swallow so the write (idempotent,
       // retried on the next auth) never drops the established session.
@@ -79,10 +75,9 @@ export class LocksController {
    */
   static async logout(): Promise<void> {
     const store = useLocksAuthStore.getState();
-    const session = store.selectLocksSession();
-    if (session) {
+    if (store.selectLocksSession()) {
       try {
-        await LocksApplication.signout(session);
+        await LocksApplication.signout();
       } catch {
         // Already reported to Sentry by the service Err factory; swallow so local teardown runs.
       }
@@ -107,13 +102,12 @@ export class LocksController {
    * the UI shows unauthenticated rather than a broken session. Restore is local (no network), so no
    * retry is needed.
    */
-  static async restorePersistedLocksSession({ lockServerPubky }: TLocksServerParams): Promise<void> {
+  static async restorePersistedLocksSession(): Promise<void> {
     const store = useLocksAuthStore.getState();
-    const secret = store.selectLocksSessionSecret();
-    if (!secret || store.selectLocksSession() !== null) return;
+    if (!store.selectLocksSessionSecret() || store.selectLocksSession() !== null) return;
 
     try {
-      store.setSession(await LocksApplication.restoreSession({ lockServerPubky, secret }));
+      store.setSession(await LocksApplication.restoreSession());
     } catch {
       // Malformed/stale secret — already reported by the service Err factory; clear it so the UI
       // shows unauthenticated rather than a broken session.
@@ -141,30 +135,24 @@ export class LocksController {
     attachments = [],
     buildPost,
   }: TCreateLockContentParams): Promise<TCreateContentLockResult> {
-    const session = this.requireSession();
-
     // The guarded bytes land on the Lock-Server-authenticated account, which may differ from the
     // pubky.app user. Capture that owner from the upload response so `buildPost` can reference the
     // attachments by their real host. With no attachments the owner stays undefined and no URIs are built.
     let owner: string | undefined;
     const attachmentResources: TGuardedResource[] = [];
     for (const file of attachments) {
-      const uploaded = await this.upload(session, file);
+      const uploaded = await this.upload(file);
       owner = uploaded.creator;
       attachmentResources.push(uploaded.resource);
     }
-    const post = await this.upload(session, buildPost(attachmentResources, owner));
+    const post = await this.upload(buildPost(attachmentResources, owner));
 
     return LocksApplication.createContentLock({
-      session,
       primaryResource: post.resource,
       secondaryResources: attachmentResources,
       criteria: [{ criterion_id: CRITERION_ID, verifier_type: VERIFIER_TYPE, params: VERIFIER_PARAMS }],
       lockLogic: { type: 'all', criteria: [CRITERION_ID] },
       accessPolicy: { requested_credential_ttl_seconds: CREDENTIAL_TTL_SECONDS },
-      // Pin the lock to the session's Lock Server — the only one holding the bytes we just uploaded.
-      // Leaving this null would defer to the creator's default pointer, which can later change.
-      lockServer: { override: session.lockServer() },
     });
   }
 
@@ -176,31 +164,11 @@ export class LocksController {
    * normal posts, where the blob path comes from a spec-generated id and the filename survives only
    * as display metadata on `PubkyAppFile`.
    */
-  private static upload(
-    session: LocksSdkSession,
-    { contentType, bytes }: TLockContentFile,
-  ): Promise<TRegisterGuardedResourceResult> {
+  private static upload({ contentType, bytes }: TLockContentFile): Promise<TRegisterGuardedResourceResult> {
     return LocksApplication.registerGuardedResource({
-      session,
       path: crypto.randomUUID(),
       contentType,
       bytes,
     });
-  }
-
-  /**
-   * The composer gates on the Locks session when the lock switch is flipped, but that is a one-shot
-   * check: logging out while the Lock Content dialog is open clears the session before Apply Lock is
-   * ever clicked. Re-read it here rather than trusting the gate.
-   */
-  private static requireSession(): LocksSdkSession {
-    const session = useLocksAuthStore.getState().selectLocksSession();
-    if (!session) {
-      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No Locks session; sign into the Lock Server first', {
-        service: ErrorService.Locks,
-        operation: 'LocksController.createLockContent',
-      });
-    }
-    return session;
   }
 }

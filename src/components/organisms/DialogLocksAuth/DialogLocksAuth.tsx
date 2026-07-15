@@ -34,7 +34,6 @@ import { cn } from '@/libs/utils/utils';
 type DialogLocksAuthProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lockServerPubky: string;
   onSuccess: (session: LocksSdkSession) => void;
 };
 
@@ -52,8 +51,8 @@ function StepImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
-export function DialogLocksAuth({ open, onOpenChange, lockServerPubky, onSuccess }: DialogLocksAuthProps) {
-  const { status, connectUrl, session, error, iframeRef, start, reset } = useLocksAuthFlow(lockServerPubky);
+export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAuthProps) {
+  const { status, connectUrl, session, error, iframeRef, start, reset } = useLocksAuthFlow();
   const t = useTranslations('dialogs.locksAuth');
   const tCommon = useTranslations('common');
 

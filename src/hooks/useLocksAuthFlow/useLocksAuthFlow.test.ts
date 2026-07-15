@@ -63,35 +63,35 @@ describe('useLocksAuthFlow', () => {
   });
 
   it('starts idle', () => {
-    const { result } = renderHook(() => useLocksAuthFlow('lockpubky'));
+    const { result } = renderHook(() => useLocksAuthFlow());
     expect(result.current.status).toBe(LocksAuthFlowStatus.IDLE);
     expect(result.current.connectUrl).toBeNull();
   });
 
   it('start() requests a connect URL with a generated state', async () => {
-    const { result } = renderHook(() => useLocksAuthFlow('lockpubky'));
+    const { result } = renderHook(() => useLocksAuthFlow());
     const state = await startFlow(result);
 
-    expect(mocks.getConnectUrl).toHaveBeenCalledWith({ lockServerPubky: 'lockpubky', state: expect.any(String) });
+    expect(mocks.getConnectUrl).toHaveBeenCalledWith({ state: expect.any(String) });
     expect(state).toBeTruthy();
     expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
     expect(result.current.connectUrl).toBe('https://lock.server/connect?delivery=postmessage');
   });
 
   it('exchanges the code and reaches success when the callback state matches', async () => {
-    const { result } = renderHook(() => useLocksAuthFlow('lockpubky'));
+    const { result } = renderHook(() => useLocksAuthFlow());
     const state = await startFlow(result);
     attachIframeSource(result);
 
     await postCallback({ type: LOCKS_AUTH_MESSAGE_TYPE, code: 'CODE', state });
 
     await waitFor(() => expect(result.current.status).toBe(LocksAuthFlowStatus.SUCCESS));
-    expect(mocks.completeAuthFromCallback).toHaveBeenCalledWith({ lockServerPubky: 'lockpubky', code: 'CODE', state });
+    expect(mocks.completeAuthFromCallback).toHaveBeenCalledWith({ code: 'CODE', state });
     expect(result.current.session).toBe(mocks.fakeSession);
   });
 
   it('passes the lock server origin (from the connect URL) to the bridge validator', async () => {
-    const { result } = renderHook(() => useLocksAuthFlow('lockpubky'));
+    const { result } = renderHook(() => useLocksAuthFlow());
     const state = await startFlow(result);
     attachIframeSource(result);
 
@@ -103,7 +103,7 @@ describe('useLocksAuthFlow', () => {
   });
 
   it('errors on a state mismatch and does NOT exchange', async () => {
-    const { result } = renderHook(() => useLocksAuthFlow('lockpubky'));
+    const { result } = renderHook(() => useLocksAuthFlow());
     await startFlow(result);
     attachIframeSource(result);
 
@@ -115,7 +115,7 @@ describe('useLocksAuthFlow', () => {
   });
 
   it('errors on a failure message and does NOT exchange', async () => {
-    const { result } = renderHook(() => useLocksAuthFlow('lockpubky'));
+    const { result } = renderHook(() => useLocksAuthFlow());
     await startFlow(result);
     attachIframeSource(result);
 
@@ -126,7 +126,7 @@ describe('useLocksAuthFlow', () => {
   });
 
   it('ignores invalid bridge messages (readBridge returns null)', async () => {
-    const { result } = renderHook(() => useLocksAuthFlow('lockpubky'));
+    const { result } = renderHook(() => useLocksAuthFlow());
     await startFlow(result);
     attachIframeSource(result);
 
@@ -138,21 +138,21 @@ describe('useLocksAuthFlow', () => {
 
   it('errors when code exchange fails after a valid callback', async () => {
     mocks.completeAuthFromCallback.mockRejectedValueOnce(new Error('exchange failed'));
-    const { result } = renderHook(() => useLocksAuthFlow('lockpubky'));
+    const { result } = renderHook(() => useLocksAuthFlow());
     const state = await startFlow(result);
     attachIframeSource(result);
 
     await postCallback({ type: LOCKS_AUTH_MESSAGE_TYPE, code: 'CODE', state });
 
     await waitFor(() => expect(result.current.status).toBe(LocksAuthFlowStatus.ERROR));
-    expect(mocks.completeAuthFromCallback).toHaveBeenCalledWith({ lockServerPubky: 'lockpubky', code: 'CODE', state });
+    expect(mocks.completeAuthFromCallback).toHaveBeenCalledWith({ code: 'CODE', state });
     expect(result.current.error).not.toBeNull();
     expect(result.current.session).toBeNull();
   });
 
   it('errors when the connect URL cannot be generated', async () => {
     mocks.getConnectUrl.mockRejectedValueOnce(new Error('pkarr resolve failed'));
-    const { result } = renderHook(() => useLocksAuthFlow('lockpubky'));
+    const { result } = renderHook(() => useLocksAuthFlow());
     await act(async () => {
       await result.current.start();
     });

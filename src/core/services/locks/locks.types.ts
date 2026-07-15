@@ -1,10 +1,7 @@
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 
-/** Lock Server identity (pubky) the SDK client is bound to. */
-export type TLocksServerParams = { lockServerPubky: string };
-
 /** Params to build a `/connect` URL for the Lock-Server-hosted auth shell. */
-export type TGenerateConnectUrlParams = TLocksServerParams & {
+export type TGenerateConnectUrlParams = {
   /** Parent (pubky-app) origin; the Lock Server targets its postMessage + `frame-ancestors` at it. */
   returnTo: string;
   /** Opaque CSRF value echoed back in the callback for verification. */
@@ -12,21 +9,15 @@ export type TGenerateConnectUrlParams = TLocksServerParams & {
 };
 
 /** Controller-facing params for the connect URL; `returnTo` is derived inside the controller. */
-export type TGetConnectUrlParams = TLocksServerParams & {
+export type TGetConnectUrlParams = {
   /** Opaque CSRF value echoed back in the callback for verification. */
   state: string;
 };
 
 /** Params to exchange a one-time callback code for a Locks session. */
-export type TExchangeSessionCodeParams = TLocksServerParams & {
+export type TExchangeSessionCodeParams = {
   code: string;
   state: string;
-};
-
-/** Params to restore a Locks session from a persisted bearer secret. */
-export type TRestoreLocksSessionParams = TLocksServerParams & {
-  /** The `exportSecret()` value persisted at login. */
-  secret: string;
 };
 
 /**
@@ -75,14 +66,8 @@ type TAccessPolicy = {
   requested_credential_ttl_seconds: number;
 };
 
-/** Lock-server binding. `override` pins a specific Lock Server pubky; `null` uses the creator default. */
-type TLockServer = {
-  override: string | null;
-};
-
 /** Params to upload one guarded resource (raw bytes). */
 export type TRegisterGuardedResourceParams = {
-  session: LocksSdkSession;
   /**
    * The path TAIL only (the caller mints it); the server prepends `/priv/locks.app/content/`.
    * Passing a full path double-prefixes.
@@ -101,7 +86,6 @@ export type TRegisterGuardedResourceResult = {
 
 /** Params to bundle uploaded resources into one content lock. At least one resource is required. */
 export type TCreateContentLockParams = {
-  session: LocksSdkSession;
   /** Entry-point resource: the JSON file holding the `PubkyAppPost` object. Always present. */
   primaryResource: TGuardedResource;
   /** The remaining resources; each descriptor as returned by `registerGuardedResource`. */
@@ -109,7 +93,6 @@ export type TCreateContentLockParams = {
   criteria: TLockCriterion[];
   lockLogic: TLockLogic;
   accessPolicy: TAccessPolicy;
-  lockServer: TLockServer;
 };
 
 /**

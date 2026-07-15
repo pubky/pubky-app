@@ -1,6 +1,5 @@
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { isAppError } from '@/libs/error/error.utils';
 import type { TGuardedResource } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
@@ -30,7 +29,7 @@ vi.mock('@/application/locks/locks', () => ({
   },
 }));
 
-const fakeSession = asOpaque<LocksSdkSession>({ id: 'locks-session', lockServer: () => 'lockpubky' });
+const fakeSession = asOpaque<LocksSdkSession>({ id: 'locks-session' });
 
 describe('LocksController (auth)', () => {
   beforeEach(() => {
@@ -43,55 +42,47 @@ describe('LocksController (auth)', () => {
   });
 
   it('getConnectUrl derives returnTo from the app origin and forwards it', async () => {
-    const url = await LocksController.getConnectUrl({ lockServerPubky: 'lockpubky', state: 'opaque-state' });
+    const url = await LocksController.getConnectUrl({ state: 'opaque-state' });
 
     expect(url).toBe('https://lock.server/connect');
     expect(mocks.generateConnectUrl).toHaveBeenCalledWith({
-      lockServerPubky: 'lockpubky',
       returnTo: window.location.origin,
       state: 'opaque-state',
     });
   });
 
   it('completeAuthFromCallback exchanges the code and persists the session to the store', async () => {
-    const result = await LocksController.completeAuthFromCallback({
-      lockServerPubky: 'lockpubky',
-      code: 'CODE',
-      state: 'STATE',
-    });
+    const result = await LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
 
     expect(result.session).toBe(fakeSession);
-    expect(mocks.exchangeSessionCode).toHaveBeenCalledWith({
-      lockServerPubky: 'lockpubky',
-      code: 'CODE',
-      state: 'STATE',
-    });
+    expect(mocks.exchangeSessionCode).toHaveBeenCalledWith({ code: 'CODE', state: 'STATE' });
     const store = useLocksAuthStore.getState();
     expect(store.selectIsLocksAuthenticated()).toBe(true);
     expect(store.selectLocksSession()).toBe(fakeSession);
     expect(store.selectLocksSessionSecret()).toBe('secret-abc');
   });
 
-  it('completeAuthFromCallback registers the lock-service config in the background with the authed server', async () => {
-    await LocksController.completeAuthFromCallback({ lockServerPubky: 'lockpubky', code: 'CODE', state: 'STATE' });
+  it('completeAuthFromCallback registers the lock-service config in the background after the session is stored', async () => {
+    // The service reads the session from the store, so the store must be populated by call time.
+    mocks.setLockServiceConfig.mockImplementation(async () => {
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+    });
+
+    await LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
     // Background write is fire-and-forget; let the microtask queue flush.
     await Promise.resolve();
 
-    expect(mocks.setLockServiceConfig).toHaveBeenCalledWith(fakeSession, 'lockpubky');
+    expect(mocks.setLockServiceConfig).toHaveBeenCalledTimes(1);
   });
 
   it('completeAuthFromCallback keeps the session when the background config write fails', async () => {
     mocks.setLockServiceConfig.mockRejectedValue(new Error('config write failed'));
 
-    const result = await LocksController.completeAuthFromCallback({
-      lockServerPubky: 'lockpubky',
-      code: 'CODE',
-      state: 'STATE',
-    });
+    const result = await LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
     await Promise.resolve();
 
     expect(result.session).toBe(fakeSession);
-    expect(mocks.setLockServiceConfig).toHaveBeenCalledWith(fakeSession, 'lockpubky');
+    expect(mocks.setLockServiceConfig).toHaveBeenCalledTimes(1);
     expect(useLocksAuthStore.getState().selectIsLocksAuthenticated()).toBe(true);
   });
 
@@ -101,7 +92,7 @@ describe('LocksController (auth)', () => {
 
       await LocksController.logout();
 
-      expect(mocks.signout).toHaveBeenCalledWith(fakeSession);
+      expect(mocks.signout).toHaveBeenCalledTimes(1);
       const store = useLocksAuthStore.getState();
       expect(store.selectIsLocksAuthenticated()).toBe(false);
       expect(store.selectLocksSessionSecret()).toBeNull();
@@ -113,7 +104,7 @@ describe('LocksController (auth)', () => {
 
       await LocksController.logout();
 
-      expect(mocks.signout).toHaveBeenCalledWith(fakeSession);
+      expect(mocks.signout).toHaveBeenCalledTimes(1);
       expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
     });
 
@@ -130,13 +121,9 @@ describe('LocksController (auth)', () => {
   it('does not persist a session when the callback exchange fails', async () => {
     mocks.exchangeSessionCode.mockRejectedValueOnce(new Error('exchange failed'));
 
-    await expect(
-      LocksController.completeAuthFromCallback({
-        lockServerPubky: 'lockpubky',
-        code: 'CODE',
-        state: 'STATE',
-      }),
-    ).rejects.toThrow('exchange failed');
+    await expect(LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' })).rejects.toThrow(
+      'exchange failed',
+    );
 
     const store = useLocksAuthStore.getState();
     expect(store.selectIsLocksAuthenticated()).toBe(false);
@@ -149,20 +136,20 @@ describe('LocksController (auth)', () => {
       useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
       mocks.restoreSession.mockReturnValue(fakeSession);
 
-      await LocksController.restorePersistedLocksSession({ lockServerPubky: 'lockpubky' });
+      await LocksController.restorePersistedLocksSession();
 
-      expect(mocks.restoreSession).toHaveBeenCalledWith({ lockServerPubky: 'lockpubky', secret: 'secret-abc' });
+      expect(mocks.restoreSession).toHaveBeenCalledTimes(1);
       expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
     });
 
     it('no-ops when there is no persisted secret', () => {
-      LocksController.restorePersistedLocksSession({ lockServerPubky: 'lockpubky' });
+      LocksController.restorePersistedLocksSession();
       expect(mocks.restoreSession).not.toHaveBeenCalled();
     });
 
     it('no-ops when a live session already exists', () => {
       useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
-      LocksController.restorePersistedLocksSession({ lockServerPubky: 'lockpubky' });
+      LocksController.restorePersistedLocksSession();
       expect(mocks.restoreSession).not.toHaveBeenCalled();
     });
 
@@ -172,7 +159,7 @@ describe('LocksController (auth)', () => {
         throw new Error('invalid secret');
       });
 
-      LocksController.restorePersistedLocksSession({ lockServerPubky: 'lockpubky' });
+      LocksController.restorePersistedLocksSession();
 
       const store = useLocksAuthStore.getState();
       expect(store.selectIsLocksAuthenticated()).toBe(false);
@@ -201,8 +188,6 @@ describe('LocksController (content)', () => {
       content_lock_path: '/pub/locks.app/LOCK1.json',
       creator: 'pubkybob',
     });
-    useLocksAuthStore.setState(locksAuthInitialState);
-    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
   });
 
   it('uploads the attachments first, then the post built from their paths', async () => {
@@ -226,10 +211,8 @@ describe('LocksController (content)', () => {
 
     expect(mocks.createContentLock).toHaveBeenCalledWith(
       expect.objectContaining({
-        session: fakeSession,
         primaryResource: descriptor('id-3'),
         secondaryResources: [descriptor('id-1'), descriptor('id-2')],
-        lockServer: { override: 'lockpubky' },
       }),
     );
     expect(result).toEqual({ lock_id: 'LOCK1', content_lock_path: '/pub/locks.app/LOCK1.json', creator: 'pubkybob' });
@@ -264,15 +247,6 @@ describe('LocksController (content)', () => {
     ]);
     expect(params.lockLogic).toEqual({ type: 'all', criteria: ['criterion-1'] });
     expect(params.accessPolicy).toEqual({ requested_credential_ttl_seconds: 900 });
-  });
-
-  it('rejects when there is no Locks session', async () => {
-    useLocksAuthStore.getState().reset();
-
-    const error = await LocksController.createLockContent({ buildPost }).catch((caught: unknown) => caught);
-
-    expect(isAppError(error)).toBe(true);
-    expect(mocks.registerGuardedResource).not.toHaveBeenCalled();
   });
 
   it('does not build the post or create the lock when an attachment upload fails', async () => {

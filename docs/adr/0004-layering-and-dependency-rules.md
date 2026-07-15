@@ -12,6 +12,8 @@ The core architecture enforces distinct responsibilities (controllers, pipes, ap
 
 Codify dependency boundaries: UI → controllers → pipes/application → services → models. Services split into local, homeserver, and nexus responsibilities; models interact only with Dexie. Stores expose UI state without business logic. Public access uses direct layer aliases such as `@/controllers/*`, `@/services/*`, `@/models/*`, and `@/stores/*`.
 
+**Exception — session-store reads at the IO boundary.** Services never touch stores, with one sanctioned exception: a service that owns an authenticated session reads it straight from its session store via `getState()` — `HomeserverService` reads `useAuthStore`, `LocksService` reads `useLocksAuthStore` (session and persisted secret). The session is process-global state consumed by the IO boundary; threading it through controller → application params added noise without any isolation benefit. Reads only — every store write stays in controllers.
+
 ## Consequences
 
 - ✅ Predictable data flow and high testability per layer.

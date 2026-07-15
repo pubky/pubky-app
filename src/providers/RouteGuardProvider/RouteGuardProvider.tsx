@@ -9,6 +9,7 @@ import { AuthController } from '@/controllers/auth/auth';
 import { MigrationController } from '@/controllers/migration/migration';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
+import { useRestoreLocksAuth } from '@/hooks/useRestoreLocksAuth/useRestoreLocksAuth';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -66,6 +67,9 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
       Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
     });
   }, [hasHydrated, session, sessionExport]);
+
+  // Restore the Locks session alongside the homeserver one (no-op while Locks is unconfigured).
+  useRestoreLocksAuth();
 
   // Post-migration re-sync: fetch critical homeserver data after DB recreation
   // TODO: Consider using BroadcastChannel to notify other browser tabs when DB was recreated / resync completed

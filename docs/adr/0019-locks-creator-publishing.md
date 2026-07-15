@@ -58,7 +58,7 @@ frontend must handle both cases.
   back via `postMessage` (origin/source/state validated), which is exchanged for an SDK session.
 - The session's bearer secret persists in a dedicated zustand store (`useLocksAuthStore`, mirroring
   the homeserver `auth-store`): live SDK session in memory only, secret in localStorage, rebuilt on
-  app load by a mount in the root layout. Restore is offline — expiry is only discovered when a
+  app load by a hook in `RouteGuardProvider` (alongside the homeserver restore). Restore is offline — expiry is only discovered when a
   creator call returns 401, which drops the session and reopens sign-in.
 - pubky.app logout tears down the Locks session too. Abandoning a lock in the composer never signs
   the creator out.
@@ -77,7 +77,10 @@ frontend must handle both cases.
 ### Layering and config follow the existing rules
 
 - Same stack as ADR 0004: hooks → `LocksController` → `LocksApplication` →
-  `LocksService` → locks-sdk. Services are the IO boundary and apply
+  `LocksService` → locks-sdk. The service reads the Locks session (and persisted secret) from
+  `useLocksAuthStore` and the Lock Server pubky from runtime config, so neither crosses the
+  layers as params (ADR 0004 session-store exception, like `HomeserverService`).
+  Services are the IO boundary and apply
   ADR 0015 error handling; the SDK exposes no HTTP status, so a 401 is recognized from the error
   message and promoted to a typed auth error.
 - The Lock Server pubky comes from runtime config (`getLockServer()`, `PUBKY_RUNTIME_LOCK_SERVER`,

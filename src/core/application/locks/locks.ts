@@ -8,7 +8,6 @@ import type {
   TLocksSessionResult,
   TRegisterGuardedResourceParams,
   TRegisterGuardedResourceResult,
-  TRestoreLocksSessionParams,
 } from '@/services/locks/locks.types';
 
 /**
@@ -26,16 +25,16 @@ export class LocksApplication {
     return LocksService.exchangeSessionCode(params);
   }
 
-  static restoreSession(params: TRestoreLocksSessionParams): Promise<LocksSdkSession> {
-    return LocksService.restoreSession(params);
+  static restoreSession(): Promise<LocksSdkSession> {
+    return LocksService.restoreSession();
   }
 
-  static signout(session: LocksSdkSession): Promise<void> {
-    return LocksService.signout(session);
+  static signout(): Promise<void> {
+    return LocksService.signout();
   }
 
-  static setLockServiceConfig(session: LocksSdkSession, defaultLockServer: string): Promise<void> {
-    return LocksService.setLockServiceConfig(session, defaultLockServer);
+  static setLockServiceConfig(): Promise<void> {
+    return LocksService.setLockServiceConfig();
   }
 
   static registerGuardedResource(params: TRegisterGuardedResourceParams): Promise<TRegisterGuardedResourceResult> {
