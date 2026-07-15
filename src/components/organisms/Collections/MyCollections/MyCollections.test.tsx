@@ -102,8 +102,21 @@ vi.mock('@/organisms/Collections/CollectionBookmarkCard/CollectionBookmarkCard',
 }));
 
 vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
-  CollectionCard: ({ authorPubky, postId }: { authorPubky: string; postId: string }) => (
-    <div data-testid="collection-card" data-author-pubky={authorPubky} data-post-id={postId} />
+  CollectionCard: ({
+    authorPubky,
+    postId,
+    showDeleteAction,
+  }: {
+    authorPubky: string;
+    postId: string;
+    showDeleteAction?: boolean;
+  }) => (
+    <div
+      data-testid="collection-card"
+      data-author-pubky={authorPubky}
+      data-post-id={postId}
+      data-show-delete-action={String(showDeleteAction ?? false)}
+    />
   ),
 }));
 
@@ -237,8 +250,10 @@ describe('MyCollections', () => {
     expect(cards).toHaveLength(2);
     expect(cards[0]).toHaveAttribute('data-author-pubky', AUTHOR_A);
     expect(cards[0]).toHaveAttribute('data-post-id', 'p1');
+    expect(cards[0]).toHaveAttribute('data-show-delete-action', 'true');
     expect(cards[1]).toHaveAttribute('data-author-pubky', AUTHOR_A);
     expect(cards[1]).toHaveAttribute('data-post-id', 'p2');
+    expect(cards[1]).toHaveAttribute('data-show-delete-action', 'true');
     expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'collections.new.cta' })).toHaveAttribute(
       'data-cy',
