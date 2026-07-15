@@ -51,6 +51,7 @@ export function ClickableTagsList({
   showInput = false,
   showAddButton = false,
   addMode = false,
+  readOnly = false,
   showTagClose = false,
   className,
   onTagClick,
@@ -99,6 +100,11 @@ export function ClickableTagsList({
 
   // Handle tag click with auth requirement (toggle or custom handler)
   const handleTagClick = (tag: (typeof enrichedTags)[number], index: number, e: React.MouseEvent) => {
+    if (readOnly) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     requireAuth(() => {
       if (onTagClick) {
         onTagClick(tag, index, e);
@@ -128,7 +134,7 @@ export function ClickableTagsList({
 
   // Check if we should render anything
   const hasVisibleTags = visibleTags.length > 0;
-  const hasAddButton = showAddButton && !showInput && !isAdding;
+  const hasAddButton = !readOnly && showAddButton && !showInput && !isAdding;
 
   if (!hasVisibleTags && !hasInput && !hasAddButton) return null;
 

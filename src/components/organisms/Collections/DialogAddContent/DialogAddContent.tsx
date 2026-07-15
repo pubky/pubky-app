@@ -243,7 +243,7 @@ function DialogAddContentBody({
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
       <DialogHeader className="pr-0">
         <DialogTitle>{t('title')}</DialogTitle>
-        <DialogDescription className="sr-only">{t('description')}</DialogDescription>
+        <DialogDescription className="text-muted-foreground">{t('description')}</DialogDescription>
       </DialogHeader>
       <Container overrideDefaults className="flex w-full flex-col gap-3">
         <FeedInstructionCard onOpenFeed={onOpenFeed} />
@@ -302,7 +302,7 @@ export function DialogAddContent({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>{trigger}</DialogTrigger>
         <DialogContent
-          className="flex w-3xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
+          className="flex w-xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
           hiddenTitle={t('title')}
         >
           <DialogAddContentBody

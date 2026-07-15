@@ -119,7 +119,7 @@ export function PostInputExpandableSection({
                   ))}
                 </Container>
               )}
-              <Container className="justify-between gap-4 md:flex-row md:gap-0">
+              <Container className="gap-4">
                 <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
 
                 <PostInputActionBar

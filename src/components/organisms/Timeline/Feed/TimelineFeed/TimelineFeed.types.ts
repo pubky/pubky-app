@@ -1,5 +1,6 @@
 import type { ReactNode, RefObject } from 'react';
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 
 interface TimelineFeedPropsBase {
   /**
@@ -72,6 +73,11 @@ export interface TimelineFeedContextValue {
    * feed.
    */
   variant: TimelineFeedVariant;
+  /**
+   * Active post stream for this feed. Used to gate optimistic inserts so posts
+   * that do not match the current content filter are not prepended locally.
+   */
+  streamId: PostStreamId;
   /**
    * Current collection composite id when this context belongs to a single
    * collection feed.

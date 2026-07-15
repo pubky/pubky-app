@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import { useTranslations } from 'next-intl';
 import { useDebounceCallback } from 'usehooks-ts';
+import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
@@ -16,6 +17,7 @@ import {
   POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
   POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
+import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
@@ -23,9 +25,11 @@ import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentio
 import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
 import { usePost } from '@/hooks/usePost/usePost';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
+import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+import { postKindBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
 
@@ -203,12 +207,45 @@ export function usePostInput({
         useLocalFilesStore.getState().setPostAttachments(createdPostId, localAttachments);
       }
 
-      // Only prepend to timeline for posts and reposts, not replies or edits
-      if (variant !== POST_INPUT_VARIANT.REPLY && variant !== POST_INPUT_VARIANT.EDIT) {
-        timelineFeed?.prependPosts(createdPostId);
+      if (variant === POST_INPUT_VARIANT.REPLY || variant === POST_INPUT_VARIANT.EDIT) {
+        onSuccess?.(createdPostId);
+        return;
+      }
+
+      const feedVariant = timelineFeed?.variant;
+      const shouldPrepend =
+        variant === POST_INPUT_VARIANT.POST ||
+        (variant === POST_INPUT_VARIANT.REPOST &&
+          feedVariant != null &&
+          REPOST_OPTIMISTIC_PREPEND_VARIANTS.has(feedVariant));
+
+      if (shouldPrepend) {
+        void (async () => {
+          try {
+            const streamId = timelineFeed?.streamId;
+            if (!streamId) {
+              await timelineFeed?.prependPosts(createdPostId);
+              return;
+            }
+
+            const details = await PostController.getDetails({ compositeId: createdPostId });
+            if (!details?.kind || postKindBelongsToStream(details.kind, streamId)) {
+              await timelineFeed.prependPosts(createdPostId);
+            }
+          } catch (error) {
+            Logger.error('[usePostInput] Failed to prepend created post to timeline', {
+              error,
+              createdPostId,
+              streamId: timelineFeed?.streamId,
+            });
+          } finally {
+            setIsExpanded(false);
+          }
+        })();
+      } else {
         setIsExpanded(false);
       }
-      // Call original onSuccess callback if provided
+
       onSuccess?.(createdPostId);
     };
 

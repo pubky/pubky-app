@@ -2,22 +2,26 @@
 
 exports[`PostHeader - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div
-  class="flex w-full min-w-0 items-start justify-between gap-3"
+  class="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3"
   data-testid="container"
 >
   <div
-    data-size="normal"
-    data-testid="post-header-user-info"
+    class="w-full max-w-full min-w-0"
   >
     <div
-      data-testid="avatar"
-    />
-    <div>
-      Snapshot User
-    </div>
-    <div>
-      @
-      snapshot
+      data-size="normal"
+      data-testid="post-header-user-info"
+    >
+      <div
+        data-testid="avatar"
+      />
+      <div>
+        Snapshot User
+      </div>
+      <div>
+        @
+        snapshot
+      </div>
     </div>
   </div>
   <div
@@ -58,22 +62,26 @@ exports[`PostHeader - Mobile Snapshots > matches snapshot on mobile viewport 1`]
 
 exports[`PostHeader - Snapshots > matches snapshot in loaded state 1`] = `
 <div
-  class="flex w-full min-w-0 items-start justify-between gap-3"
+  class="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3"
   data-testid="container"
 >
   <div
-    data-size="normal"
-    data-testid="post-header-user-info"
+    class="w-full max-w-full min-w-0"
   >
     <div
-      data-testid="avatar"
-    />
-    <div>
-      Snapshot User
-    </div>
-    <div>
-      @
-      snapshot
+      data-size="normal"
+      data-testid="post-header-user-info"
+    >
+      <div
+        data-testid="avatar"
+      />
+      <div>
+        Snapshot User
+      </div>
+      <div>
+        @
+        snapshot
+      </div>
     </div>
   </div>
   <div

@@ -321,11 +321,26 @@ vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
 
 vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
   return {
-    PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
-      <div data-testid="post-preview-card" data-post-id={postId} className={className}>
-        Original Post: {postId}
-      </div>
-    )),
+    PostPreviewCard: vi.fn(
+      ({
+        postId,
+        className,
+        interactiveActions,
+      }: {
+        postId: string;
+        className?: string;
+        interactiveActions?: boolean;
+      }) => (
+        <div
+          data-testid="post-preview-card"
+          data-post-id={postId}
+          data-interactive-actions={String(interactiveActions ?? true)}
+          className={className}
+        >
+          Original Post: {postId}
+        </div>
+      ),
+    ),
   };
 });
 
@@ -562,6 +577,8 @@ describe('PostInput', () => {
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Optional comment')).toBeInTheDocument();
+    expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-interactive-actions', 'false');
+    expect(screen.getByTestId('post-preview-card')).toHaveClass('bg-card');
   });
 
   it('renders with reply variant', () => {
@@ -570,6 +587,17 @@ describe('PostInput', () => {
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Write a reply...')).toBeInTheDocument();
+  });
+
+  it('constrains nested content so long reply usernames can truncate', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" />);
+
+    const containers = screen.getAllByTestId('container');
+    const outerContainer = containers[0];
+    const contentContainer = containers.find((container) => container.className.includes('contain-inline-size'));
+
+    expect(outerContainer).toHaveClass('min-w-0', 'max-w-full');
+    expect(contentContainer).toHaveClass('min-w-0');
   });
 
   it('shows thread connector when showThreadConnector is true', () => {
