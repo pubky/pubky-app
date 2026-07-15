@@ -32,12 +32,7 @@ function renderDialog(overrides?: { open?: boolean; onOpenChange?: () => void; o
   const onOpenChange = overrides?.onOpenChange ?? vi.fn();
   const onSuccess = overrides?.onSuccess ?? vi.fn();
   const view = render(
-    <DialogLocksAuth
-      open={overrides?.open ?? true}
-      onOpenChange={onOpenChange}
-      lockServerPubky="lockpubky"
-      onSuccess={onSuccess}
-    />,
+    <DialogLocksAuth open={overrides?.open ?? true} onOpenChange={onOpenChange} onSuccess={onSuccess} />,
   );
   return { ...view, onOpenChange, onSuccess };
 }
@@ -114,7 +109,7 @@ describe('DialogLocksAuth', () => {
     const { rerender } = renderDialog({ open: true });
     expect(mocks.reset).not.toHaveBeenCalled();
 
-    rerender(<DialogLocksAuth open={false} onOpenChange={vi.fn()} lockServerPubky="lockpubky" onSuccess={vi.fn()} />);
+    rerender(<DialogLocksAuth open={false} onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
 
     expect(mocks.reset).toHaveBeenCalled();
   });

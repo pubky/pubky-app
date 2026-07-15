@@ -10,7 +10,7 @@ import type {
   TPubkyParams,
   TSignUpParams,
 } from '@/controllers/auth/auth.types';
-import { LocksAuthController } from '@/controllers/locksAuth/locksAuth';
+import { LocksController } from '@/controllers/locks/locks';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
@@ -298,7 +298,7 @@ export class AuthController {
 
     // Unified logout: tear down the Locks session (Lock Server signout + local store) alongside the
     // homeserver session, so the user can never stay logged into Locks after leaving pubky.app.
-    await LocksAuthController.logout();
+    await LocksController.logout();
 
     // Clear cookies (locale cookie excluded — device-level UI preference, not sensitive data)
     clearCookies(['locale']);

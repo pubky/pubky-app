@@ -13,7 +13,7 @@ export interface LocksAuthState {
   locksSessionSecret: string | null;
   // TODO: when locks-sdk exposes the creator pubky on `Session`, store it here as `creatorPubky`
   // (mirroring the homeserver store's `currentUserPubky`). Callers then read it from the store
-  // instead of extracting `creator` from Lock Server responses (`LocksContentService`).
+  // instead of extracting `creator` from Lock Server responses (`LocksService`).
   hasHydrated: boolean;
 }
 

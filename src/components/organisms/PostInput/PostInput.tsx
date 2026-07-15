@@ -457,7 +457,6 @@ export function PostInput({
                 onOpenChange={(open) => {
                   if (!open) closeAuthDialog();
                 }}
-                lockServerPubky={lockServerPubky}
                 onSuccess={handleAuthSuccess}
               />
             )}

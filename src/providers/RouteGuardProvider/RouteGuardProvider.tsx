@@ -9,6 +9,7 @@ import { AuthController } from '@/controllers/auth/auth';
 import { MigrationController } from '@/controllers/migration/migration';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
+import { useRestoreLocksAuth } from '@/hooks/useRestoreLocksAuth/useRestoreLocksAuth';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -181,6 +182,9 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
       router.push(redirectTo);
     }
   }, [status, pathname, router, isLoading, isRouteAccessible]);
+
+  // Restore the Locks session alongside the homeserver one (no-op while Locks is unconfigured).
+  useRestoreLocksAuth();
 
   // Show loading spinner while:
   // 1. Authentication status is being determined (isLoading = true)

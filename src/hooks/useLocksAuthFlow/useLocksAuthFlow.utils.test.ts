@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { LOCKS_AUTH_MESSAGE_TYPE, readLocksAuthBridgeMessage } from './locksAuthBridge';
+import { LOCKS_AUTH_MESSAGE_TYPE, readLocksAuthBridgeMessage } from './useLocksAuthFlow.utils';
 
 const LOCK_SERVER_ORIGIN = 'https://lock-server.example';
 const iframeWindow = asOpaque<Window>({ name: 'iframe' });

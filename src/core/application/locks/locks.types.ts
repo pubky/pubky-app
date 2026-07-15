@@ -1,4 +1,4 @@
-import type { TGuardedResource } from '@/services/locksContent/locksContent.types';
+import type { TGuardedResource } from '@/services/locks/locks.types';
 
 /**
  * One file to guard. The storage path is minted per upload, so the original filename is not part of
@@ -10,8 +10,8 @@ export type TLockContentFile = {
 };
 
 /**
- * Params to publish one content lock, in pubky-app terms: a post and its attachments. The controller
- * maps them onto the Lock Server's primary/secondary resource vocabulary.
+ * Params to publish one content lock, in pubky-app terms: a post and its attachments. The
+ * application maps them onto the Lock Server's primary/secondary resource vocabulary.
  *
  * The Lock Server is not passed in — it is read off the session, which is the only server holding the
  * uploaded bytes. The post is not passed either: an attachment's path only exists once its bytes are

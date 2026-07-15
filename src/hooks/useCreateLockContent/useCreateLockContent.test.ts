@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { TGuardedResource } from '@/services/locksContent/locksContent.types';
+import type { TGuardedResource } from '@/services/locks/locks.types';
 import { useCreateLockContent } from './useCreateLockContent';
 
 const mocks = vi.hoisted(() => ({
@@ -14,16 +14,12 @@ const mocks = vi.hoisted(() => ({
   clearSession: vi.fn(),
 }));
 
-vi.mock('@/controllers/locksContent/locksContent', () => ({
-  LocksContentController: { createLockContent: mocks.createLockContent },
+vi.mock('@/controllers/locks/locks', () => ({
+  LocksController: { createLockContent: mocks.createLockContent, clearSession: mocks.clearSession },
 }));
 
 vi.mock('@/controllers/post/post', () => ({
   PostController: { commitCreate: mocks.commitCreate },
-}));
-
-vi.mock('@/controllers/locksAuth/locksAuth', () => ({
-  LocksAuthController: { clearSession: mocks.clearSession },
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({

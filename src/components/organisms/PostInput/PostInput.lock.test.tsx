@@ -27,14 +27,11 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@/controllers/locksContent/locksContent', () => ({
-  LocksContentController: { createLockContent: mocks.createLockContent },
+vi.mock('@/controllers/locks/locks', () => ({
+  LocksController: { createLockContent: mocks.createLockContent, clearSession: mocks.clearSession },
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: { commitCreate: mocks.commitCreate },
-}));
-vi.mock('@/controllers/locksAuth/locksAuth', () => ({
-  LocksAuthController: { clearSession: mocks.clearSession },
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) => selector({ currentUserPubky: 'alice' }),

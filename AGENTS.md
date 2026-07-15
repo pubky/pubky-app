@@ -20,6 +20,7 @@ Import modules through the path aliases in `tsconfig.json` (for example `@/hooks
 - Controllers NEVER call Services directly — go through Application
 - Coordinators NEVER call Application — go through Controllers
 - Application NEVER accesses Stores — only Controllers manage stores
+- Services NEVER access Stores — except session reads in `HomeserverService`/`LocksService` via `getState()` (ADR 0004); reads only, never writes
 - Pipes are pure — NO IO, NO side effects
 - Only PostApplication, NotificationApplication, BootstrapApplication, HotApplication, PostStreamApplication, TtlApplication may call other Applications (max depth 1, no cycles)
 
