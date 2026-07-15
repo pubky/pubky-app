@@ -38,7 +38,12 @@ export enum CONTENT {
 export type LayoutType = (typeof LAYOUT)[keyof typeof LAYOUT];
 export type SortType = (typeof SORT)[keyof typeof SORT];
 export type ReachType = (typeof REACH)[keyof typeof REACH];
+export type ProfileTagGatedReachType = typeof REACH.ALL | typeof REACH.ME;
 export type ContentType = (typeof CONTENT)[keyof typeof CONTENT];
+
+export function isProfileTagGatedReach(reach: ReachType): reach is ProfileTagGatedReachType {
+  return reach === REACH.ALL || reach === REACH.ME;
+}
 
 export interface HomeState {
   layout: LayoutType;
