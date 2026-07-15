@@ -45,6 +45,11 @@ vi.mock('@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs', () => ({
   usePostReplyRepostDialogs: vi.fn(),
 }));
 
+const mockRequireAuth = vi.fn(<T,>(action: () => T) => action());
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ requireAuth: mockRequireAuth }),
+}));
+
 const mockRouterReplace = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockRouterReplace, push: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
@@ -340,11 +345,21 @@ describe('CollectionHero', () => {
 
     expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-    expect(screen.getByText('2 posts')).toBeInTheDocument(); // compact-formatted item count
+    expect(screen.getByLabelText('2 posts')).toBeInTheDocument(); // compact-formatted item count
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
     expect(avatar).toHaveAttribute('data-fallback-seed', AUTHOR_PUBKY);
+  });
+
+  it('links the owner avatar and name to the author profile', () => {
+    renderHero();
+
+    const profileHref = `/profile/${AUTHOR_PUBKY}`;
+    const profileLinks = screen.getAllByRole('link').filter((link) => link.getAttribute('href') === profileHref);
+    expect(profileLinks).toHaveLength(2);
+    expect(profileLinks[0]).toContainElement(screen.getByTestId('avatar-with-fallback'));
+    expect(profileLinks[1]).toHaveTextContent('Bitcoin Wizard');
   });
 
   it('wires ClickableTagsList to the composite id with POST kind and the add button enabled', () => {
@@ -379,7 +394,7 @@ describe('CollectionHero', () => {
     renderHero();
 
     expect(screen.queryByText('A bit of Bitcoin purity amidst all of the madness.')).not.toBeInTheDocument();
-    expect(screen.getByText('0 posts')).toBeInTheDocument(); // empty items count still renders
+    expect(screen.getByLabelText('0 posts')).toBeInTheDocument(); // empty items count still renders
   });
 
   it('renders the hero skeleton while post details have not loaded yet', () => {
@@ -616,7 +631,34 @@ describe('CollectionHero', () => {
       expect(screen.getByText('collections.single.share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
       fireEvent.click(screen.getByLabelText('collections.single.share'));
 
+      expect(mockRequireAuth).toHaveBeenCalledTimes(1);
       expect(openRepostDialog).toHaveBeenCalledTimes(1);
+    });
+
+    it('prompts sign-in instead of toggling bookmark when a guest clicks Follow', () => {
+      setAuthStore(null);
+      const toggle = setBookmark({ isBookmarked: false });
+      mockRequireAuth.mockImplementation(<T,>(_action: () => T) => undefined as T);
+
+      renderHero();
+
+      fireEvent.click(screen.getByLabelText('collections.single.follow'));
+
+      expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+      expect(toggle).not.toHaveBeenCalled();
+    });
+
+    it('prompts sign-in instead of opening the share dialog when a guest clicks Share', () => {
+      setAuthStore(null);
+      const { openRepostDialog } = setRepostDialogs();
+      mockRequireAuth.mockImplementation(<T,>(_action: () => T) => undefined as T);
+
+      renderHero();
+
+      fireEvent.click(screen.getByLabelText('collections.single.share'));
+
+      expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+      expect(openRepostDialog).not.toHaveBeenCalled();
     });
   });
 

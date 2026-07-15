@@ -288,6 +288,8 @@ describe('PostMain', () => {
     vi.mocked(usePostNavigation).mockReturnValue({
       getPostHref: vi.fn(() => '/post/author/post-abc'),
       navigateToPost: vi.fn(),
+      getCollectionHref: vi.fn(() => '/collections/author/collection-abc'),
+      navigateToCollection: vi.fn(),
       handlePostClick: mockHandlePostClick,
       handlePostAuxClick: mockHandlePostAuxClick,
       handlePostKeyDown: vi.fn(),
@@ -721,6 +723,8 @@ describe('PostMain - Snapshots', () => {
     vi.mocked(usePostNavigation).mockReturnValue({
       getPostHref: vi.fn(() => '/post/author/post-abc'),
       navigateToPost: vi.fn(),
+      getCollectionHref: vi.fn(() => '/collections/author/collection-abc'),
+      navigateToCollection: vi.fn(),
       handlePostClick: vi.fn(),
       handlePostAuxClick: vi.fn(),
       handlePostKeyDown: vi.fn(),
@@ -827,6 +831,8 @@ describe('PostMain - Mobile Snapshots', () => {
     vi.mocked(usePostNavigation).mockReturnValue({
       getPostHref: vi.fn(() => '/post/author/post-abc'),
       navigateToPost: vi.fn(),
+      getCollectionHref: vi.fn(() => '/collections/author/collection-abc'),
+      navigateToCollection: vi.fn(),
       handlePostClick: vi.fn(),
       handlePostAuxClick: vi.fn(),
       handlePostKeyDown: vi.fn(),

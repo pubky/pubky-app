@@ -1078,7 +1078,12 @@
       "maxFiles": "Maximum {max} fichiers autorisés",
       "maxFilesPartial": "Maximum {max} fichiers autorisés. Certains fichiers n'ont pas été ajoutés.",
       "unsupportedType": "Type de fichier non pris en charge pour {name}. Pris en charge : {formats}.",
-      "fileTooLarge": "{name} dépasse la limite de {maxSize}."
+      "fileTooLarge": "{name} dépasse la limite de {maxSize}.",
+      "imageTooLargeRaw": "L'image est trop grande. La taille maximale est {maxSize}.",
+      "imageTooLargeGif": "Ce GIF dépasse la limite d'envoi de {maxSize} et ne peut pas être compressé. Veuillez utiliser un GIF plus petit.",
+      "imageTooLargeAnimatedWebp": "Ce WebP animé dépasse la limite d'envoi de {maxSize} et ne peut pas être compressé. Veuillez utiliser un fichier plus petit.",
+      "imageTooLargeSvg": "Ce SVG dépasse la limite d'envoi de {maxSize} après assainissement. Veuillez utiliser un fichier plus petit.",
+      "imageTooLargeRaster": "L'image n'a pas pu être compressée en dessous de {maxSize}. Veuillez utiliser une image plus petite ou de plus basse résolution."
     },
     "status": {
       "updateFailed": "Impossible de mettre à jour le statut. Réessayez.",
@@ -1329,14 +1334,14 @@
       "ctaShort": "Nouveau",
       "title": "Nouvelle collection",
       "nameLabel": "Titre",
-      "namePlaceholder": "Proof of Work",
+      "namePlaceholder": "Nommez votre collection",
       "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Le meilleur des plus grands contributeurs Bitcoin",
+      "descriptionPlaceholder": "Que trouveront les gens ici ?",
       "backgroundLabel": "Arrière-plan",
       "addImage": "Ajouter une image",
       "removeImage": "Supprimer l'image",
       "coverImageInvalid": "L'image de couverture doit être un fichier image.",
-      "coverImageTooLarge": "L'image de couverture est trop grande.",
+      "coverImageTooLarge": "L'image de couverture est trop grande. La taille maximale est {maxSize}.",
       "nameRequired": "Le titre de la collection est requis.",
       "cancel": "Annuler",
       "save": "Enregistrer la collection",
@@ -1348,6 +1353,7 @@
       "title": "Bienvenue dans les Collections",
       "description": "Gardez les publications qui en valent la peine. Rassemblez le meilleur contenu de votre réseau. Organisez vos idées, filtrez le signal du bruit et partagez ce qui compte.",
       "imageAlt": "Collections",
+      "publicNote": "À noter : les collections sont publiques et visibles.",
       "cancel": "Annuler",
       "continue": "Continuer"
     },
@@ -1360,9 +1366,7 @@
     "showMore": "Afficher plus",
     "loadFailed": "Échec du chargement des collections. Veuillez réessayer.",
     "my": {
-      "title": "Mes collections",
-      "publicNote": "À noter : toutes les collections sont publiques et visibles.",
-      "publicNoteShort": "Toutes les collections sont publiques et visibles."
+      "title": "Mes collections"
     },
     "followed": {
       "title": "Collections suivies",
@@ -1407,7 +1411,7 @@
     },
     "addContentDialog": {
       "title": "Ajouter une publication",
-      "description": "Ajoutez une publication ou un article depuis votre fil ou collez directement une URL.",
+      "description": "Il existe plusieurs façons d'ajouter des publications à votre collection.",
       "fromFeedTitle": "Ajouter depuis le fil",
       "fromFeedLead": "Trouvez une publication",
       "fromFeedRest": " que vous voulez ajouter et cliquez sur le bouton des collections.",

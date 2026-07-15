@@ -16,7 +16,7 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when disabled
       Test
     </div>
     <div
-      class="justify-between gap-4 md:flex-row md:gap-0"
+      class="gap-4"
       data-testid="container"
     >
       <div
@@ -69,7 +69,7 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when expanded
       Test content with link https://example.com
     </div>
     <div
-      class="justify-between gap-4 md:flex-row md:gap-0"
+      class="gap-4"
       data-testid="container"
     >
       <div
@@ -147,7 +147,7 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when expanded
       </div>
     </div>
     <div
-      class="justify-between gap-4 md:flex-row md:gap-0"
+      class="gap-4"
       data-testid="container"
     >
       <div
@@ -201,7 +201,7 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when isArticl
     data-testid="container"
   >
     <div
-      class="justify-between gap-4 md:flex-row md:gap-0"
+      class="gap-4"
       data-testid="container"
     >
       <div
@@ -248,7 +248,7 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when submitti
       Test
     </div>
     <div
-      class="justify-between gap-4 md:flex-row md:gap-0"
+      class="gap-4"
       data-testid="container"
     >
       <div
@@ -301,7 +301,7 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot with EDIT sub
       Editing content
     </div>
     <div
-      class="justify-between gap-4 md:flex-row md:gap-0"
+      class="gap-4"
       data-testid="container"
     >
       <div
@@ -348,7 +348,7 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot with REPLY su
       Test content
     </div>
     <div
-      class="justify-between gap-4 md:flex-row md:gap-0"
+      class="gap-4"
       data-testid="container"
     >
       <div
@@ -395,7 +395,7 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot with emoji pi
       Test content
     </div>
     <div
-      class="justify-between gap-4 md:flex-row md:gap-0"
+      class="gap-4"
       data-testid="container"
     >
       <div

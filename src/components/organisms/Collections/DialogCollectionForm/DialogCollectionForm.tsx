@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FORM_LABEL_CLASSES } from '@/config/forms';
+import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import { COLLECTION_DESCRIPTION_MAX_CHARACTER_LENGTH, COLLECTION_NAME_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import type { UseCoverImagePickerResult } from '@/hooks/useCoverImagePicker/useCoverImagePicker';
 import {
@@ -108,14 +109,14 @@ export function DialogCollectionForm({
     coverError === 'invalid-type'
       ? t('coverImageInvalid')
       : coverError === 'too-large'
-        ? t('coverImageTooLarge')
+        ? t('coverImageTooLarge', { maxSize: `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB` })
         : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent
-        className="w-3xl border-border bg-popover"
+        className="w-xl border-border bg-popover"
         onOpenAutoFocus={disableOpenAutoFocus ? (event) => event.preventDefault() : undefined}
       >
         <DialogHeader>

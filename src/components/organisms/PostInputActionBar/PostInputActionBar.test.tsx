@@ -226,6 +226,12 @@ describe('PostInputActionBar', () => {
     expect(screen.getByText('45/300')).toHaveClass('sm:block');
   });
 
+  it('uses full width root layout', () => {
+    const { container } = render(<PostInputActionBar hideArticleButton={false} />);
+
+    expect(container.firstChild).toHaveClass('w-full');
+  });
+
   it('uses default size for post button on mobile', () => {
     mockUseIsMobile.mockReturnValue(true);
     render(<PostInputActionBar hideArticleButton={false} />);

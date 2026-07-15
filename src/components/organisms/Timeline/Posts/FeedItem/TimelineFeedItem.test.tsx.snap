@@ -1,0 +1,39 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TimelineFeedItem - Snapshots > matches snapshot for a collection timeline feed item 1`] = `
+<div
+  aria-posinset="1"
+  aria-setsize="3"
+  class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  data-cy="post-card"
+  data-testid="container"
+  role="article"
+  tabindex="0"
+>
+  <div
+    data-author-pubky="author-pubky"
+    data-post-id="collection-id"
+    data-testid="collection-card"
+  />
+</div>
+`;
+
+exports[`TimelineFeedItem - Snapshots > matches snapshot for a regular timeline feed item 1`] = `
+<div
+  aria-posinset="1"
+  aria-setsize="3"
+  class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  data-cy="post-card"
+  data-testid="container"
+  role="article"
+  tabindex="0"
+>
+  <div
+    data-is-reply="false"
+    data-testid="post-author:post123"
+  />
+  <div
+    data-testid="replies-author:post123"
+  />
+</div>
+`;

@@ -547,7 +547,7 @@ describe('createPostStreamParams', () => {
       expect(result.invokeEndpoint).toBe(StreamSource.BOOKMARKS);
     });
 
-    it('should limit tags to maximum 5 (NEXT_MAX_STREAM_TAGS)', () => {
+    it('should limit tags to maximum 5 (PUBKY_RUNTIME_MAX_STREAM_TAGS)', () => {
       const streamIdWithManyTags = 'timeline:bookmarks:all:tag1,tag2,tag3,tag4,tag5,tag6,tag7' as PostStreamId;
       const result = createPostStreamParams({
         streamId: streamIdWithManyTags,

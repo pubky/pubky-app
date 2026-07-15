@@ -34,6 +34,7 @@ import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
+import { isArticleContent } from '@/libs/post/articleContent';
 import { stripPubkyPrefix, truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
@@ -75,7 +76,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const isUserMuted = isMuted(postAuthorId);
   const rawUsername = authorProfile?.name || postAuthorId;
   const username = truncateString(rawUsername, 15);
-  const isArticle = postDetails?.kind === 'long';
+  const isArticle = postDetails?.kind === 'long' && isArticleContent(postDetails.content);
   // Collections store a JSON envelope in `content`; copying that raw JSON would
   // be useless to the user, so we hide "Copy text" for them just like articles.
   const isCollection = postDetails?.kind === 'collection';
