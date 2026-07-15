@@ -28,11 +28,19 @@ const UNSAFE_IPV4_RANGES: IPv4Range[] = [
   { base: ipv4Base(240), prefix: 4 }, // Reserved, includes limited broadcast
 ];
 
+// More-specific globally reachable allocations override their special-purpose parent range.
+const GLOBAL_IPV4_EXCEPTIONS: IPv4Range[] = [
+  { base: ipv4Base(192, 0, 0, 9), prefix: 32 }, // Port Control Protocol anycast
+  { base: ipv4Base(192, 0, 0, 10), prefix: 32 }, // TURN anycast
+];
+
 const UNSAFE_IPV6_RANGES: IPv6Range[] = [
   { base: ipv6Base(), prefix: 128 }, // Unspecified
   { base: ipv6Base(0, 0, 0, 0, 0, 0, 0, 1), prefix: 128 }, // Loopback
   { base: ipv6Base(0, 0, 0, 0, 0, 0xffff), prefix: 96 }, // IPv4-mapped IPv6
-  { base: ipv6Base(0x64, 0xff9b), prefix: 96 }, // IPv4/IPv6 translation
+  // Intentionally block the globally reachable NAT64 prefix: embedded IPv4 destinations
+  // could otherwise bypass the IPv4 safety policy at a network translator.
+  { base: ipv6Base(0x64, 0xff9b), prefix: 96 },
   { base: ipv6Base(0x64, 0xff9b, 1), prefix: 48 }, // Local-use IPv4/IPv6 translation
   { base: ipv6Base(0x100), prefix: 64 }, // Discard-only
   { base: ipv6Base(0x2001), prefix: 23 }, // IETF protocol assignments
@@ -43,6 +51,17 @@ const UNSAFE_IPV6_RANGES: IPv6Range[] = [
   { base: ipv6Base(0xfe80), prefix: 10 }, // Link-local
   { base: ipv6Base(0xfec0), prefix: 10 }, // Deprecated site-local
   { base: ipv6Base(0xff00), prefix: 8 }, // Multicast
+];
+
+// More-specific globally reachable allocations override 2001::/23.
+const GLOBAL_IPV6_EXCEPTIONS: IPv6Range[] = [
+  { base: ipv6Base(0x2001, 0x0001, 0, 0, 0, 0, 0, 1), prefix: 128 }, // PCP anycast
+  { base: ipv6Base(0x2001, 0x0001, 0, 0, 0, 0, 0, 2), prefix: 128 }, // TURN anycast
+  { base: ipv6Base(0x2001, 0x0001, 0, 0, 0, 0, 0, 3), prefix: 128 }, // DNS-SD anycast
+  { base: ipv6Base(0x2001, 0x0003), prefix: 32 }, // Automatic Multicast Tunneling
+  { base: ipv6Base(0x2001, 0x0004, 0x0112), prefix: 48 }, // AS112-v6
+  { base: ipv6Base(0x2001, 0x0020), prefix: 28 }, // ORCHIDv2
+  { base: ipv6Base(0x2001, 0x0030), prefix: 28 }, // Drone Remote ID protocol entity tags
 ];
 
 const GLOBAL_IPV6_RANGES: IPv6Range[] = [
@@ -62,11 +81,13 @@ export function isIpSafe(ip: string): boolean {
 
   const ipv4 = parseIpv4(normalizedIp);
   if (ipv4 !== null) {
+    if (GLOBAL_IPV4_EXCEPTIONS.some((range) => isIpv4InRange(ipv4, range))) return true;
     return !UNSAFE_IPV4_RANGES.some((range) => isIpv4InRange(ipv4, range));
   }
 
   const ipv6 = parseIpv6(normalizedIp);
   if (ipv6 !== null) {
+    if (GLOBAL_IPV6_EXCEPTIONS.some((range) => isIpv6InRange(ipv6, range))) return true;
     return (
       GLOBAL_IPV6_RANGES.some((range) => isIpv6InRange(ipv6, range)) &&
       !UNSAFE_IPV6_RANGES.some((range) => isIpv6InRange(ipv6, range))

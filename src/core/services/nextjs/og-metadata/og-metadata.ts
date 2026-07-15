@@ -5,10 +5,12 @@ import type { TOgMetadataFallbackReason, TOgMetadataResult } from '@/application
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
+import { safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
+import { isNetworkError, isTimeoutError } from '@/libs/error/error.utils';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { checkDnsSafety, isExpectedDnsResolutionError, readResponseBody } from '../nextjs.utils';
+import { checkDnsSafety, readResponseBody } from '../nextjs.utils';
 import { buildFallbackMetadata, detectMediaType, extractMetadata, validateRedirectUrl } from './og-metadata.utils';
 
 const MAX_REDIRECTS = 5;
@@ -236,37 +238,41 @@ async function fetchForOgMetadata(url: string, options: RequestInit): Promise<Og
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-      dispatcher: SAFE_OG_METADATA_DISPATCHER,
-    } as FetchInitWithDispatcher);
+    const response = await safeFetch(
+      url,
+      {
+        ...options,
+        signal: controller.signal,
+        dispatcher: SAFE_OG_METADATA_DISPATCHER,
+      } as FetchInitWithDispatcher,
+      ErrorService.NextJsServer,
+      OG_METADATA_OPERATION,
+    );
     return { ok: true, response };
   } catch (error) {
-    const appError = findAppError(error);
-    if (appError) {
-      if (isDnsLookupFailure(appError)) {
+    if (error instanceof AppError) {
+      if (isDnsLookupFailure(error)) {
         return {
           ok: false,
           reason: 'dns_failed',
           url,
-          context: { errorName: appError.name },
+          context: { errorName: error.name },
           alreadyLogged: true,
         };
       }
 
-      throw appError;
+      if (isTimeoutError(error) || isNetworkError(error)) {
+        return {
+          ok: false,
+          reason: isTimeoutError(error) ? 'timeout' : 'network',
+          url,
+          context: { errorName: error.name },
+          alreadyLogged: true,
+        };
+      }
     }
 
-    if (isAbortError(error)) {
-      return { ok: false, reason: 'timeout', url, context: { errorName: getErrorName(error) } };
-    }
-
-    if (hasExpectedDnsResolutionError(error)) {
-      return { ok: false, reason: 'dns_failed', url, context: { errorName: getErrorName(error) } };
-    }
-
-    return { ok: false, reason: 'network', url, context: { errorName: getErrorName(error) } };
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -282,14 +288,14 @@ function safeOgMetadataLookup(...[hostname, options, callback]: Parameters<Looku
           return;
         }
 
-        callback(createDnsFailedError(dnsResult.cause), '');
+        callback(createDnsFailedError(hostname, dnsResult.cause), '');
         return;
       }
 
       const requestedFamily = normalizeRequestedIpFamily(options.family);
       const addresses = dnsResult.addresses.filter(({ family }) => !requestedFamily || requestedFamily === family);
       if (addresses.length === 0) {
-        callback(createDnsFailedError(), '');
+        callback(createDnsFailedError(hostname), '');
         return;
       }
 
@@ -316,11 +322,12 @@ function safeOgMetadataLookup(...[hostname, options, callback]: Parameters<Looku
   })();
 }
 
-function createDnsFailedError(cause?: unknown): AppError {
-  return Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Connection-time DNS resolution failed', {
+function createDnsFailedError(hostname: string, cause?: unknown): AppError {
+  return Err.network(NetworkErrorCode.DNS_FAILED, 'Connection-time DNS resolution failed', {
     service: ErrorService.NextJsServer,
     operation: SAFE_LOOKUP_OPERATION,
     cause,
+    context: { hostname },
   });
 }
 
@@ -330,44 +337,6 @@ function normalizeRequestedIpFamily(family: number | string | undefined): 4 | 6 
   return undefined;
 }
 
-function isAbortError(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
-}
-
-function findAppError(error: unknown): AppError | null {
-  for (const cause of errorCauseChain(error)) {
-    if (cause instanceof AppError) return cause;
-  }
-
-  return null;
-}
-
 function isDnsLookupFailure(error: AppError): boolean {
-  return error.operation === SAFE_LOOKUP_OPERATION && error.code === NetworkErrorCode.CONNECTION_FAILED;
-}
-
-function hasExpectedDnsResolutionError(error: unknown): boolean {
-  return errorCauseChain(error).some(isExpectedDnsResolutionError);
-}
-
-function errorCauseChain(error: unknown): unknown[] {
-  const causes: unknown[] = [];
-  const seen = new Set<unknown>();
-  let current = error;
-
-  while (current && typeof current === 'object' && !seen.has(current)) {
-    causes.push(current);
-    seen.add(current);
-    current = 'cause' in current ? current.cause : undefined;
-  }
-
-  return causes;
-}
-
-function getErrorName(error: unknown): string | undefined {
-  if (error instanceof Error) return error.name;
-  if (typeof error === 'object' && error !== null && 'name' in error && typeof error.name === 'string') {
-    return error.name;
-  }
-  return undefined;
+  return error.operation === SAFE_LOOKUP_OPERATION && error.code === NetworkErrorCode.DNS_FAILED;
 }

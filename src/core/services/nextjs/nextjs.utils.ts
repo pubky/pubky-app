@@ -22,7 +22,7 @@ const EXPECTED_DNS_ERROR_CODES = new Set([
   'EDESTRUCTION',
 ]);
 
-export type TDnsSafeAddress = { address: string; family: 4 | 6 };
+type TDnsSafeAddress = { address: string; family: 4 | 6 };
 
 type TDnsSafetyResult =
   | { ok: true; addresses: TDnsSafeAddress[] }
@@ -37,7 +37,8 @@ export function isHttpProtocol(url: URL): boolean {
 }
 
 /**
- * Resolves DNS for hostname and validates every resolved address without creating AppErrors.
+ * Resolves DNS for a hostname and validates every resolved address.
+ * Expected resolver failures are returned as data; unexpected failures throw an AppError.
  */
 export async function checkDnsSafety(hostname: string): Promise<TDnsSafetyResult> {
   // Keep Node.js-only modules out of client bundles if this helper is imported from UI code.
@@ -100,7 +101,7 @@ export async function checkDnsSafety(hostname: string): Promise<TDnsSafetyResult
   return { ok: true, addresses: resolvedAddresses };
 }
 
-export function isExpectedDnsResolutionError(error: unknown): boolean {
+function isExpectedDnsResolutionError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
 
   const code = 'code' in error ? error.code : undefined;

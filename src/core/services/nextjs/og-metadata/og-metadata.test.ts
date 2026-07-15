@@ -1,3 +1,4 @@
+import { createServer } from 'node:http';
 import { fetch as undiciFetch } from 'undici';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TITLE_TRUNCATE_LENGTH, URL_TRUNCATE_LENGTH } from '@/config/urls';
@@ -78,6 +79,11 @@ const EXPECTED_DNS_ERROR_CODES = [
 const spyOnLoggerWarn = async () => {
   const { Logger } = await import('@/libs/logger/logger');
   return vi.spyOn(Logger, 'warn');
+};
+
+const spyOnLoggerError = async () => {
+  const { Logger } = await import('@/libs/logger/logger');
+  return vi.spyOn(Logger, 'error');
 };
 
 // ---------------------------------------------------------------------------
@@ -431,6 +437,7 @@ describe('NextJsOgMetadataService', () => {
 
   it('should abort fetch when request exceeds timeout', async () => {
     const loggerWarnSpy = await spyOnLoggerWarn();
+    const loggerErrorSpy = await spyOnLoggerError();
     // Mock setTimeout to invoke the callback immediately to trigger abort.
     vi.spyOn(globalThis, 'setTimeout').mockImplementation((fn: TimerHandler) => {
       if (typeof fn === 'function') fn();
@@ -447,15 +454,12 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
-    expect(loggerWarnSpy).toHaveBeenCalledWith(
-      '[og-metadata:fetch]',
-      expect.objectContaining({
-        outcome: 'fallback',
-        reason: 'timeout',
-        hostname: 'slow.test',
-        errorName: 'AbortError',
-      }),
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      '[nextjs-server:fetchOgMetadata]',
+      'Request was aborted',
+      expect.objectContaining({ url: 'https://slow.test/page' }),
     );
+    expect(loggerWarnSpy).not.toHaveBeenCalledWith('[og-metadata:fetch]', expect.anything());
 
     vi.mocked(globalThis.setTimeout).mockRestore();
   });
@@ -473,6 +477,7 @@ describe('NextJsOgMetadataService', () => {
 
   it('should return fallback metadata for raw fetch failures', async () => {
     const loggerWarnSpy = await spyOnLoggerWarn();
+    const loggerErrorSpy = await spyOnLoggerError();
     const rawError = new TypeError('ECONNRESET');
     mockFetch.mockRejectedValueOnce(rawError);
 
@@ -482,15 +487,12 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
-    expect(loggerWarnSpy).toHaveBeenCalledWith(
-      '[og-metadata:fetch]',
-      expect.objectContaining({
-        outcome: 'fallback',
-        reason: 'network',
-        hostname: 'example.com',
-        errorName: 'TypeError',
-      }),
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      '[nextjs-server:fetchOgMetadata]',
+      'ECONNRESET',
+      expect.objectContaining({ url: 'https://example.com/' }),
     );
+    expect(loggerWarnSpy).not.toHaveBeenCalledWith('[og-metadata:fetch]', expect.anything());
   });
 
   it('should block redirects to non-HTTP protocols', async () => {
@@ -639,8 +641,39 @@ describe('NextJsOgMetadataService', () => {
     });
   });
 
+  it('should connect to the vetted address returned by the connection-time lookup', async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { 'content-type': 'text/html' });
+      response.end(simpleHtml('Vetted destination'));
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
+
+    try {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Expected a TCP server address');
+
+      global.fetch = asOpaque<typeof global.fetch>(undiciFetch);
+      mockResolve4.mockResolvedValue(['127.0.0.1']);
+      mockIsIpSafe.mockReturnValue(true);
+      mockReadResponseBody.mockImplementationOnce(async (response: Response) => response.text());
+
+      await expect(
+        NextJsOgMetadataService.fetch(new URL(`http://vetted.example.test:${address.port}/`)),
+      ).resolves.toMatchObject({ title: 'Vetted destination' });
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+  });
+
   it('should return fallback metadata when connection-time DNS resolution fails', async () => {
     const loggerWarnSpy = await spyOnLoggerWarn();
+    const loggerErrorSpy = await spyOnLoggerError();
     global.fetch = asOpaque<typeof global.fetch>(undiciFetch);
     mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockRejectedValueOnce(createDnsError());
 
@@ -650,6 +683,11 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      '[nextjs-server:safeOgMetadataLookup]',
+      'Connection-time DNS resolution failed',
+      { hostname: 'dns-change.example.test' },
+    );
     expect(loggerWarnSpy).not.toHaveBeenCalledWith('[og-metadata:fetch]', expect.anything());
   });
 
