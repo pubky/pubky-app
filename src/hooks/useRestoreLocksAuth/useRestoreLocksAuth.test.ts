@@ -6,8 +6,8 @@ import { useRestoreLocksAuth } from './useRestoreLocksAuth';
 
 const mocks = vi.hoisted(() => ({ restore: vi.fn() }));
 
-vi.mock('@/controllers/locksAuth/locksAuth', () => ({
-  LocksAuthController: { restorePersistedLocksSession: mocks.restore },
+vi.mock('@/controllers/locks/locks', () => ({
+  LocksController: { restorePersistedLocksSession: mocks.restore },
 }));
 
 describe('useRestoreLocksAuth', () => {

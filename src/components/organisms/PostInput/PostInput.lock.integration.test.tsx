@@ -4,7 +4,7 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { inferPostKindForCreate } from '@/pipes/post/post.kind';
-import type { TGuardedResource } from '@/services/locksContent/locksContent.types';
+import type { TGuardedResource } from '@/services/locks/locks.types';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
@@ -34,14 +34,11 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@/controllers/locksContent/locksContent', () => ({
-  LocksContentController: { createLockContent: mocks.createLockContent },
+vi.mock('@/controllers/locks/locks', () => ({
+  LocksController: { createLockContent: mocks.createLockContent, clearSession: mocks.clearSession },
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: { commitCreate: mocks.commitCreate },
-}));
-vi.mock('@/controllers/locksAuth/locksAuth', () => ({
-  LocksAuthController: { clearSession: mocks.clearSession },
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) => selector({ currentUserPubky: 'alice' }),

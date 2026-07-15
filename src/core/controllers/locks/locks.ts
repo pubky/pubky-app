@@ -1,15 +1,19 @@
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
-import { LocksContentApplication } from '@/application/locksContent/locksContent';
+import { LocksApplication } from '@/application/locks/locks';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type {
   TCreateContentLockResult,
+  TExchangeSessionCodeParams,
+  TGetConnectUrlParams,
   TGuardedResource,
+  TLocksServerParams,
+  TLocksSessionResult,
   TRegisterGuardedResourceResult,
-} from '@/services/locksContent/locksContent.types';
+} from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
-import type { TCreateLockContentParams, TLockContentFile } from './locksContent.types';
+import type { TCreateLockContentParams, TLockContentFile } from './locks.types';
 
 // TODO:[Locks] #2040 — Phase 1 ships the `password` verifier, but the Lock Server does not implement
 // one yet: `VerifierType` (locks-core/src/lock_policy.rs) only has `DevStatic`, and unknown verifier
@@ -25,13 +29,97 @@ const VERIFIER_PARAMS = { satisfied: true };
 const CREDENTIAL_TTL_SECONDS = 900;
 
 /**
- * Publishes locked content. Mirrors `LocksAuthController`.
+ * Entry point for the Lock Server: auth (mirrors `AuthController`) and publishing locked content.
  *
  * One lock = N uploads + 1 lock: each file's raw bytes go up via `registerGuardedResource`, then the
  * returned descriptors are bundled by `createContentLock`.
  */
-export class LocksContentController {
+export class LocksController {
   private constructor() {} // Prevent instantiation
+
+  /**
+   * Builds the `/connect` URL to load in the iframe auth modal.
+   *
+   * `returnTo` is the parent origin. There is no navigation to it — the Lock Server uses it to target
+   * the `postMessage` and the `frame-ancestors` CSP, so it must be in `allowed_return_origins`.
+   */
+  static getConnectUrl({ lockServerPubky, state }: TGetConnectUrlParams): Promise<string> {
+    const returnTo = window.location.origin;
+    return LocksApplication.generateConnectUrl({ lockServerPubky, returnTo, state });
+  }
+
+  /**
+   * Completes auth from a validated callback: exchanges the one-time code for a session and
+   * persists it (bearer secret) to the store.
+   */
+  static async completeAuthFromCallback(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
+    const result = await LocksApplication.exchangeSessionCode(params);
+    useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
+    // Register the creator's default Lock Server pointer in the background on every auth, mirroring
+    // the homeserver's post-auth write. Fire-and-forget: a failure must not drop the established
+    // session (the pointer write is idempotent and retried on the next auth).
+    void this.registerLockServiceConfig(result.session, params.lockServerPubky);
+    return result;
+  }
+
+  /** Background lock-service-config write; reports failures to Sentry but never drops the session. */
+  private static async registerLockServiceConfig(session: LocksSdkSession, defaultLockServer: string): Promise<void> {
+    try {
+      await LocksApplication.setLockServiceConfig(session, defaultLockServer);
+    } catch {
+      // Already reported to Sentry by the service Err factory; swallow so the write (idempotent,
+      // retried on the next auth) never drops the established session.
+    }
+  }
+
+  /**
+   * Tears down the Locks session as part of unified pubky.app logout: revokes the frontend session on
+   * the Lock Server (best-effort) then clears the local store. Invoked from `AuthController` cleanup so
+   * one logout drops both the homeserver and Locks sessions.
+   */
+  static async logout(): Promise<void> {
+    const store = useLocksAuthStore.getState();
+    const session = store.selectLocksSession();
+    if (session) {
+      try {
+        await LocksApplication.signout(session);
+      } catch {
+        // Already reported to Sentry by the service Err factory; swallow so local teardown runs.
+      }
+    }
+    store.reset();
+  }
+
+  /**
+   * Clears the Locks session locally. Does not call the Lock Server.
+   *
+   * Call this when the server rejects the session (HTTP 401) — `signout` would be rejected too.
+   * Restoring a session makes no network call, so a stale secret keeps the UI looking signed in until
+   * the next creator call fails.
+   */
+  static clearSession(): void {
+    useLocksAuthStore.getState().reset();
+  }
+
+  /**
+   * On app load, rebuilds the live Locks session from the persisted bearer secret.
+   * No-op if nothing to restore or a session is already live. A malformed/stale secret is cleared so
+   * the UI shows unauthenticated rather than a broken session. Restore is local (no network), so no
+   * retry is needed.
+   */
+  static async restorePersistedLocksSession({ lockServerPubky }: TLocksServerParams): Promise<void> {
+    const store = useLocksAuthStore.getState();
+    const secret = store.selectLocksSessionSecret();
+    if (!secret || store.selectLocksSession() !== null) return;
+
+    try {
+      store.setSession(await LocksApplication.restoreSession({ lockServerPubky, secret }));
+    } catch {
+      // Malformed/stale secret — already reported by the service Err factory; clear it so the UI
+      // shows unauthenticated rather than a broken session.
+      store.reset();
+    }
+  }
 
   /**
    * Uploads every attachment, builds the post from their paths, uploads that too, then bundles the
@@ -42,7 +130,7 @@ export class LocksContentController {
    * post has to reference them. Uploads are sequential.
    *
    * TODO:[Locks] #2039 — a failure part-way leaves the already-uploaded resources orphaned on the
-   * server. See the note on `LocksContentService.createContentLock` for the cleanup rules.
+   * server. See the note on `LocksService.createContentLock` for the cleanup rules.
    *
    * TODO:[Locks] #2039 — sizes are never checked before uploading. The Lock Server only enforces its
    * limits at `createContentLock` (server config; defaults 10 MB/file, 10 files, 100 MB total), so an
@@ -67,7 +155,7 @@ export class LocksContentController {
     }
     const post = await this.upload(session, buildPost(attachmentResources, owner));
 
-    return LocksContentApplication.createContentLock({
+    return LocksApplication.createContentLock({
       session,
       primaryResource: post.resource,
       secondaryResources: attachmentResources,
@@ -92,7 +180,7 @@ export class LocksContentController {
     session: LocksSdkSession,
     { contentType, bytes }: TLockContentFile,
   ): Promise<TRegisterGuardedResourceResult> {
-    return LocksContentApplication.registerGuardedResource({
+    return LocksApplication.registerGuardedResource({
       session,
       path: crypto.randomUUID(),
       contentType,
@@ -110,7 +198,7 @@ export class LocksContentController {
     if (!session) {
       throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No Locks session; sign into the Lock Server first', {
         service: ErrorService.Locks,
-        operation: 'LocksContentController.createLockContent',
+        operation: 'LocksController.createLockContent',
       });
     }
     return session;

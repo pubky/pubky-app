@@ -1,4 +1,4 @@
-import type { TGuardedResource } from '@/services/locksContent/locksContent.types';
+import type { TGuardedResource } from '@/services/locks/locks.types';
 
 /**
  * One file to guard. The storage path is minted per upload, so the original filename is not part of

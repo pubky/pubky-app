@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { PubkyAppPost } from 'pubky-app-specs';
-import { LocksAuthController } from '@/controllers/locksAuth/locksAuth';
-import { LocksContentController } from '@/controllers/locksContent/locksContent';
+import { LocksController } from '@/controllers/locks/locks';
 import { PostController } from '@/controllers/post/post';
 import type { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
@@ -11,7 +10,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
-import type { TGuardedResource } from '@/services/locksContent/locksContent.types';
+import type { TGuardedResource } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
   TPublishResult,
@@ -75,7 +74,7 @@ export function useCreateLockContent({
           bytes: new Uint8Array(await file.arrayBuffer()),
         })),
       );
-      const lock = await LocksContentController.createLockContent({ attachments: files, buildPost });
+      const lock = await LocksController.createLockContent({ attachments: files, buildPost });
       // The lock lives on the Lock-Server-authenticated pubky's homeserver, which may differ from the
       // pubky.app account. Build the URL from `lock.creator`, stripping its `pubky` prefix to the raw
       // z32 host the `pubky://` scheme expects.
@@ -102,7 +101,7 @@ export function useCreateLockContent({
       // The Lock Server rejected the session. Restore is offline, so a stale secret would keep the UI
       // looking authenticated — drop it here and tell the caller to reopen the sign-in modal.
       if (appError.category === ErrorCategory.Auth) {
-        LocksAuthController.clearSession();
+        LocksController.clearSession();
         return { status: 'auth-expired' };
       }
       return { status: 'failed' };

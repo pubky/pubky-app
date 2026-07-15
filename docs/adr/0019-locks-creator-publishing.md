@@ -76,8 +76,8 @@ frontend must handle both cases.
 
 ### Layering and config follow the existing rules
 
-- Same stack as ADR 0004: hooks → `LocksAuthController` / `LocksContentController` → application →
-  `LocksAuthService` / `LocksContentService` → locks-sdk. Services are the IO boundary and apply
+- Same stack as ADR 0004: hooks → `LocksController` → `LocksApplication` →
+  `LocksService` → locks-sdk. Services are the IO boundary and apply
   ADR 0015 error handling; the SDK exposes no HTTP status, so a 401 is recognized from the error
   message and promoted to a typed auth error.
 - The Lock Server pubky comes from runtime config (`getLockServer()`, `PUBKY_RUNTIME_LOCK_SERVER`,
@@ -147,7 +147,7 @@ validates the `lock` URL only, and apps own their preview shape (collections set
 - Publish orchestration: `src/hooks/useCreateLockContent/`; composer phases:
   `src/hooks/usePostInputLock/` + `PostInput`; auth flow: `src/hooks/useLocksAuthFlow/`,
   `DialogLocksAuth` (iframe), `src/libs/locks/locksAuthBridge.ts`.
-- Layers: `src/core/{controllers,application,services}/locksAuth/` and `…/locksContent/`; session
+- Layers: `src/core/{controllers,application,services}/locks/`; session
   store: `src/core/stores/locksAuth/`.
 - Composer wiring is covered by `PostInput.lock.test.tsx` (probes) and
   `PostInput.lock.integration.test.tsx` (real composer UI); every layer has unit tests.

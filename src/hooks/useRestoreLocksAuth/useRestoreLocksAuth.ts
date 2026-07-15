@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { LocksAuthController } from '@/controllers/locksAuth/locksAuth';
+import { LocksController } from '@/controllers/locks/locks';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 
 /**
@@ -15,6 +15,6 @@ export function useRestoreLocksAuth(lockServerPubky: string | null): void {
 
   useEffect(() => {
     if (!hasHydrated || !lockServerPubky) return;
-    void LocksAuthController.restorePersistedLocksSession({ lockServerPubky });
+    void LocksController.restorePersistedLocksSession({ lockServerPubky });
   }, [hasHydrated, lockServerPubky]);
 }

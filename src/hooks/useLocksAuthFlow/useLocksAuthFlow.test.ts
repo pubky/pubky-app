@@ -13,8 +13,8 @@ const mocks = vi.hoisted(() => ({
 const LOCKS_AUTH_MESSAGE_TYPE = 'locks-auth-callback';
 const LOCK_SERVER_ORIGIN = 'https://lock.server';
 
-vi.mock('@/controllers/locksAuth/locksAuth', () => ({
-  LocksAuthController: {
+vi.mock('@/controllers/locks/locks', () => ({
+  LocksController: {
     getConnectUrl: mocks.getConnectUrl,
     completeAuthFromCallback: mocks.completeAuthFromCallback,
   },

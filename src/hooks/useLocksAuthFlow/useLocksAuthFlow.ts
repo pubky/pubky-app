@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
-import { LocksAuthController } from '@/controllers/locksAuth/locksAuth';
+import { LocksController } from '@/controllers/locks/locks';
 import type { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -48,7 +48,7 @@ export function useLocksAuthFlow(lockServerPubky: string): UseLocksAuthFlowRetur
     stateRef.current = authState;
 
     try {
-      const url = await LocksAuthController.getConnectUrl({ lockServerPubky, state: authState });
+      const url = await LocksController.getConnectUrl({ lockServerPubky, state: authState });
       lockServerOriginRef.current = new URL(url).origin;
       setConnectUrl(url);
       setStatus(LocksAuthFlowStatus.AWAITING_APPROVAL);
@@ -86,7 +86,7 @@ export function useLocksAuthFlow(lockServerPubky: string): UseLocksAuthFlowRetur
           });
         }
         setStatus(LocksAuthFlowStatus.EXCHANGING);
-        const result = await LocksAuthController.completeAuthFromCallback({ lockServerPubky, code, state });
+        const result = await LocksController.completeAuthFromCallback({ lockServerPubky, code, state });
         setSession(result.session);
         setStatus(LocksAuthFlowStatus.SUCCESS);
       } catch (caught) {
