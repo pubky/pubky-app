@@ -1,6 +1,7 @@
 import type { Pubky } from '@/models/models.types';
 import {
   buildWotDomainStreamId,
+  getPostStreamKind,
   type PostStreamId,
   type PostStreamKindSegment,
   type WotDomainDepth,
@@ -201,12 +202,20 @@ const POST_KIND_TO_CONTENT = {
 } as const satisfies Record<string, ContentType>;
 
 /**
- * Returns whether a post kind belongs in a timeline stream identified by streamId.
- * Unparseable stream ids (profile, author collections, etc.) accept all kinds.
+ * Returns whether a post kind belongs in a stream identified by streamId.
+ * Kind extraction is delegated to the canonical model-layer parser, which
+ * covers timeline, tag, wot_domain, and author-kind shapes. Stream ids that
+ * encode no kind (replies, single-collection items, plain author feeds)
+ * accept all kinds.
  */
 export function postKindBelongsToStream(postKind: string, streamId: string): boolean {
-  const parsed = parseStreamId(streamId);
-  if (!parsed || parsed.content === CONTENT.ALL) {
+  const kindSegment = getPostStreamKind(streamId);
+  if (!kindSegment) {
+    return true;
+  }
+
+  const streamContent = KIND_TO_CONTENT[kindSegment];
+  if (streamContent === CONTENT.ALL) {
     return true;
   }
 
@@ -215,5 +224,5 @@ export function postKindBelongsToStream(postKind: string, streamId: string): boo
     return false;
   }
 
-  return postContent === parsed.content;
+  return postContent === streamContent;
 }

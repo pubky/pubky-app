@@ -187,6 +187,27 @@ describe('NewPostsSection', () => {
     expect(prependPosts).not.toHaveBeenCalled();
   });
 
+  it('does not prepend posts whose kind does not match a wot_domain stream kind', async () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1'], unreadCount: 1 });
+    vi.mocked(PostController.getDetailsByIds).mockResolvedValue([{ kind: 'short' } as never]);
+    const prependPosts = vi.fn();
+
+    render(
+      <NewPostsSection
+        {...defaultProps}
+        streamId={'timeline:wot_domain:2:image:bitcoin' as PostStreamId}
+        prependPosts={prependPosts}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('new-posts-button'));
+
+    await waitFor(() => {
+      expect(PostController.getDetailsByIds).toHaveBeenCalledWith({ compositeIds: ['new1'] });
+    });
+    expect(prependPosts).not.toHaveBeenCalled();
+  });
+
   it('scrolls to top after loading new posts', async () => {
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1'], unreadCount: 1 });
     render(<NewPostsSection {...defaultProps} />);

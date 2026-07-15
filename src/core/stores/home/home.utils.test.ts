@@ -417,9 +417,32 @@ describe('filters.utils', () => {
       expect(postKindBelongsToStream('unknown', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
     });
 
-    it('allows any kind for unparseable stream ids', () => {
-      expect(postKindBelongsToStream('short', 'author:pubky123')).toBe(true);
+    it('gates wot_domain streams by their kind segment', () => {
+      // PR #2156 review repro: short post must not prepend into an images-only domain feed.
+      expect(postKindBelongsToStream('short', 'timeline:wot_domain:2:image:bitcoin')).toBe(false);
+      expect(postKindBelongsToStream('image', 'timeline:wot_domain:2:image:bitcoin')).toBe(true);
+      expect(postKindBelongsToStream('short', 'timeline:wot_domain:1:collection:bitcoin')).toBe(false);
+      expect(postKindBelongsToStream('collection', 'timeline:wot_domain:1:collection:bitcoin')).toBe(true);
+      expect(postKindBelongsToStream('short', 'timeline:wot_domain:2:all:bitcoin')).toBe(true);
+    });
+
+    it('gates 4-segment tag streams by their kind segment', () => {
+      expect(postKindBelongsToStream('short', 'timeline:all:image:bitcoin')).toBe(false);
+      expect(postKindBelongsToStream('image', 'timeline:all:image:bitcoin')).toBe(true);
+      expect(postKindBelongsToStream('short', 'timeline:all:all:bitcoin,dev')).toBe(true);
+    });
+
+    it('gates author-kind streams by their kind segment', () => {
       expect(postKindBelongsToStream('collection', 'pubky123:author:collection')).toBe(true);
+      expect(postKindBelongsToStream('short', 'pubky123:author:collection')).toBe(false);
+      expect(postKindBelongsToStream('image', 'pubky123:author:image')).toBe(true);
+      expect(postKindBelongsToStream('short', 'pubky123:author:image')).toBe(false);
+    });
+
+    it('allows any kind for stream ids that encode no kind', () => {
+      expect(postKindBelongsToStream('short', 'author:pubky123')).toBe(true);
+      expect(postKindBelongsToStream('short', 'author_replies:pubky123')).toBe(true);
+      expect(postKindBelongsToStream('collection', 'post_replies:pubky123:post456')).toBe(true);
     });
   });
 });
