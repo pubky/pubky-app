@@ -13,7 +13,6 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
-import { ensureLocksSdkReady } from '@/libs/locks/locksSdk';
 import { Logger } from '@/libs/logger/logger';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import type {
@@ -67,6 +66,30 @@ export class LocksService {
   /** Cached SDK client (singleton, like `HomeserverService.getPubkySdk`); runtime config never changes. */
   private static locksClient: Locks | null = null;
 
+  /** One-time wasm init promise; see `ensureLocksSdkReady`. */
+  private static sdkReady: Promise<void> | null = null;
+
+  /**
+   * Runs the locks-sdk's wasm `init()` (its default export) once, on the first call. The `pkg`
+   * build of the SDK (wasm-pack `--target web`) requires this before any SDK class is used —
+   * unlike `@synonymdev/pubky` / `pubky-app-specs`, which self-initialize on import.
+   *
+   * TODO: This only exists because the SDK is shipped as the web build. If the SDK is published
+   * as a bundler or self-contained (base64-inlined) build instead, wasm initializes on import and
+   * this method becomes unnecessary — the app would just `import` the SDK like the other wasm
+   * deps. Prefer that; ask the SDK maintainers to ship it self-contained. Reference for the
+   * self-contained approach (pubky-app-specs #60):
+   * https://github.com/pubky/pubky-app-specs/pull/60/changes#diff-028ca4d711c47ae908581ec9a46af068ac895940de4c76e845234e61bc06b3d7
+   */
+  private static ensureLocksSdkReady(): Promise<void> {
+    if (!this.sdkReady) {
+      this.sdkReady = import('@pubky/locks-sdk').then(async ({ default: init }) => {
+        await init();
+      });
+    }
+    return this.sdkReady;
+  }
+
   /**
    * The runtime-configured Lock Server pubky. Locks is a feature that can simply be off (no config),
    * and every Locks entry point is gated on the config, so this never fires in a healthy build —
@@ -106,7 +129,7 @@ export class LocksService {
    * Lock Server (built once from the app's network config, then reused).
    */
   private static async getLocksClient(): Promise<Locks> {
-    await ensureLocksSdkReady();
+    await this.ensureLocksSdkReady();
     if (!this.locksClient) {
       const options = new LocksOptions();
       for (const relay of getPkarrRelays()) {
@@ -183,7 +206,7 @@ export class LocksService {
   static async setLockServiceConfig(): Promise<void> {
     const session = this.requireSession();
     try {
-      await ensureLocksSdkReady();
+      await this.ensureLocksSdkReady();
       await session.creator.setLockServicePointer(new SetLockServicePointerOptions(this.requireLockServer()));
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.setLockServiceConfig');
@@ -204,7 +227,7 @@ export class LocksService {
   }: TRegisterGuardedResourceParams): Promise<TRegisterGuardedResourceResult> {
     const session = this.requireSession();
     try {
-      await ensureLocksSdkReady();
+      await this.ensureLocksSdkReady();
       // TODO:[Locks] #2040 — same untyped-SDK cast as `createContentLock` below.
       const response = (await session.creator.registerGuardedResource(
         new RegisterGuardedResourceOptions(path, contentType, bytes),
@@ -239,7 +262,7 @@ export class LocksService {
   }: TCreateContentLockParams): Promise<TCreateContentLockResult> {
     const session = this.requireSession();
     try {
-      await ensureLocksSdkReady();
+      await this.ensureLocksSdkReady();
       // primaryResource is the JSON file holding the `PubkyAppPost` object (the lock's entry point).
       let builder = new CreateContentLockRequestBuilder().primaryResource(primaryResource);
       for (const resource of secondaryResources) {

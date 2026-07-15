@@ -91,6 +91,8 @@ vi.mock('@pubky/locks-sdk', () => {
     }
   }
   return {
+    // The real web-build SDK default-exports its wasm init(); the service awaits it before any call.
+    default: async () => ({}),
     LocksOptions,
     ConnectUrlOptions,
     ExchangeFrontendSessionCodeOptions,
