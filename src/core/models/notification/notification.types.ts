@@ -50,6 +50,7 @@ export type TagPostNotification = {
   tagged_by: string;
   tag_label: string;
   post_uri: string;
+  post_kind?: string;
 };
 
 export type TagProfileNotification = {
@@ -61,17 +62,20 @@ export type ReplyNotification = {
   replied_by: string;
   parent_post_uri: string;
   reply_uri: string;
+  post_kind?: string;
 };
 
 export type RepostNotification = {
   reposted_by: string;
   embed_uri: string;
   repost_uri: string;
+  post_kind?: string;
 };
 
 export type MentionNotification = {
   mentioned_by: string;
   post_uri: string;
+  post_kind?: string;
 };
 
 export type PostDeletedNotification = {
@@ -79,6 +83,7 @@ export type PostDeletedNotification = {
   deleted_by: string;
   deleted_uri: string;
   linked_uri: string;
+  post_kind?: string;
 };
 
 export type PostEditedNotification = {
@@ -86,6 +91,7 @@ export type PostEditedNotification = {
   edited_by: string;
   edited_uri: string;
   linked_uri: string;
+  post_kind?: string;
 };
 
 /**
