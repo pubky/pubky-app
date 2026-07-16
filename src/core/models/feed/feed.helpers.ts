@@ -102,13 +102,19 @@ type ProfileTagFeedReach =
 /**
  * Exhaustive per-reach wot_domain depth. `satisfies` forces a compile error if
  * a reach is added to the supported set without an explicit depth decision.
+ * The map lives inside the function (like every other enum map in this file)
+ * so importing the module never touches the enum — test suites partially mock
+ * pubky-app-specs without exporting PubkyAppFeedReach.
  */
-const WOT_DOMAIN_DEPTH_BY_FEED_REACH = {
-  [PubkyAppFeedReach.Wot]: 2,
-  [PubkyAppFeedReach.Following]: 1,
-  [PubkyAppFeedReach.Friends]: 1,
-  [PubkyAppFeedReach.Me]: 0,
-} as const satisfies Record<ProfileTagFeedReach, WotDomainDepth>;
+function wotDomainDepthForReach(reach: ProfileTagFeedReach): WotDomainDepth {
+  const map = {
+    [PubkyAppFeedReach.Wot]: 2,
+    [PubkyAppFeedReach.Following]: 1,
+    [PubkyAppFeedReach.Friends]: 1,
+    [PubkyAppFeedReach.Me]: 0,
+  } as const satisfies Record<ProfileTagFeedReach, WotDomainDepth>;
+  return map[reach];
+}
 
 export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): PostStreamId {
   const sorting = sortToStreamSorting(feed.sort);
@@ -125,7 +131,7 @@ export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): Po
       });
     }
     // The guard above narrows the reach at runtime; TS cannot infer it from the string check.
-    const depth = WOT_DOMAIN_DEPTH_BY_FEED_REACH[feed.reach as ProfileTagFeedReach];
+    const depth = wotDomainDepthForReach(feed.reach as ProfileTagFeedReach);
     return buildWotDomainStreamId(sorting, depth, kind, domainTags, feed.tags);
   }
 
