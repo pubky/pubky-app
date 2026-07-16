@@ -169,8 +169,8 @@ describe('PostContentBlurred', () => {
   it('uses a horizontal, constrained overlay for the compact variant', () => {
     render(<PostContentBlurred {...defaultProps} variant="compact" />);
 
-    expect(screen.getByTestId('blurred-content-button')).toHaveClass('h-10', 'overflow-hidden');
-    expect(screen.getByTestId('container')).toHaveClass('flex-row', '[&_svg]:size-4');
+    expect(screen.getByTestId('blurred-content-button')).toHaveClass('h-6', 'overflow-hidden');
+    expect(screen.getByTestId('container')).toHaveClass('flex-row', 'justify-start', '[&_svg]:size-4');
   });
 
   it('sets aria-hidden on blurred placeholder text', () => {
