@@ -57,12 +57,13 @@ const CONTENT_TO_KIND = {
   [CONTENT.FILES]: StreamKind.FILE,
 } as const satisfies Record<ContentType, PostStreamKindSegment>;
 
-type WotDomainReachType = typeof REACH.NETWORK | typeof REACH.FOLLOWING | typeof REACH.FRIENDS;
+type WotDomainReachType = typeof REACH.NETWORK | typeof REACH.FOLLOWING | typeof REACH.FRIENDS | typeof REACH.ME;
 
 const WOT_DOMAIN_DEPTH_BY_REACH = {
   [REACH.NETWORK]: 2,
   [REACH.FOLLOWING]: 1,
   [REACH.FRIENDS]: 1,
+  [REACH.ME]: 0,
 } as const satisfies Record<WotDomainReachType, WotDomainDepth>;
 
 /** Maps streamId KIND part to CONTENT filter (auto-generated) */

@@ -733,10 +733,52 @@ describe('FeedApplication', () => {
       expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: feedUri1 });
     });
 
+    it('should admit remote Me profile-tag feeds during bootstrap without rewriting them (#2150)', async () => {
+      const { listSpy, requestSpy, createOrUpdateManySpy } = setupMocks();
+      const builder = new PubkySpecsBuilder(testUserId);
+      vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(builder);
+      const remote = {
+        name: 'My Tagged Authors',
+        feed: {
+          tags: null,
+          domain_tags: ['bitcoiner'],
+          reach: 'me',
+          layout: 'columns',
+          sort: 'recent',
+          content: null,
+        },
+        created_at: 1700000000,
+      };
+      const original = builder.createFeed(
+        undefined,
+        remote.feed.reach,
+        remote.feed.layout,
+        remote.feed.sort,
+        remote.feed.content,
+        remote.name,
+        remote.feed.domain_tags,
+      );
+
+      listSpy.mockResolvedValue([feedUri1]);
+      requestSpy.mockResolvedValue(remote);
+      createOrUpdateManySpy.mockImplementation((feeds) => Promise.resolve(feeds));
+
+      const result = await FeedApplication.fetchFeeds(testUserId);
+
+      // Admitted with the original HashId and persisted locally.
+      expect(result[0]).toEqual(
+        expect.objectContaining({ id: original.meta.id, tags: [], domain_tags: ['bitcoiner'] }),
+      );
+      expect(createOrUpdateManySpy).toHaveBeenCalledTimes(1);
+      // Only the bootstrap GET — no PUT, DELETE, or migration rewrite.
+      expect(requestSpy).toHaveBeenCalledTimes(1);
+      expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: feedUri1 });
+    });
+
     it('should skip gated remote profile-tag feeds without persisting or rewriting them', async () => {
       const { listSpy, requestSpy, createOrUpdateManySpy, mockBuilder, loggerWarnSpy } = setupFetchMocks();
       mockBuilder.createFeed.mockReturnValue(
-        createMockFeedResult({ tags: [], domainTags: ['bitcoiner'], reach: PubkyAppFeedReach.Me }),
+        createMockFeedResult({ tags: [], domainTags: ['bitcoiner'], reach: PubkyAppFeedReach.All }),
       );
       listSpy.mockResolvedValue([feedUri1]);
       requestSpy.mockResolvedValue({
@@ -744,7 +786,7 @@ describe('FeedApplication', () => {
         feed: {
           tags: [],
           domain_tags: ['bitcoiner'],
-          reach: 'me',
+          reach: 'all',
           layout: 'columns',
           sort: 'recent',
           content: null,
@@ -760,7 +802,7 @@ describe('FeedApplication', () => {
       expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: feedUri1 });
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         'Skipping unsupported profile-tag feed during bootstrap fetch',
-        expect.objectContaining({ reach: 'me', domainTags: ['bitcoiner'] }),
+        expect.objectContaining({ reach: 'all', domainTags: ['bitcoiner'] }),
       );
     });
 

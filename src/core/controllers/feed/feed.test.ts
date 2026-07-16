@@ -130,7 +130,21 @@ describe('FeedController', () => {
       await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
     });
 
-    it.each([PubkyAppFeedReach.All, PubkyAppFeedReach.Me, PubkyAppFeedReach.Followers])(
+    it('should create a profile-only Me feed (depth-0 domain, #2150)', async () => {
+      const params = createFeedParams({
+        tags: [],
+        domain_tags: ['bitcoiner'],
+        reach: PubkyAppFeedReach.Me,
+      });
+
+      await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
+      expect(FeedApplication.persist).toHaveBeenCalledWith({
+        userId: testData.userPubky,
+        params: { feed: expect.any(Object) },
+      });
+    });
+
+    it.each([PubkyAppFeedReach.All, PubkyAppFeedReach.Followers])(
       'should reject profile tags for unsupported reach %s',
       async (reach) => {
         const params = createFeedParams({ domain_tags: ['bitcoiner'], reach });
@@ -220,14 +234,14 @@ describe('FeedController', () => {
     it('should validate the fully merged feed configuration', async () => {
       vi.spyOn(FeedApplication, 'prepareUpdateParams').mockResolvedValue(
         createFeedParams({
-          reach: PubkyAppFeedReach.Me,
+          reach: PubkyAppFeedReach.Followers,
           tags: [],
           domain_tags: ['bitcoiner'],
         }),
       );
 
       await expect(
-        FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { reach: PubkyAppFeedReach.Me } }),
+        FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { reach: PubkyAppFeedReach.Followers } }),
       ).rejects.toThrow('Profile tags are not supported for this feed reach');
       expect(FeedApplication.persist).not.toHaveBeenCalled();
     });

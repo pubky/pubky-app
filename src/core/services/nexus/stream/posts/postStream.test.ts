@@ -128,6 +128,12 @@ describe('Stream API URL Generation', () => {
         expectedInUrl: ['source=wot_domain', `observer_id=${mockObserverId}`, 'depth=2', 'domain_tags=bitcoiner%2Cdev'],
       },
       {
+        name: 'wot_domain depth 0 (Me trust set)',
+        endpoint: 'wot_domain' as const,
+        params: { observer_id: mockObserverId, depth: 0, domain_tags: 'bitcoiner' },
+        expectedInUrl: ['source=wot_domain', `observer_id=${mockObserverId}`, 'depth=0', 'domain_tags=bitcoiner'],
+      },
+      {
         name: 'bookmarks',
         endpoint: 'bookmarks' as const,
         params: { observer_id: mockObserverId, order: StreamOrder.ASCENDING, start: 1759289451314, end: 1759289451314 },
@@ -495,6 +501,20 @@ describe('createPostStreamParams', () => {
       expect(result.params.domain_tags).toBe('bitcoiner,dev');
       expect(result.params.tags).toBe('bitcoin,lightning');
       expect(result.params.depth).toBe(2);
+    });
+
+    it('should keep the explicit depth 0 for Me wot_domain streams (regression: truthy check dropped 0)', () => {
+      const result = createPostStreamParams({
+        streamId: 'timeline:wot_domain:0:all:bitcoiner,dev' as PostStreamId,
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.params.depth).toBe(0);
+      expect(result.params.domain_tags).toBe('bitcoiner,dev');
+      expect(result.invokeEndpoint).toBe(StreamSource.WOT_DOMAIN);
     });
 
     it('should parse sorting-aware custom Me streams and use offset pagination for popularity', () => {
@@ -880,9 +900,22 @@ describe('breakDownStreamId', () => {
       });
     });
 
+    it('should parse the depth-0 (Me/observer-only) wot_domain shape', () => {
+      expect(breakDownStreamId('timeline:wot_domain:0:all:bitcoiner' as PostStreamId)).toEqual({
+        sorting: 'timeline',
+        invokeEndpoint: StreamSource.WOT_DOMAIN,
+        kind: 'all',
+        wotDepth: 0,
+        domainTags: 'bitcoiner',
+      });
+    });
+
     it('should reject malformed wot_domain depth', () => {
       expect(() => breakDownStreamId('timeline:wot_domain:3:all:bitcoin' as PostStreamId)).toThrow(
         'Invalid wot_domain depth: 3',
+      );
+      expect(() => breakDownStreamId('timeline:wot_domain:x:all:bitcoin' as PostStreamId)).toThrow(
+        'Invalid wot_domain depth: x',
       );
     });
   });

@@ -101,7 +101,7 @@ export type ReplyStreamCompositeId = `${StreamSource.REPLIES}:${string}`;
 export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
 export type PostStreamKindSegment = 'all' | StreamKind;
-export type WotDomainDepth = 1 | 2;
+export type WotDomainDepth = 0 | 1 | 2;
 export type WotStreamId =
   | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}`
   | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}:${string}`;

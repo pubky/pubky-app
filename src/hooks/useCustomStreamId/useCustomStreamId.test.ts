@@ -201,6 +201,20 @@ describe('useCustomStreamId', () => {
     expect(result.current).toBe('total_engagement:author:viewer-pubky:all:bitcoin');
   });
 
+  it('builds a depth-0 Me domain stream when profile tags are set (#2150)', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({
+        reach: PubkyAppFeedReach.Me,
+        tags: [],
+        domain_tags: ['developer', 'bitcoiner'],
+      }),
+    );
+
+    const { result } = renderHook(() => useCustomStreamId());
+
+    expect(result.current).toBe('timeline:wot_domain:0:all:bitcoiner,developer');
+  });
+
   it('returns undefined without an authenticated viewer', () => {
     mockUseCustomFeed.mockReturnValue(createMockFeed());
     useAuthStore.setState({ currentUserPubky: null });

@@ -1,6 +1,6 @@
 import type { TFetchStreamParams } from '@/application/stream/posts/post.types';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import type { PostStreamId, WotDomainDepth } from '@/models/stream/post/postStream.types';
 import type {
   THandleNotCommonStreamParamsParams,
   TSetStreamPaginationParams,
@@ -42,7 +42,8 @@ export function createPostStreamParams({
   params.viewer_id = viewerId ?? undefined;
   params.sorting = parseSorting(sorting);
   if (invokeEndpoint === StreamSource.WOT_DOMAIN) {
-    if (wotDepth) {
+    // `!== undefined` rather than truthiness: depth 0 (Me trust set) is a valid value.
+    if (wotDepth !== undefined) {
       params.depth = wotDepth;
     }
     params.domain_tags = domainTags;
@@ -134,7 +135,8 @@ function toStreamSource({ value }: TStreamSource): StreamSource {
   throw new Error(`Invalid stream source: ${value}`);
 }
 
-function parseWotDomainDepth(depth: string | undefined): 1 | 2 {
+function parseWotDomainDepth(depth: string | undefined): WotDomainDepth {
+  if (depth === '0') return 0;
   if (depth === '1') return 1;
   if (depth === '2') return 2;
   throw new Error(`Invalid wot_domain depth: ${depth}`);

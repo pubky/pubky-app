@@ -9,6 +9,7 @@ import {
   buildSortedAuthorStreamId,
   buildWotDomainStreamId,
   type PostStreamId,
+  type WotDomainDepth,
 } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
@@ -92,6 +93,23 @@ export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKin
   return map[content];
 }
 
+type ProfileTagFeedReach =
+  | PubkyAppFeedReach.Wot
+  | PubkyAppFeedReach.Following
+  | PubkyAppFeedReach.Friends
+  | PubkyAppFeedReach.Me;
+
+/**
+ * Exhaustive per-reach wot_domain depth. `satisfies` forces a compile error if
+ * a reach is added to the supported set without an explicit depth decision.
+ */
+const WOT_DOMAIN_DEPTH_BY_FEED_REACH = {
+  [PubkyAppFeedReach.Wot]: 2,
+  [PubkyAppFeedReach.Following]: 1,
+  [PubkyAppFeedReach.Friends]: 1,
+  [PubkyAppFeedReach.Me]: 0,
+} as const satisfies Record<ProfileTagFeedReach, WotDomainDepth>;
+
 export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): PostStreamId {
   const sorting = sortToStreamSorting(feed.sort);
   const kind = contentToStreamKind(feed.content) ?? 'all';
@@ -106,7 +124,8 @@ export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): Po
         context: { reach },
       });
     }
-    const depth = feed.reach === PubkyAppFeedReach.Wot ? 2 : 1;
+    // The guard above narrows the reach at runtime; TS cannot infer it from the string check.
+    const depth = WOT_DOMAIN_DEPTH_BY_FEED_REACH[feed.reach as ProfileTagFeedReach];
     return buildWotDomainStreamId(sorting, depth, kind, domainTags, feed.tags);
   }
 

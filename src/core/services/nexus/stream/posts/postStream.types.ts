@@ -1,4 +1,5 @@
 import type { Pubky } from '@/models/models.types';
+import type { WotDomainDepth } from '@/models/stream/post/postStream.types';
 import type { StreamSorting, TPaginationParams, TPaginationRangeParams } from '@/services/nexus/nexus.types';
 
 export enum STREAM_PREFIX {
@@ -118,6 +119,6 @@ export type TStreamIdBreakdown = {
   authorId?: string;
   kind?: string;
   tags?: string;
-  wotDepth?: 1 | 2;
+  wotDepth?: WotDomainDepth;
   domainTags?: string;
 };

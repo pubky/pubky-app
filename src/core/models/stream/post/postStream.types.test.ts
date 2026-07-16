@@ -43,6 +43,12 @@ describe('post-stream id builders', () => {
       );
     });
 
+    it('supports the depth-0 (Me/observer-only) trust set', () => {
+      expect(buildWotDomainStreamId(StreamSorting.TIMELINE, 0, 'all', ['dev', 'bitcoin'])).toBe(
+        'timeline:wot_domain:0:all:bitcoin,dev',
+      );
+    });
+
     it('keeps profile tags canonical while preserving post-tag order in the sixth segment', () => {
       expect(
         buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['developer', 'bitcoiner'], ['second', 'first']),
@@ -187,6 +193,7 @@ describe('getPostStreamKind', () => {
     );
     expect(getPostStreamKind('timeline:wot_domain:2:collection:bitcoin')).toBe(StreamKind.COLLECTION);
     expect(getPostStreamKind('total_engagement:wot_domain:1:all:🔥')).toBe('all');
+    expect(getPostStreamKind('timeline:wot_domain:0:short:dev')).toBe(StreamKind.SHORT);
     // #2190 shape with a trailing post-tags segment keeps the kind at index 3.
     expect(getPostStreamKind('timeline:wot_domain:2:image:bitcoin:dev')).toBe(StreamKind.IMAGE);
   });
