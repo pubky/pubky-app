@@ -97,6 +97,10 @@ vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => ({
   PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string }) => <span>{timeAgo}</span>,
 }));
 
+vi.mock('@/molecules/PostDeleted/PostDeleted', () => ({
+  PostDeleted: () => <div data-testid="post-deleted" />,
+}));
+
 vi.mock('@/molecules/PostListMediaThumbnail/PostListMediaThumbnail', () => ({
   PostListMediaThumbnail: ({ postId }: { postId: string }) => (
     <div data-testid="post-list-media-thumbnail" data-post-id={postId} />
@@ -183,6 +187,12 @@ vi.mock('../../PostContent/PostContent', () => ({
     >
       PostContent {postId}
     </div>
+  ),
+}));
+
+vi.mock('../../PostContentBlurred/PostContentBlurred', () => ({
+  PostContentBlurred: ({ postId, className, variant }: { postId: string; className?: string; variant?: string }) => (
+    <div data-testid="post-content-blurred" data-post-id={postId} data-variant={variant} className={className} />
   ),
 }));
 
@@ -322,6 +332,32 @@ describe('PostMainListRow', () => {
     expect(truncatedText).toHaveClass('truncate');
   });
 
+  it('replaces blurred compact content and its media thumbnail with the moderation affordance', () => {
+    mockPostDetails('Sensitive post content');
+    vi.mocked(usePostDetails).mockImplementation((postId) => ({
+      postDetails:
+        postId === 'author:post'
+          ? { ...createPostDetails('author:post', 'Sensitive post content'), is_blurred: true }
+          : undefined,
+      isLoading: false,
+    }));
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('Sensitive post content')).not.toBeInTheDocument();
+    expect(screen.getByTestId('post-content-blurred')).toHaveAttribute('data-post-id', 'author:post');
+    expect(screen.getByTestId('post-content-blurred')).toHaveAttribute('data-variant', 'compact');
+    expect(screen.queryByTestId('post-list-media-thumbnail')).not.toBeInTheDocument();
+  });
+
   it('renders collection name instead of raw collection JSON in compact rows', () => {
     const collectionContent = JSON.stringify({
       name: 'Reading list',
@@ -443,6 +479,94 @@ describe('PostMainListRow', () => {
     expect(handleReplyClick).toHaveBeenCalledWith('original-author:original-post');
     expect(handleRepostClick).toHaveBeenCalledWith('original-author:original-post');
     expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-post-id', 'original-author:original-post');
+  });
+
+  it('uses the original post moderation state for compact simple repost rows', () => {
+    vi.mocked(useAvatarUrl).mockReturnValue('https://example.com/original-avatar.png');
+    vi.mocked(useRelativeTime).mockReturnValue({ formatRelativeTime: () => '1m' });
+    vi.mocked(useRepostInfo).mockReturnValue({
+      isRepost: true,
+      repostAuthorId: 'author',
+      isCurrentUserRepost: true,
+      originalPostId: 'original-author:original-post',
+      isLoading: false,
+      hasError: false,
+    });
+    vi.mocked(usePostDetails).mockImplementation((postId) => ({
+      postDetails:
+        postId === 'author:post'
+          ? createPostDetails('author:post', '')
+          : postId === 'original-author:original-post'
+            ? { ...createPostDetails('original-author:original-post', 'Blurred original content'), is_blurred: true }
+            : undefined,
+      isLoading: false,
+    }));
+    vi.mocked(useUserDetails).mockImplementation((userId) => ({
+      userDetails: userId
+        ? {
+            id: userId,
+            name: 'Original Author',
+            bio: '',
+            links: null,
+            status: null,
+            image: null,
+            indexed_at: Date.now(),
+          }
+        : undefined,
+      isLoading: false,
+    }));
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={false}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('Blurred original content')).not.toBeInTheDocument();
+    expect(screen.getByTestId('post-content-blurred')).toHaveAttribute('data-post-id', 'original-author:original-post');
+    expect(screen.queryByTestId('post-list-media-thumbnail')).not.toBeInTheDocument();
+  });
+
+  it('does not expose deleted original content in compact simple repost rows', () => {
+    vi.mocked(useRepostInfo).mockReturnValue({
+      isRepost: true,
+      repostAuthorId: 'author',
+      isCurrentUserRepost: true,
+      originalPostId: 'original-author:original-post',
+      isLoading: false,
+      hasError: false,
+    });
+    vi.mocked(usePostDetails).mockImplementation((postId) => ({
+      postDetails:
+        postId === 'author:post'
+          ? createPostDetails('author:post', '')
+          : postId === 'original-author:original-post'
+            ? createPostDetails('original-author:original-post', '[DELETED]')
+            : undefined,
+      isLoading: false,
+    }));
+    vi.mocked(useUserDetails).mockReturnValue({
+      userDetails: undefined,
+      isLoading: false,
+    });
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={false}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('post-deleted')).toBeInTheDocument();
+    expect(screen.queryByText('[DELETED]')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-list-media-thumbnail')).not.toBeInTheDocument();
   });
 
   it('falls back to the repost row when original post details are unavailable', () => {

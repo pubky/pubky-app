@@ -13,7 +13,8 @@ import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
-import { cn, formatPublicKey } from '@/libs/utils/utils';
+import { cn, formatPublicKey, isPostDeleted } from '@/libs/utils/utils';
+import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostListMediaThumbnail } from '@/molecules/PostListMediaThumbnail/PostListMediaThumbnail';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
@@ -23,6 +24,7 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { ClickableTagsList } from '../../ClickableTagsList/ClickableTagsList';
 import { PostActionsBar } from '../../PostActionsBar/PostActionsBar';
 import { PostContent } from '../../PostContent/PostContent';
+import { PostContentBlurred } from '../../PostContentBlurred/PostContentBlurred';
 import { PostTagsPanel } from '../../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../../PostTagsPanel/PostTagsPanel.types';
 import { LIST_POST_BODY_TEXT_CLASS } from '../PostMainTypography';
@@ -101,7 +103,15 @@ export function PostMainListRow({
 
   const displayPostDetails = shouldUseOriginalPost ? originalPostDetails : postDetails;
 
-  if (!postDetails || !displayPostDetails || !userDetails) {
+  if (!postDetails || !displayPostDetails) {
+    return <PostMainListRowSkeleton />;
+  }
+
+  if (isPostDeleted(displayPostDetails.content)) {
+    return <PostDeleted />;
+  }
+
+  if (!userDetails) {
     return <PostMainListRowSkeleton />;
   }
 
@@ -112,6 +122,7 @@ export function PostMainListRow({
   const snippet = showFullContent ? '' : truncateAtWordBoundary(contentSnippet, LIST_SNIPPET_MAX_CHARS);
   const profileUrl = getUserProfileUrl(displayUserId, currentUserPubky);
   const shouldShowDisplayHeader = shouldShowPostHeader || shouldUseOriginalPost;
+  const shouldShowCompactBlur = !showFullContent && displayPostDetails.is_blurred;
 
   const handleTagClick = () => {
     setTagsExpanded((previousValue) => !previousValue);
@@ -152,7 +163,9 @@ export function PostMainListRow({
                 </Typography>
               </Link>
             ) : null}
-            {snippet ? (
+            {shouldShowCompactBlur ? (
+              <PostContentBlurred postId={displayPostId} variant="compact" className="min-w-0 flex-1" />
+            ) : snippet ? (
               <Typography
                 className={cn('min-w-0 flex-1 truncate text-secondary-foreground', LIST_POST_BODY_TEXT_CLASS)}
                 overrideDefaults
@@ -202,7 +215,7 @@ export function PostMainListRow({
           />
         </Container>
 
-        {!showFullContent ? <PostListMediaThumbnail postId={displayPostId} /> : null}
+        {!showFullContent && !shouldShowCompactBlur ? <PostListMediaThumbnail postId={displayPostId} /> : null}
       </Container>
 
       {showFullContent ? (
