@@ -2,42 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogAddLink } from './DialogAddLink';
 
-vi.mock('@/atoms/Dialog/Dialog', () => {
-  return {
-    Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
-    DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-      <div data-testid="dialog-trigger" data-as-child={asChild}>
-        {children}
-      </div>
-    ),
-    DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="dialog-content" className={className}>
-        {children}
-      </div>
-    ),
-    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="dialog-header" className={className}>
-        {children}
-      </div>
-    ),
-    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <h2 data-testid="dialog-title" className={className}>
-        {children}
-      </h2>
-    ),
-    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="dialog-footer" className={className}>
-        {children}
-      </div>
-    ),
-    DialogClose: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-      <div data-testid="dialog-close" data-as-child={asChild}>
-        {children}
-      </div>
-    ),
-  };
-});
-
 // Mock molecules
 vi.mock('@/molecules/InputField/InputField', () => {
   return {
@@ -154,6 +118,7 @@ describe('DialogAddLink', () => {
 
   it('saves a supported external URL', () => {
     render(<DialogAddLink onSave={mockOnSave} />);
+    fireEvent.click(screen.getByText('Add link'));
     const [labelInput, urlInput] = screen.getAllByTestId('input');
 
     fireEvent.change(labelInput, { target: { value: 'Website' } });
@@ -165,6 +130,7 @@ describe('DialogAddLink', () => {
 
   it('does not save an executable URL scheme', () => {
     render(<DialogAddLink onSave={mockOnSave} />);
+    fireEvent.click(screen.getByText('Add link'));
     const [labelInput, urlInput] = screen.getAllByTestId('input');
 
     fireEvent.change(labelInput, { target: { value: 'Website' } });
@@ -180,8 +146,11 @@ describe('DialogAddLink - Snapshots', () => {
   const mockOnSave = vi.fn();
 
   it('matches snapshot for default DialogAddLink', () => {
-    const { container } = render(<DialogAddLink onSave={mockOnSave} />);
-    expect(container.firstChild).toMatchSnapshot();
+    render(<DialogAddLink onSave={mockOnSave} />);
+    fireEvent.click(screen.getByText('Add link'));
+
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent.parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot for DialogAddLink with iconPosition variations', () => {
