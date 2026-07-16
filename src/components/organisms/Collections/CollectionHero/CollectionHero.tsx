@@ -216,7 +216,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         {description && (
           <Typography
             overrideDefaults
-            className="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-muted-foreground lg:text-2xl"
+            className="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-secondary-foreground lg:text-2xl"
           >
             {description}
           </Typography>

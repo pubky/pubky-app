@@ -20,6 +20,7 @@ import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/str
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
@@ -255,6 +256,19 @@ export class PostApplication {
     }
   }
 
+  /**
+   * Delete a post (or collection) from local storage and the homeserver.
+   *
+   * Collection covers: `cover_image` lives in the content envelope, not
+   * `post.attachments`. After the homeserver post DELETE succeeds, if the post
+   * was a collection with a homeserver file cover, that file is deleted too —
+   * including when the local row is soft-deleted (`hadConnections`), because
+   * the envelope is tombstoned either way and no longer references the file.
+   * Failures during cover delete are logged and swallowed so they do not fail
+   * an already-successful post delete. External http(s) covers are never deleted.
+   *
+   * Regular attachment cleanup still runs only when `!hadConnections`.
+   */
   static async commitDelete({ compositePostId }: TDeletePostParams) {
     const post = await PostDetailsModel.findById(compositePostId);
 
@@ -265,6 +279,11 @@ export class PostApplication {
         context: { compositePostId },
       });
     }
+
+    // Capture collection cover before local delete tombstones content to `[DELETED]`.
+    const collectionCoverUri =
+      post.kind === 'collection' ? CollectionPostContent.parse(post.content)?.cover_image : undefined;
+
     const hadConnections = await LocalPostService.delete({ compositePostId });
 
     // Always delete from homeserver, even if the post had connections (soft delete).
@@ -274,6 +293,18 @@ export class PostApplication {
 
     if (!hadConnections && post.attachments && post.attachments.length > 0) {
       await FileApplication.commitDelete(post.attachments);
+    }
+
+    // Cover is no longer referenced after delete; if this delete fails, the post
+    // delete still stands (old cover may remain on the homeserver).
+    if (isHomeserverFileUri(collectionCoverUri)) {
+      await FileApplication.commitDelete([collectionCoverUri]).catch((cleanupError) => {
+        Logger.warn('[PostApplication.commitDelete] Failed to cleanup collection cover', {
+          compositePostId,
+          collectionCoverUri,
+          cleanupError,
+        });
+      });
     }
   }
 

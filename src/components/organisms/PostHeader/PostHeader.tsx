@@ -42,17 +42,22 @@ export function PostHeader({
   const timeAgo = indexedAt ? formatRelativeTime(indexedAt) : null;
 
   return (
-    <Container className="flex w-full min-w-0 items-start justify-between gap-3" overrideDefaults>
-      <PostHeaderUserInfo
-        userId={userId}
-        userName={userDetails.name || ''}
-        avatarUrl={avatarUrl}
-        characterLimit={characterLimit}
-        showPopover={showPopover}
-        size={size}
-        timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
-        indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
-      />
+    <Container
+      className="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3"
+      overrideDefaults
+    >
+      <div className="w-full max-w-full min-w-0">
+        <PostHeaderUserInfo
+          userId={userId}
+          userName={userDetails.name || ''}
+          avatarUrl={avatarUrl}
+          characterLimit={characterLimit}
+          showPopover={showPopover}
+          size={size}
+          timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
+          indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
+        />
+      </div>
       {timeAgo && timeAgoPlacement === 'top-right' && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />}
     </Container>
   );
