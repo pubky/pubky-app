@@ -162,7 +162,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
             ))
           : visibleIds.map((compositeId) => {
               const { pubky, id } = parseCompositeId(compositeId);
-              return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} />;
+              return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} showDeleteAction />;
             })}
         <NewCollectionCardCTA />
       </Container>

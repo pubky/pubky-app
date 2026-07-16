@@ -45,6 +45,7 @@ export function ClickableTagsList({
   taggedKind,
   tags: providedTags,
   maxTags,
+  maxVisibleTags,
   maxTagLength = CLICKABLE_TAGS_DEFAULT_MAX_LENGTH,
   maxTotalChars = CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
   showCount = true,
@@ -128,7 +129,7 @@ export function ClickableTagsList({
   const displayLabels = getDisplayTags(tagLabels, {
     maxTagLength,
     maxTotalChars,
-    maxCount: maxTags,
+    maxCount: maxVisibleTags ?? maxTags,
   });
   const visibleTags = enrichedTags.filter((tag) => displayLabels.includes(tag.label));
 
