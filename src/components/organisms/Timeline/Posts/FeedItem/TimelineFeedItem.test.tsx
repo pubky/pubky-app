@@ -42,8 +42,21 @@ vi.mock('@/organisms/Timeline/PostReplies/PostReplies', () => {
 
 vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => {
   return {
-    CollectionCard: ({ authorPubky, postId }: { authorPubky: string; postId: string }) => (
-      <div data-testid="collection-card" data-author-pubky={authorPubky} data-post-id={postId} />
+    CollectionCard: ({
+      authorPubky,
+      postId,
+      showDeleteAction,
+    }: {
+      authorPubky: string;
+      postId: string;
+      showDeleteAction?: boolean;
+    }) => (
+      <div
+        data-testid="collection-card"
+        data-author-pubky={authorPubky}
+        data-post-id={postId}
+        data-show-delete-action={String(showDeleteAction ?? false)}
+      />
     ),
   };
 });
@@ -117,6 +130,7 @@ describe('TimelineFeedItem', () => {
     expect(collectionCard).toBeInTheDocument();
     expect(collectionCard).toHaveAttribute('data-author-pubky', 'author-pubky');
     expect(collectionCard).toHaveAttribute('data-post-id', 'collection-id');
+    expect(collectionCard).toHaveAttribute('data-show-delete-action', 'false');
     expect(screen.queryByTestId('post-author-pubky:collection-id')).not.toBeInTheDocument();
     expect(screen.queryByTestId('replies-author-pubky:collection-id')).not.toBeInTheDocument();
   });

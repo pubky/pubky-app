@@ -2,7 +2,7 @@
 
 exports[`PostInlineTagsActions - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-2! md:items-start"
+  class="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
   data-testid="container"
 >
   <div

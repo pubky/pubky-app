@@ -1,5 +1,357 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`CollectionCard - Mobile Snapshots > matches the mobile snapshot with up to three visible tags and stacked actions 1`] = `
+<a
+  aria-label="Based Bitcoin"
+  class="group relative block h-full w-full"
+  data-cy="collection-card"
+  data-interactive-actions="true"
+  data-layout="default"
+  data-presentation="landing"
+  href="/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0034BBBDFK83G"
+>
+  <div
+    class="flex flex-col text-card-foreground shadow-sm relative isolate h-full gap-0 overflow-hidden py-0 rounded-md border-transparent bg-card/40"
+    data-slot="card"
+    data-testid="card"
+  >
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+      data-testid="container"
+      style="background-image: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.35)), url(\\"https://example.com/cover.png\\");"
+    />
+    <div
+      class="flex h-full flex-col gap-3 p-6"
+      data-slot="card-content"
+    >
+      <div
+        class="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap"
+        data-testid="container"
+      >
+        <div
+          class="flex min-w-0 flex-1 items-center gap-2"
+          data-testid="container"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-library size-6 shrink-0 text-foreground"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m16 6 4 14"
+            />
+            <path
+              d="M12 6v14"
+            />
+            <path
+              d="M8 8v12"
+            />
+            <path
+              d="M4 4v16"
+            />
+          </svg>
+          <span
+            class="min-w-0 truncate font-bold text-foreground text-xl leading-7"
+            data-testid="typography"
+          >
+            Based Bitcoin
+          </span>
+          <div
+            aria-label="2 posts"
+            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+            data-testid="container"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-sticky-note size-3 shrink-0"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+              />
+              <path
+                d="M15 3v5a1 1 0 0 0 1 1h5"
+              />
+            </svg>
+            <span
+              class="text-xs leading-4 font-medium tracking-widest uppercase"
+              data-testid="typography"
+            >
+              2
+              <span
+                class="hidden sm:inline"
+                data-testid="typography"
+              >
+                 posts
+              </span>
+            </span>
+          </div>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end"
+          data-testid="container"
+        >
+          <div
+            data-alt="Bitcoin Wizard"
+            data-avatar-url="https://example.com/avatar.png"
+            data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+            data-name="Bitcoin Wizard"
+            data-size="sm"
+            data-testid="avatar-with-fallback"
+          >
+            Bitcoin Wizard
+          </div>
+        </div>
+      </div>
+      <p
+        class="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-secondary-foreground"
+        data-testid="typography"
+      >
+        A bit of Bitcoin purity amidst all of the madness.
+      </p>
+      <div
+        class="mt-auto flex w-full flex-col items-start gap-3 md:flex-row md:items-end md:justify-between md:gap-4"
+        data-cy="collection-card-bottom-row"
+        data-testid="container"
+      >
+        <div
+          class="flex w-full flex-wrap justify-between gap-3 sm:flex-nowrap items-center min-w-0 flex-1"
+          data-cy="post-tags-expandable-row"
+          data-testid="container"
+        >
+          <div
+            class="min-w-0 flex-1"
+            data-testid="container"
+          >
+            <div
+              class="flex flex-col gap-1"
+              data-testid="container"
+            >
+              <div
+                class="flex flex-wrap items-center gap-2"
+                data-cy="clickable-tags-list"
+                data-testid="container"
+              >
+                <button
+                  aria-label="bitcoin tag (5 posts)"
+                  aria-pressed="true"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-cy="post-tag"
+                  data-state="on"
+                  data-tag-label="bitcoin"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="bitcoin"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      bitcoin
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      5
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+                  />
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md border border-solid"
+                    style="border-color: rgb(255, 153, 0);"
+                  />
+                </button>
+                <button
+                  aria-label="ethereum tag (3 posts)"
+                  aria-pressed="false"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-cy="post-tag"
+                  data-state="off"
+                  data-tag-label="ethereum"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 9, 0) 0%, rgb(255, 9, 0) 100%);"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="ethereum"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      ethereum
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      3
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #FF0900;"
+                  />
+                </button>
+                <button
+                  aria-label="web3 tag (10 posts)"
+                  aria-pressed="false"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-cy="post-tag"
+                  data-state="off"
+                  data-tag-label="web3"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(95, 0, 255) 0%, rgb(95, 0, 255) 100%);"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="web3"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      web3
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      10
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #5f00FF;"
+                  />
+                </button>
+                <div
+                  class="relative h-8 overflow-hidden rounded-md border border-dashed border-input shadow-sm"
+                  style="width: 34px; transform-origin: 0% 50% 0;"
+                >
+                  <div
+                    class="h-full w-full absolute inset-0 inline-flex items-center justify-center"
+                    style="opacity: 1;"
+                  >
+                    <button
+                      aria-label="Add new tag"
+                      class="inline-flex items-center justify-center whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground gap-1.5 px-3 has-[>svg]:px-3.5 relative size-8 min-w-8! rounded-md bg-transparent p-0! transition-opacity hover:bg-transparent hover:opacity-80 gap-0! px-0! has-[>svg]:px-0! border-transparent shadow-none hover:border-transparent hover:shadow-none"
+                      data-cy="post-tag-add-button"
+                      data-size="sm"
+                      data-slot="button"
+                      data-variant="outline"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="lucide lucide-plus pointer-events-none absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 opacity-[0.32]"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 12h14"
+                        />
+                        <path
+                          d="M12 5v14"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="flex w-full shrink-0 items-center justify-start gap-2 self-start md:w-auto md:justify-end md:self-end"
+          data-cy="collection-card-actions"
+          data-testid="container"
+        >
+          <button
+            aria-label="collections.card.follow"
+            class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
+            data-size="sm"
+            data-slot="button"
+            data-variant="secondary"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-plus size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M5 12h14"
+              />
+              <path
+                d="M12 5v14"
+              />
+            </svg>
+            collections.card.follow
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</a>
+`;
+
 exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Follow state 1`] = `
 <a
   aria-label="Based Bitcoin"
@@ -127,7 +479,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
         A bit of Bitcoin purity amidst all of the madness.
       </p>
       <div
-        class="mt-auto flex w-full flex-row items-end justify-between gap-3"
+        class="mt-auto flex w-full flex-col items-start gap-3 md:flex-row md:items-end md:justify-between md:gap-4"
         data-cy="collection-card-bottom-row"
         data-testid="container"
       >
@@ -141,58 +493,199 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
             data-testid="container"
           >
             <div
-              data-read-only="false"
-              data-show-add-button="true"
-              data-tagged-id="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:0034BBBDFK83G"
-              data-tagged-kind="post"
-              data-testid="clickable-tags-list"
-            />
+              class="flex flex-col gap-1"
+              data-testid="container"
+            >
+              <div
+                class="flex flex-wrap items-center gap-2"
+                data-cy="clickable-tags-list"
+                data-testid="container"
+              >
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="bitcoin tag (5 posts)"
+                  aria-pressed="true"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="bitcoin"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="bitcoin"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      bitcoin
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      5
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+                  />
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md border border-solid"
+                    style="border-color: rgb(255, 153, 0);"
+                  />
+                </button>
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="ethereum tag (3 posts)"
+                  aria-pressed="false"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="ethereum"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 9, 0) 0%, rgb(255, 9, 0) 100%);"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="ethereum"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      ethereum
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      3
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #FF0900;"
+                  />
+                </button>
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="web3 tag (10 posts)"
+                  aria-pressed="false"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="web3"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(95, 0, 255) 0%, rgb(95, 0, 255) 100%);"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="web3"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      web3
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      10
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #5f00FF;"
+                  />
+                </button>
+                <div
+                  class="relative h-8 overflow-hidden rounded-md border border-dashed border-input shadow-sm"
+                  style="width: 34px; transform-origin: 0% 50% 0;"
+                >
+                  <div
+                    class="h-full w-full absolute inset-0 inline-flex items-center justify-center"
+                    style="opacity: 1;"
+                  >
+                    <button
+                      aria-label="Add new tag"
+                      class="inline-flex items-center justify-center whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground gap-1.5 px-3 has-[>svg]:px-3.5 relative size-8 min-w-8! rounded-md bg-transparent p-0! transition-opacity hover:bg-transparent hover:opacity-80 gap-0! px-0! has-[>svg]:px-0! border-transparent shadow-none hover:border-transparent hover:shadow-none"
+                      data-cy="post-tag-add-button"
+                      data-size="sm"
+                      data-slot="button"
+                      data-variant="outline"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="lucide lucide-plus pointer-events-none absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 opacity-[0.32]"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 12h14"
+                        />
+                        <path
+                          d="M12 5v14"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div
-          class="flex shrink-0 items-center gap-2 self-end"
-          data-cy="collection-card-tag-actions"
+          class="flex w-full shrink-0 items-center justify-start gap-2 self-start md:w-auto md:justify-end md:self-end"
+          data-cy="collection-card-actions"
           data-testid="container"
         >
-          <button
-            aria-expanded="false"
-            aria-label="post.actions.tagPost"
-            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
-            data-cy="post-tag-btn"
-            data-size="sm"
-            data-slot="button"
-            data-variant="secondary"
-          >
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-tag"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
-              />
-              <circle
-                cx="7.5"
-                cy="7.5"
-                fill="currentColor"
-                r=".5"
-              />
-            </svg>
-            <span
-              class="text-xs leading-4 font-bold text-muted-foreground"
-              data-testid="typography"
-            >
-              3
-            </span>
-          </button>
           <button
             aria-label="collections.card.follow"
             class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
@@ -356,7 +849,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
         A bit of Bitcoin purity amidst all of the madness.
       </p>
       <div
-        class="mt-auto flex w-full flex-row items-end justify-between gap-3"
+        class="mt-auto flex w-full flex-col items-start gap-3 md:flex-row md:items-end md:justify-between md:gap-4"
         data-cy="collection-card-bottom-row"
         data-testid="container"
       >
@@ -370,58 +863,199 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
             data-testid="container"
           >
             <div
-              data-read-only="false"
-              data-show-add-button="true"
-              data-tagged-id="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:0034BBBDFK83G"
-              data-tagged-kind="post"
-              data-testid="clickable-tags-list"
-            />
+              class="flex flex-col gap-1"
+              data-testid="container"
+            >
+              <div
+                class="flex flex-wrap items-center gap-2"
+                data-cy="clickable-tags-list"
+                data-testid="container"
+              >
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="bitcoin tag (5 posts)"
+                  aria-pressed="true"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="bitcoin"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="bitcoin"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      bitcoin
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      5
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+                  />
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md border border-solid"
+                    style="border-color: rgb(255, 153, 0);"
+                  />
+                </button>
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="ethereum tag (3 posts)"
+                  aria-pressed="false"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="ethereum"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 9, 0) 0%, rgb(255, 9, 0) 100%);"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="ethereum"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      ethereum
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      3
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #FF0900;"
+                  />
+                </button>
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="web3 tag (10 posts)"
+                  aria-pressed="false"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="web3"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(95, 0, 255) 0%, rgb(95, 0, 255) 100%);"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="web3"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      web3
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      10
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #5f00FF;"
+                  />
+                </button>
+                <div
+                  class="relative h-8 overflow-hidden rounded-md border border-dashed border-input shadow-sm"
+                  style="width: 34px; transform-origin: 0% 50% 0;"
+                >
+                  <div
+                    class="h-full w-full absolute inset-0 inline-flex items-center justify-center"
+                    style="opacity: 1;"
+                  >
+                    <button
+                      aria-label="Add new tag"
+                      class="inline-flex items-center justify-center whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground gap-1.5 px-3 has-[>svg]:px-3.5 relative size-8 min-w-8! rounded-md bg-transparent p-0! transition-opacity hover:bg-transparent hover:opacity-80 gap-0! px-0! has-[>svg]:px-0! border-transparent shadow-none hover:border-transparent hover:shadow-none"
+                      data-cy="post-tag-add-button"
+                      data-size="sm"
+                      data-slot="button"
+                      data-variant="outline"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="lucide lucide-plus pointer-events-none absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 opacity-[0.32]"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 12h14"
+                        />
+                        <path
+                          d="M12 5v14"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div
-          class="flex shrink-0 items-center gap-2 self-end"
-          data-cy="collection-card-tag-actions"
+          class="flex w-full shrink-0 items-center justify-start gap-2 self-start md:w-auto md:justify-end md:self-end"
+          data-cy="collection-card-actions"
           data-testid="container"
         >
-          <button
-            aria-expanded="false"
-            aria-label="post.actions.tagPost"
-            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
-            data-cy="post-tag-btn"
-            data-size="sm"
-            data-slot="button"
-            data-variant="secondary"
-          >
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-tag"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
-              />
-              <circle
-                cx="7.5"
-                cy="7.5"
-                fill="currentColor"
-                r=".5"
-              />
-            </svg>
-            <span
-              class="text-xs leading-4 font-bold text-muted-foreground"
-              data-testid="typography"
-            >
-              3
-            </span>
-          </button>
           <button
             aria-label="collections.card.delete"
             class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
@@ -458,6 +1092,11 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
                 d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
               />
             </svg>
+            <span
+              class="md:hidden"
+            >
+              collections.card.delete
+            </span>
           </button>
         </div>
       </div>
@@ -593,7 +1232,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
         A bit of Bitcoin purity amidst all of the madness.
       </p>
       <div
-        class="mt-auto flex w-full flex-row items-end justify-between gap-3"
+        class="mt-auto flex w-full flex-col items-start gap-3 md:flex-row md:items-end md:justify-between md:gap-4"
         data-cy="collection-card-bottom-row"
         data-testid="container"
       >
@@ -607,58 +1246,199 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
             data-testid="container"
           >
             <div
-              data-read-only="false"
-              data-show-add-button="true"
-              data-tagged-id="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:0034BBBDFK83G"
-              data-tagged-kind="post"
-              data-testid="clickable-tags-list"
-            />
+              class="flex flex-col gap-1"
+              data-testid="container"
+            >
+              <div
+                class="flex flex-wrap items-center gap-2"
+                data-cy="clickable-tags-list"
+                data-testid="container"
+              >
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="bitcoin tag (5 posts)"
+                  aria-pressed="true"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="bitcoin"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="bitcoin"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      bitcoin
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      5
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+                  />
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md border border-solid"
+                    style="border-color: rgb(255, 153, 0);"
+                  />
+                </button>
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="ethereum tag (3 posts)"
+                  aria-pressed="false"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="ethereum"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 9, 0) 0%, rgb(255, 9, 0) 100%);"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="ethereum"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      ethereum
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      3
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #FF0900;"
+                  />
+                </button>
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="web3 tag (10 posts)"
+                  aria-pressed="false"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="web3"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(95, 0, 255) 0%, rgb(95, 0, 255) 100%);"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="web3"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      web3
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      10
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #5f00FF;"
+                  />
+                </button>
+                <div
+                  class="relative h-8 overflow-hidden rounded-md border border-dashed border-input shadow-sm"
+                  style="width: 34px; transform-origin: 0% 50% 0;"
+                >
+                  <div
+                    class="h-full w-full absolute inset-0 inline-flex items-center justify-center"
+                    style="opacity: 1;"
+                  >
+                    <button
+                      aria-label="Add new tag"
+                      class="inline-flex items-center justify-center whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground gap-1.5 px-3 has-[>svg]:px-3.5 relative size-8 min-w-8! rounded-md bg-transparent p-0! transition-opacity hover:bg-transparent hover:opacity-80 gap-0! px-0! has-[>svg]:px-0! border-transparent shadow-none hover:border-transparent hover:shadow-none"
+                      data-cy="post-tag-add-button"
+                      data-size="sm"
+                      data-slot="button"
+                      data-variant="outline"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="lucide lucide-plus pointer-events-none absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 opacity-[0.32]"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 12h14"
+                        />
+                        <path
+                          d="M12 5v14"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div
-          class="flex shrink-0 items-center gap-2 self-end"
-          data-cy="collection-card-tag-actions"
+          class="flex w-full shrink-0 items-center justify-start gap-2 self-start md:w-auto md:justify-end md:self-end"
+          data-cy="collection-card-actions"
           data-testid="container"
         >
-          <button
-            aria-expanded="false"
-            aria-label="post.actions.tagPost"
-            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
-            data-cy="post-tag-btn"
-            data-size="sm"
-            data-slot="button"
-            data-variant="secondary"
-          >
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-tag"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
-              />
-              <circle
-                cx="7.5"
-                cy="7.5"
-                fill="currentColor"
-                r=".5"
-              />
-            </svg>
-            <span
-              class="text-xs leading-4 font-bold text-muted-foreground"
-              data-testid="typography"
-            >
-              3
-            </span>
-          </button>
           <button
             aria-label="collections.card.follow"
             class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
@@ -810,7 +1590,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
         </div>
       </div>
       <div
-        class="mt-auto flex w-full flex-row items-end justify-between gap-3"
+        class="mt-auto flex w-full flex-col items-start gap-3 md:flex-row md:items-end md:justify-between md:gap-4"
         data-cy="collection-card-bottom-row"
         data-testid="container"
       >
@@ -824,58 +1604,199 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
             data-testid="container"
           >
             <div
-              data-read-only="false"
-              data-show-add-button="true"
-              data-tagged-id="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:0034BBBDFK83G"
-              data-tagged-kind="post"
-              data-testid="clickable-tags-list"
-            />
+              class="flex flex-col gap-1"
+              data-testid="container"
+            >
+              <div
+                class="flex flex-wrap items-center gap-2"
+                data-cy="clickable-tags-list"
+                data-testid="container"
+              >
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="bitcoin tag (5 posts)"
+                  aria-pressed="true"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="bitcoin"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="bitcoin"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      bitcoin
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      5
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+                  />
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md border border-solid"
+                    style="border-color: rgb(255, 153, 0);"
+                  />
+                </button>
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="ethereum tag (3 posts)"
+                  aria-pressed="false"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="ethereum"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 9, 0) 0%, rgb(255, 9, 0) 100%);"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="ethereum"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      ethereum
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      3
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #FF0900;"
+                  />
+                </button>
+                <button
+                  aria-controls="radix-normalized"
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="web3 tag (10 posts)"
+                  aria-pressed="false"
+                  class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+                  data-as-child="true"
+                  data-cy="post-tag"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-tag-label="web3"
+                  data-testid="popover-trigger"
+                  style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(95, 0, 255) 0%, rgb(95, 0, 255) 100%);"
+                  type="button"
+                >
+                  <div
+                    class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+                    data-cy="tag"
+                    data-testid="tag"
+                    style="background-color: transparent; border: medium; box-shadow: none;"
+                    title="web3"
+                  >
+                    <p
+                      class="text-sm text-foreground truncate font-bold"
+                      data-cy="tag-name"
+                      data-testid="tag-name"
+                    >
+                      web3
+                    </p>
+                    <p
+                      class="text-sm ml-1.5 shrink-0 font-medium text-foreground/50"
+                      data-cy="post-tag-count"
+                      data-testid="tag-count"
+                    >
+                      10
+                    </p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+                    style="box-shadow: inset 0px 0px 8px 0px #5f00FF;"
+                  />
+                </button>
+                <div
+                  class="relative h-8 overflow-hidden rounded-md border border-dashed border-input shadow-sm"
+                  style="width: 34px; transform-origin: 0% 50% 0;"
+                >
+                  <div
+                    class="h-full w-full absolute inset-0 inline-flex items-center justify-center"
+                    style="opacity: 1;"
+                  >
+                    <button
+                      aria-label="Add new tag"
+                      class="inline-flex items-center justify-center whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground gap-1.5 px-3 has-[>svg]:px-3.5 relative size-8 min-w-8! rounded-md bg-transparent p-0! transition-opacity hover:bg-transparent hover:opacity-80 gap-0! px-0! has-[>svg]:px-0! border-transparent shadow-none hover:border-transparent hover:shadow-none"
+                      data-cy="post-tag-add-button"
+                      data-size="sm"
+                      data-slot="button"
+                      data-variant="outline"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="lucide lucide-plus pointer-events-none absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 opacity-[0.32]"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 12h14"
+                        />
+                        <path
+                          d="M12 5v14"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div
-          class="flex shrink-0 items-center gap-2 self-end"
-          data-cy="collection-card-tag-actions"
+          class="flex w-full shrink-0 items-center justify-start gap-2 self-start md:w-auto md:justify-end md:self-end"
+          data-cy="collection-card-actions"
           data-testid="container"
         >
-          <button
-            aria-expanded="false"
-            aria-label="post.actions.tagPost"
-            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
-            data-cy="post-tag-btn"
-            data-size="sm"
-            data-slot="button"
-            data-variant="secondary"
-          >
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-tag"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
-              />
-              <circle
-                cx="7.5"
-                cy="7.5"
-                fill="currentColor"
-                r=".5"
-              />
-            </svg>
-            <span
-              class="text-xs leading-4 font-bold text-muted-foreground"
-              data-testid="typography"
-            >
-              3
-            </span>
-          </button>
           <button
             aria-label="collections.card.follow"
             class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
