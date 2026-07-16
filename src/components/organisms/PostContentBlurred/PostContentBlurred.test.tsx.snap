@@ -2,20 +2,20 @@
 
 exports[`PostContentBlurred - Snapshots > matches snapshot with compact variant 1`] = `
 <button
-  class="group relative w-full cursor-pointer h-10 overflow-hidden rounded-sm"
+  class="group relative w-full cursor-pointer h-6 overflow-hidden rounded-sm"
   data-override-defaults="true"
   data-testid="blurred-content-button"
 >
   <p
     aria-hidden="true"
-    class="font-medium text-secondary-foreground blur-2xl select-none p-2 text-sm leading-5"
+    class="font-medium text-secondary-foreground blur-2xl select-none p-2 text-sm leading-5 opacity-0"
     data-override-defaults="true"
     data-testid="typography"
   >
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
   </p>
   <div
-    class="absolute inset-0 flex items-center justify-center text-muted-foreground transition-colors group-hover:text-secondary-foreground flex-row gap-2 [&_svg]:size-4"
+    class="absolute inset-0 flex items-center text-muted-foreground transition-colors group-hover:text-secondary-foreground flex-row justify-start gap-2 [&_svg]:size-4"
     data-override-defaults="true"
     data-testid="container"
   >
