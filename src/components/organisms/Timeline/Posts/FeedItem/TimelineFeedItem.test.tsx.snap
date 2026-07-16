@@ -13,6 +13,7 @@ exports[`TimelineFeedItem - Snapshots > matches snapshot for a collection timeli
   <div
     data-author-pubky="author-pubky"
     data-post-id="collection-id"
+    data-show-delete-action="false"
     data-testid="collection-card"
   />
 </div>

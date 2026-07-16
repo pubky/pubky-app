@@ -27,7 +27,7 @@ exports[`PostMain - Mobile Snapshots > matches snapshot on mobile viewport 1`] =
         post-123
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-2! md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div
@@ -95,7 +95,7 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
         me:quote-repost-1
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-2! md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div
@@ -158,7 +158,7 @@ exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] 
         other-user:repost-1
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-2! md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div
@@ -220,7 +220,7 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
         me:simple-repost-1
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-2! md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div
@@ -389,7 +389,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
         post-no-reply-456
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-2! md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div
@@ -465,7 +465,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
         post-reply-123
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-2! md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div

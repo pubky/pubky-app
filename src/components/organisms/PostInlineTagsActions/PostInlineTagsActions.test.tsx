@@ -107,6 +107,7 @@ describe('PostInlineTagsActions', () => {
   it('renders the collapsed inline tags list by default', () => {
     render(<PostInlineTagsActions {...defaultProps} />);
 
+    expect(screen.getByTestId('container')).toHaveClass('gap-3', 'md:gap-4', '@max-xl/grid:gap-3!');
     expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-post-id', 'author:post-1');
     expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-show-add-button', 'true');
     expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
