@@ -64,7 +64,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
         </svg>
         <svg
           aria-hidden="true"
-          class="lucide lucide-square-library absolute inset-0 transition-[opacity,transform] duration-150 ease-out scale-100 opacity-100"
+          class="lucide lucide-square-library absolute inset-0 transition-[opacity,transform] duration-150 ease-out scale-100 opacity-100 text-brand"
           fill="none"
           height="24"
           stroke="currentColor"
