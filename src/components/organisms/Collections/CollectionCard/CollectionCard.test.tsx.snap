@@ -65,6 +65,11 @@ exports[`CollectionCard - Mobile Snapshots > matches the mobile snapshot with up
           >
             Based Bitcoin
           </span>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end gap-2"
+          data-testid="container"
+        >
           <div
             aria-label="2 posts"
             class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
@@ -103,11 +108,6 @@ exports[`CollectionCard - Mobile Snapshots > matches the mobile snapshot with up
               </span>
             </span>
           </div>
-        </div>
-        <div
-          class="flex shrink-0 items-center justify-end"
-          data-testid="container"
-        >
           <div
             data-alt="Bitcoin Wizard"
             data-avatar-url="https://example.com/avatar.png"
@@ -417,6 +417,11 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
           >
             Based Bitcoin
           </span>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end gap-2"
+          data-testid="container"
+        >
           <div
             aria-label="2 posts"
             class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
@@ -455,11 +460,6 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
               </span>
             </span>
           </div>
-        </div>
-        <div
-          class="flex shrink-0 items-center justify-end"
-          data-testid="container"
-        >
           <div
             data-alt="Bitcoin Wizard"
             data-avatar-url="https://example.com/avatar.png"
@@ -787,6 +787,11 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
           >
             Based Bitcoin
           </span>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end gap-2"
+          data-testid="container"
+        >
           <div
             aria-label="2 posts"
             class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
@@ -825,11 +830,6 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
               </span>
             </span>
           </div>
-        </div>
-        <div
-          class="flex shrink-0 items-center justify-end"
-          data-testid="container"
-        >
           <div
             data-alt="Bitcoin Wizard"
             data-avatar-url="https://example.com/avatar.png"
@@ -1170,6 +1170,11 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
           >
             Based Bitcoin
           </span>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end gap-2"
+          data-testid="container"
+        >
           <div
             aria-label="2 posts"
             class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
@@ -1208,11 +1213,6 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
               </span>
             </span>
           </div>
-        </div>
-        <div
-          class="flex shrink-0 items-center justify-end"
-          data-testid="container"
-        >
           <div
             data-alt="Bitcoin Wizard"
             data-avatar-url="https://example.com/avatar.png"
@@ -1534,6 +1534,11 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
           >
             Quiet collection
           </span>
+        </div>
+        <div
+          class="flex shrink-0 items-center justify-end gap-2"
+          data-testid="container"
+        >
           <div
             aria-label="0 posts"
             class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
@@ -1572,11 +1577,6 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
               </span>
             </span>
           </div>
-        </div>
-        <div
-          class="flex shrink-0 items-center justify-end"
-          data-testid="container"
-        >
           <div
             data-alt="Bitcoin Wizard"
             data-avatar-url="https://example.com/avatar.png"
