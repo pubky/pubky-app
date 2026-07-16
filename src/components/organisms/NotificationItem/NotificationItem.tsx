@@ -42,6 +42,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
 
   // Extract the user ID from the notification (the actor who triggered it)
   const actorUserId = getUserIdFromNotification(notification);
+  const postKind = 'post_kind' in notification ? notification.post_kind : undefined;
+  const shouldRefreshPost = notification.type === NotificationType.PostEdited && postKind === 'collection';
 
   // Extract post composite ID for notifications with post content (memoized to avoid recalculation)
   const postCompositeId = useMemo(() => {
@@ -68,7 +70,11 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     // 1. Check local DB first
     // 2. If missing, fetch from Nexus
     // 3. Write to local DB
-    PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
+    const postPromise = shouldRefreshPost
+      ? PostController.fetch({ compositeId: postCompositeId, viewerId })
+      : PostController.getOrFetch({ compositeId: postCompositeId, viewerId });
+
+    postPromise
       .then(async (post) => {
         if (!isCancelled && post?.content) {
           if (isPostDeleted(post.content)) {
@@ -102,7 +108,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
       isCancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
-  }, [postCompositeId]);
+  }, [postCompositeId, shouldRefreshPost]);
 
   // Get user name and avatar from profile hook
   const userName = profile?.name || tCommon('user');
@@ -113,7 +119,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const actionText = t(actionKey);
 
   // Get post preview text
-  const previewText = hasPostPreview(notification.type) ? formatPreviewText(postContent) : null;
+  const previewText = hasPostPreview(notification.type, postKind) ? formatPreviewText(postContent) : null;
 
   // Format timestamps (short for mobile, long for desktop)
   const timestampShort = formatNotificationTime(notification.timestamp, false);
@@ -242,7 +248,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             {timestampLong}
           </Typography>
 
-          <NotificationIcon type={notification.type} showBadge={isUnread} />
+          <NotificationIcon type={notification.type} postKind={postKind} showBadge={isUnread} />
         </Link>
       ) : (
         <Container overrideDefaults={true} className="flex items-center gap-2">
@@ -258,7 +264,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             {timestampLong}
           </Typography>
 
-          <NotificationIcon type={notification.type} showBadge={isUnread} />
+          <NotificationIcon type={notification.type} postKind={postKind} showBadge={isUnread} />
         </Container>
       )}
     </Container>

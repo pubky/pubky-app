@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { type FlatNotification, NotificationType, PostChangedSource } from '@/models/notification/notification.types';
-import { getNotificationActionKey, getNotificationLink } from './NotificationItem.utils';
+import { getNotificationActionKey, getNotificationLink, hasPostPreview } from './NotificationItem.utils';
 
 describe('NotificationItem utilities', () => {
+  it('shows the subject preview for edited-collection notifications', () => {
+    expect(hasPostPreview(NotificationType.PostEdited, 'collection')).toBe(true);
+  });
+
+  it.each([undefined, 'long', 'unknown'])('does not show an edited-post preview for post kind %s', (postKind) => {
+    expect(hasPostPreview(NotificationType.PostEdited, postKind)).toBe(false);
+  });
+
   it.each([
     [NotificationType.TagPost, 'collection', 'taggedCollection'],
     [NotificationType.TagPost, 'long', 'taggedArticle'],

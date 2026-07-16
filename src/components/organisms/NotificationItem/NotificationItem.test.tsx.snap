@@ -227,3 +227,12 @@ exports[`NotificationItem - Snapshots > matches snapshot for TagPost notificatio
   </a>
 </div>
 `;
+
+exports[`NotificationItem - Snapshots > matches snapshot for an edited collection with a title preview 1`] = `
+<a
+  class="hidden shrink-0 text-base font-medium text-muted-foreground hover:underline xl:inline"
+  href="/collections/collection-owner/collection-id"
+>
+  'Based Bitcoin'
+</a>
+`;

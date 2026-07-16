@@ -278,7 +278,9 @@ export function formatPreviewText(content: string | null | undefined): string | 
 /**
  * Check if notification type has post preview
  */
-export function hasPostPreview(notificationType: NotificationType): boolean {
+export function hasPostPreview(notificationType: NotificationType, postKind?: string): boolean {
+  if (notificationType === NotificationType.PostEdited) return postKind === 'collection';
+
   return [NotificationType.Reply, NotificationType.Mention, NotificationType.Repost, NotificationType.TagPost].includes(
     notificationType,
   );
