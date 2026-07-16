@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { FileController } from '@/controllers/file/file';
+import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { PostAttachmentsAudios } from '@/molecules/PostAttachmentsAudios/PostAttachmentsAudios';
 import { PostAttachmentsGenericFiles } from '@/molecules/PostAttachmentsGenericFiles/PostAttachmentsGenericFiles';
 import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
@@ -11,6 +12,7 @@ import { categorizeAttachments, splitAttachmentsByMediaType } from './PostAttach
 import type { AttachmentConstructed, PostAttachmentsProps } from './PostAttachments.types';
 
 export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 'default' }: PostAttachmentsProps) => {
+  const mediaContainerRef = usePauseMediaOutsideViewport();
   const [imagesAndVideos, setImagesAndVideos] = useState<AttachmentConstructed[]>([]);
   const [audios, setAudios] = useState<AttachmentConstructed[]>([]);
   const [genericFiles, setGenericFiles] = useState<AttachmentConstructed[]>([]);
@@ -58,7 +60,7 @@ export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 
   if (!imagesAndVideos.length && !audios.length && !genericFiles.length) return null;
 
   return (
-    <Container className="gap-3">
+    <Container ref={mediaContainerRef} className="gap-3">
       {imagesAndVideos.length ? (
         <PostAttachmentsImagesAndVideos
           imagesAndVideos={imagesAndVideos}
