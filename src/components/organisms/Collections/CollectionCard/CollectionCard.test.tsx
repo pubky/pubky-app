@@ -1,12 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import { TagKind } from '@/application/tag/tag.types';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import type { Pubky } from '@/models/models.types';
+import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { CollectionCard } from './CollectionCard';
@@ -17,6 +19,10 @@ import { CollectionCard } from './CollectionCard';
 
 const mockUseAuthStore = vi.fn();
 const mockLocalCollections: Record<string, string | undefined> = {};
+const mockSetShowSignInDialog = vi.fn();
+const mockHandleTagToggle = vi.fn();
+const mockHandleTagAdd = vi.fn().mockResolvedValue({ success: true });
+const mockIsViewerTagger = vi.fn((tag: TagWithAvatars) => tag.relationship ?? false);
 
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string, values?: { count?: number }) =>
@@ -48,7 +54,54 @@ vi.mock('@/hooks/useBookmark/useBookmark', () => ({
 
 const mockRequireAuth = vi.fn(<T,>(action: () => T) => action());
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
-  useRequireAuth: () => ({ requireAuth: mockRequireAuth }),
+  useRequireAuth: () => ({ isAuthenticated: true, requireAuth: mockRequireAuth }),
+}));
+
+vi.mock('@/hooks/useEntityTags/useEntityTags', () => ({
+  useEntityTags: vi.fn((_entityId, _taggedKind, options) => ({
+    tags: options?.providedTags ?? mockCollectionTags,
+    count: options?.providedTags?.length ?? mockCollectionTags.length,
+    isLoading: false,
+    isViewerTagger: mockIsViewerTagger,
+    handleTagToggle: mockHandleTagToggle,
+    handleTagAdd: mockHandleTagAdd,
+  })),
+}));
+
+vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
+  useEnrichedTags: vi.fn((tags: NexusTag[]) => ({
+    enrichedTags: tags.map((tag) => ({
+      ...tag,
+      taggers: tag.taggers.map((taggerId, index) => ({
+        id: taggerId as Pubky,
+        name: `User ${index + 1}`,
+        avatarUrl: `https://example.com/${taggerId}.png`,
+      })),
+    })),
+    isLoading: false,
+  })),
+}));
+
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: () => false,
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
+  usePostTaggers: () => ({
+    taggersByLabel: new Map(),
+    taggerStates: new Map(),
+    fetchAllTaggers: vi.fn(),
+  }),
+}));
+
+vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => ({
+  UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="user-info-popover">{children}</div>
+  ),
 }));
 
 const mockDeletePost = vi.fn().mockResolvedValue(undefined);
@@ -127,31 +180,6 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
   ),
 }));
 
-vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => ({
-  ClickableTagsList: ({
-    taggedId,
-    taggedKind,
-    showAddButton,
-    readOnly,
-    maxVisibleTags,
-  }: {
-    taggedId: string;
-    taggedKind: TagKind;
-    showAddButton: boolean;
-    readOnly?: boolean;
-    maxVisibleTags?: number;
-  }) => (
-    <div
-      data-testid="clickable-tags-list"
-      data-tagged-id={taggedId}
-      data-tagged-kind={String(taggedKind)}
-      data-show-add-button={String(showAddButton)}
-      data-read-only={String(readOnly ?? false)}
-      data-max-visible-tags={maxVisibleTags}
-    />
-  ),
-}));
-
 // ---------------------------------------------------------------------------
 // Fixtures + helpers
 // ---------------------------------------------------------------------------
@@ -159,6 +187,12 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => ({
 const AUTHOR_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 const POST_ID = '0034BBBDFK83G';
 const COMPOSITE_ID = `${AUTHOR_PUBKY}:${POST_ID}`;
+const mockCollectionTags: NexusTag[] = [
+  { label: 'bitcoin', taggers_count: 5, taggers: ['user1', 'user2'], relationship: true },
+  { label: 'ethereum', taggers_count: 3, taggers: ['user3'], relationship: false },
+  { label: 'web3', taggers_count: 10, taggers: [], relationship: false },
+  { label: 'nostr', taggers_count: 1, taggers: ['user4'], relationship: false },
+];
 
 const COLLECTION_CONTENT = JSON.stringify({
   name: 'Based Bitcoin',
@@ -177,9 +211,18 @@ const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseUserProfile = vi.mocked(useUserProfile);
 const mockUseBookmark = vi.mocked(useBookmark);
 
+function getTagsList(container: HTMLElement = document.body) {
+  return container.querySelector('[data-cy="clickable-tags-list"]');
+}
+
+function getAddTagButton(container: HTMLElement = document.body) {
+  return container.querySelector('[data-cy="post-tag-add-button"]');
+}
+
 function setAuthStore(currentUserPubky: string | null) {
-  mockUseAuthStore.mockImplementation((selector: (state: { currentUserPubky: string | null }) => unknown) =>
-    selector({ currentUserPubky }),
+  mockUseAuthStore.mockImplementation(
+    (selector: (state: { currentUserPubky: string | null; setShowSignInDialog: () => void }) => unknown) =>
+      selector({ currentUserPubky, setShowSignInDialog: mockSetShowSignInDialog }),
   );
 }
 
@@ -233,6 +276,7 @@ function setBookmark({ isBookmarked = false, isToggling = false } = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useIsMobile).mockReturnValue(false);
+  mockIsViewerTagger.mockImplementation((tag: TagWithAvatars) => tag.relationship ?? false);
   for (const key of Object.keys(mockLocalCollections)) delete mockLocalCollections[key];
   setAuthStore(null);
   setPostDetails(COLLECTION_CONTENT);
@@ -266,13 +310,12 @@ describe('CollectionCard', () => {
   });
 
   it('restores the add-tag control for landing cards while keeping the tag-count button hidden', () => {
-    render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+    const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
-    const tags = screen.getByTestId('clickable-tags-list');
-    expect(tags).toHaveAttribute('data-tagged-id', COMPOSITE_ID);
-    expect(tags).toHaveAttribute('data-tagged-kind', String(TagKind.POST));
-    expect(tags).toHaveAttribute('data-show-add-button', 'true');
-    expect(tags).not.toHaveAttribute('data-max-visible-tags');
+    expect(getTagsList(container)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'bitcoin tag (5 posts)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ethereum tag (3 posts)' })).toBeInTheDocument();
+    expect(getAddTagButton(container)).toBeInTheDocument();
     expect(screen.queryByLabelText('post.actions.tagPost')).not.toBeInTheDocument();
   });
 
@@ -332,7 +375,10 @@ describe('CollectionCard', () => {
       expect(link).toHaveAttribute('data-layout', 'default');
       expect(screen.getByText('Based Bitcoin')).toHaveClass('text-xl', 'leading-7');
       expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-size', 'sm');
-      expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-max-visible-tags', '3');
+      expect(screen.getByRole('button', { name: 'bitcoin tag (5 posts)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'ethereum tag (3 posts)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'web3 tag (10 posts)' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'nostr tag (1 posts)' })).not.toBeInTheDocument();
     });
 
     it('uses full width when tags layout is inline on desktop', () => {
@@ -620,9 +666,12 @@ describe('CollectionCard', () => {
 
       render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
 
-      expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
-      expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-show-add-button', 'false');
-      expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-max-visible-tags', '3');
+      expect(getTagsList()).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'bitcoin tag (5 posts)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'ethereum tag (3 posts)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'web3 tag (10 posts)' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'nostr tag (1 posts)' })).not.toBeInTheDocument();
+      expect(getAddTagButton()).not.toBeInTheDocument();
       expect(screen.getByLabelText('collections.card.follow')).toBeInTheDocument();
       expect(screen.queryByLabelText('post.actions.tagPost')).not.toBeInTheDocument();
     });
@@ -632,9 +681,12 @@ describe('CollectionCard', () => {
 
       render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
 
-      expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
-      expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-show-add-button', 'false');
-      expect(screen.getByTestId('clickable-tags-list')).not.toHaveAttribute('data-max-visible-tags');
+      expect(getTagsList()).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'bitcoin tag (5 posts)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'ethereum tag (3 posts)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'web3 tag (10 posts)' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'nostr tag (1 posts)' })).not.toBeInTheDocument();
+      expect(getAddTagButton()).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.delete')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('post.actions.tagPost')).not.toBeInTheDocument();
       expect(document.querySelector('[data-cy="collection-card-actions"]')).not.toBeInTheDocument();
@@ -688,9 +740,9 @@ describe('CollectionCard', () => {
         <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" interactiveActions={false} />,
       );
 
-      const tagsList = screen.getByTestId('clickable-tags-list');
-      expect(tagsList).toHaveAttribute('data-show-add-button', 'false');
-      expect(tagsList).toHaveAttribute('data-read-only', 'true');
+      expect(getTagsList()).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'bitcoin tag (5 posts)' })).toBeInTheDocument();
+      expect(getAddTagButton()).not.toBeInTheDocument();
       expect(screen.queryByLabelText('collections.card.follow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('post.actions.tagPost')).not.toBeInTheDocument();
       expect(document.querySelector('[data-cy="collection-card-actions"]')).not.toBeInTheDocument();
