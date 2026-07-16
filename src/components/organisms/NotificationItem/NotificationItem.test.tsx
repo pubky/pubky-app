@@ -55,9 +55,6 @@ vi.mock('@/controllers/post/post', () => ({
     get getOrFetch() {
       return mockGetOrFetch;
     },
-    get fetch() {
-      return mockFetch;
-    },
   },
 }));
 vi.mock('@/controllers/file/file', () => ({
@@ -93,7 +90,6 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
 // Mock molecules
 const mockToast = vi.fn();
 const mockGetOrFetch = vi.fn<() => Promise<{ kind: string; content: string } | null>>(() => Promise.resolve(null));
-const mockFetch = vi.fn<() => Promise<{ kind: string; content: string } | null>>(() => Promise.resolve(null));
 vi.mock('@/molecules/NotificationIcon/NotificationIcon', () => {
   return {
     NotificationIcon: ({
@@ -184,8 +180,6 @@ describe('NotificationItem', () => {
     mockToast.mockClear();
     mockGetOrFetch.mockClear();
     mockGetOrFetch.mockResolvedValue(null);
-    mockFetch.mockClear();
-    mockFetch.mockResolvedValue(null);
     vi.mocked(useUserProfile).mockReturnValue({
       profile: { name: 'User', avatarUrl: undefined },
       isLoading: false,
@@ -587,16 +581,12 @@ describe('NotificationItem', () => {
     }
   });
 
-  it('refreshes and shows an edited collection name as a muted preview', async () => {
+  it('shows an edited collection name as a muted preview', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-16T12:00:00Z'));
 
     try {
       mockGetOrFetch.mockResolvedValue({
-        kind: 'collection',
-        content: JSON.stringify({ name: 'Old name', description: '', items: [] }),
-      });
-      mockFetch.mockResolvedValue({
         kind: 'collection',
         content: JSON.stringify({ name: 'Based Bitcoin', description: '', items: [] }),
       });
@@ -617,11 +607,10 @@ describe('NotificationItem', () => {
       await vi.waitFor(() => {
         expect(screen.getByText("'Based Bitcoin'")).toHaveClass('text-muted-foreground');
       });
-      expect(mockFetch).toHaveBeenCalledWith({
+      expect(mockGetOrFetch).toHaveBeenCalledWith({
         compositeId: 'collection-owner:collection-id',
         viewerId: 'test-user-pubky',
       });
-      expect(mockGetOrFetch).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
@@ -768,7 +757,6 @@ describe('NotificationItem - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetOrFetch.mockResolvedValue(null);
-    mockFetch.mockResolvedValue(null);
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-16T12:00:00Z'));
   });
@@ -814,7 +802,7 @@ describe('NotificationItem - Snapshots', () => {
   });
 
   it('matches snapshot for an edited collection with a title preview', async () => {
-    mockFetch.mockResolvedValue({
+    mockGetOrFetch.mockResolvedValue({
       kind: 'collection',
       content: JSON.stringify({ name: 'Based Bitcoin', description: '', items: [] }),
     });
@@ -831,7 +819,7 @@ describe('NotificationItem - Snapshots', () => {
 
     render(<NotificationItem notification={notification} isUnread={false} />);
     await act(async () => {
-      await mockFetch.mock.results[0]?.value;
+      await mockGetOrFetch.mock.results[0]?.value;
     });
 
     expect(screen.getByText("'Based Bitcoin'")).toMatchSnapshot();

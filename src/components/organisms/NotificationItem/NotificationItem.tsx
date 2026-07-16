@@ -43,7 +43,6 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   // Extract the user ID from the notification (the actor who triggered it)
   const actorUserId = getUserIdFromNotification(notification);
   const postKind = 'post_kind' in notification ? notification.post_kind : undefined;
-  const shouldRefreshPost = notification.type === NotificationType.PostEdited && postKind === 'collection';
 
   // Extract post composite ID for notifications with post content (memoized to avoid recalculation)
   const postCompositeId = useMemo(() => {
@@ -70,11 +69,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     // 1. Check local DB first
     // 2. If missing, fetch from Nexus
     // 3. Write to local DB
-    const postPromise = shouldRefreshPost
-      ? PostController.fetch({ compositeId: postCompositeId, viewerId })
-      : PostController.getOrFetch({ compositeId: postCompositeId, viewerId });
-
-    postPromise
+    PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
       .then(async (post) => {
         if (!isCancelled && post?.content) {
           if (isPostDeleted(post.content)) {
@@ -108,7 +103,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
       isCancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
-  }, [postCompositeId, shouldRefreshPost]);
+  }, [postCompositeId]);
 
   // Get user name and avatar from profile hook
   const userName = profile?.name || tCommon('user');
