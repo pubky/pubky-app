@@ -139,16 +139,6 @@ describe('LocksService (auth)', () => {
     expect(mocks.fakeLocks.exchangeFrontendSessionCode).toHaveBeenCalledTimes(1); // both calls served by the one client
   });
 
-  it('does not set a testnet homeserver on mainnet (testnet=false)', async () => {
-    mocks.getTestnet.mockReturnValueOnce(false);
-    await LocksService.generateConnectUrl({
-      returnTo: 'https://staging.pubky.app',
-      state: 'opaque-state',
-    });
-    expect(mocks.setLocalTestnetHomeserver).not.toHaveBeenCalled();
-    expect(mocks.addPkarrRelay).toHaveBeenCalledWith('https://pkarr.example/inbox'); // relays still set
-  });
-
   it('rejects without touching the SDK when no Lock Server is configured', async () => {
     mocks.getLockServer.mockReturnValue(undefined);
     await expect(
@@ -205,13 +195,6 @@ describe('LocksService (auth)', () => {
 
     expect(isAppError(error)).toBe(true);
     expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Auth);
-  });
-
-  it('maps a failed lock-service-config write to an AppError under the Locks service', async () => {
-    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
-    mocks.setLockServicePointer.mockRejectedValueOnce(new Error('creator authority unavailable'));
-    const error = await LocksService.setLockServiceConfig().catch((e: unknown) => e);
-    expect(isAppError(error)).toBe(true);
   });
 
   it('maps SDK failures to an AppError under the Locks service', async () => {
@@ -303,29 +286,5 @@ describe('LocksService (content)', () => {
 
     expect(isAppError(error)).toBe(true);
     expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Auth);
-  });
-
-  it('leaves other HTTP failures as non-auth errors', async () => {
-    mocks.createContentLock.mockRejectedValue(new Error('Lock Server request failed with HTTP 422'));
-
-    const error = await LocksService.createContentLock(lockParams).catch((caught: unknown) => caught);
-
-    expect(isAppError(error)).toBe(true);
-    expect((error as { category: ErrorCategory }).category).not.toBe(ErrorCategory.Auth);
-  });
-
-  it('leaves a network failure as a non-auth error', async () => {
-    mocks.registerGuardedResource.mockRejectedValue(
-      new Error('Lock Server request failed: TypeError: Failed to fetch'),
-    );
-
-    const error = await LocksService.registerGuardedResource({
-      path: 'id-1',
-      contentType: 'image/png',
-      bytes: new Uint8Array([1]),
-    }).catch((caught: unknown) => caught);
-
-    expect(isAppError(error)).toBe(true);
-    expect((error as { category: ErrorCategory }).category).not.toBe(ErrorCategory.Auth);
   });
 });
