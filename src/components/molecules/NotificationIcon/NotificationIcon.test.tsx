@@ -79,6 +79,38 @@ describe('NotificationIcon', () => {
     expect(icon).toBeInTheDocument();
   });
 
+  it.each([
+    ['short', 'lucide-sticky-note'],
+    ['long', 'lucide-newspaper'],
+    ['image', 'lucide-image'],
+    ['video', 'lucide-circle-play'],
+    ['link', 'lucide-link'],
+    ['file', 'lucide-download'],
+    ['collection', 'lucide-library'],
+  ])('renders the %s category icon for edited notifications', (postKind, iconClassName) => {
+    const { container } = render(
+      <NotificationIcon type={NotificationType.PostEdited} postKind={postKind} showBadge={false} />,
+    );
+
+    expect(container.querySelector(`.${iconClassName}`)).toBeInTheDocument();
+  });
+
+  it.each([undefined, 'unknown', 'audio'])('uses the edited-post fallback icon for post kind %s', (postKind) => {
+    const { container } = render(
+      <NotificationIcon type={NotificationType.PostEdited} postKind={postKind} showBadge={false} />,
+    );
+
+    expect(container.querySelector('.lucide-sticky-note')).toBeInTheDocument();
+  });
+
+  it('keeps the action icon for non-edited collection notifications', () => {
+    const { container } = render(
+      <NotificationIcon type={NotificationType.Mention} postKind="collection" showBadge={false} />,
+    );
+
+    expect(container.querySelector('.lucide-at-sign')).toBeInTheDocument();
+  });
+
   it('renders icon with correct size', () => {
     const { container } = render(<NotificationIcon type={NotificationType.Follow} showBadge={false} />);
     const icon = container.querySelector('svg');
@@ -161,6 +193,20 @@ describe('NotificationIcon - Snapshots', () => {
 
   it('matches snapshot for PostEdited notification without badge', () => {
     const { container } = render(<NotificationIcon type={NotificationType.PostEdited} showBadge={false} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for an edited collection notification', () => {
+    const { container } = render(
+      <NotificationIcon type={NotificationType.PostEdited} postKind="collection" showBadge={false} />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it.each(['long', 'image', 'video', 'link', 'file'])('matches snapshot for an edited %s notification', (postKind) => {
+    const { container } = render(
+      <NotificationIcon type={NotificationType.PostEdited} postKind={postKind} showBadge={false} />,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

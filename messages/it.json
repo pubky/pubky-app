@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "adesso",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}g",
+    "weeksShort": "{count}sett",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Sblocca</highlight> il web.",
@@ -844,12 +847,24 @@
       "followedYou": "ti ha seguito",
       "newFriend": "ora e tuo amico",
       "taggedPost": "ha taggato il tuo post",
+      "taggedCollection": "ha taggato la tua collezione",
+      "taggedArticle": "ha taggato il tuo articolo",
       "taggedProfile": "ha taggato il tuo profilo",
       "repliedToPost": "ha risposto al tuo post",
+      "repliedToCollection": "ha risposto alla tua collezione",
+      "repliedToArticle": "ha risposto al tuo articolo",
       "repostedPost": "ha ripubblicato il tuo post",
+      "repostedCollection": "ha ripubblicato la tua collezione",
+      "repostedArticle": "ha ripubblicato il tuo articolo",
       "mentionedYou": "ti ha menzionato in un post",
+      "mentionedYouInCollection": "ti ha menzionato in una collezione",
+      "mentionedYouInArticle": "ti ha menzionato in un articolo",
       "deletedPost": "ha eliminato un post",
+      "deletedCollection": "ha eliminato una collezione",
+      "deletedArticle": "ha eliminato un articolo",
       "editedPost": "ha modificato un post con cui hai interagito",
+      "updatedCollection": "ha aggiornato una collezione",
+      "updatedArticle": "ha aggiornato un articolo",
       "fallback": "Nuova notifica"
     },
     "settings": {

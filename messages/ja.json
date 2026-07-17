@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "今",
+    "secondsShort": "{count}秒",
     "minutesShort": "{count}分",
-    "hoursShort": "{count}時間"
+    "hoursShort": "{count}時間",
+    "daysShort": "{count}日",
+    "weeksShort": "{count}週",
+    "monthsShort": "{count}か月"
   },
   "landing": {
     "title": "ウェブを<highlight>解放</highlight>する。",
@@ -844,12 +847,24 @@
       "followedYou": "あなたをフォローしました",
       "newFriend": "あなたと友達になりました",
       "taggedPost": "あなたの投稿にタグ付けしました",
+      "taggedCollection": "あなたのコレクションにタグ付けしました",
+      "taggedArticle": "あなたの記事にタグ付けしました",
       "taggedProfile": "あなたのプロフィールにタグ付けしました",
       "repliedToPost": "あなたの投稿に返信しました",
+      "repliedToCollection": "あなたのコレクションに返信しました",
+      "repliedToArticle": "あなたの記事に返信しました",
       "repostedPost": "あなたの投稿をリポストしました",
+      "repostedCollection": "あなたのコレクションをリポストしました",
+      "repostedArticle": "あなたの記事をリポストしました",
       "mentionedYou": "投稿であなたをメンションしました",
+      "mentionedYouInCollection": "コレクションであなたをメンションしました",
+      "mentionedYouInArticle": "記事であなたをメンションしました",
       "deletedPost": "投稿を削除しました",
+      "deletedCollection": "コレクションを削除しました",
+      "deletedArticle": "記事を削除しました",
       "editedPost": "関わった投稿を編集しました",
+      "updatedCollection": "コレクションを更新しました",
+      "updatedArticle": "記事を更新しました",
       "fallback": "新しい通知"
     },
     "settings": {

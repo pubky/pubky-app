@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "ahora",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}d",
+    "weeksShort": "{count}sem",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Desbloquea</highlight> la web.",
@@ -846,12 +849,24 @@
       "followedYou": "te siguió",
       "newFriend": "ahora es tu amigo",
       "taggedPost": "etiquetó tu publicación",
+      "taggedCollection": "etiquetó tu colección",
+      "taggedArticle": "etiquetó tu artículo",
       "taggedProfile": "etiquetó tu perfil",
       "repliedToPost": "respondió a tu publicación",
+      "repliedToCollection": "respondió a tu colección",
+      "repliedToArticle": "respondió a tu artículo",
       "repostedPost": "republicó tu publicación",
+      "repostedCollection": "republicó tu colección",
+      "repostedArticle": "republicó tu artículo",
       "mentionedYou": "te mencionó en una publicación",
+      "mentionedYouInCollection": "te mencionó en una colección",
+      "mentionedYouInArticle": "te mencionó en un artículo",
       "deletedPost": "eliminó una publicación",
+      "deletedCollection": "eliminó una colección",
+      "deletedArticle": "eliminó un artículo",
       "editedPost": "editó una publicación con la que interactuaste",
+      "updatedCollection": "actualizó una colección",
+      "updatedArticle": "actualizó un artículo",
       "fallback": "Nueva notificación"
     },
     "settings": {

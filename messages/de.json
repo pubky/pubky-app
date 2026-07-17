@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "jetzt",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}T",
+    "weeksShort": "{count}W",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Entsperre</highlight> das Web.",
@@ -846,12 +849,24 @@
       "followedYou": "folgt Ihnen",
       "newFriend": "ist jetzt Ihr Freund",
       "taggedPost": "hat Ihren Beitrag markiert",
+      "taggedCollection": "hat Ihre Sammlung markiert",
+      "taggedArticle": "hat Ihren Artikel markiert",
       "taggedProfile": "hat Ihr Profil markiert",
       "repliedToPost": "hat auf Ihren Beitrag geantwortet",
+      "repliedToCollection": "hat auf Ihre Sammlung geantwortet",
+      "repliedToArticle": "hat auf Ihren Artikel geantwortet",
       "repostedPost": "hat Ihren Beitrag repostet",
+      "repostedCollection": "hat Ihre Sammlung repostet",
+      "repostedArticle": "hat Ihren Artikel repostet",
       "mentionedYou": "hat Sie in einem Beitrag erwaehnt",
+      "mentionedYouInCollection": "hat Sie in einer Sammlung erwähnt",
+      "mentionedYouInArticle": "hat Sie in einem Artikel erwähnt",
       "deletedPost": "hat einen Beitrag gelöscht",
+      "deletedCollection": "hat eine Sammlung gelöscht",
+      "deletedArticle": "hat einen Artikel gelöscht",
       "editedPost": "hat einen Beitrag bearbeitet, mit dem Sie interagiert haben",
+      "updatedCollection": "hat eine Sammlung aktualisiert",
+      "updatedArticle": "hat einen Artikel aktualisiert",
       "fallback": "Neue Benachrichtigung"
     },
     "settings": {

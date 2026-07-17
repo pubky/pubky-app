@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "now",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}d",
+    "weeksShort": "{count}w",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Unlock</highlight> the web.",
@@ -844,12 +847,24 @@
       "followedYou": "followed you",
       "newFriend": "is now your friend",
       "taggedPost": "tagged your post",
+      "taggedCollection": "tagged your collection",
+      "taggedArticle": "tagged your article",
       "taggedProfile": "tagged your profile",
       "repliedToPost": "replied to your post",
+      "repliedToCollection": "replied to your collection",
+      "repliedToArticle": "replied to your article",
       "repostedPost": "reposted your post",
+      "repostedCollection": "reposted your collection",
+      "repostedArticle": "reposted your article",
       "mentionedYou": "mentioned you in post",
+      "mentionedYouInCollection": "mentioned you in a collection",
+      "mentionedYouInArticle": "mentioned you in an article",
       "deletedPost": "deleted a post",
+      "deletedCollection": "deleted a collection",
+      "deletedArticle": "deleted an article",
       "editedPost": "edited a post you have interacted with",
+      "updatedCollection": "updated collection",
+      "updatedArticle": "updated an article",
       "fallback": "New notification"
     },
     "settings": {

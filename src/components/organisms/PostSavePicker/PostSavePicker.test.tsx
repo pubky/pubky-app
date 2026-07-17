@@ -159,6 +159,7 @@ describe('PostSavePicker', () => {
     const { container } = renderPicker();
 
     expect(getTriggerIcon(container)).toHaveAttribute('data-state', 'saved');
+    expect(container.querySelector('.lucide-square-library')).toHaveClass('text-brand');
   });
 
   it('keeps the collection icon while the desktop save menu is open', async () => {
