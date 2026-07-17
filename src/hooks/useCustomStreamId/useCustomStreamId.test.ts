@@ -52,14 +52,6 @@ describe('useCustomStreamId', () => {
   // Mapping failures → undefined
   // ============================================================================
 
-  it('builds the existing Followers stream without relying on Home reach mapping', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Followers }));
-
-    const { result } = renderHook(() => useCustomStreamId());
-
-    expect(result.current).toBe('timeline:followers:all:bitcoin,lightning');
-  });
-
   it('returns undefined when sort cannot be mapped (unknown sort value)', () => {
     mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: 999 as PubkyAppFeedSort }));
 
@@ -312,6 +304,21 @@ describe('useCustomStreamId', () => {
     const { result } = renderHook(() => useCustomStreamId());
 
     expect(result.current).toBe('timeline:all:collection:curated');
+  });
+
+  // ============================================================================
+  // Foreign-authored reaches (interop policy)
+  // ============================================================================
+
+  // Deliberate policy, not an accident of the buildFeedStreamId refactor: this client
+  // offers no Followers option in CustomFeedDialog, but feeds are homeserver-stored and
+  // portable, so a Followers feed authored by a foreign client must still render.
+  it('builds a stream for a foreign-authored Followers feed this client cannot create', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Followers }));
+
+    const { result } = renderHook(() => useCustomStreamId());
+
+    expect(result.current).toBe('timeline:followers:all:bitcoin,lightning');
   });
 
   // ============================================================================
