@@ -5,7 +5,8 @@
     "hoursShort": "{count}h",
     "daysShort": "{count}d",
     "weeksShort": "{count}w",
-    "monthsShort": "{count}M"
+    "monthsShort": "{count}M",
+    "yearsShort": "{count}Y"
   },
   "landing": {
     "title": "<highlight>Unlock</highlight> the web.",

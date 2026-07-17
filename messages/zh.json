@@ -5,7 +5,8 @@
     "hoursShort": "{count}小时",
     "daysShort": "{count}天",
     "weeksShort": "{count}周",
-    "monthsShort": "{count}个月"
+    "monthsShort": "{count}个月",
+    "yearsShort": "{count}年"
   },
   "landing": {
     "title": "<highlight>解锁</highlight>网络。",
