@@ -102,9 +102,15 @@ export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
 export type PostStreamKindSegment = 'all' | StreamKind;
 export type WotDomainDepth = 1 | 2;
-export type WotStreamId = `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}`;
+export type WotStreamId =
+  | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}`
+  | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}:${string}`;
 export type WotDomainStreamCompositeId =
-  `${StreamSorting}:${StreamSource.WOT_DOMAIN}:${WotDomainDepth}:${PostStreamKindSegment}:${string}`;
+  | `${StreamSorting}:${StreamSource.WOT_DOMAIN}:${WotDomainDepth}:${PostStreamKindSegment}:${string}`
+  | `${StreamSorting}:${StreamSource.WOT_DOMAIN}:${WotDomainDepth}:${PostStreamKindSegment}:${string}:${string}`;
+export type SortedAuthorStreamCompositeId =
+  | `${StreamSorting}:${StreamSource.AUTHOR}:${string}:${PostStreamKindSegment}`
+  | `${StreamSorting}:${StreamSource.AUTHOR}:${string}:${PostStreamKindSegment}:${string}`;
 
 // Collections feature (see `.plans/2026/may/collections-feature-foundation.md`).
 //
@@ -134,10 +140,24 @@ export function buildWotDomainStreamId(
   sorting: StreamSorting,
   depth: WotDomainDepth,
   kind: PostStreamKindSegment,
-  tags: string[],
+  domainTags: string[],
+  postTags: string[] = [],
 ): WotDomainStreamCompositeId {
-  const canonicalTags = [...tags].sort().join(',');
-  return `${sorting}:${StreamSource.WOT_DOMAIN}:${depth}:${kind}:${canonicalTags}`;
+  const canonicalDomainTags = [...domainTags].sort().join(',');
+  const baseStreamId = `${sorting}:${StreamSource.WOT_DOMAIN}:${depth}:${kind}:${canonicalDomainTags}`;
+  return (postTags.length > 0 ? `${baseStreamId}:${postTags.join(',')}` : baseStreamId) as WotDomainStreamCompositeId;
+}
+
+export function buildSortedAuthorStreamId(
+  sorting: StreamSorting,
+  authorPubky: Pubky,
+  kind: PostStreamKindSegment,
+  postTags: string[] = [],
+): SortedAuthorStreamCompositeId {
+  const baseStreamId = `${sorting}:${StreamSource.AUTHOR}:${authorPubky}:${kind}`;
+  return (
+    postTags.length > 0 ? `${baseStreamId}:${postTags.join(',')}` : baseStreamId
+  ) as SortedAuthorStreamCompositeId;
 }
 
 export function buildAuthorCollectionsStreamId(authorPubky: Pubky): AuthorCollectionsStreamId {
@@ -149,13 +169,12 @@ export function buildAuthorCollectionsStreamId(authorPubky: Pubky): AuthorCollec
  * (viewing someone's profile shows their full timeline, same as bookmarks #1804).
  */
 export function isAuthorStreamSkippingMuteFilter(streamId: string): boolean {
-  if (streamId.startsWith(`${StreamSource.AUTHOR}:`)) {
-    return true;
-  }
-  if (streamId.startsWith(`${StreamSource.AUTHOR_REPLIES}:`)) {
-    return true;
-  }
-  return streamId.endsWith(`:${StreamSource.AUTHOR}:${StreamKind.COLLECTION}`);
+  const [firstSegment, secondSegment] = streamId.split(':');
+  return (
+    firstSegment === StreamSource.AUTHOR ||
+    firstSegment === StreamSource.AUTHOR_REPLIES ||
+    secondSegment === StreamSource.AUTHOR
+  );
 }
 
 export function buildFollowedCollectionsStreamId(): FollowedCollectionsStreamId {
@@ -246,6 +265,7 @@ export type PostStreamId =
   | PostStreamTypes
   | WotStreamId
   | WotDomainStreamCompositeId
+  | SortedAuthorStreamCompositeId
   | ReplyStreamCompositeId
   | AuthorStreamCompositeId
   | AuthorRepliesStreamCompositeId

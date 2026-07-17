@@ -115,6 +115,7 @@ export type TPostStreamFetchParams = {
 export type TStreamIdBreakdown = {
   sorting: string;
   invokeEndpoint: StreamSource;
+  authorId?: string;
   kind?: string;
   tags?: string;
   wotDepth?: 1 | 2;

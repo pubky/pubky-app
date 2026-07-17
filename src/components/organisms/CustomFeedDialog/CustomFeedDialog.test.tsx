@@ -97,6 +97,7 @@ vi.mock('@/molecules/TagInput/TagInput', () => {
       disabled,
       maxTags,
       currentTagsCount,
+      showEmojiButton,
       className,
       'data-testid': dataTestId,
     }: {
@@ -106,6 +107,7 @@ vi.mock('@/molecules/TagInput/TagInput', () => {
       disabled?: boolean;
       maxTags?: number;
       currentTagsCount?: number;
+      showEmojiButton?: boolean;
       enableApiSuggestions?: boolean;
       excludeFromApiSuggestions?: string[];
       addOnSuggestionClick?: boolean;
@@ -117,10 +119,11 @@ vi.mock('@/molecules/TagInput/TagInput', () => {
         data-disabled={disabled}
         data-max-tags={maxTags}
         data-current-tags-count={currentTagsCount}
+        data-show-emoji-button={showEmojiButton}
         className={className}
       >
         <input
-          data-testid="tag-input-field"
+          data-testid={dataTestId === 'feed-profile-tag-input' ? 'profile-tag-input-field' : 'tag-input-field'}
           onChange={(e) => {
             if (e.target.value) onTagAdd(e.target.value);
           }}
@@ -317,6 +320,7 @@ const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSche
   id: 'feed-abc123',
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],
+  domain_tags: [],
   reach: PubkyAppFeedReach.Following,
   sort: PubkyAppFeedSort.Popularity,
   content: PubkyAppPostKind.Short,
@@ -390,6 +394,19 @@ describe('CustomFeedDialog', () => {
     expect(input).toHaveAttribute('placeholder', 'Not your keys...');
   });
 
+  it('renders the post and profile tag section copy from the design', () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    expect(screen.getByText('Post Tags')).toBeInTheDocument();
+    expect(screen.getByText('Filter by what posts are about.')).toBeInTheDocument();
+    expect(screen.getByText('Profile Tags')).toBeInTheDocument();
+    expect(screen.getByText('Filter by how people are tagged.')).toBeInTheDocument();
+  });
+
   it('renders feed name input as enabled in edit mode when customFeed is defined', () => {
     const mockFeed = createMockFeed();
     mockUseCustomFeed.mockReturnValue(mockFeed);
@@ -449,6 +466,19 @@ describe('CustomFeedDialog', () => {
     );
 
     expect(screen.getByTestId('feed-tag-input')).toBeInTheDocument();
+    expect(screen.getByTestId('feed-profile-tag-input')).toBeInTheDocument();
+  });
+
+  it('renders Network and Me reach options', () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    const reachSection = within(screen.getByTestId('reach-filter-section'));
+    expect(reachSection.getByTestId(`select-item-${PubkyAppFeedReach.Wot}`)).toHaveTextContent('Network');
+    expect(reachSection.getByTestId(`select-item-${PubkyAppFeedReach.Me}`)).toHaveTextContent('Me');
   });
 
   it('renders Save Feed button', () => {
@@ -561,6 +591,19 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('save-feed-button')).toBeDisabled();
   });
 
+  it('disables Save Feed button when the name contains only whitespace', () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: '   ' } });
+    fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'bitcoin' } });
+
+    expect(screen.getByTestId('save-feed-button')).toBeDisabled();
+  });
+
   it('disables Save Feed button in edit mode when customFeed is undefined', () => {
     mockUseCustomFeed.mockReturnValue(undefined);
 
@@ -631,6 +674,71 @@ describe('CustomFeedDialog', () => {
 
     expect(screen.getByTestId('post-tag-bitcoin')).toBeInTheDocument();
     expect(screen.getByTestId('post-tag-lightning')).toBeInTheDocument();
+  });
+
+  it('hydrates existing profile tags from customFeed in edit mode', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({ reach: PubkyAppFeedReach.Wot, tags: [], domain_tags: ['bitcoiner', '🔥'] }),
+    );
+
+    render(
+      <CustomFeedDialog mode="edit">
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
+    expect(screen.getByTestId('post-tag-🔥')).toBeInTheDocument();
+  });
+
+  it('clears unsupported profile tags while hydrating an edit', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({ reach: PubkyAppFeedReach.Me, tags: ['bitcoin'], domain_tags: ['bitcoiner'] }),
+    );
+
+    render(
+      <CustomFeedDialog mode="edit">
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');
+  });
+
+  it('clears and disables profile tags when switching to Me', () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    changeSelectValue('reach-select', PubkyAppFeedReach.Wot);
+    fireEvent.change(screen.getByTestId('profile-tag-input-field'), { target: { value: 'bitcoiner' } });
+    expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
+
+    changeSelectValue('reach-select', PubkyAppFeedReach.Me);
+
+    expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');
+  });
+
+  it('caps profile tags at five and hides the emoji selector at the limit', () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    changeSelectValue('reach-select', PubkyAppFeedReach.Wot);
+    const profileTagInput = screen.getByTestId('profile-tag-input-field');
+    for (const tag of ['one', 'two', 'three', 'four', 'five', 'six']) {
+      fireEvent.change(profileTagInput, { target: { value: tag } });
+    }
+
+    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-current-tags-count', '5');
+    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-show-emoji-button', 'false');
+    expect(screen.queryByTestId('post-tag-six')).not.toBeInTheDocument();
   });
 
   it('shows close buttons on tags when not disabled', () => {
@@ -902,7 +1010,36 @@ describe('CustomFeedDialog', () => {
         layout: PubkyAppFeedLayout.Columns,
         content: null, // ALL maps to null
         tags: ['bitcoin'],
+        domain_tags: [],
       });
+    });
+  });
+
+  it('creates a profile-only Network feed', async () => {
+    mockCommitCreate.mockResolvedValue(
+      createMockFeed({ id: 'profile-feed', reach: PubkyAppFeedReach.Wot, tags: [], domain_tags: ['🔥'] }),
+    );
+
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'Emoji Network' } });
+    changeSelectValue('reach-select', PubkyAppFeedReach.Wot);
+    fireEvent.change(screen.getByTestId('profile-tag-input-field'), { target: { value: '🔥' } });
+    fireEvent.click(screen.getByTestId('save-feed-button'));
+
+    await waitFor(() => {
+      expect(mockCommitCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Emoji Network',
+          reach: PubkyAppFeedReach.Wot,
+          tags: [],
+          domain_tags: ['🔥'],
+        }),
+      );
     });
   });
 
@@ -1036,6 +1173,7 @@ describe('CustomFeedDialog', () => {
           layout: PubkyAppFeedLayout.Wide,
           content: PubkyAppPostKind.Short,
           tags: ['bitcoin', 'lightning', 'crypto'],
+          domain_tags: [],
         },
       });
     });

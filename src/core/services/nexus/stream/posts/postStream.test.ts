@@ -435,6 +435,20 @@ describe('createPostStreamParams', () => {
       expect(result.invokeEndpoint).toBe(StreamSource.WOT);
     });
 
+    it('should send post tags for Network streams', () => {
+      const result = createPostStreamParams({
+        streamId: 'timeline:wot:all:bitcoin,lightning' as PostStreamId,
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.params.depth).toBe(2);
+      expect(result.params.tags).toBe('bitcoin,lightning');
+      expect(result.invokeEndpoint).toBe(StreamSource.WOT);
+    });
+
     it('should set domain_tags and requested depth for wot_domain streams', () => {
       const result = createPostStreamParams({
         streamId: 'timeline:wot_domain:1:all:bitcoiner,dev' as PostStreamId,
@@ -467,6 +481,36 @@ describe('createPostStreamParams', () => {
       expect(result.params.kind).toBe(StreamKind.COLLECTION);
       expect(result.params.tags).toBeUndefined();
       expect(result.invokeEndpoint).toBe(StreamSource.WOT_DOMAIN);
+    });
+
+    it('should send post tags and profile tags together for combined domain streams', () => {
+      const result = createPostStreamParams({
+        streamId: 'timeline:wot_domain:2:all:bitcoiner,dev:bitcoin,lightning' as PostStreamId,
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.params.domain_tags).toBe('bitcoiner,dev');
+      expect(result.params.tags).toBe('bitcoin,lightning');
+      expect(result.params.depth).toBe(2);
+    });
+
+    it('should parse sorting-aware custom Me streams and use offset pagination for popularity', () => {
+      const result = createPostStreamParams({
+        streamId: 'total_engagement:author:viewer-pubky-id:all:bitcoin' as PostStreamId,
+        streamTail: 20,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.invokeEndpoint).toBe(StreamSource.AUTHOR);
+      expect(result.extraParams.author_id).toBe(mockViewerId);
+      expect(result.params.sorting).toBe(StreamSorting.ENGAGEMENT);
+      expect(result.params.tags).toBe('bitcoin');
+      expect(result.params.skip).toBe(20);
     });
   });
 
@@ -825,6 +869,17 @@ describe('breakDownStreamId', () => {
       });
     });
 
+    it('should parse combined wot_domain profile and post tags independently', () => {
+      expect(breakDownStreamId('timeline:wot_domain:2:all:developer,bitcoiner:second,first' as PostStreamId)).toEqual({
+        sorting: 'timeline',
+        invokeEndpoint: StreamSource.WOT_DOMAIN,
+        kind: 'all',
+        wotDepth: 2,
+        domainTags: 'developer,bitcoiner',
+        tags: 'second,first',
+      });
+    });
+
     it('should reject malformed wot_domain depth', () => {
       expect(() => breakDownStreamId('timeline:wot_domain:3:all:bitcoin' as PostStreamId)).toThrow(
         'Invalid wot_domain depth: 3',
@@ -869,6 +924,32 @@ describe('breakDownStreamId', () => {
       expect(result).toEqual({
         sorting: 'pubky',
         invokeEndpoint: StreamSource.AUTHOR_REPLIES,
+        tags: undefined,
+      });
+    });
+
+    it('should distinguish sorting-first custom Me from pubky-first legacy author streams', () => {
+      expect(breakDownStreamId('timeline:author:viewer-pubky:all:bitcoin' as PostStreamId)).toEqual({
+        sorting: 'timeline',
+        invokeEndpoint: StreamSource.AUTHOR,
+        authorId: 'viewer-pubky',
+        kind: 'all',
+        tags: 'bitcoin',
+      });
+      expect(breakDownStreamId('viewer-pubky:author:image:bitcoin' as PostStreamId)).toEqual({
+        sorting: 'viewer-pubky',
+        invokeEndpoint: StreamSource.AUTHOR,
+        kind: 'image',
+        tags: 'bitcoin',
+      });
+    });
+
+    it('should parse sorting-first custom Me without post tags', () => {
+      expect(breakDownStreamId('timeline:author:viewer-pubky:all' as PostStreamId)).toEqual({
+        sorting: 'timeline',
+        invokeEndpoint: StreamSource.AUTHOR,
+        authorId: 'viewer-pubky',
+        kind: 'all',
         tags: undefined,
       });
     });
@@ -938,9 +1019,11 @@ describe('breakDownStreamId', () => {
     });
 
     it('should limit wot_domain tags independently from post tags', () => {
-      const result = breakDownStreamId('timeline:wot_domain:2:all:tag1,tag2,tag3,tag4,tag5,tag6,tag7' as PostStreamId);
+      const result = breakDownStreamId(
+        'timeline:wot_domain:2:all:tag1,tag2,tag3,tag4,tag5,tag6,tag7:post1,post2,post3,post4,post5,post6' as PostStreamId,
+      );
       expect(result.domainTags).toBe('tag1,tag2,tag3,tag4,tag5');
-      expect(result.tags).toBeUndefined();
+      expect(result.tags).toBe('post1,post2,post3,post4,post5');
     });
   });
 });

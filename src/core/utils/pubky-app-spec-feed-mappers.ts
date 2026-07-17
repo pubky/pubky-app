@@ -79,6 +79,10 @@ export function pubkyReachToHomeReach(reach: PubkyAppFeedReach): ReachType | und
       return REACH.FRIENDS;
     case PubkyAppFeedReach.All:
       return REACH.ALL;
+    case PubkyAppFeedReach.Wot:
+      return REACH.NETWORK;
+    case PubkyAppFeedReach.Me:
+      return REACH.ME;
     case PubkyAppFeedReach.Followers:
       // No home type equivalent for Followers
       return undefined;
@@ -98,6 +102,10 @@ export function homeReachToPubkyReach(reach: ReachType): PubkyAppFeedReach | und
       return PubkyAppFeedReach.Friends;
     case REACH.ALL:
       return PubkyAppFeedReach.All;
+    case REACH.NETWORK:
+      return PubkyAppFeedReach.Wot;
+    case REACH.ME:
+      return PubkyAppFeedReach.Me;
     default:
       return undefined;
   }

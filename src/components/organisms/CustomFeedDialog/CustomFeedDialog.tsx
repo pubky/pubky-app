@@ -20,6 +20,8 @@ import {
   Radio,
   SquareAsterisk,
   StickyNote,
+  UserRound,
+  Waypoints,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
@@ -30,13 +32,17 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
-import { FeedController } from '@/controllers/feed/feed';
+import { Typography } from '@/atoms/Typography/Typography';
+import { isProfileTagReachSupported } from '@/config/feed';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { useCustomFeedMutation } from '@/hooks/useCustomFeedMutation/useCustomFeedMutation';
 import { UsersRound2 } from '@/icons';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
+import { reachToString } from '@/models/feed/feed.helpers';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { useToast } from '@/molecules/Toaster/use-toast';
+import { HOME_PROFILE_TAGS_MAX_SELECTED } from '@/stores/home/home.types';
 
 type CustomFeedDialogProps = {
   mode: 'create' | 'edit';
@@ -50,6 +56,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const router = useRouter();
   const { toast } = useToast();
   const customFeed = useCustomFeed();
+  const { commitCreate, commitUpdate, commitDelete, loading } = useCustomFeedMutation();
   const tFilter = useTranslations('filters');
   const tDialog = useTranslations('dialogs.customFeed');
   const [open, setOpen] = useState(false);
@@ -65,7 +72,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   );
   const [content, setContent] = useState<CustomFeedDialogContent | undefined>(mode === 'create' ? 'ALL' : undefined);
   const [tags, setTags] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [domainTags, setDomainTags] = useState<string[]>([]);
   const disabled = loading || (mode === 'edit' && !customFeed);
   useEffect(() => {
     if (open) return;
@@ -76,6 +83,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       setLayout(PubkyAppFeedLayout.Columns);
       setContent('ALL');
       setTags([]);
+      setDomainTags([]);
     } else if (mode === 'edit') {
       setName(customFeed?.name ?? '');
       setReach(customFeed?.reach);
@@ -83,6 +91,9 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       setLayout(customFeed?.layout);
       setContent(customFeed?.content === null ? 'ALL' : customFeed?.content);
       setTags(customFeed?.tags ?? []);
+      setDomainTags(
+        customFeed && isProfileTagReachSupported(reachToString(customFeed.reach)) ? customFeed.domain_tags : [],
+      );
     }
   }, [open, mode, customFeed]);
   const reachFilters = [
@@ -90,6 +101,11 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       value: PubkyAppFeedReach.All,
       label: tFilter('reach.all'),
       icon: Radio,
+    },
+    {
+      value: PubkyAppFeedReach.Wot,
+      label: tFilter('reach.network'),
+      icon: Waypoints,
     },
     {
       value: PubkyAppFeedReach.Following,
@@ -100,6 +116,11 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       value: PubkyAppFeedReach.Friends,
       label: tFilter('reach.friends'),
       icon: HeartHandshake,
+    },
+    {
+      value: PubkyAppFeedReach.Me,
+      label: tFilter('reach.me'),
+      icon: UserRound,
     },
   ];
   const sortFilters = [
@@ -197,18 +218,39 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       setContent('ALL');
     }
   };
+  const handleReachChange = (value: string) => {
+    const nextReach = Number(value) as PubkyAppFeedReach;
+    setReach(nextReach);
+    if (!isProfileTagReachSupported(reachToString(nextReach))) {
+      setDomainTags([]);
+    }
+  };
+  const handleDomainTagAdd = (tag: string) => {
+    const normalizedTag = tag.trim().toLowerCase();
+    if (
+      !normalizedTag ||
+      domainTags.length >= HOME_PROFILE_TAGS_MAX_SELECTED ||
+      domainTags.some((existingTag) => existingTag.toLowerCase() === normalizedTag)
+    ) {
+      return;
+    }
+    setDomainTags([...domainTags, normalizedTag]);
+  };
+  const areProfileTagsDisabled = reach === undefined || !isProfileTagReachSupported(reachToString(reach));
+  const isAtProfileTagLimit = domainTags.length >= HOME_PROFILE_TAGS_MAX_SELECTED;
+  const canSave = name.trim().length > 0 && (tags.length > 0 || domainTags.length > 0);
   const handleSaveFeed = async () => {
     if (reach === undefined || sort === undefined || layout === undefined || content === undefined) return;
     if (mode === 'create') {
       try {
-        setLoading(true);
-        const feed = await FeedController.commitCreate({
+        const feed = await commitCreate({
           name,
           reach,
           sort,
           layout,
           content: content === 'ALL' ? null : content,
           tags,
+          domain_tags: domainTags,
         });
         setOpen(false);
         toast({
@@ -222,14 +264,11 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           variant: 'error',
           description: tDialog('feedCreateError'),
         });
-      } finally {
-        setLoading(false);
       }
     } else if (mode === 'edit') {
       if (!customFeed) return;
       try {
-        setLoading(true);
-        const feed = await FeedController.commitUpdate({
+        const feed = await commitUpdate({
           feedId: customFeed.id,
           changes: {
             name,
@@ -238,6 +277,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             layout,
             content: content === 'ALL' ? null : content,
             tags,
+            domain_tags: domainTags,
           },
         });
         setOpen(false);
@@ -252,16 +292,13 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           variant: 'error',
           description: tDialog('feedEditError'),
         });
-      } finally {
-        setLoading(false);
       }
     }
   };
   const handleDeleteFeed = async () => {
     if (!customFeed) return;
     try {
-      setLoading(true);
-      await FeedController.commitDelete({
+      await commitDelete({
         feedId: customFeed.id,
       });
       setOpen(false);
@@ -276,8 +313,6 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         variant: 'error',
         description: tDialog('feedDeleteError'),
       });
-    } finally {
-      setLoading(false);
     }
   };
   return (
@@ -318,7 +353,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
 
             <Select
               value={reach === undefined ? reach : String(reach)}
-              onValueChange={(v) => setReach(Number(v))}
+              onValueChange={handleReachChange}
               disabled={disabled}
               data-testid="reach-select"
             >
@@ -329,7 +364,8 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
               <SelectContent>
                 {reachFilters.map((r) => (
                   <SelectItem key={r.value} value={String(r.value)}>
-                    <r.icon /> {r.label}
+                    <r.icon />
+                    {r.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -407,7 +443,11 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         </Container>
 
         <Container className="gap-y-2">
-          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('filterTags')}</Label>
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('postTags')}</Label>
+
+          <Typography overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
+            {tDialog('postTagsDescription')}
+          </Typography>
 
           <TagInput
             onTagAdd={(tag) => setTags([...tags, tag])}
@@ -439,12 +479,52 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           )}
         </Container>
 
+        <Container className="gap-y-2">
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('profileTags')}</Label>
+
+          <Typography overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
+            {tDialog('profileTagsDescription')}
+          </Typography>
+
+          <TagInput
+            onTagAdd={handleDomainTagAdd}
+            placeholder={tFilter('reach.profileTag')}
+            existingTags={domainTags.map((label) => ({ label }))}
+            viewerTags={domainTags.map((label) => ({ label }))}
+            disabled={disabled || areProfileTagsDisabled}
+            maxTags={HOME_PROFILE_TAGS_MAX_SELECTED}
+            currentTagsCount={domainTags.length}
+            limitReachedPlaceholder={tFilter('reach.profileTagLimitReached', {
+              max: HOME_PROFILE_TAGS_MAX_SELECTED,
+            })}
+            showEmojiButton={!isAtProfileTagLimit}
+            enableApiSuggestions
+            excludeFromApiSuggestions={domainTags}
+            addOnSuggestionClick
+            className="w-48"
+            data-testid="feed-profile-tag-input"
+          />
+
+          {domainTags.length > 0 && (
+            <Container className="flex-row flex-wrap gap-2">
+              {domainTags.map((tag, index) => (
+                <PostTag
+                  key={`${tag}-${index}`}
+                  label={tag}
+                  showClose={!disabled && !areProfileTagsDisabled}
+                  onClose={() => setDomainTags((currentTags) => currentTags.filter((_, i) => i !== index))}
+                />
+              ))}
+            </Container>
+          )}
+        </Container>
+
         <DialogFooter>
           <Button
             variant="secondary"
             size="lg"
             onClick={handleSaveFeed}
-            disabled={disabled || !name || !tags.length}
+            disabled={disabled || !canSave}
             className="h-15 w-full"
             data-testid="save-feed-button"
           >

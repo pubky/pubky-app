@@ -8,6 +8,10 @@ const FEED_TABLES = [FeedModel.table];
 export class LocalFeedService {
   private constructor() {}
 
+  private static normalize(feed: FeedModelSchema): FeedModelSchema {
+    return { ...feed, domain_tags: feed.domain_tags ?? [] };
+  }
+
   /**
    * Persist a feed to local storage.
    * The ID is always a HashId-derived string provided upfront, so this is a plain upsert.
@@ -15,7 +19,7 @@ export class LocalFeedService {
   static async createOrUpdate(feed: FeedModelSchema): Promise<FeedModelSchema> {
     return await db.transaction('rw', FEED_TABLES, async () => {
       await FeedModel.upsert(feed);
-      return FeedModel.findByIdOrThrow(feed.id);
+      return this.normalize(await FeedModel.findByIdOrThrow(feed.id));
     });
   }
 
@@ -26,7 +30,7 @@ export class LocalFeedService {
   static async createOrUpdateMany(feeds: FeedModelSchema[]): Promise<FeedModelSchema[]> {
     return await db.transaction('rw', FEED_TABLES, async () => {
       await FeedModel.bulkSave(feeds);
-      return feeds;
+      return feeds.map((feed) => this.normalize(feed));
     });
   }
 
@@ -40,10 +44,10 @@ export class LocalFeedService {
    * Read a feed by ID. Throws RECORD_NOT_FOUND if feed doesn't exist.
    */
   static async read({ feedId }: TFeedIdParam): Promise<FeedModelSchema> {
-    return FeedModel.findByIdOrThrow(feedId);
+    return this.normalize(await FeedModel.findByIdOrThrow(feedId));
   }
 
   static async readAll(): Promise<FeedModelSchema[]> {
-    return FeedModel.findAllSorted();
+    return (await FeedModel.findAllSorted()).map((feed) => this.normalize(feed));
   }
 }

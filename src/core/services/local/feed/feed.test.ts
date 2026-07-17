@@ -10,6 +10,7 @@ describe('LocalFeedService', () => {
     id: 'feed-default',
     name: 'Bitcoin News',
     tags: ['bitcoin', 'lightning'],
+    domain_tags: [],
     reach: PubkyAppFeedReach.All,
     sort: PubkyAppFeedSort.Recent,
     content: null,
@@ -106,6 +107,15 @@ describe('LocalFeedService', () => {
       expect(found!.name).toBe(feed.name);
     });
 
+    it('normalizes legacy rows without domain_tags to an empty list', async () => {
+      const { domain_tags: _domainTags, ...legacyFeed } = createFeedSchema({ id: 'legacy-feed' });
+      await FeedModel.table.put(legacyFeed as FeedModelSchema);
+
+      const found = await LocalFeedService.read({ feedId: 'legacy-feed' });
+
+      expect(found.domain_tags).toEqual([]);
+    });
+
     it('should throw RECORD_NOT_FOUND error when not found', async () => {
       await expect(LocalFeedService.read({ feedId: 'nonexistent' })).rejects.toMatchObject({
         name: 'AppError',
@@ -138,6 +148,15 @@ describe('LocalFeedService', () => {
       const feeds = await LocalFeedService.readAll();
 
       expect(feeds).toEqual([]);
+    });
+
+    it('normalizes legacy rows when reading the full list', async () => {
+      const { domain_tags: _domainTags, ...legacyFeed } = createFeedSchema({ id: 'legacy-feed' });
+      await FeedModel.table.put(legacyFeed as FeedModelSchema);
+
+      const feeds = await LocalFeedService.readAll();
+
+      expect(feeds[0].domain_tags).toEqual([]);
     });
   });
 

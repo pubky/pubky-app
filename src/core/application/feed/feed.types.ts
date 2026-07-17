@@ -26,6 +26,7 @@ export interface PersistAndSyncParams {
 }
 
 export interface LocalFeedMigrationParams {
+  userId: Pubky;
   existingId: string;
   feedSchema: FeedModelSchema;
   oldFeed: FeedModelSchema | null;
@@ -61,7 +62,8 @@ export interface RemoteFeedParams {
 export interface HomeserverFeedJson {
   name: string;
   feed: {
-    tags?: string[];
+    tags?: string[] | null;
+    domain_tags?: string[] | null;
     reach: string;
     layout: string;
     sort: string;

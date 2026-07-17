@@ -44,8 +44,8 @@ export class FeedController {
   static async commitCreate(params: TFeedCreateParams): Promise<FeedModelSchema> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
 
-    // Validate tags early to fail fast before normalization and persistence
-    FeedValidators.validateTags(params.tags);
+    // Validate tag scope early to fail fast before normalization and persistence.
+    FeedValidators.validateTagScope(params.tags, params.domain_tags, params.reach);
 
     const normalizedFeed = FeedNormalizer.to({ params, userId });
 
@@ -66,17 +66,15 @@ export class FeedController {
   static async commitUpdate(params: TFeedUpdateParams): Promise<FeedModelSchema> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
 
-    if (params.changes.tags) {
-      FeedValidators.validateTags(params.changes.tags);
-    }
-
     const mergedParams = await FeedApplication.prepareUpdateParams({
       feedId: params.feedId,
       changes: params.changes,
     });
 
+    FeedValidators.validateTagScope(mergedParams.tags, mergedParams.domain_tags, mergedParams.reach);
+
     // Normalizing produces a new FeedResult whose ID is derived from the feed config
-    // (tags, reach, layout, sort, content) via HashId — a blake3 hash of the serialized
+    // (tags, domain_tags, reach, layout, sort, content) via HashId — a blake3 hash of the serialized
     // PubkyAppFeedConfig. Changing any of those fields yields a different ID, which means
     // the homeserver path changes. The `name` and `created_at` fields are NOT part of the
     // hash, so renaming a feed keeps the same ID.

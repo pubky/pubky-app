@@ -6,6 +6,7 @@ import {
   buildDiscoverCollectionsStreamId,
   buildFollowedCollectionsStreamId,
   buildPostReplyStreamId,
+  buildSortedAuthorStreamId,
   buildWotDomainStreamId,
   getPostStreamKind,
   isAuthorStreamSkippingMuteFilter,
@@ -42,6 +43,12 @@ describe('post-stream id builders', () => {
       );
     });
 
+    it('keeps profile tags canonical while preserving post-tag order in the sixth segment', () => {
+      expect(
+        buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['developer', 'bitcoiner'], ['second', 'first']),
+      ).toBe('timeline:wot_domain:2:all:bitcoiner,developer:second,first');
+    });
+
     it('round-trips through breakDownStreamId as named fields', () => {
       const streamId = buildWotDomainStreamId(StreamSorting.TIMELINE, 2, StreamKind.COLLECTION, ['bitcoin']);
       expect(breakDownStreamId(streamId)).toEqual({
@@ -56,6 +63,17 @@ describe('post-stream id builders', () => {
     it('identifies wot_domain stream ids', () => {
       expect(isWotDomainStream('timeline:wot_domain:1:all:bitcoin')).toBe(true);
       expect(isWotDomainStream('timeline:wot:all')).toBe(false);
+    });
+  });
+
+  describe('buildSortedAuthorStreamId', () => {
+    it('includes sorting and optional post tags in custom Me identity', () => {
+      expect(buildSortedAuthorStreamId(StreamSorting.TIMELINE, TEST_PUBKY, 'all')).toBe(
+        `timeline:author:${TEST_PUBKY}:all`,
+      );
+      expect(buildSortedAuthorStreamId(StreamSorting.ENGAGEMENT, TEST_PUBKY, StreamKind.IMAGE, ['photo'])).toBe(
+        `total_engagement:author:${TEST_PUBKY}:image:photo`,
+      );
     });
   });
 
@@ -126,6 +144,7 @@ describe('isSkipPaginatedStream', () => {
   it('returns true for engagement streams (no stable score cursor)', () => {
     expect(isSkipPaginatedStream(buildDiscoverCollectionsStreamId())).toBe(true);
     expect(isSkipPaginatedStream('total_engagement:all:all')).toBe(true);
+    expect(isSkipPaginatedStream(buildSortedAuthorStreamId(StreamSorting.ENGAGEMENT, TEST_PUBKY, 'all'))).toBe(true);
   });
 
   it('returns true for single-collection item streams (index-ordered)', () => {
@@ -200,6 +219,10 @@ describe('isAuthorStreamSkippingMuteFilter', () => {
     expect(isAuthorStreamSkippingMuteFilter(`author:${TEST_PUBKY}`)).toBe(true);
     expect(isAuthorStreamSkippingMuteFilter(`author_replies:${TEST_PUBKY}`)).toBe(true);
     expect(isAuthorStreamSkippingMuteFilter(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(true);
+    expect(isAuthorStreamSkippingMuteFilter(`${TEST_PUBKY}:author:image`)).toBe(true);
+    expect(isAuthorStreamSkippingMuteFilter(buildSortedAuthorStreamId(StreamSorting.TIMELINE, TEST_PUBKY, 'all'))).toBe(
+      true,
+    );
   });
 
   it('returns false for global and discover streams', () => {

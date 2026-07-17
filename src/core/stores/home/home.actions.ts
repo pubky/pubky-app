@@ -1,3 +1,4 @@
+import { isProfileTagReachSupported } from '@/config/feed';
 import { sanitizeTagInput } from '@/libs/utils/utils';
 import { ZustandSet } from '../stores.types';
 import {
@@ -6,7 +7,6 @@ import {
   HomeActionTypes,
   homeInitialState,
   HomeStore,
-  isProfileTagGatedReach,
 } from './home.types';
 
 function normalizeProfileTag(profileTag: string): string {
@@ -41,7 +41,7 @@ export const createHomeActions = (set: ZustandSet<HomeStore>): HomeActions => ({
 
   setReach: (reach) => {
     set(
-      { reach, ...(isProfileTagGatedReach(reach) ? { profileTags: [] } : {}) },
+      { reach, ...(!isProfileTagReachSupported(reach) ? { profileTags: [] } : {}) },
       false,
       HomeActionTypes.SET_HOME_REACH,
     );
