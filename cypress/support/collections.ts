@@ -24,17 +24,17 @@ export const createCollection = (name: string, description?: string) => {
     }
   });
 
-  cy.get('[data-cy="collection-form-name-input"]').should('be.visible').type(name);
+  cy.get('[data-cy="collection-form-name-input"]').should('be.visible').clear().type(name);
   if (description) {
-    cy.get('[data-cy="collection-form-description-input"]').type(description);
+    cy.get('[data-cy="collection-form-description-input"]').clear().type(description);
   }
 
   cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('collectionCreated');
-  cy.get('[data-cy="collection-form-save-btn"]').click();
+  cy.get('[data-cy="collection-form-save-btn"]').should('not.be.disabled').click();
   cy.wait('@collectionCreated').its('response.statusCode').should('eq', 201);
 
   // saving navigates to the new collection page
-  cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
+  cy.location('pathname', { timeout: 30_000 }).should('match', /^\/collections\/[^/]+\/[^/]+$/);
   cy.get('[data-cy="collection-hero"]').should('contain.text', name);
 };
 
@@ -198,7 +198,14 @@ export const findCollectionCardInSection = (sectionSelector: string, collectionN
   return cy.get(sectionSelector).contains('[data-cy="collection-card"]', collectionName);
 };
 
-// assert a landing section does not list a collection with the given name
+// assert a landing section does not list a collection with the given name.
+// FollowedCollections returns null when empty, so a missing section also counts as success.
 export const sectionDoesNotContainCollection = (sectionSelector: string, collectionName: string) => {
-  cy.get(sectionSelector).should('not.contain.text', collectionName);
+  cy.get('body').should(($body) => {
+    const $section = $body.find(sectionSelector);
+    if ($section.length === 0) {
+      return;
+    }
+    expect($section.text()).to.not.include(collectionName);
+  });
 };

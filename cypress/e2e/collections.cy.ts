@@ -263,7 +263,7 @@ describe('collections', () => {
       .within(() => {
         cy.get('textarea').should('have.value', '').type(shareComment);
         cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('collectionShared');
-        cy.get('[data-cy="post-input-action-bar-repost"]').click();
+        cy.get('[data-cy="post-input-action-bar-share"]').click();
         cy.wait('@collectionShared').its('response.statusCode').should('eq', 201);
       });
     cy.get('[data-cy="repost-post-input"]').should('not.exist');
