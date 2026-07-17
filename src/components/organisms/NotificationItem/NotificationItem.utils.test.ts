@@ -35,7 +35,7 @@ describe('NotificationItem utilities', () => {
     expect(getNotificationActionKey(notification)).toBe(expectedKey);
   });
 
-  it.each([undefined, 'unknown', 'audio'])('keeps generic copy for unsupported post kind %s', (postKind) => {
+  it.each([undefined, 'short', 'unknown', 'audio'])('uses generic copy for post kind %s', (postKind) => {
     const notification = {
       id: 'post_edited:123:owner',
       type: NotificationType.PostEdited,
@@ -50,19 +50,22 @@ describe('NotificationItem utilities', () => {
     expect(getNotificationActionKey(notification)).toBe('editedPost');
   });
 
-  it('links an updated collection to its collection detail page', () => {
+  it.each([
+    ['collection', '/collections/owner/post-id'],
+    ['long', '/post/owner/post-id'],
+  ])('links an updated %s to the correct detail page', (postKind, expectedRoute) => {
     const notification = {
       id: 'post_edited:123:owner',
       type: NotificationType.PostEdited,
       timestamp: 123,
       edit_source: PostChangedSource.Repost,
       edited_by: 'owner',
-      edited_uri: 'pubky://owner/pub/pubky.app/posts/collection-id',
+      edited_uri: 'pubky://owner/pub/pubky.app/posts/post-id',
       linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost-id',
-      post_kind: 'collection',
+      post_kind: postKind,
     } satisfies FlatNotification;
 
-    expect(getNotificationLink(notification).notificationLink).toBe('/collections/owner/collection-id');
+    expect(getNotificationLink(notification).notificationLink).toBe(expectedRoute);
   });
 
   it.each([

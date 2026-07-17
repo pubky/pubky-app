@@ -193,17 +193,17 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             )}
           </Typography>
 
-          {/* Post preview text for desktop - dynamically fetched from database */}
+          {/* Post preview text - dynamically fetched from database */}
           {previewText &&
             (notificationLink ? (
               <Link
                 href={notificationLink}
-                className="hidden shrink-0 text-base font-medium text-muted-foreground hover:underline xl:inline"
+                className="min-w-0 truncate text-sm font-medium text-muted-foreground hover:underline lg:text-base"
               >
                 {previewText}
               </Link>
             ) : (
-              <Typography as="p" className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline">
+              <Typography as="p" className="min-w-0 truncate text-sm font-medium text-muted-foreground lg:text-base">
                 {previewText}
               </Typography>
             ))}

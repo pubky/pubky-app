@@ -605,7 +605,9 @@ describe('NotificationItem', () => {
       render(<NotificationItem notification={collectionNotification} isUnread={false} />);
 
       await vi.waitFor(() => {
-        expect(screen.getByText("'Based Bitcoin'")).toHaveClass('text-muted-foreground');
+        const preview = screen.getByText("'Based Bitcoin'");
+        expect(preview).toHaveClass('text-muted-foreground');
+        expect(preview).not.toHaveClass('hidden');
       });
       expect(mockGetOrFetch).toHaveBeenCalledWith({
         compositeId: 'collection-owner:collection-id',
