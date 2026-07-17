@@ -204,6 +204,7 @@ export function PostInput({
       ref={containerRef}
       className={cn(
         'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
+        'max-w-full min-w-0',
         isWideLayout ? 'p-12' : 'p-4',
         !isAuthenticated ? 'px-6' : '',
         isDragging ? 'border-brand' : 'border-input',
@@ -225,7 +226,7 @@ export function PostInput({
       )}
 
       {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
-      <Container className="gap-4 contain-inline-size">
+      <Container className="min-w-0 gap-4 contain-inline-size">
         {isArticle && (
           <Input
             placeholder={t('articleTitle')}

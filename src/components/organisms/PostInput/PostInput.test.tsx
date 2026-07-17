@@ -589,6 +589,17 @@ describe('PostInput', () => {
     expect(screen.getByPlaceholderText('Write a reply...')).toBeInTheDocument();
   });
 
+  it('constrains nested content so long reply usernames can truncate', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" />);
+
+    const containers = screen.getAllByTestId('container');
+    const outerContainer = containers[0];
+    const contentContainer = containers.find((container) => container.className.includes('contain-inline-size'));
+
+    expect(outerContainer).toHaveClass('min-w-0', 'max-w-full');
+    expect(contentContainer).toHaveClass('min-w-0');
+  });
+
   it('shows thread connector when showThreadConnector is true', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" showThreadConnector={true} />);
 

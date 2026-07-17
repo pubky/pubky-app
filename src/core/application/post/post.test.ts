@@ -719,6 +719,138 @@ describe('Post Application', () => {
       });
     });
 
+    // --- Collection cover cleanup ---
+    describe('with collection cover_image', () => {
+      const coverUri = 'pubky://author/pub/pubky.app/files/collection-cover';
+
+      it('deletes the homeserver cover after deleting a collection', async () => {
+        const mockData = { compositePostId: 'author:collection-with-cover' };
+        const collectionPost = {
+          id: 'author:collection-with-cover',
+          content: JSON.stringify({
+            name: 'My collection',
+            description: '',
+            items: [],
+            cover_image: coverUri,
+          }),
+          kind: 'collection',
+          uri: 'pubky://author/pub/pubky.app/posts/collection-with-cover',
+          indexed_at: Date.now(),
+          attachments: null,
+        };
+
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(collectionPost);
+        deleteSpy.mockResolvedValue(false);
+
+        await PostApplication.commitDelete(mockData);
+
+        expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: collectionPost.uri });
+        expect(fileCommitDeleteSpy).toHaveBeenCalledWith([coverUri]);
+        expect(requestSpy).toHaveBeenCalledBefore(fileCommitDeleteSpy);
+      });
+
+      it('deletes the collection cover even when the post has connections (soft delete)', async () => {
+        const mockData = { compositePostId: 'author:collection-soft-delete' };
+        const collectionPost = {
+          id: 'author:collection-soft-delete',
+          content: JSON.stringify({
+            name: 'Soft-deleted collection',
+            items: [],
+            cover_image: coverUri,
+          }),
+          kind: 'collection',
+          uri: 'pubky://author/pub/pubky.app/posts/collection-soft-delete',
+          indexed_at: Date.now(),
+          attachments: null,
+        };
+
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(collectionPost);
+        deleteSpy.mockResolvedValue(true);
+
+        await PostApplication.commitDelete(mockData);
+
+        expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: collectionPost.uri });
+        expect(fileCommitDeleteSpy).toHaveBeenCalledWith([coverUri]);
+      });
+
+      it('does not delete an external https collection cover', async () => {
+        const mockData = { compositePostId: 'author:collection-https-cover' };
+        const collectionPost = {
+          id: 'author:collection-https-cover',
+          content: JSON.stringify({
+            name: 'External cover',
+            items: [],
+            cover_image: 'https://example.com/cover.png',
+          }),
+          kind: 'collection',
+          uri: 'pubky://author/pub/pubky.app/posts/collection-https-cover',
+          indexed_at: Date.now(),
+          attachments: null,
+        };
+
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(collectionPost);
+        deleteSpy.mockResolvedValue(false);
+
+        await PostApplication.commitDelete(mockData);
+
+        expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: collectionPost.uri });
+        expect(fileCommitDeleteSpy).not.toHaveBeenCalled();
+      });
+
+      it('does not attempt cover cleanup for non-collection posts', async () => {
+        const mockData = { compositePostId: 'author:short-post' };
+        const shortPost = {
+          id: 'author:short-post',
+          content: JSON.stringify({
+            name: 'Not a collection',
+            cover_image: coverUri,
+          }),
+          kind: 'short',
+          uri: 'pubky://author/pub/pubky.app/posts/short-post',
+          indexed_at: Date.now(),
+          attachments: null,
+        };
+
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(shortPost);
+        deleteSpy.mockResolvedValue(false);
+
+        await PostApplication.commitDelete(mockData);
+
+        expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: shortPost.uri });
+        expect(fileCommitDeleteSpy).not.toHaveBeenCalled();
+      });
+
+      it('does not fail the delete when cover cleanup fails', async () => {
+        const mockData = { compositePostId: 'author:collection-cover-cleanup-fail' };
+        const collectionPost = {
+          id: 'author:collection-cover-cleanup-fail',
+          content: JSON.stringify({
+            name: 'Cleanup fail',
+            items: [],
+            cover_image: coverUri,
+          }),
+          kind: 'collection',
+          uri: 'pubky://author/pub/pubky.app/posts/collection-cover-cleanup-fail',
+          indexed_at: Date.now(),
+          attachments: null,
+        };
+
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(collectionPost);
+        deleteSpy.mockResolvedValue(false);
+        fileCommitDeleteSpy.mockRejectedValue(new Error('cover cleanup failed'));
+
+        await expect(PostApplication.commitDelete(mockData)).resolves.toBeUndefined();
+
+        expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: collectionPost.uri });
+        expect(fileCommitDeleteSpy).toHaveBeenCalledWith([coverUri]);
+      });
+    });
+
     // --- Edge Cases ---
     describe('edge cases with empty arrays', () => {
       it('should skip tag creation with empty array', async () => {

@@ -127,7 +127,8 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
+      expect(iframe).not.toHaveAttribute('enablejsapi');
     });
 
     it('renders YouTube embed for youtu.be URL', () => {
@@ -135,7 +136,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('handles youtu.be URL with query parameters', () => {
@@ -143,7 +144,10 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=123');
+      expect(iframe).toHaveAttribute(
+        'src',
+        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=123&enablejsapi=1',
+      );
     });
 
     it('renders YouTube embed for mobile youtube.com URL', () => {
@@ -151,7 +155,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('renders YouTube embed for youtube-nocookie.com URL', () => {
@@ -159,7 +163,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('renders YouTube embed for embed URL format', () => {
@@ -167,7 +171,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('renders YouTube embed for shorts URL format', () => {
@@ -175,7 +179,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('renders YouTube embed for live stream URL format', () => {
@@ -183,7 +187,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('renders YouTube embed for legacy /v URL format', () => {
@@ -191,7 +195,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('renders YouTube embed for music.youtube.com URL', () => {
@@ -199,7 +203,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/UTD5buLHoR4');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/UTD5buLHoR4?enablejsapi=1');
     });
 
     it('handles YouTube URL with trailing punctuation', () => {
@@ -207,7 +211,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('handles YouTube URL with timestamp in seconds format', () => {
@@ -215,7 +219,10 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=123');
+      expect(iframe).toHaveAttribute(
+        'src',
+        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=123&enablejsapi=1',
+      );
     });
 
     it('handles YouTube URL with timestamp in h/m/s format', () => {
@@ -223,7 +230,10 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=3723');
+      expect(iframe).toHaveAttribute(
+        'src',
+        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=3723&enablejsapi=1',
+      );
     });
 
     it('handles YouTube URL with timestamp as plain number', () => {
@@ -231,7 +241,10 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=90');
+      expect(iframe).toHaveAttribute(
+        'src',
+        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=90&enablejsapi=1',
+      );
     });
 
     it('handles YouTube URL with partial h/m/s format (minutes and seconds only)', () => {
@@ -239,7 +252,10 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=150');
+      expect(iframe).toHaveAttribute(
+        'src',
+        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=150&enablejsapi=1',
+      );
     });
 
     it('does not render embed for YouTube video ID shorter than 11 characters', () => {
@@ -654,7 +670,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('does not render embed when only URL is inside Markdown link', () => {
@@ -715,7 +731,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('handles URLs without protocol', () => {
@@ -723,7 +739,7 @@ describe('PostLinkEmbeds', () => {
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
 
     it('stops event propagation when clicking embed container', () => {

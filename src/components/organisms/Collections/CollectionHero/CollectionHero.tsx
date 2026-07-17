@@ -205,8 +205,8 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
             fallbackSeed={authorPubky}
             avatarUrl={ownerAvatarUrl}
             isResolved={isOwnerResolved}
-            size="md"
-            className="min-w-0 flex-1 gap-2 lg:flex-none"
+            size="sm"
+            className="min-w-0 flex-1 gap-3 lg:flex-none"
             profileHref={ownerProfileHref}
           />
           <CollectionCountBadge count={itemCount} />
@@ -216,7 +216,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         {description && (
           <Typography
             overrideDefaults
-            className="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-muted-foreground lg:text-2xl"
+            className="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-secondary-foreground lg:text-2xl"
           >
             {description}
           </Typography>
@@ -231,7 +231,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         />
 
         {/* Actions */}
-        <Container overrideDefaults className="flex flex-wrap items-center gap-3">
+        <Container overrideDefaults className="flex flex-wrap items-center gap-2">
           {isOwn ? (
             <>
               <DialogAddContent

@@ -13,6 +13,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
@@ -28,7 +29,6 @@ import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFal
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { CollectionCardBlurred } from '@/organisms/Collections/CollectionCard/CollectionCardBlurred';
 import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
-import { PostTagToggleButton } from '@/organisms/PostTagsExpandableRow/PostTagToggleButton';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
@@ -50,16 +50,18 @@ interface CollectionCardProps {
   /**
    * Controls layout, visible actions, and embed chrome.
    *
-   * - `landing` — full card in catalog sections (default)
+   * - `landing` — full card in catalog sections and collection feeds (default)
    * - `embed` — nested preview (repost, share dialog, inline in post body)
    */
   presentation?: CollectionCardPresentation;
   /**
-   * When `false`, tags render read-only and the tag-toggle / Follow / Delete CTAs
-   * are hidden. Use for collection embeds inside share/repost dialogs; feed embeds
-   * keep the default (`true`).
+   * When `false`, tags render read-only and the Follow / Delete CTA is hidden.
+   * Use for collection embeds inside share/repost dialogs; feed embeds keep the
+   * default (`true`).
    */
   interactiveActions?: boolean;
+  /** Show the owner Delete action. Opt in only from the My Collections overview. */
+  showDeleteAction?: boolean;
 }
 
 /**
@@ -69,7 +71,7 @@ interface CollectionCardProps {
  * landing sections (`presentation="landing"`) and nested embed surfaces
  * (`presentation="embed"` — repost, share dialog, inline post body).
  * Use `interactiveActions={false}` on dialog embeds so tags stay visible but
- * non-interactive and CTAs are hidden; feed embeds keep full interactions.
+ * non-interactive and the Follow / Delete CTA is hidden.
  * Self-contained: derives title / description / cover / item count / owner profile / tags / ownership
  * locally from `(authorPubky, postId)`, so callers stay thin.
  *
@@ -88,8 +90,10 @@ export function CollectionCard({
   initialIsBookmarked,
   presentation = 'landing',
   interactiveActions = true,
+  showDeleteAction = false,
 }: CollectionCardProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
+  const isMobile = useIsMobile();
   const isWideLayout = useEffectiveTagsLayout() === 'side';
   const { postDetails, isLoading } = usePostDetails(compositeId);
 
@@ -125,8 +129,10 @@ export function CollectionCard({
       className={className}
       initialIsBookmarked={initialIsBookmarked}
       presentation={presentation}
+      isMobile={isMobile}
       isWideLayout={isWideLayout}
       interactiveActions={interactiveActions}
+      showDeleteAction={showDeleteAction}
     />
   );
 }
@@ -139,8 +145,10 @@ interface CollectionCardContentProps {
   className?: string;
   initialIsBookmarked?: boolean;
   presentation: CollectionCardPresentation;
+  isMobile: boolean;
   isWideLayout: boolean;
   interactiveActions: boolean;
+  showDeleteAction: boolean;
 }
 
 function CollectionCardContent({
@@ -151,10 +159,13 @@ function CollectionCardContent({
   className,
   initialIsBookmarked,
   presentation,
+  isMobile,
   isWideLayout,
   interactiveActions,
+  showDeleteAction,
 }: CollectionCardContentProps) {
   const isEmbed = presentation === 'embed';
+  const showTagAddButton = interactiveActions && !isEmbed;
   const t = useTranslations('collections.card');
   const tCardToast = useTranslations('collections.card.toast');
 
@@ -162,6 +173,9 @@ function CollectionCardContent({
 
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isOwn = currentUserPubky === authorPubky;
+  const canDelete = interactiveActions && isOwn && showDeleteAction;
+  const canFollow = interactiveActions && !isOwn;
+  const showCardActions = canDelete || canFollow;
   const { requireAuth } = useRequireAuth();
 
   const collection = parseCollectionContent(postDetails.content);
@@ -226,16 +240,10 @@ function CollectionCardContent({
     },
   });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [tagsExpanded, setTagsExpanded] = useState(false);
 
   const handleDelete = (event: MouseEvent) => {
     suppressCardNavigation(event);
     setDeleteConfirmOpen(true);
-  };
-
-  const handleTagToggle = (event: MouseEvent<HTMLButtonElement>) => {
-    suppressCardNavigation(event);
-    setTagsExpanded((prev) => !prev);
   };
 
   const handleDeleteConfirm = () => {
@@ -281,7 +289,7 @@ function CollectionCardContent({
           )}
 
           <CardContent className={cn('flex h-full flex-col gap-3', isWideLayout ? 'p-12' : 'p-6')}>
-            {/* Header row: icon + title + item-count (left, grows) | avatar (right) */}
+            {/* Header row: icon + title (left, grows) | item-count + avatar (right) */}
             <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
               <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">
                 <Library className="size-6 shrink-0 text-foreground" />
@@ -295,10 +303,10 @@ function CollectionCardContent({
                 >
                   {title}
                 </Typography>
-                <CollectionCountBadge count={itemCount} tone={embeddedOnMuted ? 'on-muted' : 'on-card'} />
               </Container>
 
-              <Container overrideDefaults className="flex shrink-0 items-center justify-end">
+              <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-2">
+                <CollectionCountBadge count={itemCount} tone={embeddedOnMuted ? 'on-muted' : 'on-card'} />
                 <AvatarWithFallback
                   avatarUrl={ownerAvatarUrl}
                   name={ownerName}
@@ -313,54 +321,42 @@ function CollectionCardContent({
             {description && (
               <Typography
                 overrideDefaults
-                className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-muted-foreground"
+                className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-secondary-foreground"
               >
                 {description}
               </Typography>
             )}
 
             {/*
-              Bottom row: tags (left) | tag-toggle + Follow/Delete (right).
+              Bottom row: tags (left) | Follow/Delete (right).
 
               `interactiveActions={false}` (share/repost dialog previews): tags
-              stay visible but read-only; CTAs hidden — matches non-collection
-              repost previews. Feed embeds default to interactive actions.
+              stay visible but read-only; Follow/Delete hidden — matches
+              non-collection repost previews.
             */}
             <Container
               overrideDefaults
               data-cy="collection-card-bottom-row"
-              className="mt-auto flex w-full flex-row items-end justify-between gap-3"
+              className="mt-auto flex w-full flex-col items-start gap-3 md:flex-row md:items-end md:justify-between md:gap-4"
             >
               <PostTagsExpandableRow
                 postId={compositeId}
                 preventDefaultOnClick
-                expanded={tagsExpanded}
-                onExpandedChange={setTagsExpanded}
                 showTagToggle={false}
-                showAddButton={interactiveActions}
+                showAddButton={showTagAddButton}
                 tagsReadOnly={!interactiveActions}
-                // Full mode keeps the expanded tag UI from being squeezed on
-                // mobile collection cards. It also preserves PostTagsPanel's
-                // existing "See all" behavior when there are more than 3 tags.
-                panelWidthMode="full"
+                maxVisibleTags={isMobile ? 3 : undefined}
                 className="min-w-0 flex-1"
               />
-              {interactiveActions && (
+              {showCardActions && (
                 <Container
                   overrideDefaults
-                  data-cy="collection-card-tag-actions"
-                  className="flex shrink-0 items-center gap-2 self-end"
+                  data-cy="collection-card-actions"
+                  className="flex w-full shrink-0 items-center justify-start gap-2 self-start md:w-auto md:justify-end md:self-end"
                   onClick={suppressCardNavigation}
                   onAuxClick={suppressCardNavigation}
                 >
-                  <PostTagToggleButton
-                    postId={compositeId}
-                    expanded={tagsExpanded}
-                    onToggle={handleTagToggle}
-                    disabled={isOwn && isDeleting}
-                    onMutedSurface={embeddedOnMuted}
-                  />
-                  {isOwn ? (
+                  {canDelete ? (
                     <Button
                       variant="secondary"
                       size="sm"
@@ -370,8 +366,9 @@ function CollectionCardContent({
                       className={embeddedMutedActionClass}
                     >
                       <Trash2 className="size-4" />
+                      <span className="md:hidden">{t('delete')}</span>
                     </Button>
-                  ) : (
+                  ) : canFollow ? (
                     <Button
                       variant="secondary"
                       size="sm"
@@ -383,7 +380,7 @@ function CollectionCardContent({
                       {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}
                       {isBookmarked ? t('unfollow') : t('follow')}
                     </Button>
-                  )}
+                  ) : null}
                 </Container>
               )}
             </Container>

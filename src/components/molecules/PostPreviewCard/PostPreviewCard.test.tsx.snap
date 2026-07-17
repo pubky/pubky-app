@@ -20,13 +20,13 @@ exports[`PostPreviewCard - Snapshots > matches snapshot for a collection origina
 exports[`PostPreviewCard - Snapshots > matches snapshot with default props 1`] = `
 <div
   aria-label="View original post"
-  class="min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50"
+  class="w-full max-w-full min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50"
   data-testid="card"
   role="link"
   tabindex="0"
 >
   <div
-    class="flex min-w-0 flex-col gap-4 p-6"
+    class="flex w-full max-w-full min-w-0 flex-col gap-4 p-6"
     data-testid="card-content"
   >
     <div
@@ -51,13 +51,13 @@ exports[`PostPreviewCard - Snapshots > matches snapshot with default props 1`] =
 exports[`PostPreviewCard - Snapshots > matches snapshot with extra className 1`] = `
 <div
   aria-label="View original post"
-  class="min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50 bg-muted"
+  class="w-full max-w-full min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50 bg-muted"
   data-testid="card"
   role="link"
   tabindex="0"
 >
   <div
-    class="flex min-w-0 flex-col gap-4 p-6"
+    class="flex w-full max-w-full min-w-0 flex-col gap-4 p-6"
     data-testid="card-content"
   >
     <div

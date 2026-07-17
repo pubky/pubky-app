@@ -84,7 +84,7 @@ exports[`PostLinkEmbeds - Snapshots > matches snapshot for YouTube embed 1`] = `
       height="auto"
       loading="lazy"
       sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox"
-      src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
+      src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1"
       title="YouTube video dQw4w9WgXcQ"
       width="100%"
     />
