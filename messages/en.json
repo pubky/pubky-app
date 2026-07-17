@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "now",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}d",
+    "weeksShort": "{count}w",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Unlock</highlight> the web.",

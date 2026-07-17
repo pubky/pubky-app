@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "maintenant",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}j",
+    "weeksShort": "{count}sem",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Libérez</highlight> le web.",

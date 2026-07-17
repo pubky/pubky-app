@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "ahora",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}d",
+    "weeksShort": "{count}sem",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Desbloquea</highlight> la web.",

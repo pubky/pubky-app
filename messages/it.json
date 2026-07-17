@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "adesso",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}g",
+    "weeksShort": "{count}sett",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Sblocca</highlight> il web.",

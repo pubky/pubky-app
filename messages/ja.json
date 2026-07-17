@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "今",
+    "secondsShort": "{count}秒",
     "minutesShort": "{count}分",
-    "hoursShort": "{count}時間"
+    "hoursShort": "{count}時間",
+    "daysShort": "{count}日",
+    "weeksShort": "{count}週",
+    "monthsShort": "{count}か月"
   },
   "landing": {
     "title": "ウェブを<highlight>解放</highlight>する。",

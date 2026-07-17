@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "刚刚",
+    "secondsShort": "{count}秒",
     "minutesShort": "{count}分钟",
-    "hoursShort": "{count}小时"
+    "hoursShort": "{count}小时",
+    "daysShort": "{count}天",
+    "weeksShort": "{count}周",
+    "monthsShort": "{count}个月"
   },
   "landing": {
     "title": "<highlight>解锁</highlight>网络。",

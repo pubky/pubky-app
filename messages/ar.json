@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "الان",
+    "secondsShort": "{count}ث",
     "minutesShort": "{count}د",
-    "hoursShort": "{count}س"
+    "hoursShort": "{count}س",
+    "daysShort": "{count}ي",
+    "weeksShort": "{count}أ",
+    "monthsShort": "{count}ش"
   },
   "landing": {
     "title": "<highlight>افتح</highlight> الويب.",
