@@ -11,6 +11,10 @@ export function useCustomStreamId(): PostStreamId | undefined {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   if (!customFeed || !currentUserPubky) return;
+  // Policy: any valid specs reach builds a stream, including reaches this client
+  // cannot author (e.g. Followers). Feeds are homeserver-stored and portable, so
+  // foreign-authored feeds must render even without a create/edit path here.
+  // See https://github.com/pubky/pubky-app/pull/2191#pullrequestreview-4719154230
   if (!Object.values(PubkyAppFeedReach).includes(customFeed.reach)) return;
   if (!Object.values(PubkyAppFeedSort).includes(customFeed.sort)) return;
   if (customFeed.content !== null && !Object.values(PubkyAppPostKind).includes(customFeed.content)) return;
