@@ -186,31 +186,6 @@ export const applyContentFilter = (label: string) => {
   waitForFeedToLoad();
 };
 
-// reload-poll until a collection card with the given name appears in a landing section
-// (Discover Collections relies on the Nexus engagement stream, which can lag behind creation)
-export const waitForCollectionInSection = (sectionSelector: string, collectionName: string, attempts = 30) => {
-  const go = (remaining: number) => {
-    if (remaining <= 0) {
-      assert(false, `waitForCollectionInSection: '${collectionName}' not found in ${sectionSelector}`);
-    }
-
-    cy.get('body').then(($body) => {
-      const $cards = $body.find(`${sectionSelector} [data-cy="collection-card"]`);
-      const found = $cards.filter((_idx, element) => (element.textContent ?? '').includes(collectionName)).length > 0;
-      if (found) {
-        cy.log(`waitForCollectionInSection: '${collectionName}' found; continuing.`);
-        return;
-      }
-      cy.log(`waitForCollectionInSection: '${collectionName}' not found; waiting and reloading.`);
-      cy.wait(1_000);
-      cy.reload();
-      cy.wait(Cypress.expose('ci') ? 3_000 : 1_000);
-      go(remaining - 1);
-    });
-  };
-  go(attempts);
-};
-
 // find the collection card containing the given name within a landing section
 export const findCollectionCardInSection = (sectionSelector: string, collectionName: string) => {
   return cy.get(sectionSelector).contains('[data-cy="collection-card"]', collectionName);

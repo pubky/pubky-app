@@ -19,7 +19,6 @@ import {
   openCollectionFromMyCollections,
   sectionDoesNotContainCollection,
   togglePostInCollectionViaSavePicker,
-  waitForCollectionInSection,
 } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToCollectionsPage, goToHomePage } from '../support/header';
@@ -179,12 +178,14 @@ describe('collections', () => {
     createCollection(collectionName, 'Waiting to be discovered.');
     goToHomePage();
     togglePostInCollectionViaSavePicker(curator.postText3, collectionName);
+    // wait for nexus to index the collection as discoverable
+    cy.wait(1000);
     cy.signOut(HasBackedUp.Yes);
 
     // * as the follower, the collection appears in Discover Collections
     cy.signInWithEncryptedFile(backupDownloadFilePath(follower.username));
     goToCollectionsPage();
-    waitForCollectionInSection(DISCOVER_SECTION, collectionName);
+    findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
 
     // * follow the collection from its discover card
     cy.intercept('PUT', '**/pub/pubky.app/bookmarks/**').as('followCollection');
@@ -226,8 +227,9 @@ describe('collections', () => {
       .click();
     cy.wait('@unfollowCollection').its('response.statusCode').should('eq', 204);
     sectionDoesNotContainCollection(FOLLOWED_SECTION, collectionName);
-    // Discover only refetches on load, so reload until the card is back
-    waitForCollectionInSection(DISCOVER_SECTION, collectionName);
+    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2237
+    cy.reload();
+    findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
 
     cy.signOut(HasBackedUp.Yes);
 
