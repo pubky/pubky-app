@@ -198,12 +198,15 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             (notificationLink ? (
               <Link
                 href={notificationLink}
-                className="min-w-0 truncate text-sm font-medium text-muted-foreground hover:underline lg:text-base"
+                className="hidden min-w-0 truncate text-sm font-medium text-muted-foreground hover:underline sm:block lg:text-base"
               >
                 {previewText}
               </Link>
             ) : (
-              <Typography as="p" className="min-w-0 truncate text-sm font-medium text-muted-foreground lg:text-base">
+              <Typography
+                as="p"
+                className="hidden min-w-0 truncate text-sm font-medium text-muted-foreground sm:block lg:text-base"
+              >
                 {previewText}
               </Typography>
             ))}

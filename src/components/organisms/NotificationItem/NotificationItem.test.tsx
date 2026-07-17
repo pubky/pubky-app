@@ -581,7 +581,7 @@ describe('NotificationItem', () => {
     }
   });
 
-  it('shows an edited collection name as a muted preview', async () => {
+  it('hides the muted collection preview below the sm breakpoint', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-16T12:00:00Z'));
 
@@ -606,8 +606,7 @@ describe('NotificationItem', () => {
 
       await vi.waitFor(() => {
         const preview = screen.getByText("'Based Bitcoin'");
-        expect(preview).toHaveClass('text-muted-foreground');
-        expect(preview).not.toHaveClass('hidden');
+        expect(preview).toHaveClass('hidden', 'sm:block', 'text-muted-foreground');
       });
       expect(mockGetOrFetch).toHaveBeenCalledWith({
         compositeId: 'collection-owner:collection-id',
