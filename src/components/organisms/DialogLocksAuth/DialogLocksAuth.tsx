@@ -52,18 +52,24 @@ function StepImage({ src, alt }: { src: string; alt: string }) {
 }
 
 export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAuthProps) {
-  const { status, connectUrl, session, error, iframeRef, start, reset } = useLocksAuthFlow();
+  const { status, connectUrl, session, error, iframeRef, prepare, start, reset } = useLocksAuthFlow();
   const t = useTranslations('dialogs.locksAuth');
   const tCommon = useTranslations('common');
 
-  // Reset when the modal closes. No auto-start: the flow begins on the Intro step's "Continue".
+  // Probe the Lock Server's readiness when the modal opens; reset when it closes. "Continue" only
+  // starts the auth flow once the probe says the server is ready.
   useEffect(() => {
-    if (!open) reset();
-  }, [open, reset]);
+    if (open) prepare();
+    else reset();
+  }, [open, prepare, reset]);
 
   const close = () => onOpenChange(false);
   const isSuccess = status === LocksAuthFlowStatus.SUCCESS;
   const isError = status === LocksAuthFlowStatus.ERROR;
+  const isCheckingServer = status === LocksAuthFlowStatus.CHECKING_SERVER;
+  const isServerUnavailable = status === LocksAuthFlowStatus.SERVER_UNAVAILABLE;
+  // Intro step: the readiness probe (checking / ready / unavailable), before the auth iframe.
+  const isIntroPhase = isCheckingServer || isServerUnavailable || status === LocksAuthFlowStatus.IDLE;
   const isEnableStep =
     status === LocksAuthFlowStatus.CONNECTING ||
     status === LocksAuthFlowStatus.AWAITING_APPROVAL ||
@@ -105,7 +111,13 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
           </DialogDescription>
         </DialogHeader>
 
-        {status === LocksAuthFlowStatus.IDLE && <StepImage src="/images/locks-intro.webp" alt={title} />}
+        {isIntroPhase && <StepImage src="/images/locks-intro.webp" alt={title} />}
+
+        {isServerUnavailable && (
+          <Typography size="sm" className="text-center text-destructive">
+            {t('serverUnavailable')}
+          </Typography>
+        )}
 
         {isEnableStep && (
           // min-h reserves the iframe's height so the loader states (spinner) don't collapse and
@@ -137,13 +149,20 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
           </Typography>
         )}
 
-        {status === LocksAuthFlowStatus.IDLE && (
+        {isIntroPhase && (
           <DialogFooter className="flex-row gap-4">
             <Button variant={ButtonVariant.OUTLINE} size="lg" className="flex-1" onClick={close}>
               {tCommon('cancel')}
             </Button>
-            <Button variant={ButtonVariant.DEFAULT} size="lg" className="flex-1" onClick={start}>
-              {tCommon('continue')}
+            {/* Enabled only once the server is confirmed ready; a spinner shows while probing. */}
+            <Button
+              variant={ButtonVariant.DEFAULT}
+              size="lg"
+              className="flex-1 disabled:pointer-events-auto disabled:cursor-not-allowed"
+              disabled={status !== LocksAuthFlowStatus.IDLE}
+              onClick={start}
+            >
+              {isCheckingServer ? <LoaderCircle className="size-5 animate-spin" /> : tCommon('continue')}
             </Button>
           </DialogFooter>
         )}

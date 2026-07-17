@@ -810,7 +810,8 @@
         "fallback": "Lock authorization failed."
       },
       "tryAgain": "Try again",
-      "iframeTitle": "Lock Server authorization"
+      "iframeTitle": "Lock Server authorization",
+      "serverUnavailable": "The Lock Server is unavailable right now. Please try again later."
     }
   },
   "sidebar": {

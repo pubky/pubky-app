@@ -5,6 +5,7 @@ import { LocksAuthFlowStatus } from './useLocksAuthFlow.types';
 
 const mocks = vi.hoisted(() => ({
   getConnectUrl: vi.fn(),
+  isServerReachable: vi.fn(),
   completeAuthFromCallback: vi.fn(),
   readBridge: vi.fn(),
   fakeSession: { id: 'locks-session' },
@@ -16,6 +17,7 @@ const LOCK_SERVER_ORIGIN = 'https://lock.server';
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: {
     getConnectUrl: mocks.getConnectUrl,
+    isServerReachable: mocks.isServerReachable,
     completeAuthFromCallback: mocks.completeAuthFromCallback,
   },
 }));
@@ -48,6 +50,7 @@ describe('useLocksAuthFlow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getConnectUrl.mockResolvedValue('https://lock.server/connect?delivery=postmessage');
+    mocks.isServerReachable.mockResolvedValue(true);
     mocks.completeAuthFromCallback.mockResolvedValue({ session: mocks.fakeSession, secret: 'secret-abc' });
     mocks.readBridge.mockImplementation(
       (event: MessageEvent, expectedSource: MessageEventSource | null, origin: string) => {
@@ -68,6 +71,27 @@ describe('useLocksAuthFlow', () => {
     expect(result.current.connectUrl).toBeNull();
   });
 
+  it('prepare() reaches IDLE (Continue enabled) when the server is reachable', async () => {
+    const { result } = renderHook(() => useLocksAuthFlow());
+    await act(async () => {
+      await result.current.prepare();
+    });
+
+    expect(mocks.isServerReachable).toHaveBeenCalled();
+    expect(result.current.status).toBe(LocksAuthFlowStatus.IDLE);
+  });
+
+  it('prepare() reaches SERVER_UNAVAILABLE without a connect URL when the server is not reachable', async () => {
+    mocks.isServerReachable.mockResolvedValue(false);
+    const { result } = renderHook(() => useLocksAuthFlow());
+    await act(async () => {
+      await result.current.prepare();
+    });
+
+    expect(result.current.status).toBe(LocksAuthFlowStatus.SERVER_UNAVAILABLE);
+    expect(result.current.connectUrl).toBeNull();
+  });
+
   it('start() requests a connect URL with a generated state', async () => {
     const { result } = renderHook(() => useLocksAuthFlow());
     const state = await startFlow(result);
@@ -76,6 +100,15 @@ describe('useLocksAuthFlow', () => {
     expect(state).toBeTruthy();
     expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
     expect(result.current.connectUrl).toBe('https://lock.server/connect?delivery=postmessage');
+  });
+
+  it('errors without mounting the iframe when getConnectUrl rejects (e.g. server not ready)', async () => {
+    mocks.getConnectUrl.mockRejectedValue(new Error('Lock Server is not ready'));
+    const { result } = renderHook(() => useLocksAuthFlow());
+    await startFlow(result);
+
+    expect(result.current.status).toBe(LocksAuthFlowStatus.ERROR);
+    expect(result.current.connectUrl).toBeNull(); // iframe never loads
   });
 
   it('exchanges the code and reaches success when the callback state matches', async () => {

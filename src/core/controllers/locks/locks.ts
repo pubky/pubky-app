@@ -29,6 +29,21 @@ export class LocksController {
   }
 
   /**
+   * True when the Lock Server is reachable + ready.
+   *
+   * `/readyz` needs the server's HTTP origin, which the SDK only exposes by building a connect URL —
+   * so build a throwaway one just to read its origin; the
+   * real auth builds its own URL at "Continue".
+   */
+  static async isServerReachable(): Promise<boolean> {
+    const url = await LocksApplication.generateConnectUrl({
+      returnTo: window.location.origin,
+      state: crypto.randomUUID(),
+    });
+    return LocksApplication.isServerReady(new URL(url).origin);
+  }
+
+  /**
    * Completes auth from a validated callback: exchanges the one-time code for a session and
    * persists it (bearer secret) to the store.
    */

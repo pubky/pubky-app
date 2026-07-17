@@ -288,3 +288,37 @@ describe('LocksService (content)', () => {
     expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Auth);
   });
 });
+
+describe('LocksService.isServerReady', () => {
+  const origin = 'https://lock.server';
+
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns true when /readyz responds 2xx', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true }) as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(LocksService.isServerReady(origin)).resolves.toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith('https://lock.server/readyz', { method: 'GET' });
+  });
+
+  it('returns false when /readyz responds non-2xx (server not ready)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false }) as Response),
+    );
+    await expect(LocksService.isServerReady(origin)).resolves.toBe(false);
+  });
+
+  it('returns false when the server is unreachable (fetch throws)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('network down');
+      }),
+    );
+    await expect(LocksService.isServerReady(origin)).resolves.toBe(false);
+  });
+});

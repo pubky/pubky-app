@@ -7,6 +7,7 @@ import { DialogLocksAuth } from './DialogLocksAuth';
 // NOTE: the hoisted factory runs before imports, so it can't reference LocksAuthFlowStatus — the
 // enum's IDLE value is the string 'idle', and each test resets `flow` with the real enum member.
 const mocks = vi.hoisted(() => ({
+  prepare: vi.fn(),
   start: vi.fn(),
   reset: vi.fn(),
   flow: {
@@ -21,6 +22,7 @@ vi.mock('@/hooks/useLocksAuthFlow/useLocksAuthFlow', () => ({
   useLocksAuthFlow: () => ({
     ...mocks.flow,
     iframeRef: { current: null },
+    prepare: mocks.prepare,
     start: mocks.start,
     reset: mocks.reset,
   }),
@@ -43,10 +45,34 @@ describe('DialogLocksAuth', () => {
     mocks.flow = { status: LocksAuthFlowStatus.IDLE, connectUrl: null, session: null, error: null };
   });
 
+  it('probes the server readiness when the modal opens', () => {
+    renderDialog({ open: true });
+    expect(mocks.prepare).toHaveBeenCalled();
+  });
+
   it('starts the flow when Continue is clicked on the Intro step', () => {
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(mocks.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables Continue and shows a spinner while the server readiness is being checked', () => {
+    mocks.flow = { status: LocksAuthFlowStatus.CHECKING_SERVER, connectUrl: null, session: null, error: null };
+    renderDialog();
+
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    const continueBtn = screen.getAllByRole('button').find((button) => button !== cancel);
+    expect(continueBtn).toBeDisabled();
+    expect(screen.getByRole('dialog').querySelector('svg.animate-spin')).toBeInTheDocument();
+  });
+
+  it('shows a message and disables Continue when the server is unavailable', () => {
+    mocks.flow = { status: LocksAuthFlowStatus.SERVER_UNAVAILABLE, connectUrl: null, session: null, error: null };
+    renderDialog();
+
+    expect(screen.getByText(/Lock Server is unavailable/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    expect(mocks.start).not.toHaveBeenCalled();
   });
 
   it('renders the Lock Server iframe with the postMessage sandbox on the Enable step', () => {

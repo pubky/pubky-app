@@ -40,6 +40,20 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
     setStatus(LocksAuthFlowStatus.IDLE);
   }, []);
 
+  // Run when the modal opens: probe readiness before the user can start, so a dead / not-ready server
+  // disables "Continue" (with a message) instead of loading a broken iframe on click.
+  const prepare = useCallback(async () => {
+    setError(null);
+    setStatus(LocksAuthFlowStatus.CHECKING_SERVER);
+    try {
+      const reachable = await LocksController.isServerReachable();
+      setStatus(reachable ? LocksAuthFlowStatus.IDLE : LocksAuthFlowStatus.SERVER_UNAVAILABLE);
+    } catch (caught) {
+      setError(toAppError(caught, ErrorService.Locks, 'useLocksAuthFlow.prepare'));
+      setStatus(LocksAuthFlowStatus.SERVER_UNAVAILABLE);
+    }
+  }, []);
+
   const start = useCallback(async () => {
     setError(null);
     setStatus(LocksAuthFlowStatus.CONNECTING);
@@ -100,5 +114,5 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
     return () => window.removeEventListener('message', handler);
   }, [status]);
 
-  return { status, connectUrl, session, error, iframeRef, start, reset };
+  return { status, connectUrl, session, error, iframeRef, prepare, start, reset };
 }

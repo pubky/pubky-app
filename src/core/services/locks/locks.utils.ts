@@ -84,8 +84,12 @@ export function getLockSession(): LocksSdkSession {
   return session;
 }
 
-/** Builds a Locks client for a Lock Server, applying the app's network options (pkarr / testnet). */
-export function initLockClient(lockServerPubky: string): Locks {
+/**
+ * Builds a Locks client for the configured Lock Server.
+ * TODO:[Locks] today there is one server, taken from env. Once multiple lock servers exist,
+ * the reader must use each lock's `lock_server.override`; take the server pubky as a param again then.
+ */
+export function initLockClient(): Locks {
   const options = new LocksOptions();
   for (const relay of getPkarrRelays()) {
     options.addPkarrRelay(relay);
@@ -93,5 +97,5 @@ export function initLockClient(lockServerPubky: string): Locks {
   if (getTestnet()) {
     options.setLocalTestnetHomeserver(getHomeserver());
   }
-  return Locks.forServerWithOptions(lockServerPubky, options);
+  return Locks.forServerWithOptions(getLockServerPubky(), options);
 }
