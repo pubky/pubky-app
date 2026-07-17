@@ -20,7 +20,6 @@ import {
   sectionDoesNotContainCollection,
   togglePostInCollectionViaSavePicker,
   waitForCollectionInSection,
-  waitForPostInCollectionGrid,
 } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToCollectionsPage, goToHomePage } from '../support/header';
@@ -117,7 +116,9 @@ describe('collections', () => {
     togglePostInCollectionViaSavePicker(curator.postText1, editedName);
 
     openCollectionFromMyCollections(editedName);
-    waitForPostInCollectionGrid(curator.postText1);
+    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
+    cy.reload();
+    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', curator.postText1);
     collectionCounterEq(1);
 
     // * add post 2 of 3 by pasting its URL in the Add Post dialog
@@ -157,8 +158,8 @@ describe('collections', () => {
     // * remove one post from the collection via the post's save picker in the feed
     togglePostInCollectionViaSavePicker(curator.postText1, editedName);
     openCollectionFromMyCollections(editedName);
-    // wait for Nexus to serve the remaining items before asserting the removal
-    waitForPostInCollectionGrid(curator.postText2);
+    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
+    cy.reload();
     cy.get('[data-cy="timeline-posts-grid"]').should('not.contain.text', curator.postText1);
     cy.get('[data-cy="timeline-posts-grid"]').find('[data-cy="post-card"]').should('have.length', 2);
     collectionCounterEq(2);
@@ -199,7 +200,9 @@ describe('collections', () => {
     // * the followed collection contains the correct post and its hero offers Unfollow
     findCollectionCardInSection(FOLLOWED_SECTION, collectionName).click();
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
-    waitForPostInCollectionGrid(curator.postText3);
+    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
+    cy.reload();
+    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', curator.postText3);
     cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Unfollow');
 
     // * the collection is listed on the curator's profile Collections tab

@@ -16,33 +16,6 @@ export const openCollectionFromMyCollections = (collectionName: string) => {
   cy.get('[data-cy="collection-hero"]').should('contain.text', collectionName);
 };
 
-// wait until a post appears in the collection grid.
-// Collection items are served by the Nexus collection stream (not the local envelope),
-// so after adding a post off-page (e.g. via the feed save picker) the grid can lag
-// behind the card/hero count. Reload-poll until the stream catches up.
-export const waitForPostInCollectionGrid = (postContent: string, attempts = 30) => {
-  const go = (remaining: number) => {
-    if (remaining <= 0) {
-      assert(false, `waitForPostInCollectionGrid: '${postContent}' not found in collection grid`);
-    }
-
-    cy.get('body').then(($body) => {
-      const gridText = $body.find('[data-cy="timeline-posts-grid"]').text();
-      if (gridText.includes(postContent)) {
-        cy.log(`waitForPostInCollectionGrid: '${postContent}' found; continuing.`);
-        return;
-      }
-      cy.log(`waitForPostInCollectionGrid: '${postContent}' not found; waiting and reloading.`);
-      cy.wait(1_000);
-      cy.reload();
-      cy.get('[data-cy="collection-hero"]').should('be.visible');
-      cy.wait(Cypress.expose('ci') ? 3_000 : 1_000);
-      go(remaining - 1);
-    });
-  };
-  go(attempts);
-};
-
 // create a collection from the My Collections dashed CTA card on /collections.
 // `expectIntro: true` hard-asserts the first-run welcome dialog; `false` hard-asserts
 // it is skipped; omit to dismiss the intro if present (order-independent shared helper).

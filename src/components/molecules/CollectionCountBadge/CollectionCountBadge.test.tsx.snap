@@ -32,8 +32,12 @@ exports[`CollectionCountBadge - Snapshots > matches the snapshot 1`] = `
     data-testid="typography"
   >
     123
-     
-    posts
+    <span
+      class="hidden sm:inline"
+      data-testid="typography"
+    >
+       posts
+    </span>
   </span>
 </div>
 `;
