@@ -1,3 +1,4 @@
+import { goToCollectionsPage } from './header';
 import { fastTagPost, waitForFeedToLoad } from './posts';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
@@ -5,24 +6,68 @@ import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 export const ADD_CONTENT_URL_INVALID_ERROR = 'Enter a valid post URL.';
 export const ADD_CONTENT_URL_DUPLICATE_ERROR = 'This post is already added.';
 
-// navigate to the collections landing page via the header library button
-export const goToCollectionsPage = () => {
-  cy.get('[data-cy="header-collections-btn"]').click();
-  cy.location('pathname').should('eq', '/collections');
+// open a collection from the My Collections section by its name
+export const openCollectionFromMyCollections = (collectionName: string) => {
+  goToCollectionsPage();
+  cy.contains('[data-cy="my-collections-section"] [data-cy="collection-card"]', collectionName)
+    .should('be.visible')
+    .click();
+  cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
+  cy.get('[data-cy="collection-hero"]').should('contain.text', collectionName);
 };
 
-// create a collection from the My Collections dashed CTA card on /collections
-// handles the first-time intro dialog when the user has no authored collections
-export const createCollection = (name: string, description?: string) => {
+// wait until a post appears in the collection grid.
+// Collection items are served by the Nexus collection stream (not the local envelope),
+// so after adding a post off-page (e.g. via the feed save picker) the grid can lag
+// behind the card/hero count. Reload-poll until the stream catches up.
+export const waitForPostInCollectionGrid = (postContent: string, attempts = 30) => {
+  const go = (remaining: number) => {
+    if (remaining <= 0) {
+      assert(false, `waitForPostInCollectionGrid: '${postContent}' not found in collection grid`);
+    }
+
+    cy.get('body').then(($body) => {
+      const gridText = $body.find('[data-cy="timeline-posts-grid"]').text();
+      if (gridText.includes(postContent)) {
+        cy.log(`waitForPostInCollectionGrid: '${postContent}' found; continuing.`);
+        return;
+      }
+      cy.log(`waitForPostInCollectionGrid: '${postContent}' not found; waiting and reloading.`);
+      cy.wait(1_000);
+      cy.reload();
+      cy.get('[data-cy="collection-hero"]').should('be.visible');
+      cy.wait(Cypress.expose('ci') ? 3_000 : 1_000);
+      go(remaining - 1);
+    });
+  };
+  go(attempts);
+};
+
+// create a collection from the My Collections dashed CTA card on /collections.
+// `expectIntro: true` hard-asserts the first-run welcome dialog; `false` hard-asserts
+// it is skipped; omit to dismiss the intro if present (order-independent shared helper).
+export const createCollection = (
+  name: string,
+  description?: string,
+  { expectIntro }: { expectIntro?: boolean } = {},
+) => {
   cy.get('[data-cy="new-collection-card-cta"]').click();
 
-  // either the first-time intro or the create form opens; advance past the intro if shown
-  cy.get('[data-cy="collections-intro-continue"], [data-cy="collection-form-name-input"]').should('be.visible');
-  cy.get('body').then(($body) => {
-    if ($body.find('[data-cy="collections-intro-continue"]').length > 0) {
-      cy.get('[data-cy="collections-intro-continue"]').click();
-    }
-  });
+  if (expectIntro === true) {
+    cy.get('[data-cy="dialog-content"]').should('contain.text', 'Welcome to Collections');
+    cy.get('[data-cy="collections-intro-continue"]').should('be.visible').click();
+  } else if (expectIntro === false) {
+    cy.get('[data-cy="collections-intro-continue"]').should('not.exist');
+    cy.get('[data-cy="collection-form-name-input"]').should('be.visible');
+  } else {
+    // either the first-time intro or the create form opens; advance past the intro if shown
+    cy.get('[data-cy="collections-intro-continue"], [data-cy="collection-form-name-input"]').should('be.visible');
+    cy.get('body').then(($body) => {
+      if ($body.find('[data-cy="collections-intro-continue"]').length > 0) {
+        cy.get('[data-cy="collections-intro-continue"]').click();
+      }
+    });
+  }
 
   cy.get('[data-cy="collection-form-name-input"]').should('be.visible').clear().type(name);
   if (description) {

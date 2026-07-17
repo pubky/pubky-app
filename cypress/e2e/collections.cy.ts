@@ -1,4 +1,4 @@
-import { backupDownloadFilePath, userIdFromPubky } from '../support/common';
+import { backupDownloadFilePath } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
 import 'cypress-slow-down/commands';
@@ -16,11 +16,14 @@ import {
   deleteCollectionFromHero,
   editCollectionFromHero,
   findCollectionCardInSection,
-  goToCollectionsPage,
+  openCollectionFromMyCollections,
   sectionDoesNotContainCollection,
   togglePostInCollectionViaSavePicker,
   waitForCollectionInSection,
+  waitForPostInCollectionGrid,
 } from '../support/collections';
+import { searchForProfileByPubky } from '../support/contacts';
+import { goToCollectionsPage, goToHomePage } from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
@@ -89,13 +92,11 @@ describe('collections', () => {
     });
     cy.location('pathname').should('contain', '/post/');
     cy.url().as('post2Url');
-    cy.visit('/home');
-    waitForFeedToLoad();
+    goToHomePage();
 
     // * create the collection with a name and description, then tag it
     goToCollectionsPage();
     createCollection(originalName, originalDescription);
-    cy.url().as('collectionUrl');
     addTagsToCollectionHero(tags);
 
     // * edit the collection name and description; the hero updates and survives a reload
@@ -115,8 +116,8 @@ describe('collections', () => {
     waitForFeedToLoad();
     togglePostInCollectionViaSavePicker(curator.postText1, editedName);
 
-    cy.get('@collectionUrl').then((url) => cy.visit(String(url)));
-    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', curator.postText1);
+    openCollectionFromMyCollections(editedName);
+    waitForPostInCollectionGrid(curator.postText1);
     collectionCounterEq(1);
 
     // * add post 2 of 3 by pasting its URL in the Add Post dialog
@@ -142,8 +143,7 @@ describe('collections', () => {
     collectionCounterEq(3);
 
     // * the collection is not shown in the global feed (only its posts are)
-    cy.visit('/home');
-    waitForFeedToLoad();
+    goToHomePage();
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', editedName);
     cy.findFirstPostInFeedFiltered(curator.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(curator.postText2).should('be.visible');
@@ -156,7 +156,9 @@ describe('collections', () => {
 
     // * remove one post from the collection via the post's save picker in the feed
     togglePostInCollectionViaSavePicker(curator.postText1, editedName);
-    cy.get('@collectionUrl').then((url) => cy.visit(String(url)));
+    openCollectionFromMyCollections(editedName);
+    // wait for Nexus to serve the remaining items before asserting the removal
+    waitForPostInCollectionGrid(curator.postText2);
     cy.get('[data-cy="timeline-posts-grid"]').should('not.contain.text', curator.postText1);
     cy.get('[data-cy="timeline-posts-grid"]').find('[data-cy="post-card"]').should('have.length', 2);
     collectionCounterEq(2);
@@ -165,8 +167,7 @@ describe('collections', () => {
     deleteCollectionFromHero();
     cy.get(MY_SECTION).should('not.contain.text', editedName);
 
-    cy.visit('/home');
-    waitForFeedToLoad();
+    goToHomePage();
   });
 
   it('another user can discover, follow, view on profile, and unfollow a collection', () => {
@@ -175,8 +176,7 @@ describe('collections', () => {
     // * as the curator, create a collection with one post
     goToCollectionsPage();
     createCollection(collectionName, 'Waiting to be discovered.');
-    cy.visit('/home');
-    waitForFeedToLoad();
+    goToHomePage();
     togglePostInCollectionViaSavePicker(curator.postText3, collectionName);
     cy.signOut(HasBackedUp.Yes);
 
@@ -199,16 +199,20 @@ describe('collections', () => {
     // * the followed collection contains the correct post and its hero offers Unfollow
     findCollectionCardInSection(FOLLOWED_SECTION, collectionName).click();
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
-    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', curator.postText3);
+    waitForPostInCollectionGrid(curator.postText3);
     cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Unfollow');
 
-    // * the collection is listed on the curator's profile Collections tab with the correct count
+    // * the collection is listed on the curator's profile Collections tab
     cy.get(`@${curator.pubkyAlias}`).then((pubky) => {
-      cy.visit(`/profile/${userIdFromPubky(String(pubky))}`);
+      searchForProfileByPubky(String(pubky), curator.username);
     });
     cy.get('[data-cy="profile-filter-item-collections"]').click();
     cy.location('pathname').should('match', /^\/profile\/[^/]+\/collections$/);
-    cy.get('[data-cy="profile-filter-item-collections-count"]').should('have.text', '1');
+    cy.get('[data-cy="profile-filter-item-collections-count"]')
+      .invoke('text')
+      .then((text) => {
+        expect(Number(text), 'profile collections count').to.be.at.least(1);
+      });
     cy.contains('[data-cy="collection-card"]', collectionName).should('be.visible');
 
     // * unfollowing returns the collection to Discover Collections
@@ -222,6 +226,36 @@ describe('collections', () => {
     // Discover only refetches on load, so reload until the card is back
     waitForCollectionInSection(DISCOVER_SECTION, collectionName);
 
+    cy.signOut(HasBackedUp.Yes);
+
+    // clean up the curator's collection so it does not linger in Discover for later runs/retries
+    cy.signInWithEncryptedFile(backupDownloadFilePath(curator.username));
+    openCollectionFromMyCollections(collectionName);
+    deleteCollectionFromHero();
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  it('shows the collections intro the first time a user creates a collection', () => {
+    const collectionName = `First collection ${Date.now()}`;
+
+    // beforeEach signs in as the curator, who may already have collections — use a fresh user
+    cy.signOut(HasBackedUp.Yes);
+    cy.onboardAsNewUser('Intro Newbie', 'I have never made a collection.', [BackupType.EncryptedFile]);
+
+    goToCollectionsPage();
+    createCollection(collectionName, 'Seen the welcome intro.', { expectIntro: true });
+
+    // * a second create skips the intro and opens the form directly
+    goToCollectionsPage();
+    cy.get('[data-cy="new-collection-card-cta"]').click();
+    cy.get('[data-cy="collections-intro-continue"]').should('not.exist');
+    cy.get('[data-cy="collection-form-name-input"]').should('be.visible');
+    cy.get('[data-testid="dialog-close"]').click();
+    cy.get('[data-cy="dialog-content"]').should('not.exist');
+
+    // clean up so the collection does not linger in other users' Discover section
+    openCollectionFromMyCollections(collectionName);
+    deleteCollectionFromHero();
     cy.signOut(HasBackedUp.Yes);
   });
 
@@ -241,8 +275,7 @@ describe('collections', () => {
 
     // clean up so the collection does not linger in other users' Discover section
     deleteCollectionFromHero();
-    cy.visit('/home');
-    waitForFeedToLoad();
+    goToHomePage();
   });
 
   it('can share a collection and navigate to it from the shared post in the feed', () => {
@@ -269,8 +302,7 @@ describe('collections', () => {
     cy.get('[data-cy="repost-post-input"]').should('not.exist');
 
     // * the shared post appears in the feed containing the collection preview
-    cy.visit('/home');
-    waitForFeedToLoad();
+    goToHomePage();
     cy.findFirstPostInFeedFiltered(shareComment, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       cy.contains('[data-cy="collection-card"]', collectionName).should('be.visible');
     });
@@ -282,7 +314,8 @@ describe('collections', () => {
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
     cy.get('[data-cy="collection-hero"]').should('contain.text', collectionName);
 
-    cy.visit('/home');
-    waitForFeedToLoad();
+    // clean up so the collection does not linger in other users' Discover section
+    deleteCollectionFromHero();
+    goToHomePage();
   });
 });
