@@ -55,7 +55,7 @@ export class LocksService {
   private static async getLocksClient(): Promise<Locks> {
     await ensureLocksSdkReady();
     if (!this.locksClient) {
-      this.locksClient = initLockClient(getLockServerPubky());
+      this.locksClient = initLockClient();
     }
     return this.locksClient;
   }

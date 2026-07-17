@@ -90,18 +90,18 @@ describe('locks.utils', () => {
   });
 
   describe('initLockClient', () => {
-    it('applies every pkarr relay + the testnet homeserver, then builds the client for the server', () => {
-      const client = initLockClient('serverpubky');
+    it('applies every pkarr relay + the testnet homeserver, then builds the client for the configured server', () => {
+      const client = initLockClient();
 
       expect(mocks.addPkarrRelay).toHaveBeenCalledTimes(2);
       expect(mocks.setLocalTestnetHomeserver).toHaveBeenCalledWith('homeservertestpubky');
-      expect(mocks.forServerWithOptions).toHaveBeenCalledWith('serverpubky', expect.anything());
+      expect(mocks.forServerWithOptions).toHaveBeenCalledWith('lockserverpubky', expect.anything());
       expect(client).toBe(mocks.forServerWithOptions.mock.results[0]?.value);
     });
 
     it('skips the testnet homeserver on mainnet', () => {
       mocks.getTestnet.mockReturnValue(false);
-      initLockClient('serverpubky');
+      initLockClient();
       expect(mocks.setLocalTestnetHomeserver).not.toHaveBeenCalled();
     });
   });
