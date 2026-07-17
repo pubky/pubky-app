@@ -82,7 +82,7 @@ function SaveTriggerIcon({ state }: { state: SaveTriggerIconState }) {
       className="relative size-4"
     >
       <Library aria-hidden="true" className={iconClassName('default')} />
-      <SquareLibrary aria-hidden="true" className={iconClassName('saved')} />
+      <SquareLibrary aria-hidden="true" className={cn(iconClassName('saved'), 'text-brand')} />
     </Typography>
   );
 }

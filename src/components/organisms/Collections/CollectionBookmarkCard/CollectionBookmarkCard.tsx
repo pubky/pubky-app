@@ -58,10 +58,10 @@ export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProp
               >
                 {title}
               </Typography>
-              {bookmarkCount !== undefined && <CollectionCountBadge count={bookmarkCount} />}
             </Container>
 
-            <Container overrideDefaults className="flex shrink-0 items-center justify-end">
+            <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-2">
+              {bookmarkCount !== undefined && <CollectionCountBadge count={bookmarkCount} />}
               <AvatarWithFallback
                 avatarUrl={avatarUrl}
                 name={avatarName}

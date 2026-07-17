@@ -145,6 +145,14 @@ describe('PostTagsExpandableRow', () => {
     expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
   });
 
+  it('forwards the visible tag limit to the collapsed tag list', () => {
+    render(<PostTagsExpandableRow postId={POST_ID} maxVisibleTags={1} />);
+
+    expect(screen.getByText('bitcoin')).toBeInTheDocument();
+    expect(screen.queryByText('ethereum')).not.toBeInTheDocument();
+    expect(screen.queryByText('web3')).not.toBeInTheDocument();
+  });
+
   it('toggles from clickable tags to the editable tags panel', () => {
     render(<PostTagsExpandableRow postId={POST_ID} />);
 
