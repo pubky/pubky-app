@@ -7,6 +7,7 @@ import { LocksController } from './locks';
 
 const mocks = vi.hoisted(() => ({
   generateConnectUrl: vi.fn(),
+  isServerReady: vi.fn(),
   exchangeSessionCode: vi.fn(),
   restoreSession: vi.fn(),
   signout: vi.fn(),
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/application/locks/locks', () => ({
   LocksApplication: {
     generateConnectUrl: mocks.generateConnectUrl,
+    isServerReady: mocks.isServerReady,
     exchangeSessionCode: mocks.exchangeSessionCode,
     restoreSession: mocks.restoreSession,
     signout: mocks.signout,
@@ -31,6 +33,7 @@ describe('LocksController (auth)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.generateConnectUrl.mockResolvedValue('https://lock.server/connect');
+    mocks.isServerReady.mockResolvedValue(true);
     mocks.exchangeSessionCode.mockResolvedValue({ session: fakeSession, secret: 'secret-abc' });
     mocks.signout.mockResolvedValue(undefined);
     mocks.setLockServiceConfig.mockResolvedValue(undefined);
@@ -45,6 +48,16 @@ describe('LocksController (auth)', () => {
       returnTo: window.location.origin,
       state: 'opaque-state',
     });
+  });
+
+  it('isServerReachable probes readiness at the origin resolved from a throwaway connect URL', async () => {
+    await expect(LocksController.isServerReachable()).resolves.toBe(true);
+    expect(mocks.isServerReady).toHaveBeenCalledWith('https://lock.server');
+  });
+
+  it('isServerReachable returns false when the server is not ready', async () => {
+    mocks.isServerReady.mockResolvedValue(false);
+    await expect(LocksController.isServerReachable()).resolves.toBe(false);
   });
 
   it('completeAuthFromCallback exchanges the code and persists the session to the store', async () => {

@@ -37,6 +37,11 @@ export class LocksApplication {
     return LocksService.generateConnectUrl(params);
   }
 
+  /** Whether the Lock Server at `origin` is ready to serve — gates the auth flow before the iframe. */
+  static isServerReady(origin: string): Promise<boolean> {
+    return LocksService.isServerReady(origin);
+  }
+
   static exchangeSessionCode(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
     return LocksService.exchangeSessionCode(params);
   }

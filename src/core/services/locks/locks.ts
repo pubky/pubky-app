@@ -61,6 +61,20 @@ export class LocksService {
   }
 
   /**
+   * True when the Lock Server's `/readyz` returns 2xx. Gates the auth flow before the iframe loads,
+   * so a down (throws) / not-ready (503) server is a boolean branch, not a logged error. No SDK
+   * health surface, so it fetches `<origin>/readyz` directly (`origin` from the connect URL).
+   */
+  static async isServerReady(origin: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${origin}/readyz`, { method: 'GET' });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Builds the Lock-Server-hosted `/connect` URL (resolves the server via pkarr) and opts into
    * postMessage delivery so the shell posts the code to the parent instead of redirecting.
    */
