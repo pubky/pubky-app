@@ -1,7 +1,7 @@
 import type { Metadata as NextMetadata } from 'next';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
-import { isPostDeleted } from '@/libs/utils/utils';
+import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { Metadata } from '@/molecules/Metadata/Metadata';
 import { Collection } from '@/templates/Collection/Collection';
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
     const { user, post } = result;
     if (post.kind !== 'collection') return {};
 
-    const username = user.name;
+    const username = resolveDisplayName(user);
     const { content } = post;
 
     const description = isPostDeleted(content)
@@ -32,9 +32,12 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
 
     const title = `${username} on Pubky`;
 
+    // Static OG/Twitter images are omitted so the dynamic `opengraph-image` /
+    // `twitter-image` route is the single source of truth for the preview image.
     const { openGraph, twitter } = Metadata({
       title,
       description,
+      omitImages: true,
     });
 
     return username && description
