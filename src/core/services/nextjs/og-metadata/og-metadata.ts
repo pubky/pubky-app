@@ -5,9 +5,7 @@ import type { TOgMetadataFallbackReason, TOgMetadataResult } from '@/application
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
-import { safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
-import { isNetworkError, isTimeoutError } from '@/libs/error/error.utils';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { checkDnsSafety, readResponseBody } from '../nextjs.utils';
@@ -28,6 +26,17 @@ const FETCH_HEADERS = {
 };
 
 type FetchInitWithDispatcher = RequestInit & { dispatcher: Dispatcher };
+
+/**
+ * Internal transport signal for an expected connection-time DNS miss.
+ * This must stay outside Err.* so best-effort enrichment failures do not reach Sentry.
+ */
+class OgMetadataDnsError extends Error {
+  constructor(cause?: unknown) {
+    super('Connection-time DNS resolution failed', { cause });
+    this.name = 'OgMetadataDnsError';
+  }
+}
 
 const SAFE_OG_METADATA_DISPATCHER: Dispatcher = new Agent({
   connect: { lookup: safeOgMetadataLookup },
@@ -56,10 +65,6 @@ export class NextJsOgMetadataService {
       // a preflight check for IP literals/all answers, then a connection-time check that pins the socket to vetted answers.
       const fetchResult = await fetchWithRedirectsForOgMetadata(url);
       if (!fetchResult.ok) {
-        if (fetchResult.alreadyLogged) {
-          return buildFallbackMetadata(fetchResult.url);
-        }
-
         return fallback(fetchResult.url, fetchResult.reason, fetchResult.context);
       }
       const { response } = fetchResult;
@@ -177,7 +182,6 @@ type OgFetchResult =
       reason: Extract<TOgMetadataFallbackReason, 'dns_failed' | 'network' | 'timeout'>;
       url: string;
       context?: Record<string, unknown>;
-      alreadyLogged?: boolean;
     };
 
 function fallback(
@@ -238,41 +242,38 @@ async function fetchForOgMetadata(url: string, options: RequestInit): Promise<Og
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const response = await safeFetch(
-      url,
-      {
-        ...options,
-        signal: controller.signal,
-        dispatcher: SAFE_OG_METADATA_DISPATCHER,
-      } as FetchInitWithDispatcher,
-      ErrorService.NextJsServer,
-      OG_METADATA_OPERATION,
-    );
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      dispatcher: SAFE_OG_METADATA_DISPATCHER,
+    } as FetchInitWithDispatcher);
     return { ok: true, response };
   } catch (error) {
-    if (error instanceof AppError) {
-      if (isDnsLookupFailure(error)) {
-        return {
-          ok: false,
-          reason: 'dns_failed',
-          url,
-          context: { errorName: error.name },
-          alreadyLogged: true,
-        };
-      }
-
-      if (isTimeoutError(error) || isNetworkError(error)) {
-        return {
-          ok: false,
-          reason: isTimeoutError(error) ? 'timeout' : 'network',
-          url,
-          context: { errorName: error.name },
-          alreadyLogged: true,
-        };
-      }
+    const appError = findErrorInCauseChain(error, (candidate): candidate is AppError => candidate instanceof AppError);
+    if (appError) {
+      throw appError;
     }
 
-    throw error;
+    const dnsError = findErrorInCauseChain(
+      error,
+      (candidate): candidate is OgMetadataDnsError => candidate instanceof OgMetadataDnsError,
+    );
+    if (dnsError) {
+      return {
+        ok: false,
+        reason: 'dns_failed',
+        url,
+        context: { errorName: dnsError.name },
+      };
+    }
+
+    const abortError = findErrorInCauseChain(error, isAbortError);
+    return {
+      ok: false,
+      reason: abortError ? 'timeout' : 'network',
+      url,
+      context: { errorName: getErrorName(abortError ?? error) },
+    };
   } finally {
     clearTimeout(timeoutId);
   }
@@ -288,14 +289,14 @@ function safeOgMetadataLookup(...[hostname, options, callback]: Parameters<Looku
           return;
         }
 
-        callback(createDnsFailedError(hostname, dnsResult.cause), '');
+        callback(new OgMetadataDnsError(dnsResult.cause), '');
         return;
       }
 
       const requestedFamily = normalizeRequestedIpFamily(options.family);
       const addresses = dnsResult.addresses.filter(({ family }) => !requestedFamily || requestedFamily === family);
       if (addresses.length === 0) {
-        callback(createDnsFailedError(hostname), '');
+        callback(new OgMetadataDnsError(), '');
         return;
       }
 
@@ -322,21 +323,35 @@ function safeOgMetadataLookup(...[hostname, options, callback]: Parameters<Looku
   })();
 }
 
-function createDnsFailedError(hostname: string, cause?: unknown): AppError {
-  return Err.network(NetworkErrorCode.DNS_FAILED, 'Connection-time DNS resolution failed', {
-    service: ErrorService.NextJsServer,
-    operation: SAFE_LOOKUP_OPERATION,
-    cause,
-    context: { hostname },
-  });
+function findErrorInCauseChain<T>(error: unknown, predicate: (candidate: unknown) => candidate is T): T | null {
+  const seen = new Set<unknown>();
+  let candidate = error;
+
+  while (candidate && typeof candidate === 'object' && !seen.has(candidate)) {
+    if (predicate(candidate)) return candidate;
+
+    seen.add(candidate);
+    candidate = 'cause' in candidate ? candidate.cause : undefined;
+  }
+
+  return null;
+}
+
+function isAbortError(error: unknown): error is { name: string } {
+  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
+}
+
+function getErrorName(error: unknown): string | undefined {
+  if (error instanceof Error) return error.name;
+  if (typeof error === 'object' && error !== null && 'name' in error && typeof error.name === 'string') {
+    return error.name;
+  }
+
+  return undefined;
 }
 
 function normalizeRequestedIpFamily(family: number | string | undefined): 4 | 6 | undefined {
   if (family === 4 || family === 'IPv4') return 4;
   if (family === 6 || family === 'IPv6') return 6;
   return undefined;
-}
-
-function isDnsLookupFailure(error: AppError): boolean {
-  return error.operation === SAFE_LOOKUP_OPERATION && error.code === NetworkErrorCode.DNS_FAILED;
 }

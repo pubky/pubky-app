@@ -454,12 +454,16 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
-    expect(loggerErrorSpy).toHaveBeenCalledWith(
-      '[nextjs-server:fetchOgMetadata]',
-      'Request was aborted',
-      expect.objectContaining({ url: 'https://slow.test/page' }),
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'timeout',
+        hostname: 'slow.test',
+        errorName: 'AbortError',
+      }),
     );
-    expect(loggerWarnSpy).not.toHaveBeenCalledWith('[og-metadata:fetch]', expect.anything());
+    expect(loggerErrorSpy).not.toHaveBeenCalled();
 
     vi.mocked(globalThis.setTimeout).mockRestore();
   });
@@ -487,12 +491,16 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
-    expect(loggerErrorSpy).toHaveBeenCalledWith(
-      '[nextjs-server:fetchOgMetadata]',
-      'ECONNRESET',
-      expect.objectContaining({ url: 'https://example.com/' }),
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'network',
+        hostname: 'example.com',
+        errorName: 'TypeError',
+      }),
     );
-    expect(loggerWarnSpy).not.toHaveBeenCalledWith('[og-metadata:fetch]', expect.anything());
+    expect(loggerErrorSpy).not.toHaveBeenCalled();
   });
 
   it('should block redirects to non-HTTP protocols', async () => {
@@ -630,6 +638,7 @@ describe('NextJsOgMetadataService', () => {
   });
 
   it('should block when any connection-time DNS answer is unsafe', async () => {
+    const loggerErrorSpy = await spyOnLoggerError();
     global.fetch = asOpaque<typeof global.fetch>(undiciFetch);
     mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockResolvedValueOnce(['1.1.1.1', '127.0.0.2']);
     mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
@@ -639,6 +648,11 @@ describe('NextJsOgMetadataService', () => {
       code: AuthErrorCode.FORBIDDEN,
       context: { hostname: 'rebind.example.test', statusCode: HttpStatusCode.FORBIDDEN },
     });
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      '[nextjs-server:safeOgMetadataLookup]',
+      'Blocked IP range. Cannot fetch from private networks.',
+      { hostname: 'rebind.example.test', statusCode: HttpStatusCode.FORBIDDEN },
+    );
   });
 
   it('should connect to the vetted address returned by the connection-time lookup', async () => {
@@ -683,12 +697,16 @@ describe('NextJsOgMetadataService', () => {
       image: null,
       type: 'website',
     });
-    expect(loggerErrorSpy).toHaveBeenCalledWith(
-      '[nextjs-server:safeOgMetadataLookup]',
-      'Connection-time DNS resolution failed',
-      { hostname: 'dns-change.example.test' },
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'dns_failed',
+        hostname: 'dns-change.example.test',
+        errorName: 'OgMetadataDnsError',
+      }),
     );
-    expect(loggerWarnSpy).not.toHaveBeenCalledWith('[og-metadata:fetch]', expect.anything());
+    expect(loggerErrorSpy).not.toHaveBeenCalled();
   });
 
   it('should keep unexpected DNS safety errors reportable', async () => {
