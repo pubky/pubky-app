@@ -250,6 +250,21 @@ describe('DialogReply', () => {
     expect(vi.mocked(DialogContent).mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ avoidKeyboard: true }));
   });
 
+  it('uses the dialog body layout', () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    expect(screen.getByTestId('dialog-content')).toHaveClass('flex', 'max-h-[calc(100dvh-2rem)]', 'flex-col');
+    expect(screen.getByTestId('post-preview-card').parentElement).toHaveClass(
+      'min-h-0',
+      'flex-1',
+      'overflow-x-hidden',
+      'overscroll-contain',
+    );
+    expect(screen.getByTestId('post-preview-card').parentElement).not.toHaveClass('overflow-y-auto');
+    expect(screen.getByTestId('post-input').parentElement).toHaveClass('min-w-0');
+  });
+
   it('calls onOpenChangeAction when PostInput onSuccess is called', async () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogReply postId="test-post-123" open={false} onOpenChangeAction={onOpenChangeAction} />);

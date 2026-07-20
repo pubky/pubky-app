@@ -23,6 +23,7 @@ import { PostInlineTagsActions } from '../PostInlineTagsActions/PostInlineTagsAc
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import type { PostMainProps } from './PostMain.types';
+import { PostMainListRow } from './PostMainListRow/PostMainListRow';
 import { WIDE_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 
 // Stops click and middle-click from bubbling to the outer post-card navigation
@@ -36,9 +37,11 @@ export function PostMain({
   isLastReply = false,
   pinActionsToBottom = false,
   isNavigable = true,
+  showFullContentInListLayout = false,
 }: PostMainProps) {
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
+  const isListLayout = effectiveTagsLayout === 'list';
   const { postDetails, isLoading } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
   // A settled `null` (cache miss after the fetch resolved) means the post 404'd.
@@ -89,9 +92,20 @@ export function PostMain({
             <>
               {showRepostHeader && <RepostHeader />}
               <CardContent
-                className={cn('flex min-w-0 flex-col @max-xl/grid:flex-1', isWideLayout ? 'p-0' : 'gap-4 p-6')}
+                className={cn(
+                  'flex min-w-0 flex-col @max-xl/grid:flex-1',
+                  isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6',
+                )}
               >
-                {isWideLayout ? (
+                {isListLayout ? (
+                  <PostMainListRow
+                    postId={postId}
+                    showFullContent={!isReply && showFullContentInListLayout}
+                    shouldShowPostHeader={shouldShowPostHeader}
+                    onReplyClick={openReplyDialog}
+                    onRepostClick={openRepostDialog}
+                  />
+                ) : isWideLayout ? (
                   <Container className="flex min-w-0 flex-col lg:flex-row">
                     <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
                       {shouldShowPostHeader && (

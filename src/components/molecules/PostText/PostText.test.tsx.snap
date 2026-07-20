@@ -2,7 +2,7 @@
 
 exports[`PostText - Snapshots > matches snapshot for article preview with headings and paragraphs 1`] = `
 <div
-  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
+  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-muted-foreground"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -33,7 +33,7 @@ exports[`PostText - Snapshots > matches snapshot for article preview with headin
 
 exports[`PostText - Snapshots > matches snapshot for article preview with long content 1`] = `
 <div
-  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
+  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-muted-foreground"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -45,7 +45,7 @@ exports[`PostText - Snapshots > matches snapshot for article preview with long c
 
 exports[`PostText - Snapshots > matches snapshot for article preview with multiple headings 1`] = `
 <div
-  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
+  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-muted-foreground"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -121,7 +121,7 @@ exports[`PostText - Snapshots > matches snapshot for article showing full conten
 
 exports[`PostText - Snapshots > matches snapshot for article with h1 heading 1`] = `
 <div
-  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
+  class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-muted-foreground"
   data-override-defaults="true"
   data-testid="container"
 >
