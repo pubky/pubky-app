@@ -1,12 +1,19 @@
 import { fireEvent, render as rtlRender, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { USER_NAME_MAX_LENGTH } from '@/config/user';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NotificationItem } from './NotificationItem';
+
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: mockUseIsMobile,
+}));
 
 function render(ui: ReactElement) {
   return rtlRender(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
@@ -174,6 +181,7 @@ describe('NotificationItem', () => {
     mockToast.mockClear();
     mockGetOrFetch.mockClear();
     mockGetOrFetch.mockResolvedValue(null);
+    mockUseIsMobile.mockReturnValue(false);
     vi.mocked(useUserProfile).mockReturnValue({
       profile: { name: 'User', avatarUrl: undefined },
       isLoading: false,
@@ -208,13 +216,27 @@ describe('NotificationItem', () => {
 
   it('shows exact date in tooltip on hover', async () => {
     const user = userEvent.setup();
+    const expectedExactLabel = new Date(baseNotification.timestamp).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'medium',
+    });
     render(<NotificationItem notification={baseNotification} isUnread={false} />);
 
     await user.hover(screen.getByText('30m'));
 
     await vi.waitFor(() => {
-      expect(screen.getByRole('tooltip')).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).toHaveTextContent(expectedExactLabel);
     });
+  });
+
+  it('does not show tooltip on mobile after hover', async () => {
+    mockUseIsMobile.mockReturnValue(true);
+    const user = userEvent.setup();
+    render(<NotificationItem notification={baseNotification} isUnread={false} />);
+
+    await user.hover(screen.getByText('30m'));
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
   it('renders notification icon', () => {
@@ -695,6 +717,10 @@ describe('NotificationItem', () => {
 });
 
 describe('NotificationItem - Snapshots', () => {
+  beforeEach(() => {
+    mockUseIsMobile.mockReturnValue(false);
+  });
+
   it('matches snapshot for Follow notification', () => {
     const notification = {
       id: 'follow:123:user1',
@@ -726,6 +752,28 @@ describe('NotificationItem - Snapshots', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       mentioned_by: 'user1',
       post_uri: 'user1:post123',
+    } as FlatNotification;
+    const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('NotificationItem - Mobile Snapshots', () => {
+  beforeEach(() => {
+    mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const notification = {
+      id: 'follow:123:user1',
+      type: NotificationType.Follow,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      followed_by: 'user1',
     } as FlatNotification;
     const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
     expect(container.firstChild).toMatchSnapshot();

@@ -5,10 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
-import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { PostController } from '@/controllers/post/post';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
@@ -19,6 +17,7 @@ import { isPostDeleted } from '@/libs/utils/utils';
 import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationIcon } from '@/molecules/NotificationIcon/NotificationIcon';
 import { PostTag } from '@/molecules/PostTag/PostTag';
+import { RelativeTimestamp } from '@/molecules/RelativeTimestamp/RelativeTimestamp';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
@@ -43,7 +42,6 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const router = useRouter();
   const { toast } = useToast();
   const { formatRelativeTime } = useRelativeTime();
-  const isMobile = useIsMobile();
 
   // Extract the user ID from the notification (the actor who triggered it)
   const actorUserId = getUserIdFromNotification(notification);
@@ -121,25 +119,13 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const previewText = hasPostPreview(notification.type) ? formatPreviewText(postContent) : null;
 
   const timestampDate = new Date(notification.timestamp);
-  const timestamp = formatRelativeTime(timestampDate);
-  const timestampLabel = (
-    <Typography as="p" className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
-      {timestamp}
-    </Typography>
-  );
-  const timestampElement = isMobile ? (
-    timestampLabel
-  ) : (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span>{timestampLabel}</span>
-      </TooltipTrigger>
-      <TooltipPortal>
-        <TooltipContent>
-          {timestampDate.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })}
-        </TooltipContent>
-      </TooltipPortal>
-    </Tooltip>
+  const timestampElement = (
+    <RelativeTimestamp
+      timeAgo={formatRelativeTime(timestampDate)}
+      date={timestampDate}
+      as="p"
+      className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+    />
   );
 
   // Calculate notification links (business logic separated in pure function)
