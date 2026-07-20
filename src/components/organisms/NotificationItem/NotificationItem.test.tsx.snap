@@ -51,18 +51,16 @@ exports[`NotificationItem - Snapshots > matches snapshot for Follow notification
     class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
     href="/profile/user1"
   >
-    <p
-      class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden"
-      data-testid="typography"
+    <span
+      data-state="closed"
     >
-      30m
-    </p>
-    <p
-      class="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
-      data-testid="typography"
-    >
-      30 MINUTES AGO
-    </p>
+      <p
+        class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+        data-testid="typography"
+      >
+        30m
+      </p>
+    </span>
     <div
       data-badge="false"
       data-testid="notification-icon"
@@ -125,18 +123,16 @@ exports[`NotificationItem - Snapshots > matches snapshot for Mention notificatio
     class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
     href="/post/user1/post123"
   >
-    <p
-      class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden"
-      data-testid="typography"
+    <span
+      data-state="closed"
     >
-      30m
-    </p>
-    <p
-      class="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
-      data-testid="typography"
-    >
-      30 MINUTES AGO
-    </p>
+      <p
+        class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+        data-testid="typography"
+      >
+        30m
+      </p>
+    </span>
     <div
       data-badge="false"
       data-testid="notification-icon"
@@ -205,18 +201,16 @@ exports[`NotificationItem - Snapshots > matches snapshot for TagPost notificatio
     class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
     href="/post/user1/post123"
   >
-    <p
-      class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden"
-      data-testid="typography"
+    <span
+      data-state="closed"
     >
-      30m
-    </p>
-    <p
-      class="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
-      data-testid="typography"
-    >
-      30 MINUTES AGO
-    </p>
+      <p
+        class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+        data-testid="typography"
+      >
+        30m
+      </p>
+    </span>
     <div
       data-badge="false"
       data-testid="notification-icon"

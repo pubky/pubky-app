@@ -1,9 +1,16 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render as rtlRender, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { USER_NAME_MAX_LENGTH } from '@/config/user';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { NotificationItem } from './NotificationItem';
+
+function render(ui: ReactElement) {
+  return rtlRender(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
+}
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -197,7 +204,17 @@ describe('NotificationItem', () => {
   it('renders timestamp', () => {
     render(<NotificationItem notification={baseNotification} isUnread={false} />);
     expect(screen.getByText('30m')).toBeInTheDocument();
-    expect(screen.getByText('30 MINUTES AGO')).toBeInTheDocument();
+  });
+
+  it('shows exact date in tooltip on hover', async () => {
+    const user = userEvent.setup();
+    render(<NotificationItem notification={baseNotification} isUnread={false} />);
+
+    await user.hover(screen.getByText('30m'));
+
+    await vi.waitFor(() => {
+      expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    });
   });
 
   it('renders notification icon', () => {
