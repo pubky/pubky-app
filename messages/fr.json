@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "maintenant",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}j",
+    "weeksShort": "{count}sem",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Libérez</highlight> le web.",
@@ -844,12 +847,24 @@
       "followedYou": "vous a suivi",
       "newFriend": "est maintenant votre ami",
       "taggedPost": "a tagge votre publication",
+      "taggedCollection": "a tagué votre collection",
+      "taggedArticle": "a tagué votre article",
       "taggedProfile": "a tagge votre profil",
       "repliedToPost": "a repondu a votre publication",
+      "repliedToCollection": "a répondu à votre collection",
+      "repliedToArticle": "a répondu à votre article",
       "repostedPost": "a republie votre publication",
+      "repostedCollection": "a republié votre collection",
+      "repostedArticle": "a republié votre article",
       "mentionedYou": "vous a mentionne dans une publication",
+      "mentionedYouInCollection": "vous a mentionné dans une collection",
+      "mentionedYouInArticle": "vous a mentionné dans un article",
       "deletedPost": "a supprimé une publication",
+      "deletedCollection": "a supprimé une collection",
+      "deletedArticle": "a supprimé un article",
       "editedPost": "a modifié une publication avec laquelle vous avez interagi",
+      "updatedCollection": "a mis à jour une collection",
+      "updatedArticle": "a mis à jour un article",
       "fallback": "Nouvelle notification"
     },
     "settings": {

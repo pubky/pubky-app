@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "刚刚",
+    "secondsShort": "{count}秒",
     "minutesShort": "{count}分钟",
-    "hoursShort": "{count}小时"
+    "hoursShort": "{count}小时",
+    "daysShort": "{count}天",
+    "weeksShort": "{count}周",
+    "monthsShort": "{count}个月"
   },
   "landing": {
     "title": "<highlight>解锁</highlight>网络。",
@@ -844,12 +847,24 @@
       "followedYou": "关注了您",
       "newFriend": "现在是您的好友",
       "taggedPost": "标记了您的帖子",
+      "taggedCollection": "标记了您的收藏集",
+      "taggedArticle": "标记了您的文章",
       "taggedProfile": "标记了您的个人资料",
       "repliedToPost": "回复了您的帖子",
+      "repliedToCollection": "回复了您的收藏集",
+      "repliedToArticle": "回复了您的文章",
       "repostedPost": "转发了您的帖子",
+      "repostedCollection": "转发了您的收藏集",
+      "repostedArticle": "转发了您的文章",
       "mentionedYou": "在帖子中提到了您",
+      "mentionedYouInCollection": "在收藏集中提到了您",
+      "mentionedYouInArticle": "在文章中提到了您",
       "deletedPost": "删除了一条帖子",
+      "deletedCollection": "删除了一个收藏集",
+      "deletedArticle": "删除了一篇文章",
       "editedPost": "编辑了您互动过的帖子",
+      "updatedCollection": "更新了一个收藏集",
+      "updatedArticle": "更新了一篇文章",
       "fallback": "新通知"
     },
     "settings": {

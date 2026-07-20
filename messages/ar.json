@@ -1,8 +1,11 @@
 {
   "time": {
-    "now": "الان",
+    "secondsShort": "{count}ث",
     "minutesShort": "{count}د",
-    "hoursShort": "{count}س"
+    "hoursShort": "{count}س",
+    "daysShort": "{count}ي",
+    "weeksShort": "{count}أ",
+    "monthsShort": "{count}ش"
   },
   "landing": {
     "title": "<highlight>افتح</highlight> الويب.",
@@ -846,12 +849,24 @@
       "followedYou": "تابعك",
       "newFriend": "اصبح صديقك الان",
       "taggedPost": "وسم منشورك",
+      "taggedCollection": "وسم مجموعتك",
+      "taggedArticle": "وسم مقالتك",
       "taggedProfile": "وسم ملفك الشخصي",
       "repliedToPost": "رد على منشورك",
+      "repliedToCollection": "رد على مجموعتك",
+      "repliedToArticle": "رد على مقالتك",
       "repostedPost": "اعاد نشر منشورك",
+      "repostedCollection": "أعاد نشر مجموعتك",
+      "repostedArticle": "أعاد نشر مقالتك",
       "mentionedYou": "ذكرك في منشور",
+      "mentionedYouInCollection": "ذكرك في مجموعة",
+      "mentionedYouInArticle": "ذكرك في مقال",
       "deletedPost": "حذف منشورا",
+      "deletedCollection": "حذف مجموعة",
+      "deletedArticle": "حذف مقالاً",
       "editedPost": "عدّل منشوراً تفاعلت معه",
+      "updatedCollection": "حدّث مجموعة",
+      "updatedArticle": "حدّث مقالاً",
       "fallback": "إشعار جديد"
     },
     "settings": {
