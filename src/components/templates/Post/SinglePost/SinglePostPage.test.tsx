@@ -18,6 +18,12 @@ const SHORT_POST_DETAILS = {
   is_blurred: false,
 } satisfies EnrichedPostDetails;
 
+const { replaceMock } = vi.hoisted(() => ({ replaceMock: vi.fn() }));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: replaceMock, back: vi.fn(), forward: vi.fn(), prefetch: vi.fn() }),
+}));
+
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
 }));
@@ -62,5 +68,25 @@ describe('SinglePostPage', () => {
 
     expect(screen.getByTestId('post-not-found-discovery')).toBeInTheDocument();
     expect(usePostDetails).toHaveBeenCalledWith(invalidComposite, { enabled: false });
+  });
+
+  it('redirects collection-kind posts to the collections route without rendering content', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: { ...SHORT_POST_DETAILS, kind: 'collection' },
+      isLoading: false,
+    });
+
+    render(<SinglePostPage postId={VALID_COMPOSITE_POST_ID} />);
+
+    expect(replaceMock).toHaveBeenCalledWith(`/collections/${PUBKY_52_STAGING_FIXTURE}/${POST_ID_STAGING_FIXTURE}`);
+    expect(screen.queryByTestId('single-post-content')).not.toBeInTheDocument();
+    expect(screen.getByTestId('single-post-content-skeleton')).toBeInTheDocument();
+  });
+
+  it('does not redirect non-collection posts', () => {
+    render(<SinglePostPage postId={VALID_COMPOSITE_POST_ID} />);
+
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('single-post-content')).toBeInTheDocument();
   });
 });

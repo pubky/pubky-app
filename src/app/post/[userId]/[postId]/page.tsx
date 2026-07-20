@@ -58,6 +58,14 @@ export default async function PostPage({ params }: PostPageProps) {
   // outage) is non-fatal — fall through and render the post page as before.
   // NOTE: permanentRedirect() signals via a thrown error, so it MUST stay
   // outside the try/catch or the redirect would be swallowed.
+  // NOTE: this redirect only covers full document loads, and even then it ships
+  // as a streamed 200 with the redirect embedded in the RSC payload — executed
+  // client-side after hydration, never as a real HTTP 308 (observed on Next 16
+  // even for redirects thrown before any await). Client-side navigations bypass
+  // it entirely: the intercepted `(.)post` route never runs this page, and the
+  // Next 16 router does not act on the streamed NEXT_REDIRECT during soft
+  // navigation. SinglePostPage has a client-side guard that handles those
+  // paths — keep both in sync.
   let isCollection = false;
   try {
     const result = await fetchUserAndPostForMetadata(userId, postId);
