@@ -24,12 +24,13 @@ describe('useRelativeTime', () => {
     ['5w', 5 * 7 * DAY],
     ['6w', 6 * 7 * DAY],
     ['6M', 6 * 30 * DAY],
-    ['1Y 1M', 13 * 28 * DAY],
-    ['2Y', 24 * 28 * DAY],
-    ['2Y 1M', 25 * 28 * DAY],
-    ['1Y 10M', 22 * 28 * DAY],
-    ['2Y 10M', 34 * 28 * DAY],
-    ['3Y 10M', 46 * 28 * DAY],
+    ['1Y', 365 * DAY],
+    ['2Y', 730 * DAY],
+    ['1Y 1M', 395 * DAY],
+    ['2Y 1M', 760 * DAY],
+    ['1Y 10M', 665 * DAY],
+    ['2Y 10M', 1030 * DAY],
+    ['3Y 10M', 1395 * DAY],
   ])('formats %s timestamps with a compact label', (expected, elapsedMs) => {
     const { result } = renderHook(() => useRelativeTime());
 
@@ -48,7 +49,7 @@ describe('useRelativeTime', () => {
     ['23h', 23 * 60 * 60 * 1000, '1d', 24 * 60 * 60 * 1000],
     ['6d', 6 * DAY, '1w', 7 * DAY],
     ['7w', 55 * DAY, '2M', 56 * DAY],
-    ['11M', 335 * DAY, '1Y', 336 * DAY],
+    ['11M', 364 * DAY, '1Y', 365 * DAY],
   ])('does not skip or go backwards across the %s / %s boundary', (belowExpected, belowMs, atExpected, atMs) => {
     const { result } = renderHook(() => useRelativeTime());
 
@@ -72,7 +73,7 @@ describe('useRelativeTime', () => {
       d: 86400,
       w: 604800,
       M: 2592000,
-      Y: 12 * 2592000,
+      Y: 365 * 86400,
     };
 
     function labelSeconds(elapsedMs: number): number {

@@ -25,15 +25,17 @@ export function useRelativeTime() {
     const diffDays = Math.floor(diffHours / 24);
     const diffWeeks = Math.floor(diffDays / 7);
     const diffMonths = Math.floor(diffWeeks / 4);
-    const diffYears = Math.floor(diffMonths / 12);
-    const remainderMonths = diffMonths % 12;
 
     if (diffSeconds < 60) return t('secondsShort', { count: diffSeconds });
     if (diffMins < 60) return t('minutesShort', { count: diffMins });
     if (diffHours < 24) return t('hoursShort', { count: diffHours });
     if (diffDays < 7) return t('daysShort', { count: diffDays });
     if (diffWeeks < 8) return t('weeksShort', { count: diffWeeks });
-    if (diffMonths < 12) return t('monthsShort', { count: diffMonths });
+    // ponytail: switch to real-day years here (not diffMonths/12) so a year stays 365 days, not 336 (12 * 28-day "weeks/4" months)
+    if (diffDays < 365) return t('monthsShort', { count: Math.min(diffMonths, 11) });
+
+    const diffYears = Math.floor(diffDays / 365);
+    const remainderMonths = Math.min(Math.floor((diffDays % 365) / 30), 11);
     if (remainderMonths === 0) return t('yearsShort', { count: diffYears });
     return `${t('yearsShort', { count: diffYears })} ${t('monthsShort', { count: remainderMonths })}`;
   }
