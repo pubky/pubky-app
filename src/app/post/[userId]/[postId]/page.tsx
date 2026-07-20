@@ -1,3 +1,4 @@
+import { permanentRedirect } from 'next/navigation';
 import type { Metadata as NextMetadata } from 'next';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
@@ -27,6 +28,11 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     if (!result) return {};
 
     const { user, post } = result;
+
+    if (post.kind === 'collection') {
+      return { alternates: { canonical: `/collections/${userId}/${postId}` } };
+    }
+
     const username = user.name;
     const { content, kind } = post;
 
@@ -73,6 +79,19 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
 
 export default async function PostPage({ params }: PostPageProps) {
   const { userId, postId } = await params;
+
+  let isCollection = false;
+  try {
+    const result = await fetchUserAndPostForMetadata(userId, postId);
+    isCollection = result?.post.kind === 'collection';
+  } catch {
+    // Preserve the existing post page when the kind lookup fails.
+  }
+
+  if (isCollection) {
+    permanentRedirect(`/collections/${userId}/${postId}`);
+  }
+
   const compositeId = buildCompositeId({ pubky: userId, id: postId });
 
   return <SinglePostPage postId={compositeId} />;

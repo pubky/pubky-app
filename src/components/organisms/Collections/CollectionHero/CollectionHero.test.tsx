@@ -353,6 +353,7 @@ describe('CollectionHero', () => {
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
     expect(avatar).toHaveAttribute('data-fallback-seed', AUTHOR_PUBKY);
+    expect(avatar).toHaveAttribute('data-size', 'sm');
   });
 
   it('links the owner avatar and name to the author profile', () => {
