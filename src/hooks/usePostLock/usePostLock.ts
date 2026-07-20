@@ -17,5 +17,5 @@ export function usePostLock({ content, lock }: UsePostLockParams): UsePostLockRe
   const { lockFile, hasError } = useLockFile(lock);
   const verifierType = LockFileParser.resolveVerifierType(lockFile);
 
-  return { lockContent, verifierType, hasError };
+  return { lockContent, lockFile, verifierType, hasError };
 }

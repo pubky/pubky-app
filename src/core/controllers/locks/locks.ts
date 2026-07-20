@@ -1,5 +1,10 @@
 import { LocksApplication } from '@/application/locks/locks';
-import type { TCreateLockContentParams } from '@/application/locks/locks.types';
+import type {
+  TCreateLockContentParams,
+  TFetchUnlockedContentParams,
+  TUnlockContentParams,
+} from '@/application/locks/locks.types';
+import { isAppError, isAuthError } from '@/libs/error/error.utils';
 import type {
   LockFile,
   TCreateContentLockResult,
@@ -7,6 +12,8 @@ import type {
   TFetchLockFileParams,
   TGetConnectUrlParams,
   TLocksSessionResult,
+  TUnlockedContent,
+  TUnlockResult,
 } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 
@@ -97,10 +104,14 @@ export class LocksController {
   }
 
   /**
-   * On app load, rebuilds the live Locks session from the persisted bearer secret.
-   * No-op if nothing to restore or a session is already live. A malformed/stale secret is cleared so
-   * the UI shows unauthenticated rather than a broken session. Restore is local (no network), so no
-   * retry is needed.
+   * On app load, rebuilds the live Locks session from the persisted bearer secret, then validates it
+   * against the Lock Server. No-op if nothing to restore or a session is already live.
+   *
+   * `restoreSession` is offline, so a server-expired secret would rebuild a session that looks live —
+   * the composer would show "authenticated", let the creator configure a lock, and only surprise them
+   * with a sign-in prompt when publishing makes the first real call. The SDK exposes no read to probe
+   * with, so validate via the idempotent config write: a rejected session (401 → Auth) is cleared now.
+   * Other failures (network / 5xx) keep the session — they don't prove it's dead.
    */
   static async restorePersistedLocksSession(): Promise<void> {
     const store = useLocksAuthStore.getState();
@@ -112,6 +123,13 @@ export class LocksController {
       // Malformed/stale secret — already reported by the service Err factory; clear it so the UI
       // shows unauthenticated rather than a broken session.
       store.reset();
+      return;
+    }
+
+    try {
+      await LocksApplication.setLockServiceConfig();
+    } catch (error) {
+      if (isAppError(error) && isAuthError(error)) store.reset();
     }
   }
 
@@ -129,5 +147,15 @@ export class LocksController {
    */
   static async fetchLockFile({ lockUrl }: TFetchLockFileParams): Promise<LockFile | null> {
     return LocksApplication.fetchLockFile({ lockUrl });
+  }
+
+  /** Reader unlock: submit the proof for a resolved lock file, verify, and return the access credential. */
+  static unlock(params: TUnlockContentParams): Promise<TUnlockResult> {
+    return LocksApplication.unlockContent(params);
+  }
+
+  /** Reads the guarded post + attachments after unlock, using the access credential. */
+  static fetchUnlockedContent(params: TFetchUnlockedContentParams): Promise<TUnlockedContent | null> {
+    return LocksApplication.fetchUnlockedContent(params);
   }
 }

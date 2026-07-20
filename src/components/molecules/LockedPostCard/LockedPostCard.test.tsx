@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { LockedPostCard } from './LockedPostCard';
 
 describe('LockedPostCard', () => {
@@ -18,9 +18,27 @@ describe('LockedPostCard', () => {
     expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('My most famous quote');
   });
 
-  // Nothing in this card acts: the lock does not exist until the composer's Post button runs.
-  it('renders the Unlock control as inert', () => {
+  // Composer preview: no `onUnlock`, so the lock (which does not exist until Post) cannot be opened.
+  it('renders the Unlock control as inert without an onUnlock handler', () => {
     render(<LockedPostCard title="" />);
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+  });
+
+  // Reader: an `onUnlock` handler enables the control and runs on click.
+  it('enables Unlock and calls onUnlock on click when a handler is given', () => {
+    const onUnlock = vi.fn();
+    render(<LockedPostCard title="" onUnlock={onUnlock} />);
+
+    const button = screen.getByRole('button', { name: 'Unlock' });
+    expect(button).toBeEnabled();
+
+    fireEvent.click(button);
+    expect(onUnlock).toHaveBeenCalledTimes(1);
+  });
+
+  it('honours an explicit disabled even with a handler', () => {
+    const onUnlock = vi.fn();
+    render(<LockedPostCard title="" onUnlock={onUnlock} disabled />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
 });

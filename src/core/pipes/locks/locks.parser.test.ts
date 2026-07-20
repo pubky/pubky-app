@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type LockFile, VerifierType } from '@/services/locks/locks.types';
-import { LockContentParser, LockFileParser } from './locks.parser';
+import { GuardedContentParser, LockContentParser, LockFileParser, LockProofBundler } from './locks.parser';
 
 // TODO:[Locks] #1998 — inline test fixtures (sample lock file + author pubky) are
 // duplicated across the lock tests; consider extracting a shared test util/fixture.
@@ -8,12 +8,13 @@ const MOCK_LOCK_AUTHOR_PUBKY = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwaz
 const MOCK_LOCK_FILE: LockFile = {
   version: 1,
   creator: 'pubkycreator123',
-  guarded_resource: {
+  primary_resource: {
     path: '/priv/locks.app/content/example.txt',
     hash: '<hash>',
     content_type: 'text/plain',
     size: 13,
   },
+  secondary_resources: {},
   criteria: [{ criterion_id: 'criterion-1', verifier_type: 'password', params: { satisfied: true } }],
   lock_logic: { type: 'all', criteria: ['criterion-1'] },
   access_policy: { requested_credential_ttl_seconds: 900 },
@@ -94,6 +95,92 @@ describe('LockFileParser', () => {
         criteria: [{ criterion_id: 'criterion-1', verifier_type: 'dev-static', params: {} }],
       };
       expect(LockFileParser.resolveVerifierType(devStaticLock)).toBeNull();
+    });
+  });
+
+  describe('resolveLockServerPubky', () => {
+    it('returns the lock file override', () => {
+      expect(LockFileParser.resolveLockServerPubky(MOCK_LOCK_FILE)).toBe('pubkyserver123');
+    });
+
+    it('returns null when there is no override to fall back to config.json', () => {
+      expect(LockFileParser.resolveLockServerPubky(null)).toBeNull();
+      expect(LockFileParser.resolveLockServerPubky({ ...MOCK_LOCK_FILE, lock_server: { override: '' } })).toBeNull();
+    });
+  });
+});
+
+describe('LockProofBundler', () => {
+  const LOCK_URL = `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/lock1.json`;
+
+  it('builds a proof bundle: one satisfied proof per criterion (verifier_type mirrored), scheme stripped from the resource', () => {
+    const bundle = LockProofBundler.build(MOCK_LOCK_FILE, LOCK_URL, 'bundle-1');
+
+    expect(bundle).toEqual({
+      version: 1,
+      bundle_id: 'bundle-1',
+      pubky_lock_resource: `${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/lock1.json`,
+      proofs: [{ criterion_id: 'criterion-1', verifier_type: 'password', payload: { satisfied: true } }],
+    });
+  });
+
+  it('emits a proof for every criterion', () => {
+    const twoCriteria = {
+      ...MOCK_LOCK_FILE,
+      criteria: [
+        { criterion_id: 'c-1', verifier_type: 'dev-static', params: {} },
+        { criterion_id: 'c-2', verifier_type: 'dev-static', params: {} },
+      ],
+    };
+    expect(LockProofBundler.build(twoCriteria, LOCK_URL, 'b').proofs).toHaveLength(2);
+  });
+});
+
+describe('GuardedContentParser', () => {
+  describe('toReadPath', () => {
+    it('strips the guarded content prefix to the relative read path', () => {
+      expect(GuardedContentParser.toReadPath('/priv/locks.app/content/nested/a.txt')).toBe('nested/a.txt');
+    });
+
+    it('returns null for a path outside the guarded namespace', () => {
+      expect(GuardedContentParser.toReadPath('/pub/pubky.app/posts/x')).toBeNull();
+    });
+  });
+
+  describe('attachmentUriToPath', () => {
+    it('strips the pubky scheme and host to the private path', () => {
+      expect(GuardedContentParser.attachmentUriToPath('pubky://ownerb/priv/locks.app/content/img1')).toBe(
+        '/priv/locks.app/content/img1',
+      );
+    });
+  });
+
+  describe('parsePost', () => {
+    const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+
+    it('parses guarded PubkyAppPost bytes into the reader post shape', () => {
+      const bytes = encode({
+        content: 'secret body',
+        kind: 'short',
+        attachments: ['pubky://b/priv/locks.app/content/a'],
+      });
+      expect(GuardedContentParser.parsePost(bytes)).toEqual({
+        content: 'secret body',
+        kind: 'short',
+        attachments: ['pubky://b/priv/locks.app/content/a'],
+      });
+    });
+
+    it('defaults missing fields (attachments → null)', () => {
+      expect(GuardedContentParser.parsePost(encode({ content: 'x', kind: 'long' }))).toEqual({
+        content: 'x',
+        kind: 'long',
+        attachments: null,
+      });
+    });
+
+    it('returns null for non-JSON bytes', () => {
+      expect(GuardedContentParser.parsePost(new TextEncoder().encode('not json'))).toBeNull();
     });
   });
 });

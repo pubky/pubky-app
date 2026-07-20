@@ -5,26 +5,32 @@ import { useTranslations } from 'next-intl';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
 import { cn } from '@/libs/utils/utils';
-import type { LockedPostCardProps } from './LockedPostCard.types';
+
+interface LockedPostCardProps {
+  /** Creator-typed lock title. Empty → falls back to "Locked post". */
+  title: string;
+  onUnlock?: () => void;
+  /** Force the Unlock control disabled. Defaults to `!onUnlock` (inert without a handler). */
+  disabled?: boolean;
+  className?: string;
+}
 
 /** Masked dots stand in for the password the reader will have to enter. */
 const PASSWORD_MASK = '••••••';
 
 /**
- * Stands in for the locked content inside the composer: once the lock switch is on, the body the
- * creator wrote is stashed away and this card takes its place, so the composer is free for the public
- * announcement teaser. Purely presentational — nothing here is clickable.
- *
- * This is now the shared lock card — the reader (`PostContentBase` lock branch) renders it too.
- * TODO:[Locks] #2003 — the unlock flow will add interactive props (`disabled` / `onUnlock` / price)
- * so the viewer variant can actually unlock, while the composer keeps this inert variant.
+ * The shared lock card.
+ * TODO:[Locks] #2003 — the payment verifier will add a price indicator variant (see below).
  */
-export function LockedPostCard({ title, className }: LockedPostCardProps) {
+export function LockedPostCard({ title, onUnlock, disabled, className }: LockedPostCardProps) {
   const t = useTranslations('post.lock');
+  const isDisabled = disabled ?? !onUnlock;
 
   return (
     <div
-      className={cn('flex items-start justify-between gap-4 rounded-md bg-muted p-6', className)}
+      // Don't redirect to the post detail on card clicks — only Unlock acts.
+      onClick={(event) => event.stopPropagation()}
+      className={cn('flex cursor-default items-start justify-between gap-4 rounded-md bg-muted p-6', className)}
       data-testid="locked-post-card"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-4">
@@ -35,10 +41,19 @@ export function LockedPostCard({ title, className }: LockedPostCardProps) {
           </h4>
         </div>
 
-        {/* TODO:[Locks] — Phase 1 is password-only, so the indicator is hardcoded. The payment
-            variant (price) arrives with the payment verifier. */}
+        {/* TODO:[Locks] #1998 — Phase 1 is password-only, so the indicator is hardcoded. The payment
+            variant (price, from `verifierType`) arrives with the payment verifier. */}
         <div className="flex w-fit items-center gap-1 rounded-full bg-card p-1">
-          <Button type="button" variant={ButtonVariant.BRAND} disabled className="h-10 gap-2 rounded-full px-4">
+          <Button
+            type="button"
+            variant={ButtonVariant.BRAND}
+            disabled={isDisabled}
+            onClick={(event) => {
+              event.stopPropagation();
+              onUnlock?.();
+            }}
+            className="h-10 gap-2 rounded-full px-4"
+          >
             <LockOpen className="size-4 shrink-0" aria-hidden />
             {t('unlock')}
           </Button>

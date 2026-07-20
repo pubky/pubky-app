@@ -25,6 +25,16 @@ export interface UsePostInputLockOptions {
   restoreComposer: (draft: TLockDraft) => void;
   /** Empties the composer so the creator can write the announcement teaser. */
   clearComposer: () => void;
+  /** The announcement (public teaser) composer state, published once the lock is configured. */
+  announcementContent: string;
+  announcementAttachments: File[];
+  announcementTags: string[];
+  /** Clears the announcement's tags after a successful publish (they belonged to the announcement). */
+  clearTags: () => void;
+  /** Called with the new announcement post id after a successful publish. */
+  onPublished?: (postId: string) => void;
+  /** The normal (non-lock) submit path, run when the switch is off. */
+  onNormalSubmit: () => void;
 }
 
 export interface UsePostInputLockReturn {
@@ -44,16 +54,15 @@ export interface UsePostInputLockReturn {
   handleAuthSuccess: () => void;
   isLockDialogOpen: boolean;
   closeLockDialog: () => void;
-  /** The unlock method is configured and the composer's Post button now publishes a locked post. */
-  isLockConfigured: boolean;
   handleLockApplied: (password: string) => void;
-  /** The content to be locked, captured when the switch went on. `null` while the switch is off. */
-  lockDraft: TLockDraft | null;
   /** Title of the locked content, shown on the composer's "Locked post" card. */
   lockTitle: string;
   setLockTitle: (title: string) => void;
-  /** Clears the lock state after a successful publish. The composer is emptied, not restored. */
-  resetLock: () => void;
-  /** The Lock Server rejected the session mid-publish: reopen sign-in, keep the switch on. */
-  handleAuthExpired: () => void;
+  /**
+   * The composer's Post button handler: publishes the locked content (switch on + configured),
+   * publishes nothing (switch on, not yet configured), or runs the normal submit (switch off).
+   */
+  submitOrPublish: () => Promise<void>;
+  /** A lock publish is in flight — disables the Post button and counts as submitting. */
+  isPublishing: boolean;
 }

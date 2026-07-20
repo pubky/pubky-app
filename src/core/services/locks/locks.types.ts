@@ -122,9 +122,16 @@ export enum VerifierType {
   PAYMENT = 'payment',
 }
 
-/** The content a lock guards (the gated resource on the creator's homeserver). */
-interface LockGuardedResource {
+/** Primary for Lock. The entry-point PubkyAppPost; carries its own `path`. */
+interface LockPostResource {
   path: string;
+  hash: string;
+  content_type: string;
+  size: number;
+}
+
+/** Secondary for Lock. An attachment, keyed by its path in `secondary_resources`. */
+interface LockAttachmentResource {
   hash: string;
   content_type: string;
   size: number;
@@ -165,7 +172,10 @@ interface LockServer {
 export interface LockFile {
   version: number;
   creator: string;
-  guarded_resource: LockGuardedResource;
+  /** The entry-point post. Optional per the contract, but at least one resource is always present. */
+  primary_resource?: LockPostResource;
+  /** Attachments, keyed by full canonical private path. */
+  secondary_resources: Record<string, LockAttachmentResource>;
   criteria: LockCriterion[];
   lock_logic: LockLogic;
   access_policy: LockAccessPolicy;
@@ -186,7 +196,69 @@ export const lockPostContentSchema = z.object({
 
 export type LockPostContent = z.infer<typeof lockPostContentSchema>;
 
+/** The guarded primary — a `PubkyAppPost` — read back after unlock. Lenient: unknown fields ignored. */
+export const guardedPostSchema = z.object({
+  content: z.string().catch(''),
+  kind: z.string().catch('short'),
+  attachments: z.array(z.string()).nullable().catch(null),
+});
+
+export type GuardedPost = z.infer<typeof guardedPostSchema>;
+
+/** One guarded attachment read back after unlock — raw bytes + its content type (for a Blob). */
+export interface TUnlockedAttachment {
+  contentType: string;
+  bytes: Uint8Array;
+}
+
+/** The full unlocked content: the parsed post plus its proxy-read attachments (in `attachments` order). */
+export interface TUnlockedContent {
+  post: GuardedPost;
+  attachments: TUnlockedAttachment[];
+}
+
 /** Parameters for fetching a lock file from a post's top-level `lock` URL. */
 export interface TFetchLockFileParams {
   lockUrl: string;
+}
+
+/** One proof for a lock criterion. `payload` is verifier-specific (dev-static: `{ satisfied: true }`). */
+export interface TProof {
+  criterion_id: string;
+  verifier_type: string;
+  payload: Record<string, unknown>;
+}
+
+/** Reader-built proof bundle submitted to unlock (`Viewer.submitProofBundle`). */
+export interface TSubmittedProofBundle {
+  version: number;
+  bundle_id: string;
+  /** Public lock file as `<creator>/pub/locks.app/<lock_id>.json` — no `pubky://` scheme. */
+  pubky_lock_resource: string;
+  proofs: TProof[];
+}
+
+export type TVerificationStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'expired';
+
+/** Verification lifecycle state, tracked server-side by `{ creator, bundle_id }`. */
+export interface TVerificationTask {
+  creator: string;
+  bundle_id: string;
+  status: TVerificationStatus;
+  submitted_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  failure_message: string | null;
+}
+
+/** Bearer credential issued after a completed verification; shown once. */
+export interface TAccessCredential {
+  credential: string;
+  expires_at: string;
+}
+
+export interface TUnlockResult {
+  bundleId: string;
+  credential: string;
+  expiresAt: string;
 }

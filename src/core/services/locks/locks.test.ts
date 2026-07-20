@@ -14,10 +14,18 @@ const mocks = vi.hoisted(() => {
     signout: vi.fn(async () => {}),
     creator: { setLockServicePointer },
   };
+  const fakeViewer = {
+    id: 'viewer',
+    submitProofBundle: vi.fn(async () => ({ status: 'pending' })),
+    lookupVerificationTask: vi.fn(async () => ({ status: 'completed' })),
+    issueAccessCredential: vi.fn(async () => ({ credential: 'cred-abc', expires_at: '2026-01-01' })),
+    proxyReadGuardedResource: vi.fn(async () => new Uint8Array([1, 2, 3])),
+  };
   const fakeLocks = {
     createConnectUrl: vi.fn(async () => 'https://connect.url/'),
     exchangeFrontendSessionCode: vi.fn(async () => fakeSession),
     restoreSession: vi.fn(() => fakeSession),
+    viewer: fakeViewer,
   };
   return {
     addPkarrRelay: vi.fn(),
@@ -28,8 +36,10 @@ const mocks = vi.hoisted(() => {
     setLockServicePointer,
     fakeSession,
     fakeLocks,
+    fakeViewer,
     registerGuardedResource: vi.fn(),
     createContentLock: vi.fn(),
+    readContentLockWithOptions: vi.fn(async () => ({ version: 1, creator: 'pubkybob' })),
   };
 });
 
@@ -90,6 +100,12 @@ vi.mock('@pubky/locks-sdk', () => {
       return { body: true };
     }
   }
+  class VerificationTaskHandleOptions {
+    constructor(
+      public creator: string,
+      public bundle_id: string,
+    ) {}
+  }
   return {
     // The real web-build SDK default-exports its wasm init(); the service awaits it before any call.
     default: async () => ({}),
@@ -99,8 +115,11 @@ vi.mock('@pubky/locks-sdk', () => {
     SetLockServicePointerOptions,
     RegisterGuardedResourceOptions,
     CreateContentLockRequestBuilder,
+    VerificationTaskHandleOptions,
+    BundleId: { generate: () => ({ toString: () => 'bundle-generated' }) },
     Locks: {
       forServerWithOptions: mocks.forServerWithOptions,
+      readContentLockWithOptions: mocks.readContentLockWithOptions,
     },
   };
 });
@@ -112,6 +131,7 @@ describe('LocksService (auth)', () => {
     useLocksAuthStore.setState(locksAuthInitialState);
     // The client is a cached singleton; tests below assert construction, so build fresh per test.
     LocksService['locksClient'] = null;
+    LocksService['viewerClient'] = null;
   });
 
   it('generateConnectUrl builds a client bound to the configured Lock Server and returns the /connect URL with delivery=postmessage', async () => {
@@ -145,6 +165,14 @@ describe('LocksService (auth)', () => {
       LocksService.generateConnectUrl({ returnTo: 'https://staging.pubky.app', state: 'opaque-state' }),
     ).rejects.toThrow('No Lock Server configured');
     expect(mocks.forServerWithOptions).not.toHaveBeenCalled();
+  });
+
+  it('getViewer builds a session-less reader Viewer on the configured Lock Server', async () => {
+    const viewer = await LocksService.getViewer();
+
+    expect(viewer).toBe(mocks.fakeViewer);
+    // Reader Viewer is public (no session) and uses the configured server — every lock shares it for now.
+    expect(mocks.forServerWithOptions).toHaveBeenCalledWith('lockserverpubky', expect.anything());
   });
 
   it('exchangeSessionCode returns the session and freshly exported secret', async () => {
@@ -320,5 +348,57 @@ describe('LocksService.isServerReady', () => {
       }),
     );
     await expect(LocksService.isServerReady(origin)).resolves.toBe(false);
+  });
+});
+
+describe('LocksService (reader unlock)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getLockServer.mockReturnValue('lockserverpubky');
+    LocksService['locksClient'] = null;
+    LocksService['viewerClient'] = null;
+  });
+
+  it('readContentLock strips the pubky:// scheme and reads via the SDK', async () => {
+    const result = await LocksService.readContentLock('pubky://creatorb/pub/locks.app/lock1.json');
+
+    expect(mocks.readContentLockWithOptions).toHaveBeenCalledWith(
+      'creatorb/pub/locks.app/lock1.json',
+      expect.anything(),
+    );
+    expect(result).toEqual({ version: 1, creator: 'pubkybob' });
+  });
+
+  it('generateBundleId returns a fresh reader-generated id', async () => {
+    await expect(LocksService.generateBundleId()).resolves.toBe('bundle-generated');
+  });
+
+  it('submitProofBundle sends the bundle to the viewer (never the password) and returns the task state', async () => {
+    const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
+    const task = await LocksService.submitProofBundle(bundle, 'hunter2');
+
+    // The password is intentionally not forwarded to the SDK (no password verifier yet).
+    expect(mocks.fakeViewer.submitProofBundle).toHaveBeenCalledWith(bundle);
+    expect(task).toEqual({ status: 'pending' });
+  });
+
+  it('lookupVerificationTask polls by the { creator, bundleId } handle', async () => {
+    const task = await LocksService.lookupVerificationTask('creator-b', 'b1');
+
+    expect(mocks.fakeViewer.lookupVerificationTask).toHaveBeenCalledWith(
+      expect.objectContaining({ creator: 'creator-b', bundle_id: 'b1' }),
+    );
+    expect(task).toEqual({ status: 'completed' });
+  });
+
+  it('issueAccessCredential returns the bearer credential and expiry', async () => {
+    const credential = await LocksService.issueAccessCredential('creator-b', 'b1');
+    expect(credential).toEqual({ credential: 'cred-abc', expires_at: '2026-01-01' });
+  });
+
+  it('proxyReadGuardedResource returns the guarded bytes from the viewer', async () => {
+    const bytes = await LocksService.proxyReadGuardedResource('cred-abc', 'content/a.json');
+    expect(mocks.fakeViewer.proxyReadGuardedResource).toHaveBeenCalledWith('cred-abc', 'content/a.json');
+    expect(bytes).toEqual(new Uint8Array([1, 2, 3]));
   });
 });

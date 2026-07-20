@@ -664,6 +664,12 @@
       "newLockedPost": "New Locked Post",
       "description": "{title} dialog"
     },
+    "unlockContent": {
+      "title": "Password to Unlock",
+      "passwordLabel": "Password",
+      "viewContent": "View Content",
+      "error": "Couldn't unlock this content. Please try again."
+    },
     "lockContent": {
       "title": "Lock Content",
       "tabs": {

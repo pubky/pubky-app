@@ -1,6 +1,9 @@
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksApplication } from '@/application/locks/locks';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import type { LockFile } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
@@ -16,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   setLockServiceConfig: vi.fn(),
   createLockContent: vi.fn(),
   fetchLockFile: vi.fn(),
+  unlockContent: vi.fn(),
+  fetchUnlockedContent: vi.fn(),
 }));
 
 vi.mock('@/application/locks/locks', () => ({
@@ -28,6 +33,8 @@ vi.mock('@/application/locks/locks', () => ({
     setLockServiceConfig: mocks.setLockServiceConfig,
     createLockContent: mocks.createLockContent,
     fetchLockFile: mocks.fetchLockFile,
+    unlockContent: mocks.unlockContent,
+    fetchUnlockedContent: mocks.fetchUnlockedContent,
   },
 }));
 
@@ -145,34 +152,59 @@ describe('LocksController (auth)', () => {
   });
 
   describe('restorePersistedLocksSession', () => {
-    it('rebuilds and sets the live session from a persisted secret', async () => {
+    it('rebuilds the session, validates it against the server, and keeps it on success', async () => {
       useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
       mocks.restoreSession.mockReturnValue(fakeSession);
 
       await LocksController.restorePersistedLocksSession();
 
       expect(mocks.restoreSession).toHaveBeenCalledTimes(1);
+      expect(mocks.setLockServiceConfig).toHaveBeenCalledTimes(1); // validity probe
       expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
     });
 
-    it('no-ops when there is no persisted secret', () => {
-      LocksController.restorePersistedLocksSession();
+    it('clears the session when the server rejects the restored secret as expired (401 → Auth)', async () => {
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
+      mocks.restoreSession.mockReturnValue(fakeSession);
+      mocks.setLockServiceConfig.mockRejectedValue(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' }),
+      );
+
+      await LocksController.restorePersistedLocksSession();
+
+      const store = useLocksAuthStore.getState();
+      expect(store.selectIsLocksAuthenticated()).toBe(false);
+      expect(store.selectLocksSessionSecret()).toBeNull();
+    });
+
+    it('keeps the session when the validation write fails for a non-auth reason', async () => {
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
+      mocks.restoreSession.mockReturnValue(fakeSession);
+      mocks.setLockServiceConfig.mockRejectedValue(new Error('network down'));
+
+      await LocksController.restorePersistedLocksSession();
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+    });
+
+    it('no-ops when there is no persisted secret', async () => {
+      await LocksController.restorePersistedLocksSession();
       expect(mocks.restoreSession).not.toHaveBeenCalled();
     });
 
-    it('no-ops when a live session already exists', () => {
+    it('no-ops when a live session already exists', async () => {
       useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
-      LocksController.restorePersistedLocksSession();
+      await LocksController.restorePersistedLocksSession();
       expect(mocks.restoreSession).not.toHaveBeenCalled();
     });
 
-    it('clears the store when restore throws (malformed/stale secret)', () => {
+    it('clears the store when restore throws (malformed/stale secret)', async () => {
       useLocksAuthStore.getState().init({ session: null, secret: 'bad-secret' });
       mocks.restoreSession.mockImplementation(() => {
         throw new Error('invalid secret');
       });
 
-      LocksController.restorePersistedLocksSession();
+      await LocksController.restorePersistedLocksSession();
 
       const store = useLocksAuthStore.getState();
       expect(store.selectIsLocksAuthenticated()).toBe(false);
@@ -202,12 +234,13 @@ const MOCK_LOCK_AUTHOR_PUBKY = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwaz
 const MOCK_LOCK_FILE: LockFile = {
   version: 1,
   creator: 'pubkycreator123',
-  guarded_resource: {
+  primary_resource: {
     path: '/priv/locks.app/content/example.txt',
     hash: '<hash>',
     content_type: 'text/plain',
     size: 13,
   },
+  secondary_resources: {},
   criteria: [{ criterion_id: 'criterion-1', verifier_type: 'password', params: { satisfied: true } }],
   lock_logic: { type: 'all', criteria: ['criterion-1'] },
   access_policy: { requested_credential_ttl_seconds: 900 },
@@ -224,5 +257,30 @@ describe('LocksController.fetchLockFile', () => {
   it('delegates to the application for a valid pubky lock url', async () => {
     await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual(MOCK_LOCK_FILE);
     expect(LocksApplication.fetchLockFile).toHaveBeenCalledWith({ lockUrl: VALID_LOCK_URL });
+  });
+});
+
+describe('LocksController.unlock', () => {
+  it('delegates the reader unlock to the application', async () => {
+    const params = { lockFile: MOCK_LOCK_FILE, lockUrl: VALID_LOCK_URL, password: 'hunter2' };
+    mocks.unlockContent.mockResolvedValue({ bundleId: 'b1', credential: 'cred', expiresAt: '2026-01-01' });
+
+    await expect(LocksController.unlock(params)).resolves.toEqual({
+      bundleId: 'b1',
+      credential: 'cred',
+      expiresAt: '2026-01-01',
+    });
+    expect(mocks.unlockContent).toHaveBeenCalledWith(params);
+  });
+});
+
+describe('LocksController.fetchUnlockedContent', () => {
+  it('delegates reading the guarded content to the application', async () => {
+    const params = { lockFile: MOCK_LOCK_FILE, credential: 'cred-abc' };
+    const content = { post: { content: 'secret', kind: 'short', attachments: null }, attachments: [] };
+    mocks.fetchUnlockedContent.mockResolvedValue(content);
+
+    await expect(LocksController.fetchUnlockedContent(params)).resolves.toEqual(content);
+    expect(mocks.fetchUnlockedContent).toHaveBeenCalledWith(params);
   });
 });

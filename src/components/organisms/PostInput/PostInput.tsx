@@ -9,7 +9,6 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/Post
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
-import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
@@ -27,7 +26,6 @@ import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
 import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
-import { inferPostKindForCreate } from '@/pipes/post/post.kind';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
@@ -168,13 +166,11 @@ export function PostInput({
     handleAuthSuccess,
     isLockDialogOpen,
     closeLockDialog,
-    isLockConfigured,
     handleLockApplied,
-    lockDraft,
     lockTitle,
     setLockTitle,
-    resetLock,
-    handleAuthExpired,
+    submitOrPublish,
+    isPublishing: isPublishingLock,
   } = usePostInputLock({
     isEnabled: isPostVariant,
     // Something to lock: any body text or at least one attachment.
@@ -187,54 +183,14 @@ export function PostInput({
       setArticleTitle(draft.articleTitle);
     },
     clearComposer: clearComposerForLock,
+    // Announcement (public teaser) = the current composer state once the switch is on.
+    announcementContent: content,
+    announcementAttachments: attachments,
+    announcementTags: tags,
+    clearTags: () => setTags([]),
+    onPublished: onSuccess,
+    onNormalSubmit: handleSubmitWithAuth,
   });
-
-  // Once the switch is on the composer holds the announcement; the locked post is the captured draft.
-  // The locked post may be any kind, so infer it exactly as a normal post would (link / image / video / …).
-  const { publish: publishLock, isPublishing: isPublishingLock } = useCreateLockContent({
-    lockedPost: {
-      content: lockDraft?.content ?? '',
-      kind: inferPostKindForCreate({
-        content: lockDraft?.content ?? '',
-        attachments: lockDraft?.attachments,
-        isArticle: lockDraft?.isArticle,
-      }),
-      attachments: lockDraft?.attachments ?? [],
-    },
-    announcement: {
-      teaser: { lock_title: lockTitle, teaser_description: content },
-      attachments,
-      tags,
-    },
-  });
-
-  // Post publishes the locked content once the lock is configured; otherwise it posts normally.
-  const handleSubmitOrPublishLock = async () => {
-    // Gate on the switch, not on `isLockConfigured`: while the switch is on the body is the content
-    // to be locked, so falling through here would publish that content in the clear.
-    if (!isLockEnabled) {
-      handleSubmitWithAuth();
-      return;
-    }
-    if (!isLockConfigured) return; // switch on, unlock method never applied — publish nothing
-
-    const result = await publishLock();
-    if (result.status === 'auth-expired') {
-      // Recoverable: reopen sign-in and keep the configured lock so the creator only re-authenticates.
-      handleAuthExpired();
-      return;
-    }
-    if (result.status === 'failed') {
-      toast({ variant: 'error', description: tToast('lockError') });
-      return;
-    }
-    resetLock();
-    // Empty the composer like a normal post does; tags are cleared here because the announcement
-    // that owned them is now published.
-    clearComposerForLock();
-    setTags([]);
-    onSuccess?.(result.postId);
-  };
 
   const isValid = () => {
     // `isPublishingLock` counts as submitting: the action-bar button only disables through this check,
@@ -242,7 +198,7 @@ export function PostInput({
     return canSubmitPost(variant, content, attachments, isSubmitting || isPublishingLock, isArticle, articleTitle);
   };
 
-  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitOrPublishLock, {
+  const enterSubmitHandler = useEnterSubmit(isValid, submitOrPublish, {
     requireModifier: true,
   });
 
@@ -432,7 +388,7 @@ export function PostInput({
             isArticle={isArticle}
             isDisabled={!isAuthenticated}
             setTags={setTagsWithAuth}
-            onSubmit={handleSubmitOrPublishLock}
+            onSubmit={submitOrPublish}
             showEmojiPicker={showEmojiPicker}
             setShowEmojiPicker={setShowEmojiPicker}
             onEmojiSelect={handleEmojiSelectWithAuth}

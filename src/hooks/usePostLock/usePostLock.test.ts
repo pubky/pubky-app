@@ -12,7 +12,8 @@ const LOCK_URL = 'pubky://hs/lock.json';
 const buildLockFile = (verifierType: VerifierType): LockFile => ({
   version: 1,
   creator: 'creator',
-  guarded_resource: { path: '/x', hash: 'h', content_type: 'text/plain', size: 1 },
+  primary_resource: { path: '/x', hash: 'h', content_type: 'text/plain', size: 1 },
+  secondary_resources: {},
   criteria: [{ criterion_id: 'c1', verifier_type: verifierType, params: {} }],
   lock_logic: { type: 'all', criteria: ['c1'] },
   access_policy: { requested_credential_ttl_seconds: 900 },

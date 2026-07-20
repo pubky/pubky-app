@@ -1,4 +1,5 @@
 import {
+  BundleId,
   ConnectUrlOptions,
   CreateContentLockRequestBuilder,
   ExchangeFrontendSessionCodeOptions,
@@ -6,6 +7,8 @@ import {
   RegisterGuardedResourceOptions,
   type Session as LocksSdkSession,
   SetLockServicePointerOptions,
+  VerificationTaskHandleOptions,
+  type Viewer,
 } from '@pubky/locks-sdk';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -13,6 +16,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import type {
+  TAccessCredential,
   TCreateContentLockParams,
   TCreateContentLockResult,
   TExchangeSessionCodeParams,
@@ -21,8 +25,17 @@ import type {
   TLocksSessionResult,
   TRegisterGuardedResourceParams,
   TRegisterGuardedResourceResult,
+  TSubmittedProofBundle,
+  TVerificationTask,
 } from './locks.types';
-import { ensureLocksSdkReady, getLockServerPubky, getLockSession, initLockClient, toLocksError } from './locks.utils';
+import {
+  buildLocksOptions,
+  ensureLocksSdkReady,
+  getLockServerPubky,
+  getLockSession,
+  initLockClient,
+  toLocksError,
+} from './locks.utils';
 
 /** Opt-in flag telling the Lock Server `/connect` shell to deliver the code via postMessage
  * instead of redirecting back to `returnTo`. */
@@ -48,6 +61,9 @@ export class LocksService {
   /** Cached SDK client (singleton, like `HomeserverService.getPubkySdk`); runtime config never changes. */
   private static locksClient: Locks | null = null;
 
+  /** Cached reader Viewer (public, session-less). Bound to the configured server, so it never varies. */
+  private static viewerClient: Viewer | null = null;
+
   /**
    * Awaits the one-time wasm init and returns the Locks client bound to the runtime-configured
    * Lock Server (built once from the app's network config, then reused).
@@ -71,6 +87,90 @@ export class LocksService {
       return response.ok;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Reader `Viewer` — public read surface, no session (unlike the creator client's bearer).
+   * TODO:[Locks] uses the configured server; resolve each lock's own (`lock.json` override) when
+   * multiple lock servers exist — same follow-up as `initLockClient`.
+   */
+  static async getViewer(): Promise<Viewer> {
+    await ensureLocksSdkReady();
+    if (!this.viewerClient) {
+      try {
+        this.viewerClient = initLockClient().viewer;
+      } catch (error) {
+        throw toAppError(error, ErrorService.Locks, 'LocksService.getViewer');
+      }
+    }
+    return this.viewerClient;
+  }
+
+  /**
+   * Reads + validates a public lock file via the SDK (pkarr resolve + GET inside `readContentLock`).
+   * TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
+   */
+  static async readContentLock(lockUrl: string): Promise<unknown> {
+    await ensureLocksSdkReady();
+    try {
+      // `readContentLock` rejects the `pubky://` scheme — pass the bare `<pubky>/pub/...` resource.
+      const resource = lockUrl.replace(/^pubky:\/\//, '');
+      return await Locks.readContentLockWithOptions(resource, buildLocksOptions());
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, 'LocksService.readContentLock');
+    }
+  }
+
+  /** A fresh reader-generated bundle id — the public handle for the unlock's verification task. */
+  static async generateBundleId(): Promise<string> {
+    await ensureLocksSdkReady();
+    return BundleId.generate().toString();
+  }
+
+  // Reader calls are public (no session) → `toAppError`, not `toLocksError` (a 401 isn't an expired session).
+  // TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
+  // TODO:[Locks] #2040 — `password` reaches here but isn't forwarded to lock-sdk (no password verifier yet).
+  static async submitProofBundle(bundle: TSubmittedProofBundle, _password: string): Promise<TVerificationTask> {
+    try {
+      const viewer = await this.getViewer();
+      return (await viewer.submitProofBundle(bundle)) as TVerificationTask;
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, 'LocksService.submitProofBundle');
+    }
+  }
+
+  // TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
+  static async lookupVerificationTask(creator: string, bundleId: string): Promise<TVerificationTask> {
+    try {
+      const viewer = await this.getViewer();
+      return (await viewer.lookupVerificationTask(
+        new VerificationTaskHandleOptions(creator, bundleId),
+      )) as TVerificationTask;
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, 'LocksService.lookupVerificationTask');
+    }
+  }
+
+  // TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
+  static async issueAccessCredential(creator: string, bundleId: string): Promise<TAccessCredential> {
+    try {
+      const viewer = await this.getViewer();
+      return (await viewer.issueAccessCredential(
+        new VerificationTaskHandleOptions(creator, bundleId),
+      )) as TAccessCredential;
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, 'LocksService.issueAccessCredential');
+    }
+  }
+
+  /** Reads one guarded resource's raw bytes through the Lock Server, authorized by the credential. */
+  static async proxyReadGuardedResource(credential: string, path: string): Promise<Uint8Array> {
+    try {
+      const viewer = await this.getViewer();
+      return await viewer.proxyReadGuardedResource(credential, path);
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, 'LocksService.proxyReadGuardedResource');
     }
   }
 
@@ -159,7 +259,7 @@ export class LocksService {
     const session = getLockSession();
     try {
       await ensureLocksSdkReady();
-      // TODO:[Locks] #2040 — same untyped-SDK cast as `createContentLock` below.
+      // TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
       const response = (await session.creator.registerGuardedResource(
         new RegisterGuardedResourceOptions(path, contentType, bytes),
       )) as { creator: string; guarded_resource: TGuardedResource };
@@ -208,8 +308,7 @@ export class LocksService {
         .lockServer({ override: session.lockServer() })
         .build();
 
-      // TODO:[Locks] #2040 — the SDK declares `Promise<any>` (wasm-bindgen cannot type JSON), so the
-      // response shape is asserted here. Delete the cast when the SDK exports typed responses.
+      // TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
       const response = (await session.creator.createContentLock(body)) as {
         lock_id: string;
         content_lock_path: string;
