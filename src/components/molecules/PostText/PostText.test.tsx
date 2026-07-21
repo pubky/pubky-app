@@ -388,11 +388,14 @@ describe('PostText', () => {
       expect(img).not.toBeInTheDocument();
     });
 
-    it('unwraps tables but keeps content', () => {
-      render(<PostText content={'| Header |\n| ------ |\n| Cell |'} />);
+    it('renders unsupported tables as literal markdown text', () => {
+      render(<PostText content={'| Item | Category | Price |\n| :--- | :----: | ---: |\n| Apple | Fruit | $1.00 |'} />);
 
-      // Table should be unwrapped but content preserved
+      const container = screen.getByTestId('container');
       expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(container).toHaveTextContent('| Item | Category | Price |');
+      expect(container).toHaveTextContent('| :--- | :---: | ---: |');
+      expect(container).toHaveTextContent('| Apple | Fruit | $1.00 |');
     });
   });
 
@@ -453,29 +456,70 @@ describe('PostText', () => {
       expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Subsection');
     });
 
-    it('does not show "Show more" button in article mode even with long content', () => {
+    it('does not show "Show more" button in article mode when content exceeds the character limit', () => {
       const longContent = generateContent(600);
       render(<PostText content={longContent} isArticle />);
 
       expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
     });
 
-    it('truncates content in article mode but without Show more button', () => {
+    it('truncates content in article mode without Show more', () => {
       const longContent = generateContent(600);
       const { container } = render(<PostText content={longContent} isArticle />);
 
-      // Content can still be truncated (ellipsis present), but no "Show more" button
-      // The remarkExtractFirstParagraph plugin handles truncation for articles at the AST level
       expect(container.textContent).toContain('...');
       expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
     });
 
-    it('shows only first paragraph of article in feed', () => {
+    it('truncates article previews at 300 characters across paragraphs', () => {
+      const firstParagraph = 'a'.repeat(160);
+      const secondParagraph = 'b'.repeat(160);
+      render(<PostText content={`${firstParagraph}\n\n${secondParagraph}\n\nhidden`} isArticle />);
+
+      expect(screen.getByText(firstParagraph)).toBeInTheDocument();
+      expect(screen.queryByText('hidden')).not.toBeInTheDocument();
+      expect(screen.getByText(/\.\.\./)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+    });
+
+    it('shows heading and first paragraph of article in feed', () => {
       render(<PostText content={`# Title\n\nFirst paragraph text.\n\nSecond paragraph text.`} isArticle />);
 
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Title');
       expect(screen.getByText('First paragraph text.')).toBeInTheDocument();
-      expect(screen.queryByText('Second paragraph text.')).not.toBeInTheDocument();
-      expect(screen.queryByText('Title')).not.toBeInTheDocument();
+      expect(screen.getByText('Second paragraph text.')).toBeInTheDocument();
+    });
+
+    it('keeps article code blocks between paragraphs in feed previews', () => {
+      render(<PostText content={`Para 1\n\n\`\`\`js\nconst value = 1;\n\`\`\`\n\nPara 2`} isArticle />);
+
+      expect(screen.getByText('Para 1')).toBeInTheDocument();
+      expect(screen.getByTestId('post-code-block')).toHaveTextContent('const value = 1;');
+      expect(screen.getByText('Para 2')).toBeInTheDocument();
+    });
+
+    it('keeps article blockquotes between paragraphs in feed previews', () => {
+      render(<PostText content={`Para 1\n\n> Quoted text\n\nPara 2`} isArticle />);
+
+      expect(screen.getByText('Para 1')).toBeInTheDocument();
+      expect(screen.getByText('Quoted text')).toBeInTheDocument();
+      expect(screen.getByText('Para 2')).toBeInTheDocument();
+    });
+
+    it('does not show Show more when article blank separators exceed source lines but rendered blocks fit', () => {
+      render(<PostText content={`# Title\n\nPara A\n\nPara B\n\nPara C`} isArticle />);
+
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Title');
+      expect(screen.getByText('Para C')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+    });
+
+    it('does not show Show more when article markdown syntax pushes raw text over the character limit', () => {
+      const content = `[${'a'.repeat(250)}](https://${'b'.repeat(120)}.com)`;
+      render(<PostText content={content} isArticle />);
+
+      expect(screen.getByText('a'.repeat(250))).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
     });
 
     it('shows full article content on post page', () => {
@@ -494,6 +538,64 @@ describe('PostText', () => {
 
       // On post page, the plugin is a no-op, so full content renders
       expect(screen.queryByText(/\.\.\./)).not.toBeInTheDocument();
+    });
+
+    it('truncates article paragraphs over the source-line limit in feed without Show more', () => {
+      const content = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7'].join('\n');
+      const { container } = render(<PostText content={content} isArticle />);
+
+      expect(container.textContent).toContain('Line 6...');
+      expect(container.textContent).not.toContain('Line 7');
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+    });
+
+    it('truncates list-only article previews to six top-level list items', () => {
+      const content = ['- Item 1', '- Item 2', '- Item 3', '- Item 4', '- Item 5', '- Item 6', '- Item 7'].join('\n');
+      render(<PostText content={content} isArticle />);
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(6);
+      expect(items[5]).toHaveTextContent('Item 6...');
+      expect(screen.queryByText('Item 7')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+    });
+
+    it('truncates heading and list article previews without Show more', () => {
+      const content = [
+        '# Changelog 1.6.0',
+        '- Feature 1',
+        '- Feature 2',
+        '- Feature 3',
+        '- Feature 4',
+        '- Feature 5',
+        '- Feature 6',
+      ].join('\n');
+      render(<PostText content={content} isArticle />);
+
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Changelog 1.6.0');
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(5);
+      expect(items[4]).toHaveTextContent('Feature 5...');
+      expect(screen.queryByText('Feature 6')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+    });
+
+    it('truncates article previews that only contain a long code block', () => {
+      const content = ['```js', 'Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7', '```'].join('\n');
+      const { container } = render(<PostText content={content} isArticle />);
+
+      expect(container.textContent).toContain('Line 6...');
+      expect(container.textContent).not.toContain('Line 7');
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+    });
+
+    it('does not truncate list-only article content on post page', () => {
+      mockUsePathname.mockReturnValue('/post/some-post-id');
+      const content = ['- Item 1', '- Item 2', '- Item 3', '- Item 4', '- Item 5', '- Item 6', '- Item 7'].join('\n');
+      render(<PostText content={content} isArticle />);
+
+      expect(screen.getAllByRole('listitem')).toHaveLength(7);
+      expect(screen.getByText('Item 7')).toBeInTheDocument();
     });
 
     it('allows markdown links when isArticle is true', () => {
@@ -754,12 +856,58 @@ describe('PostText', () => {
       expect(screen.queryByText(originalEndText)).not.toBeInTheDocument();
     });
 
+    it('truncates content under TRUNCATION_LIMIT characters when over the source-line limit', () => {
+      const content = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7'].join('\n');
+      const { container } = render(<PostText content={content} />);
+
+      expect(screen.getByRole('button', { name: 'Show full post content' })).toBeInTheDocument();
+      expect(container.textContent).toContain('Line 6...');
+      expect(container.textContent).not.toContain('Line 7');
+    });
+
+    it('does not truncate when normal post only exceeds the line limit through trailing blank lines', () => {
+      const content = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', '', ''].join('\n');
+      render(<PostText content={content} />);
+
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(screen.queryByText(/\.\.\./)).not.toBeInTheDocument();
+    });
+
+    it('does not show Show more when fenced code delimiters push raw lines over the line limit', () => {
+      const content = ['This text', '', '```ad', '', '', 'da', '```'].join('\n');
+      render(<PostText content={content} />);
+
+      expect(screen.getByText('This text')).toBeInTheDocument();
+      expect(screen.getByTestId('post-code-block')).toHaveTextContent('da');
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(screen.queryByText(/\.\.\./)).not.toBeInTheDocument();
+    });
+
+    it('does not show Show more when blank markdown separators push raw lines over the line limit', () => {
+      const content = ['ad', '', '', '', '', '', 'da'].join('\n');
+      render(<PostText content={content} />);
+
+      expect(screen.getByText('ad')).toBeInTheDocument();
+      expect(screen.getByText('da')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(screen.queryByText(/\.\.\./)).not.toBeInTheDocument();
+    });
+
     it('does not truncate on post detail page', () => {
       mockUsePathname.mockReturnValue('/post/some-post-id');
       const longContent = generateContent(600);
       render(<PostText content={longContent} />);
 
       expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+    });
+
+    it('does not truncate line-heavy content on post detail page', () => {
+      mockUsePathname.mockReturnValue('/post/some-post-id');
+      const content = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7'].join('\n');
+      render(<PostText content={content} />);
+
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(screen.getByText(/Line 7/)).toBeInTheDocument();
     });
 
     it('does not truncate on nested post routes', () => {
@@ -922,6 +1070,7 @@ plain code block
   });
 
   it('matches snapshot for combined markdown elements', () => {
+    mockUsePathname.mockReturnValue('/post/some-post-id');
     const { container } = render(
       <PostText
         content={`# Welcome
@@ -1120,7 +1269,7 @@ Third line`}
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot for article with multiple headings (first paragraph extracted in feed)', () => {
+  it('matches snapshot for article preview with multiple headings', () => {
     const { container } = render(
       <PostText
         content={`# Article Title
@@ -1142,14 +1291,14 @@ Even more specific information.`}
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot for article with long content (first paragraph extracted and truncated in feed)', () => {
+  it('matches snapshot for article preview with long content', () => {
     const longContent =
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Extra text to make this longer than 500 characters for truncation testing purposes.';
     const { container } = render(<PostText content={longContent} isArticle />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot for article showing only first paragraph in feed', () => {
+  it('matches snapshot for article preview with headings and paragraphs', () => {
     const { container } = render(
       <PostText
         content={`# Article Title\n\nThis is the introduction paragraph.\n\n## Section\n\nMore content here.`}

@@ -2,15 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Create stable mock references via vi.hoisted so they're shared
 // between the vi.mock factories and the test assertions
-const { mockResolve4, mockIsIP, mockIsIpSafe } = vi.hoisted(() => ({
+const { mockResolve4, mockResolve6, mockIsIP, mockIsIpSafe } = vi.hoisted(() => ({
   mockResolve4: vi.fn<(hostname: string) => Promise<string[]>>(),
+  mockResolve6: vi.fn<(hostname: string) => Promise<string[]>>(),
   mockIsIP: vi.fn<(input: string) => number>(),
   mockIsIpSafe: vi.fn<(ip: string) => boolean>(),
 }));
 
 vi.mock('dns/promises', () => ({
-  default: { resolve4: mockResolve4 },
+  default: { resolve4: mockResolve4, resolve6: mockResolve6 },
   resolve4: mockResolve4,
+  resolve6: mockResolve6,
 }));
 
 vi.mock('net', () => ({
@@ -79,8 +81,13 @@ describe('OgMetadataApplication (integration)', () => {
     vi.clearAllMocks();
 
     // Default mocks: hostname resolves to safe public IP
-    mockIsIP.mockReturnValue(0);
+    mockIsIP.mockImplementation((input) => {
+      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(input)) return 4;
+      if (input.includes(':')) return 6;
+      return 0;
+    });
     mockResolve4.mockResolvedValue(['1.1.1.1']);
+    mockResolve6.mockResolvedValue([]);
     mockIsIpSafe.mockReturnValue(true);
 
     // Mock global fetch (used by safeFetch in the service utils layer)
@@ -124,6 +131,8 @@ describe('OgMetadataApplication (integration)', () => {
       expect(redirectResponse._cancel).toHaveBeenCalled();
       expect(mockResolve4).toHaveBeenCalledWith('example.com');
       expect(mockResolve4).toHaveBeenCalledWith('example.org');
+      expect(mockResolve6).toHaveBeenCalledWith('example.com');
+      expect(mockResolve6).toHaveBeenCalledWith('example.org');
       expect(result).toMatchObject({
         title: 'Redirected Page',
       });
@@ -134,7 +143,6 @@ describe('OgMetadataApplication (integration)', () => {
       mockFetch.mockResolvedValueOnce(redirectResponse);
 
       mockResolve4.mockResolvedValueOnce(['1.1.1.1']);
-      mockIsIP.mockReturnValueOnce(0).mockReturnValueOnce(4);
       mockIsIpSafe.mockReturnValueOnce(true).mockReturnValueOnce(false);
 
       await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow('Blocked IP range');

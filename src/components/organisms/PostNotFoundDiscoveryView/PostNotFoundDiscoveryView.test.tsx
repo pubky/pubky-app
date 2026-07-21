@@ -8,12 +8,6 @@ vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
 }));
 
-vi.mock('@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout', () => ({
-  HotDiscoveryContentLayout: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="hot-discovery-content-layout">{children}</div>
-  ),
-}));
-
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
   TimelineFeed: () => <div data-testid="timeline-feed" />,
 }));
@@ -49,10 +43,10 @@ describe('PostNotFoundDiscoveryView', () => {
     vi.clearAllMocks();
   });
 
-  it('renders HotDiscoveryContentLayout and trending section', () => {
+  it('renders trending section without its own layout shell', () => {
     render(<PostNotFoundDiscoveryView postId={VALID_COMPOSITE} />);
 
-    expect(screen.getByTestId('hot-discovery-content-layout')).toBeInTheDocument();
+    expect(screen.queryByTestId('hot-discovery-content-layout')).not.toBeInTheDocument();
     expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
     expect(screen.getByTestId('trending-heading')).toHaveTextContent('hot.trendingPosts');
   });

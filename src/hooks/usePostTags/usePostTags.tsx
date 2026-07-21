@@ -235,8 +235,8 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       }
     } catch {
       toast({
-        title: tTags('loadFailed'),
-        description: tTags('loadFailedDesc'),
+        variant: 'error',
+        description: tTags('loadFailed'),
       });
     } finally {
       setIsLoadingMore(false);
@@ -276,11 +276,14 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         const counter = addCounterRef.current;
         setRecentlyAddedLabels((prev) => new Map(prev).set(labelLower, counter));
 
+        toast({
+          title: tTags('added', { label }),
+        });
         return { success: true };
       } catch {
         toast({
-          title: tTags('addFailed'),
-          description: tTags('addFailedDesc', { label }),
+          variant: 'error',
+          description: tTags('addFailed', { label }),
         });
         return { success: false, error: 'Failed to add tag' };
       }
@@ -325,6 +328,9 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
             taggedKind: TagKind.POST,
           });
 
+          toast({
+            title: tTags('removed', { label: tag.label }),
+          });
           // Removing the tag clears its "recently added" pinning so the natural
           // ordering takes over again if it ever resurfaces.
           setRecentlyAddedLabels((prev) => {
@@ -346,6 +352,10 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
             next.delete(labelLower);
             return next;
           });
+
+          toast({
+            title: tTags('added', { label: tag.label }),
+          });
         }
       } catch {
         // Rollback zero-tagger state on error
@@ -357,10 +367,10 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           });
         }
         toast({
-          title: userIsTagger ? tTags('removeFailed') : tTags('addFailed'),
+          variant: 'error',
           description: userIsTagger
-            ? tTags('removeFailedDesc', { label: tag.label })
-            : tTags('addFailedDesc', { label: tag.label }),
+            ? tTags('removeFailed', { label: tag.label })
+            : tTags('addFailed', { label: tag.label }),
         });
       }
     },

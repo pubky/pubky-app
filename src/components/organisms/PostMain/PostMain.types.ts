@@ -1,4 +1,4 @@
-export type TagsLayout = 'inline' | 'side';
+export type TagsLayout = 'inline' | 'side' | 'list';
 
 export interface PostMainProps {
   postId: string;
@@ -7,4 +7,5 @@ export interface PostMainProps {
   isLastReply?: boolean;
   pinActionsToBottom?: boolean;
   isNavigable?: boolean;
+  showFullContentInListLayout?: boolean;
 }

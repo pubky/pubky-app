@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Megaphone } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { getUserProfileUrl } from '@/app/routes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -15,6 +16,7 @@ import { isAppError } from '@/libs/error/error.utils';
 import { extractInitials, truncateMiddle } from '@/libs/utils/utils';
 import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
 import { toast } from '@/molecules/Toaster/use-toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
 
@@ -22,6 +24,7 @@ export function MutedUsersList() {
   const t = useTranslations('mutedUsers');
   const tCommon = useTranslations('common');
   const tToast = useTranslations('toast.mute');
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { mutedUserIds, isLoading: isMutedLoading } = useMutedUsers();
   const { usersMap, isLoading: isUsersLoading } = useBulkUserAvatars(mutedUserIds);
   const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = useMuteUser();
@@ -32,14 +35,13 @@ export function MutedUsersList() {
     try {
       await toggleMute(userId, true);
       toast({
-        title: t('userUnmuted'),
-        description: t('userUnmutedDesc', {
+        title: t('userUnmuted', {
           username: userName || userId,
         }),
       });
     } catch (error) {
       toast({
-        title: tCommon('error'),
+        variant: 'error',
         description: isAppError(error) ? error.message : tToast('failed'),
       });
     }
@@ -56,6 +58,7 @@ export function MutedUsersList() {
       const failedCount = results.filter((r) => r.status === 'rejected').length;
       if (failedCount > 0) {
         toast({
+          variant: 'warning',
           title: t('partialSuccess'),
           description: t('partialSuccessDesc', {
             success: idsToUnmute.length - failedCount,
@@ -65,12 +68,11 @@ export function MutedUsersList() {
       } else {
         toast({
           title: t('allUsersUnmuted'),
-          description: t('allUsersUnmutedDesc'),
         });
       }
     } catch (error) {
       toast({
-        title: tCommon('error'),
+        variant: 'error',
         description: isAppError(error) ? error.message : tToast('failed'),
       });
     } finally {
@@ -86,7 +88,7 @@ export function MutedUsersList() {
           {mutedUsers.map((mutedUser) => (
             <Container overrideDefaults key={mutedUser?.id} className="flex w-full items-center justify-between gap-3">
               <Link
-                href={`/profile/${mutedUser.id}`}
+                href={getUserProfileUrl(mutedUser.id, currentUserPubky)}
                 overrideDefaults
                 className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80"
               >

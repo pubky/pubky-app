@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import type { Pubky } from '@/models/models.types';
@@ -43,9 +44,9 @@ vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/showErrorToast', () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    showErrorToast: vi.fn(),
+    toast: vi.fn(),
   };
 });
 
@@ -59,6 +60,11 @@ vi.mock('@/controllers/stream/posts/posts', () => ({
     mergeUnreadStreamWithPostStream: vi.fn(),
     clearUnreadStream: vi.fn(),
     filterDeletedPosts: vi.fn((ids: string[]) => Promise.resolve(ids)),
+  },
+}));
+vi.mock('@/controllers/post/post', () => ({
+  PostController: {
+    getDetailsByIds: vi.fn(),
   },
 }));
 
@@ -76,6 +82,7 @@ describe('NewPostsSection', () => {
     vi.clearAllMocks();
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
     vi.mocked(MuteFilter.filterPostsSafe).mockImplementation((ids: string[]) => ids);
+    vi.mocked(PostController.getDetailsByIds).mockResolvedValue([{ kind: 'short' } as never]);
     window.scrollTo = vi.fn();
   });
 
@@ -143,6 +150,41 @@ describe('NewPostsSection', () => {
       });
       expect(prependPosts).toHaveBeenCalledWith(['new1']);
     });
+  });
+
+  it('prepends posts whose local details are not yet available', async () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1'], unreadCount: 1 });
+    vi.mocked(PostController.getDetailsByIds).mockResolvedValue([undefined as never]);
+    const prependPosts = vi.fn();
+
+    render(<NewPostsSection {...defaultProps} prependPosts={prependPosts} />);
+
+    fireEvent.click(screen.getByTestId('new-posts-button'));
+
+    await waitFor(() => {
+      expect(prependPosts).toHaveBeenCalledWith(['new1']);
+    });
+  });
+
+  it('does not prepend posts whose kind does not match the stream content filter', async () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1'], unreadCount: 1 });
+    vi.mocked(PostController.getDetailsByIds).mockResolvedValue([{ kind: 'short' } as never]);
+    const prependPosts = vi.fn();
+
+    render(
+      <NewPostsSection
+        {...defaultProps}
+        streamId={'timeline:all:collection' as PostStreamId}
+        prependPosts={prependPosts}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('new-posts-button'));
+
+    await waitFor(() => {
+      expect(PostController.getDetailsByIds).toHaveBeenCalledWith({ compositeIds: ['new1'] });
+    });
+    expect(prependPosts).not.toHaveBeenCalled();
   });
 
   it('scrolls to top after loading new posts', async () => {

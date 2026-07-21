@@ -1,6 +1,6 @@
 import { createRef } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
@@ -320,11 +321,26 @@ vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
 
 vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
   return {
-    PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
-      <div data-testid="post-preview-card" data-post-id={postId} className={className}>
-        Original Post: {postId}
-      </div>
-    )),
+    PostPreviewCard: vi.fn(
+      ({
+        postId,
+        className,
+        interactiveActions,
+      }: {
+        postId: string;
+        className?: string;
+        interactiveActions?: boolean;
+      }) => (
+        <div
+          data-testid="post-preview-card"
+          data-post-id={postId}
+          data-interactive-actions={String(interactiveActions ?? true)}
+          className={className}
+        >
+          Original Post: {postId}
+        </div>
+      ),
+    ),
   };
 });
 
@@ -561,6 +577,8 @@ describe('PostInput', () => {
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Optional comment')).toBeInTheDocument();
+    expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-interactive-actions', 'false');
+    expect(screen.getByTestId('post-preview-card')).toHaveClass('bg-card');
   });
 
   it('renders with reply variant', () => {
@@ -569,6 +587,17 @@ describe('PostInput', () => {
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Write a reply...')).toBeInTheDocument();
+  });
+
+  it('constrains nested content so long reply usernames can truncate', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" />);
+
+    const containers = screen.getAllByTestId('container');
+    const outerContainer = containers[0];
+    const contentContainer = containers.find((container) => container.className.includes('contain-inline-size'));
+
+    expect(outerContainer).toHaveClass('min-w-0', 'max-w-full');
+    expect(contentContainer).toHaveClass('min-w-0');
   });
 
   it('shows thread connector when showThreadConnector is true', () => {
@@ -728,8 +757,8 @@ describe('PostInput', () => {
     expect(mockToast).toHaveBeenCalledTimes(1);
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: expect.any(String),
-        description: expect.any(String),
+        variant: 'error',
+        description: 'Could not parse article content',
       }),
     );
   });
@@ -909,6 +938,19 @@ describe('PostInput', () => {
       expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'text-xl leading-7');
     });
 
+    it('applies wide PostInput styling when inheriting list layout', () => {
+      render(
+        <PostMainLayoutProvider tagsLayout="list">
+          <PostInput variant={POST_INPUT_VARIANT.POST} />
+        </PostMainLayoutProvider>,
+      );
+
+      const outerContainer = screen.getAllByTestId('container')[0];
+      expect(outerContainer.className).toContain('p-12');
+      expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'large');
+      expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'text-xl leading-7');
+    });
+
     it('falls back to inline layout on mobile even when the inherited layout is side', () => {
       mockUseIsMobile.mockReturnValue(true);
 
@@ -989,6 +1031,7 @@ describe('PostInput - autoFocusTextarea', () => {
 describe('PostInput - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useIsMobile).mockReturnValue(false);
     mockIsAuthenticated = true;
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePostReturn.content = '';
@@ -1001,7 +1044,11 @@ describe('PostInput - Snapshots', () => {
   });
 
   it('matches snapshot for post variant without content or attachments', () => {
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostInput variant={POST_INPUT_VARIANT.POST} />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -1090,6 +1137,36 @@ describe('PostInput - Snapshots', () => {
         editContent='{"title":"Existing Article Title","body":"Existing article body"}'
         editIsArticle={true}
       />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostInput - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsAuthenticated = true;
+    mockRequireAuth.mockImplementation((action: () => unknown) => action());
+    mockUsePostReturn.content = '';
+    mockUsePostReturn.tags = [];
+    mockUsePostReturn.attachments = [];
+    mockUsePostReturn.isDragging = false;
+    mockUsePostReturn.isSubmitting = false;
+    mockUsePostReturn.isArticle = false;
+    mockUsePostReturn.articleTitle = '';
+    vi.mocked(useIsMobile).mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostInput variant={POST_INPUT_VARIANT.POST} />
+      </PostMainLayoutProvider>,
     );
     expect(container.firstChild).toMatchSnapshot();
   });

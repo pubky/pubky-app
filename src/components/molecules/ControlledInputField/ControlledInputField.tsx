@@ -19,37 +19,56 @@ export function ControlledInputField<T extends FieldValues>({
   icon,
   iconPosition,
   disabled = false,
+  loading = false,
+  loadingText,
+  onPaste,
+  className,
+  inputClassName,
+  dataCy,
 }: ControlledInputFieldProps<T>) {
+  const field = (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field: controllerField, fieldState }) => (
+        <InputField
+          id={name}
+          name={controllerField.name}
+          value={controllerField.value}
+          onChange={controllerField.onChange}
+          onBlur={controllerField.onBlur}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          variant={variant}
+          size={size}
+          icon={icon}
+          iconPosition={iconPosition}
+          disabled={disabled}
+          loading={loading}
+          loadingText={loadingText}
+          onPaste={onPaste}
+          className={className ?? 'mb-0'}
+          inputClassName={inputClassName}
+          dataCy={dataCy}
+          status={fieldState.error ? 'error' : 'default'}
+          message={fieldState.error?.message}
+          messageType={fieldState.error ? 'error' : 'default'}
+        />
+      )}
+    />
+  );
+
+  if (!label) {
+    return field;
+  }
+
   return (
     <Container className="gap-2">
       <Label htmlFor={name} className={FORM_LABEL_CLASSES}>
         {label}
         {labelHint}
       </Label>
-      <Controller
-        name={name}
-        control={control}
-        render={({ field, fieldState }) => (
-          <InputField
-            id={name}
-            name={field.name}
-            value={field.value}
-            onChange={field.onChange}
-            onBlur={field.onBlur}
-            maxLength={maxLength}
-            placeholder={placeholder}
-            variant={variant}
-            size={size}
-            icon={icon}
-            iconPosition={iconPosition}
-            disabled={disabled}
-            className="mb-0"
-            status={fieldState.error ? 'error' : 'default'}
-            message={fieldState.error?.message}
-            messageType={fieldState.error ? 'error' : 'default'}
-          />
-        )}
-      />
+      {field}
     </Container>
   );
 }

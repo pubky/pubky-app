@@ -27,6 +27,19 @@ describe('InputField', () => {
 
     expect(handleClick).toHaveBeenCalled();
   });
+
+  it('handles paste events', () => {
+    const handlePaste = vi.fn();
+    render(<InputField value="test" onPaste={handlePaste} />);
+
+    fireEvent.paste(screen.getByTestId('input'), {
+      clipboardData: {
+        getData: () => 'pasted value',
+      },
+    });
+
+    expect(handlePaste).toHaveBeenCalled();
+  });
 });
 
 describe('InputField - Snapshots', () => {

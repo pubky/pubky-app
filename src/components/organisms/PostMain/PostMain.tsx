@@ -5,8 +5,8 @@ import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
@@ -14,6 +14,7 @@ import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/use
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
+import { PostMissing } from '@/molecules/PostMissing/PostMissing';
 import { RepostHeader } from '@/molecules/RepostHeader/RepostHeader';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContent } from '../PostContent/PostContent';
@@ -22,7 +23,7 @@ import { PostInlineTagsActions } from '../PostInlineTagsActions/PostInlineTagsAc
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 import type { PostMainProps } from './PostMain.types';
-import { usePostMainLayout } from './PostMainLayoutContext';
+import { PostMainListRow } from './PostMainListRow/PostMainListRow';
 import { WIDE_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 
 // Stops click and middle-click from bubbling to the outer post-card navigation
@@ -36,13 +37,17 @@ export function PostMain({
   isLastReply = false,
   pinActionsToBottom = false,
   isNavigable = true,
+  showFullContentInListLayout = false,
 }: PostMainProps) {
-  const isMobile = useIsMobile();
-  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
-  const effectiveTagsLayout = inheritedTagsLayout === 'side' && isMobile ? 'inline' : inheritedTagsLayout;
+  const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
-  const { postDetails } = usePostDetails(postId);
+  const isListLayout = effectiveTagsLayout === 'list';
+  const { postDetails, isLoading } = usePostDetails(postId);
   const isDeleted = isPostDeleted(postDetails?.content);
+  // A settled `null` (cache miss after the fetch resolved) means the post 404'd.
+  // Without this branch the card below would skeleton forever (PostHeader /
+  // PostContent each wait on `postDetails`). `undefined` is still loading.
+  const isMissing = postDetails === null && !isLoading;
 
   const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
@@ -71,7 +76,7 @@ export function PostMain({
         overrideDefaults
         onClick={isNavigable ? (e) => handlePostClick(postId, e) : undefined}
         onAuxClick={isNavigable ? (e) => handlePostAuxClick(postId, e) : undefined}
-        className={cn('relative flex min-w-0', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
+        className={cn('relative flex min-w-0 @max-xl/grid:h-full', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
           <Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">
@@ -79,13 +84,28 @@ export function PostMain({
           </Container>
         )}
         <Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
-          {isDeleted ? (
+          {isMissing ? (
+            <PostMissing />
+          ) : isDeleted ? (
             <PostDeleted />
           ) : (
             <>
               {showRepostHeader && <RepostHeader />}
-              <CardContent className={cn('flex min-w-0 flex-col', isWideLayout ? 'p-0' : 'gap-4 p-6')}>
-                {isWideLayout ? (
+              <CardContent
+                className={cn(
+                  'flex min-w-0 flex-col @max-xl/grid:flex-1',
+                  isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6',
+                )}
+              >
+                {isListLayout ? (
+                  <PostMainListRow
+                    postId={postId}
+                    showFullContent={!isReply && showFullContentInListLayout}
+                    shouldShowPostHeader={shouldShowPostHeader}
+                    onReplyClick={openReplyDialog}
+                    onRepostClick={openRepostDialog}
+                  />
+                ) : isWideLayout ? (
                   <Container className="flex min-w-0 flex-col lg:flex-row">
                     <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
                       {shouldShowPostHeader && (
@@ -133,7 +153,7 @@ export function PostMain({
                       postId={postId}
                       onReplyClick={openReplyDialog}
                       onRepostClick={openRepostDialog}
-                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
                     />
                   </>
                 )}

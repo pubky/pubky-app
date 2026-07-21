@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Ancestor } from '@/hooks/usePostAncestors/usePostAncestors.types';
 import { PostPageBreadcrumb } from './PostPageBreadcrumb';
@@ -129,6 +129,38 @@ describe('PostPageBreadcrumb', () => {
 
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.getByText('Satoshi')).toBeInTheDocument();
+  });
+
+  it('constrains breadcrumb items so long usernames can truncate', () => {
+    const longName = 'This is an extremely long profile name that should truncate in the breadcrumb trail';
+    const ancestors = createAncestors(3);
+    const userDetailsMap = createUserDetailsMap(3);
+    userDetailsMap.set('user3', longName);
+
+    render(<PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={mockOnNavigate} />);
+
+    const breadcrumb = screen.getByTestId('post-breadcrumb');
+    expect(breadcrumb).toHaveClass('w-full', 'min-w-0');
+    expect(breadcrumb.querySelector('ol')).toHaveClass('justify-end');
+
+    const lastItem = screen.getByTestId('breadcrumb-item-2');
+    expect(lastItem).toHaveClass('min-w-0', 'max-w-[50%]', 'shrink-0', 'overflow-hidden');
+    expect(within(lastItem).getByText(longName)).toHaveClass('truncate', 'max-w-full');
+  });
+
+  it('keeps the last breadcrumb visible when earlier items are long', () => {
+    const longName = 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz';
+    const ancestors = createAncestors(3);
+    const userDetailsMap = createUserDetailsMap(3);
+    userDetailsMap.set('user1', longName);
+    userDetailsMap.set('user2', longName);
+
+    render(<PostPageBreadcrumb ancestors={ancestors} userDetailsMap={userDetailsMap} onNavigate={mockOnNavigate} />);
+
+    expect(screen.getByTestId('breadcrumb-item-0')).toHaveClass('shrink');
+    expect(screen.getByTestId('breadcrumb-item-1')).toHaveClass('shrink');
+    expect(screen.getByTestId('breadcrumb-item-2')).toHaveClass('shrink-0');
+    expect(screen.getByText('Anna')).toBeInTheDocument();
   });
 });
 

@@ -2,6 +2,7 @@ export interface ProfileStats {
   notifications: number;
   posts: number;
   replies: number;
+  collections: number;
   followers: number;
   following: number;
   friends: number;

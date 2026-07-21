@@ -7,11 +7,8 @@ import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmabl
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { scrollDialogTextareaIntoDialog } from '@/organisms/PostInput/PostInput.utils';
 import { PostInput } from '../PostInput/PostInput';
 import type { DialogReplyProps } from './DialogReply.types';
-
-const REPLY_TEXTAREA_SELECTOR = '#reply-post-input [data-slot="textarea"]';
 
 export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyProps) {
   const t = useTranslations('dialogs.reply');
@@ -20,31 +17,28 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
       onClose: () => onOpenChangeAction(false),
     });
 
-  //NOTE: This might refactor or improved in the future if we need it.
-  // PostInput can handle this autoscrolling already but refactoring without need could impact in many other places.
-  const handleDialogContentAnimationEnd: React.AnimationEventHandler<HTMLDivElement> = () => {
-    if (!open) return;
-
-    scrollDialogTextareaIntoDialog(REPLY_TEXTAREA_SELECTOR, 'smooth');
-  };
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-3xl" hiddenTitle={t('hiddenTitle')} onAnimationEnd={handleDialogContentAnimationEnd}>
+      <DialogContent
+        avoidKeyboard
+        className="flex max-h-[calc(100dvh-2rem)] w-3xl flex-col"
+        hiddenTitle={t('hiddenTitle')}
+      >
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription className="sr-only">{t('description')}</DialogDescription>
         </DialogHeader>
-        <Container className="gap-3">
+        <Container className="min-h-0 flex-1 gap-3 overflow-x-hidden overscroll-contain pr-1">
           {/* Post being replied to */}
           <PostPreviewCard postId={postId} />
 
           {/* Reply input */}
-          <Container className="relative pl-6" overrideDefaults>
+          <Container className="relative w-full min-w-0 pl-6" overrideDefaults>
             <PostInput
               dataCy="reply-post-input"
               id="reply-post-input"
               key={resetKey}
+              autoFocusTextarea
               variant={POST_INPUT_VARIANT.REPLY}
               postId={postId}
               onSuccess={() => {
@@ -52,7 +46,6 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
               }}
               showThreadConnector={true}
               expanded={true}
-              autoFocusTextarea
               onContentChange={handleContentChange}
             />
           </Container>

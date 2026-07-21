@@ -4,18 +4,20 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import { useTranslations } from 'next-intl';
 import { useDebounceCallback } from 'usehooks-ts';
+import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
+import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_SUPPORTED_FILE_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
-  ATTACHMENT_MAX_IMAGE_SIZE,
   ATTACHMENT_MAX_OTHER_SIZE,
   POST_ATTACHMENT_MAX_FILES,
   POST_MAX_CHARACTER_LENGTH,
   POST_SUPPORTED_ATTACHMENT_MIME_TYPES,
   POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
+import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
@@ -23,9 +25,11 @@ import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentio
 import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
 import { usePost } from '@/hooks/usePost/usePost';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
+import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+import { postKindBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.types';
 
@@ -50,6 +54,7 @@ export function usePostInput({
   editPostId,
   onSuccess,
   placeholder,
+  successToastTitle,
   expanded = false,
   onContentChange,
   onArticleModeChange,
@@ -68,7 +73,6 @@ export function usePostInput({
 
   // Hooks
   const t = useTranslations('post.placeholder');
-  const tToast = useTranslations('toast');
   const tFile = useTranslations('toast.file');
   const { currentUserPubky } = useCurrentUserProfile();
   const {
@@ -203,12 +207,45 @@ export function usePostInput({
         useLocalFilesStore.getState().setPostAttachments(createdPostId, localAttachments);
       }
 
-      // Only prepend to timeline for posts and reposts, not replies or edits
-      if (variant !== POST_INPUT_VARIANT.REPLY && variant !== POST_INPUT_VARIANT.EDIT) {
-        timelineFeed?.prependPosts(createdPostId);
+      if (variant === POST_INPUT_VARIANT.REPLY || variant === POST_INPUT_VARIANT.EDIT) {
+        onSuccess?.(createdPostId);
+        return;
+      }
+
+      const feedVariant = timelineFeed?.variant;
+      const shouldPrepend =
+        variant === POST_INPUT_VARIANT.POST ||
+        (variant === POST_INPUT_VARIANT.REPOST &&
+          feedVariant != null &&
+          REPOST_OPTIMISTIC_PREPEND_VARIANTS.has(feedVariant));
+
+      if (shouldPrepend) {
+        void (async () => {
+          try {
+            const streamId = timelineFeed?.streamId;
+            if (!streamId) {
+              await timelineFeed?.prependPosts(createdPostId);
+              return;
+            }
+
+            const details = await PostController.getDetails({ compositeId: createdPostId });
+            if (!details?.kind || postKindBelongsToStream(details.kind, streamId)) {
+              await timelineFeed.prependPosts(createdPostId);
+            }
+          } catch (error) {
+            Logger.error('[usePostInput] Failed to prepend created post to timeline', {
+              error,
+              createdPostId,
+              streamId: timelineFeed?.streamId,
+            });
+          } finally {
+            setIsExpanded(false);
+          }
+        })();
+      } else {
         setIsExpanded(false);
       }
-      // Call original onSuccess callback if provided
+
       onSuccess?.(createdPostId);
     };
 
@@ -220,6 +257,7 @@ export function usePostInput({
         await repost({
           originalPostId: originalPostId!,
           originalAuthorName: originalPostAuthor?.name,
+          successToastTitle,
           onSuccess: handleSuccess,
           onUndo: deletePost,
         });
@@ -241,6 +279,7 @@ export function usePostInput({
     postId,
     originalPostId,
     originalPostAuthor,
+    successToastTitle,
     reply,
     post,
     repost,
@@ -310,7 +349,7 @@ export function usePostInput({
 
       if (availableSlots <= 0) {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tFile('maxFiles', { max: ATTACHMENT_MAX_FILES }),
         });
         return;
@@ -333,12 +372,16 @@ export function usePostInput({
         }
 
         const isImage = file.type.startsWith('image/');
-        const maxSize = isImage ? ATTACHMENT_MAX_IMAGE_SIZE : ATTACHMENT_MAX_OTHER_SIZE;
+        const maxImageSizeLabel = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
         const maxOtherSizeLabel = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
-        const maxSizeLabel = isImage ? '5MB' : maxOtherSizeLabel;
 
-        if (file.size > maxSize) {
-          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxSizeLabel }));
+        if (isImage && file.size > IMAGE_MAX_RAW_SIZE) {
+          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxImageSizeLabel }));
+          continue;
+        }
+
+        if (!isImage && file.size > ATTACHMENT_MAX_OTHER_SIZE) {
+          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxOtherSizeLabel }));
           continue;
         }
 
@@ -347,7 +390,7 @@ export function usePostInput({
 
       if (errors.length > 0) {
         toast({
-          title: errors.length > 1 ? tToast('errors') : tToast('error'),
+          variant: 'error',
           description: errors.join('\n'),
         });
       }
@@ -356,7 +399,7 @@ export function usePostInput({
         setAttachments((prev) => [...prev, ...validFiles]);
       }
     },
-    [isArticle, isSubmitting, attachments.length, setAttachments, toast, tToast, tFile],
+    [isArticle, isSubmitting, attachments.length, setAttachments, toast, tFile],
   );
 
   // Drag and drop handlers

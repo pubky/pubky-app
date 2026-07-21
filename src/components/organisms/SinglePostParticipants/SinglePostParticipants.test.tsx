@@ -38,6 +38,8 @@ vi.mock('@/app/routes', () => ({
   APP_ROUTES: {
     PROFILE: '/profile',
   },
+  getUserProfileUrl: (pubky: string, currentUserPubky?: string | null) =>
+    currentUserPubky && pubky === currentUserPubky ? '/profile' : `/profile/${pubky}`,
 }));
 
 // Mock molecules
@@ -72,13 +74,16 @@ vi.mock('@/organisms/UserListItem/UserListItem', () => {
     }: {
       user: { id: string; name?: string };
       onUserClick?: (id: string) => void;
-      onFollowClick?: (id: string, isFollowing: boolean) => void;
+      onFollowClick?: (id: string, isFollowing: boolean, displayName: string) => void;
     }) => (
       <div data-testid={`user-list-item-${user.id}`}>
         <button onClick={() => onUserClick?.(user.id)} data-testid={`user-click-${user.id}`}>
           {user.name || user.id}
         </button>
-        <button onClick={() => onFollowClick?.(user.id, false)} data-testid={`follow-click-${user.id}`}>
+        <button
+          onClick={() => onFollowClick?.(user.id, false, user.name || user.id)}
+          data-testid={`follow-click-${user.id}`}
+        >
           Follow
         </button>
       </div>
@@ -195,7 +200,7 @@ describe('SinglePostParticipants', () => {
 
       fireEvent.click(screen.getByTestId('follow-click-user1'));
 
-      expect(mockToggleFollow).toHaveBeenCalledWith('user1', false);
+      expect(mockToggleFollow).toHaveBeenCalledWith('user1', false, 'User One');
     });
   });
 

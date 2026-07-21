@@ -17,6 +17,7 @@
 # next.js
 /.next/
 /out/
+.sentry-builder/
 
 # production
 /build
@@ -73,6 +74,9 @@ public/sw.js.map
 
 # AI Context Plans
 .plans
+
+# Screenshots
+.screenshots
 
 # Serena
 .serena

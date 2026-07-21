@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Env } from '@/libs/env/env';
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -25,7 +25,7 @@ function parseTags(tagsParam: string | null): string[] {
     .split(',')
     .map((tag) => tag.trim())
     .filter((tag) => tag.length > 0)
-    .slice(0, Env.NEXT_MAX_STREAM_TAGS);
+    .slice(0, getMaxStreamTags());
 }
 
 /**
@@ -40,7 +40,7 @@ function parseTags(tagsParam: string | null): string[] {
  * Example: timeline:all:all:pubky,bitcoin
  *
  * Note: Reach filter is always 'all' for search (we search all posts with the given tags).
- * Tags are limited to NEXT_MAX_STREAM_TAGS (default 5).
+ * Tags are limited to PUBKY_RUNTIME_MAX_STREAM_TAGS (default 5).
  *
  * @returns The search streamId or undefined if no tags provided
  *

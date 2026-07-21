@@ -20,6 +20,7 @@ export function layoutToString(layout: PubkyAppFeedLayout): string {
     [PubkyAppFeedLayout.Columns]: 'columns',
     [PubkyAppFeedLayout.Wide]: 'wide',
     [PubkyAppFeedLayout.Visual]: 'visual',
+    [PubkyAppFeedLayout.List]: 'list',
   };
   return map[layout];
 }
@@ -40,6 +41,8 @@ export function postKindToString(kind: PubkyAppPostKind): string {
     [PubkyAppPostKind.Video]: 'video',
     [PubkyAppPostKind.Link]: 'link',
     [PubkyAppPostKind.File]: 'file',
+    [PubkyAppPostKind.Collection]: 'collection',
+    [PubkyAppPostKind.Unknown]: 'unknown',
   };
   return map[kind];
 }
@@ -64,13 +67,15 @@ export function sortToStreamSorting(sort: PubkyAppFeedSort): StreamSorting {
 
 export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKind | undefined {
   if (content === null) return undefined;
-  const map: Record<PubkyAppPostKind, StreamKind> = {
+  const map: Record<PubkyAppPostKind, StreamKind | undefined> = {
     [PubkyAppPostKind.Short]: StreamKind.SHORT,
     [PubkyAppPostKind.Long]: StreamKind.LONG,
     [PubkyAppPostKind.Image]: StreamKind.IMAGE,
     [PubkyAppPostKind.Video]: StreamKind.VIDEO,
     [PubkyAppPostKind.Link]: StreamKind.LINK,
     [PubkyAppPostKind.File]: StreamKind.FILE,
+    [PubkyAppPostKind.Collection]: StreamKind.COLLECTION,
+    [PubkyAppPostKind.Unknown]: undefined,
   };
   return map[content];
 }

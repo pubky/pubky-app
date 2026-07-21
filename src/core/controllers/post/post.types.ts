@@ -12,6 +12,43 @@ export interface TCreatePostParams {
   originalPostId?: string;
 }
 
+export interface TCreateCollectionParams {
+  authorId: Pubky;
+  name: string;
+  description?: string | null;
+  items?: string[] | null;
+  /**
+   * Optional cover image. Either:
+   * - a `File` (uploaded to the homeserver, the resulting `pubky://` URL is
+   *   stored as `cover_image` in the collection envelope), or
+   * - a string URL already accessible by Nexus (pubky/http/https), or
+   * - `null` / `undefined` for no cover.
+   */
+  coverImage?: File | string | null;
+}
+
+export interface TUpdateCollectionItemParams {
+  collectionId: string;
+  postId: string;
+  shouldAdd: boolean;
+}
+
+export interface TEditCollectionParams {
+  compositeCollectionId: string;
+  name: string;
+  description?: string | null;
+  /**
+   * Required cover image decision for the edit. Either:
+   * - a `File` (uploaded to the homeserver, the resulting `pubky://` URL replaces `cover_image`),
+   * - a string URL already accessible by Nexus (pass the current cover URL unchanged to keep it),
+   * - `null` to clear the cover.
+   *
+   * Must be passed explicitly — omitting it is not allowed, so a metadata-only
+   * edit cannot accidentally clear/delete the existing homeserver cover.
+   */
+  coverImage: File | string | null;
+}
+
 export interface TDeletePostParams {
   compositePostId: string;
 }

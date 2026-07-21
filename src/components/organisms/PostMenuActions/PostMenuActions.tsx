@@ -8,8 +8,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/at
 import { MENU_VARIANT } from '@/config/ui';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
+import { DialogEditCollection } from '@/organisms/Collections/DialogEditCollection/DialogEditCollection';
 import { DialogEditPost } from '../DialogEditPost/DialogEditPost';
 import { DialogReportPost } from '../DialogReportPost/DialogReportPost';
 import type { PostMenuActionsProps } from './PostMenuActions.types';
@@ -24,6 +26,11 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { deletePost, isDeleting } = useDeletePost();
   const { requireAuth } = useRequireAuth();
+  const { postDetails } = usePostDetails(postId);
+  // Collection posts use a dedicated form dialog because their content is a
+  // structured envelope (name/description/cover), unlike the free-form text /
+  // article content handled by DialogEditPost.
+  const isCollection = postDetails?.kind === 'collection';
   const closeMenu = () => setOpen(false);
 
   const handleReportClick = () => {
@@ -96,7 +103,11 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
         </DropdownMenu>
       )}
       <DialogReportPost open={reportDialogOpen} onOpenChange={setReportDialogOpen} postId={postId} />
-      <DialogEditPost open={editDialogOpen} onOpenChangeAction={setEditDialogOpen} postId={postId} />
+      {isCollection ? (
+        <DialogEditCollection open={editDialogOpen} onOpenChange={setEditDialogOpen} compositeCollectionId={postId} />
+      ) : (
+        <DialogEditPost open={editDialogOpen} onOpenChangeAction={setEditDialogOpen} postId={postId} />
+      )}
       <DialogConfirmDelete
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}

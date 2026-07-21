@@ -5,12 +5,12 @@ import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
-import { Env } from '@/libs/env/env';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { getTtlRetryDelayMs } from '@/libs/runtime-config/runtime-config';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
 import type { Pubky } from '@/models/models.types';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
@@ -72,6 +72,7 @@ const createMockBootstrapData = (): NexusBootstrapResponse => ({
         unique_tags: 0,
         replies: 0,
         friends: 0,
+        collections: 0,
         bookmarks: 0,
       },
       relationship: { following: false, followed_by: false },
@@ -645,9 +646,9 @@ describe('BootstrapApplication', () => {
 
       expect(loggerWarnSpy).toHaveBeenCalledWith('User is not indexed in Nexus. Scheduling TTL retry', {
         pubky: TEST_PUBKY,
-        retryDelayMs: Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS,
+        retryDelayMs: getTtlRetryDelayMs(),
       });
-      expect(upsertTtlSpy).toHaveBeenCalledWith(TEST_PUBKY, Env.NEXT_PUBLIC_TTL_RETRY_DELAY_MS);
+      expect(upsertTtlSpy).toHaveBeenCalledWith(TEST_PUBKY, getTtlRetryDelayMs());
       expect(mockGetInstance).toHaveBeenCalled();
       expect(mockSubscribeUser).toHaveBeenCalledWith({ pubky: TEST_PUBKY });
       expect(mocks.persistUsers).toHaveBeenCalled();

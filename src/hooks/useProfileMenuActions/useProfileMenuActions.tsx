@@ -28,7 +28,6 @@ import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './usePr
 export function useProfileMenuActions(userId: string): UseProfileMenuActionsResult {
   const t = useTranslations('profile.actions');
   const tToast = useTranslations('toast');
-  const tErrors = useTranslations('errors');
   const { profile, isLoading: isProfileLoading } = useUserProfile(userId);
   const { isFollowing, isLoading: isFollowingLoading } = useIsFollowing(userId);
   const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser();
@@ -59,14 +58,8 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
         }),
     icon: isFollowing ? UserRoundMinus : UserRoundPlus,
     onClick: async () => {
-      try {
-        await toggleFollow(userId, isFollowing);
-      } catch (error) {
-        toast({
-          title: tErrors('title'),
-          description: isAppError(error) ? error.message : tToast('follow.failed'),
-        });
-      }
+      // useFollowUser handles all feedback (toast + state) and never throws.
+      await toggleFollow(userId, isFollowing, profile?.name);
     },
     disabled: isFollowLoading || isUserLoading(userId),
   });
@@ -81,8 +74,8 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
         await copyPubky(withPubkyPrefix(userId));
       } catch (error) {
         toast({
-          title: tErrors('title'),
-          description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
+          variant: 'error',
+          description: isAppError(error) ? error.message : tToast('copy.copyFailedDesc'),
         });
       }
     },
@@ -98,8 +91,8 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
         await copyLink(profileUrl);
       } catch (error) {
         toast({
-          title: tErrors('title'),
-          description: isAppError(error) ? error.message : tToast('copy.copyFailed'),
+          variant: 'error',
+          description: isAppError(error) ? error.message : tToast('copy.copyFailedDesc'),
         });
       }
     },
@@ -120,18 +113,11 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await toggleMute(userId, isUserMuted);
         toast({
-          title: isUserMuted ? tToast('mute.unmuted') : tToast('mute.muted'),
-          description: isUserMuted
-            ? tToast('mute.unmutedDesc', {
-                username,
-              })
-            : tToast('mute.mutedDesc', {
-                username,
-              }),
+          title: isUserMuted ? tToast('mute.unmuted', { username }) : tToast('mute.muted', { username }),
         });
       } catch (error) {
         toast({
-          title: tErrors('title'),
+          variant: 'error',
           description: isAppError(error) ? error.message : tToast('mute.failed'),
         });
       }

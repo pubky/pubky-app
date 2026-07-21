@@ -1,12 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`TimelineFeed - Snapshots > should match snapshot for bookmarks variant 1`] = `
+exports[`TimelineFeed - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div>
   <div
     class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
     data-testid="container"
   >
     <div
+      data-feed-renderer="columns"
       data-testid="timeline-posts"
     >
       <span
@@ -39,13 +40,59 @@ exports[`TimelineFeed - Snapshots > should match snapshot for bookmarks variant 
 </div>
 `;
 
-exports[`TimelineFeed - Snapshots > should match snapshot for custom variant 1`] = `
+exports[`TimelineFeed - Snapshots > matches snapshot for home visual layout 1`] = `
 <div>
   <div
     class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
     data-testid="container"
   >
     <div
+      data-feed-renderer="visual"
+      data-testid="visual-timeline-posts"
+    >
+      <span
+        data-testid="visual-post-count"
+      >
+        3
+      </span>
+      <span
+        data-testid="visual-loading"
+      >
+        false
+      </span>
+      <span
+        data-testid="visual-loading-more"
+      >
+        false
+      </span>
+      <span
+        data-testid="visual-error"
+      >
+        none
+      </span>
+      <span
+        data-testid="visual-has-more"
+      >
+        true
+      </span>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`TimelineFeed - Snapshots > matches snapshot for home with feed children 1`] = `
+<div>
+  <div
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    data-testid="container"
+  >
+    <aside
+      data-testid="feed-filters"
+    >
+      Feed filters
+    </aside>
+    <div
+      data-feed-renderer="columns"
       data-testid="timeline-posts"
     >
       <span
@@ -78,171 +125,12 @@ exports[`TimelineFeed - Snapshots > should match snapshot for custom variant 1`]
 </div>
 `;
 
-exports[`TimelineFeed - Snapshots > should match snapshot for empty state 1`] = `
-<div>
-  <div
-    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
-    data-testid="container"
-  >
-    <div
-      data-testid="timeline-posts"
-    >
-      <span
-        data-testid="post-count"
-      >
-        0
-      </span>
-      <span
-        data-testid="loading"
-      >
-        false
-      </span>
-      <span
-        data-testid="loading-more"
-      >
-        false
-      </span>
-      <span
-        data-testid="error"
-      >
-        none
-      </span>
-      <span
-        data-testid="has-more"
-      >
-        true
-      </span>
-    </div>
-  </div>
-</div>
-`;
-
-exports[`TimelineFeed - Snapshots > should match snapshot for error state 1`] = `
-<div>
-  <div
-    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
-    data-testid="container"
-  >
-    <div
-      data-testid="timeline-posts"
-    >
-      <span
-        data-testid="post-count"
-      >
-        3
-      </span>
-      <span
-        data-testid="loading"
-      >
-        false
-      </span>
-      <span
-        data-testid="loading-more"
-      >
-        false
-      </span>
-      <span
-        data-testid="error"
-      >
-        Network error
-      </span>
-      <span
-        data-testid="has-more"
-      >
-        true
-      </span>
-    </div>
-  </div>
-</div>
-`;
-
-exports[`TimelineFeed - Snapshots > should match snapshot for home variant 1`] = `
-<div>
-  <div
-    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
-    data-testid="container"
-  >
-    <div
-      data-testid="timeline-posts"
-    >
-      <span
-        data-testid="post-count"
-      >
-        3
-      </span>
-      <span
-        data-testid="loading"
-      >
-        false
-      </span>
-      <span
-        data-testid="loading-more"
-      >
-        false
-      </span>
-      <span
-        data-testid="error"
-      >
-        none
-      </span>
-      <span
-        data-testid="has-more"
-      >
-        true
-      </span>
-    </div>
-  </div>
-</div>
-`;
-
-exports[`TimelineFeed - Snapshots > should match snapshot for loading state 1`] = `
+exports[`TimelineFeed - Snapshots > matches snapshot for loading state 1`] = `
 <div>
   <div
     data-testid="timeline-loading"
   >
     Loading...
-  </div>
-</div>
-`;
-
-exports[`TimelineFeed - Snapshots > should match snapshot with children 1`] = `
-<div>
-  <div
-    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
-    data-testid="container"
-  >
-    <div>
-      Child Component
-    </div>
-    <div
-      data-testid="timeline-posts"
-    >
-      <span
-        data-testid="post-count"
-      >
-        3
-      </span>
-      <span
-        data-testid="loading"
-      >
-        false
-      </span>
-      <span
-        data-testid="loading-more"
-      >
-        false
-      </span>
-      <span
-        data-testid="error"
-      >
-        none
-      </span>
-      <span
-        data-testid="has-more"
-      >
-        true
-      </span>
-    </div>
   </div>
 </div>
 `;

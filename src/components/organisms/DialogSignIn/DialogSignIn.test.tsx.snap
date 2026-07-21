@@ -4,11 +4,11 @@ exports[`DialogSignIn - Snapshots > matches snapshot when closed 1`] = `null`;
 
 exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
 <div
-  class="fixed inset-0 z-50 flex items-center justify-center"
+  class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
 >
   <div
     aria-labelledby="radix-normalized"
-    class="relative z-50 grid duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 m-4 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg border bg-background p-6 shadow-lg sm:rounded-xl sm:p-8 w-3xl gap-0"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 w-[576px] gap-6"
     data-cy="dialog-content"
     data-slot="dialog-content"
     data-state="open"
@@ -40,16 +40,16 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
       </p>
     </div>
     <div
-      class="mx-auto w-full mt-6 flex flex-col gap-4 sm:flex-row"
+      class="mx-auto w-full flex flex-col gap-4 sm:flex-row"
       data-testid="container"
     >
       <div
-        class="rounded-xl bg-card text-card-foreground shadow-sm flex flex-1 flex-col gap-4 p-6"
+        class="bg-card text-card-foreground shadow-sm flex flex-1 flex-col gap-3 rounded-md py-6 sm:gap-6"
         data-slot="card"
         data-testid="card"
       >
         <div
-          class="mx-auto w-full flex-col flex gap-2"
+          class="mx-auto w-full flex-col flex gap-2 px-6"
           data-testid="container"
         >
           <h3
@@ -60,120 +60,124 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
           </h3>
         </div>
         <div
-          class="mx-auto w-full flex-col flex flex-1 items-center justify-center py-4"
+          class="mx-auto w-full flex-col flex flex-1 items-center justify-center"
           data-testid="container"
         >
           <img
             alt="New here?"
-            class="h-[87px] w-auto max-w-[220px] sm:h-auto sm:w-full"
+            class="h-[87px] w-auto max-w-[202px] sm:h-auto sm:w-full"
             data-nimg="1"
             decoding="async"
-            height="220"
+            height="202"
             loading="lazy"
             src="/images/new-here.svg"
             style="color: transparent;"
-            width="220"
+            width="202"
           />
         </div>
-        <a
-          data-testid="link--onboarding-human"
-          href="/onboarding/human"
+        <div
+          class="mx-auto w-full flex-col flex px-6"
+          data-testid="container"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-user-plus mr-2 size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
+          <a
+            data-testid="link--onboarding-human"
+            href="/onboarding/human"
           >
-            <path
-              d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
-            />
-            <circle
-              cx="9"
-              cy="7"
-              r="4"
-            />
-            <line
-              x1="19"
-              x2="19"
-              y1="8"
-              y2="14"
-            />
-            <line
-              x1="22"
-              x2="16"
-              y1="11"
-              y2="11"
-            />
-          </svg>
-          Join Pubky
-        </a>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-user-round-plus size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M2 21a8 8 0 0 1 13.292-6"
+              />
+              <circle
+                cx="10"
+                cy="8"
+                r="5"
+              />
+              <path
+                d="M19 16v6"
+              />
+              <path
+                d="M22 19h-6"
+              />
+            </svg>
+            Join Pubky
+          </a>
+        </div>
       </div>
       <div
-        class="rounded-xl bg-card text-card-foreground shadow-sm flex flex-1 flex-col gap-4 p-6"
+        class="bg-card text-card-foreground shadow-sm flex flex-1 flex-col gap-3 rounded-md py-6 sm:gap-6"
         data-slot="card"
         data-testid="card"
       >
         <div
-          class="mx-auto w-full flex-col flex gap-2"
+          class="mx-auto w-full flex-col flex gap-2 px-6"
           data-testid="container"
         >
           <h3
             class="text-base text-foreground font-bold"
             data-testid="typography"
           >
-            Already have an account?
+            Already have a pubky?
           </h3>
         </div>
         <div
-          class="mx-auto w-full flex-col flex flex-1 items-center justify-center py-4"
+          class="mx-auto w-full flex-col flex flex-1 items-center justify-center"
           data-testid="container"
         >
           <img
-            alt="Already have an account?"
-            class="h-[87px] w-auto max-w-[220px] sm:h-auto sm:w-full"
+            alt="Already have a pubky?"
+            class="h-[87px] w-auto max-w-[202px] sm:h-auto sm:w-full"
             data-nimg="1"
             decoding="async"
-            height="220"
+            height="202"
             loading="lazy"
             src="/images/sign-in.svg"
             style="color: transparent;"
-            width="220"
+            width="202"
           />
         </div>
-        <a
-          data-testid="link--sign-in"
-          href="/sign-in"
+        <div
+          class="mx-auto w-full flex-col flex px-6"
+          data-testid="container"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-arrow-right mr-2 size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
+          <a
+            data-testid="link--sign-in"
+            href="/sign-in"
           >
-            <path
-              d="M5 12h14"
-            />
-            <path
-              d="m12 5 7 7-7 7"
-            />
-          </svg>
-          Sign In
-        </a>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-right size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M5 12h14"
+              />
+              <path
+                d="m12 5 7 7-7 7"
+              />
+            </svg>
+            Sign In
+          </a>
+        </div>
       </div>
     </div>
     <button

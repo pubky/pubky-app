@@ -37,6 +37,7 @@ describe('UserStreamApplication', () => {
       following: 20,
       followers: 30,
       friends: 15,
+      collections: 0,
       bookmarks: 8,
       ...overrides?.counts,
     },

@@ -15,7 +15,7 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
 describe('useWhoToFollowFollowPreservation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockToggleFollow.mockResolvedValue(undefined);
+    mockToggleFollow.mockResolvedValue(true);
     mockIsUserLoading.mockReturnValue(false);
   });
 
@@ -24,10 +24,10 @@ describe('useWhoToFollowFollowPreservation', () => {
     const { result } = renderHook(() => useWhoToFollowFollowPreservation());
 
     act(() => {
-      void result.current.handleFollowClick('user-1', false);
+      void result.current.handleFollowClick('user-1', false, 'User One');
     });
 
-    expect(mockToggleFollow).toHaveBeenCalledWith('user-1', false);
+    expect(mockToggleFollow).toHaveBeenCalledWith('user-1', false, 'User One');
     await waitFor(() => {
       expect(result.current.preservedFollowedUserIds).toEqual(['user-1']);
     });
@@ -37,21 +37,21 @@ describe('useWhoToFollowFollowPreservation', () => {
     const { result } = renderHook(() => useWhoToFollowFollowPreservation());
 
     await act(async () => {
-      await result.current.handleFollowClick('user-1', false);
+      await result.current.handleFollowClick('user-1', false, 'User One');
     });
     await act(async () => {
-      await result.current.handleFollowClick('user-1', true);
+      await result.current.handleFollowClick('user-1', true, 'User One');
     });
 
     expect(result.current.preservedFollowedUserIds).toEqual([]);
   });
 
   it('rolls back optimistic preservation when follow fails', async () => {
-    mockToggleFollow.mockRejectedValue(new Error('follow failed'));
+    mockToggleFollow.mockResolvedValue(false);
     const { result } = renderHook(() => useWhoToFollowFollowPreservation());
 
     await act(async () => {
-      await result.current.handleFollowClick('user-1', false);
+      await result.current.handleFollowClick('user-1', false, 'User One');
     });
 
     expect(result.current.preservedFollowedUserIds).toEqual([]);
@@ -63,11 +63,11 @@ describe('useWhoToFollowFollowPreservation', () => {
     });
 
     await act(async () => {
-      await result.current.handleFollowClick('user-1', false);
+      await result.current.handleFollowClick('user-1', false, 'User One');
     });
     expect(result.current.preservedFollowedUserIds).toEqual(['user-1']);
 
-    rerender({ resetKey: '/bookmarks' });
+    rerender({ resetKey: '/collections' });
 
     await waitFor(() => {
       expect(result.current.preservedFollowedUserIds).toEqual([]);

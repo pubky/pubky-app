@@ -51,7 +51,7 @@ describe('DialogSignIn', () => {
 
       // Check for the two card headings
       expect(screen.getByText('New here?')).toBeInTheDocument();
-      expect(screen.getByText('Already have an account?')).toBeInTheDocument();
+      expect(screen.getByText('Already have a pubky?')).toBeInTheDocument();
     });
 
     it('renders Join Pubky link pointing to human onboarding', () => {
@@ -77,10 +77,10 @@ describe('DialogSignIn', () => {
       render(<DialogSignIn />);
 
       const dialog = screen.getByRole('dialog');
-      expect(dialog.querySelectorAll('.lucide-user-plus')).toHaveLength(1);
+      expect(dialog.querySelectorAll('.lucide-user-round-plus')).toHaveLength(1);
       expect(dialog.querySelectorAll('.lucide-arrow-right')).toHaveLength(1);
       expect(screen.getByAltText('New here?')).toHaveAttribute('src', '/images/new-here.svg');
-      expect(screen.getByAltText('Already have an account?')).toHaveAttribute('src', '/images/sign-in.svg');
+      expect(screen.getByAltText('Already have a pubky?')).toHaveAttribute('src', '/images/sign-in.svg');
     });
   });
 

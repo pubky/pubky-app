@@ -6,6 +6,7 @@ import type { TCreatePostInput, TEditPostInput } from '@/application/post/post.t
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { TagApplication } from '@/application/tag/tag';
 import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
+import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import type { TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -20,6 +21,7 @@ import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostService } from '@/services/local/post/post';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
@@ -33,9 +35,16 @@ vi.mock('@/services/local/post/post', () => ({
     delete: vi.fn(),
     edit: vi.fn(),
     readDetails: vi.fn(),
+    readDetailsByIds: vi.fn(),
     readCounts: vi.fn(),
     readTags: vi.fn(),
     readRelationships: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/local/stream/posts/posts', () => ({
+  LocalStreamPostsService: {
+    read: vi.fn(),
   },
 }));
 
@@ -710,6 +719,138 @@ describe('Post Application', () => {
       });
     });
 
+    // --- Collection cover cleanup ---
+    describe('with collection cover_image', () => {
+      const coverUri = 'pubky://author/pub/pubky.app/files/collection-cover';
+
+      it('deletes the homeserver cover after deleting a collection', async () => {
+        const mockData = { compositePostId: 'author:collection-with-cover' };
+        const collectionPost = {
+          id: 'author:collection-with-cover',
+          content: JSON.stringify({
+            name: 'My collection',
+            description: '',
+            items: [],
+            cover_image: coverUri,
+          }),
+          kind: 'collection',
+          uri: 'pubky://author/pub/pubky.app/posts/collection-with-cover',
+          indexed_at: Date.now(),
+          attachments: null,
+        };
+
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(collectionPost);
+        deleteSpy.mockResolvedValue(false);
+
+        await PostApplication.commitDelete(mockData);
+
+        expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: collectionPost.uri });
+        expect(fileCommitDeleteSpy).toHaveBeenCalledWith([coverUri]);
+        expect(requestSpy).toHaveBeenCalledBefore(fileCommitDeleteSpy);
+      });
+
+      it('deletes the collection cover even when the post has connections (soft delete)', async () => {
+        const mockData = { compositePostId: 'author:collection-soft-delete' };
+        const collectionPost = {
+          id: 'author:collection-soft-delete',
+          content: JSON.stringify({
+            name: 'Soft-deleted collection',
+            items: [],
+            cover_image: coverUri,
+          }),
+          kind: 'collection',
+          uri: 'pubky://author/pub/pubky.app/posts/collection-soft-delete',
+          indexed_at: Date.now(),
+          attachments: null,
+        };
+
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(collectionPost);
+        deleteSpy.mockResolvedValue(true);
+
+        await PostApplication.commitDelete(mockData);
+
+        expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: collectionPost.uri });
+        expect(fileCommitDeleteSpy).toHaveBeenCalledWith([coverUri]);
+      });
+
+      it('does not delete an external https collection cover', async () => {
+        const mockData = { compositePostId: 'author:collection-https-cover' };
+        const collectionPost = {
+          id: 'author:collection-https-cover',
+          content: JSON.stringify({
+            name: 'External cover',
+            items: [],
+            cover_image: 'https://example.com/cover.png',
+          }),
+          kind: 'collection',
+          uri: 'pubky://author/pub/pubky.app/posts/collection-https-cover',
+          indexed_at: Date.now(),
+          attachments: null,
+        };
+
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(collectionPost);
+        deleteSpy.mockResolvedValue(false);
+
+        await PostApplication.commitDelete(mockData);
+
+        expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: collectionPost.uri });
+        expect(fileCommitDeleteSpy).not.toHaveBeenCalled();
+      });
+
+      it('does not attempt cover cleanup for non-collection posts', async () => {
+        const mockData = { compositePostId: 'author:short-post' };
+        const shortPost = {
+          id: 'author:short-post',
+          content: JSON.stringify({
+            name: 'Not a collection',
+            cover_image: coverUri,
+          }),
+          kind: 'short',
+          uri: 'pubky://author/pub/pubky.app/posts/short-post',
+          indexed_at: Date.now(),
+          attachments: null,
+        };
+
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(shortPost);
+        deleteSpy.mockResolvedValue(false);
+
+        await PostApplication.commitDelete(mockData);
+
+        expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: shortPost.uri });
+        expect(fileCommitDeleteSpy).not.toHaveBeenCalled();
+      });
+
+      it('does not fail the delete when cover cleanup fails', async () => {
+        const mockData = { compositePostId: 'author:collection-cover-cleanup-fail' };
+        const collectionPost = {
+          id: 'author:collection-cover-cleanup-fail',
+          content: JSON.stringify({
+            name: 'Cleanup fail',
+            items: [],
+            cover_image: coverUri,
+          }),
+          kind: 'collection',
+          uri: 'pubky://author/pub/pubky.app/posts/collection-cover-cleanup-fail',
+          indexed_at: Date.now(),
+          attachments: null,
+        };
+
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies();
+        findByIdSpy.mockResolvedValue(collectionPost);
+        deleteSpy.mockResolvedValue(false);
+        fileCommitDeleteSpy.mockRejectedValue(new Error('cover cleanup failed'));
+
+        await expect(PostApplication.commitDelete(mockData)).resolves.toBeUndefined();
+
+        expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: collectionPost.uri });
+        expect(fileCommitDeleteSpy).toHaveBeenCalledWith([coverUri]);
+      });
+    });
+
     // --- Edge Cases ---
     describe('edge cases with empty arrays', () => {
       it('should skip tag creation with empty array', async () => {
@@ -974,6 +1115,70 @@ describe('Post Application', () => {
     });
   });
 
+  describe('getAuthoredCollections', () => {
+    // Regression: after the `LocalPostService.delete` tombstone refactor, a
+    // soft-deleted collection has `content === '[DELETED]'` but `kind ===
+    // 'collection'`. Without an explicit `isPostDeleted` guard it would slip
+    // past the kind filter and only get dropped later by
+    // `CollectionPostContent.parse` failing on `[DELETED]` — fragile, since a
+    // future parser change could let it through and leak deleted collections
+    // into the post-save picker.
+    it('excludes tombstoned collections from the returned list', async () => {
+      const authorId = asOpaque<Pubky>('author-1');
+      const liveId = 'author-1:live';
+      const tombstonedId = 'author-1:tombstoned';
+      vi.mocked(LocalStreamPostsService.read).mockResolvedValue({
+        streamId: `${authorId}:author:collection`,
+        stream: [liveId, tombstonedId],
+      } as never);
+      vi.mocked(LocalPostService.readDetailsByIds).mockResolvedValue([
+        {
+          id: liveId,
+          content: JSON.stringify({ name: 'Live collection', items: [] }),
+          kind: 'collection',
+          uri: '',
+          indexed_at: 0,
+          attachments: null,
+        },
+        {
+          id: tombstonedId,
+          content: '[DELETED]',
+          kind: 'collection',
+          uri: '',
+          indexed_at: 0,
+          attachments: null,
+        },
+      ]);
+
+      const result = await PostApplication.getAuthoredCollections({ authorId });
+
+      expect(result).toHaveLength(1);
+      expect(result?.[0].details.id).toBe(liveId);
+    });
+  });
+
+  describe('fetchAuthoredCollections', () => {
+    // Regression: Nexus rejects any stream `limit` above 50 with
+    // "limit exceeds maximum of 50". A previous hardcoded `limit: 100` made
+    // every collections fetch fail, so the post-save picker rendered no
+    // collections. Pin the request to the Nexus cap so it can't regress.
+    it('requests the collections stream slice within the Nexus limit cap', async () => {
+      const authorId = asOpaque<Pubky>('author-1');
+      const viewerId = asOpaque<Pubky>('viewer-1');
+      const fetchSliceSpy = vi
+        .spyOn(PostStreamApplication, 'fetchStreamSlice')
+        .mockResolvedValue({ cacheMissPostIds: [] } as never);
+      vi.spyOn(PostApplication, 'getAuthoredCollections').mockResolvedValue([]);
+
+      await PostApplication.fetchAuthoredCollections({ authorId, viewerId });
+
+      expect(fetchSliceSpy).toHaveBeenCalledTimes(1);
+      const sliceArgs = fetchSliceSpy.mock.calls[0][0];
+      expect(sliceArgs.limit).toBe(NEXUS_STREAM_MAX_LIMIT);
+      expect(sliceArgs.limit).toBeLessThanOrEqual(50);
+    });
+  });
+
   describe('getCounts', () => {
     it('should call LocalPostService.readCounts', async () => {
       const mockCounts: PostCountsModelSchema = {
@@ -1106,6 +1311,29 @@ describe('Post Application', () => {
 
       expect(readSpy).toHaveBeenCalledWith({ postId: 'nonexistent:post' });
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getDetailsByIds', () => {
+    it('should delegate to LocalPostService.readDetailsByIds', async () => {
+      const compositeIds = ['author:post1', 'author:post2'];
+      const details: (PostDetailsModelSchema | undefined)[] = [
+        {
+          id: 'author:post1',
+          content: 'one',
+          indexed_at: Date.now(),
+          kind: 'short',
+          uri: 'pubky://author/pub/pubky.app/posts/post1',
+          attachments: null,
+        },
+        undefined,
+      ];
+      const readSpy = vi.spyOn(LocalPostService, 'readDetailsByIds').mockResolvedValue(details);
+
+      const result = await PostApplication.getDetailsByIds({ compositeIds });
+
+      expect(readSpy).toHaveBeenCalledWith(compositeIds);
+      expect(result).toBe(details);
     });
   });
 

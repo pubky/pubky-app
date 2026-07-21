@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { APP_ROUTES } from '@/app/routes';
+import { getUserProfileUrl } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
@@ -47,12 +47,12 @@ export function WhoTaggedExpandedList({
     };
   });
 
-  const handleFollowClick = async (userId: string, isFollowing: boolean) => {
-    requireAuth(() => toggleFollow(userId, isFollowing));
+  const handleFollowClick = (userId: string, isFollowing: boolean, displayName: string) => {
+    requireAuth(() => toggleFollow(userId, isFollowing, displayName));
   };
 
   const handleUserClick = (userId: string) => {
-    router.push(`${APP_ROUTES.PROFILE}/${userId}`);
+    router.push(getUserProfileUrl(userId, currentUserPubky));
   };
 
   if (taggerIds.length === 0) {

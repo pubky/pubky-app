@@ -129,7 +129,7 @@ export const toAppError = (error: unknown, service: ErrorService, operation: str
     return error;
   }
 
-  const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+  const message = error instanceof Error ? error.message : 'Unexpected error occurred.';
 
   return Err.server(ServerErrorCode.UNKNOWN_ERROR, message, {
     service,
@@ -150,5 +150,5 @@ export const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
     return error.message;
   }
-  return 'An unexpected error occurred';
+  return 'Unexpected error occurred.';
 };

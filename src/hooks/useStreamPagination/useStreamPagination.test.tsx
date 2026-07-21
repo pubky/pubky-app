@@ -380,6 +380,162 @@ describe('useStreamPagination', () => {
     });
   });
 
+  describe('Skip-paginated streams (collection items)', () => {
+    // collection:<author>:<postId> pages by offset (`skip`); Nexus returns no timestamp/score
+    // cursor, so the cursor is the count of already-loaded items. Regression guard for the
+    // infinite-scroll flicker where a stuck null timestamp cursor re-served page 1 forever.
+    const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
+
+    it('starts the initial load at offset 0, ignoring any cached timestamp cursor', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(9999);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        timestamp: undefined, // skip-paginated streams carry no timestamp cursor
+      });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 0,
+          lastPostId: undefined,
+        }),
+      );
+    });
+
+    it('paginates by the number of already-loaded items on loadMore (offset cursor)', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        timestamp: undefined,
+      });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3']);
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5'],
+        timestamp: undefined,
+      });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 3, // count of already-loaded items, not a timestamp
+        }),
+      );
+    });
+
+    it('does not count optimistic membership posts in collection offset pagination', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        timestamp: undefined,
+      });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      act(() => {
+        result.current.prependOptimisticPosts('optimistic-c0');
+      });
+
+      expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2', 'c3']);
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5'],
+        timestamp: undefined,
+      });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 3,
+        }),
+      );
+      expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2', 'c3', 'c4', 'c5']);
+    });
+
+    it('preserves optimistic membership posts across collection refresh without changing the next offset', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2'],
+        timestamp: undefined,
+      });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      act(() => {
+        result.current.prependOptimisticPosts('optimistic-c0');
+      });
+
+      expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2']);
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2'],
+        timestamp: undefined,
+      });
+
+      await act(async () => {
+        await result.current.refresh();
+      });
+
+      expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2']);
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 0,
+          lastPostId: undefined,
+        }),
+      );
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c3'],
+        timestamp: undefined,
+      });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 2,
+        }),
+      );
+      expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2', 'c3']);
+    });
+  });
+
   describe('Stream Preparation on Initial Load', () => {
     it('should call prepareStreamForInitialLoad on initial load', async () => {
       const { result } = renderHook(() =>
@@ -503,6 +659,74 @@ describe('useStreamPagination', () => {
 
       expect(result.current.refresh).toBeDefined();
       expect(typeof result.current.refresh).toBe('function');
+    });
+  });
+
+  describe('onError option', () => {
+    it('invokes onError with the thrown value when initial fetch fails', async () => {
+      const failure = new Error('network down');
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockRejectedValueOnce(failure);
+      const onError = vi.fn();
+
+      const { result } = renderHook(() =>
+        useStreamPagination({
+          streamId: mockStreamId,
+          onError,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith(failure);
+      // Internal state still reflects the failure.
+      expect(result.current.error).toBeTruthy();
+      expect(result.current.hasMore).toBe(false);
+    });
+
+    it('invokes onError on loadMore failures too', async () => {
+      // First (initial) call succeeds, second (loadMore) call throws.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce({ nextPageIds: mockPostIds, timestamp: Date.now() })
+        .mockRejectedValueOnce(new Error('boom'));
+      const onError = vi.fn();
+
+      const { result } = renderHook(() =>
+        useStreamPagination({
+          streamId: mockStreamId,
+          onError,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+      expect(onError).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+    });
+
+    it('is not invoked on success', async () => {
+      const onError = vi.fn();
+      const { result } = renderHook(() =>
+        useStreamPagination({
+          streamId: mockStreamId,
+          onError,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(onError).not.toHaveBeenCalled();
     });
   });
 
@@ -642,6 +866,43 @@ describe('useStreamPagination', () => {
       expect(result.current.postIds.length).toBe(initialPostIds.length + 2);
       expect(result.current.postIds[0]).toBe('new-post-1');
       expect(result.current.postIds[1]).toBe('new-post-2');
+    });
+  });
+
+  describe('prependOptimisticPosts', () => {
+    it('adds membership posts to the top without timestamp sorting', async () => {
+      vi.mocked(sortPostIdsByTimestamp).mockImplementation(async (ids: string[]) => {
+        const timestampMap: Record<string, number> = {
+          'old-membership-post': 100,
+          post1: 3000,
+          post2: 2000,
+          post3: 1000,
+        };
+        return [...ids].sort((a, b) => (timestampMap[b] || 0) - (timestampMap[a] || 0));
+      });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      act(() => {
+        result.current.prependOptimisticPosts('old-membership-post');
+      });
+
+      expect(result.current.postIds).toEqual(['old-membership-post', 'post1', 'post2', 'post3']);
+      expect(sortPostIdsByTimestamp).not.toHaveBeenCalledWith(
+        expect.arrayContaining(['old-membership-post', 'post1', 'post2', 'post3']),
+      );
+    });
+
+    it('dedupes optimistic posts against displayed posts', async () => {
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      act(() => {
+        result.current.prependOptimisticPosts(['optimistic-a', 'post1', 'optimistic-a']);
+      });
+
+      expect(result.current.postIds).toEqual(['optimistic-a', 'post1', 'post2', 'post3']);
     });
   });
 

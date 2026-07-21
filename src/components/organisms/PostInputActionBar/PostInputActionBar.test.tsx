@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInputActionBar } from './PostInputActionBar';
 
 // Use real libs - use actual implementations
@@ -225,6 +226,22 @@ describe('PostInputActionBar', () => {
     expect(screen.getByText('45/300')).toHaveClass('sm:block');
   });
 
+  it('separates action and submit clusters when separateActions is true', () => {
+    render(<PostInputActionBar hideArticleButton={false} characterLimit={{ count: 45, max: 300 }} separateActions />);
+
+    const root = screen.getAllByTestId('container')[0];
+    expect(root).toHaveClass('flex-1');
+    expect(root).toHaveClass('justify-between');
+    expect(root).toHaveClass('gap-6');
+    expect(screen.getByText('45/300').parentElement).toHaveClass('shrink-0');
+  });
+
+  it('uses full width root layout', () => {
+    const { container } = render(<PostInputActionBar hideArticleButton={false} />);
+
+    expect(container.firstChild).toHaveClass('w-full');
+  });
+
   it('uses default size for post button on mobile', () => {
     mockUseIsMobile.mockReturnValue(true);
     render(<PostInputActionBar hideArticleButton={false} />);
@@ -294,6 +311,23 @@ describe('PostInputActionBar - Snapshots', () => {
 
   it('matches snapshot with isEdit prop', () => {
     const { container } = render(<PostInputActionBar hideArticleButton={false} isEdit={true} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostInputActionBar - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useIsMobile).mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<PostInputActionBar hideArticleButton={false} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

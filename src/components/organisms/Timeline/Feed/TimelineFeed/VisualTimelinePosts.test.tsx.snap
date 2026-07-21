@@ -32,7 +32,7 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for a populated visu
             class="pointer-events-none absolute inset-0 flex flex-col justify-between bg-[linear-gradient(180deg,rgba(5,5,10,0.58)_0%,rgba(5,5,10,0.72)_100%)] opacity-0 backdrop-blur-[3px] transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100 p-5"
           >
             <div
-              class="pointer-events-none drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] group-focus-within:pointer-events-auto group-hover:pointer-events-auto"
+              class="pointer-events-none group-focus-within:pointer-events-auto group-hover:pointer-events-auto"
             >
               <div
                 class="flex flex-col gap-4 max-h-56"
@@ -72,9 +72,10 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for a populated visu
               </div>
             </div>
             <div
-              class="pointer-events-none w-full drop-shadow-[0_2px_10px_rgba(5,5,10,0.9)] group-focus-within:pointer-events-auto group-hover:pointer-events-auto mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-4"
+              class="pointer-events-none w-full group-focus-within:pointer-events-auto group-hover:pointer-events-auto mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-4"
             >
               <div
+                class="text-white min-w-0 flex-1"
                 data-testid="visual-overlay-tags"
               >
                 Tags

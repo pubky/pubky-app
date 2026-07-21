@@ -1,10 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { getUserProfileUrl } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 interface UserInfoPopoverHeaderProps {
   userId: string;
@@ -15,7 +17,8 @@ interface UserInfoPopoverHeaderProps {
 
 export function UserInfoPopoverHeader({ userId, userName, formattedPublicKey, avatarUrl }: UserInfoPopoverHeaderProps) {
   const router = useRouter();
-  const profileUrl = `/profile/${userId}`;
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const profileUrl = getUserProfileUrl(userId, currentUserPubky);
 
   // Navigate to profile programmatically while preventing event propagation
   // This prevents clicks from bubbling up to PostMain's onClick handler

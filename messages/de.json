@@ -1,16 +1,99 @@
 {
   "time": {
-    "now": "jetzt",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}T",
+    "weeksShort": "{count}W",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Entsperre</highlight> das Web.",
     "subtitle": "Deine Schlüssel, deine Inhalte, deine Regeln.",
-    "explore": "Entdecken",
-    "joinNow": "Jetzt beitreten",
+    "signIn": "Anmelden",
+    "learn": "Lernen",
+    "join": "Beitreten",
+    "createAccount": "Jetzt beitreten",
+    "videoLabel": "Pubky-Video",
+    "scrollToNext": "Zum nächsten Abschnitt scrollen",
+    "scrollToTop": "Nach oben scrollen",
     "aTetherCompany": "ein <tether>tether.</tether> Unternehmen",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Alle Rechte vorbehalten."
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Alle Rechte vorbehalten.",
+    "broken": {
+      "eyebrow": "Das Problem",
+      "title": "Das Web ist <highlight>kaputt</highlight>.",
+      "description": "Zentralisierte Plattformen kontrollieren deine Identität, deine Daten und deine Reichweite.",
+      "features": {
+        "identity": {
+          "title": "Sie besitzen dich",
+          "description": "Sie machen dich süchtig nach billigem Content und Dopamin. Zugriff kann jederzeit entzogen werden."
+        },
+        "data": {
+          "title": "Sie sperren dich ein",
+          "description": "Beiträge, Profile und Beziehungen stecken in Silos fest, die den Wechsel erschweren."
+        },
+        "reach": {
+          "title": "Sie begrenzen dich",
+          "description": "Algorithmen entscheiden, wer dich hört, was sich verbreitet und was im Nichts verschwindet."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "Die Lösung",
+      "title": "<highlight>Pubky</highlight> ist anders.",
+      "description": "Es gibt dir die Kontrolle über dein digitales Leben zurück.",
+      "features": {
+        "core": {
+          "title": "Du bist deine Schlüssel",
+          "description": "Konten werden von kryptografischen Schlüsseln angetrieben. Kein zentraler Server, keine Gatekeeper."
+        },
+        "taggable": {
+          "title": "Das taggbare Web",
+          "description": "Tagge Beiträge, Medien und Profile. Tags geben Bedeutung und helfen, deinen Social Graph zu formen."
+        },
+        "social": {
+          "title": "Sozial, aber persönlich",
+          "description": "Du hast deinen Feed, deine Inhalte und Verbindungen in der Hand. Du wählst deine Erfahrung."
+        },
+        "portable": {
+          "title": "Eine portable Identität",
+          "description": "Wechsle zwischen Apps, ohne von vorne anzufangen. Deine Identität, Daten und Freunde bleiben deine."
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "Für Freiheit gebaut",
+      "title": "Du bist <highlight>der Algorithmus</highlight>.",
+      "description": "Niemand bestimmt deinen Feed. Erstelle, forme und erlebe das Web nach deinen Regeln.",
+      "nextSlide": "Nächste Folie",
+      "features": {
+        "creation": {
+          "title": "Ohne Grenzen erstellen",
+          "description": "Poste alles: Gedanken, Artikel, Fotos, Videos, Links. Deine Inhalte beginnen bei dir und bleiben bei dir."
+        },
+        "browsing": {
+          "title": "Browsen auf deine Art",
+          "description": "Wechsle zwischen Layouts oder ändere deine Reichweite, um den Lärm zu filtern und dich auf das Wichtige zu konzentrieren."
+        },
+        "feeds": {
+          "title": "Perspektiven formen",
+          "description": "Erstelle dynamische Feeds, die sich in Echtzeit aktualisieren und als wiederverwendbare Perspektiven gespeichert bleiben."
+        },
+        "tagging": {
+          "title": "Alles taggen",
+          "description": "Tagge Beiträge, Medien und Profile, um Kontext hinzuzufügen, bessere Inhalte zu finden, Menschen zu entdecken und schnell zu reagieren."
+        },
+        "collections": {
+          "title": "Sammle, was zählt",
+          "description": "Speichere Beiträge, die bleiben sollen, kuratiere deine eigenen Ideen und teile deine Sammlungen mit anderen."
+        }
+      }
+    },
+    "final": {
+      "title": "Betritt das <line><highlight>freie Web</highlight>.</line>",
+      "joinNow": "Jetzt beitreten"
+    },
+    "explore": "Entdecken"
   },
   "status": {
     "available": "Verfügbar",
@@ -74,11 +157,13 @@
   "header": {
     "home": "Startseite",
     "hot": "Beliebt",
-    "bookmarks": "Lesezeichen",
     "settings": "Einstellungen",
     "newHere": "Neu hier?",
     "signIn": "Anmelden",
-    "feed": "Feed"
+    "feed": "Feed",
+    "search": "Suchen",
+    "collections": "Sammlungen",
+    "new": "Neu"
   },
   "settings": {
     "title": "Einstellungen",
@@ -184,9 +269,15 @@
       "blocked": "Telefonnummer gesperrt",
       "blockedDescription": "Diese Telefonnummer kann nicht zur Verifizierung verwendet werden.",
       "tooManyAttempts": "Zu viele Verifizierungsversuche",
-      "tooManyAttemptsDescription": "Sie haben die maximale Anzahl an Verifizierungen für diese Telefonnummer erreicht.",
+      "tooManyAttemptsDescription": "Zu viele Verifizierungsversuche",
       "sendFailed": "SMS-Code konnte nicht gesendet werden",
-      "sendFailedDescription": "Bitte versuchen Sie es später erneut. Wenn das Problem weiterhin besteht, kontaktieren Sie den Support."
+      "sendFailedDescription": "Verifizierungscode konnte nicht gesendet werden. Versuchen Sie es später erneut.",
+      "rateLimitedWithRetry": "Zu viele Verifizierungsversuche. Erneut versuchen in {seconds}s.",
+      "weeklyLimitReached": "Zu viele Verifizierungsversuche",
+      "weeklyLimitDescription": "Zu viele Verifizierungsversuche",
+      "yearlyLimitReached": "Zu viele Verifizierungsversuche",
+      "yearlyLimitDescription": "Zu viele Verifizierungsversuche",
+      "verificationFailed": "Telefonverifizierung fehlgeschlagen. Versuchen Sie es erneut."
     },
     "phoneCode": {
       "title": "Code <highlight>eingeben.</highlight>",
@@ -199,7 +290,7 @@
       "valid": "Verifizierungscode gültig",
       "invalid": "Verifizierungscode ungültig. Versuchen Sie es erneut.",
       "verifyFailed": "SMS-Code konnte nicht verifiziert werden",
-      "verifyFailedDescription": "Bitte versuchen Sie es später erneut. Wenn das Problem weiterhin besteht, kontaktieren Sie den Support."
+      "verifyFailedDescription": "Code konnte nicht verifiziert werden. Versuchen Sie es später erneut."
     },
     "lightning": {
       "title": "Scannen zum <highlight>Bezahlen.</highlight>",
@@ -215,9 +306,9 @@
       "paymentSuccess": "Zahlung erfolgreich",
       "paymentExpired": "Zahlung abgelaufen",
       "requestFailed": "Lightning-Rechnung konnte nicht angefordert werden",
-      "requestFailedDescription": "Bitte versuchen Sie es später erneut. Wenn das Problem weiterhin besteht, kontaktieren Sie den Support.",
+      "requestFailedDescription": "Lightning-Rechnung konnte nicht angefordert werden. Versuchen Sie es später erneut.",
       "invoiceCopied": "Rechnung in Zwischenablage kopiert",
-      "copyFailed": "Kopieren der Rechnung fehlgeschlagen"
+      "copyFailed": "Rechnung konnte nicht kopiert werden."
     },
     "inviteCode": {
       "title": "Beweisen Sie, dass Sie <highlight>kein Roboter sind.</highlight>",
@@ -237,13 +328,13 @@
       "notAvailable": "Derzeit in Ihrem Land nicht verfügbar",
       "unavailable": "Service vorübergehend nicht verfügbar"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "Telefonnummer",
       "free": "Kostenlos",
       "lessPrivate": "WENIGER PRIVAT, ABER EINFACH",
       "storage": "1GB Speicher",
       "speedLimit": "1MB/s Geschwindigkeitslimit",
-      "receiveSms": "SMS empfangen",
+      "receiveCode": "Code empfangen",
       "notAvailable": "Derzeit in Ihrem Land nicht verfügbar",
       "unavailable": "Service vorübergehend nicht verfügbar"
     },
@@ -259,11 +350,8 @@
       "subtitleDesktop": "Oeffnen Sie Pubky Ring, tippen Sie auf 'Pubky hinzufügen', und scannen Sie diesen QR.",
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
-
       "clickToReload": "Zum Neuladen klicken",
-
       "openingRing": "Pubky Ring wird geöffnet...",
-
       "authorize": "Mit Pubky Ring autorisieren",
       "authorizeSub": "Verwenden Sie <pubkyRing>Pubky Ring</pubkyRing> oder einen anderen von <pubkyCore>Pubky Core</pubkyCore> betriebenen Schlüsselbund.",
       "linkFailed": "Verbindung zur Signer-Anwendung Pubky Ring nicht möglich",
@@ -276,22 +364,18 @@
       "progressSubtitle": "Bitte warten Sie, während Ihr Pubky-Erlebnis geladen wird.",
       "generating": "QR-Code wird generiert...",
       "generatingShort": "Generieren...",
-
       "clickToReload": "Zum Neuladen klicken",
-
       "openingRing": "Pubky Ring wird geöffnet...",
-
       "authorize": "Mit Pubky Ring autorisieren",
       "linkCopied": "Link kopiert",
-      "linkCopiedDescription": "Authentifizierungslink in die Zwischenablage kopiert.",
       "linkFailed": "Verbindung zur Signer-Anwendung Pubky Ring nicht möglich",
       "tryAgain": "Bitte versuchen Sie es erneut.",
-      "authInitFailedTitle": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
-      "authInitFailedDescription": "Autorisierung mit Pubky Ring konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+      "authInitFailedTitle": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
+      "authInitFailedDescription": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
       "authNotCompletedTitle": "Autorisierung wurde nicht abgeschlossen",
-      "authNotCompletedDescription": "Der Signer hat die Autorisierung nicht abgeschlossen. Bitte versuchen Sie es erneut.",
+      "authNotCompletedDescription": "Autorisierung fehlgeschlagen. Versuchen Sie es erneut.",
       "qrGenerationFailedTitle": "QR-Code-Generierung fehlgeschlagen",
-      "qrGenerationFailedDescription": "Anmelde-QR-Code konnte nicht generiert werden. Bitte aktualisieren Sie und versuchen Sie es erneut.",
+      "qrGenerationFailedDescription": "QR-Code konnte nicht generiert werden. Aktualisieren und erneut versuchen.",
       "recoveryHint": "Können Sie sich nicht mit <pubkyRing>Pubky Ring</pubkyRing> anmelden? Verwenden Sie die Wiederherstellungsphrase oder die verschlüsselte Datei, um Ihr Konto wiederherzustellen.",
       "verifyingAccount": "Konto wird verifiziert",
       "loadingData": "Ihre Daten werden geladen",
@@ -308,7 +392,7 @@
         "restore": "Wiederherstellen",
         "restoring": "Wird wiederhergestellt...",
         "errorTitle": "Fehler bei der Anmeldung mit Mnemonic",
-        "errorDescription": "Bitte versuchen Sie es erneut."
+        "errorDescription": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut."
       },
       "restoreEncryptedFile": {
         "title": "Mit verschlüsselter Datei wiederherstellen",
@@ -318,11 +402,11 @@
         "passwordPlaceholder": "Geben Sie Ihr Passwort ein",
         "selectFile": "Datei auswählen",
         "invalidFileType": "Bitte wählen Sie eine .pkarr-Datei",
-        "missingFields": "Bitte wählen Sie eine Datei und geben Sie Ihr Passwort ein",
+        "missingFields": "Bitte wählen Sie eine Datei",
         "invalidPassword": "Ungültiges Passwort oder beschädigte Datei. Bitte überprüfen Sie Ihr Passwort und versuchen Sie es erneut.",
         "nexusError": "Bei Nexus ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
         "restoreError": "Wiederherstellung aus Datei fehlgeschlagen. Bitte überprüfen Sie Ihre Datei und versuchen Sie es erneut.",
-        "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten",
+        "unexpectedError": "Unerwarteter Fehler aufgetreten.",
         "cancel": "Abbrechen",
         "restore": "Wiederherstellen",
         "restoring": "Wird wiederhergestellt..."
@@ -338,25 +422,25 @@
       "myPubky": "Mein Pubky",
       "shareText": "Hier ist mein Pubky:\n{displayPubky}",
       "shareUnavailable": "Teilen nicht verfügbar",
-      "shareUnavailableDescription": "Wir haben Ihren Pubky kopiert, damit Sie ihn in Ihre Lieblings-App einfuegen können.",
       "shareFailed": "Teilen fehlgeschlagen",
-      "shareFailedDescription": "Teilen momentan nicht möglich. Bitte versuchen Sie es erneut.",
+      "shareFailedDescription": "Teilen fehlgeschlagen. Versuchen Sie es erneut.",
       "signUpFailed": "Fehler - Registrierung fehlgeschlagen",
-      "signUpError": "Etwas ist schief gelaufen. Bitte versuchen Sie es erneut.",
-      "invalidInvite": "Ungültiger oder abgelaufener Einladungscode. Bitte holen Sie sich einen neuen Einladungscode."
+      "signUpError": "Registrierung fehlgeschlagen. Versuchen Sie es erneut.",
+      "invalidInvite": "Einladungscode ist ungültig oder abgelaufen."
     },
     "backupMethod": {
       "title": "Backup-Methode wählen",
       "subtitle": "Sichern und speichern Sie den geheimen Seed für Ihren Pubky sicher. Welche Backup-Methode bevorzugen Sie? Sie können dies auch später tun.",
       "recoveryPhrase": "Wiederherstellungsphrase",
-      "encryptedFile": "Verschlüsselte Datei"
+      "encryptedFile": "Verschlüsselte Datei",
+      "exportRing": "Zu Pubky Ring exportieren"
     },
     "backup": {
       "title": "Sichern Sie Ihren <highlight>Pubky.</highlight>",
       "subtitle": "Sie benötigen ein Backup, um später wieder auf Ihr Konto zugreifen zu können.",
       "signUpFailed": "Fehler - Anmeldung fehlgeschlagen",
-      "signUpError": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
-      "invalidInvite": "Ungültiger oder abgelaufener Einladungscode. Bitte holen Sie sich einen neuen Einladungscode."
+      "signUpError": "Registrierung fehlgeschlagen. Versuchen Sie es erneut.",
+      "invalidInvite": "Einladungscode ist ungültig oder abgelaufen."
     },
     "backupPhrase": {
       "title": "Wiederherstellungsphrase sichern",
@@ -394,13 +478,9 @@
       "createInBrowser": "Schlüssel im Browser erstellen",
       "continueWithRing": "Mit Pubky Ring fortfahren",
       "inviteCodeApplied": "Einladungscode angewendet",
-      "inviteCodeAppliedDescription": "Dein Einladungscode {inviteCode} wurde angewendet.",
       "invalidInviteCode": "Ungültiger Einladungscode",
-      "invalidInviteCodeDescription": "Dieser Einladungscode ist ungültig oder abgelaufen. Bitte verwende einen gültigen Einladungscode.",
       "usedInviteCode": "Einladungscode bereits verwendet",
-      "usedInviteCodeDescription": "Dieser Einladungscode wurde bereits verwendet. Bitte verwende einen anderen Einladungscode.",
-      "verificationFailed": "Einladungscode konnte nicht überprüft werden",
-      "verificationFailedDescription": "Wir konnten deinen Einladungscode gerade nicht überprüfen. Bitte überprüfe deine Verbindung und versuche es erneut."
+      "verificationFailed": "Einladungscode konnte nicht überprüft werden"
     },
     "createProfile": {
       "title": "Erstellen Sie Ihr <highlight>Profil.</highlight>",
@@ -431,9 +511,11 @@
       "followUser": "{username} folgen",
       "unfollowUser": "{username} entfolgen",
       "muteUser": "{username} stummschalten",
-      "unmuteUser": "Stummschaltung von {username} aufheben"
+      "unmuteUser": "Stummschaltung von {username} aufheben",
+      "tagPost": "Beitrag taggen ({count})"
     },
     "deleted": "Dieser Beitrag wurde vom Autor gelöscht.",
+    "missing": "Beitrag nicht gefunden.",
     "dropFiles": "Dateien hier ablegen",
     "articleTitle": "Artikeltitel",
     "addTag": "Tag hinzufügen",
@@ -444,6 +526,8 @@
     "addArticle": "Artikel hinzufügen",
     "posting": "Wird gepostet...",
     "viewOriginal": "Originalbeitrag ansehen",
+    "postBy": "Beitrag von",
+    "replyBy": "Antwort von",
     "youReposted": "Du hast geteilt",
     "newPostsSingular": "{count} neuen Beitrag anzeigen",
     "newPostsPlural": "{count} neue Beiträge anzeigen",
@@ -470,6 +554,7 @@
     "tabs": {
       "notifications": "Benachrichtigungen",
       "posts": "Beiträge",
+      "collections": "Sammlungen",
       "replies": "Antworten",
       "followers": "Follower",
       "following": "Folge ich",
@@ -560,6 +645,12 @@
       "confirmButton": "Löschen",
       "cancelButton": "Abbrechen"
     },
+    "deleteCollection": {
+      "title": "Sammlung löschen?",
+      "description": "Sind Sie sicher, dass Sie ''{name}'' löschen möchten? Personen, die dieser Sammlung folgen, haben keinen Zugriff mehr darauf. Beiträge in der Sammlung werden nicht gelöscht.",
+      "confirmButton": "Löschen",
+      "cancelButton": "Abbrechen"
+    },
     "editPost": {
       "editArticle": "Artikel bearbeiten",
       "editPost": "Beitrag bearbeiten",
@@ -587,7 +678,7 @@
       "newHere": "Neu hier?",
       "newHereDescription": "Erstellen Sie Ihr Konto und beginnen Sie, Pubky zu erkunden.",
       "joinButton": "Pubky beitreten",
-      "alreadyHaveAccount": "Sie haben bereits ein Konto?",
+      "alreadyHaveAccount": "Sie haben bereits einen Pubky?",
       "alreadyHaveAccountDescription": "Melden Sie sich an, um mit Beiträgen und Profilen zu interagieren.",
       "signInButton": "Anmelden"
     },
@@ -628,7 +719,9 @@
     },
     "deleteAccount": {
       "title": "Konto löschen",
-      "description": "Sind Sie sicher? Ihre Kontoinformationen können nicht wiederhergestellt werden."
+      "description": "Sind Sie sicher? Ihre Kontoinformationen können nicht wiederhergestellt werden.",
+      "button": "Konto löschen",
+      "buttonLoading": "Wird gelöscht... {progress}%"
     },
     "confirmDiscard": {
       "title": "Möchten Sie schließen?",
@@ -666,11 +759,11 @@
       "saveFeed": "Feed speichern",
       "deleteFeed": "Feed löschen",
       "feedCreated": "Feed {name} erstellt!",
-      "feedCreatedError": "Feed konnte nicht erstellt werden. Bitte versuche es erneut oder wende dich an den Support.",
       "feedEdited": "Feed {name} bearbeitet!",
-      "feedEditedError": "Feed konnte nicht bearbeitet werden. Bitte versuche es erneut oder wende dich an den Support.",
       "feedDeleted": "Feed {name} gelöscht!",
-      "feedDeletedError": "Feed konnte nicht gelöscht werden. Bitte versuche es erneut oder wende dich an den Support."
+      "feedCreateError": "Feed konnte nicht erstellt werden. Versuchen Sie es erneut.",
+      "feedEditError": "Feed konnte nicht aktualisiert werden. Versuchen Sie es erneut.",
+      "feedDeleteError": "Feed konnte nicht gelöscht werden. Versuchen Sie es erneut."
     }
   },
   "sidebar": {
@@ -706,7 +799,7 @@
     },
     "userSuggestion": "Benutzer {name} ({pubky})",
     "viewProfile": "Profil von {name} ansehen",
-    "invalidTag": "Tags dürfen maximal 20 Zeichen lang sein und keine Sonderzeichen enthalten"
+    "invalidTag": "Tags dürfen max. 20 Zeichen lang sein und keine Sonderzeichen enthalten"
   },
   "feedback": {
     "title": "Feedback geben",
@@ -756,12 +849,24 @@
       "followedYou": "folgt Ihnen",
       "newFriend": "ist jetzt Ihr Freund",
       "taggedPost": "hat Ihren Beitrag markiert",
+      "taggedCollection": "hat Ihre Sammlung markiert",
+      "taggedArticle": "hat Ihren Artikel markiert",
       "taggedProfile": "hat Ihr Profil markiert",
       "repliedToPost": "hat auf Ihren Beitrag geantwortet",
+      "repliedToCollection": "hat auf Ihre Sammlung geantwortet",
+      "repliedToArticle": "hat auf Ihren Artikel geantwortet",
       "repostedPost": "hat Ihren Beitrag repostet",
+      "repostedCollection": "hat Ihre Sammlung repostet",
+      "repostedArticle": "hat Ihren Artikel repostet",
       "mentionedYou": "hat Sie in einem Beitrag erwaehnt",
+      "mentionedYouInCollection": "hat Sie in einer Sammlung erwähnt",
+      "mentionedYouInArticle": "hat Sie in einem Artikel erwähnt",
       "deletedPost": "hat einen Beitrag gelöscht",
+      "deletedCollection": "hat eine Sammlung gelöscht",
+      "deletedArticle": "hat einen Artikel gelöscht",
       "editedPost": "hat einen Beitrag bearbeitet, mit dem Sie interagiert haben",
+      "updatedCollection": "hat eine Sammlung aktualisiert",
+      "updatedArticle": "hat einen Artikel aktualisiert",
       "fallback": "Neue Benachrichtigung"
     },
     "settings": {
@@ -893,123 +998,119 @@
     "success": "Erfolg",
     "error": "Fehler",
     "errors": "Fehler",
-    "genericErrorTitle": "Hoppla! Etwas ist schiefgelaufen!",
+    "genericErrorTitle": "Fehler",
     "post": {
       "replyPosted": "Antwort gepostet",
-      "replyPostedDesc": "Ihre Antwort wurde erfolgreich gepostet.",
-      "replyFailed": "Antwort konnte nicht gepostet werden. Bitte versuchen Sie es erneut.",
-      "postCreated": "Beitrag erstellt",
-      "postCreatedDesc": "Ihr Beitrag wurde erfolgreich erstellt.",
-      "postFailed": "Beitrag konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+      "replyFailed": "Antwort konnte nicht gepostet werden. Versuchen Sie es erneut.",
+      "postCreated": "Beitrag veröffentlicht",
+      "postFailed": "Beitrag konnte nicht erstellt werden. Versuchen Sie es erneut.",
       "repostSuccess": "Repostet!",
-      "repostSuccessDesc": "Sie haben erfolgreich einen Beitrag von {author} repostet!",
-      "repostSuccessDescFallback": "Ihr Repost wurde erfolgreich erstellt.",
       "repostUndo": "Rückgängig",
-      "repostFailed": "Repost fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "repostFailed": "Repost fehlgeschlagen. Versuchen Sie es erneut.",
       "postEdited": "Beitrag bearbeitet",
-      "postEditedDesc": "Ihr Beitrag wurde erfolgreich bearbeitet.",
-      "editFailed": "Beitrag konnte nicht bearbeitet werden. Bitte versuchen Sie es erneut.",
+      "editFailed": "Beitrag konnte nicht aktualisiert werden. Versuchen Sie es erneut.",
       "postDeleted": "Beitrag gelöscht",
-      "postDeletedDesc": "Ihr Beitrag wurde gelöscht",
-      "deleteFailed": "Beitrag konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
-      "invalidPostId": "Ungültige Beitrags-ID. Bitte versuchen Sie es erneut.",
+      "deleteFailed": "Beitrag konnte nicht gelöscht werden. Versuchen Sie es erneut.",
+      "invalidPostId": "Ungültiger Beitrag. Versuchen Sie es erneut.",
       "attachmentsCleared": "Anhaenge entfernt",
-      "attachmentsClearedDesc": "Artikel unterstuetzen nur ein Titelbild.",
       "failedToLoadPosts": "Neue Beiträge konnten nicht geladen werden",
-      "failedToLoadPostsDesc": "Neue Beiträge können nicht angezeigt werden. Bitte versuchen Sie es erneut.",
       "parseError": "Artikelinhalt konnte nicht analysiert werden",
-      "coverImageError": "Artikeltitelbild konnte nicht geladen werden",
-      "attachmentsLoadFailed": "Anhänge konnten nicht geladen werden"
+      "collectionParseError": "Sammlungsinhalt konnte nicht analysiert werden",
+      "coverImageError": "Titelbild konnte nicht geladen werden",
+      "attachmentsLoadFailed": "Anhänge konnten nicht geladen werden",
+      "repostSuccessFallback": "Repostet"
     },
     "bookmark": {
       "added": "Lesezeichen hinzugefügt",
-      "addedDesc": "Beitrag in Ihren Lesezeichen gespeichert",
       "removed": "Lesezeichen entfernt",
-      "removedDesc": "Beitrag aus Ihren Lesezeichen entfernt",
       "addFailed": "Lesezeichen konnte nicht hinzugefügt werden",
       "removeFailed": "Lesezeichen konnte nicht entfernt werden",
-      "loginRequired": "Sie müssen angemeldet sein, um Beiträge zu speichern"
+      "loginRequired": "Melden Sie sich an, um Beiträge zu speichern"
+    },
+    "collection": {
+      "collectionDeleted": "Ihre Sammlung wurde gelöscht",
+      "deleteFailed": "Sammlung konnte nicht gelöscht werden. Bitte erneut versuchen."
     },
     "copy": {
       "pubkyCopied": "Pubky in Zwischenablage kopiert",
       "linkCopied": "Link in Zwischenablage kopiert",
       "textCopied": "Text in Zwischenablage kopiert",
       "profileLinkCopied": "Profillink in Zwischenablage kopiert",
-      "copyFailed": "Kopieren fehlgeschlagen",
+      "copyFailed": "Kopieren in Zwischenablage nicht möglich",
       "copyFailedDesc": "Kopieren in Zwischenablage nicht möglich"
     },
     "follow": {
-      "failed": "Folgestatus konnte nicht aktualisiert werden"
+      "followed": "Folge {username}",
+      "unfollowed": "{username} entfolgt",
+      "followFailed": "{username} konnte nicht gefolgt werden",
+      "unfollowFailed": "{username} konnte nicht entfolgt werden"
     },
     "mute": {
-      "muted": "Benutzer stummgeschaltet",
-      "unmuted": "Stummschaltung aufgehoben",
-      "mutedDesc": "{username} wurde stummgeschaltet.",
-      "unmutedDesc": "Stummschaltung von {username} wurde aufgehoben.",
+      "muted": "{username} stummgeschaltet",
+      "unmuted": "{username} nicht mehr stummgeschaltet",
       "failed": "Stummschaltungsstatus konnte nicht aktualisiert werden"
     },
     "profile": {
       "updated": "Profil aktualisiert",
-      "updatedDesc": "Ihr Profil wurde erfolgreich aktualisiert.",
       "sessionExpired": "Sitzung abgelaufen",
-      "sessionExpiredDesc": "Bitte melden Sie sich ab und wieder an, um fortzufahren.",
+      "sessionExpiredDesc": "Sitzung abgelaufen. Bitte melden Sie sich an.",
       "saveFailed": "Profil konnte nicht gespeichert werden",
-      "saveFailedDesc": "Bitte versuchen Sie es erneut.",
-      "fetchFailed": "Bitte versuchen Sie es erneut.",
-      "fetchFailedDesc": "Neue Benutzerdaten konnten nicht abgerufen werden. Indizierung läuft möglicherweise...",
-      "updateFailed": "Profil konnte nicht aktualisiert werden."
+      "fetchFailedDesc": "Profil konnte nicht aktualisiert werden",
+      "updateFailed": "Profil konnte nicht aktualisiert werden"
     },
     "report": {
-      "userNotLoaded": "Benutzerprofil nicht geladen. Bitte versuchen Sie es erneut.",
-      "submitFailed": "Meldung konnte nicht gesendet werden",
-      "submitFailedDesc": "Meldung konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
+      "userNotLoaded": "Profil konnte nicht geladen werden",
+      "submitFailedDesc": "Meldung konnte nicht gesendet werden. Versuchen Sie es erneut."
     },
     "feedback": {
-      "userNotLoaded": "Benutzerprofil nicht geladen. Bitte versuchen Sie es erneut.",
-      "submitFailed": "Feedback konnte nicht gesendet werden",
-      "submitFailedDesc": "Feedback konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
+      "userNotLoaded": "Profil konnte nicht geladen werden",
+      "submitFailedDesc": "Feedback konnte nicht gesendet werden. Versuchen Sie es erneut."
     },
     "copyright": {
       "success": "Anfrage erfolgreich gesendet",
-      "error": "Fehler beim Senden der Anfrage",
+      "error": "Anfrage konnte nicht gesendet werden",
       "submitFailed": "Anfrage konnte nicht gesendet werden"
     },
     "tags": {
       "loadFailed": "Weitere Tags konnten nicht geladen werden",
-      "loadFailedDesc": "Weitere Tags konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
       "labelEmpty": "Tag-Bezeichnung darf nicht leer sein",
       "postIdRequired": "Beitrags-ID ist erforderlich",
       "userIdRequired": "Benutzer-ID ist erforderlich",
       "loginRequired": "Sie müssen angemeldet sein, um Tags hinzuzufuegen",
       "alreadyAdded": "Sie haben diesen Tag bereits hinzugefügt",
-      "addFailed": "Tag konnte nicht hinzugefügt werden",
-      "addFailedDesc": "\"{label}\" konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut.",
-      "removeFailed": "Tag konnte nicht entfernt werden",
-      "removeFailedDesc": "\"{label}\" konnte nicht entfernt werden. Bitte versuchen Sie es erneut."
+      "added": "Tag hinzugefügt: {label}",
+      "removed": "Tag entfernt: {label}",
+      "addFailed": "Tag konnte nicht hinzugefügt werden: {label}",
+      "removeFailed": "Tag konnte nicht entfernt werden: {label}"
     },
     "auth": {
-      "signInFailed": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
-      "signInFailedDesc": "Autorisierung mit Pubky Ring konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+      "signInFailed": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
+      "signInFailedDesc": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
       "authNotCompleted": "Autorisierung wurde nicht abgeschlossen",
-      "authNotCompletedDesc": "Der Signer hat die Autorisierung nicht abgeschlossen. Bitte versuchen Sie es erneut.",
+      "authNotCompletedDesc": "Autorisierung fehlgeschlagen. Versuchen Sie es erneut.",
       "qrFailed": "QR-Code-Generierung fehlgeschlagen",
-      "qrFailedDesc": "Anmelde-QR-Code konnte nicht generiert werden. Bitte aktualisieren Sie und versuchen Sie es erneut."
+      "qrFailedDesc": "QR-Code konnte nicht generiert werden. Aktualisieren und erneut versuchen."
     },
     "file": {
       "maxFiles": "Maximal {max} Dateien erlaubt",
       "maxFilesPartial": "Maximal {max} Dateien erlaubt. Einige Dateien wurden nicht hinzugefügt.",
-      "unsupportedType": "\"{name}\" hat nicht unterstützten Typ \"{type}\". Unterstützte Formate: {formats}.",
-      "fileTooLarge": "\"{name}\" überschreitet die maximale Größe von {maxSize}."
+      "unsupportedType": "Nicht unterstützter Dateityp für {name}. Unterstützt: {formats}.",
+      "fileTooLarge": "{name} überschreitet das Limit von {maxSize}.",
+      "imageTooLargeRaw": "Bild ist zu groß. Maximale Größe ist {maxSize}.",
+      "imageTooLargeGif": "Dieses GIF überschreitet das Upload-Limit von {maxSize} und kann nicht komprimiert werden. Bitte verwende ein kleineres GIF.",
+      "imageTooLargeAnimatedWebp": "Dieses animierte WebP überschreitet das Upload-Limit von {maxSize} und kann nicht komprimiert werden. Bitte verwende eine kleinere Datei.",
+      "imageTooLargeSvg": "Dieses SVG überschreitet nach der Bereinigung das Upload-Limit von {maxSize}. Bitte verwende eine kleinere Datei.",
+      "imageTooLargeRaster": "Bild konnte nicht unter {maxSize} komprimiert werden. Bitte verwende ein kleineres oder niedriger aufgelöstes Bild."
     },
     "status": {
-      "updateFailed": "Status konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
-      "userNotLoaded": "Benutzerprofil nicht geladen. Bitte versuchen Sie es erneut."
+      "updateFailed": "Status konnte nicht aktualisiert werden. Versuchen Sie es erneut.",
+      "userNotLoaded": "Profil konnte nicht geladen werden. Versuchen Sie es erneut."
     },
     "fullscreen": {
-      "error": "Fehler beim Aktivieren des Vollbildmodus"
+      "error": "Vollbild konnte nicht aktiviert werden."
     },
     "logout": {
-      "failed": "Abmelden fehlgeschlagen. Bitte versuchen Sie es erneut."
+      "failed": "Abmeldung fehlgeschlagen. Versuchen Sie es erneut."
     }
   },
   "empty": {
@@ -1020,9 +1121,10 @@
     "noNotifications": "Keine Benachrichtigungen"
   },
   "errors": {
-    "signOutFailed": "Abmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "signOutFailed": "Abmeldung fehlgeschlagen. Versuchen Sie es erneut.",
+    "deleteAccountFailed": "Löschen des Kontos fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "generic": "Etwas ist schiefgelaufen",
-    "network": "Netzwerkfehler. Bitte versuchen Sie es erneut.",
+    "network": "Netzwerkfehler",
     "notFound": "Seite nicht gefunden",
     "couldNotFind": "Angeforderte Ressource konnte nicht gefunden werden",
     "database": {
@@ -1076,6 +1178,7 @@
       "title": "Layout",
       "columns": "Spalten",
       "wide": "Breit",
+      "list": "Liste",
       "visual": "Visuell"
     },
     "content": {
@@ -1086,7 +1189,8 @@
       "images": "Bilder",
       "videos": "Videos",
       "links": "Links",
-      "files": "Dateien"
+      "files": "Dateien",
+      "collections": "Sammlungen"
     },
     "timeframe": {
       "title": "Zeitraum",
@@ -1127,9 +1231,7 @@
     "unmuteAll": "Alle Benutzer entstummen",
     "noMutedUsers": "Noch keine stummgeschalteten Benutzer",
     "userUnmuted": "Benutzer entstummt",
-    "userUnmutedDesc": "{username} wurde entstummt.",
     "allUsersUnmuted": "Alle Benutzer entstummt",
-    "allUsersUnmutedDesc": "Alle stummgeschalteten Benutzer wurden entstummt.",
     "partialSuccess": "Teilweiser Erfolg",
     "partialSuccessDesc": "{success} Benutzer entstummt, {failed} fehlgeschlagen."
   },
@@ -1240,5 +1342,138 @@
     "toolbarAriaLabel": "Markdown-Bearbeitungsleiste",
     "warningApproaching": "Du näherst dich dem maximalen Zeichenlimit.",
     "warningReached": "Du hast das maximale Zeichenlimit erreicht."
+  },
+  "collections": {
+    "deleted": "Diese Sammlung wurde vom Autor gelöscht.",
+    "missing": "Sammlung nicht gefunden.",
+    "postCount": "{count, plural, one {Beitrag} other {Beiträge}}",
+    "new": {
+      "cta": "Neue Sammlung",
+      "ctaShort": "Neu",
+      "title": "Neue Sammlung",
+      "nameLabel": "Titel",
+      "namePlaceholder": "Geben Sie Ihrer Sammlung einen Namen",
+      "descriptionLabel": "Beschreibung",
+      "descriptionPlaceholder": "Was werden Menschen hier finden?",
+      "backgroundLabel": "Hintergrund",
+      "addImage": "Bild hinzufügen",
+      "removeImage": "Bild entfernen",
+      "coverImageInvalid": "Das Coverbild muss eine Bilddatei sein.",
+      "coverImageTooLarge": "Das Coverbild ist zu groß. Maximale Größe ist {maxSize}.",
+      "nameRequired": "Sammlungstitel ist erforderlich.",
+      "cancel": "Abbrechen",
+      "save": "Sammlung speichern",
+      "saving": "Wird gespeichert...",
+      "created": "Sammlung erstellt",
+      "createFailed": "Sammlung konnte nicht erstellt werden."
+    },
+    "intro": {
+      "title": "Willkommen bei Sammlungen",
+      "description": "Bewahre Beiträge auf, die es wert sind. Sammle die besten Inhalte aus deinem Netzwerk. Ordne Ideen, filtere das Signal vom Rauschen und teile, was zählt.",
+      "imageAlt": "Sammlungen",
+      "publicNote": "Hinweis: Sammlungen sind öffentlich und auffindbar.",
+      "cancel": "Abbrechen",
+      "continue": "Weiter"
+    },
+    "edit": {
+      "title": "Sammlung bearbeiten",
+      "save": "Änderungen speichern",
+      "updated": "Sammlung aktualisiert",
+      "updateFailed": "Sammlung konnte nicht aktualisiert werden."
+    },
+    "showMore": "Mehr anzeigen",
+    "loadFailed": "Sammlungen konnten nicht geladen werden. Bitte erneut versuchen.",
+    "my": {
+      "title": "Meine Sammlungen"
+    },
+    "followed": {
+      "title": "Gefolgte Sammlungen",
+      "empty": "Du folgst noch keinen Sammlungen."
+    },
+    "discover": {
+      "title": "Sammlungen entdecken",
+      "empty": "Im Moment gibt es keine Sammlungen zu entdecken."
+    },
+    "bookmarks": {
+      "title": "Lesezeichen",
+      "description": "Alles, was du für später gespeichert hast."
+    },
+    "card": {
+      "follow": "Folgen",
+      "unfollow": "Entfolgen",
+      "delete": "Löschen",
+      "toast": {
+        "followed": "Du folgst jetzt dieser Sammlung",
+        "unfollowed": "Du folgst dieser Sammlung nicht mehr",
+        "shared": "Du hast diese Sammlung geteilt"
+      }
+    },
+    "single": {
+      "share": "Teilen",
+      "shareTitle": "Sammlung teilen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "follow": "Folgen",
+      "unfollow": "Entfolgen",
+      "content": "Beitrag hinzufügen",
+      "addContent": "Beitrag hinzufügen",
+      "empty": "Diese Sammlung ist leer.",
+      "notFound": {
+        "title": "Sammlung nicht gefunden",
+        "subtitle1": "Diese Sammlung ist nicht verfügbar.",
+        "subtitle2": "Sie wurde möglicherweise entfernt oder der Link ist nicht mehr gültig.",
+        "imageAlt": "Sammlung nicht gefunden",
+        "backToCollections": "Zurück zu Sammlungen",
+        "viewProfile": "Profil ansehen"
+      }
+    },
+    "addContentDialog": {
+      "title": "Beitrag hinzufügen",
+      "description": "Es gibt mehrere Möglichkeiten, Beiträge zu deiner Sammlung hinzuzufügen.",
+      "fromFeedTitle": "Aus Feed hinzufügen",
+      "fromFeedLead": "Finde einen Beitrag",
+      "fromFeedRest": " den du hinzufügen möchtest und klicke auf die Sammlungen-Schaltfläche.",
+      "pasteTitle": "Beitrags-URL einfügen",
+      "pasteDescription": "Du kannst auch eine Beitrags-URL einfügen, um ihn schnell zu deiner Sammlung hinzuzufügen.",
+      "createPostTitle": "Neuen Beitrag erstellen",
+      "createPostPlaceholder": "Was gibt es Neues?",
+      "createPostAvatarFallback": "Du",
+      "adding": "Wird hinzugefügt...",
+      "errors": {
+        "required": "Füge eine Beitrags-URL ein.",
+        "invalid": "Gib eine gültige Beitrags-URL ein.",
+        "notFound": "Wir konnten diesen Beitrag nicht finden.",
+        "alreadyAdded": "Dieser Beitrag wurde bereits hinzugefügt.",
+        "collectionNotAllowed": "Eine Sammlung kann nicht zu einer Sammlung hinzugefügt werden.",
+        "failure": "Dieser Beitrag konnte nicht hinzugefügt werden."
+      }
+    }
+  },
+  "fab": {
+    "newPost": "Neuer Beitrag",
+    "newCollection": "Neue Sammlung",
+    "newPostInCollection": "Neuer Beitrag in der Sammlung",
+    "newBookmark": "Neues Lesezeichen",
+    "addedToCollection": "Beitrag zur Sammlung hinzugefügt."
+  },
+  "postSave": {
+    "title": "Beitrag speichern",
+    "description": "Wähle, wo dieser Beitrag gespeichert werden soll.",
+    "open": "Beitrag speichern",
+    "loading": "Speicheroptionen werden geladen",
+    "bookmarks": "Lesezeichen",
+    "newCollection": "Neue Sammlung",
+    "collectionNamePlaceholder": "Name der Sammlung",
+    "createCollection": "Sammlung erstellen",
+    "loadingCollections": "Sammlungen werden geladen...",
+    "addedToCollection": "Beitrag zur Sammlung hinzugefügt.",
+    "removedFromCollection": "Beitrag aus der Sammlung entfernt.",
+    "updateCollectionFailed": "Sammlung konnte nicht aktualisiert werden.",
+    "collectionCreated": "Sammlung erstellt und Beitrag gespeichert.",
+    "createCollectionFailed": "Sammlung konnte nicht erstellt werden."
+  },
+  "moderation": {
+    "postContentModerated": "Beitragsinhalt zensiert.",
+    "collectionContentModerated": "Sammlungsinhalt zensiert."
   }
 }

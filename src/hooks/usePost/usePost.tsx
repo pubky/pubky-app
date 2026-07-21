@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ToastAction } from '@/atoms/Toast/Toast';
 import { PostController } from '@/controllers/post/post';
+import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -48,23 +49,8 @@ export function usePost(): UsePostReturn {
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const { toast } = useToast();
-  const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
-
-  const showErrorToast = (description: string) => {
-    toast({
-      title: tToast('error'),
-      description,
-      className: 'destructive border-destructive bg-destructive text-destructive-foreground',
-    });
-  };
-
-  const showSuccessToast = (title: string, description: string) => {
-    toast({
-      title,
-      description,
-    });
-  };
+  const tFile = useTranslations('toast.file');
 
   const reply = async ({ postId, onSuccess }: UsePostReplyOptions) => {
     // allow empty content and attachments
@@ -85,13 +71,15 @@ export function usePost(): UsePostReturn {
       setAttachments([]);
       toast({
         title: tPost('replyPosted'),
-        description: tPost('replyPostedDesc'),
         dismissButton: true,
       });
       onSuccess?.(createdPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to submit reply:', err);
-      showErrorToast(tPost('replyFailed'));
+      toast({
+        variant: 'error',
+        description: getImageUploadSizeLimitToastMessage(err, tFile) ?? tPost('replyFailed'),
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -123,19 +111,26 @@ export function usePost(): UsePostReturn {
       setArticleTitle('');
       toast({
         title: tPost('postCreated'),
-        description: tPost('postCreatedDesc'),
-        dismissButton: true,
       });
       onSuccess?.(createdPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to create post:', err);
-      showErrorToast(tPost('postFailed'));
+      toast({
+        variant: 'error',
+        description: getImageUploadSizeLimitToastMessage(err, tFile) ?? tPost('postFailed'),
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const repost = async ({ originalPostId, originalAuthorName, onSuccess, onUndo }: UsePostRepostOptions) => {
+  const repost = async ({
+    originalPostId,
+    originalAuthorName,
+    successToastTitle,
+    onSuccess,
+    onUndo,
+  }: UsePostRepostOptions) => {
     if (!originalPostId || !currentUserId) return;
 
     setIsSubmitting(true);
@@ -153,12 +148,14 @@ export function usePost(): UsePostReturn {
       setAttachments([]);
 
       const toastInstance = toast({
-        title: tPost('repostSuccess'),
-        description: originalAuthorName
-          ? tPost('repostSuccessDesc', { author: originalAuthorName })
-          : tPost('repostSuccessDescFallback'),
+        title:
+          successToastTitle ??
+          (originalAuthorName
+            ? tPost('repostSuccess', { author: originalAuthorName })
+            : tPost('repostSuccessFallback')),
         action: (
           <ToastAction
+            variant={'info'}
             altText={tPost('repostUndo')}
             onClick={() => {
               toastInstance.dismiss();
@@ -173,7 +170,10 @@ export function usePost(): UsePostReturn {
       onSuccess?.(createdPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to repost:', err);
-      showErrorToast(tPost('repostFailed'));
+      toast({
+        variant: 'error',
+        description: getImageUploadSizeLimitToastMessage(err, tFile) ?? tPost('repostFailed'),
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -194,11 +194,13 @@ export function usePost(): UsePostReturn {
       setContent('');
       setIsArticle(false);
       setArticleTitle('');
-      showSuccessToast(tPost('postEdited'), tPost('postEditedDesc'));
+      toast({
+        title: tPost('postEdited'),
+      });
       onSuccess?.(editPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to edit post:', err);
-      showErrorToast(tPost('editFailed'));
+      toast({ variant: 'error', description: tPost('editFailed') });
     } finally {
       setIsSubmitting(false);
     }
@@ -208,8 +210,8 @@ export function usePost(): UsePostReturn {
   useEffect(() => {
     if (isArticle && attachments.length > 0) {
       toast({
+        variant: 'warning',
         title: tPost('attachmentsCleared'),
-        description: tPost('attachmentsClearedDesc'),
       });
       setAttachments([]);
     }

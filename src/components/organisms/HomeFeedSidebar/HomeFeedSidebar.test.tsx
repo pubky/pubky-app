@@ -3,18 +3,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFeedSidebar';
 
-const mockSetContent = vi.fn();
-const mockUseHomeStore = vi.fn();
-let mockCurrentUserPubky: string | null = 'viewer-pubky';
-const mockFilterContent = vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
-  <div
-    data-testid="filter-content"
-    data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
-    data-selected-tab={selectedTab}
-  >
-    FilterContent
-  </div>
-));
+const { mockSetContent, mockUseHomeStore, mockFilterContent, mockUseFeedLayoutResolution, mockCurrentUserPubky } =
+  vi.hoisted(() => ({
+    mockSetContent: vi.fn(),
+    mockUseHomeStore: vi.fn(),
+    mockFilterContent: vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
+      <div
+        data-testid="filter-content"
+        data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
+        data-selected-tab={selectedTab}
+      >
+        FilterContent
+      </div>
+    )),
+    mockUseFeedLayoutResolution: vi.fn(() => ({
+      requestedLayout: 'columns',
+      effectiveLayout: 'columns',
+      isVisualRequested: false,
+      isVisualActive: false,
+      isPhoneViewport: false,
+    })),
+    mockCurrentUserPubky: { value: 'viewer-pubky' as string | null },
+  }));
 
 // Mock useHomeStore
 vi.mock('@/stores/home/home.types', () => ({
@@ -39,15 +49,7 @@ vi.mock('@/stores/home/home.store', () => ({
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
-    selector({ currentUserPubky: mockCurrentUserPubky }),
-}));
-
-const mockUseFeedLayoutResolution = vi.fn(() => ({
-  requestedLayout: 'columns',
-  effectiveLayout: 'columns',
-  isVisualRequested: false,
-  isVisualActive: false,
-  isPhoneViewport: false,
+    selector({ currentUserPubky: mockCurrentUserPubky.value }),
 }));
 
 vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
@@ -100,7 +102,7 @@ vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
 
 beforeEach(() => {
   mockSetContent.mockClear();
-  mockCurrentUserPubky = 'viewer-pubky';
+  mockCurrentUserPubky.value = 'viewer-pubky';
   mockUseHomeStore.mockReturnValue({
     layout: 'columns',
     setLayout: vi.fn(),
@@ -131,11 +133,6 @@ describe('HomeFeedSidebar', () => {
     expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
   });
 
-  it('matches snapshot', () => {
-    const { container } = render(<HomeFeedSidebar />);
-    expect(container).toMatchSnapshot();
-  });
-
   it('shows visual layout when enabled on desktop/tablet', () => {
     render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
 
@@ -153,7 +150,10 @@ describe('HomeFeedSidebar', () => {
 
     render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
 
-    expect(screen.getByTestId('filter-content')).toHaveAttribute('data-disabled-tabs', 'short,long,links,files');
+    expect(screen.getByTestId('filter-content')).toHaveAttribute(
+      'data-disabled-tabs',
+      'short,long,collections,links,files',
+    );
   });
 
   it('shows the resolved visual content without mutating the store from the sidebar', () => {
@@ -182,7 +182,7 @@ describe('HomeFeedSidebar', () => {
   });
 
   it('forces all reach when logged out', () => {
-    mockCurrentUserPubky = null;
+    mockCurrentUserPubky.value = null;
 
     render(<HomeFeedSidebar />);
 
@@ -199,11 +199,6 @@ describe('HomeFeedDrawer', () => {
     expect(screen.getByTestId('filter-content')).toBeInTheDocument();
     expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<HomeFeedDrawer />);
-    expect(container).toMatchSnapshot();
-  });
 });
 
 describe('HomeFeedDrawerMobile', () => {
@@ -215,6 +210,52 @@ describe('HomeFeedDrawerMobile', () => {
     expect(screen.getByTestId('filter-content')).toBeInTheDocument();
     // Mobile doesn't show layout filter
     expect(screen.queryByTestId('filter-layout')).not.toBeInTheDocument();
+  });
+});
+
+describe('HomeFeedSidebar - Snapshots', () => {
+  beforeEach(() => {
+    mockUseFeedLayoutResolution.mockReturnValue({
+      requestedLayout: 'columns',
+      effectiveLayout: 'columns',
+      isVisualRequested: false,
+      isVisualActive: false,
+      isPhoneViewport: false,
+    });
+  });
+
+  it('matches snapshot', () => {
+    const { container } = render(<HomeFeedSidebar allowVisualLayout={true} feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('HomeFeedDrawer - Snapshots', () => {
+  beforeEach(() => {
+    mockUseFeedLayoutResolution.mockReturnValue({
+      requestedLayout: 'columns',
+      effectiveLayout: 'columns',
+      isVisualRequested: false,
+      isVisualActive: false,
+      isPhoneViewport: false,
+    });
+  });
+
+  it('matches snapshot', () => {
+    const { container } = render(<HomeFeedDrawer allowVisualLayout={true} feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('HomeFeedDrawerMobile - Snapshots', () => {
+  beforeEach(() => {
+    mockUseFeedLayoutResolution.mockReturnValue({
+      requestedLayout: 'columns',
+      effectiveLayout: 'columns',
+      isVisualRequested: false,
+      isVisualActive: false,
+      isPhoneViewport: false,
+    });
   });
 
   it('matches snapshot', () => {

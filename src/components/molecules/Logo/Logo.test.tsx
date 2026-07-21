@@ -2,6 +2,7 @@ import { usePathname } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LOGO_LANDING_ROUTES } from '@/app/routes';
+import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
 import { Logo } from './Logo';
 
 // Mock Next.js Image component
@@ -25,7 +26,6 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
-const FORCE_HOME_SCROLL_TOP_KEY = 'pubky:force-home-scroll-top';
 const createSessionStorageMock = () => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -81,7 +81,7 @@ describe('Logo', () => {
 
     fireEvent.click(link!);
     expect(window.scrollTo).not.toHaveBeenCalled();
-    expect(setItemSpy).toHaveBeenCalledWith(FORCE_HOME_SCROLL_TOP_KEY, '1');
+    expect(setItemSpy).toHaveBeenCalledWith(FORCE_FEED_SCROLL_TOP_KEY, '1');
   });
 
   it.each(LOGO_LANDING_ROUTES)('links to the landing page on %s', (pathname) => {

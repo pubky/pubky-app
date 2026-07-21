@@ -1,6 +1,7 @@
 'use client';
-import { Smartphone, TriangleAlert } from 'lucide-react';
+import { Check, Smartphone, TriangleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Badge } from '@/atoms/Badge/Badge';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -12,7 +13,7 @@ import { HumanSmsCardSkeleton } from './HumanSmsCard.skeleton';
 import type { HumanSmsCardProps } from './HumanSmsCard.types';
 
 export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
-  const t = useTranslations('onboarding.sms');
+  const t = useTranslations('onboarding.phoneNumber');
   const smsInfo = useSmsVerificationInfo();
 
   // Waiting for availability check
@@ -30,33 +31,50 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
     <Container className="relative flex-1">
       <Card
         data-testid="sms-verification-card"
-        className={cn('flex-1 gap-0 p-6 md:p-12', isUnavailable && 'pointer-events-none opacity-60 blur-[5px]')}
+        className={cn(
+          'flex-1 gap-0 rounded-md p-6 lg:p-12',
+          isUnavailable && 'pointer-events-none opacity-60 blur-[5px]',
+        )}
       >
-        <Container className="flex-col gap-10 lg:flex-row lg:items-center lg:gap-12">
-          <Container className="hidden h-full w-full flex-1 items-center lg:block lg:w-auto">
+        <Container className="w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12">
+          <Container className="hidden w-48 shrink-0 lg:block">
             <Image
-              priority={true}
+              priority
               src="/images/sms-verification-phone.webp"
               alt="Lime Pubky phone representing SMS verification"
               className="size-48"
             />
           </Container>
 
-          <Container className="w-full flex-1 items-start gap-6">
-            <Container className="gap-3">
-              <Typography as="h3" className="text-2xl leading-8 font-semibold text-foreground">
-                {t('title')}
-              </Typography>
+          <Container className="w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6">
+            <Container className="w-full flex-col gap-3">
+              <Container className="flex-row items-center justify-between gap-4 lg:justify-start">
+                <Typography
+                  as="h3"
+                  className="m-0 text-[20px] leading-none font-bold text-foreground lg:text-2xl lg:leading-8"
+                >
+                  {t('title')}
+                </Typography>
+                <Badge
+                  variant="secondary"
+                  className="rounded-md border-0 bg-primary px-2 py-[2px] text-sm font-semibold tracking-wide text-primary-foreground uppercase lg:hidden"
+                >
+                  {t('free')}
+                </Badge>
+              </Container>
 
-              <Typography as="p" className="text-5xl leading-none font-semibold text-brand lg:text-6xl">
+              <Typography as="p" className="hidden text-5xl leading-none font-bold text-brand lg:block lg:text-6xl">
                 {t('free')}
               </Typography>
 
-              <Typography as="p" className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+              <Typography
+                as="p"
+                className="mt-1 text-sm font-bold tracking-widest text-muted-foreground uppercase lg:mt-0 lg:text-xs lg:font-medium lg:tracking-[1.2px]"
+              >
                 {t('lessPrivate')}
               </Typography>
 
-              <Container className="gap-1">
+              <Container className="hidden flex-col lg:flex">
                 <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
                   {t('storage')}
                 </Typography>
@@ -66,15 +84,30 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
               </Container>
             </Container>
 
+            <Container className="gap-2 lg:hidden">
+              <Container className="flex-row items-center gap-2">
+                <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
+                <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
+                  {t('storage')}
+                </Typography>
+              </Container>
+              <Container className="flex-row items-center gap-2">
+                <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
+                <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
+                  {t('speedLimit')}
+                </Typography>
+              </Container>
+            </Container>
+
             <Button
               data-testid="human-sms-card-receive-sms-btn"
               variant={ButtonVariant.SECONDARY}
-              className="h-10 rounded-full px-4 text-sm font-semibold shadow-xs"
+              className="h-10 w-full shrink-0 rounded-full px-4 text-sm font-semibold shadow-xs lg:w-auto lg:self-start"
               onClick={onClick}
               disabled={isUnavailable}
             >
               <Smartphone className="mr-2 size-4" />
-              {t('receiveSms')}
+              {t('receiveCode')}
             </Button>
           </Container>
         </Container>

@@ -176,11 +176,14 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           return next;
         });
 
+        toast({
+          title: tTags('added', { label }),
+        });
         return { success: true };
       } catch {
         toast({
-          title: tTags('addFailed'),
-          description: tTags('addFailedDesc', { label }),
+          variant: 'error',
+          description: tTags('addFailed', { label }),
         });
         return { success: false, error: 'Failed to add tag' };
       }
@@ -226,6 +229,10 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
           // TagController.commitDelete updates IndexedDB first and rolls back on homeserver failure.
           await TagController.commitDelete(params);
+
+          toast({
+            title: tTags('removed', { label: tag.label }),
+          });
         } else {
           // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
           await TagController.commitCreate(params);
@@ -235,6 +242,10 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
             const next = new Map(prev);
             next.delete(labelLower);
             return next;
+          });
+
+          toast({
+            title: tTags('added', { label: tag.label }),
           });
         }
       } catch {
@@ -247,10 +258,10 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           });
         }
         toast({
-          title: userIsTagger ? tTags('removeFailed') : tTags('addFailed'),
+          variant: 'error',
           description: userIsTagger
-            ? tTags('removeFailedDesc', { label: tag.label })
-            : tTags('addFailedDesc', { label: tag.label }),
+            ? tTags('removeFailed', { label: tag.label })
+            : tTags('addFailed', { label: tag.label }),
         });
       }
     },

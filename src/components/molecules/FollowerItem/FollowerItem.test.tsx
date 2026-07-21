@@ -188,7 +188,7 @@ describe('FollowerItem', () => {
     const buttons = screen.getAllByTestId('button');
     const followButton = buttons.find((btn) => btn.getAttribute('aria-label') === 'Unfollow');
     fireEvent.click(followButton!);
-    expect(onFollow).toHaveBeenCalledWith('test-user-1', true);
+    expect(onFollow).toHaveBeenCalledWith('test-user-1', true, 'John Doe');
   });
 
   it('handles follower without tags', () => {

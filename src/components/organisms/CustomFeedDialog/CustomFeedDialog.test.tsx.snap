@@ -79,8 +79,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -117,8 +116,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 fill="none"
@@ -139,8 +137,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Following
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -202,8 +199,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -239,8 +235,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Recent
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -302,8 +297,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -336,12 +330,11 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Columns
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-menu"
+                class="lucide lucide-rows2 lucide-rows-2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -352,22 +345,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M4 5h16"
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
                 />
                 <path
-                  d="M4 12h16"
-                />
-                <path
-                  d="M4 19h16"
+                  d="M3 12h18"
                 />
               </svg>
                
               Wide
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -414,6 +407,42 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
                
               Visual
             </div>
+            <div
+              data-testid="select-item"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-rows4 lucide-rows-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M21 7.5H3"
+                />
+                <path
+                  d="M21 12H3"
+                />
+                <path
+                  d="M21 16.5H3"
+                />
+              </svg>
+               
+              List
+            </div>
           </div>
           <input
             aria-hidden="true"
@@ -454,8 +483,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-ALL"
-              data-value="ALL"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -484,8 +512,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -511,8 +538,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Posts
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -548,8 +574,39 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Articles
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-library"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m16 6 4 14"
+                />
+                <path
+                  d="M12 6v14"
+                />
+                <path
+                  d="M8 8v12"
+                />
+                <path
+                  d="M4 4v16"
+                />
+              </svg>
+               
+              Collections
+            </div>
+            <div
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -585,8 +642,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Images
             </div>
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -614,8 +670,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Videos
             </div>
             <div
-              data-testid="select-item-4"
-              data-value="4"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -641,8 +696,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               Links
             </div>
             <div
-              data-testid="select-item-5"
-              data-value="5"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -818,8 +872,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -856,8 +909,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 fill="none"
@@ -878,8 +930,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Following
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -941,8 +992,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -978,8 +1028,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Recent
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1041,8 +1090,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1075,12 +1123,11 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Columns
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-menu"
+                class="lucide lucide-rows2 lucide-rows-2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1091,22 +1138,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M4 5h16"
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
                 />
                 <path
-                  d="M4 12h16"
-                />
-                <path
-                  d="M4 19h16"
+                  d="M3 12h18"
                 />
               </svg>
                
               Wide
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1153,6 +1200,42 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
                
               Visual
             </div>
+            <div
+              data-testid="select-item"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-rows4 lucide-rows-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M21 7.5H3"
+                />
+                <path
+                  d="M21 12H3"
+                />
+                <path
+                  d="M21 16.5H3"
+                />
+              </svg>
+               
+              List
+            </div>
           </div>
           <input
             aria-hidden="true"
@@ -1193,8 +1276,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-ALL"
-              data-value="ALL"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1223,8 +1305,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1250,8 +1331,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Posts
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1287,8 +1367,39 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Articles
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-library"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m16 6 4 14"
+                />
+                <path
+                  d="M12 6v14"
+                />
+                <path
+                  d="M8 8v12"
+                />
+                <path
+                  d="M4 4v16"
+                />
+              </svg>
+               
+              Collections
+            </div>
+            <div
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1324,8 +1435,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Images
             </div>
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1353,8 +1463,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Videos
             </div>
             <div
-              data-testid="select-item-4"
-              data-value="4"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1380,8 +1489,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               Links
             </div>
             <div
-              data-testid="select-item-5"
-              data-value="5"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1555,8 +1663,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1593,8 +1700,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 fill="none"
@@ -1615,8 +1721,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Following
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1678,8 +1783,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1715,8 +1819,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Recent
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1778,8 +1881,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1812,12 +1914,11 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Columns
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-menu"
+                class="lucide lucide-rows2 lucide-rows-2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1828,22 +1929,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M4 5h16"
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
                 />
                 <path
-                  d="M4 12h16"
-                />
-                <path
-                  d="M4 19h16"
+                  d="M3 12h18"
                 />
               </svg>
                
               Wide
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1890,6 +1991,42 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
                
               Visual
             </div>
+            <div
+              data-testid="select-item"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-rows4 lucide-rows-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M21 7.5H3"
+                />
+                <path
+                  d="M21 12H3"
+                />
+                <path
+                  d="M21 16.5H3"
+                />
+              </svg>
+               
+              List
+            </div>
           </div>
           <input
             aria-hidden="true"
@@ -1930,8 +2067,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-ALL"
-              data-value="ALL"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1960,8 +2096,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -1987,8 +2122,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Posts
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2024,8 +2158,39 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Articles
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-library"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m16 6 4 14"
+                />
+                <path
+                  d="M12 6v14"
+                />
+                <path
+                  d="M8 8v12"
+                />
+                <path
+                  d="M4 4v16"
+                />
+              </svg>
+               
+              Collections
+            </div>
+            <div
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2061,8 +2226,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Images
             </div>
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2090,8 +2254,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Videos
             </div>
             <div
-              data-testid="select-item-4"
-              data-value="4"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2117,8 +2280,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               Links
             </div>
             <div
-              data-testid="select-item-5"
-              data-value="5"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2359,8 +2521,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2397,8 +2558,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 fill="none"
@@ -2419,8 +2579,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Following
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2482,8 +2641,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2519,8 +2677,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Recent
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2582,8 +2739,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2616,12 +2772,11 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Columns
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-menu"
+                class="lucide lucide-rows2 lucide-rows-2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2632,22 +2787,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M4 5h16"
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
                 />
                 <path
-                  d="M4 12h16"
-                />
-                <path
-                  d="M4 19h16"
+                  d="M3 12h18"
                 />
               </svg>
                
               Wide
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2694,6 +2849,42 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
                
               Visual
             </div>
+            <div
+              data-testid="select-item"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-rows4 lucide-rows-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M21 7.5H3"
+                />
+                <path
+                  d="M21 12H3"
+                />
+                <path
+                  d="M21 16.5H3"
+                />
+              </svg>
+               
+              List
+            </div>
           </div>
           <input
             aria-hidden="true"
@@ -2734,8 +2925,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-ALL"
-              data-value="ALL"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2764,8 +2954,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2791,8 +2980,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Posts
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2828,8 +3016,39 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Articles
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-library"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m16 6 4 14"
+                />
+                <path
+                  d="M12 6v14"
+                />
+                <path
+                  d="M8 8v12"
+                />
+                <path
+                  d="M4 4v16"
+                />
+              </svg>
+               
+              Collections
+            </div>
+            <div
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2865,8 +3084,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Images
             </div>
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2894,8 +3112,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Videos
             </div>
             <div
-              data-testid="select-item-4"
-              data-value="4"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -2921,8 +3138,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               Links
             </div>
             <div
-              data-testid="select-item-5"
-              data-value="5"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3147,8 +3363,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3185,8 +3400,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 fill="none"
@@ -3207,8 +3421,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Following
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3269,8 +3482,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3306,8 +3518,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Recent
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3368,8 +3579,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3402,12 +3612,11 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Columns
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-menu"
+                class="lucide lucide-rows2 lucide-rows-2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3418,22 +3627,22 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M4 5h16"
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
                 />
                 <path
-                  d="M4 12h16"
-                />
-                <path
-                  d="M4 19h16"
+                  d="M3 12h18"
                 />
               </svg>
                
               Wide
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3480,6 +3689,42 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
                
               Visual
             </div>
+            <div
+              data-testid="select-item"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-rows4 lucide-rows-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M21 7.5H3"
+                />
+                <path
+                  d="M21 12H3"
+                />
+                <path
+                  d="M21 16.5H3"
+                />
+              </svg>
+               
+              List
+            </div>
           </div>
           <input
             aria-hidden="true"
@@ -3519,8 +3764,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
             data-testid="select-content"
           >
             <div
-              data-testid="select-item-ALL"
-              data-value="ALL"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3549,8 +3793,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               All
             </div>
             <div
-              data-testid="select-item-0"
-              data-value="0"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3576,8 +3819,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Posts
             </div>
             <div
-              data-testid="select-item-1"
-              data-value="1"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3613,8 +3855,39 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Articles
             </div>
             <div
-              data-testid="select-item-2"
-              data-value="2"
+              data-testid="select-item"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-library"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m16 6 4 14"
+                />
+                <path
+                  d="M12 6v14"
+                />
+                <path
+                  d="M8 8v12"
+                />
+                <path
+                  d="M4 4v16"
+                />
+              </svg>
+               
+              Collections
+            </div>
+            <div
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3650,8 +3923,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Images
             </div>
             <div
-              data-testid="select-item-3"
-              data-value="3"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3679,8 +3951,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Videos
             </div>
             <div
-              data-testid="select-item-4"
-              data-value="4"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"
@@ -3706,8 +3977,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
               Links
             </div>
             <div
-              data-testid="select-item-5"
-              data-value="5"
+              data-testid="select-item"
             >
               <svg
                 aria-hidden="true"

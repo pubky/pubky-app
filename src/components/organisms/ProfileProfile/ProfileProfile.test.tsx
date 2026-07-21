@@ -52,6 +52,7 @@ vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
       following: 10,
       followers: 100,
       tagged: 7,
+      collections: 0,
       uniqueTags: 12,
     },
     actions: {
@@ -183,6 +184,7 @@ describe('ProfileProfile', () => {
         following: 10,
         followers: 100,
         friends: 0,
+        collections: 0,
         uniqueTags: 12,
       },
       actions: {

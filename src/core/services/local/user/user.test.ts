@@ -132,6 +132,7 @@ describe('LocalUserService', () => {
         following: 10,
         followers: 20,
         friends: 5,
+        collections: 0,
         bookmarks: 3,
       };
 
@@ -161,6 +162,7 @@ describe('LocalUserService', () => {
         following: 0,
         followers: 0,
         friends: 0,
+        collections: 0,
         bookmarks: 0,
       };
 

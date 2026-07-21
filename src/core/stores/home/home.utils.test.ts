@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { CONTENT, ContentType, REACH, ReachType, SORT, SortType } from './home.types';
-import { getStreamId, getStreamIdFromFilters, matchesFilters, parseStreamId } from './home.utils';
+import {
+  getStreamId,
+  getStreamIdFromFilters,
+  matchesFilters,
+  parseStreamId,
+  postKindBelongsToStream,
+} from './home.utils';
 
 describe('filters.utils', () => {
   describe('getStreamIdFromFilters', () => {
@@ -48,6 +54,11 @@ describe('filters.utils', () => {
       it('should map "articles" to "long"', () => {
         const streamId = getStreamIdFromFilters(SORT.TIMELINE, REACH.ALL, CONTENT.LONG);
         expect(streamId).toBe('timeline:all:long');
+      });
+
+      it('should map "collections" to "collection"', () => {
+        const streamId = getStreamIdFromFilters(SORT.TIMELINE, REACH.ALL, CONTENT.COLLECTIONS);
+        expect(streamId).toBe('timeline:all:collection');
       });
 
       it('should map "images" to "image"', () => {
@@ -109,6 +120,12 @@ describe('filters.utils', () => {
       expect(streamId).toBe('timeline:all:image');
     });
 
+    it('should return PostStreamTypes.TIMELINE_ALL_COLLECTION', () => {
+      const streamId = getStreamId(SORT.TIMELINE, REACH.ALL, CONTENT.COLLECTIONS);
+      expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_COLLECTION);
+      expect(streamId).toBe('timeline:all:collection');
+    });
+
     it('should return PostStreamTypes for all combinations', () => {
       const streamId = getStreamId(SORT.ENGAGEMENT, REACH.FOLLOWING, CONTENT.VIDEOS);
       expect(streamId).toBe(PostStreamTypes.POPULARITY_FOLLOWING_VIDEO);
@@ -140,6 +157,9 @@ describe('filters.utils', () => {
         true,
       );
       expect(matchesFilters(PostStreamTypes.TIMELINE_ALL_IMAGE, SORT.TIMELINE, REACH.ALL, CONTENT.IMAGES)).toBe(true);
+      expect(
+        matchesFilters(PostStreamTypes.TIMELINE_ALL_COLLECTION, SORT.TIMELINE, REACH.ALL, CONTENT.COLLECTIONS),
+      ).toBe(true);
     });
   });
 
@@ -202,6 +222,7 @@ describe('filters.utils', () => {
         expect(parseStreamId('timeline:all:all')?.content).toBe(CONTENT.ALL);
         expect(parseStreamId('timeline:all:short')?.content).toBe(CONTENT.SHORT);
         expect(parseStreamId('timeline:all:long')?.content).toBe(CONTENT.LONG);
+        expect(parseStreamId('timeline:all:collection')?.content).toBe(CONTENT.COLLECTIONS);
         expect(parseStreamId('timeline:all:image')?.content).toBe(CONTENT.IMAGES);
         expect(parseStreamId('timeline:all:video')?.content).toBe(CONTENT.VIDEOS);
         expect(parseStreamId('timeline:all:link')?.content).toBe(CONTENT.LINKS);
@@ -241,6 +262,7 @@ describe('filters.utils', () => {
         [SORT.TIMELINE, REACH.FOLLOWING, CONTENT.IMAGES],
         [SORT.ENGAGEMENT, REACH.FRIENDS, CONTENT.VIDEOS],
         [SORT.ENGAGEMENT, REACH.ALL, CONTENT.LINKS],
+        [SORT.TIMELINE, REACH.ALL, CONTENT.COLLECTIONS],
       ];
 
       testCases.forEach(([sort, reach, content]) => {
@@ -249,6 +271,30 @@ describe('filters.utils', () => {
 
         expect(parsed).toEqual({ sort, reach, content });
       });
+    });
+  });
+
+  describe('postKindBelongsToStream', () => {
+    it('allows any kind when the stream content filter is all', () => {
+      expect(postKindBelongsToStream('short', PostStreamTypes.TIMELINE_ALL_ALL)).toBe(true);
+      expect(postKindBelongsToStream('collection', PostStreamTypes.TIMELINE_ALL_ALL)).toBe(true);
+    });
+
+    it('matches post kind to the stream content filter', () => {
+      expect(postKindBelongsToStream('collection', PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(true);
+      expect(postKindBelongsToStream('short', PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(false);
+      expect(postKindBelongsToStream('short', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(true);
+      expect(postKindBelongsToStream('collection', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
+    });
+
+    it('rejects unknown post kinds when the stream has a specific content filter', () => {
+      expect(postKindBelongsToStream('unknown', PostStreamTypes.TIMELINE_ALL_COLLECTION)).toBe(false);
+      expect(postKindBelongsToStream('unknown', PostStreamTypes.TIMELINE_ALL_SHORT)).toBe(false);
+    });
+
+    it('allows any kind for unparseable stream ids', () => {
+      expect(postKindBelongsToStream('short', 'author:pubky123')).toBe(true);
+      expect(postKindBelongsToStream('collection', 'pubky123:author:collection')).toBe(true);
     });
   });
 });

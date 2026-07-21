@@ -1,16 +1,97 @@
 {
   "time": {
-    "now": "maintenant",
+    "secondsShort": "{count}s",
     "minutesShort": "{count}m",
-    "hoursShort": "{count}h"
+    "hoursShort": "{count}h",
+    "daysShort": "{count}j",
+    "weeksShort": "{count}sem",
+    "monthsShort": "{count}M"
   },
   "landing": {
     "title": "<highlight>Libérez</highlight> le web.",
     "subtitle": "Vos clés, votre contenu, vos règles.",
-    "explore": "Explorer",
-    "joinNow": "Rejoignez-nous maintenant",
+    "learn": "Apprendre",
+    "join": "Rejoindre",
+    "videoLabel": "Vidéo Pubky",
+    "scrollToNext": "Faire défiler jusqu'à la section suivante",
+    "scrollToTop": "Revenir en haut",
     "aTetherCompany": "une entreprise <tether>tether.</tether>",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tous droits réservés."
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026. Tous droits réservés.",
+    "broken": {
+      "eyebrow": "Le problème",
+      "title": "Le web est <highlight>cassé</highlight>.",
+      "description": "Les plateformes centralisées contrôlent votre identité, vos données et votre portée.",
+      "features": {
+        "identity": {
+          "title": "Elles vous possèdent",
+          "description": "Elles vous accrochent avec du contenu facile et de la dopamine. L’accès peut être révoqué à tout moment."
+        },
+        "data": {
+          "title": "Elles vous enferment",
+          "description": "Publications, profils et relations sont coincés dans des silos qui rendent le départ difficile."
+        },
+        "reach": {
+          "title": "Elles vous limitent",
+          "description": "Les algorithmes décident qui vous entend, ce qui circule et ce qui disparaît dans le vide."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "La solution",
+      "title": "<highlight>Pubky</highlight> est différent.",
+      "description": "Il vous remet aux commandes de votre vie numérique.",
+      "features": {
+        "core": {
+          "title": "Vous êtes vos clés",
+          "description": "Les comptes reposent sur des clés cryptographiques. Pas de serveur central, pas de gatekeepers."
+        },
+        "taggable": {
+          "title": "Le web taggable",
+          "description": "Taguez les publications, médias et profils. Les tags ajoutent du sens et aident à façonner votre graphe social."
+        },
+        "social": {
+          "title": "Social, mais personnel",
+          "description": "Vous gardez la maîtrise de votre fil, de votre contenu et de vos connexions. Vous choisissez votre expérience."
+        },
+        "portable": {
+          "title": "Une identité portable",
+          "description": "Passez d’une app à l’autre sans repartir de zéro. Votre identité, vos données et vos amis restent à vous."
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "Conçu pour la liberté",
+      "title": "Vous êtes <highlight>l’algorithme</highlight>.",
+      "description": "Personne ne décide de votre fil. Créez, façonnez et vivez le web selon vos règles.",
+      "nextSlide": "Slide suivant",
+      "features": {
+        "creation": {
+          "title": "Créer sans limites",
+          "description": "Publiez n’importe quoi : pensées, articles, photos, vidéos, liens. Votre contenu commence avec vous et reste avec vous."
+        },
+        "browsing": {
+          "title": "Naviguer à votre façon",
+          "description": "Changez de mise en page ou changez votre portée pour filtrer le bruit et vous concentrer sur l’essentiel."
+        },
+        "feeds": {
+          "title": "Façonner des perspectives",
+          "description": "Construisez des fils dynamiques qui se mettent à jour en temps réel et restent enregistrés comme perspectives réutilisables."
+        },
+        "tagging": {
+          "title": "Tout taguer",
+          "description": "Taguez publications, médias et profils pour ajouter du contexte, trouver du contenu plus pertinent, découvrir des personnes et réagir vite."
+        },
+        "collections": {
+          "title": "Collectez ce qui compte",
+          "description": "Sauvegardez les publications qui méritent d’être gardées, organisez vos propres idées et partagez vos collections avec d’autres."
+        }
+      }
+    },
+    "final": {
+      "title": "Entrez dans le <line><highlight>web libre</highlight>.</line>",
+      "joinNow": "Rejoindre"
+    },
+    "explore": "Explorer"
   },
   "status": {
     "available": "Disponible",
@@ -74,11 +155,13 @@
   "header": {
     "home": "Accueil",
     "hot": "Tendances",
-    "bookmarks": "Favoris",
     "settings": "Paramètres",
     "newHere": "Nouveau ici ?",
     "signIn": "Se connecter",
-    "feed": "Fil"
+    "feed": "Fil",
+    "search": "Rechercher",
+    "collections": "Collections",
+    "new": "Nouveau"
   },
   "settings": {
     "title": "Paramètres",
@@ -184,9 +267,15 @@
       "blocked": "Numéro de téléphone bloque",
       "blockedDescription": "Ce numéro de téléphone ne peut pas etre utilise pour la vérification.",
       "tooManyAttempts": "Trop de tentatives de vérification",
-      "tooManyAttemptsDescription": "Vous avez atteint le nombre maximum de vérifications pour ce numéro de téléphone.",
+      "tooManyAttemptsDescription": "Trop de tentatives de vérification",
       "sendFailed": "Échec de l'envoi du code SMS",
-      "sendFailedDescription": "Veuillez réessayer plus tard. Si le probleme persiste, contactez le support."
+      "sendFailedDescription": "Impossible d'envoyer le code de vérification. Réessayez plus tard.",
+      "rateLimitedWithRetry": "Trop de tentatives de vérification. Réessayez dans {seconds}s.",
+      "weeklyLimitReached": "Trop de tentatives de vérification",
+      "weeklyLimitDescription": "Trop de tentatives de vérification",
+      "yearlyLimitReached": "Trop de tentatives de vérification",
+      "yearlyLimitDescription": "Trop de tentatives de vérification",
+      "verificationFailed": "Échec de la vérification téléphonique. Réessayez."
     },
     "phoneCode": {
       "title": "Entrez le <highlight>code.</highlight>",
@@ -199,7 +288,7 @@
       "valid": "Code de vérification valide",
       "invalid": "Code de vérification invalide. Reessayez.",
       "verifyFailed": "Échec de la vérification du code SMS",
-      "verifyFailedDescription": "Veuillez réessayer plus tard. Si le probleme persiste, contactez le support."
+      "verifyFailedDescription": "Impossible de vérifier le code. Réessayez plus tard."
     },
     "lightning": {
       "title": "Scannez pour <highlight>payer.</highlight>",
@@ -215,9 +304,9 @@
       "paymentSuccess": "Paiement reussi",
       "paymentExpired": "Paiement expire",
       "requestFailed": "Échec de la demande de facture Lightning",
-      "requestFailedDescription": "Veuillez réessayer plus tard. Si le probleme persiste, contactez le support.",
+      "requestFailedDescription": "Impossible de demander la facture Lightning. Réessayez plus tard.",
       "invoiceCopied": "Facture copiee dans le presse-papiers",
-      "copyFailed": "Échec de la copie de la facture"
+      "copyFailed": "Impossible de copier la facture."
     },
     "inviteCode": {
       "title": "Prouvez que vous <highlight>n'etes pas un robot.</highlight>",
@@ -237,13 +326,13 @@
       "notAvailable": "Actuellement non disponible dans votre pays",
       "unavailable": "Service temporairement indisponible"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "Numéro de téléphone",
       "free": "Gratuit",
       "lessPrivate": "MOINS PRIVE, MAIS FACILE",
       "storage": "1 Go de stockage",
       "speedLimit": "Limite de vitesse 1 Mo/s",
-      "receiveSms": "Recevoir un SMS",
+      "receiveCode": "Recevoir le code",
       "notAvailable": "Actuellement non disponible dans votre pays",
       "unavailable": "Service temporairement indisponible"
     },
@@ -259,11 +348,8 @@
       "subtitleDesktop": "Ouvrez Pubky Ring, appuyez sur 'Ajouter un pubky', et scannez ce QR.",
       "generating": "Génération du code QR...",
       "generatingShort": "Génération...",
-
       "clickToReload": "Cliquez pour recharger",
-
       "openingRing": "Ouverture de Pubky Ring...",
-
       "authorize": "Autoriser avec Pubky Ring",
       "authorizeSub": "Utilisez <pubkyRing>Pubky Ring</pubkyRing> ou tout autre trousseau alimente par <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "Impossible de se connecter a l'application Pubky Ring",
@@ -276,22 +362,18 @@
       "progressSubtitle": "Veuillez patienter pendant le chargement de votre expérience Pubky.",
       "generating": "Génération du code QR...",
       "generatingShort": "Génération...",
-
       "clickToReload": "Cliquez pour recharger",
-
       "openingRing": "Ouverture de Pubky Ring...",
-
       "authorize": "Autoriser avec Pubky Ring",
       "linkCopied": "Lien copie",
-      "linkCopiedDescription": "Lien d'authentification copie dans le presse-papiers.",
       "linkFailed": "Impossible de se connecter a l'application Pubky Ring",
       "tryAgain": "Veuillez réessayer.",
-      "authInitFailedTitle": "Échec de la connexion. Veuillez réessayer.",
-      "authInitFailedDescription": "Impossible de terminer l'autorisation avec Pubky Ring. Veuillez réessayer.",
+      "authInitFailedTitle": "Échec de la connexion. Réessayez.",
+      "authInitFailedDescription": "Échec de la connexion. Réessayez.",
       "authNotCompletedTitle": "L'autorisation n'a pas été terminée",
-      "authNotCompletedDescription": "Le signataire n'a pas terminé l'autorisation. Veuillez réessayer.",
+      "authNotCompletedDescription": "Autorisation échouée. Réessayez.",
       "qrGenerationFailedTitle": "Échec de la génération du code QR",
-      "qrGenerationFailedDescription": "Impossible de générer le code QR de connexion. Actualisez et réessayez.",
+      "qrGenerationFailedDescription": "Impossible de générer le QR. Actualisez et réessayez.",
       "recoveryHint": "Vous ne pouvez pas vous connecter avec <pubkyRing>Pubky Ring</pubkyRing> ? Utilisez la phrase de récupération ou le fichier chiffre pour restaurer votre compte.",
       "verifyingAccount": "Vérification du compte",
       "loadingData": "Chargement de vos donnees",
@@ -308,7 +390,7 @@
         "restore": "Restaurer",
         "restoring": "Restauration...",
         "errorTitle": "Erreur de connexion avec le mnémonique",
-        "errorDescription": "Veuillez réessayer."
+        "errorDescription": "Impossible de se connecter. Réessayez."
       },
       "restoreEncryptedFile": {
         "title": "Restaurer avec le fichier chiffré",
@@ -318,11 +400,11 @@
         "passwordPlaceholder": "Entrez votre mot de passe",
         "selectFile": "Sélectionner le fichier",
         "invalidFileType": "Veuillez sélectionner un fichier .pkarr",
-        "missingFields": "Veuillez sélectionner un fichier et entrer votre mot de passe",
+        "missingFields": "Veuillez sélectionner un fichier",
         "invalidPassword": "Mot de passe invalide ou fichier corrompu. Veuillez vérifier votre mot de passe et réessayer.",
         "nexusError": "Quelque chose s'est mal passé avec nexus. Veuillez réessayer.",
         "restoreError": "Échec de la restauration depuis le fichier. Veuillez vérifier votre fichier et réessayer.",
-        "unexpectedError": "Une erreur inattendue s'est produite",
+        "unexpectedError": "Erreur inattendue.",
         "cancel": "Annuler",
         "restore": "Restaurer",
         "restoring": "Restauration..."
@@ -338,25 +420,25 @@
       "myPubky": "Mon Pubky",
       "shareText": "Voici mon Pubky :\n{displayPubky}",
       "shareUnavailable": "Partage indisponible",
-      "shareUnavailableDescription": "Nous avons copie votre pubky pour que vous puissiez le coller dans votre application préférée.",
       "shareFailed": "Échec du partage",
-      "shareFailedDescription": "Impossible de partager pour le moment. Veuillez réessayer.",
+      "shareFailedDescription": "Impossible de partager. Réessayez.",
       "signUpFailed": "Erreur - Échec de l'inscription",
-      "signUpError": "Une erreur s'est produite. Veuillez réessayer.",
-      "invalidInvite": "Code d'invitation invalide ou expiré. Veuillez obtenir ou demander un nouveau code d'invitation."
+      "signUpError": "Impossible de s'inscrire. Réessayez.",
+      "invalidInvite": "Le code d'invitation est invalide ou expiré."
     },
     "backupMethod": {
       "title": "Choisir la methode de sauvegarde",
       "subtitle": "Sauvegardez et stockez en toute sécurité la graine secrete de votre pubky. Quelle methode de sauvegarde préférez-vous ? Vous pouvez aussi choisir de le faire plus tard.",
       "recoveryPhrase": "Phrase de récupération",
-      "encryptedFile": "Fichier chiffre"
+      "encryptedFile": "Fichier chiffre",
+      "exportRing": "Exporter vers Pubky Ring"
     },
     "backup": {
       "title": "Sauvegardez votre <highlight>pubky.</highlight>",
       "subtitle": "Vous avez besoin d'une sauvegarde pour restaurer l'acces a votre compte plus tard.",
       "signUpFailed": "Erreur - Échec de l'inscription",
-      "signUpError": "Quelque chose s'est mal passe. Veuillez réessayer.",
-      "invalidInvite": "Code d'invitation invalide ou expire. Veuillez obtenir ou demander un nouveau code d'invitation."
+      "signUpError": "Impossible de s'inscrire. Réessayez.",
+      "invalidInvite": "Le code d'invitation est invalide ou expiré."
     },
     "backupPhrase": {
       "title": "Sauvegarde de la phrase de récupération",
@@ -394,13 +476,9 @@
       "createInBrowser": "Créér les cles dans le navigateur",
       "continueWithRing": "Continuer avec Pubky Ring",
       "inviteCodeApplied": "Code d'invitation appliqué",
-      "inviteCodeAppliedDescription": "Votre code d'invitation {inviteCode} a été appliqué.",
       "invalidInviteCode": "Code d'invitation invalide",
-      "invalidInviteCodeDescription": "Ce code d'invitation est invalide ou a expiré. Veuillez utiliser un code d'invitation valide.",
       "usedInviteCode": "Code d'invitation déjà utilisé",
-      "usedInviteCodeDescription": "Ce code d'invitation a déjà été utilisé. Veuillez utiliser un autre code d'invitation.",
-      "verificationFailed": "Impossible de vérifier le code d'invitation",
-      "verificationFailedDescription": "Nous n'avons pas pu vérifier votre code d'invitation pour le moment. Veuillez vérifier votre connexion et réessayer."
+      "verificationFailed": "Impossible de vérifier le code d'invitation"
     },
     "createProfile": {
       "title": "Créez votre <highlight>profil.</highlight>",
@@ -431,9 +509,11 @@
       "followUser": "Suivre {username}",
       "unfollowUser": "Ne plus suivre {username}",
       "muteUser": "Masquer {username}",
-      "unmuteUser": "Afficher {username}"
+      "unmuteUser": "Afficher {username}",
+      "tagPost": "Taguer la publication ({count})"
     },
     "deleted": "Cette publication a ete supprimée par son auteur.",
+    "missing": "Publication introuvable.",
     "dropFiles": "Deposez les fichiers ici",
     "articleTitle": "Titre de l'article",
     "addTag": "ajouter un tag",
@@ -444,6 +524,8 @@
     "addArticle": "Ajouter un article",
     "posting": "Publication en cours...",
     "viewOriginal": "Voir la publication originale",
+    "postBy": "Publié par",
+    "replyBy": "Répondu par",
     "youReposted": "Vous avez republié",
     "newPostsSingular": "Voir {count} nouvelle publication",
     "newPostsPlural": "Voir {count} nouvelles publications",
@@ -470,6 +552,7 @@
     "tabs": {
       "notifications": "Notifications",
       "posts": "Publications",
+      "collections": "Collections",
       "replies": "Réponses",
       "followers": "Abonnes",
       "following": "Abonnements",
@@ -560,6 +643,12 @@
       "confirmButton": "Supprimer",
       "cancelButton": "Annuler"
     },
+    "deleteCollection": {
+      "title": "Supprimer la collection ?",
+      "description": "Voulez-vous vraiment supprimer « {name} » ? Les personnes qui suivent cette collection n'y auront plus accès. Les publications dans la collection ne seront pas supprimées.",
+      "confirmButton": "Supprimer",
+      "cancelButton": "Annuler"
+    },
     "editPost": {
       "editArticle": "Modifiér l'article",
       "editPost": "Modifiér la publication",
@@ -587,7 +676,7 @@
       "newHere": "Nouveau ici ?",
       "newHereDescription": "Crééz votre compte et commencez a explorer Pubky.",
       "joinButton": "Rejoindre Pubky",
-      "alreadyHaveAccount": "Vous avez déjà un compte ?",
+      "alreadyHaveAccount": "Vous avez déjà un pubky ?",
       "alreadyHaveAccountDescription": "Connectez-vous pour interagir avec les publications et les profils.",
       "signInButton": "Se connecter"
     },
@@ -628,7 +717,9 @@
     },
     "deleteAccount": {
       "title": "Supprimér le compte",
-      "description": "Êtes-vous sur ? Les informations de votre compte ne peuvent pas etre recuperees."
+      "description": "Êtes-vous sur ? Les informations de votre compte ne peuvent pas etre recuperees.",
+      "button": "Supprimér le compte",
+      "buttonLoading": "Suppression... {progress}%"
     },
     "confirmDiscard": {
       "title": "Voulez-vous fermer ?",
@@ -666,11 +757,11 @@
       "saveFeed": "Enregistrer le flux",
       "deleteFeed": "Supprimer le flux",
       "feedCreated": "Flux {name} cree !",
-      "feedCreateError": "Impossible de creer le flux, veuillez reessayer ou contacter le support.",
+      "feedCreateError": "Impossible de créer le flux. Réessayez.",
       "feedEdited": "Flux {name} modifie !",
-      "feedEditError": "Impossible de modifier le flux, veuillez reessayer ou contacter le support.",
+      "feedEditError": "Impossible de mettre à jour le flux. Réessayez.",
       "feedDeleted": "Flux {name} supprime !",
-      "feedDeleteError": "Impossible de supprimer le flux, veuillez reessayer ou contacter le support."
+      "feedDeleteError": "Impossible de supprimer le flux. Réessayez."
     }
   },
   "sidebar": {
@@ -706,7 +797,7 @@
     },
     "userSuggestion": "Utilisateur {name} ({pubky})",
     "viewProfile": "Voir le profil de {name}",
-    "invalidTag": "Les tags doivent contenir 20 caractères ou moins et ne peuvent pas contenir de caractères spéciaux"
+    "invalidTag": "Les tags peuvent avoir max. 20 caractères et ne peuvent pas contenir de caractères spéciaux"
   },
   "feedback": {
     "title": "Donner votre avis",
@@ -756,12 +847,24 @@
       "followedYou": "vous a suivi",
       "newFriend": "est maintenant votre ami",
       "taggedPost": "a tagge votre publication",
+      "taggedCollection": "a tagué votre collection",
+      "taggedArticle": "a tagué votre article",
       "taggedProfile": "a tagge votre profil",
       "repliedToPost": "a repondu a votre publication",
+      "repliedToCollection": "a répondu à votre collection",
+      "repliedToArticle": "a répondu à votre article",
       "repostedPost": "a republie votre publication",
+      "repostedCollection": "a republié votre collection",
+      "repostedArticle": "a republié votre article",
       "mentionedYou": "vous a mentionne dans une publication",
+      "mentionedYouInCollection": "vous a mentionné dans une collection",
+      "mentionedYouInArticle": "vous a mentionné dans un article",
       "deletedPost": "a supprimé une publication",
+      "deletedCollection": "a supprimé une collection",
+      "deletedArticle": "a supprimé un article",
       "editedPost": "a modifié une publication avec laquelle vous avez interagi",
+      "updatedCollection": "a mis à jour une collection",
+      "updatedArticle": "a mis à jour un article",
       "fallback": "Nouvelle notification"
     },
     "settings": {
@@ -893,123 +996,119 @@
     "success": "Succes",
     "error": "Erreur",
     "errors": "Erreurs",
-    "genericErrorTitle": "Oups! Une erreur s'est produite!",
+    "genericErrorTitle": "Erreur",
     "post": {
       "replyPosted": "Réponse publiee",
-      "replyPostedDesc": "Votre réponse a ete publiee avec succes.",
-      "replyFailed": "Échec de la publication de la réponse. Veuillez réessayer.",
-      "postCreated": "Publication créée",
-      "postCreatedDesc": "Votre publication a ete créée avec succes.",
-      "postFailed": "Échec de la creation de la publication. Veuillez réessayer.",
+      "replyFailed": "Impossible de publier la réponse. Réessayez.",
+      "postCreated": "Publication publiée",
+      "postFailed": "Impossible de créer la publication. Réessayez.",
       "repostSuccess": "Republié !",
-      "repostSuccessDesc": "Vous avez republié avec succès une publication de {author} !",
-      "repostSuccessDescFallback": "Votre republication a été créée avec succès.",
       "repostUndo": "Annuler",
-      "repostFailed": "Échec de la republication. Veuillez réessayer.",
+      "repostFailed": "Impossible de republier. Réessayez.",
       "postEdited": "Publication modifiée",
-      "postEditedDesc": "Votre publication a ete modifiée avec succes.",
-      "editFailed": "Échec de la modification de la publication. Veuillez réessayer.",
+      "editFailed": "Impossible de mettre à jour la publication. Réessayez.",
       "postDeleted": "Publication supprimée",
-      "postDeletedDesc": "Votre publication a ete supprimée",
-      "deleteFailed": "Échec de la suppression de la publication. Veuillez réessayer.",
-      "invalidPostId": "ID de publication invalide. Veuillez réessayer.",
+      "deleteFailed": "Impossible de supprimer la publication. Réessayez.",
+      "invalidPostId": "Publication invalide. Réessayez.",
       "attachmentsCleared": "Pieces jointes supprimées",
-      "attachmentsClearedDesc": "Les articles ne supportent qu'une seule image de couverture.",
-      "failedToLoadPosts": "Échec du chargement des nouvelles publications",
-      "failedToLoadPostsDesc": "Impossible d'afficher les nouvelles publications. Veuillez réessayer.",
-      "parseError": "Échec de l'analyse du contenu de l'article",
-      "coverImageError": "Échec du chargement de l'image de couverture de l'article",
-      "attachmentsLoadFailed": "Échec du chargement des pièces jointes"
+      "failedToLoadPosts": "Impossible de charger les nouvelles publications",
+      "parseError": "Impossible d'analyser le contenu de l'article",
+      "collectionParseError": "Impossible d'analyser le contenu de la collection",
+      "coverImageError": "Impossible de charger l'image de couverture",
+      "attachmentsLoadFailed": "Impossible de charger les pièces jointes",
+      "repostSuccessFallback": "Republié"
     },
     "bookmark": {
       "added": "Favori ajoute",
-      "addedDesc": "Publication enregistree dans vos favoris",
       "removed": "Favori retire",
-      "removedDesc": "Publication retiree de vos favoris",
-      "addFailed": "Échec de l'ajout du favori",
-      "removeFailed": "Échec du retrait du favori",
-      "loginRequired": "Vous devez etre connecte pour ajouter des favoris"
+      "addFailed": "Impossible d'ajouter le favori",
+      "removeFailed": "Impossible de retirer le favori",
+      "loginRequired": "Connectez-vous pour enregistrer des publications"
+    },
+    "collection": {
+      "collectionDeleted": "Votre collection a été supprimée",
+      "deleteFailed": "Échec de la suppression de la collection. Veuillez réessayer."
     },
     "copy": {
       "pubkyCopied": "Pubky copie dans le presse-papiers",
       "linkCopied": "Lien copie dans le presse-papiers",
       "textCopied": "Texte copie dans le presse-papiers",
       "profileLinkCopied": "Lien du profil copie dans le presse-papiers",
-      "copyFailed": "Échec de la copie",
+      "copyFailed": "Impossible de copier dans le presse-papiers",
       "copyFailedDesc": "Impossible de copier dans le presse-papiers"
     },
     "follow": {
-      "failed": "Échec de la mise a jour du statut de suivi"
+      "followed": "Vous suivez {username}",
+      "unfollowed": "Vous ne suivez plus {username}",
+      "followFailed": "Impossible de suivre {username}",
+      "unfollowFailed": "Impossible de ne plus suivre {username}"
     },
     "mute": {
-      "muted": "Utilisateur masque",
-      "unmuted": "Utilisateur affiche",
-      "mutedDesc": "{username} a ete masque.",
-      "unmutedDesc": "{username} a ete affiche.",
-      "failed": "Échec de la mise a jour du statut de masquage"
+      "muted": "{username} masqué",
+      "unmuted": "{username} n'est plus masqué",
+      "failed": "Impossible de mettre à jour le statut de silence"
     },
     "profile": {
       "updated": "Profil mis a jour",
-      "updatedDesc": "Votre profil a ete mis a jour avec succes.",
       "sessionExpired": "Session expiree",
-      "sessionExpiredDesc": "Veuillez vous déconnectér et vous reconnecter pour continuer.",
-      "saveFailed": "Échec de l'enregistrement du profil",
-      "saveFailedDesc": "Veuillez réessayer.",
-      "fetchFailed": "Veuillez réessayer.",
-      "fetchFailedDesc": "Échec de la récupération des nouvelles donnees utilisateur. L'indexation est peut-etre en cours...",
-      "updateFailed": "Échec de la mise a jour du profil."
+      "sessionExpiredDesc": "Session expirée. Veuillez vous connecter.",
+      "saveFailed": "Impossible d'enregistrer le profil",
+      "fetchFailedDesc": "Impossible d'actualiser le profil",
+      "updateFailed": "Impossible de mettre à jour le profil"
     },
     "report": {
-      "userNotLoaded": "Profil utilisateur non charge. Veuillez réessayer.",
-      "submitFailed": "Échec de l'envoi du signalement",
-      "submitFailedDesc": "Échec de l'envoi du signalement. Veuillez réessayer."
+      "userNotLoaded": "Impossible de charger le profil",
+      "submitFailedDesc": "Impossible d'envoyer le signalement. Réessayez."
     },
     "feedback": {
-      "userNotLoaded": "Profil utilisateur non charge. Veuillez réessayer.",
-      "submitFailed": "Échec de l'envoi des commentaires",
-      "submitFailedDesc": "Échec de l'envoi des commentaires. Veuillez réessayer."
+      "userNotLoaded": "Impossible de charger le profil",
+      "submitFailedDesc": "Impossible d'envoyer le commentaire. Réessayez."
     },
     "copyright": {
       "success": "Demande envoyee avec succes",
-      "error": "Erreur lors de l'envoi de la demande",
-      "submitFailed": "Échec de l'envoi de la demande"
+      "error": "Impossible d'envoyer la demande",
+      "submitFailed": "Impossible d'envoyer la demande"
     },
     "tags": {
-      "loadFailed": "Échec du chargement de plus de tags",
-      "loadFailedDesc": "Impossible de charger plus de tags. Veuillez réessayer.",
+      "loadFailed": "Impossible de charger plus de tags",
       "labelEmpty": "Le libelle du tag ne peut pas etre vide",
       "postIdRequired": "L'ID de publication est obligatoire",
       "userIdRequired": "L'ID utilisateur est obligatoire",
       "loginRequired": "Vous devez etre connecte pour ajouter des tags",
       "alreadyAdded": "Vous avez déjà ajoute ce tag",
-      "addFailed": "Échec de l'ajout du tag",
-      "addFailedDesc": "Impossible d'ajouter \"{label}\". Veuillez réessayer.",
-      "removeFailed": "Échec du retrait du tag",
-      "removeFailedDesc": "Impossible de retirer \"{label}\". Veuillez réessayer."
+      "added": "Tag ajouté : {label}",
+      "removed": "Tag supprimé : {label}",
+      "addFailed": "Impossible d'ajouter le tag : {label}",
+      "removeFailed": "Impossible de retirer le tag : {label}"
     },
     "auth": {
-      "signInFailed": "Échec de la connexion. Veuillez réessayer.",
-      "signInFailedDesc": "Impossible de terminér l'autorisation avec Pubky Ring. Veuillez réessayer.",
+      "signInFailed": "Échec de la connexion. Réessayez.",
+      "signInFailedDesc": "Échec de la connexion. Réessayez.",
       "authNotCompleted": "L'autorisation n'a pas ete completee",
-      "authNotCompletedDesc": "Le signataire n'a pas complete l'autorisation. Veuillez réessayer.",
+      "authNotCompletedDesc": "Autorisation échouée. Réessayez.",
       "qrFailed": "Échec de la génération du code QR",
-      "qrFailedDesc": "Impossible de générér le code QR de connexion. Veuillez rafraichir et réessayer."
+      "qrFailedDesc": "Impossible de générer le QR. Actualisez et réessayez."
     },
     "file": {
-      "maxFiles": "Maximum {max} fichiers autorises",
-      "maxFilesPartial": "Maximum {max} fichiers autorises. Certains fichiers n'ont pas ete ajoutes.",
-      "unsupportedType": "\"{name}\" a un type non supporte \"{type}\". Formats supportes : {formats}.",
-      "fileTooLarge": "\"{name}\" depasse la taille maximale de {maxSize}."
+      "maxFiles": "Maximum {max} fichiers autorisés",
+      "maxFilesPartial": "Maximum {max} fichiers autorisés. Certains fichiers n'ont pas été ajoutés.",
+      "unsupportedType": "Type de fichier non pris en charge pour {name}. Pris en charge : {formats}.",
+      "fileTooLarge": "{name} dépasse la limite de {maxSize}.",
+      "imageTooLargeRaw": "L'image est trop grande. La taille maximale est {maxSize}.",
+      "imageTooLargeGif": "Ce GIF dépasse la limite d'envoi de {maxSize} et ne peut pas être compressé. Veuillez utiliser un GIF plus petit.",
+      "imageTooLargeAnimatedWebp": "Ce WebP animé dépasse la limite d'envoi de {maxSize} et ne peut pas être compressé. Veuillez utiliser un fichier plus petit.",
+      "imageTooLargeSvg": "Ce SVG dépasse la limite d'envoi de {maxSize} après assainissement. Veuillez utiliser un fichier plus petit.",
+      "imageTooLargeRaster": "L'image n'a pas pu être compressée en dessous de {maxSize}. Veuillez utiliser une image plus petite ou de plus basse résolution."
     },
     "status": {
-      "updateFailed": "Échec de la mise à jour du statut. Veuillez réessayer.",
-      "userNotLoaded": "Profil utilisateur non chargé. Veuillez réessayer."
+      "updateFailed": "Impossible de mettre à jour le statut. Réessayez.",
+      "userNotLoaded": "Impossible de charger le profil. Réessayez."
     },
     "fullscreen": {
-      "error": "Erreur lors de l'activation du plein écran"
+      "error": "Impossible d'activer le plein écran."
     },
     "logout": {
-      "failed": "Échec de la déconnexion. Veuillez réessayer."
+      "failed": "Impossible de se déconnecter. Réessayez."
     }
   },
   "empty": {
@@ -1020,9 +1119,10 @@
     "noNotifications": "Aucune notification"
   },
   "errors": {
-    "signOutFailed": "Échec de la déconnexion. Veuillez réessayer.",
+    "signOutFailed": "Impossible de se déconnecter. Réessayez.",
+    "deleteAccountFailed": "Échec de la suppression du compte. Veuillez réessayer.",
     "generic": "Quelque chose s'est mal passe",
-    "network": "Erreur réseau. Veuillez réessayer.",
+    "network": "Erreur réseau",
     "notFound": "Page non trouvee",
     "couldNotFind": "Impossible de trouver la ressource demandee",
     "database": {
@@ -1076,6 +1176,7 @@
       "title": "Disposition",
       "columns": "Colonnes",
       "wide": "Large",
+      "list": "Liste",
       "visual": "Visuel"
     },
     "content": {
@@ -1086,7 +1187,8 @@
       "images": "Images",
       "videos": "Videos",
       "links": "Liens",
-      "files": "Fichiers"
+      "files": "Fichiers",
+      "collections": "Collections"
     },
     "timeframe": {
       "title": "Periode",
@@ -1127,9 +1229,7 @@
     "unmuteAll": "Afficher tous les utilisateurs",
     "noMutedUsers": "Aucun utilisateur masque pour l'instant",
     "userUnmuted": "Utilisateur affiche",
-    "userUnmutedDesc": "{username} a ete affiche.",
     "allUsersUnmuted": "Tous les utilisateurs affiches",
-    "allUsersUnmutedDesc": "Tous les utilisateurs masques ont ete affiches.",
     "partialSuccess": "Succes partiel",
     "partialSuccessDesc": "{success} utilisateurs affiches, {failed} echoues."
   },
@@ -1240,5 +1340,138 @@
     "toolbarAriaLabel": "Barre d'outils d'édition Markdown",
     "warningApproaching": "Vous approchez de la limite maximale de caractères.",
     "warningReached": "Vous avez atteint la limite maximale de caractères."
+  },
+  "collections": {
+    "deleted": "Cette collection a été supprimée par son auteur.",
+    "missing": "Collection introuvable.",
+    "postCount": "{count, plural, one {publication} other {publications}}",
+    "new": {
+      "cta": "Nouvelle collection",
+      "ctaShort": "Nouveau",
+      "title": "Nouvelle collection",
+      "nameLabel": "Titre",
+      "namePlaceholder": "Nommez votre collection",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Que trouveront les gens ici ?",
+      "backgroundLabel": "Arrière-plan",
+      "addImage": "Ajouter une image",
+      "removeImage": "Supprimer l'image",
+      "coverImageInvalid": "L'image de couverture doit être un fichier image.",
+      "coverImageTooLarge": "L'image de couverture est trop grande. La taille maximale est {maxSize}.",
+      "nameRequired": "Le titre de la collection est requis.",
+      "cancel": "Annuler",
+      "save": "Enregistrer la collection",
+      "saving": "Enregistrement...",
+      "created": "Collection créée",
+      "createFailed": "Échec de la création de la collection."
+    },
+    "intro": {
+      "title": "Bienvenue dans les Collections",
+      "description": "Gardez les publications qui en valent la peine. Rassemblez le meilleur contenu de votre réseau. Organisez vos idées, filtrez le signal du bruit et partagez ce qui compte.",
+      "imageAlt": "Collections",
+      "publicNote": "À noter : les collections sont publiques et visibles.",
+      "cancel": "Annuler",
+      "continue": "Continuer"
+    },
+    "edit": {
+      "title": "Modifier la collection",
+      "save": "Enregistrer les modifications",
+      "updated": "Collection mise à jour",
+      "updateFailed": "Échec de la mise à jour de la collection."
+    },
+    "showMore": "Afficher plus",
+    "loadFailed": "Échec du chargement des collections. Veuillez réessayer.",
+    "my": {
+      "title": "Mes collections"
+    },
+    "followed": {
+      "title": "Collections suivies",
+      "empty": "Vous ne suivez aucune collection pour le moment."
+    },
+    "discover": {
+      "title": "Découvrir des collections",
+      "empty": "Aucune collection à découvrir pour le moment."
+    },
+    "bookmarks": {
+      "title": "Signets",
+      "description": "Tout ce que vous avez enregistré pour plus tard."
+    },
+    "card": {
+      "follow": "Suivre",
+      "unfollow": "Ne plus suivre",
+      "delete": "Supprimer",
+      "toast": {
+        "followed": "Vous suivez désormais cette collection",
+        "unfollowed": "Vous ne suivez plus cette collection",
+        "shared": "Vous avez partagé cette collection"
+      }
+    },
+    "single": {
+      "share": "Partager",
+      "shareTitle": "Partager la collection",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "follow": "Suivre",
+      "unfollow": "Ne plus suivre",
+      "content": "Ajouter une publication",
+      "addContent": "Ajouter une publication",
+      "empty": "Cette collection est vide.",
+      "notFound": {
+        "title": "Collection introuvable",
+        "subtitle1": "Cette collection n'est pas disponible.",
+        "subtitle2": "Elle a peut-être été supprimée ou le lien n'est plus valide.",
+        "imageAlt": "Collection introuvable",
+        "backToCollections": "Retour aux collections",
+        "viewProfile": "Voir le profil"
+      }
+    },
+    "addContentDialog": {
+      "title": "Ajouter une publication",
+      "description": "Il existe plusieurs façons d'ajouter des publications à votre collection.",
+      "fromFeedTitle": "Ajouter depuis le fil",
+      "fromFeedLead": "Trouvez une publication",
+      "fromFeedRest": " que vous voulez ajouter et cliquez sur le bouton des collections.",
+      "pasteTitle": "Coller l'URL de la publication",
+      "pasteDescription": "Vous pouvez aussi coller l'URL d'une publication pour l'ajouter rapidement à votre collection.",
+      "createPostTitle": "Créer une nouvelle publication",
+      "createPostPlaceholder": "Qu'avez-vous en tête ?",
+      "createPostAvatarFallback": "Vous",
+      "adding": "Ajout...",
+      "errors": {
+        "required": "Collez une URL de publication.",
+        "invalid": "Saisissez une URL de publication valide.",
+        "notFound": "Nous n'avons pas trouvé cette publication.",
+        "alreadyAdded": "Cette publication est déjà ajoutée.",
+        "collectionNotAllowed": "Une collection ne peut pas être ajoutée à une collection.",
+        "failure": "Impossible d'ajouter cette publication."
+      }
+    }
+  },
+  "fab": {
+    "newPost": "Nouvelle publication",
+    "newCollection": "Nouvelle collection",
+    "newPostInCollection": "Nouvelle publication dans la collection",
+    "newBookmark": "Nouveau signet",
+    "addedToCollection": "Publication ajoutée à la collection."
+  },
+  "postSave": {
+    "title": "Enregistrer la publication",
+    "description": "Choisissez où enregistrer cette publication.",
+    "open": "Enregistrer la publication",
+    "loading": "Chargement des options d'enregistrement",
+    "bookmarks": "Signets",
+    "newCollection": "Nouvelle collection",
+    "collectionNamePlaceholder": "Nom de la collection",
+    "createCollection": "Créer une collection",
+    "loadingCollections": "Chargement des collections...",
+    "addedToCollection": "Publication ajoutée à la collection.",
+    "removedFromCollection": "Publication retirée de la collection.",
+    "updateCollectionFailed": "Échec de la mise à jour de la collection.",
+    "collectionCreated": "Collection créée et publication enregistrée.",
+    "createCollectionFailed": "Échec de la création de la collection."
+  },
+  "moderation": {
+    "postContentModerated": "Contenu de la publication censuré.",
+    "collectionContentModerated": "Contenu de la collection censuré."
   }
 }

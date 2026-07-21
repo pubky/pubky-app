@@ -1,5 +1,5 @@
 import type { TFetchStreamParams } from '@/application/stream/posts/post.types';
-import { Env } from '@/libs/env/env';
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type {
   THandleNotCommonStreamParamsParams,
@@ -39,27 +39,36 @@ export function createPostStreamParams({
   params.viewer_id = viewerId ?? undefined;
   params.sorting = parseSorting(sorting);
   params.tags = tags;
-  if (content && invokeEndpoint !== StreamSource.REPLIES) {
+  // REPLIES and COLLECTION use the third segment for an entity id (postId), not a kind.
+  if (content && invokeEndpoint !== StreamSource.REPLIES && invokeEndpoint !== StreamSource.COLLECTION) {
     params.kind = parseContent(content);
   }
   params.limit = limit;
   params.order = order;
-  let extraParams = handleNotCommonStreamParams({ authorId: sorting, postId: content });
-  setStreamPagination({ params, streamTail, streamHead });
+  let extraParams = handleNotCommonStreamParams({ authorId: sorting, postId: content, invokeEndpoint });
+  setStreamPagination({ params, streamTail, streamHead, invokeEndpoint });
   return { params, invokeEndpoint, extraParams };
 }
 
 /**
  * Handles parameters specific to streams that don't follow the common TStreamBase pattern.
+ * Only REPLIES and COLLECTION streams encode a `post_id` in the third stream-id segment;
+ * for AUTHOR / AUTHOR_REPLIES the third segment (when present) is a `kind` filter and must
+ * NOT be forwarded as `post_id`.
  * @param authorId - The author identifier for the stream
  * @param postId - Optional post identifier for post-specific streams
+ * @param invokeEndpoint - Resolved stream source (controls whether postId is forwarded)
  */
-function handleNotCommonStreamParams({ authorId, postId }: THandleNotCommonStreamParamsParams): TStreamExtraParams {
+function handleNotCommonStreamParams({
+  authorId,
+  postId,
+  invokeEndpoint,
+}: THandleNotCommonStreamParamsParams): TStreamExtraParams {
   const extraParams: TStreamExtraParams = {
     author_id: authorId,
   };
 
-  if (postId) {
+  if (postId && (invokeEndpoint === StreamSource.REPLIES || invokeEndpoint === StreamSource.COLLECTION)) {
     extraParams.post_id = postId;
   }
   return extraParams;
@@ -70,8 +79,10 @@ function handleNotCommonStreamParams({ authorId, postId }: THandleNotCommonStrea
  * @param params - The base stream parameters object to modify
  * @param streamTail - The pagination tail value (timestamp of last post in current page)
  */
-function setStreamPagination({ params, streamTail, streamHead }: TSetStreamPaginationParams) {
-  if (params.sorting === StreamSorting.ENGAGEMENT) {
+function setStreamPagination({ params, streamTail, streamHead, invokeEndpoint }: TSetStreamPaginationParams) {
+  // Engagement and single-collection item streams paginate by offset (`skip`): Nexus returns
+  // no score/timestamp cursor for them, so `streamTail` carries the number of items already loaded.
+  if (params.sorting === StreamSorting.ENGAGEMENT || invokeEndpoint === StreamSource.COLLECTION) {
     params.skip = streamTail; // post amount of the stream, page number * limit
   } else {
     // For ASCENDING order, streamTail is the timestamp of the newest post we have
@@ -116,15 +127,19 @@ export function breakDownStreamId(streamId: PostStreamId): TStreamIdBreakdown {
   const [sorting, invokeEndpoint, kind, tags] = streamId.split(':');
   // Tags are separated by ',' character. Only the first MAX_STREAM_TAGS are considered.
   const limitTags = tags
-    ? tags.split(POST_STREAM_TAG_DELIMITER).slice(0, Env.NEXT_MAX_STREAM_TAGS).join(POST_STREAM_TAG_DELIMITER)
+    ? tags.split(POST_STREAM_TAG_DELIMITER).slice(0, getMaxStreamTags()).join(POST_STREAM_TAG_DELIMITER)
     : undefined;
 
   if (kind) {
-    if (sorting === StreamSource.REPLIES) {
-      // [pubky, post_replies, postId]
+    if (sorting === StreamSource.REPLIES || sorting === StreamSource.COLLECTION) {
+      // Source-first composite formats:
+      // - post_replies:<pubky>:<postId>
+      // - collection:<pubky>:<postId>
       return [invokeEndpoint, toStreamSource({ value: sorting }), kind, limitTags];
     }
-    // Applies to timeline pattern
+    // Applies to timeline pattern (sorting:source:kind[:tags]) and to the
+    // author-with-kind shape (<pubky>:author:<kind>) where parseSorting falls
+    // through to undefined.
     return [sorting, toStreamSource({ value: invokeEndpoint }), kind, limitTags];
   }
   // That case covers StreamSource.AUTHOR_REPLIES and StreamSource.AUTHOR
@@ -161,6 +176,7 @@ function parseContent(content: string): StreamKind | undefined {
     video: StreamKind.VIDEO,
     link: StreamKind.LINK,
     file: StreamKind.FILE,
+    collection: StreamKind.COLLECTION,
   };
   return contentMap[content];
 }

@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import LinkifyIt from 'linkify-it';
 import { Container } from '@/atoms/Container/Container';
+import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import type { ParseUrlForLinkEmbedResult, PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 import { Generic } from './Providers/Generic/ProviderGeneric';
 import type { EmbedProvider } from './Providers/Provider.types';
@@ -103,11 +104,12 @@ const parseContentForLinkEmbed = (content: string): ParseUrlForLinkEmbedResult =
 
 export const PostLinkEmbeds = ({ content }: PostLinkEmbedsProps) => {
   const { embed, provider } = useMemo(() => parseContentForLinkEmbed(content), [content]);
+  const mediaContainerRef = usePauseMediaOutsideViewport();
 
   if (!embed || !provider) return null;
 
   return (
-    <Container className="w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <Container ref={mediaContainerRef} className="w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
       {provider.renderEmbed(embed)}
     </Container>
   );

@@ -53,11 +53,11 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 
 Guests can open routes that do not require a session:
 
-| Kind           | Paths                                                           | `@/app/routes` helper  | `usePublicRoute()` flag |
-| -------------- | --------------------------------------------------------------- | ---------------------- | ----------------------- |
-| Core explore   | `/home`, `/hot`, `/search`                                      | `isCoreExploreRoute`   | `isCoreExploreRoute`    |
-| Dynamic public | `/post/[userId]/[postId]`, `/profile/[pubky]`, `/invite/[code]` | `isDynamicPublicRoute` | `isDynamicPublicRoute`  |
-| Either         | —                                                               | `isPublicExploreRoute` | `isPublicExploreRoute`  |
+| Kind           | Paths                                                                                             | `@/app/routes` helper  | `usePublicRoute()` flag |
+| -------------- | ------------------------------------------------------------------------------------------------- | ---------------------- | ----------------------- |
+| Core explore   | `/home`, `/hot`, `/search`, `/collections`                                                        | `isCoreExploreRoute`   | `isCoreExploreRoute`    |
+| Dynamic public | `/post/[userId]/[postId]`, `/profile/[pubky]`, `/invite/[code]`, `/collections/[userId]/[postId]` | `isDynamicPublicRoute` | `isDynamicPublicRoute`  |
+| Either         | —                                                                                                 | `isPublicExploreRoute` | `isPublicExploreRoute`  |
 
 - **Route guard:** `EXPLORE_ROUTES` is included in `UNAUTHENTICATED_ROUTES`; dynamic public paths are allowed via `isDynamicPublicRoute()` in `RouteGuardProvider`.
 - **UI chrome:** use `usePublicRoute()` for layout (e.g. explore header, mobile footer on `/home`). `isPublicRoute` on the hook result is a **legacy alias** for `isDynamicPublicRoute` only—it is `false` on `/home` even though the page is browsable.
@@ -169,6 +169,52 @@ Helpers such as **`getIconFromUrl`** and **`getLabelFromUrl`** live in **`@/libs
 ### Tests
 
 Component tests must use **real** `lucide-react` and `@/icons` implementations (no `vi.mock('lucide-react')` / `vi.mock('@/icons')` for icons). See `docs/component-testing.md` — _Icon components: Always Real_.
+
+## Toasts
+
+Stack: atom [`Toast`](src/components/atoms/Toast/Toast.tsx) + [`Toast.variants.ts`](src/components/atoms/Toast/Toast.variants.ts) + [`Toast.icons.tsx`](src/components/atoms/Toast/Toast.icons.tsx), molecule [`Toaster`](src/components/molecules/Toaster/Toaster.tsx), API [`toast()`](src/components/molecules/Toaster/use-toast.ts) / `useToast()`. `<Toaster />` is mounted in the app layout.
+
+### Variants (`ToastVariant`)
+
+Icons are **not** stock Lucide — they are bespoke filled shapes with knocked-out glyphs in `Toast.icons.tsx`, wired via `TOAST_ICONS` in `Toast.variants.ts` (same semantics as check / alert / info, different source and silhouette).
+
+| Variant   | Use for                                         | Icon (`TOAST_ICONS`) |
+| --------- | ----------------------------------------------- | -------------------- |
+| `default` | Success, confirmation, neutral completion       | `ToastSuccessIcon`   |
+| `error`   | Failures, validation errors, caught exceptions  | `ToastErrorIcon`     |
+| `warning` | Caution, rate limits, recoverable problems      | `ToastWarningIcon`   |
+| `info`    | Informational feedback (e.g. copy-to-clipboard) | `ToastInfoIcon`      |
+
+Colors and per-variant styling live in `Toast.variants.ts` (`toastVariants`, `toastIconVariants`, `toastActionVariants`). Update tokens there — do not ad-hoc style toasts with `className` unless intentionally overriding.
+
+### Calling `toast()`
+
+```tsx
+import { toast } from '@/molecules/Toaster/use-toast';
+
+// Success / default (brand styling)
+toast({ title: t('saved'), description: t('savedDesc') });
+
+// Error — omit title to use toast.genericErrorTitle (filled in by Toaster)
+toast({ variant: 'error', description: t('failed') });
+
+// Custom error title when domain copy is specific
+toast({ variant: 'error', title: t('uploadFailed'), description: t('uploadFailedDesc') });
+
+// Warning / info
+toast({ variant: 'warning', title: t('headsUp'), description: t('...') });
+toast({ variant: 'info', title: t('copied'), description: text, dismissButton: true });
+```
+
+- Import `toast` from `@/molecules/Toaster/use-toast` (module-level; works in hooks and providers). Use `useToast()` in components when you only need the hook-bound `toast`.
+- **`variant: 'error'`** for errors — not `title: tToast('error')`, not `className: 'destructive …'`, and **no** `showErrorToast` / `showSuccessToast` wrapper helpers.
+- **`dismissButton: true`** when the toast should show an OK action (styled via `toastActionVariants` for the toast variant).
+- **`action`** for a custom `<ToastAction>` (e.g. repost Undo). Pass `variant` on `ToastAction` when it is not rendered by `Toaster`.
+- **`toast()` return value** supports `dismiss()` / `update()` (e.g. Undo flow).
+
+### Tests
+
+Mock `@/molecules/Toaster/use-toast` in unit tests; assert `variant: 'error'` (or other variant) instead of `title: 'Error'`.
 
 ## Design System Integration
 

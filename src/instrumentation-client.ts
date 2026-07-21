@@ -1,12 +1,27 @@
 import * as Sentry from '@sentry/nextjs';
-import { Env } from '@/libs/env/env';
 import { getSentryInitBase, shouldEnableSentry } from '@/libs/observability/sentry';
+import {
+  getSentryReplaysOnErrorSampleRate,
+  getSentryReplaysSessionSampleRate,
+  RUNTIME_CONFIG_WINDOW_KEY,
+} from '@/libs/runtime-config/runtime-config';
+
+// Safe to read runtime config here: ContainerRoot emits `window.__PUBKY_CONFIG__` as a raw
+// inline <script> at the top of <body>, which the browser executes during HTML parsing —
+// before this module (bundled into the main app chunks) evaluates. If the config is missing,
+// shouldEnableSentry() would swallow the resolution error and silently disable client Sentry,
+// so make the broken injection contract loud instead.
+if (window[RUNTIME_CONFIG_WINDOW_KEY] === undefined) {
+  console.error(
+    `window.${RUNTIME_CONFIG_WINDOW_KEY} was not injected before client init — runtime-config injection is broken; ALL client runtime config (network URLs, moderation, analytics, ...) resolves to staging defaults and client Sentry stays disabled.`,
+  );
+}
 
 if (shouldEnableSentry()) {
   Sentry.init({
     ...getSentryInitBase(),
-    replaysSessionSampleRate: Env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
-    replaysOnErrorSampleRate: Env.NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE,
+    replaysSessionSampleRate: getSentryReplaysSessionSampleRate(),
+    replaysOnErrorSampleRate: getSentryReplaysOnErrorSampleRate(),
     integrations: [
       Sentry.replayIntegration({
         maskAllText: true,

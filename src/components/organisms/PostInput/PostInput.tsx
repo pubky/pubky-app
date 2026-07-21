@@ -9,11 +9,11 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/Post
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
+import { parseArticleContent } from '@/libs/post/articleContent';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
@@ -21,7 +21,7 @@ import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
-import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
+import { usesWidePostInput } from '@/organisms/PostMain/PostMainLayoutRules';
 import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
@@ -39,6 +39,9 @@ export function PostInput({
   editPostId,
   onSuccess,
   placeholder,
+  submitLabel,
+  submitIcon,
+  successToastTitle,
   showThreadConnector = false,
   expanded = false,
   onContentChange,
@@ -50,7 +53,6 @@ export function PostInput({
   initialAttachments,
 }: PostInputProps) {
   const t = useTranslations('post');
-  const tCommon = useTranslations('common');
   const tToast = useTranslations('toast.post');
   const {
     textareaRef,
@@ -102,6 +104,7 @@ export function PostInput({
     editPostId,
     onSuccess,
     placeholder,
+    successToastTitle,
     expanded,
     onContentChange,
     onArticleModeChange,
@@ -158,13 +161,13 @@ export function PostInput({
       if (editIsArticle) {
         setIsArticle(true);
 
-        try {
-          const parsed = JSON.parse(editContent) as ArticleJSON;
-          setArticleTitle(parsed.title || '');
-          setContent(parsed.body || '');
-        } catch {
+        const parsed = parseArticleContent(editContent);
+        if (parsed) {
+          setArticleTitle(parsed.title);
+          setContent(parsed.body);
+        } else {
           toast({
-            title: tCommon('error'),
+            variant: 'error',
             description: tToast('parseError'),
           });
         }
@@ -193,9 +196,7 @@ export function PostInput({
 
   const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
-  const isMobile = useIsMobile();
-  const inheritedTagsLayout = usePostMainLayout() ?? 'inline';
-  const isWideLayout = !isMobile && inheritedTagsLayout === 'side';
+  const isWideLayout = usesWidePostInput(useEffectiveTagsLayout());
 
   return (
     <Container
@@ -204,6 +205,7 @@ export function PostInput({
       ref={containerRef}
       className={cn(
         'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
+        'max-w-full min-w-0',
         isWideLayout ? 'p-12' : 'p-4',
         !isAuthenticated ? 'px-6' : '',
         isDragging ? 'border-brand' : 'border-input',
@@ -225,7 +227,7 @@ export function PostInput({
       )}
 
       {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
-      <Container className="gap-4 contain-inline-size">
+      <Container className="min-w-0 gap-4 contain-inline-size">
         {isArticle && (
           <Input
             placeholder={t('articleTitle')}
@@ -265,6 +267,8 @@ export function PostInput({
               readOnly={!isAuthenticated}
               aria-haspopup="listbox"
               autoFocus={autoFocusTextarea}
+              // Suppress the iOS keyboard autofill accessory bar (passwords/cards/contacts)
+              autoComplete="off"
             />
 
             {/* Mention autocomplete popover */}
@@ -303,7 +307,7 @@ export function PostInput({
 
         {/* Show original post preview for reposts */}
         {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
-          <PostPreviewCard postId={originalPostId} className="bg-card" />
+          <PostPreviewCard postId={originalPostId} className="bg-card" interactiveActions={false} />
         )}
 
         <PostInputExpandableSection
@@ -322,6 +326,8 @@ export function PostInput({
           onArticleClick={handleArticleClickWithAuth}
           isPostDisabled={isAuthenticated ? !isValid() : false}
           submitMode={variant}
+          submitLabel={submitLabel}
+          submitIcon={submitIcon}
           parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
           characterLimit={characterLimit}
         />

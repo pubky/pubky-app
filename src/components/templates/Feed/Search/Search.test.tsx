@@ -1,9 +1,12 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Search } from './Search';
 
-const mockUseIsMobile = vi.fn(() => false);
-const mockUseSearchTags = vi.fn(() => ['pubky']);
+const { mockUseIsMobile, mockUseSearchTags } = vi.hoisted(() => ({
+  mockUseIsMobile: vi.fn(() => false),
+  mockUseSearchTags: vi.fn(() => ['pubky']),
+}));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockUseIsMobile(),
@@ -14,7 +17,11 @@ vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
 }));
 
 vi.mock('@/organisms/SearchInput/SearchInput', () => ({
-  SearchInput: () => <div data-testid="search-input">SearchInput</div>,
+  SearchInput: ({ autoFocus }: { autoFocus?: boolean }) => (
+    <div data-auto-focus={String(Boolean(autoFocus))} data-testid="search-input">
+      SearchInput
+    </div>
+  ),
 }));
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
@@ -99,6 +106,10 @@ describe('Search', () => {
 });
 
 describe('Search - Snapshots', () => {
+  beforeEach(() => {
+    mockUseIsMobile.mockReturnValue(false);
+  });
+
   it('matches snapshot with tags present', () => {
     mockUseSearchTags.mockReturnValue(['pubky']);
     const { container } = render(<Search />);
@@ -107,6 +118,21 @@ describe('Search - Snapshots', () => {
 
   it('matches snapshot with no tags', () => {
     mockUseSearchTags.mockReturnValue([]);
+    const { container } = render(<Search />);
+    expect(container).toMatchSnapshot();
+  });
+});
+
+describe('Search - Mobile Snapshots', () => {
+  beforeEach(() => {
+    mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+  });
+  afterEach(() => {
+    resetViewport();
+  });
+  it('matches snapshot on mobile viewport', () => {
+    mockUseSearchTags.mockReturnValue(['pubky']);
     const { container } = render(<Search />);
     expect(container).toMatchSnapshot();
   });

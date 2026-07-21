@@ -1,6 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { PostController } from '@/controllers/post/post';
+import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useDeletePost } from './useDeletePost';
 
@@ -27,9 +29,13 @@ vi.mock('@/molecules/Toaster/use-toast', () => {
 // Mock organisms (useTimelineFeedContext)
 const mockRemovePosts = vi.fn();
 const mockPrependPosts = vi.fn();
+const mockPrependOptimisticPosts = vi.fn();
 const mockTimelineFeed = {
+  variant: TIMELINE_FEED_VARIANT.HOME,
+  streamId: PostStreamTypes.TIMELINE_ALL_ALL,
   removePosts: mockRemovePosts,
   prependPosts: mockPrependPosts,
+  prependOptimisticPosts: mockPrependOptimisticPosts,
 };
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => {
@@ -98,7 +104,6 @@ describe('useDeletePost', () => {
 
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Post deleted',
-      description: 'Your post has been deleted',
       dismissButton: true,
     });
   });
@@ -162,6 +167,26 @@ describe('useDeletePost', () => {
     expect(mockPrependPosts).not.toHaveBeenCalled();
   });
 
+  it('does not restore when the row exists but is tombstoned (content === [DELETED])', async () => {
+    // After the `LocalPostService.delete` tombstone refactor, a successful
+    // local-first write leaves a row with `content === '[DELETED]'` instead
+    // of removing it. Without the content-aware check the hook would
+    // restore — bringing back a `PostDeleted` molecule where the user's
+    // post used to be. Verify the tombstone is treated as "local write
+    // committed" and the optimistic removal stays in place.
+    mockDelete.mockRejectedValue(new Error('homeserver sync failed'));
+    mockGetPostDetails.mockResolvedValue({ id: mockPostId, content: '[DELETED]' });
+
+    const { result } = renderHook(() => useDeletePost());
+
+    await act(async () => {
+      await result.current.deletePost(mockPostId);
+    });
+
+    expect(mockGetPostDetails).toHaveBeenCalledWith({ compositeId: mockPostId });
+    expect(mockPrependPosts).not.toHaveBeenCalled();
+  });
+
   it('shows error toast on deletion failure', async () => {
     const error = new Error('Deletion failed');
     mockDelete.mockRejectedValue(error);
@@ -173,9 +198,8 @@ describe('useDeletePost', () => {
     });
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
-      description: 'Failed to delete post. Please try again.',
-      className: 'destructive border-destructive bg-destructive text-destructive-foreground',
+      variant: 'error',
+      description: 'Could not delete post. Try again.',
     });
   });
 
@@ -234,8 +258,70 @@ describe('useDeletePost', () => {
     expect(mockPrependPosts).not.toHaveBeenCalled();
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Post deleted',
-      description: 'Your post has been deleted',
       dismissButton: true,
+    });
+  });
+
+  describe('toastMessages override', () => {
+    it('uses overridden success toast copy when provided', async () => {
+      mockDelete.mockResolvedValue(undefined);
+
+      const { result } = renderHook(() =>
+        useDeletePost({
+          toastMessages: {
+            deleted: 'Collection deleted',
+          },
+        }),
+      );
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Collection deleted',
+        dismissButton: true,
+      });
+    });
+
+    it('uses overridden failure toast copy when provided', async () => {
+      mockDelete.mockRejectedValue(new Error('boom'));
+
+      const { result } = renderHook(() =>
+        useDeletePost({
+          toastMessages: {
+            deleteFailed: 'Failed to delete collection. Please try again.',
+          },
+        }),
+      );
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Failed to delete collection. Please try again.',
+      });
+    });
+
+    it('uses overridden title while falling back to generic copy for omitted fields', async () => {
+      mockDelete.mockResolvedValue(undefined);
+
+      const { result } = renderHook(() =>
+        useDeletePost({
+          toastMessages: { deleted: 'Collection deleted' },
+        }),
+      );
+
+      await act(async () => {
+        await result.current.deletePost(mockPostId);
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Collection deleted',
+        dismissButton: true,
+      });
     });
   });
 });

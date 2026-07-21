@@ -9,7 +9,6 @@ import { AuthController } from '@/controllers/auth/auth';
 import { formatInviteCode } from '@/libs/utils/utils';
 import { InstallCard, InstallFooter, InstallHeader, InstallNavigation } from '@/molecules/Install/Install';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
@@ -39,7 +38,6 @@ export function Install() {
           useOnboardingStore.getState().setInviteCode(inviteCodeFromUrl);
           toast({
             title: t('inviteCodeApplied'),
-            description: t('inviteCodeAppliedDescription', { inviteCode: inviteCodeFromUrl }),
           });
           setIsVerifying(false);
           return;
@@ -47,20 +45,20 @@ export function Install() {
 
         if (status === 'used') {
           toast({
+            variant: 'error',
             title: t('usedInviteCode'),
-            description: t('usedInviteCodeDescription'),
           });
         } else {
           toast({
+            variant: 'error',
             title: t('invalidInviteCode'),
-            description: t('invalidInviteCodeDescription'),
           });
         }
       } catch {
         // The homeserver could not be reached, so we couldn't confirm the code.
-        showErrorToast({
+        toast({
+          variant: 'error',
           title: t('verificationFailed'),
-          description: t('verificationFailedDescription'),
         });
       }
 

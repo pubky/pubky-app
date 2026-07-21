@@ -28,7 +28,10 @@ export function useUnreadPosts({ streamId }: UseUnreadPostsOptions): UseUnreadPo
   const unreadStream = useLiveQuery(async () => {
     try {
       if (!streamId) return null;
-      return await StreamPostsController.getUnreadStream({ streamId });
+      const stream = await StreamPostsController.getUnreadStream({ streamId });
+      if (!stream) return null;
+      const filteredStream = await StreamPostsController.filterStreamPosts({ streamId, postIds: stream.stream });
+      return { stream: filteredStream };
     } catch (error) {
       Logger.error('[useUnreadPosts] Failed to query unread stream', { streamId, error });
       return null;

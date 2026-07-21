@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { APP_ROUTES, getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
+import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
@@ -16,6 +16,7 @@ import type { Pubky } from '@/models/models.types';
 import { SearchInputBar } from '@/molecules/SearchInputBar/SearchInputBar';
 import { SearchSuggestions } from '@/molecules/SearchSuggestions/SearchSuggestions';
 import { toast } from '@/molecules/Toaster/use-toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { SearchInputProps } from './SearchInput.types';
 import { parseTagsFromUrl } from './SearchInput.utils';
@@ -28,11 +29,12 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
 
   const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = useTagSearch();
   const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = useSearchStore();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isMobile = useIsMobile();
 
   const handleEnter = (value: string) => {
     if (!isValidTagLabel(value.trim().toLowerCase())) {
-      toast({ description: t('invalidTag') });
+      toast({ variant: 'error', description: t('invalidTag') });
       return false;
     }
 
@@ -72,7 +74,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     addUser(userId);
     clearInputValue();
     setFocus(false);
-    router.push(getProfileRoute(PROFILE_ROUTES.POSTS, userId));
+    router.push(getUserProfileUrl(userId, currentUserPubky));
   };
 
   const handleTagClick = (tag: string) => {

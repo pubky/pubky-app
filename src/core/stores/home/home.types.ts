@@ -2,6 +2,7 @@
 export const LAYOUT = {
   COLUMNS: 'columns',
   WIDE: 'wide',
+  LIST: 'list',
   VISUAL: 'visual',
 } as const;
 
@@ -23,6 +24,7 @@ export enum CONTENT {
   ALL = 'all',
   SHORT = 'short',
   LONG = 'long',
+  COLLECTIONS = 'collections',
   IMAGES = 'images',
   VIDEOS = 'videos',
   LINKS = 'links',

@@ -1,7 +1,7 @@
 import type { Pubky } from '@/models/models.types';
 import type { PostStreamId, ReplyStreamCompositeId } from '@/models/stream/post/postStream.types';
 import type { NexusFileDetails, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
-import type { TStreamBase } from '@/services/nexus/stream/posts/postStream.types';
+import type { StreamSource, TStreamBase } from '@/services/nexus/stream/posts/postStream.types';
 
 export interface TStreamResult {
   stream: string[];
@@ -34,6 +34,7 @@ export interface TAddReplyToStreamParams {
 export interface THandleNotCommonStreamParamsParams {
   authorId: Pubky;
   postId: string | undefined;
+  invokeEndpoint: StreamSource;
 }
 
 export interface TPersistPostsParams {
@@ -48,4 +49,5 @@ export interface TSetStreamPaginationParams {
   params: TStreamBase;
   streamTail: number;
   streamHead?: number;
+  invokeEndpoint: StreamSource;
 }

@@ -11,9 +11,8 @@ import {
   Signer,
 } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
-import { DEFAULT_HTTP_RELAY, HOMESERVER, HOMESERVER_URL, PKARR_RELAYS, TESTNET } from '@/config/network';
+import { getDefaultHttpRelay, getHomeserver, getHomeserverUrl, getPkarrRelays, getTestnet } from '@/config/network';
 import type { TPublicKeyParams } from '@/controllers/auth/auth.types';
-import { Env } from '@/libs/env/env';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError } from '@/libs/error/error.http';
@@ -35,6 +34,7 @@ import type {
   PubPath,
   TGenerateSignupAuthUrlParams,
   THomeserverFetchParams,
+  THomeserverListAllParams,
   THomeserverListParams,
   THomeserverRequestParams,
   THomeserverUserEvent,
@@ -50,8 +50,6 @@ import {
   PUBKY_PREFIX,
   resolveOwnedSessionPath,
 } from './homeserver.utils';
-
-const IS_TESTNET = TESTNET.toString() === 'true';
 
 const CAPABILITIES = '/pub/pubky.app/:rw';
 const PUB_PATH_PREFIX = '/pub/' as const;
@@ -72,10 +70,10 @@ export class HomeserverService {
    */
   private static getPubkySdk(): Pubky {
     if (!this.pubkySdk) {
-      if (IS_TESTNET) {
+      if (getTestnet()) {
         this.pubkySdk = Pubky.testnet();
       } else {
-        const client = new Client({ pkarr: { relays: PKARR_RELAYS } });
+        const client = new Client({ pkarr: { relays: getPkarrRelays() } });
         this.pubkySdk = Pubky.withClient(client);
       }
     }
@@ -127,7 +125,7 @@ export class HomeserverService {
    */
   static async signUp({ keypair, signupToken }: THomeserverSignUpParams): Promise<THomeserverSessionResult> {
     try {
-      const homeserverPublicKey = PublicKey.from(HOMESERVER);
+      const homeserverPublicKey = PublicKey.from(getHomeserver());
       const signer = this.getSigner(keypair);
       const session = await signer.signup(homeserverPublicKey, signupToken);
 
@@ -149,7 +147,7 @@ export class HomeserverService {
    *
    * Performs a GET to the homeserver's `/signup_tokens/<token>` endpoint. This is a
    * homeserver-root endpoint that cannot be reached via the homeserver pubkey (its PKARR
-   * record has no resolvable HTTPS endpoint), so the explicit {@link HOMESERVER_URL} is used.
+   * record has no resolvable HTTPS endpoint), so the explicit {@link getHomeserverUrl} is used.
    *
    * A definitive homeserver response distinguishes valid, used, and unknown tokens, whereas
    * a failure to reach the homeserver is surfaced as a thrown error so callers can tell
@@ -162,7 +160,7 @@ export class HomeserverService {
    *   or returns an unexpected status.
    */
   static async verifySignupToken(signupToken: string): Promise<TSignupTokenVerificationStatus> {
-    const url = `${HOMESERVER_URL}/signup_tokens/${encodeURIComponent(signupToken)}`;
+    const url = `${getHomeserverUrl()}/signup_tokens/${encodeURIComponent(signupToken)}`;
     try {
       const response = await this.getPubkySdk().client.fetch(url, { method: HttpMethod.GET });
       Logger.debug('Signup token verification response', { status: response.status });
@@ -210,7 +208,7 @@ export class HomeserverService {
     } catch (signinError) {
       try {
         // Republish keypair's homeserver
-        const homeserverPublicKey = PublicKey.from(HOMESERVER);
+        const homeserverPublicKey = PublicKey.from(getHomeserver());
         await signer.pkdns.publishHomeserverForce(homeserverPublicKey);
         Logger.debug('Republish homeserver successful', { keypair: Identity.pubkyFromKeypair(keypair) });
         // Return undefined to signal caller should retry signin after republish
@@ -236,7 +234,7 @@ export class HomeserverService {
 
     try {
       const pubkySdk = this.getPubkySdk();
-      const flow = pubkySdk.startAuthFlow(capabilities, AuthFlowKind.signin(), DEFAULT_HTTP_RELAY);
+      const flow = pubkySdk.startAuthFlow(capabilities, AuthFlowKind.signin(), getDefaultHttpRelay());
       const approval = createCancelableAuthApproval(flow);
 
       return {
@@ -245,7 +243,7 @@ export class HomeserverService {
         cancelAuthFlow: approval.cancel,
       };
     } catch (error) {
-      return handleError({ error, additionalContext: { capabilities, relay: DEFAULT_HTTP_RELAY } });
+      return handleError({ error, additionalContext: { capabilities, relay: getDefaultHttpRelay() } });
     }
   }
 
@@ -274,7 +272,7 @@ export class HomeserverService {
     }
     url.host = 'signup';
     url.pathname = '';
-    url.searchParams.set('hs', Env.NEXT_PUBLIC_HOMESERVER);
+    url.searchParams.set('hs', getHomeserver());
     url.searchParams.set('st', inviteCode);
     res.authorizationUrl = url.toString();
     return res;
@@ -450,6 +448,33 @@ export class HomeserverService {
         return [];
       }
       return handleError({ error, additionalContext: { url: baseDirectory, baseDirectory } });
+    }
+  }
+
+  /**
+   * Lists ALL files under a base directory by paginating with a cursor until exhausted.
+   *
+   * A single `list` call is page-limited and must use a finite limit: non-finite values
+   * (e.g. Infinity) coerce to 0 at the SDK's WASM boundary and silently return an empty
+   * page. Paginating with the SDK cursor ("start after this URL") is the only reliable
+   * way to enumerate an entire directory.
+   *
+   * @param {string} baseDirectory - Base directory path to list all files from.
+   * @returns {Promise<string[]>} Array of every file URL under the directory.
+   */
+  static async listAll({ baseDirectory }: THomeserverListAllParams): Promise<string[]> {
+    const files: string[] = [];
+    let cursor: string | undefined;
+
+    for (;;) {
+      const batch = await this.list({ baseDirectory, cursor, limit: LIST_DEFAULT_LIMIT });
+      files.push(...batch);
+
+      if (batch.length < LIST_DEFAULT_LIMIT) {
+        return files;
+      }
+
+      cursor = batch[batch.length - 1];
     }
   }
 

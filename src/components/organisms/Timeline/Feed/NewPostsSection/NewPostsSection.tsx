@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
+import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { useIsScrolledFromTop } from '@/hooks/useIsScrolledFromTop/useIsScrolledFromTop';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
@@ -10,7 +11,8 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { NewPostsButton } from '@/molecules/NewPostsButton/NewPostsButton';
-import { showErrorToast } from '@/molecules/Toaster/showErrorToast';
+import { toast } from '@/molecules/Toaster/use-toast';
+import { postKindBelongsToStream } from '@/stores/home/home.utils';
 
 interface NewPostsSectionProps {
   streamId: PostStreamId;
@@ -30,6 +32,12 @@ interface NewPostsSectionProps {
  *
  * Bookmarks: unread "new posts" counts must not apply the mute list, so bookmarked
  * posts from muted authors stay consistent with the feed (#1804).
+ *
+ * Content filter: `prependPosts` only updates the feed's in-memory post list (see
+ * `useStreamPagination`) — it does not choose which stream a post belongs to in
+ * Dexie. Before prepending, we drop ids whose `kind` does not match the active
+ * `streamId` content filter so a post never flashes at the top of the wrong tab.
+ * The merge above still persists unread ids into the stream; this gate is UI-only.
  */
 export function NewPostsSection({
   streamId,
@@ -58,7 +66,20 @@ export function NewPostsSection({
 
       const existingPosts = await StreamPostsController.filterDeletedPosts(actualNewPostIds);
       const displayedPostIdsSet = new Set(postIds);
-      const postsToAdd = existingPosts.filter((id) => !displayedPostIdsSet.has(id));
+      let postsToAdd = existingPosts.filter((id) => !displayedPostIdsSet.has(id));
+
+      /*
+        Gate optimistic prepend by content kind (e.g. do not show a `short` post
+        after "New posts" on `timeline:…:collection`). `!kind` keeps cache misses
+        so a not-yet-indexed post can still appear; mirrors `usePostInput`.
+      */
+      if (postsToAdd.length > 0) {
+        const details = await PostController.getDetailsByIds({ compositeIds: postsToAdd });
+        postsToAdd = postsToAdd.filter((id, index) => {
+          const kind = details[index]?.kind;
+          return !kind || postKindBelongsToStream(kind, streamId);
+        });
+      }
 
       if (postsToAdd.length > 0) {
         prependPosts(postsToAdd);
@@ -67,9 +88,9 @@ export function NewPostsSection({
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       Logger.error('Failed to load new posts:', error);
-      showErrorToast({
-        title: t('failedToLoadPosts'),
-        description: t('failedToLoadPostsDesc'),
+      toast({
+        variant: 'error',
+        description: t('failedToLoadPosts'),
       });
     }
   };

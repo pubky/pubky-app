@@ -18,7 +18,12 @@ export function PostTag({
 }: PostTagProps) {
   const tagColor = color || generateRandomColor(label);
   const backgroundGradient = `linear-gradient(90deg, ${hexToRgba(COLORS.background, 0.7)} 0%, ${hexToRgba(COLORS.background, 0.7)} 100%), linear-gradient(90deg, ${tagColor} 0%, ${tagColor} 100%)`;
+  // A tag chip's only jobs are toggle / close — never navigation. Suppressing
+  // both the native default and propagation lets it sit inside a clickable or
+  // linked surface (e.g. a collection card wrapped in a `Link`) without the
+  // click bubbling into navigation; harmless everywhere else.
   const handleClose = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     onClose?.(e);
   };
@@ -27,13 +32,14 @@ export function PostTag({
       {...rest}
       pressed={selected}
       onClick={(e) => {
+        e.preventDefault();
         e.stopPropagation();
         onClick?.(e);
       }}
       data-cy="post-tag"
       data-tag-label={label}
       className={cn(
-        'group relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg',
+        'group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg',
         'border-0 text-sm leading-5 font-bold text-white subpixel-antialiased',
         'transition-all duration-200',
         // Override Toggle default hover styles - keep text white
@@ -70,7 +76,7 @@ export function PostTag({
 
       {/* Hover shadow overlay - exactly as Figma */}
       <span
-        className="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+        className="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
         style={{
           boxShadow: `inset 0px 0px 8px 0px ${tagColor}`,
         }}

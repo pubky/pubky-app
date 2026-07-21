@@ -1,13 +1,15 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { UserController } from '@/controllers/user/user';
-import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import { toast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseFollowUserResult } from './useFollowUser.types';
+import { resolveFollowToastDisplayName } from './useFollowUser.utils';
 
 /**
  * useFollowUser
@@ -22,8 +24,8 @@ import type { UseFollowUserResult } from './useFollowUser.types';
  * ```tsx
  * const { toggleFollow, isLoading, isUserLoading, error } = useFollowUser();
  *
- * const handleFollow = async (userId: Pubky, isFollowing: boolean) => {
- *   await toggleFollow(userId, isFollowing);
+ * const handleFollow = async (userId: Pubky, isFollowing: boolean, displayName: string) => {
+ *   await toggleFollow(userId, isFollowing, displayName);
  * };
  *
  * // Check if a specific user is loading
@@ -31,6 +33,7 @@ import type { UseFollowUserResult } from './useFollowUser.types';
  * ```
  */
 export function useFollowUser(): UseFollowUserResult {
+  const t = useTranslations('toast.follow');
   const { currentUserPubky } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<UseFollowUserResult['loadingAction']>(null);
@@ -38,21 +41,24 @@ export function useFollowUser(): UseFollowUserResult {
   const [error, setError] = useState<string | null>(null);
 
   const toggleFollow = useCallback(
-    async (userId: Pubky, isCurrentlyFollowing: boolean) => {
+    async (userId: Pubky, isCurrentlyFollowing: boolean, displayName?: string) => {
       if (!currentUserPubky) {
         setError('User not authenticated');
-        return;
+        return false;
       }
 
       if (userId === currentUserPubky) {
         setError('Cannot follow yourself');
-        return;
+        return false;
       }
 
       setLoadingAction(isCurrentlyFollowing ? 'unfollow' : 'follow');
       setIsLoading(true);
       setLoadingUserId(userId);
       setError(null);
+
+      // Resolved up front so the failure toast can name the user too.
+      const username = await resolveFollowToastDisplayName(userId, displayName);
 
       try {
         const action = isCurrentlyFollowing ? HttpMethod.DELETE : HttpMethod.PUT;
@@ -62,21 +68,32 @@ export function useFollowUser(): UseFollowUserResult {
           followee: userId,
         });
 
+        toast({
+          title: isCurrentlyFollowing ? t('unfollowed', { username }) : t('followed', { username }),
+        });
+
         Logger.debug(`[useFollowUser] Successfully ${isCurrentlyFollowing ? 'unfollowed' : 'followed'} user`, {
           userId,
         });
+
+        return true;
       } catch (err) {
-        const errorMessage = isAppError(err) ? err.message : 'Failed to update follow status';
-        setError(errorMessage);
+        // Always a friendly, named message — raw transport/server text never reaches the user.
+        const message = isCurrentlyFollowing ? t('unfollowFailed', { username }) : t('followFailed', { username });
+        setError(message);
+        toast({
+          variant: 'error',
+          description: message,
+        });
         Logger.error('[useFollowUser] Failed to toggle follow:', err);
-        throw err;
+        return false;
       } finally {
         setIsLoading(false);
         setLoadingAction(null);
         setLoadingUserId(null);
       }
     },
-    [currentUserPubky],
+    [currentUserPubky, t],
   );
 
   const isUserLoading = useCallback(

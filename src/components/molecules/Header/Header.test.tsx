@@ -16,6 +16,11 @@ import {
   HeaderTitle,
 } from './Header';
 
+const collectionsDiscoveryMock = vi.hoisted(() => ({
+  markCollectionsNavSeen: vi.fn(),
+  showCollectionsNew: false,
+}));
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
@@ -36,6 +41,12 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 vi.mock('@/stores/notification/notification.store', () => ({
   useNotificationStore: vi.fn(),
+}));
+vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
+  useCollectionsNavDiscovery: () => ({
+    showCollectionsNew: collectionsDiscoveryMock.showCollectionsNew,
+    markCollectionsNavSeen: collectionsDiscoveryMock.markCollectionsNavSeen,
+  }),
 }));
 vi.mock('@/stores/search/search.store', () => ({
   useSearchStore: vi.fn(() => ({
@@ -128,6 +139,9 @@ vi.mock('@/config/externalLinks', async (importOriginal) => {
     GITHUB_URL: 'https://github.com',
     TWITTER_GETPUBKY_URL: 'https://twitter.com/getpubky',
     TELEGRAM_URL: 'https://t.me/getpubky',
+    getGithubLink: () => 'https://github.com',
+    getTwitterGetpubkyLink: () => 'https://twitter.com/getpubky',
+    getTelegramLink: () => 'https://t.me/getpubky',
   };
 });
 
@@ -160,6 +174,7 @@ describe('Header Components', () => {
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
     vi.mocked(usePathname).mockReturnValue('/home');
+    collectionsDiscoveryMock.showCollectionsNew = false;
     vi.mocked(useAuthStore).mockImplementation((selector) => {
       const state = {
         currentUserPubky: 'test-pubky',
@@ -173,6 +188,7 @@ describe('Header Components', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    collectionsDiscoveryMock.showCollectionsNew = false;
   });
 
   describe('HeaderContainer', () => {
@@ -393,7 +409,7 @@ describe('Header Components', () => {
       // lucide uses 'house' for the home icon
       expect(document.querySelector('.lucide-house')).toBeInTheDocument();
       expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
-      expect(document.querySelector('.lucide-bookmark')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-library')).toBeInTheDocument();
       expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
     });
 
@@ -449,15 +465,56 @@ describe('Header Components', () => {
 
       const homeLink = document.querySelector('.lucide-house')?.closest('a');
       const hotLink = document.querySelector('.lucide-flame')?.closest('a');
-      const bookmarkLink = document.querySelector('.lucide-bookmark')?.closest('a');
+      const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
       const settingsLink = document.querySelector('.lucide-settings')?.closest('a');
       const profileLink = screen.getByText('TU').closest('a');
 
       expect(homeLink).toHaveAttribute('href', '/home');
       expect(hotLink).toHaveAttribute('href', '/hot');
-      expect(bookmarkLink).toHaveAttribute('href', '/bookmarks');
+      expect(collectionsLink).toHaveAttribute('href', '/collections');
       expect(settingsLink).toHaveAttribute('href', '/settings/account');
       expect(profileLink).toHaveAttribute('href', '/profile');
+    });
+
+    it('highlights Collections on nested collection routes', () => {
+      vi.mocked(usePathname).mockReturnValue('/collections/bookmarks');
+      render(<HeaderNavigationButtons avatarName="TU" />);
+
+      const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
+      expect(collectionsButton).toHaveClass('bg-secondary');
+      expect(collectionsButton).not.toHaveClass('bg-white/5');
+    });
+
+    it('shows the Collections NEW treatment before dismissal', () => {
+      collectionsDiscoveryMock.showCollectionsNew = true;
+
+      render(<HeaderNavigationButtons avatarName="TU" />);
+
+      const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
+      expect(collectionsButton).toHaveClass('border-brand', 'text-brand');
+      expect(screen.getByRole('button', { name: 'Collections, New' })).toBeInTheDocument();
+      expect(screen.getByText('New')).toBeInTheDocument();
+    });
+
+    it('marks Collections discovery seen when clicking the Collections nav link', () => {
+      collectionsDiscoveryMock.showCollectionsNew = true;
+      render(<HeaderNavigationButtons avatarName="TU" />);
+
+      const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
+      expect(collectionsLink).toBeTruthy();
+      fireEvent.click(collectionsLink!);
+
+      expect(collectionsDiscoveryMock.markCollectionsNavSeen).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not show the Collections NEW treatment after dismissal', () => {
+      collectionsDiscoveryMock.showCollectionsNew = false;
+
+      render(<HeaderNavigationButtons avatarName="TU" />);
+
+      expect(screen.queryByText('New')).not.toBeInTheDocument();
+      const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
+      expect(collectionsButton).not.toHaveClass('border-brand');
     });
 
     it('applies correct button classes', () => {
@@ -474,22 +531,21 @@ describe('Header Components', () => {
     it('renders full navigation with account routes gated behind the Join dialog', () => {
       render(<HeaderExploreNavigationButtons />);
 
-      // Home and Hot are public explore routes → real navigation links.
+      // Home, Hot, and Collections are public explore routes → real navigation links.
       const links = screen.getAllByRole('link');
-      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot']);
+      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot', '/collections']);
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
 
       // All four nav icons are shown.
       expect(document.querySelector('.lucide-house')).toBeInTheDocument();
       expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
-      expect(document.querySelector('.lucide-bookmark')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-library')).toBeInTheDocument();
       expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
 
-      // Bookmarks/Settings require an account, so they render as auth-gated buttons, not links.
-      expect(document.querySelector('.lucide-bookmark')?.closest('a')).toBeNull();
+      // Settings require an account, so it renders as an auth-gated button, not a link.
       expect(document.querySelector('.lucide-settings')?.closest('a')).toBeNull();
-      expect(document.querySelector('[data-cy="header-bookmarks-btn"]')?.tagName).toBe('BUTTON');
       expect(document.querySelector('[data-cy="header-settings-btn"]')?.tagName).toBe('BUTTON');
+      expect(document.querySelector('.lucide-library')?.closest('a')).toHaveAttribute('href', '/collections');
     });
 
     it('opens sign-in dialog from the Join button', () => {
@@ -498,6 +554,17 @@ describe('Header Components', () => {
       fireEvent.click(screen.getByTestId('header-explore-join-button'));
 
       expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
+    });
+
+    it('highlights Collections on single collection pages for guests', () => {
+      const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+      vi.mocked(usePathname).mockReturnValue(`/collections/${pubky}/0034BBBDFK83G`);
+
+      render(<HeaderExploreNavigationButtons />);
+
+      const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
+      expect(collectionsButton).toHaveClass('bg-secondary');
+      expect(collectionsButton).not.toHaveClass('bg-white/5');
     });
   });
 
@@ -580,6 +647,7 @@ describe('Header Components - Snapshots', () => {
 
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
+    vi.mocked(usePathname).mockReturnValue('/home');
     vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
     vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
     vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });

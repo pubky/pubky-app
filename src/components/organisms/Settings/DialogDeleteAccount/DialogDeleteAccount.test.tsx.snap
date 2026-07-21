@@ -171,3 +171,91 @@ exports[`DialogDeleteAccount - Snapshots > matches snapshot when closed 1`] = `
   </div>
 </div>
 `;
+
+exports[`DialogDeleteAccount - Snapshots > matches snapshot while deleting 1`] = `
+<div
+  data-on-open-change="true"
+  data-open="true"
+  data-testid="dialog"
+>
+  <div
+    class="max-w-md sm:max-w-lg"
+    data-hidden-title="Delete Account"
+    data-testid="dialog-content"
+  >
+    <h2
+      class="sr-only"
+      data-testid="dialog-hidden-title"
+    >
+      Delete Account
+    </h2>
+    <div
+      data-testid="dialog-header"
+    >
+      <h2
+        data-testid="dialog-title"
+      >
+        Delete Account
+      </h2>
+    </div>
+    <p
+      class="text-base leading-6 font-normal tracking-wide text-white/80"
+      data-testid="typography"
+    >
+      Are you sure? Your account information cannot be recovered.
+    </p>
+    <div
+      data-testid="dialog-footer"
+    >
+      <button
+        class="order-1 sm:order-2"
+        data-size="lg"
+        data-testid="button-destructive"
+        data-variant="destructive"
+        disabled=""
+        id="delete-account-confirm-btn"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 h-4 w-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
+        Deleting... 50%
+      </button>
+      <button
+        class="order-2 sm:order-1"
+        data-size="lg"
+        data-testid="button-outline"
+        data-variant="outline"
+        disabled=""
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+`;
