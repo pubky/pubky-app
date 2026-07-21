@@ -36,7 +36,7 @@ describe('HumanPhoneInput', () => {
     expect(onCodeSent).toHaveBeenCalledWith('+5493416620881');
   });
 
-  it('shows an invalid phone error for non-valid numbers once enough digits are entered', async () => {
+  it('keeps Send Code enabled and hides the error until an invalid send is attempted', async () => {
     const user = userEvent.setup();
 
     render(<HumanPhoneInput onBack={() => {}} onCodeSent={() => {}} />);
@@ -44,8 +44,28 @@ describe('HumanPhoneInput', () => {
     const input = screen.getByTestId('human-phone-input');
     await user.type(input, '+12345678');
 
+    const sendButton = screen.getByRole('button', { name: /send code/i });
+    expect(sendButton).toBeEnabled();
+    expect(screen.queryByTestId('human-phone-input-error')).not.toBeInTheDocument();
+
+    await user.click(sendButton);
+
+    expect(HomegateController.sendSmsCode).not.toHaveBeenCalled();
     expect(screen.getByTestId('human-phone-input-error')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /send code/i })).toBeDisabled();
+  });
+
+  it('clears the invalid phone error when the user edits the number', async () => {
+    const user = userEvent.setup();
+
+    render(<HumanPhoneInput onBack={() => {}} onCodeSent={() => {}} />);
+
+    const input = screen.getByTestId('human-phone-input');
+    await user.type(input, '+12345678');
+    await user.click(screen.getByRole('button', { name: /send code/i }));
+    expect(screen.getByTestId('human-phone-input-error')).toBeInTheDocument();
+
+    await user.type(input, '9');
+    expect(screen.queryByTestId('human-phone-input-error')).not.toBeInTheDocument();
   });
 });
 

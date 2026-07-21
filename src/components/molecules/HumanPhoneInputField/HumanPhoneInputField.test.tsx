@@ -7,6 +7,8 @@ describe('HumanPhoneInputField', () => {
     render(<HumanPhoneInputField value="+12345678" onChange={() => {}} error="Enter a valid mobile number" />);
     expect(screen.getByTestId('human-phone-input-error')).toHaveTextContent('Enter a valid mobile number');
     expect(screen.getByTestId('human-phone-input')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByTestId('human-phone-input')).toHaveAttribute('aria-describedby', 'human-phone-input-error');
+    expect(screen.getByTestId('human-phone-input-error')).toHaveAttribute('id', 'human-phone-input-error');
   });
 });
 

@@ -7,6 +7,8 @@ import { Image } from '@/atoms/Image/Image';
 import { Input } from '@/atoms/Input/Input';
 import { Typography } from '@/atoms/Typography/Typography';
 
+const PHONE_INPUT_ERROR_ID = 'human-phone-input-error';
+
 type HumanPhoneInputFieldProps = {
   /** Current phone number value (including country code). Example: "+316XXXXXXXX" */
   value: string;
@@ -66,9 +68,10 @@ export const HumanPhoneInputField = ({
                 onChange={onChange}
                 placeholder={placeholder ?? defaultPlaceholder}
                 aria-invalid={Boolean(error)}
+                aria-describedby={error ? PHONE_INPUT_ERROR_ID : undefined}
                 className="border-none bg-transparent text-base font-medium text-brand placeholder:text-brand/50 focus:ring-0 focus:outline-none"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && isValid) {
+                  if (e.key === 'Enter') {
                     onEnter?.();
                   }
                 }}
@@ -78,7 +81,12 @@ export const HumanPhoneInputField = ({
             </Container>
 
             {error && (
-              <Typography as="p" data-testid="human-phone-input-error" className="text-sm font-medium text-destructive">
+              <Typography
+                as="p"
+                id={PHONE_INPUT_ERROR_ID}
+                data-testid="human-phone-input-error"
+                className="text-sm font-medium text-destructive"
+              >
                 {error}
               </Typography>
             )}

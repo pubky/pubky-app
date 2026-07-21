@@ -124,6 +124,7 @@ exports[`HumanPhoneInputField - Snapshots > matches snapshot with error 1`] = `
           data-testid="human-phone-input-wrapper"
         >
           <input
+            aria-describedby="human-phone-input-error"
             aria-invalid="true"
             class="flex h-9 w-full min-w-0 rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 border-none bg-transparent text-base font-medium text-brand placeholder:text-brand/50 focus:ring-0 focus:outline-none"
             data-testid="human-phone-input"
@@ -135,6 +136,7 @@ exports[`HumanPhoneInputField - Snapshots > matches snapshot with error 1`] = `
         <p
           class="text-sm font-medium text-destructive"
           data-testid="human-phone-input-error"
+          id="human-phone-input-error"
         >
           Enter a valid mobile number
         </p>

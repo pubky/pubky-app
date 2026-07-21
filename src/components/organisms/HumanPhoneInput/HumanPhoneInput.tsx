@@ -21,22 +21,23 @@ type HumanPhoneInputProps = {
   initialPhoneNumber?: string;
 };
 
-/** Digits-only length after which an invalid number should show feedback (short of just a country prefix). */
-const MIN_DIGITS_FOR_INVALID_FEEDBACK = 8;
-
 export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: HumanPhoneInputProps) => {
   const t = useTranslations('onboarding.phone');
   const tCommon = useTranslations('common');
   const [phoneNumberInput, setPhoneNumberInput] = useState(initialPhoneNumber || '');
   const [isSendingCode, setIsSendingCode] = useState(false);
-  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPhoneNumberInput(e.target.value);
-  };
+  const [hasAttemptedSend, setHasAttemptedSend] = useState(false);
+
   const parsedPhoneNumber = parsePhoneNumber(phoneNumberInput);
   const isValidNumber = !!parsedPhoneNumber;
-  const digitCount = phoneNumberInput.replace(/\D/g, '').length;
-  const showInvalidError =
-    !isValidNumber && phoneNumberInput.trim().length > 0 && digitCount >= MIN_DIGITS_FOR_INVALID_FEEDBACK;
+  const showInvalidError = hasAttemptedSend && !isValidNumber;
+
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhoneNumberInput(e.target.value);
+    if (hasAttemptedSend) {
+      setHasAttemptedSend(false);
+    }
+  };
 
   async function onSendCode(phoneNumber: string) {
     if (isSendingCode) {
@@ -98,8 +99,10 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
 
   function handleSendCode() {
     if (!parsedPhoneNumber) {
+      setHasAttemptedSend(true);
       return;
     }
+    setHasAttemptedSend(false);
     void onSendCode(parsedPhoneNumber.format('E.164'));
   }
 
@@ -136,7 +139,7 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
           size="lg"
           className="w-full flex-1 rounded-full md:flex-0"
           variant="default"
-          disabled={!isValidNumber || isSendingCode}
+          disabled={isSendingCode}
           onClick={handleSendCode}
         >
           <ArrowRight className="mr-2 h-4 w-4" />
