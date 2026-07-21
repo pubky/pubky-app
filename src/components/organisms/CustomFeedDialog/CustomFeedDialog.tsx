@@ -15,9 +15,10 @@ import {
   LayoutGrid,
   Library,
   Link,
-  Menu,
   Newspaper,
   Radio,
+  Rows2,
+  Rows4,
   SquareAsterisk,
   StickyNote,
 } from 'lucide-react';
@@ -123,12 +124,17 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
     {
       value: PubkyAppFeedLayout.Wide,
       label: tFilter('layout.wide'),
-      icon: Menu,
+      icon: Rows2,
     },
     {
       value: PubkyAppFeedLayout.Visual,
       label: tFilter('layout.visual'),
       icon: LayoutGrid,
+    },
+    {
+      value: PubkyAppFeedLayout.List,
+      label: tFilter('layout.list'),
+      icon: Rows4,
     },
   ];
   const allContentFilters: Array<{

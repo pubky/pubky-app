@@ -8,23 +8,28 @@ import type { DialogRepostConfig } from '@/organisms/DialogRepost/DialogRepost.t
 export function usePostReplyRepostDialogs(postId: string, repostConfig?: DialogRepostConfig) {
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [repostDialogOpen, setRepostDialogOpen] = useState(false);
+  const [dialogPostId, setDialogPostId] = useState(postId);
 
-  const openReplyDialog = () => {
+  const openReplyDialog = (targetPostId = postId) => {
+    setDialogPostId(targetPostId);
     setReplyDialogOpen(true);
   };
 
-  const openRepostDialog = () => {
+  const openRepostDialog = (targetPostId = postId) => {
+    setDialogPostId(targetPostId);
     setRepostDialogOpen(true);
   };
+
+  const activeDialogPostId = replyDialogOpen || repostDialogOpen ? dialogPostId : postId;
 
   return {
     openReplyDialog,
     openRepostDialog,
     dialogs: (
       <>
-        <DialogReply postId={postId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
+        <DialogReply postId={activeDialogPostId} open={replyDialogOpen} onOpenChangeAction={setReplyDialogOpen} />
         <DialogRepost
-          postId={postId}
+          postId={activeDialogPostId}
           open={repostDialogOpen}
           onOpenChangeAction={setRepostDialogOpen}
           config={repostConfig}

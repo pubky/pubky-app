@@ -18,7 +18,6 @@ exports[`PostArticle > Snapshots > matches snapshot with cover image 1`] = `
         Test Article Title
       </span>
       <div
-        class="text-muted-foreground"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
@@ -67,7 +66,6 @@ exports[`PostArticle > Snapshots > matches snapshot with custom className 1`] = 
         Test Article Title
       </span>
       <div
-        class="text-muted-foreground"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
@@ -116,7 +114,6 @@ exports[`PostArticle > Snapshots > matches snapshot with local cover image 1`] =
         Test Article Title
       </span>
       <div
-        class="text-muted-foreground"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
@@ -165,7 +162,6 @@ exports[`PostArticle > Snapshots > matches snapshot with local video attachment 
         Test Article Title
       </span>
       <div
-        class="text-muted-foreground"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
@@ -214,7 +210,6 @@ exports[`PostArticle > Snapshots > matches snapshot with long title and body 1`]
         This is a very long article title that might wrap to multiple lines in the UI
       </span>
       <div
-        class="text-muted-foreground"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
@@ -263,7 +258,6 @@ exports[`PostArticle > Snapshots > matches snapshot without cover image 1`] = `
         Test Article Title
       </span>
       <div
-        class="text-muted-foreground"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"

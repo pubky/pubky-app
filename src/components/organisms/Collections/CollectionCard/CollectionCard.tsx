@@ -289,7 +289,7 @@ function CollectionCardContent({
           )}
 
           <CardContent className={cn('flex h-full flex-col gap-3', isWideLayout ? 'p-12' : 'p-6')}>
-            {/* Header row: icon + title + item-count (left, grows) | avatar (right) */}
+            {/* Header row: icon + title (left, grows) | item-count + avatar (right) */}
             <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
               <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">
                 <Library className="size-6 shrink-0 text-foreground" />
@@ -303,10 +303,10 @@ function CollectionCardContent({
                 >
                   {title}
                 </Typography>
-                <CollectionCountBadge count={itemCount} tone={embeddedOnMuted ? 'on-muted' : 'on-card'} />
               </Container>
 
-              <Container overrideDefaults className="flex shrink-0 items-center justify-end">
+              <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-2">
+                <CollectionCountBadge count={itemCount} tone={embeddedOnMuted ? 'on-muted' : 'on-card'} />
                 <AvatarWithFallback
                   avatarUrl={ownerAvatarUrl}
                   name={ownerName}
@@ -363,6 +363,7 @@ function CollectionCardContent({
                       onClick={handleDelete}
                       disabled={isDeleting}
                       aria-label={t('delete')}
+                      data-cy="collection-card-delete-btn"
                       className={embeddedMutedActionClass}
                     >
                       <Trash2 className="size-4" />
@@ -375,6 +376,7 @@ function CollectionCardContent({
                       onClick={handleFollowToggle}
                       disabled={isToggling}
                       aria-label={isBookmarked ? t('unfollow') : t('follow')}
+                      data-cy="collection-card-follow-btn"
                       className={embeddedMutedActionClass}
                     >
                       {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}

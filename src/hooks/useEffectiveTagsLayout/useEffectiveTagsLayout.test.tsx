@@ -38,4 +38,22 @@ describe('useEffectiveTagsLayout', () => {
 
     expect(result.current).toBe('inline');
   });
+
+  it('keeps list layout on desktop', () => {
+    const { result } = renderHook(() => useEffectiveTagsLayout(), {
+      wrapper: ({ children }) => <PostMainLayoutProvider tagsLayout="list">{children}</PostMainLayoutProvider>,
+    });
+
+    expect(result.current).toBe('list');
+  });
+
+  it('collapses list layout to inline on mobile', () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    const { result } = renderHook(() => useEffectiveTagsLayout(), {
+      wrapper: ({ children }) => <PostMainLayoutProvider tagsLayout="list">{children}</PostMainLayoutProvider>,
+    });
+
+    expect(result.current).toBe('inline');
+  });
 });

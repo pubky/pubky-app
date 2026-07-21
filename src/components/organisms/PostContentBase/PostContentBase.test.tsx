@@ -204,6 +204,21 @@ describe('PostContentBase', () => {
     );
   });
 
+  it('renders attachments in the default content stack when there is no text content', () => {
+    const mockAttachments = ['file-id-1', 'file-id-2'];
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({ content: '', attachments: mockAttachments }),
+      isLoading: false,
+    });
+
+    render(<PostContentBase postId="post-123" />);
+
+    expect(mockPostAttachments).toHaveBeenCalledWith(
+      { attachments: mockAttachments, localAttachments: undefined },
+      undefined,
+    );
+  });
+
   it('renders PostContentBlurred when is_blurred is true', () => {
     mockUsePostDetails.mockReturnValue({
       postDetails: createMockPostDetails({ content: 'Test content', is_blurred: true }),

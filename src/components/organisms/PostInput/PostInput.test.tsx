@@ -938,6 +938,19 @@ describe('PostInput', () => {
       expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'text-xl leading-7');
     });
 
+    it('applies wide PostInput styling when inheriting list layout', () => {
+      render(
+        <PostMainLayoutProvider tagsLayout="list">
+          <PostInput variant={POST_INPUT_VARIANT.POST} />
+        </PostMainLayoutProvider>,
+      );
+
+      const outerContainer = screen.getAllByTestId('container')[0];
+      expect(outerContainer.className).toContain('p-12');
+      expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'large');
+      expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'text-xl leading-7');
+    });
+
     it('falls back to inline layout on mobile even when the inherited layout is side', () => {
       mockUseIsMobile.mockReturnValue(true);
 
