@@ -1,5 +1,6 @@
 import { permanentRedirect } from 'next/navigation';
 import type { Metadata as NextMetadata } from 'next';
+import { getCollectionRoute, POST_ROUTES } from '@/app/routes';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
 import { deriveTextPreview } from '@/libs/post/postPreview';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     // Collection-kind posts canonicalize to /collections (the page also redirects
     // there) so crawlers/search engines consolidate onto the canonical URL.
     if (post.kind === 'collection') {
-      return { alternates: { canonical: `/collections/${userId}/${postId}` } };
+      return { alternates: { canonical: getCollectionRoute(userId, postId) } };
     }
 
     const username = resolveDisplayName(user);
@@ -36,13 +37,20 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
 
     // Static OG/Twitter images are omitted so the dynamic `opengraph-image` /
     // `twitter-image` route is the single source of truth for the preview image.
-    const { openGraph, twitter } = Metadata({ title, description, omitImages: true });
+    // `alternates` carries the canonical built from `url` — without it the page
+    // would inherit the root layout's site-wide canonical (https://pubky.app).
+    const { openGraph, twitter, alternates } = Metadata({
+      title,
+      description,
+      url: `${POST_ROUTES.POST}/${userId}/${postId}`,
+      omitImages: true,
+    });
 
     // Emit metadata whenever we have a valid author, even when the post has no
     // textual content (e.g. a simple repost) — the `{name} on Pubky` title and the
     // dynamic OG image still surface. Description is `null` (not the parent's
     // generic one) so an empty post isn't captioned with the app's tagline.
-    return username ? { title, description: description || null, openGraph, twitter } : {};
+    return username ? { title, description: description || null, openGraph, twitter, alternates } : {};
   } catch {
     // Fallback to parent metadata
     return {};
@@ -74,7 +82,7 @@ export default async function PostPage({ params }: PostPageProps) {
     // Ignore — render the post normally when the kind lookup fails.
   }
   if (isCollection) {
-    permanentRedirect(`/collections/${userId}/${postId}`);
+    permanentRedirect(getCollectionRoute(userId, postId));
   }
 
   const compositeId = buildCompositeId({ pubky: userId, id: postId });
