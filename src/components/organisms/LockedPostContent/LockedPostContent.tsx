@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import type { AttachmentConstructed } from '@/components/organisms/PostAttachments/PostAttachments.types';
@@ -12,6 +13,7 @@ import { DialogUnlockContent } from '@/molecules/DialogUnlockContent/DialogUnloc
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import type { TUnlockedContent } from '@/services/locks/locks.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { PostBody } from '../PostBody/PostBody';
 
 /** Guarded attachment bytes → object-URL media, matching the creator-preview `localAttachments` shape. */
@@ -51,8 +53,25 @@ export function LockedPostContent({
   const [unlockedContent, setUnlockedContent] = useState<TUnlockedContent | null>(null);
   const [media, setMedia] = useState<AttachmentConstructed[]>([]);
   const { lockContent, lockFile, hasError } = usePostLock({ content, lock });
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { toast } = useToast();
   const tToast = useTranslations('toast.post');
+  const tLock = useTranslations('post.lock');
+
+  // Already unlocked? Load the reader's replicated copy from their own `/priv` — no Lock Server round
+  // trip, no re-entering the password. A missing marker just leaves the lock card in place.
+  useEffect(() => {
+    if (!lock || !currentUserPubky) return;
+    let cancelled = false;
+    LocksController.loadReplicatedContent({ lockUrl: lock, readerPubky: currentUserPubky })
+      .then((replicated) => {
+        if (!cancelled && replicated) setUnlockedContent(replicated);
+      })
+      .catch(() => undefined); // already reported by the Err factory; fall back to the lock card
+    return () => {
+      cancelled = true;
+    };
+  }, [lock, currentUserPubky]);
 
   // Object URLs are created here (browser-only) and revoked on change/unmount to avoid leaks.
   useEffect(() => {
@@ -79,6 +98,14 @@ export function LockedPostContent({
       if (content && content.attachments.length < (content.post.attachments?.length ?? 0)) {
         toast({ variant: 'error', description: tToast('attachmentsLoadFailed') });
       }
+
+      // Best-effort: the content already rendered, and a failed run writes no completion marker, so
+      // the next unlock just retries. Errors are reported by the service's Err factory.
+      if (content && currentUserPubky) {
+        void LocksController.replicateUnlockedContent({ lockUrl: lock, readerPubky: currentUserPubky, content }).catch(
+          () => undefined,
+        );
+      }
     } catch {
       setUnlockError(true); // already logged by the Err factory
     } finally {
@@ -95,17 +122,20 @@ export function LockedPostContent({
         textClassName={textClassName}
       />
       {unlockedContent ? (
-        // TODO:[Locks] #2003 — swap-in render is a placeholder; the final unlocked-post UX is undecided.
-        // The rule just separates the teaser from the unlocked body until that UX lands.
-        <>
+        <div className="flex w-full flex-col gap-4">
           <div className="border-t border-border" />
+          {/* Mirrors the lock card's password indicator (Shield + mask), swapped to the unlocked state. */}
+          <div className="flex items-center gap-1.5 text-brand">
+            <Check className="size-4 shrink-0" aria-hidden />
+            <span className="text-xs leading-4 font-medium tracking-[1.2px] uppercase">{tLock('unlocked')}</span>
+          </div>
           <PostBody
             content={unlockedContent.post.content}
             attachments={null}
             localAttachments={media}
             textClassName={textClassName}
           />
-        </>
+        </div>
       ) : (
         // Unlock is disabled when the lock file could not be resolved (`hasError`) — nothing to unlock against.
         <LockedPostCard

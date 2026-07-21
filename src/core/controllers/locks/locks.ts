@@ -2,6 +2,8 @@ import { LocksApplication } from '@/application/locks/locks';
 import type {
   TCreateLockContentParams,
   TFetchUnlockedContentParams,
+  TLoadReplicatedContentParams,
+  TReplicateUnlockedContentParams,
   TUnlockContentParams,
 } from '@/application/locks/locks.types';
 import { isAppError, isAuthError } from '@/libs/error/error.utils';
@@ -157,5 +159,15 @@ export class LocksController {
   /** Reads the guarded post + attachments after unlock, using the access credential. */
   static fetchUnlockedContent(params: TFetchUnlockedContentParams): Promise<TUnlockedContent | null> {
     return LocksApplication.fetchUnlockedContent(params);
+  }
+
+  /** Copies unlocked content into the reader's own `/priv`, so later reads need no credential. */
+  static replicateUnlockedContent(params: TReplicateUnlockedContentParams): Promise<void> {
+    return LocksApplication.replicateUnlockedContent(params);
+  }
+
+  /** Loads already-unlocked content from the reader's `/priv`, or null if this lock isn't unlocked yet. */
+  static loadReplicatedContent(params: TLoadReplicatedContentParams): Promise<TUnlockedContent | null> {
+    return LocksApplication.loadReplicatedContent(params);
   }
 }

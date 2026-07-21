@@ -1,5 +1,6 @@
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { z } from 'zod';
+import { POST_KINDS } from '@/models/models.types';
 
 // ── Creator: auth + publishing ──────────────────────────────────────────────
 
@@ -196,17 +197,38 @@ export const lockPostContentSchema = z.object({
 
 export type LockPostContent = z.infer<typeof lockPostContentSchema>;
 
+/** Serialized `PubkyAppPost.kind`. Invalid → reject the whole post, no fallback. */
+export const postKindSchema = z.enum(POST_KINDS);
+
 /** The guarded primary — a `PubkyAppPost` — read back after unlock. Lenient: unknown fields ignored. */
 export const guardedPostSchema = z.object({
   content: z.string().catch(''),
-  kind: z.string().catch('short'),
-  attachments: z.array(z.string()).nullable().catch(null),
+  kind: postKindSchema,
+  attachments: z.array(z.string()).nullable().default(null), // missing→null; malformed rejects the whole post
 });
 
 export type GuardedPost = z.infer<typeof guardedPostSchema>;
 
+/**
+ * The reader's own `post.json` written on unlock. Not a `PubkyAppPost`: each attachment carries its
+ * `content_type` inline so the replicated copy renders without the creator's lock file — the lock can
+ * be revoked, and this file lives entirely in the reader's `/priv`.
+ */
+export const replicatedPostSchema = z.object({
+  content: z.string().catch(''),
+  kind: postKindSchema,
+  attachments: z
+    .array(z.object({ url: z.string(), content_type: z.string() }))
+    .nullable()
+    .default(null),
+});
+
+export type ReplicatedPost = z.infer<typeof replicatedPostSchema>;
+
 /** One guarded attachment read back after unlock — raw bytes + its content type (for a Blob). */
 export interface TUnlockedAttachment {
+  /** Guarded path tail (`/priv/locks.app/content/<uuid>` → `<uuid>`); reused as the filename when replicated. */
+  id: string;
   contentType: string;
   bytes: Uint8Array;
 }

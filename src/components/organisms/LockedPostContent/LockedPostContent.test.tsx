@@ -10,8 +10,19 @@ import { LockedPostContent } from './LockedPostContent';
 const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }));
 
 vi.mock('@/hooks/usePostLock/usePostLock', () => ({ usePostLock: vi.fn() }));
-vi.mock('@/controllers/locks/locks', () => ({ LocksController: { unlock: vi.fn(), fetchUnlockedContent: vi.fn() } }));
+vi.mock('@/controllers/locks/locks', () => ({
+  LocksController: {
+    unlock: vi.fn(),
+    fetchUnlockedContent: vi.fn(),
+    replicateUnlockedContent: vi.fn().mockResolvedValue(undefined),
+    loadReplicatedContent: vi.fn().mockResolvedValue(null),
+  },
+}));
 vi.mock('@/molecules/Toaster/use-toast', () => ({ useToast: () => ({ toast: toastMock }) }));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (s: { currentUserPubky: string | null }) => unknown) =>
+    selector({ currentUserPubky: 'pubkyreader' }),
+}));
 vi.mock('../PostBody/PostBody', () => ({
   PostBody: ({ content, localAttachments }: { content: string; localAttachments?: unknown[] }) => (
     <div data-testid="post-body" data-media={localAttachments?.length ?? 0}>
@@ -35,6 +46,8 @@ describe('LockedPostContent', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     toastMock.mockClear();
+    vi.mocked(LocksController.loadReplicatedContent).mockResolvedValue(null);
+    vi.mocked(LocksController.replicateUnlockedContent).mockResolvedValue(undefined);
   });
 
   it('renders the teaser body and the lock card from the parsed lock content', () => {
@@ -107,8 +120,8 @@ describe('LockedPostContent', () => {
         attachments: ['pubky://b/priv/locks.app/content/a', 'pubky://b/priv/locks.app/content/b'],
       },
       attachments: [
-        { contentType: 'image/png', bytes: new Uint8Array([1]) },
-        { contentType: 'video/mp4', bytes: new Uint8Array([2]) },
+        { id: 'a', contentType: 'image/png', bytes: new Uint8Array([1]) },
+        { id: 'b', contentType: 'video/mp4', bytes: new Uint8Array([2]) },
       ],
     });
     render(<LockedPostContent content="{}" lock={LOCK_URL} />);
@@ -132,7 +145,7 @@ describe('LockedPostContent', () => {
         kind: 'image',
         attachments: ['pubky://b/priv/locks.app/content/a', 'pubky://b/priv/locks.app/content/b'],
       },
-      attachments: [{ contentType: 'image/png', bytes: new Uint8Array() }], // one of two dropped
+      attachments: [{ id: 'a', contentType: 'image/png', bytes: new Uint8Array() }], // one of two dropped
     });
     render(<LockedPostContent content="{}" lock={LOCK_URL} />);
 
@@ -143,5 +156,21 @@ describe('LockedPostContent', () => {
     // Post still renders (non-blocking) and the reader is warned once.
     await waitFor(() => expect(screen.getByText('the unlocked secret')).toBeInTheDocument());
     expect(toastMock).toHaveBeenCalledWith({ variant: 'error', description: 'Could not load attachments' });
+  });
+
+  it('shows already-unlocked content on mount without the lock card or a password prompt', async () => {
+    mockUsePostLock({ hasError: false });
+    vi.mocked(LocksController.loadReplicatedContent).mockResolvedValue({
+      post: { content: 'previously unlocked', kind: 'short', attachments: null },
+      attachments: [],
+    });
+    render(<LockedPostContent content="{}" lock={LOCK_URL} />);
+
+    await waitFor(() => expect(screen.getByText('previously unlocked')).toBeInTheDocument());
+    expect(LocksController.loadReplicatedContent).toHaveBeenCalledWith({
+      lockUrl: LOCK_URL,
+      readerPubky: 'pubkyreader',
+    });
+    expect(screen.queryByRole('button', { name: 'Unlock' })).not.toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@ import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
+import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocksService } from '@/services/locks/locks';
 import type {
   LockFile,
@@ -21,7 +22,9 @@ import type {
 import type {
   TCreateLockContentParams,
   TFetchUnlockedContentParams,
+  TLoadReplicatedContentParams,
   TLockContentFile,
+  TReplicateUnlockedContentParams,
   TUnlockContentParams,
 } from './locks.types';
 
@@ -144,13 +147,86 @@ export class LocksApplication {
               context: { path },
             });
           }
-          return { contentType, bytes: await LocksService.proxyReadGuardedResource(credential, readPath) };
+          return {
+            id: readPath,
+            contentType,
+            bytes: await LocksService.proxyReadGuardedResource(credential, readPath),
+          };
         } catch {
           return null; // already reported (Err factory / service `toAppError`); skip so the rest render
         }
       }),
     );
     return reads.filter((attachment): attachment is TUnlockedAttachment => attachment !== null);
+  }
+
+  /**
+   * Copies unlocked content into the reader's own `/priv/social/unlocked/<lockId>/`, so re-reading it
+   * later needs no credential and survives the creator revoking access.
+   *
+   * Attachments upload first: `post.json` is the completion marker (§7 reads it to decide whether a
+   * lock is already unlocked), so it must land only once everything it references is stored. A partial
+   * run therefore leaves no marker and is simply retried on the next unlock.
+   */
+  static async replicateUnlockedContent({
+    lockUrl,
+    readerPubky,
+    content,
+  }: TReplicateUnlockedContentParams): Promise<void> {
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    if (!lockId) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'lock URL has no lock id to replicate under', {
+        service: ErrorService.Locks,
+        operation: 'replicateUnlockedContent',
+        context: { lockUrl },
+      });
+    }
+
+    for (const attachment of content.attachments) {
+      await HomeserverService.putBlob({
+        url: GuardedContentParser.unlockedUrl(readerPubky, lockId, attachment.id),
+        blob: attachment.bytes,
+      });
+    }
+
+    await HomeserverService.putBlob({
+      url: GuardedContentParser.unlockedPostUrl(readerPubky, lockId),
+      blob: new TextEncoder().encode(
+        GuardedContentParser.buildUnlockedPost(content.post, readerPubky, lockId, content.attachments),
+      ),
+    });
+  }
+
+  /** Already unlocked → load from reader's HS `/priv`. Null if no `post.json` (never unlocked or partial). */
+  static async loadReplicatedContent({
+    lockUrl,
+    readerPubky,
+  }: TLoadReplicatedContentParams): Promise<TUnlockedContent | null> {
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    if (!lockId) return null;
+
+    // 404 → no marker → not unlocked yet; `getBytesIfExists` returns null quietly (no error log).
+    const postBytes = await HomeserverService.getBytesIfExists(
+      GuardedContentParser.unlockedPostUrl(readerPubky, lockId),
+    );
+    if (!postBytes) return null;
+
+    const replicated = GuardedContentParser.parseReplicatedPost(postBytes);
+    if (!replicated) return null;
+
+    const refs = replicated.attachments ?? [];
+    const attachments = await Promise.all(
+      refs.map(async ({ url, content_type }) => ({
+        id: url.slice(url.lastIndexOf('/') + 1),
+        contentType: content_type,
+        bytes: await HomeserverService.getBytes(url),
+      })),
+    );
+
+    return {
+      post: { content: replicated.content, kind: replicated.kind, attachments: refs.map((ref) => ref.url) },
+      attachments,
+    };
   }
 
   static exchangeSessionCode(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {

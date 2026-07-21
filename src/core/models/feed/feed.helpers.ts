@@ -1,5 +1,6 @@
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import type { PostKind } from '@/models/models.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
@@ -33,8 +34,8 @@ export function sortToString(sort: PubkyAppFeedSort): string {
   return map[sort];
 }
 
-export function postKindToString(kind: PubkyAppPostKind): string {
-  const map: Record<PubkyAppPostKind, string> = {
+export function postKindToString(kind: PubkyAppPostKind): PostKind {
+  const map: Record<PubkyAppPostKind, PostKind> = {
     [PubkyAppPostKind.Short]: 'short',
     [PubkyAppPostKind.Long]: 'long',
     [PubkyAppPostKind.Image]: 'image',

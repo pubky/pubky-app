@@ -76,7 +76,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 vi.mock('@synonymdev/pubky', () => {
   const createMockPubkyInstance = () => ({
     getHomeserverOf: (...args: unknown[]) => mockState.getHomeserverOf(...args),
-    startAuthFlow: (...args: unknown[]) => mockState.startAuthFlow(...args),
+    startCookieAuthFlow: (...args: unknown[]) => mockState.startAuthFlow(...args),
     eventStreamForUser: (...args: unknown[]) => mockState.eventStreamForUser(...args),
     client: {
       fetch: (...args: unknown[]) => mockState.clientFetch(...args),
@@ -86,8 +86,8 @@ vi.mock('@synonymdev/pubky', () => {
       list: (...args: unknown[]) => mockState.publicStorageList(...args),
     },
     signer: () => ({
-      signup: (...args: unknown[]) => mockState.signup(...args),
-      signin: (...args: unknown[]) => mockState.signin(...args),
+      signupCookie: (...args: unknown[]) => mockState.signup(...args),
+      signinCookie: (...args: unknown[]) => mockState.signin(...args),
       pkdns: {
         publishHomeserverForce: (...args: unknown[]) => mockState.publishHomeserverForce(...args),
       },
@@ -492,7 +492,7 @@ describe('HomeserverService', () => {
         await HomeserverService.generateAuthUrl();
 
         expect(mockState.startAuthFlow).toHaveBeenCalledWith(
-          '/pub/pubky.app/:rw', // Default capabilities
+          '/pub/pubky.app/:rw,/priv/social/:rw', // Default capabilities
           'signin-kind', // AuthFlowKind.signin()
           expect.stringContaining('/inbox'), // HTTP relay (Pubky 0.7+ inbox endpoint)
         );

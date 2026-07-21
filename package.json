@@ -42,7 +42,7 @@
     "@sentry/nextjs": "^10.53.1",
     "@serwist/next": "9.5.11",
     "@swc/helpers": "0.5.21",
-    "@synonymdev/pubky": "0.8.0",
+    "@synonymdev/pubky": "0.10.0-alpha.0",
     "@tanstack/react-query": "5.100.11",
     "bip39": "3.1.0",
     "class-variance-authority": "0.7.1",

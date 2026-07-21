@@ -518,7 +518,8 @@
       "defaultTitle": "Locked post",
       "titlePlaceholder": "Title",
       "teaserPlaceholder": "Write a short announcement to tease your content.",
-      "unavailable": "Lock content is not available"
+      "unavailable": "Lock content is not available",
+      "unlocked": "Unlocked"
     },
     "addTag": "add tag",
     "limitReached": "limit reached",

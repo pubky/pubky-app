@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type LockFile, VerifierType } from '@/services/locks/locks.types';
+import { type GuardedPost, type LockFile, VerifierType } from '@/services/locks/locks.types';
 import { GuardedContentParser, LockContentParser, LockFileParser, LockProofBundler } from './locks.parser';
 
 // TODO:[Locks] #1998 — inline test fixtures (sample lock file + author pubky) are
@@ -68,6 +68,19 @@ describe('LockContentParser', () => {
     it('rejects a valid pubky url that does not point at a .json file', () => {
       expect(LockContentParser.isValidLockUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks/lock.txt`)).toBe(false);
       expect(LockContentParser.isValidLockUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks/`)).toBe(false);
+    });
+  });
+
+  describe('lockIdFromUrl', () => {
+    it('takes the lock id from the .json filename', () => {
+      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/LOCK1.json`)).toBe(
+        'LOCK1',
+      );
+    });
+
+    it('returns null when there is no .json filename to read', () => {
+      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/`)).toBeNull();
+      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/.json`)).toBeNull();
     });
   });
 });
@@ -155,6 +168,67 @@ describe('GuardedContentParser', () => {
     });
   });
 
+  describe('unlockedUrl', () => {
+    it('builds the reader-owned copy path for one unlocked file', () => {
+      expect(GuardedContentParser.unlockedUrl('readerpubky', 'LOCK1', 'img1')).toBe(
+        'pubky://readerpubky/priv/social/unlocked/LOCK1/img1',
+      );
+    });
+  });
+
+  describe('unlockedPostUrl', () => {
+    it('builds the reader-owned post.json marker path', () => {
+      expect(GuardedContentParser.unlockedPostUrl('readerpubky', 'LOCK1')).toBe(
+        'pubky://readerpubky/priv/social/unlocked/LOCK1/post.json',
+      );
+    });
+  });
+
+  describe('buildUnlockedPost', () => {
+    const post: GuardedPost = {
+      content: 'secret',
+      kind: 'image',
+      attachments: ['pubky://b/priv/locks.app/content/img1'],
+    };
+
+    it('repoints attachments at the reader copy with inline content types', () => {
+      const json = GuardedContentParser.buildUnlockedPost(post, 'readerpubky', 'LOCK1', [
+        { id: 'img1', contentType: 'image/png' },
+      ]);
+      expect(JSON.parse(json)).toEqual({
+        content: 'secret',
+        kind: 'image',
+        attachments: [{ url: 'pubky://readerpubky/priv/social/unlocked/LOCK1/img1', content_type: 'image/png' }],
+      });
+    });
+
+    it('keeps attachments null when the post has none', () => {
+      const json = GuardedContentParser.buildUnlockedPost({ ...post, attachments: null }, 'readerpubky', 'LOCK1', []);
+      expect(JSON.parse(json).attachments).toBeNull();
+    });
+  });
+
+  describe('parseReplicatedPost', () => {
+    const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+
+    it('parses the reader post.json with inline attachment content types', () => {
+      const bytes = encode({
+        content: 'body',
+        kind: 'image',
+        attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png' }],
+      });
+      expect(GuardedContentParser.parseReplicatedPost(bytes)).toEqual({
+        content: 'body',
+        kind: 'image',
+        attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png' }],
+      });
+    });
+
+    it('returns null for non-JSON bytes', () => {
+      expect(GuardedContentParser.parseReplicatedPost(new TextEncoder().encode('nope'))).toBeNull();
+    });
+  });
+
   describe('parsePost', () => {
     const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
 
@@ -181,6 +255,11 @@ describe('GuardedContentParser', () => {
 
     it('returns null for non-JSON bytes', () => {
       expect(GuardedContentParser.parsePost(new TextEncoder().encode('not json'))).toBeNull();
+    });
+
+    it('returns null when kind is missing or invalid', () => {
+      expect(GuardedContentParser.parsePost(encode({ content: 'x' }))).toBeNull();
+      expect(GuardedContentParser.parsePost(encode({ content: 'x', kind: 'bogus' }))).toBeNull();
     });
   });
 });

@@ -5,12 +5,18 @@ import {
   type LockFile,
   type LockPostContent,
   lockPostContentSchema,
+  type ReplicatedPost,
+  replicatedPostSchema,
   type TProof,
   type TSubmittedProofBundle,
   VerifierType,
 } from '@/services/locks/locks.types';
 
 const GUARDED_CONTENT_PREFIX = '/priv/locks.app/content/';
+/** Where a reader keeps its own copy of content it has unlocked. */
+const UNLOCKED_PREFIX = '/priv/social/unlocked/';
+/** Uploaded last, so its presence proves every attachment before it succeeded. */
+export const UNLOCKED_POST_FILE = 'post.json';
 
 /**
  * Parses a lock post's `content` field (a JSON string) into its creator-authored
@@ -49,6 +55,12 @@ export class LockContentParser {
     if (!lockUrl.startsWith(PUBKY_URL_PREFIX) || !lockUrl.endsWith(LOCK_FILE_EXTENSION)) return false;
     const host = lockUrl.slice(PUBKY_URL_PREFIX.length).split('/')[0] ?? '';
     return isPubkyIdentifier(host);
+  }
+
+  /** `pubky://<creator>/pub/locks.app/<lock_id>.json` → `<lock_id>`. Null when there is no `.json` tail. */
+  static lockIdFromUrl(lockUrl: string): string | null {
+    const file = lockUrl.split('/').pop() ?? '';
+    return file.endsWith('.json') ? file.slice(0, -'.json'.length) || null : null;
   }
 }
 
@@ -123,6 +135,49 @@ export class GuardedContentParser {
   /** Relative path for `proxyReadGuardedResource`, or null when outside the guarded namespace. */
   static toReadPath(resourcePath: string): string | null {
     return resourcePath.startsWith(GUARDED_CONTENT_PREFIX) ? resourcePath.slice(GUARDED_CONTENT_PREFIX.length) : null;
+  }
+
+  /** Reader's own copy of one unlocked file: `pubky://<reader>/priv/social/unlocked/<lockId>/<file>`. */
+  static unlockedUrl(readerPubky: string, lockId: string, file: string): string {
+    return `pubky://${readerPubky}${UNLOCKED_PREFIX}${lockId}/${file}`;
+  }
+
+  /** A little helper: the reader's `post.json` URL — the unlock completion marker for a lock. */
+  static unlockedPostUrl(readerPubky: string, lockId: string): string {
+    return this.unlockedUrl(readerPubky, lockId, UNLOCKED_POST_FILE);
+  }
+
+  /**
+   * The post to store as the completion marker: the unlocked post with each attachment repointed to
+   * the reader's own copy, its `content_type` stored inline so rendering never needs the lock file.
+   */
+  static buildUnlockedPost(
+    post: GuardedPost,
+    readerPubky: string,
+    lockId: string,
+    attachments: Array<{ id: string; contentType: string }>,
+  ): string {
+    const rewritten = attachments.map(({ id, contentType }) => ({
+      url: this.unlockedUrl(readerPubky, lockId, id),
+      content_type: contentType,
+    }));
+    return JSON.stringify({
+      content: post.content,
+      kind: post.kind,
+      attachments: rewritten.length > 0 ? rewritten : null,
+    });
+  }
+
+  /** Parses the reader's replicated `post.json` bytes. Returns null on bad JSON. */
+  static parseReplicatedPost(bytes: Uint8Array): ReplicatedPost | null {
+    let raw: unknown;
+    try {
+      raw = JSON.parse(new TextDecoder().decode(bytes));
+    } catch {
+      return null;
+    }
+    const result = replicatedPostSchema.safeParse(raw);
+    return result.success ? result.data : null;
   }
 
   /** Parses the guarded primary bytes (a `PubkyAppPost` JSON) into the reader post shape. */

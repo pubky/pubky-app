@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => ({
   fetchLockFile: vi.fn(),
   unlockContent: vi.fn(),
   fetchUnlockedContent: vi.fn(),
+  replicateUnlockedContent: vi.fn(),
+  loadReplicatedContent: vi.fn(),
 }));
 
 vi.mock('@/application/locks/locks', () => ({
@@ -35,6 +37,8 @@ vi.mock('@/application/locks/locks', () => ({
     fetchLockFile: mocks.fetchLockFile,
     unlockContent: mocks.unlockContent,
     fetchUnlockedContent: mocks.fetchUnlockedContent,
+    replicateUnlockedContent: mocks.replicateUnlockedContent,
+    loadReplicatedContent: mocks.loadReplicatedContent,
   },
 }));
 
@@ -282,5 +286,16 @@ describe('LocksController.fetchUnlockedContent', () => {
 
     await expect(LocksController.fetchUnlockedContent(params)).resolves.toEqual(content);
     expect(mocks.fetchUnlockedContent).toHaveBeenCalledWith(params);
+  });
+});
+
+describe('LocksController.loadReplicatedContent', () => {
+  it('delegates loading the reader-replicated content to the application', async () => {
+    const params = { lockUrl: VALID_LOCK_URL, readerPubky: 'pubkyreader' };
+    const content = { post: { content: 'secret', kind: 'short', attachments: null }, attachments: [] };
+    mocks.loadReplicatedContent.mockResolvedValue(content);
+
+    await expect(LocksController.loadReplicatedContent(params)).resolves.toEqual(content);
+    expect(mocks.loadReplicatedContent).toHaveBeenCalledWith(params);
   });
 });
