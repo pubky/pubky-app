@@ -272,7 +272,7 @@ describe('HomeFeedSidebar', () => {
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags-disabled', 'true');
   });
 
-  it('hides and disables profile tags while effective reach is me until Nexus support ships', () => {
+  it('enables profile tags while effective reach is me (depth-0 domain feeds, #2150)', () => {
     mockUseHomeStore.mockReturnValue({
       layout: 'columns',
       setLayout: vi.fn(),
@@ -290,8 +290,8 @@ describe('HomeFeedSidebar', () => {
     render(<HomeFeedSidebar />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'me');
-    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', '');
-    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags-disabled', 'true');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', 'bitcoin');
+    expect(screen.getByTestId('filter-reach')).not.toHaveAttribute('data-profile-tags-disabled');
   });
 });
 

@@ -153,7 +153,7 @@ describe('HomeStore', () => {
       expect(useHomeStore.getState().profileTags).toEqual([]);
     });
 
-    it('should clear profile tags when reach changes to me while profile tags are gated', () => {
+    it('should keep profile tags when reach changes to me (depth-0 domain feeds, #2150)', () => {
       const store = useHomeStore.getState();
 
       store.setReach(REACH.NETWORK);
@@ -165,7 +165,7 @@ describe('HomeStore', () => {
       store.setReach(REACH.ME);
 
       expect(useHomeStore.getState().reach).toBe(REACH.ME);
-      expect(useHomeStore.getState().profileTags).toEqual([]);
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'dev']);
     });
   });
 

@@ -39,14 +39,15 @@ export const REPOST_OPTIMISTIC_PREPEND_VARIANTS = new Set<TimelineFeedVariant>([
 ]);
 
 /**
- * Reach values enabled for V1 profile/domain tag filtering. Me remains gated
- * until #2150 flips the shared capability policy.
+ * Reach values enabled for V1 profile/domain tag filtering. Me maps to a
+ * depth-0 (observer-only) wot_domain trust set, enabled by #2150 after the
+ * Nexus depth-0 support (pubky/pubky-nexus#982) was verified on staging.
  * Both aliases are included because Home calls the feature "network" while
  * pubky-app-specs serializes the same reach as "wot".
  */
-const PROFILE_TAG_SUPPORTED_REACHES = ['network', 'wot', 'following', 'friends'] as const;
+const PROFILE_TAG_SUPPORTED_REACHES = ['network', 'wot', 'following', 'friends', 'me'] as const;
 
-type ProfileTagSupportedReach = (typeof PROFILE_TAG_SUPPORTED_REACHES)[number];
+export type ProfileTagSupportedReach = (typeof PROFILE_TAG_SUPPORTED_REACHES)[number];
 
 export function isProfileTagReachSupported(reach: string): reach is ProfileTagSupportedReach {
   return PROFILE_TAG_SUPPORTED_REACHES.some((supportedReach) => supportedReach === reach);

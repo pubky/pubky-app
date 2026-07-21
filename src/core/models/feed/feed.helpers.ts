@@ -1,5 +1,5 @@
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import { isProfileTagReachSupported } from '@/config/feed';
+import { isProfileTagReachSupported, type ProfileTagSupportedReach } from '@/config/feed';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -9,6 +9,7 @@ import {
   buildSortedAuthorStreamId,
   buildWotDomainStreamId,
   type PostStreamId,
+  type WotDomainDepth,
 } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
@@ -92,6 +93,25 @@ export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKin
   return map[content];
 }
 
+/**
+ * Exhaustive per-reach wot_domain depth, keyed by the config-owned supported
+ * set: adding a reach to PROFILE_TAG_SUPPORTED_REACHES without an explicit
+ * depth decision fails compilation here. 'network' and 'wot' are the same
+ * reach in Home and pubky-app-specs vocabulary respectively, so both carry
+ * depth 2. Plain string keys mean no pubky-app-specs enum access at module
+ * scope (test suites partially mock that package).
+ *
+ * Counterpart: WOT_DOMAIN_DEPTH_BY_REACH in home.utils.ts maps Home REACH
+ * filters to the same depths — retune them together.
+ */
+const WOT_DOMAIN_DEPTH_BY_SUPPORTED_REACH = {
+  network: 2,
+  wot: 2,
+  following: 1,
+  friends: 1,
+  me: 0,
+} as const satisfies Record<ProfileTagSupportedReach, WotDomainDepth>;
+
 export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): PostStreamId {
   const sorting = sortToStreamSorting(feed.sort);
   const kind = contentToStreamKind(feed.content) ?? 'all';
@@ -106,7 +126,7 @@ export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): Po
         context: { reach },
       });
     }
-    const depth = feed.reach === PubkyAppFeedReach.Wot ? 2 : 1;
+    const depth = WOT_DOMAIN_DEPTH_BY_SUPPORTED_REACH[reach];
     return buildWotDomainStreamId(sorting, depth, kind, domainTags, feed.tags);
   }
 

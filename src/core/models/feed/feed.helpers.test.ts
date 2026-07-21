@@ -274,6 +274,24 @@ describe('Feed Helpers', () => {
       );
     });
 
+    it('should build depth-0 Me domain streams with profile tags (#2150)', () => {
+      expect(
+        buildFeedStreamId(
+          createFeed({ reach: PubkyAppFeedReach.Me, tags: [], domain_tags: ['developer', 'bitcoiner'] }),
+          TEST_VIEWER,
+        ),
+      ).toBe('timeline:wot_domain:0:all:bitcoiner,developer');
+    });
+
+    it('should combine Me profile tags with post tags in the sixth segment', () => {
+      expect(
+        buildFeedStreamId(
+          createFeed({ reach: PubkyAppFeedReach.Me, tags: ['second', 'first'], domain_tags: ['bitcoiner'] }),
+          TEST_VIEWER,
+        ),
+      ).toBe('timeline:wot_domain:0:all:bitcoiner:second,first');
+    });
+
     it('should reject profile tags for unsupported reach values', () => {
       expect(() =>
         buildFeedStreamId(createFeed({ reach: PubkyAppFeedReach.All, domain_tags: ['bitcoiner'] }), TEST_VIEWER),

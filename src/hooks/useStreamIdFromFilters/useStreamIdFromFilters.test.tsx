@@ -241,7 +241,7 @@ describe('useStreamIdFromFilters', () => {
     expect(friendsResult.current).toBe('timeline:wot_domain:1:all:bitcoin');
   });
 
-  it('should keep profile tags disabled for all and me reach', () => {
+  it('should keep profile tags disabled for all reach', () => {
     const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
     const { result: setProfileTags } = renderHook(() => useHomeStore((state) => state.setProfileTags));
 
@@ -250,11 +250,19 @@ describe('useStreamIdFromFilters', () => {
     setReach.current(REACH.ALL);
     const { result: allResult } = renderHook(() => useStreamIdFromFilters());
 
+    expect(allResult.current).toBe('timeline:all:all');
+  });
+
+  it('should build depth-0 wot_domain stream for me profile tag feeds (#2150)', () => {
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    const { result: setProfileTags } = renderHook(() => useHomeStore((state) => state.setProfileTags));
+
     setReach.current(REACH.ME);
+    setProfileTags.current(['dev', 'bitcoin']);
+
     const { result: meResult } = renderHook(() => useStreamIdFromFilters());
 
-    expect(allResult.current).toBe('timeline:all:all');
-    expect(meResult.current).toBe('author:viewer-pubky');
+    expect(meResult.current).toBe('timeline:wot_domain:0:all:bitcoin,dev');
   });
 
   it('should include content kind and emoji profile tags in wot_domain stream IDs', () => {

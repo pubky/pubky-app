@@ -691,9 +691,24 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('post-tag-🔥')).toBeInTheDocument();
   });
 
+  it('hydrates Me profile tags in edit mode (depth-0 domain feeds, #2150)', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({ reach: PubkyAppFeedReach.Me, tags: [], domain_tags: ['bitcoiner'] }),
+    );
+
+    render(
+      <CustomFeedDialog mode="edit">
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
+    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'false');
+  });
+
   it('clears unsupported profile tags while hydrating an edit', () => {
     mockUseCustomFeed.mockReturnValue(
-      createMockFeed({ reach: PubkyAppFeedReach.Me, tags: ['bitcoin'], domain_tags: ['bitcoiner'] }),
+      createMockFeed({ reach: PubkyAppFeedReach.All, tags: ['bitcoin'], domain_tags: ['bitcoiner'] }),
     );
 
     render(
@@ -706,7 +721,7 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');
   });
 
-  it('clears and disables profile tags when switching to Me', () => {
+  it('keeps profile tags enabled when switching to Me (#2150)', () => {
     render(
       <CustomFeedDialog mode="create">
         <button>Create Feed</button>
@@ -718,6 +733,23 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
 
     changeSelectValue('reach-select', PubkyAppFeedReach.Me);
+
+    expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
+    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'false');
+  });
+
+  it('clears and disables profile tags when switching to All', () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    changeSelectValue('reach-select', PubkyAppFeedReach.Wot);
+    fireEvent.change(screen.getByTestId('profile-tag-input-field'), { target: { value: 'bitcoiner' } });
+    expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
+
+    changeSelectValue('reach-select', PubkyAppFeedReach.All);
 
     expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
     expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');

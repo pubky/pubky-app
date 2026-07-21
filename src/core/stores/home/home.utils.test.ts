@@ -230,10 +230,21 @@ describe('filters.utils', () => {
       expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
     });
 
-    it('should ignore profile tags for gated Me reach', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.ALL, 'viewer-pubky', ['bitcoin']);
+    it('should build depth 0 domain stream for Me with profile tags', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.ALL, 'viewer-pubky', [
+        'dev',
+        'bitcoin',
+      ]);
 
-      expect(streamId).toBe('author:viewer-pubky');
+      expect(streamId).toBe('timeline:wot_domain:0:all:bitcoin,dev');
+    });
+
+    it('should preserve content kind in Me domain stream identity', () => {
+      const streamId = getHomeStreamIdFromFilters(SORT.ENGAGEMENT, REACH.ME, CONTENT.IMAGES, 'viewer-pubky', [
+        'bitcoin',
+      ]);
+
+      expect(streamId).toBe('total_engagement:wot_domain:0:image:bitcoin');
     });
 
     it('should use plain Network stream when profile tags are empty', () => {

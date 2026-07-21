@@ -276,6 +276,17 @@ describe('CustomFeedFilters', () => {
     expect(screen.getByTestId('readonly-tag-🔥')).toBeInTheDocument();
   });
 
+  it('renders profile tags for a Me feed (depth-0 domain feeds, #2150)', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({ tags: [], domain_tags: ['bitcoiner'], reach: PubkyAppFeedReach.Me }),
+    );
+
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'me');
+    expect(screen.getByTestId('readonly-tag-bitcoiner')).toBeInTheDocument();
+  });
+
   it('maps customFeed sort to filter selectedTab', () => {
     mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: PubkyAppFeedSort.Popularity }));
     render(<CustomFeedFilters variant="sidebar" />);

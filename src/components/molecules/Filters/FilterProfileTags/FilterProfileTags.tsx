@@ -18,7 +18,7 @@ export function FilterProfileTags({
 }: FilterProfileTagsProps) {
   const t = useTranslations('filters.reach');
 
-  // The store clears selected tags the moment a gated reach (All/Me) is picked,
+  // The store clears selected tags the moment a gated reach (All) is picked,
   // which would unmount the chips before the collapse animation can play. Freeze
   // the last tags shown while disabled so tags and input collapse together.
   const [frozenTags, setFrozenTags] = useState(selectedTags);

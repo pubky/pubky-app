@@ -57,12 +57,18 @@ const CONTENT_TO_KIND = {
   [CONTENT.FILES]: StreamKind.FILE,
 } as const satisfies Record<ContentType, PostStreamKindSegment>;
 
-type WotDomainReachType = typeof REACH.NETWORK | typeof REACH.FOLLOWING | typeof REACH.FRIENDS;
+type WotDomainReachType = typeof REACH.NETWORK | typeof REACH.FOLLOWING | typeof REACH.FRIENDS | typeof REACH.ME;
 
+/**
+ * Per-reach wot_domain depth for Home filters.
+ * Counterpart: WOT_DOMAIN_DEPTH_BY_SUPPORTED_REACH in feed.helpers.ts maps the
+ * config-owned supported-reach strings to the same depths — retune together.
+ */
 const WOT_DOMAIN_DEPTH_BY_REACH = {
   [REACH.NETWORK]: 2,
   [REACH.FOLLOWING]: 1,
   [REACH.FRIENDS]: 1,
+  [REACH.ME]: 0,
 } as const satisfies Record<WotDomainReachType, WotDomainDepth>;
 
 /** Maps streamId KIND part to CONTENT filter (auto-generated) */
