@@ -1,5 +1,5 @@
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import { isProfileTagReachSupported } from '@/config/feed';
+import { isProfileTagReachSupported, type ProfileTagSupportedReach } from '@/config/feed';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -93,28 +93,24 @@ export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKin
   return map[content];
 }
 
-type ProfileTagFeedReach =
-  | PubkyAppFeedReach.Wot
-  | PubkyAppFeedReach.Following
-  | PubkyAppFeedReach.Friends
-  | PubkyAppFeedReach.Me;
-
 /**
- * Exhaustive per-reach wot_domain depth. `satisfies` forces a compile error if
- * a reach is added to the supported set without an explicit depth decision.
- * The map lives inside the function (like every other enum map in this file)
- * so importing the module never touches the enum — test suites partially mock
- * pubky-app-specs without exporting PubkyAppFeedReach.
+ * Exhaustive per-reach wot_domain depth, keyed by the config-owned supported
+ * set: adding a reach to PROFILE_TAG_SUPPORTED_REACHES without an explicit
+ * depth decision fails compilation here. 'network' and 'wot' are the same
+ * reach in Home and pubky-app-specs vocabulary respectively, so both carry
+ * depth 2. Plain string keys mean no pubky-app-specs enum access at module
+ * scope (test suites partially mock that package).
+ *
+ * Counterpart: WOT_DOMAIN_DEPTH_BY_REACH in home.utils.ts maps Home REACH
+ * filters to the same depths — retune them together.
  */
-function wotDomainDepthForReach(reach: ProfileTagFeedReach): WotDomainDepth {
-  const map = {
-    [PubkyAppFeedReach.Wot]: 2,
-    [PubkyAppFeedReach.Following]: 1,
-    [PubkyAppFeedReach.Friends]: 1,
-    [PubkyAppFeedReach.Me]: 0,
-  } as const satisfies Record<ProfileTagFeedReach, WotDomainDepth>;
-  return map[reach];
-}
+const WOT_DOMAIN_DEPTH_BY_SUPPORTED_REACH = {
+  network: 2,
+  wot: 2,
+  following: 1,
+  friends: 1,
+  me: 0,
+} as const satisfies Record<ProfileTagSupportedReach, WotDomainDepth>;
 
 export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): PostStreamId {
   const sorting = sortToStreamSorting(feed.sort);
@@ -130,8 +126,7 @@ export function buildFeedStreamId(feed: FeedModelSchema, viewerPubky: Pubky): Po
         context: { reach },
       });
     }
-    // The guard above narrows the reach at runtime; TS cannot infer it from the string check.
-    const depth = wotDomainDepthForReach(feed.reach as ProfileTagFeedReach);
+    const depth = WOT_DOMAIN_DEPTH_BY_SUPPORTED_REACH[reach];
     return buildWotDomainStreamId(sorting, depth, kind, domainTags, feed.tags);
   }
 

@@ -59,6 +59,11 @@ const CONTENT_TO_KIND = {
 
 type WotDomainReachType = typeof REACH.NETWORK | typeof REACH.FOLLOWING | typeof REACH.FRIENDS | typeof REACH.ME;
 
+/**
+ * Per-reach wot_domain depth for Home filters.
+ * Counterpart: WOT_DOMAIN_DEPTH_BY_SUPPORTED_REACH in feed.helpers.ts maps the
+ * config-owned supported-reach strings to the same depths — retune together.
+ */
 const WOT_DOMAIN_DEPTH_BY_REACH = {
   [REACH.NETWORK]: 2,
   [REACH.FOLLOWING]: 1,

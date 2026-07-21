@@ -47,7 +47,7 @@ export const REPOST_OPTIMISTIC_PREPEND_VARIANTS = new Set<TimelineFeedVariant>([
  */
 const PROFILE_TAG_SUPPORTED_REACHES = ['network', 'wot', 'following', 'friends', 'me'] as const;
 
-type ProfileTagSupportedReach = (typeof PROFILE_TAG_SUPPORTED_REACHES)[number];
+export type ProfileTagSupportedReach = (typeof PROFILE_TAG_SUPPORTED_REACHES)[number];
 
 export function isProfileTagReachSupported(reach: string): reach is ProfileTagSupportedReach {
   return PROFILE_TAG_SUPPORTED_REACHES.some((supportedReach) => supportedReach === reach);
