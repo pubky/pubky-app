@@ -224,6 +224,17 @@ describe('DialogReply', () => {
     );
   });
 
+  it('constrains the reply input wrapper for long usernames', () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogReply postId="test-post-123" open={false} onOpenChangeAction={onOpenChangeAction} />);
+
+    const replyInputWrapper = screen
+      .getAllByTestId('container')
+      .find((container) => container.className.includes('pl-6'));
+
+    expect(replyInputWrapper).toHaveClass('w-full', 'min-w-0');
+  });
+
   it('passes onOpenChangeAction to Dialog', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
@@ -237,6 +248,21 @@ describe('DialogReply', () => {
     render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
 
     expect(vi.mocked(DialogContent).mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ avoidKeyboard: true }));
+  });
+
+  it('uses the dialog body layout', () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    expect(screen.getByTestId('dialog-content')).toHaveClass('flex', 'max-h-[calc(100dvh-2rem)]', 'flex-col');
+    expect(screen.getByTestId('post-preview-card').parentElement).toHaveClass(
+      'min-h-0',
+      'flex-1',
+      'overflow-x-hidden',
+      'overscroll-contain',
+    );
+    expect(screen.getByTestId('post-preview-card').parentElement).not.toHaveClass('overflow-y-auto');
+    expect(screen.getByTestId('post-input').parentElement).toHaveClass('min-w-0');
   });
 
   it('calls onOpenChangeAction when PostInput onSuccess is called', async () => {

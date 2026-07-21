@@ -45,6 +45,7 @@ export function CollectionCountBadge({ count, tone = 'on-card' }: CollectionCoun
   return (
     <Container
       overrideDefaults
+      data-cy="collection-count-badge"
       aria-label={`${compactCount} ${countLabel}`}
       className={cn(
         'flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground',

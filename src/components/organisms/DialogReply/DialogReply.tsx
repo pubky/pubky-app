@@ -19,17 +19,21 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent avoidKeyboard className="w-3xl" hiddenTitle={t('hiddenTitle')}>
+      <DialogContent
+        avoidKeyboard
+        className="flex max-h-[calc(100dvh-2rem)] w-3xl flex-col"
+        hiddenTitle={t('hiddenTitle')}
+      >
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription className="sr-only">{t('description')}</DialogDescription>
         </DialogHeader>
-        <Container className="gap-3">
+        <Container className="min-h-0 flex-1 gap-3 overflow-x-hidden overscroll-contain pr-1">
           {/* Post being replied to */}
           <PostPreviewCard postId={postId} />
 
           {/* Reply input */}
-          <Container className="relative pl-6" overrideDefaults>
+          <Container className="relative w-full min-w-0 pl-6" overrideDefaults>
             <PostInput
               dataCy="reply-post-input"
               id="reply-post-input"

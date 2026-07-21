@@ -589,6 +589,17 @@ describe('PostInput', () => {
     expect(screen.getByPlaceholderText('Write a reply...')).toBeInTheDocument();
   });
 
+  it('constrains nested content so long reply usernames can truncate', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" />);
+
+    const containers = screen.getAllByTestId('container');
+    const outerContainer = containers[0];
+    const contentContainer = containers.find((container) => container.className.includes('contain-inline-size'));
+
+    expect(outerContainer).toHaveClass('min-w-0', 'max-w-full');
+    expect(contentContainer).toHaveClass('min-w-0');
+  });
+
   it('shows thread connector when showThreadConnector is true', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" showThreadConnector={true} />);
 
@@ -924,6 +935,19 @@ describe('PostInput', () => {
       const postHeader = screen.getByTestId('post-header');
       expect(postHeader).toHaveAttribute('data-size', 'large');
 
+      expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'text-xl leading-7');
+    });
+
+    it('applies wide PostInput styling when inheriting list layout', () => {
+      render(
+        <PostMainLayoutProvider tagsLayout="list">
+          <PostInput variant={POST_INPUT_VARIANT.POST} />
+        </PostMainLayoutProvider>,
+      );
+
+      const outerContainer = screen.getAllByTestId('container')[0];
+      expect(outerContainer.className).toContain('p-12');
+      expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'large');
       expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'text-xl leading-7');
     });
 

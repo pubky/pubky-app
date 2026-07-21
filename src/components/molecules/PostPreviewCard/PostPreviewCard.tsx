@@ -96,7 +96,10 @@ export function PostPreviewCard({ postId, className, interactiveActions = true }
     <Card
       ref={ttlRef}
       data-cy="post-preview-card"
-      className={cn('min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50', className)}
+      className={cn(
+        'w-full max-w-full min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50',
+        className,
+      )}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="link"
@@ -106,7 +109,7 @@ export function PostPreviewCard({ postId, className, interactiveActions = true }
       {isMissing ? (
         <PostMissing />
       ) : (
-        <CardContent className="flex min-w-0 flex-col gap-4 p-6">
+        <CardContent className="flex w-full max-w-full min-w-0 flex-col gap-4 p-6">
           <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" />
           <PostContentBase postId={postId} />
         </CardContent>

@@ -135,6 +135,7 @@ export function DialogCollectionForm({
             disabled={areInputsDisabled}
             className={COLLECTION_FORM_INPUT_WRAPPER_CLASS}
             inputClassName={COLLECTION_FORM_INPUT_CLASS}
+            dataCy="collection-form-name-input"
           />
 
           <ControlledInputField
@@ -148,6 +149,7 @@ export function DialogCollectionForm({
             disabled={areInputsDisabled}
             className={COLLECTION_FORM_INPUT_WRAPPER_CLASS}
             inputClassName={COLLECTION_FORM_INPUT_CLASS}
+            dataCy="collection-form-description-input"
           />
 
           <Container overrideDefaults className="flex flex-col gap-2">
@@ -210,7 +212,13 @@ export function DialogCollectionForm({
         </Container>
 
         <DialogFooter>
-          <Button size="lg" onClick={onSubmit} disabled={!canSubmit} className="order-1 sm:order-2">
+          <Button
+            size="lg"
+            onClick={onSubmit}
+            disabled={!canSubmit}
+            className="order-1 sm:order-2"
+            data-cy="collection-form-save-btn"
+          >
             {isSaving ? t('saving') : submitLabel}
           </Button>
           <Button

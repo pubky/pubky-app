@@ -39,7 +39,14 @@ export function RootContainer({ children, locale = 'en' }: RootContainerProps) {
         */}
         <script id="pubky-runtime-config" dangerouslySetInnerHTML={{ __html: serializeRuntimeConfig() }} />
         {plausibleDomain && plausibleScriptUrl && (
-          <Script data-domain={plausibleDomain} src={plausibleScriptUrl} strategy="afterInteractive" />
+          <Script
+            data-domain={plausibleDomain}
+            src={plausibleScriptUrl}
+            strategy="afterInteractive"
+            // Plausible's pageview-props script extension reads `event-*` attributes off the
+            // script tag and attaches them as custom properties to every pageview.
+            {...{ 'event-locale': locale }}
+          />
         )}
         <PageContainer>{children}</PageContainer>
       </Container>

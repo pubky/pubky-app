@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
-import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
@@ -16,14 +15,11 @@ import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
-import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
-import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
-import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
-import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
-import type { QuickReplyProps } from './QuickReply.types';
+import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
+import { QuickReplyDefaultContent } from './QuickReplyDefaultContent';
+import { QuickReplyListContent } from './QuickReplyListContent';
 
 export function QuickReply({
   parentPostId,
@@ -121,7 +117,43 @@ export function QuickReply({
   // Account for spacing between main post and QuickReply in connector calculation
   const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_SPACER_HEIGHT : undefined;
 
-  const isWideLayout = useEffectiveTagsLayout() === 'side';
+  const effectiveTagsLayout = useEffectiveTagsLayout();
+  const isWideLayout = effectiveTagsLayout === 'side';
+  const isListLayout = effectiveTagsLayout === 'list';
+
+  const contentProps: QuickReplyContentProps = {
+    avatarUrl,
+    userName: userDetails?.name || '',
+    avatarFallbackSeed: currentUserPubky || userDetails?.name || 'user',
+    textareaRef,
+    content,
+    displayPlaceholder,
+    isSubmitting,
+    isAuthenticated,
+    onChange: handleChangeWithAuth,
+    onFocus: handleExpandWithAuth,
+    onKeyDown: handleKeyDown,
+    onPaste: handlePasteWithAuth,
+    mentionIsOpen,
+    mentionUsers,
+    mentionSelectedIndex,
+    onMentionSelect: handleMentionSelect,
+    onMentionHover: setMentionSelectedIndex,
+    fileInputRef,
+    attachments,
+    setAttachments: setAttachmentsWithAuth,
+    onFilesAdded: handleFilesAddedWithAuth,
+    isExpanded,
+    tags,
+    setTags: setTagsWithAuth,
+    onSubmit: handleSubmitWithAuth,
+    showEmojiPicker,
+    setShowEmojiPicker,
+    onEmojiSelect: handleEmojiSelectWithAuth,
+    onImageClick: handleFileClickWithAuth,
+    isPostDisabled: isAuthenticated ? !isValid() : false,
+    characterLimit,
+  };
 
   return (
     <Container overrideDefaults className="relative flex" data-testid="quick-reply" aria-busy={isSubmitting}>
@@ -154,72 +186,11 @@ export function QuickReply({
         )}
 
         <Container ref={cardRef} className="gap-2" overrideDefaults>
-          {/* Collapsed header row (avatar + input) */}
-          <Container className="flex items-center gap-4" overrideDefaults>
-            <AvatarWithFallback
-              avatarUrl={avatarUrl}
-              name={userDetails?.name || ''}
-              fallbackSeed={currentUserPubky || userDetails?.name || 'user'}
-              size={isWideLayout ? 'xl' : 'default'}
-            />
-
-            <Container overrideDefaults className="relative flex-1">
-              <Textarea
-                ref={textareaRef}
-                aria-label="Reply"
-                placeholder={displayPlaceholder}
-                variant="inline"
-                className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
-                value={content}
-                onChange={handleChangeWithAuth}
-                onFocus={handleExpandWithAuth}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePasteWithAuth}
-                rows={1}
-                disabled={isSubmitting}
-                readOnly={!isAuthenticated}
-                data-testid="quick-reply-textarea"
-                aria-haspopup="listbox"
-              />
-
-              {/* Mention autocomplete popover */}
-              {mentionIsOpen && (
-                <MentionPopover
-                  users={mentionUsers}
-                  selectedIndex={mentionSelectedIndex}
-                  onSelect={handleMentionSelect}
-                  onHover={setMentionSelectedIndex}
-                />
-              )}
-            </Container>
-          </Container>
-
-          <PostInputAttachments
-            ref={fileInputRef}
-            attachments={attachments}
-            setAttachments={setAttachmentsWithAuth}
-            handleFilesAdded={handleFilesAddedWithAuth}
-            isSubmitting={isSubmitting}
-          />
-
-          {/* Expandable section with animation (same transition as PostInput) */}
-          <PostInputExpandableSection
-            isExpanded={isExpanded}
-            content={content}
-            tags={tags}
-            isSubmitting={isSubmitting}
-            isDisabled={!isAuthenticated}
-            setTags={setTagsWithAuth}
-            onSubmit={handleSubmitWithAuth}
-            showEmojiPicker={showEmojiPicker}
-            setShowEmojiPicker={setShowEmojiPicker}
-            onEmojiSelect={handleEmojiSelectWithAuth}
-            onImageClick={handleFileClickWithAuth}
-            isPostDisabled={isAuthenticated ? !isValid() : false}
-            submitMode={POST_INPUT_VARIANT.REPLY}
-            className={isExpanded ? 'mt-4' : ''}
-            characterLimit={characterLimit}
-          />
+          {isListLayout ? (
+            <QuickReplyListContent {...contentProps} />
+          ) : (
+            <QuickReplyDefaultContent {...contentProps} isWideLayout={isWideLayout} />
+          )}
         </Container>
       </Container>
     </Container>

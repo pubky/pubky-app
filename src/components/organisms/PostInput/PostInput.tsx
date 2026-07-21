@@ -21,6 +21,7 @@ import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
+import { usesWidePostInput } from '@/organisms/PostMain/PostMainLayoutRules';
 import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
@@ -195,7 +196,7 @@ export function PostInput({
 
   const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
-  const isWideLayout = useEffectiveTagsLayout() === 'side';
+  const isWideLayout = usesWidePostInput(useEffectiveTagsLayout());
 
   return (
     <Container
@@ -204,6 +205,7 @@ export function PostInput({
       ref={containerRef}
       className={cn(
         'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
+        'max-w-full min-w-0',
         isWideLayout ? 'p-12' : 'p-4',
         !isAuthenticated ? 'px-6' : '',
         isDragging ? 'border-brand' : 'border-input',
@@ -225,7 +227,7 @@ export function PostInput({
       )}
 
       {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
-      <Container className="gap-4 contain-inline-size">
+      <Container className="min-w-0 gap-4 contain-inline-size">
         {isArticle && (
           <Input
             placeholder={t('articleTitle')}

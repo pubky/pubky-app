@@ -40,6 +40,8 @@ export function pubkyLayoutToHomeLayout(layout: PubkyAppFeedLayout): LayoutType 
       return LAYOUT.COLUMNS;
     case PubkyAppFeedLayout.Wide:
       return LAYOUT.WIDE;
+    case PubkyAppFeedLayout.List:
+      return LAYOUT.LIST;
     case PubkyAppFeedLayout.Visual:
       return LAYOUT.VISUAL;
     default:
@@ -56,6 +58,8 @@ export function homeLayoutToPubkyLayout(layout: LayoutType): PubkyAppFeedLayout 
       return PubkyAppFeedLayout.Columns;
     case LAYOUT.WIDE:
       return PubkyAppFeedLayout.Wide;
+    case LAYOUT.LIST:
+      return PubkyAppFeedLayout.List;
     case LAYOUT.VISUAL:
       return PubkyAppFeedLayout.Visual;
     default:

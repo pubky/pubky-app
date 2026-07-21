@@ -1,8 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { USER_NAME_MAX_LENGTH } from '@/config/user';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
-import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
+import { type FlatNotification, NotificationType, PostChangedSource } from '@/models/notification/notification.types';
 import { NotificationItem } from './NotificationItem';
 
 // Mock next/navigation
@@ -92,8 +92,21 @@ const mockToast = vi.fn();
 const mockGetOrFetch = vi.fn<() => Promise<{ kind: string; content: string } | null>>(() => Promise.resolve(null));
 vi.mock('@/molecules/NotificationIcon/NotificationIcon', () => {
   return {
-    NotificationIcon: ({ type, showBadge }: { type: NotificationType; showBadge?: boolean }) => (
-      <div data-testid="notification-icon" data-type={type} data-badge={showBadge ? 'true' : 'false'}>
+    NotificationIcon: ({
+      type,
+      postKind,
+      showBadge,
+    }: {
+      type: NotificationType;
+      postKind?: string;
+      showBadge?: boolean;
+    }) => (
+      <div
+        data-testid="notification-icon"
+        data-type={type}
+        data-post-kind={postKind}
+        data-badge={showBadge ? 'true' : 'false'}
+      >
         Icon
       </div>
     ),
@@ -540,6 +553,70 @@ describe('NotificationItem', () => {
     expect(actionLink.closest('a')).toHaveAttribute('href', '/post/original-author/parent-post-id');
   });
 
+  it('renders updated collection copy and links to the collection detail page', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-16T12:00:00Z'));
+
+    try {
+      const collectionNotification = {
+        id: 'post_edited:123:collection-owner',
+        type: NotificationType.PostEdited,
+        timestamp: new Date('2026-07-16T11:30:00Z').getTime(),
+        edit_source: PostChangedSource.Repost,
+        edited_by: 'collection-owner',
+        edited_uri: 'pubky://collection-owner/pub/pubky.app/posts/collection-id',
+        linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost-id',
+        post_kind: 'collection',
+      } satisfies FlatNotification;
+
+      render(<NotificationItem notification={collectionNotification} isUnread={false} />);
+
+      expect(screen.getByText('updated collection').closest('a')).toHaveAttribute(
+        'href',
+        '/collections/collection-owner/collection-id',
+      );
+      expect(screen.getByTestId('notification-icon')).toHaveAttribute('data-post-kind', 'collection');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('hides the muted collection preview below the sm breakpoint', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-16T12:00:00Z'));
+
+    try {
+      mockGetOrFetch.mockResolvedValue({
+        kind: 'collection',
+        content: JSON.stringify({ name: 'Based Bitcoin', description: '', items: [] }),
+      });
+
+      const collectionNotification = {
+        id: 'post_edited:123:collection-owner',
+        type: NotificationType.PostEdited,
+        timestamp: new Date('2026-07-16T11:30:00Z').getTime(),
+        edit_source: PostChangedSource.Repost,
+        edited_by: 'collection-owner',
+        edited_uri: 'pubky://collection-owner/pub/pubky.app/posts/collection-id',
+        linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost-id',
+        post_kind: 'collection',
+      } satisfies FlatNotification;
+
+      render(<NotificationItem notification={collectionNotification} isUnread={false} />);
+
+      await vi.waitFor(() => {
+        const preview = screen.getByText("'Based Bitcoin'");
+        expect(preview).toHaveClass('hidden', 'sm:block', 'text-muted-foreground');
+      });
+      expect(mockGetOrFetch).toHaveBeenCalledWith({
+        compositeId: 'collection-owner:collection-id',
+        viewerId: 'test-user-pubky',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('navigates to notification link when clicking empty space in the row', () => {
     render(<NotificationItem notification={baseNotification} isUnread={false} />);
 
@@ -678,6 +755,17 @@ describe('NotificationItem', () => {
 });
 
 describe('NotificationItem - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetOrFetch.mockResolvedValue(null);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-16T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('matches snapshot for Follow notification', () => {
     const notification = {
       id: 'follow:123:user1',
@@ -712,5 +800,29 @@ describe('NotificationItem - Snapshots', () => {
     } as FlatNotification;
     const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
     expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for an edited collection with a title preview', async () => {
+    mockGetOrFetch.mockResolvedValue({
+      kind: 'collection',
+      content: JSON.stringify({ name: 'Based Bitcoin', description: '', items: [] }),
+    });
+    const notification = {
+      id: 'post_edited:123:collection-owner',
+      type: NotificationType.PostEdited,
+      timestamp: new Date('2026-07-16T11:30:00Z').getTime(),
+      edit_source: PostChangedSource.Repost,
+      edited_by: 'collection-owner',
+      edited_uri: 'pubky://collection-owner/pub/pubky.app/posts/collection-id',
+      linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost-id',
+      post_kind: 'collection',
+    } satisfies FlatNotification;
+
+    render(<NotificationItem notification={notification} isUnread={false} />);
+    await act(async () => {
+      await mockGetOrFetch.mock.results[0]?.value;
+    });
+
+    expect(screen.getByText("'Based Bitcoin'")).toMatchSnapshot();
   });
 });

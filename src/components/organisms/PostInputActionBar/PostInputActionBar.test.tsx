@@ -226,6 +226,16 @@ describe('PostInputActionBar', () => {
     expect(screen.getByText('45/300')).toHaveClass('sm:block');
   });
 
+  it('separates action and submit clusters when separateActions is true', () => {
+    render(<PostInputActionBar hideArticleButton={false} characterLimit={{ count: 45, max: 300 }} separateActions />);
+
+    const root = screen.getAllByTestId('container')[0];
+    expect(root).toHaveClass('flex-1');
+    expect(root).toHaveClass('justify-between');
+    expect(root).toHaveClass('gap-6');
+    expect(screen.getByText('45/300').parentElement).toHaveClass('shrink-0');
+  });
+
   it('uses full width root layout', () => {
     const { container } = render(<PostInputActionBar hideArticleButton={false} />);
 

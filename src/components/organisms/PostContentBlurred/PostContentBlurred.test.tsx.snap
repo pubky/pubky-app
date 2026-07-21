@@ -1,5 +1,61 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`PostContentBlurred - Snapshots > matches snapshot with compact variant 1`] = `
+<button
+  class="group relative w-full cursor-pointer h-6 overflow-hidden rounded-sm"
+  data-override-defaults="true"
+  data-testid="blurred-content-button"
+>
+  <p
+    aria-hidden="true"
+    class="font-medium text-secondary-foreground blur-2xl select-none p-2 text-sm leading-5 opacity-0"
+    data-override-defaults="true"
+    data-testid="typography"
+  >
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+  </p>
+  <div
+    class="absolute inset-0 flex items-center text-muted-foreground transition-colors group-hover:text-secondary-foreground flex-row justify-start gap-2 [&_svg]:size-4"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-eye-off size-6"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+      />
+      <path
+        d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+      />
+      <path
+        d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+      />
+      <path
+        d="m2 2 20 20"
+      />
+    </svg>
+    <p
+      class="text-sm"
+      data-override-defaults="true"
+      data-testid="typography"
+    >
+      moderation.postContentModerated
+    </p>
+  </div>
+</button>
+`;
+
 exports[`PostContentBlurred - Snapshots > matches snapshot with custom className 1`] = `
 <button
   class="group relative w-full cursor-pointer mt-4 rounded-lg"

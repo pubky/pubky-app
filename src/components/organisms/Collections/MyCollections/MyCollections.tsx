@@ -53,7 +53,7 @@ export function MyCollections() {
   const avatarSeed = currentUserPubky ?? avatarName;
 
   return (
-    <Container overrideDefaults className="flex w-full flex-col gap-4">
+    <Container overrideDefaults data-cy="my-collections-section" className="flex w-full flex-col gap-4">
       {/* Header */}
       <Container overrideDefaults className="flex flex-wrap items-center justify-between gap-3">
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">
@@ -162,7 +162,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
             ))
           : visibleIds.map((compositeId) => {
               const { pubky, id } = parseCompositeId(compositeId);
-              return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} />;
+              return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} showDeleteAction />;
             })}
         <NewCollectionCardCTA />
       </Container>

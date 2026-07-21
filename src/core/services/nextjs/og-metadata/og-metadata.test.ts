@@ -1,3 +1,5 @@
+import { createServer } from 'node:http';
+import { fetch as undiciFetch } from 'undici';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TITLE_TRUNCATE_LENGTH, URL_TRUNCATE_LENGTH } from '@/config/urls';
 import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
@@ -9,16 +11,18 @@ import { asOpaque } from '@/test-utils/type-assertions';
 // Mocks
 // ---------------------------------------------------------------------------
 
-const { mockReadResponseBody, mockResolve4, mockIsIP, mockIsIpSafe } = vi.hoisted(() => ({
+const { mockReadResponseBody, mockResolve4, mockResolve6, mockIsIP, mockIsIpSafe } = vi.hoisted(() => ({
   mockReadResponseBody: vi.fn(),
   mockResolve4: vi.fn<(hostname: string) => Promise<string[]>>(),
+  mockResolve6: vi.fn<(hostname: string) => Promise<string[]>>(),
   mockIsIP: vi.fn<(input: string) => number>(),
   mockIsIpSafe: vi.fn<(ip: string) => boolean>(),
 }));
 
 vi.mock('dns/promises', () => ({
-  default: { resolve4: mockResolve4 },
+  default: { resolve4: mockResolve4, resolve6: mockResolve6 },
   resolve4: mockResolve4,
+  resolve6: mockResolve6,
 }));
 
 vi.mock('net', () => ({
@@ -77,6 +81,11 @@ const spyOnLoggerWarn = async () => {
   return vi.spyOn(Logger, 'warn');
 };
 
+const spyOnLoggerError = async () => {
+  const { Logger } = await import('@/libs/logger/logger');
+  return vi.spyOn(Logger, 'error');
+};
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -85,12 +94,16 @@ describe('NextJsOgMetadataService', () => {
   let NextJsOgMetadataService: typeof import('./og-metadata').NextJsOgMetadataService;
 
   beforeEach(async () => {
-    vi.resetModules();
     vi.clearAllMocks();
 
     global.fetch = mockFetch;
     mockResolve4.mockResolvedValue(['1.1.1.1']);
-    mockIsIP.mockReturnValue(0);
+    mockResolve6.mockResolvedValue([]);
+    mockIsIP.mockImplementation((input) => {
+      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(input)) return 4;
+      if (input.includes(':')) return 6;
+      return 0;
+    });
     mockIsIpSafe.mockReturnValue(true);
     const mod = await import('./og-metadata');
     NextJsOgMetadataService = mod.NextJsOgMetadataService;
@@ -107,6 +120,7 @@ describe('NextJsOgMetadataService', () => {
     await NextJsOgMetadataService.fetch(new URL('https://example.com/'));
 
     expect(mockResolve4).toHaveBeenCalledWith('example.com');
+    expect(mockResolve6).toHaveBeenCalledWith('example.com');
   });
 
   it('should call fetch with the URL string', async () => {
@@ -115,7 +129,13 @@ describe('NextJsOgMetadataService', () => {
 
     await NextJsOgMetadataService.fetch(new URL('https://example.com/page'));
 
-    expect(mockFetch).toHaveBeenCalledWith('https://example.com/page', expect.objectContaining({ redirect: 'manual' }));
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://example.com/page',
+      expect.objectContaining({
+        dispatcher: expect.anything(),
+        redirect: 'manual',
+      }),
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -417,6 +437,7 @@ describe('NextJsOgMetadataService', () => {
 
   it('should abort fetch when request exceeds timeout', async () => {
     const loggerWarnSpy = await spyOnLoggerWarn();
+    const loggerErrorSpy = await spyOnLoggerError();
     // Mock setTimeout to invoke the callback immediately to trigger abort.
     vi.spyOn(globalThis, 'setTimeout').mockImplementation((fn: TimerHandler) => {
       if (typeof fn === 'function') fn();
@@ -442,6 +463,7 @@ describe('NextJsOgMetadataService', () => {
         errorName: 'AbortError',
       }),
     );
+    expect(loggerErrorSpy).not.toHaveBeenCalled();
 
     vi.mocked(globalThis.setTimeout).mockRestore();
   });
@@ -459,6 +481,7 @@ describe('NextJsOgMetadataService', () => {
 
   it('should return fallback metadata for raw fetch failures', async () => {
     const loggerWarnSpy = await spyOnLoggerWarn();
+    const loggerErrorSpy = await spyOnLoggerError();
     const rawError = new TypeError('ECONNRESET');
     mockFetch.mockRejectedValueOnce(rawError);
 
@@ -477,6 +500,7 @@ describe('NextJsOgMetadataService', () => {
         errorName: 'TypeError',
       }),
     );
+    expect(loggerErrorSpy).not.toHaveBeenCalled();
   });
 
   it('should block redirects to non-HTTP protocols', async () => {
@@ -489,6 +513,41 @@ describe('NextJsOgMetadataService', () => {
       code: AuthErrorCode.FORBIDDEN,
       context: { protocol: 'ftp:', statusCode: HttpStatusCode.FORBIDDEN },
     });
+  });
+
+  it('should block redirects to unsafe IP literals', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: 'http://127.0.0.2/' } }));
+    mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
+      category: ErrorCategory.Auth,
+      code: AuthErrorCode.FORBIDDEN,
+      context: { hostname: '127.0.0.2', statusCode: HttpStatusCode.FORBIDDEN },
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should block a redirect hostname with an unsafe AAAA answer at connection time', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(null, { status: 302, headers: { location: 'http://redirect-rebind.example.test/' } }),
+      )
+      .mockImplementationOnce((input, init) =>
+        undiciFetch(input as Parameters<typeof undiciFetch>[0], init as Parameters<typeof undiciFetch>[1]),
+      );
+    mockResolve4
+      .mockResolvedValueOnce(['1.1.1.1'])
+      .mockResolvedValueOnce(['1.1.1.1'])
+      .mockResolvedValueOnce(['1.1.1.1']);
+    mockResolve6.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce(['fd00::1']);
+    mockIsIpSafe.mockImplementation((ip) => ip !== 'fd00::1');
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
+      category: ErrorCategory.Auth,
+      code: AuthErrorCode.FORBIDDEN,
+      context: { hostname: 'redirect-rebind.example.test', statusCode: HttpStatusCode.FORBIDDEN },
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('should throw when exceeding max redirects', async () => {
@@ -540,16 +599,114 @@ describe('NextJsOgMetadataService', () => {
     );
   });
 
-  it('should reject private main URL IPs before fetching', async () => {
-    mockIsIP.mockReturnValue(4);
-    mockIsIpSafe.mockReturnValue(false);
+  it.each(['http://127.0.0.2/', 'http://127.1.1.1/', 'http://169.254.169.254/', 'http://[::1]/'])(
+    'should reject unsafe main URL IP %s before fetching',
+    async (url) => {
+      mockIsIpSafe.mockReturnValue(false);
 
-    await expect(NextJsOgMetadataService.fetch(new URL('http://169.254.169.254/'))).rejects.toMatchObject({
+      await expect(NextJsOgMetadataService.fetch(new URL(url))).rejects.toMatchObject({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.FORBIDDEN,
+        context: { statusCode: HttpStatusCode.FORBIDDEN },
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('should reject hostnames when any resolved address is unsafe', async () => {
+    mockResolve4.mockResolvedValueOnce(['1.1.1.1', '127.0.0.2']);
+    mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
       category: ErrorCategory.Auth,
       code: AuthErrorCode.FORBIDDEN,
-      context: { hostname: '169.254.169.254', statusCode: HttpStatusCode.FORBIDDEN },
+      context: { hostname: 'example.com', statusCode: HttpStatusCode.FORBIDDEN },
     });
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('should reject hostnames when an AAAA answer is unsafe', async () => {
+    mockResolve6.mockResolvedValueOnce(['fd00::1']);
+    mockIsIpSafe.mockImplementation((ip) => ip !== 'fd00::1');
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
+      category: ErrorCategory.Auth,
+      code: AuthErrorCode.FORBIDDEN,
+      context: { hostname: 'example.com', statusCode: HttpStatusCode.FORBIDDEN },
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('should block when any connection-time DNS answer is unsafe', async () => {
+    const loggerErrorSpy = await spyOnLoggerError();
+    global.fetch = asOpaque<typeof global.fetch>(undiciFetch);
+    mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockResolvedValueOnce(['1.1.1.1', '127.0.0.2']);
+    mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
+
+    await expect(NextJsOgMetadataService.fetch(new URL('http://rebind.example.test/'))).rejects.toMatchObject({
+      category: ErrorCategory.Auth,
+      code: AuthErrorCode.FORBIDDEN,
+      context: { hostname: 'rebind.example.test', statusCode: HttpStatusCode.FORBIDDEN },
+    });
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      '[nextjs-server:safeOgMetadataLookup]',
+      'Blocked IP range. Cannot fetch from private networks.',
+      { hostname: 'rebind.example.test', statusCode: HttpStatusCode.FORBIDDEN },
+    );
+  });
+
+  it('should connect to the vetted address returned by the connection-time lookup', async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { 'content-type': 'text/html' });
+      response.end(simpleHtml('Vetted destination'));
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
+
+    try {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Expected a TCP server address');
+
+      global.fetch = asOpaque<typeof global.fetch>(undiciFetch);
+      mockResolve4.mockResolvedValue(['127.0.0.1']);
+      mockIsIpSafe.mockReturnValue(true);
+      mockReadResponseBody.mockImplementationOnce(async (response: Response) => response.text());
+
+      await expect(
+        NextJsOgMetadataService.fetch(new URL(`http://vetted.example.test:${address.port}/`)),
+      ).resolves.toMatchObject({ title: 'Vetted destination' });
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+  });
+
+  it('should return fallback metadata when connection-time DNS resolution fails', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    const loggerErrorSpy = await spyOnLoggerError();
+    global.fetch = asOpaque<typeof global.fetch>(undiciFetch);
+    mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockRejectedValueOnce(createDnsError());
+
+    await expect(NextJsOgMetadataService.fetch(new URL('http://dns-change.example.test/'))).resolves.toEqual({
+      url: 'http://dns-change.example.test/',
+      title: null,
+      image: null,
+      type: 'website',
+    });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'dns_failed',
+        hostname: 'dns-change.example.test',
+        errorName: 'OgMetadataDnsError',
+      }),
+    );
+    expect(loggerErrorSpy).not.toHaveBeenCalled();
   });
 
   it('should keep unexpected DNS safety errors reportable', async () => {
@@ -559,8 +716,9 @@ describe('NextJsOgMetadataService', () => {
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
       category: ErrorCategory.Server,
       code: ServerErrorCode.UNKNOWN_ERROR,
+      operation: 'checkDnsSafety',
       cause: rawError,
-      context: { url: 'https://example.com/', statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
+      context: { hostname: 'example.com' },
     });
   });
 

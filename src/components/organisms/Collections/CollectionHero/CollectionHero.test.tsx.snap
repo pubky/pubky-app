@@ -28,7 +28,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       data-testid="container"
     >
       <div
-        class="flex items-center min-w-0 flex-1 gap-2 lg:flex-none"
+        class="flex items-center min-w-0 flex-1 gap-3 lg:flex-none"
         data-testid="container"
       >
         <a
@@ -40,7 +40,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
             data-avatar-url="https://example.com/avatar.png"
             data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
             data-name="Bitcoin Wizard"
-            data-size="md"
+            data-size="sm"
             data-testid="avatar-with-fallback"
           >
             Bitcoin Wizard
@@ -61,6 +61,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       <div
         aria-label="2 posts"
         class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+        data-cy="collection-count-badge"
         data-testid="container"
       >
         <svg
@@ -98,7 +99,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       </div>
     </div>
     <p
-      class="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-muted-foreground lg:text-2xl"
+      class="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-secondary-foreground lg:text-2xl"
       data-testid="typography"
     >
       A bit of Bitcoin purity amidst all of the madness.
@@ -121,12 +122,13 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       </div>
     </div>
     <div
-      class="flex flex-wrap items-center gap-3"
+      class="flex flex-wrap items-center gap-2"
       data-testid="container"
     >
       <button
         aria-label="collections.single.follow"
         class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
+        data-cy="collection-hero-follow-btn"
         data-size="sm"
         data-slot="button"
         data-variant="secondary"
@@ -262,7 +264,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       data-testid="container"
     >
       <div
-        class="flex items-center min-w-0 flex-1 gap-2 lg:flex-none"
+        class="flex items-center min-w-0 flex-1 gap-3 lg:flex-none"
         data-testid="container"
       >
         <a
@@ -274,7 +276,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
             data-avatar-url="https://example.com/avatar.png"
             data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
             data-name="Bitcoin Wizard"
-            data-size="md"
+            data-size="sm"
             data-testid="avatar-with-fallback"
           >
             Bitcoin Wizard
@@ -295,6 +297,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       <div
         aria-label="2 posts"
         class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+        data-cy="collection-count-badge"
         data-testid="container"
       >
         <svg
@@ -332,7 +335,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       </div>
     </div>
     <p
-      class="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-muted-foreground lg:text-2xl"
+      class="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-secondary-foreground lg:text-2xl"
       data-testid="typography"
     >
       A bit of Bitcoin purity amidst all of the madness.
@@ -355,7 +358,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       </div>
     </div>
     <div
-      class="flex flex-wrap items-center gap-3"
+      class="flex flex-wrap items-center gap-2"
       data-testid="container"
     >
       <button
@@ -368,6 +371,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       <button
         aria-label="collections.single.share"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+        data-cy="collection-hero-share-btn"
         data-size="icon"
         data-slot="button"
         data-variant="secondary"
@@ -402,6 +406,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       <button
         aria-label="collections.single.edit"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+        data-cy="collection-hero-edit-btn"
         data-size="icon"
         data-slot="button"
         data-variant="secondary"
@@ -436,6 +441,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       <button
         aria-label="collections.single.delete"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+        data-cy="collection-hero-delete-btn"
         data-size="icon"
         data-slot="button"
         data-variant="secondary"
@@ -545,7 +551,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
       data-testid="container"
     >
       <div
-        class="flex items-center min-w-0 flex-1 gap-2 lg:flex-none"
+        class="flex items-center min-w-0 flex-1 gap-3 lg:flex-none"
         data-testid="container"
       >
         <a
@@ -557,7 +563,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
             data-avatar-url="https://example.com/avatar.png"
             data-fallback-seed="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
             data-name="Bitcoin Wizard"
-            data-size="md"
+            data-size="sm"
             data-testid="avatar-with-fallback"
           >
             Bitcoin Wizard
@@ -578,6 +584,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
       <div
         aria-label="0 posts"
         class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+        data-cy="collection-count-badge"
         data-testid="container"
       >
         <svg
@@ -632,12 +639,13 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
       </div>
     </div>
     <div
-      class="flex flex-wrap items-center gap-3"
+      class="flex flex-wrap items-center gap-2"
       data-testid="container"
     >
       <button
         aria-label="collections.single.follow"
         class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
+        data-cy="collection-hero-follow-btn"
         data-size="sm"
         data-slot="button"
         data-variant="secondary"

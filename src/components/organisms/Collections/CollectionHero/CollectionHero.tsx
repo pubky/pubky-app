@@ -205,8 +205,8 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
             fallbackSeed={authorPubky}
             avatarUrl={ownerAvatarUrl}
             isResolved={isOwnerResolved}
-            size="md"
-            className="min-w-0 flex-1 gap-2 lg:flex-none"
+            size="sm"
+            className="min-w-0 flex-1 gap-3 lg:flex-none"
             profileHref={ownerProfileHref}
           />
           <CollectionCountBadge count={itemCount} />
@@ -216,7 +216,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         {description && (
           <Typography
             overrideDefaults
-            className="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-muted-foreground lg:text-2xl"
+            className="max-w-3xl text-xl leading-8 font-light wrap-anywhere text-secondary-foreground lg:text-2xl"
           >
             {description}
           </Typography>
@@ -231,7 +231,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
         />
 
         {/* Actions */}
-        <Container overrideDefaults className="flex flex-wrap items-center gap-3">
+        <Container overrideDefaults className="flex flex-wrap items-center gap-2">
           {isOwn ? (
             <>
               <DialogAddContent
@@ -248,6 +248,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
                 onClick={handleShare}
                 disabled={isDeleting}
                 aria-label={t('share')}
+                data-cy="collection-hero-share-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <StickyNote className="size-4" />
@@ -261,6 +262,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
                 onClick={handleEdit}
                 disabled={isDeleting}
                 aria-label={t('edit')}
+                data-cy="collection-hero-edit-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <Pencil className="size-4" />
@@ -274,6 +276,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
                 onClick={handleDelete}
                 disabled={isDeleting}
                 aria-label={t('delete')}
+                data-cy="collection-hero-delete-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <Trash2 className="size-4" />
@@ -291,6 +294,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
                 onClick={handleFollowToggle}
                 disabled={isToggling}
                 aria-label={isBookmarked ? t('unfollow') : t('follow')}
+                data-cy="collection-hero-follow-btn"
                 className="gap-2 text-xs"
               >
                 {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}

@@ -182,6 +182,20 @@ describe('NotificationNormalizer', () => {
         expect(result).toHaveProperty('reply_uri');
       });
 
+      it('should preserve the subject post kind from Nexus', () => {
+        const nexusNotification = createNexusNotification(NotificationType.PostEdited, {
+          edited_by: TEST_PUBKY.USER_2,
+          edit_source: 'repost',
+          edited_uri: 'pubky://author/pub/pubky.app/posts/collection123',
+          linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost123',
+          post_kind: 'collection',
+        });
+
+        const result = NotificationNormalizer.toFlatNotification(nexusNotification);
+
+        expect(result).toHaveProperty('post_kind', 'collection');
+      });
+
       it.each([
         ['Follow', sampleNotifications.follow, NotificationType.Follow],
         ['NewFriend', sampleNotifications.newFriend, NotificationType.NewFriend],

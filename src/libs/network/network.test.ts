@@ -3,203 +3,130 @@ import { isIpSafe } from './network';
 
 describe('network', () => {
   describe('isIpSafe', () => {
-    describe('safe public IPs', () => {
-      it('accepts Cloudflare DNS (1.1.1.1)', () => {
-        expect(isIpSafe('1.1.1.1')).toBe(true);
-      });
-
-      it('accepts Google DNS (8.8.8.8)', () => {
-        expect(isIpSafe('8.8.8.8')).toBe(true);
-      });
-
-      it('accepts public IP addresses', () => {
-        expect(isIpSafe('93.184.216.34')).toBe(true); // example.com
-        expect(isIpSafe('151.101.1.69')).toBe(true); // random public IP
-        expect(isIpSafe('185.199.108.153')).toBe(true); // GitHub Pages
-      });
-
-      it('accepts IPs at edge of private ranges', () => {
-        expect(isIpSafe('9.255.255.255')).toBe(true); // Just before 10.x
-        expect(isIpSafe('11.0.0.0')).toBe(true); // Just after 10.x
-        expect(isIpSafe('172.15.255.255')).toBe(true); // Just before 172.16.x
-        expect(isIpSafe('172.32.0.0')).toBe(true); // Just after 172.31.x
-        expect(isIpSafe('192.167.255.255')).toBe(true); // Just before 192.168.x
-        expect(isIpSafe('192.169.0.0')).toBe(true); // Just after 192.168.x
-      });
-
-      it('accepts IPs around link-local range', () => {
-        expect(isIpSafe('169.253.255.255')).toBe(true); // Just before 169.254
-        expect(isIpSafe('169.255.0.0')).toBe(true); // Just after 169.254
-      });
-
-      it('accepts IPs around carrier-grade NAT range', () => {
-        expect(isIpSafe('100.63.255.255')).toBe(true); // Just before 100.64
-        expect(isIpSafe('100.128.0.0')).toBe(true); // Just after 100.127
-      });
+    it.each([
+      '1.1.1.1',
+      '8.8.8.8',
+      '9.9.9.9',
+      '93.184.216.34',
+      '104.16.132.229',
+      '151.101.1.69',
+      '185.199.108.153',
+      '192.0.0.9',
+      '192.0.0.10',
+      '2001:1::1',
+      '2001:1::2',
+      '2001:1::3',
+      '2001:3::1',
+      '2001:3:ffff:ffff:ffff:ffff:ffff:ffff',
+      '2001:4:112::1',
+      '2001:4:112:ffff:ffff:ffff:ffff:ffff',
+      '2001:20::1',
+      '2001:2f:ffff:ffff:ffff:ffff:ffff:ffff',
+      '2001:30::1',
+      '2001:3f:ffff:ffff:ffff:ffff:ffff:ffff',
+      '2001:4860:4860::8888',
+      '2606:4700:4700::1111',
+      '[2606:4700:4700::1111]',
+    ])('allows global IP address %s', (ip) => {
+      expect(isIpSafe(ip)).toBe(true);
     });
 
-    describe('localhost blocking', () => {
-      it('blocks 127.0.0.1 (IPv4 loopback)', () => {
-        expect(isIpSafe('127.0.0.1')).toBe(false);
-      });
-
-      it('blocks ::1 (IPv6 loopback)', () => {
-        expect(isIpSafe('::1')).toBe(false);
-      });
-
-      it('blocks 0.0.0.0 (all interfaces)', () => {
-        expect(isIpSafe('0.0.0.0')).toBe(false);
-      });
-
-      it('only blocks exact 127.0.0.1', () => {
-        expect(isIpSafe('127.0.0.1')).toBe(false);
-        // Note: Other 127.x addresses are NOT blocked by current implementation
-        expect(isIpSafe('127.0.0.0')).toBe(true);
-        expect(isIpSafe('127.1.1.1')).toBe(true);
-        expect(isIpSafe('127.255.255.255')).toBe(true);
-      });
+    it.each([
+      '0.0.0.0',
+      '0.0.0.1',
+      '10.0.0.1',
+      '100.64.0.1',
+      '100.127.255.255',
+      '127.0.0.0',
+      '127.0.0.1',
+      '127.0.0.2',
+      '127.1.1.1',
+      '127.255.255.255',
+      '169.254.169.254',
+      '172.16.0.1',
+      '172.31.255.255',
+      '192.0.0.1',
+      '192.0.0.8',
+      '192.0.0.11',
+      '192.0.2.1',
+      '192.168.1.1',
+      '198.18.0.1',
+      '198.51.100.1',
+      '203.0.113.1',
+      '224.0.0.1',
+      '239.255.255.255',
+      '240.0.0.1',
+      '255.255.255.255',
+    ])('blocks non-global IPv4 address %s', (ip) => {
+      expect(isIpSafe(ip)).toBe(false);
     });
 
-    describe('private IPv4 ranges (RFC 1918)', () => {
-      it('blocks 10.0.0.0/8 range', () => {
-        expect(isIpSafe('10.0.0.0')).toBe(false);
-        expect(isIpSafe('10.0.0.1')).toBe(false);
-        expect(isIpSafe('10.1.2.3')).toBe(false);
-        expect(isIpSafe('10.255.255.255')).toBe(false);
-      });
-
-      it('blocks 172.16.0.0/12 range', () => {
-        expect(isIpSafe('172.16.0.0')).toBe(false);
-        expect(isIpSafe('172.16.0.1')).toBe(false);
-        expect(isIpSafe('172.20.1.1')).toBe(false);
-        expect(isIpSafe('172.31.255.255')).toBe(false);
-      });
-
-      it('blocks 192.168.0.0/16 range', () => {
-        expect(isIpSafe('192.168.0.0')).toBe(false);
-        expect(isIpSafe('192.168.0.1')).toBe(false);
-        expect(isIpSafe('192.168.1.1')).toBe(false);
-        expect(isIpSafe('192.168.255.255')).toBe(false);
-      });
+    it.each([
+      '::',
+      '::1',
+      '[::1]',
+      '::ffff:127.0.0.1',
+      '::ffff:7f00:1',
+      '::ffff:8.8.8.8',
+      '64:ff9b::808:808',
+      '64:ff9b::a00:1',
+      '64:ff9b:1::808:808',
+      '100::1',
+      '2001::1',
+      '2001:1::4',
+      '2001:2::1',
+      '2001:4:111::1',
+      '2001:4:113::1',
+      '2001:10::1',
+      '2001:40::1',
+      '2001:db8::1',
+      '2002::1',
+      '3fff::1',
+      'fc00::1',
+      'fd00::1',
+      'fdff:ffff:ffff::1',
+      'fe80::1',
+      'fec0::1',
+      'ff00::1',
+      '4000::1',
+      '8000::1',
+    ])('blocks non-global IPv6 address %s', (ip) => {
+      expect(isIpSafe(ip)).toBe(false);
     });
 
-    describe('link-local addresses (RFC 3927)', () => {
-      it('blocks 169.254.0.0/16 range', () => {
-        expect(isIpSafe('169.254.0.0')).toBe(false);
-        expect(isIpSafe('169.254.0.1')).toBe(false);
-        expect(isIpSafe('169.254.169.254')).toBe(false); // AWS metadata endpoint
-        expect(isIpSafe('169.254.255.255')).toBe(false);
-      });
+    it.each([
+      '',
+      'not an ip',
+      'localhost',
+      '256.1.1.1',
+      '1.1.1',
+      '1.1.1.1.1',
+      '1.1.1.a',
+      '-1.1.1.1',
+      '1.1.1.1 ',
+      ' 1.1.1.1',
+      '1.1.1.1/24',
+      '[2001:4860:4860::8888',
+      '2001:4860:4860::8888]',
+      'fe80::1%lo0',
+    ])('fails closed for malformed input %s', (ip) => {
+      expect(isIpSafe(ip)).toBe(false);
     });
 
-    describe('carrier-grade NAT (RFC 6598)', () => {
-      it('blocks 100.64.0.0/10 range', () => {
-        expect(isIpSafe('100.64.0.0')).toBe(false);
-        expect(isIpSafe('100.64.0.1')).toBe(false);
-        expect(isIpSafe('100.100.0.0')).toBe(false);
-        expect(isIpSafe('100.127.255.255')).toBe(false);
-      });
-    });
-
-    describe('IPv6 private ranges', () => {
-      it('blocks fc00::/7 unique local addresses', () => {
-        expect(isIpSafe('fc00::1')).toBe(false);
-        expect(isIpSafe('fd00::1')).toBe(false);
-        expect(isIpSafe('fdff:ffff:ffff::1')).toBe(false);
-      });
-
-      it('blocks fe80::/10 link-local addresses', () => {
-        expect(isIpSafe('fe80::1')).toBe(false);
-        expect(isIpSafe('fe80:1234:5678::abcd')).toBe(false);
-      });
-    });
-
-    describe('invalid/malformed IPs', () => {
-      it('blocks malformed IPv4 addresses', () => {
-        expect(isIpSafe('256.1.1.1')).toBe(false); // Octet > 255
-        expect(isIpSafe('1.1.1')).toBe(false); // Too few octets
-        expect(isIpSafe('1.1.1.1.1')).toBe(false); // Too many octets
-        expect(isIpSafe('1.1.1.a')).toBe(false); // Non-numeric octet
-        expect(isIpSafe('abc.def.ghi.jkl')).toBe(false); // All invalid
-      });
-
-      it('blocks negative values', () => {
-        expect(isIpSafe('-1.1.1.1')).toBe(false);
-        expect(isIpSafe('1.-1.1.1')).toBe(false);
-        expect(isIpSafe('1.1.-1.1')).toBe(false);
-        expect(isIpSafe('1.1.1.-1')).toBe(false);
-      });
-
-      it('blocks empty and invalid strings', () => {
-        expect(isIpSafe('')).toBe(false);
-        expect(isIpSafe('not an ip')).toBe(false);
-        expect(isIpSafe('localhost')).toBe(false);
-      });
-
-      it('handles IPs with extra characters', () => {
-        // Note: split().map(Number) treats '1.1.1.1 ' as valid because split ignores trailing content
-        expect(isIpSafe('1.1.1.1 ')).toBe(true); // Trailing space - Number('1 ') = 1
-        expect(isIpSafe(' 1.1.1.1')).toBe(true); // Leading space - Number(' 1') = 1
-        expect(isIpSafe('1.1.1.1/24')).toBe(false); // CIDR notation - not 4 octets
-      });
-    });
-
-    describe('SSRF attack vectors', () => {
-      it('blocks AWS metadata endpoint', () => {
-        expect(isIpSafe('169.254.169.254')).toBe(false);
-      });
-
-      it('blocks common internal network IPs', () => {
-        expect(isIpSafe('192.168.1.1')).toBe(false); // Router
-        expect(isIpSafe('10.0.0.1')).toBe(false); // Private network gateway
-        expect(isIpSafe('172.16.0.1')).toBe(false); // Private network
-      });
-
-      it('blocks exact localhost variations', () => {
-        expect(isIpSafe('127.0.0.1')).toBe(false);
-        // Note: Only exact 127.0.0.1 is blocked, not entire 127.x range
-        expect(isIpSafe('127.1.0.1')).toBe(true);
-        expect(isIpSafe('::1')).toBe(false);
-        expect(isIpSafe('0.0.0.0')).toBe(false);
-      });
-    });
-
-    describe('edge cases', () => {
-      it('handles boundary values correctly', () => {
-        // Only exact 0.0.0.0 is blocked, not 0.0.0.1
-        expect(isIpSafe('0.0.0.1')).toBe(true);
-        expect(isIpSafe('0.0.0.0')).toBe(false);
-        expect(isIpSafe('255.255.255.255')).toBe(true); // Broadcast, but technically public
-      });
-
-      it('handles partial IPv6 formats', () => {
-        expect(isIpSafe('2001:db8::1')).toBe(false); // Invalid IPv4 format
-        expect(isIpSafe('[2001:db8::1]')).toBe(false); // Bracketed IPv6
-      });
-
-      it('rejects common typos', () => {
-        expect(isIpSafe('192.168.1')).toBe(false); // Missing octet
-        expect(isIpSafe('192.168.1.1.1')).toBe(false); // Extra octet
-      });
-    });
-
-    describe('real-world examples', () => {
-      it('allows common CDN IPs', () => {
-        expect(isIpSafe('104.16.132.229')).toBe(true); // Cloudflare
-        expect(isIpSafe('151.101.1.69')).toBe(true); // Fastly
-      });
-
-      it('allows DNS server IPs', () => {
-        expect(isIpSafe('1.1.1.1')).toBe(true); // Cloudflare DNS
-        expect(isIpSafe('8.8.8.8')).toBe(true); // Google DNS
-        expect(isIpSafe('9.9.9.9')).toBe(true); // Quad9 DNS
-      });
-
-      it('blocks typical router IPs', () => {
-        expect(isIpSafe('192.168.0.1')).toBe(false);
-        expect(isIpSafe('192.168.1.1')).toBe(false);
-        expect(isIpSafe('10.0.0.1')).toBe(false);
-      });
+    it.each([
+      '9.255.255.255',
+      '11.0.0.0',
+      '100.63.255.255',
+      '100.128.0.0',
+      '172.15.255.255',
+      '172.32.0.0',
+      '192.167.255.255',
+      '192.169.0.0',
+      '198.17.255.255',
+      '198.20.0.0',
+      '223.255.255.255',
+    ])('allows global IPv4 addresses near blocked boundaries %s', (ip) => {
+      expect(isIpSafe(ip)).toBe(true);
     });
   });
 });

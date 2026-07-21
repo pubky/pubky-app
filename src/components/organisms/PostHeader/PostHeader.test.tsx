@@ -217,6 +217,37 @@ describe('PostHeader', () => {
     expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-size', 'large');
   });
 
+  it('constrains the user info slot so long names can truncate', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: {
+        id: 'userpubkykey:post456',
+        indexed_at: Date.now(),
+        kind: 'short' as const,
+        uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
+        content: '',
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+      } as EnrichedPostDetails,
+      isLoading: false,
+    });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: {
+        id: 'userpubkykey',
+        name: 'ThisNameIsLongEnoughToOverflowTheReplyDialogWithoutAConstrainedHeaderSlot',
+        image: 'test-image-id',
+      } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
+
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" />);
+
+    const userInfoSlot = screen.getByTestId('post-header-user-info').parentElement;
+
+    expect(userInfoSlot).toHaveClass('w-full', 'max-w-full', 'min-w-0');
+  });
+
   it('renders time in top-right by default', () => {
     mockUsePostDetails.mockReturnValue({
       postDetails: {
