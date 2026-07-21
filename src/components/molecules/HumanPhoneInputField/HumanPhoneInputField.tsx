@@ -15,6 +15,8 @@ type HumanPhoneInputFieldProps = {
   placeholder?: string;
   /** Whether to show the validation checkmark. */
   isValid?: boolean;
+  /** Inline validation error shown below the input. */
+  error?: string;
   onEnter?: () => void;
 };
 
@@ -23,6 +25,7 @@ export const HumanPhoneInputField = ({
   onChange,
   placeholder,
   isValid = false,
+  error,
   onEnter,
 }: HumanPhoneInputFieldProps) => {
   const t = useTranslations('onboarding.phone');
@@ -62,6 +65,7 @@ export const HumanPhoneInputField = ({
                 value={value}
                 onChange={onChange}
                 placeholder={placeholder ?? defaultPlaceholder}
+                aria-invalid={Boolean(error)}
                 className="border-none bg-transparent text-base font-medium text-brand placeholder:text-brand/50 focus:ring-0 focus:outline-none"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && isValid) {
@@ -72,6 +76,12 @@ export const HumanPhoneInputField = ({
 
               {isValid && <CheckCircle2 className="h-6 w-6 shrink-0 text-brand" aria-hidden="true" />}
             </Container>
+
+            {error && (
+              <Typography as="p" data-testid="human-phone-input-error" className="text-sm font-medium text-destructive">
+                {error}
+              </Typography>
+            )}
           </Container>
         </Container>
       </Container>

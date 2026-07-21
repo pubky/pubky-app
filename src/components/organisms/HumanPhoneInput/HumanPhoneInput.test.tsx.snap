@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`HumanPhoneInput > matches snapshot 1`] = `
+exports[`HumanPhoneInput - Snapshots > matches snapshot 1`] = `
 <div
   class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
   data-testid="container"
