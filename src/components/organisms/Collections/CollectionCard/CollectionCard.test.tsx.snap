@@ -73,6 +73,7 @@ exports[`CollectionCard - Mobile Snapshots > matches the mobile snapshot with up
           <div
             aria-label="2 posts"
             class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+            data-cy="collection-count-badge"
             data-testid="container"
           >
             <svg
@@ -319,6 +320,7 @@ exports[`CollectionCard - Mobile Snapshots > matches the mobile snapshot with up
           <button
             aria-label="collections.card.follow"
             class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
+            data-cy="collection-card-follow-btn"
             data-size="sm"
             data-slot="button"
             data-variant="secondary"
@@ -425,6 +427,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
           <div
             aria-label="2 posts"
             class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+            data-cy="collection-count-badge"
             data-testid="container"
           >
             <svg
@@ -689,6 +692,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the non-owner Fol
           <button
             aria-label="collections.card.follow"
             class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
+            data-cy="collection-card-follow-btn"
             data-size="sm"
             data-slot="button"
             data-variant="secondary"
@@ -795,6 +799,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
           <div
             aria-label="2 posts"
             class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+            data-cy="collection-count-badge"
             data-testid="container"
           >
             <svg
@@ -1059,6 +1064,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the owner Delete 
           <button
             aria-label="collections.card.delete"
             class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
+            data-cy="collection-card-delete-btn"
             data-size="sm"
             data-slot="button"
             data-variant="secondary"
@@ -1178,6 +1184,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
           <div
             aria-label="2 posts"
             class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+            data-cy="collection-count-badge"
             data-testid="container"
           >
             <svg
@@ -1442,6 +1449,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
           <button
             aria-label="collections.card.follow"
             class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
+            data-cy="collection-card-follow-btn"
             data-size="sm"
             data-slot="button"
             data-variant="secondary"
@@ -1542,6 +1550,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
           <div
             aria-label="0 posts"
             class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+            data-cy="collection-count-badge"
             data-testid="container"
           >
             <svg
@@ -1800,6 +1809,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
           <button
             aria-label="collections.card.follow"
             class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
+            data-cy="collection-card-follow-btn"
             data-size="sm"
             data-slot="button"
             data-variant="secondary"

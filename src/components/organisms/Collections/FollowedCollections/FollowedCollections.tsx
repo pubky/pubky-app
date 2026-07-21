@@ -174,7 +174,7 @@ export function FollowedCollections() {
   }
 
   return (
-    <Container overrideDefaults className="flex w-full flex-col gap-4">
+    <Container overrideDefaults data-cy="followed-collections-section" className="flex w-full flex-col gap-4">
       <Container overrideDefaults className="flex items-center gap-3">
         <Heading level={2} size="lg" className="font-light text-muted-foreground">
           {t('followed.title')}
