@@ -10,6 +10,11 @@ export interface NotificationIconProps {
   type: NotificationType;
 
   /**
+   * The subject post's kind, when supplied by Nexus.
+   */
+  postKind?: string;
+
+  /**
    * Whether to show the unread badge indicator
    */
   showBadge: boolean;

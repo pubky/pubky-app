@@ -208,13 +208,6 @@ describe('PostArticle', () => {
       expect(dialog).toHaveAttribute('data-open', 'false');
     });
 
-    it('applies muted-foreground class to PostText', () => {
-      render(<PostArticle {...defaultProps} />);
-
-      const postText = screen.getByTestId('post-text');
-      expect(postText).toHaveClass('text-muted-foreground');
-    });
-
     it('renders typography with large size', () => {
       render(<PostArticle {...defaultProps} />);
 

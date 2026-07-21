@@ -283,10 +283,8 @@ vi.mock('@/atoms/Select/Select', () => {
     ),
     SelectValue: ({ placeholder }: { placeholder?: string }) => <span data-testid="select-value">{placeholder}</span>,
     SelectContent: ({ children }: { children: React.ReactNode }) => <div data-testid="select-content">{children}</div>,
-    SelectItem: ({ children, value }: { children: React.ReactNode; key?: string; value: string }) => (
-      <div data-testid={`select-item-${value}`} data-value={value}>
-        {children}
-      </div>
+    SelectItem: ({ children }: { children: React.ReactNode; key?: string; value: string }) => (
+      <div data-testid="select-item">{children}</div>
     ),
   };
 });

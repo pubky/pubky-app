@@ -45,6 +45,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
 
   // Extract the user ID from the notification (the actor who triggered it)
   const actorUserId = getUserIdFromNotification(notification);
+  const postKind = 'post_kind' in notification ? notification.post_kind : undefined;
 
   // Extract post composite ID for notifications with post content (memoized to avoid recalculation)
   const postCompositeId = useMemo(() => {
@@ -116,7 +117,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const actionText = t(actionKey);
 
   // Get post preview text
-  const previewText = hasPostPreview(notification.type) ? formatPreviewText(postContent) : null;
+  const previewText = hasPostPreview(notification.type, postKind) ? formatPreviewText(postContent) : null;
 
   const timestampDate = new Date(notification.timestamp);
   const timestampElement = (
@@ -201,17 +202,20 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             )}
           </Typography>
 
-          {/* Post preview text for desktop - dynamically fetched from database */}
+          {/* Post preview text - dynamically fetched from database */}
           {previewText &&
             (notificationLink ? (
               <Link
                 href={notificationLink}
-                className="hidden shrink-0 text-base font-medium text-muted-foreground hover:underline xl:inline"
+                className="hidden min-w-0 truncate text-sm font-medium text-muted-foreground hover:underline sm:block lg:text-base"
               >
                 {previewText}
               </Link>
             ) : (
-              <Typography as="p" className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline">
+              <Typography
+                as="p"
+                className="hidden min-w-0 truncate text-sm font-medium text-muted-foreground sm:block lg:text-base"
+              >
                 {previewText}
               </Typography>
             ))}
@@ -241,13 +245,13 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
         <Link href={notificationLink} className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80">
           {timestampElement}
 
-          <NotificationIcon type={notification.type} showBadge={isUnread} />
+          <NotificationIcon type={notification.type} postKind={postKind} showBadge={isUnread} />
         </Link>
       ) : (
         <Container overrideDefaults={true} className="flex items-center gap-2">
           {timestampElement}
 
-          <NotificationIcon type={notification.type} showBadge={isUnread} />
+          <NotificationIcon type={notification.type} postKind={postKind} showBadge={isUnread} />
         </Container>
       )}
     </Container>

@@ -82,6 +82,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
       overrideDefaults
       className={cn(
         'text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground',
+        isArticle && !onPostPage ? 'text-muted-foreground' : 'text-secondary-foreground',
         className,
       )}
     >

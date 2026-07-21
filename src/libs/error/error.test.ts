@@ -1,12 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ClientErrorCode, DatabaseErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
+import { safeFetch } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { hasHttpStatus, isNotFound } from '@/libs/error/error.utils';
 import { HttpStatusCode } from '@/libs/http/http.types';
 
 describe('Error Library', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   describe('AppError (Category-based)', () => {
     it('should create an error with correct properties', () => {
       const error = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Failed to read post', {
@@ -124,6 +129,21 @@ describe('Error Library', () => {
 
       expect(hasHttpStatus(httpContextOnlyError, HttpStatusCode.NOT_FOUND)).toBe(true);
       expect(isNotFound(httpContextOnlyError)).toBe(false);
+    });
+  });
+
+  describe('safeFetch', () => {
+    it('preserves an AppError wrapped by the fetch implementation', async () => {
+      const appError = Err.client(ClientErrorCode.BAD_REQUEST, 'Blocked request', {
+        service: ErrorService.NextJsServer,
+        operation: 'safeLookup',
+      });
+      const wrappedError = new TypeError('fetch failed', { cause: appError });
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(wrappedError));
+
+      await expect(safeFetch('https://example.com', {}, ErrorService.NextJsServer, 'fetchMetadata')).rejects.toBe(
+        appError,
+      );
     });
   });
 });

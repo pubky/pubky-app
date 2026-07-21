@@ -22,4 +22,5 @@ export interface PostInputActionBarProps {
   isArticle?: boolean;
   isEdit?: boolean;
   characterLimit?: CharacterLimit;
+  separateActions?: boolean;
 }
