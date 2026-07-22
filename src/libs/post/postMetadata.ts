@@ -8,8 +8,11 @@ import { userApi } from '@/services/nexus/user/user.api';
 /**
  * Server-side fetch with Next.js caching and proper error handling.
  * Used for SSR/ISR metadata generation where client-side services are not available.
+ *
+ * Exported so sibling server-only helpers (e.g. the OG image data layer in
+ * `@/libs/og/ogData`) share a single Nexus fetch + error-mapping path.
  */
-async function fetchWithValidation<T>(url: string, operation: string): Promise<T | null> {
+export async function fetchWithValidation<T>(url: string, operation: string): Promise<T | null> {
   const res = await fetch(url, { next: { revalidate: 3600 } });
   if (res.status === HttpStatusCode.NOT_FOUND) {
     return null;
