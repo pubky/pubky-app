@@ -48,7 +48,7 @@ export function DialogSignIn() {
 
             <Container className="flex flex-1 items-center justify-center">
               <Image
-                src="/images/new-here.svg"
+                src="/images/new-here.webp"
                 alt={t('newHere')}
                 width={202}
                 height={202}
@@ -76,7 +76,7 @@ export function DialogSignIn() {
 
             <Container className="flex flex-1 items-center justify-center">
               <Image
-                src="/images/sign-in.svg"
+                src="/images/sign-in.webp"
                 alt={t('alreadyHaveAccount')}
                 width={202}
                 height={202}
