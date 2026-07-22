@@ -1384,7 +1384,8 @@
     },
     "discover": {
       "title": "发现收藏集",
-      "empty": "目前没有可发现的收藏集。"
+      "empty": "目前没有可发现的收藏集。",
+      "noNewResults": "目前未找到新的收藏集。请稍后再试。"
     },
     "bookmarks": {
       "title": "书签",

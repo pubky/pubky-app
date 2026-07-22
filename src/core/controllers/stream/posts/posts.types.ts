@@ -18,7 +18,9 @@ export type TStreamIdParams = {
 
 export type TReadPostStreamChunkResponse = {
   nextPageIds: string[];
-  timestamp: number | undefined;
+  /** Opaque resume cursor (raw `skip` offset for skip streams, score for score streams).
+   * Advanced only by raw backend data, never by the post-filter visible count. */
+  nextCursor: number | undefined;
   /** True only if we've reached the actual end of the stream.
    * False if we hit MAX_FETCH_ITERATIONS or filled the limit. */
   reachedEnd?: boolean;

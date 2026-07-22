@@ -1392,7 +1392,8 @@
     },
     "discover": {
       "title": "Sammlungen entdecken",
-      "empty": "Im Moment gibt es keine Sammlungen zu entdecken."
+      "empty": "Im Moment gibt es keine Sammlungen zu entdecken.",
+      "noNewResults": "Gerade wurden keine neuen Sammlungen gefunden. Versuche es später erneut."
     },
     "bookmarks": {
       "title": "Lesezeichen",
