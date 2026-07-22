@@ -1175,7 +1175,13 @@
       "friends": "Freunde",
       "me": "Ich",
       "profileTag": "Profil-Tag",
-      "profileTagLimitReached": "Max. {max} Tags"
+      "profileTagLimitReached": "Max. {max} Tags",
+      "profileTagTooltip": {
+        "network": "Beiträge von Personen anzeigen, die mein Netzwerk als … getaggt hat",
+        "following": "Beiträge von Personen anzeigen, die ich folge und als … getaggt haben",
+        "friends": "Beiträge von Personen anzeigen, die ich folge und als … getaggt haben",
+        "me": "Beiträge von Personen anzeigen, die ich als … getaggt habe"
+      }
     },
     "sort": {
       "title": "Sortieren",

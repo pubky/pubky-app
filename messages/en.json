@@ -1173,7 +1173,13 @@
       "friends": "Friends",
       "me": "Me",
       "profileTag": "profile tag",
-      "profileTagLimitReached": "{max} tags max"
+      "profileTagLimitReached": "{max} tags max",
+      "profileTagTooltip": {
+        "network": "Show posts from people my network tagged as…",
+        "following": "Show posts from people I follow tagged as…",
+        "friends": "Show posts from people I follow tagged as…",
+        "me": "Show posts from people I tagged as…"
+      }
     },
     "sort": {
       "title": "Sort",

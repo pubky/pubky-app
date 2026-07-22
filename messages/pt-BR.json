@@ -1173,7 +1173,13 @@
       "friends": "Amigos",
       "me": "Eu",
       "profileTag": "tag de perfil",
-      "profileTagLimitReached": "maximo {max} tags"
+      "profileTagLimitReached": "maximo {max} tags",
+      "profileTagTooltip": {
+        "network": "Mostrar posts de pessoas que minha rede marcou como…",
+        "following": "Mostrar posts de pessoas que quem eu sigo marcou como…",
+        "friends": "Mostrar posts de pessoas que quem eu sigo marcou como…",
+        "me": "Mostrar posts de pessoas que eu marquei como…"
+      }
     },
     "sort": {
       "title": "Ordenar",

@@ -1175,7 +1175,13 @@
       "friends": "Amigos",
       "me": "Yo",
       "profileTag": "etiqueta de perfil",
-      "profileTagLimitReached": "máximo {max} etiquetas"
+      "profileTagLimitReached": "máximo {max} etiquetas",
+      "profileTagTooltip": {
+        "network": "Mostrar publicaciones de personas que mi red etiquetó como…",
+        "following": "Mostrar publicaciones de personas que quienes sigo etiquetaron como…",
+        "friends": "Mostrar publicaciones de personas que quienes sigo etiquetaron como…",
+        "me": "Mostrar publicaciones de personas que etiqueté como…"
+      }
     },
     "sort": {
       "title": "Ordenar",

@@ -1,12 +1,31 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { REACH } from '@/stores/home/home.types';
 import { FilterProfileTags } from './FilterProfileTags';
+
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: mockUseIsMobile,
+}));
 
 function getTagInputContainer(container: HTMLElement) {
   return container.querySelector('div.relative');
 }
 
+function renderWithTooltip(ui: ReactElement) {
+  return render(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
+}
+
 describe('FilterProfileTags', () => {
+  beforeEach(() => {
+    mockUseIsMobile.mockReset();
+    mockUseIsMobile.mockReturnValue(false);
+  });
+
   it('adds a normalized profile tag from the input', async () => {
     const onTagAdd = vi.fn();
 
@@ -142,5 +161,70 @@ describe('FilterProfileTags', () => {
     );
 
     expect(screen.getByPlaceholderText('3 tags max')).toBeDisabled();
+  });
+
+  it.each([
+    {
+      reach: REACH.NETWORK,
+      copy: 'Show posts from people my network tagged as…',
+    },
+    {
+      reach: REACH.FOLLOWING,
+      copy: 'Show posts from people I follow tagged as…',
+    },
+    {
+      reach: REACH.FRIENDS,
+      // Honest V1 copy: Friends + profile tags uses the same depth-1 trust set as Following.
+      copy: 'Show posts from people I follow tagged as…',
+    },
+    {
+      reach: REACH.ME,
+      copy: 'Show posts from people I tagged as…',
+    },
+  ] as const)('shows a desktop tooltip for $reach reach after hover', async ({ reach, copy }) => {
+    const user = userEvent.setup();
+
+    renderWithTooltip(<FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} reach={reach} />);
+
+    await user.hover(screen.getByPlaceholderText('profile tag'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent(copy);
+    });
+  });
+
+  it('does not show a tooltip for All reach', async () => {
+    const user = userEvent.setup();
+
+    renderWithTooltip(
+      <FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} reach={REACH.ALL} />,
+    );
+
+    await user.hover(screen.getByPlaceholderText('profile tag'));
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('does not show a tooltip when reach is omitted', async () => {
+    const user = userEvent.setup();
+
+    renderWithTooltip(<FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} />);
+
+    await user.hover(screen.getByPlaceholderText('profile tag'));
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('does not show a tooltip on mobile', async () => {
+    mockUseIsMobile.mockReturnValue(true);
+    const user = userEvent.setup();
+
+    renderWithTooltip(
+      <FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} reach={REACH.NETWORK} />,
+    );
+
+    await user.hover(screen.getByPlaceholderText('profile tag'));
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 });

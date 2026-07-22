@@ -1167,7 +1167,13 @@
       "friends": "好友",
       "me": "我",
       "profileTag": "个人资料标签",
-      "profileTagLimitReached": "最多{max}个标签"
+      "profileTagLimitReached": "最多{max}个标签",
+      "profileTagTooltip": {
+        "network": "显示我的网络标记为…的人的帖子",
+        "following": "显示我关注的人标记为…的人的帖子",
+        "friends": "显示我关注的人标记为…的人的帖子",
+        "me": "显示我标记为…的人的帖子"
+      }
     },
     "sort": {
       "title": "排序",
