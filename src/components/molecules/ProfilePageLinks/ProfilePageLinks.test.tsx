@@ -85,6 +85,32 @@ describe('ProfilePageLinks', () => {
     expect(screen.getByText('Example').closest('a')).toHaveAttribute('href', 'https://example.com');
   });
 
+  it('does not render unsafe legacy profile links', () => {
+    const links: NexusUserDetails['links'] = [
+      { title: 'Safe', url: 'https://example.com' },
+      { title: 'Executable', url: ' \u0000java\tscript:alert(1)' },
+      { title: 'Data', url: 'data:text/html,<script>alert(1)</script>' },
+    ];
+
+    render(<ProfilePageLinks links={links} />);
+
+    expect(screen.getByText('Safe').closest('a')).toHaveAttribute('href', 'https://example.com');
+    expect(screen.queryByText('Executable')).not.toBeInTheDocument();
+    expect(screen.queryByText('Data')).not.toBeInTheDocument();
+  });
+
+  it('shows the empty state when every stored profile link is unsafe', () => {
+    const links: NexusUserDetails['links'] = [
+      { title: 'Executable', url: 'javascript:alert(1)' },
+      { title: 'Data', url: 'data:text/html,<script>alert(1)</script>' },
+    ];
+
+    render(<ProfilePageLinks links={links} />);
+
+    expect(screen.getByText('No links added yet.')).toBeInTheDocument();
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+  });
+
   it('renders no links message when links array is empty', () => {
     render(<ProfilePageLinks links={[]} />);
     expect(screen.getByText('No links added yet.')).toBeInTheDocument();
