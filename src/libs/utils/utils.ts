@@ -50,6 +50,15 @@ export function formatPublicKey({
 }
 
 /**
+ * Resolves a user's display name, falling back to a shortened public key when
+ * the profile has no `name` set. Mirrors the app's UI convention
+ * (`user.name || formatPublicKey(...)`, e.g. in `UserListItem`).
+ */
+export function resolveDisplayName(user: { name: string; id: string }): string {
+  return user.name || formatPublicKey({ key: user.id });
+}
+
+/**
  * Checks if a string is a valid pubky identifier.
  * Pubky identifiers are exactly 52 lowercase alphanumeric characters (z-base-32 encoded).
  *

@@ -21,6 +21,7 @@ import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
+import { usesWidePostInput } from '@/organisms/PostMain/PostMainLayoutRules';
 import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
@@ -195,7 +196,7 @@ export function PostInput({
 
   const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
-  const isWideLayout = useEffectiveTagsLayout() === 'side';
+  const isWideLayout = usesWidePostInput(useEffectiveTagsLayout());
 
   return (
     <Container

@@ -62,7 +62,7 @@ export function DialogCollectionsIntro({ open, onOpenChange, onContinue }: Dialo
         </Typography>
 
         <DialogFooter>
-          <Button size="lg" onClick={onContinue} className="order-1 sm:order-2">
+          <Button size="lg" onClick={onContinue} className="order-1 sm:order-2" data-cy="collections-intro-continue">
             {t('continue')}
           </Button>
           <Button

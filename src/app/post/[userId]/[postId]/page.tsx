@@ -1,9 +1,10 @@
 import { permanentRedirect } from 'next/navigation';
 import type { Metadata as NextMetadata } from 'next';
-import { parseArticleContent } from '@/libs/post/articleContent';
-import { parseCollectionContent } from '@/libs/post/collectionContent';
+import { getCollectionRoute, POST_ROUTES } from '@/app/routes';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
-import { isPostDeleted } from '@/libs/utils/utils';
+import { deriveTextPreview } from '@/libs/post/postPreview';
+import { truncateByGraphemes } from '@/libs/utils/truncate';
+import { resolveDisplayName } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { Metadata } from '@/molecules/Metadata/Metadata';
 import { SinglePostPage } from '@/templates/Post/SinglePost/SinglePostPage';
@@ -15,11 +16,6 @@ export interface PostPageProps {
   }>;
 }
 
-// Reuse a single Segmenter instance across requests.
-// 'en' locale is fine — grapheme segmentation follows Unicode rules (UAX #29)
-// which are language-agnostic, so the locale has no practical effect.
-const graphemeSegmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
-
 export async function generateMetadata({ params }: PostPageProps): Promise<NextMetadata> {
   try {
     const { userId, postId } = await params;
@@ -29,48 +25,32 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
 
     const { user, post } = result;
 
+    // Collection-kind posts canonicalize to /collections (the page also redirects
+    // there) so crawlers/search engines consolidate onto the canonical URL.
     if (post.kind === 'collection') {
-      return { alternates: { canonical: `/collections/${userId}/${postId}` } };
+      return { alternates: { canonical: getCollectionRoute(userId, postId) } };
     }
 
-    const username = user.name;
-    const { content, kind } = post;
-
-    const isDeleted = isPostDeleted(content);
-
-    const postPreview = isDeleted
-      ? 'This post has been deleted by its author.'
-      : kind === 'long'
-        ? parseArticleContent(content)?.title || content
-        : kind === 'collection'
-          ? (parseCollectionContent(content)?.name ?? content)
-          : content;
-    // Use Intl.Segmenter to truncate by grapheme clusters, avoiding broken emojis.
-    const segments = [...graphemeSegmenter.segment(postPreview)];
-    const postPreviewTruncated =
-      segments.length > 200
-        ? `${segments
-            .slice(0, 200)
-            .map((s) => s.segment)
-            .join('')}...`
-        : postPreview;
-
+    const username = resolveDisplayName(user);
+    const description = truncateByGraphemes(deriveTextPreview({ content: post.content, kind: post.kind }), 200);
     const title = `${username} on Pubky`;
-    const description = postPreviewTruncated;
 
-    const { openGraph, twitter } = Metadata({
+    // Static OG/Twitter images are omitted so the dynamic `opengraph-image` /
+    // `twitter-image` route is the single source of truth for the preview image.
+    // `alternates` carries the canonical built from `url` — without it the page
+    // would inherit the root layout's site-wide canonical (https://pubky.app).
+    const { openGraph, twitter, alternates } = Metadata({
       title,
       description,
+      url: `${POST_ROUTES.POST}/${userId}/${postId}`,
+      omitImages: true,
     });
 
-    return username && postPreviewTruncated
-      ? {
-          title,
-          description,
-          openGraph,
-          twitter,
-        }
-      : {};
+    // Emit metadata whenever we have a valid author, even when the post has no
+    // textual content (e.g. a simple repost) — the `{name} on Pubky` title and the
+    // dynamic OG image still surface. Description is `null` (not the parent's
+    // generic one) so an empty post isn't captioned with the app's tagline.
+    return username ? { title, description: description || null, openGraph, twitter, alternates } : {};
   } catch {
     // Fallback to parent metadata
     return {};
@@ -80,16 +60,29 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
 export default async function PostPage({ params }: PostPageProps) {
   const { userId, postId } = await params;
 
+  // Collection-kind posts live under /collections; redirect there so the
+  // canonical URL and its dynamic OG image are used. The fetch is deduped by the
+  // Data Cache with the one in generateMetadata. A failed lookup (e.g. Nexus
+  // outage) is non-fatal — fall through and render the post page as before.
+  // NOTE: permanentRedirect() signals via a thrown error, so it MUST stay
+  // outside the try/catch or the redirect would be swallowed.
+  // NOTE: this redirect only covers full document loads, and even then it ships
+  // as a streamed 200 with the redirect embedded in the RSC payload — executed
+  // client-side after hydration, never as a real HTTP 308 (observed on Next 16
+  // even for redirects thrown before any await). Client-side navigations bypass
+  // it entirely: the intercepted `(.)post` route never runs this page, and the
+  // Next 16 router does not act on the streamed NEXT_REDIRECT during soft
+  // navigation. SinglePostPage has a client-side guard that handles those
+  // paths — keep both in sync.
   let isCollection = false;
   try {
     const result = await fetchUserAndPostForMetadata(userId, postId);
     isCollection = result?.post.kind === 'collection';
   } catch {
-    // Preserve the existing post page when the kind lookup fails.
+    // Ignore — render the post normally when the kind lookup fails.
   }
-
   if (isCollection) {
-    permanentRedirect(`/collections/${userId}/${postId}`);
+    permanentRedirect(getCollectionRoute(userId, postId));
   }
 
   const compositeId = buildCompositeId({ pubky: userId, id: postId });

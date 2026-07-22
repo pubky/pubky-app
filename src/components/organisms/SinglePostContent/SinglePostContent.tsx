@@ -53,7 +53,7 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
         />
       ) : (
         <Container overrideDefaults data-cy="single-post-card">
-          <PostMain postId={postId} pinActionsToBottom isNavigable={false} />
+          <PostMain postId={postId} pinActionsToBottom isNavigable={false} showFullContentInListLayout />
         </Container>
       )}
 

@@ -21,8 +21,8 @@ describe('FilterLayout', () => {
     const onTabChange = vi.fn();
     render(<FilterLayout onTabChange={onTabChange} />);
 
-    ([LAYOUT.COLUMNS, LAYOUT.WIDE] as LayoutType[]).forEach((tab) => {
-      const label = tab === LAYOUT.COLUMNS ? 'Columns' : 'Wide';
+    ([LAYOUT.COLUMNS, LAYOUT.WIDE, LAYOUT.LIST] as LayoutType[]).forEach((tab) => {
+      const label = tab === LAYOUT.COLUMNS ? 'Columns' : tab === LAYOUT.WIDE ? 'Wide' : 'List';
       fireEvent.click(screen.getByText(label));
       expect(onTabChange).toHaveBeenCalledWith(tab);
     });
@@ -46,7 +46,7 @@ describe('FilterLayout', () => {
   it('renders all items as disabled when disabled prop is true', () => {
     render(<FilterLayout disabled />);
 
-    const labels = ['Columns', 'Wide'];
+    const labels = ['Columns', 'Wide', 'List'];
     labels.forEach((label) => {
       expect(screen.getByLabelText(label)).toHaveAttribute('aria-disabled', 'true');
     });
@@ -58,6 +58,7 @@ describe('FilterLayout', () => {
 
     fireEvent.click(screen.getByText('Columns'));
     fireEvent.click(screen.getByText('Wide'));
+    fireEvent.click(screen.getByText('List'));
 
     expect(onTabChange).not.toHaveBeenCalled();
   });
@@ -65,7 +66,7 @@ describe('FilterLayout', () => {
   it('items are not disabled by default', () => {
     render(<FilterLayout />);
 
-    const labels = ['Columns', 'Wide'];
+    const labels = ['Columns', 'Wide', 'List'];
     labels.forEach((label) => {
       expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
     });

@@ -1176,6 +1176,7 @@
       "title": "Layout",
       "columns": "Columns",
       "wide": "Wide",
+      "list": "List",
       "visual": "Visual"
     },
     "content": {

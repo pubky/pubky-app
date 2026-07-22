@@ -11,7 +11,14 @@ import {
 
 interface MetadataProps {
   title: string;
-  description: string;
+  /**
+   * Optional. When empty/omitted, `description` is emitted as `null` — Next's
+   * "opt out of inherited metadata" signal — so a page with no textual content
+   * (e.g. a simple repost) still gets a title + image but does NOT inherit the
+   * parent layout's generic description (which would read as if the author wrote
+   * it). Only the description is suppressed; the rest of the metadata continues.
+   */
+  description?: string;
   image?: string;
   type?: string;
   url?: string;
@@ -23,6 +30,13 @@ interface MetadataProps {
   creator?: string;
   site?: string;
   favicon?: string;
+  /**
+   * Omit the static `openGraph.images` / `twitter.images` arrays. Use on routes
+   * that supply a dynamic image via the `opengraph-image` / `twitter-image` file
+   * convention, so the file-convention image is the single source of truth
+   * instead of conflicting with the static `/preview.webp`.
+   */
+  omitImages?: boolean;
 }
 
 export function getPWAConfig() {
@@ -50,6 +64,7 @@ export function Metadata({
   creator,
   site,
   favicon = '/pubky-favicon.svg',
+  omitImages = false,
 }: MetadataProps) {
   const defaultUrl = getDefaultUrl();
   const resolvedImage = image ?? getPreviewImage();
@@ -61,11 +76,16 @@ export function Metadata({
   const resolvedKeywords = keywords ?? getKeywords();
   const resolvedCreator = creator ?? getCreator();
   const resolvedSite = site ?? defaultUrl;
+  const hasDescription = typeof description === 'string' && description.length > 0;
+  // Top-level accepts `null` (Next's opt-out of inherited metadata); openGraph /
+  // twitter only accept `string`, so they use `''`. Both override — rather than
+  // inherit — the parent layout's generic description on a content-less page.
+  const resolvedDescription = hasDescription ? description : '';
 
   return {
     metadataBase: new URL(defaultUrl),
     title,
-    description,
+    description: hasDescription ? resolvedDescription : null,
     keywords: resolvedKeywords,
     authors: [{ name: resolvedAuthor }],
     creator: resolvedAuthor,
@@ -80,25 +100,29 @@ export function Metadata({
     },
     openGraph: {
       title,
-      description,
+      description: resolvedDescription,
       url: resolvedUrl,
       siteName: resolvedSiteName,
-      images: [
-        {
-          url: resolvedImage,
-          width: 1200,
-          height: 630,
-          alt: title,
-        },
-      ],
+      ...(omitImages
+        ? {}
+        : {
+            images: [
+              {
+                url: resolvedImage,
+                width: 1200,
+                height: 630,
+                alt: title,
+              },
+            ],
+          }),
       locale: resolvedLocale,
       type: resolvedType,
     },
     twitter: {
       card: 'summary_large_image',
       title,
-      description,
-      images: [resolvedImage],
+      description: resolvedDescription,
+      ...(omitImages ? {} : { images: [resolvedImage] }),
       creator: resolvedCreator,
       site: resolvedSite,
     },

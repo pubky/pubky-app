@@ -32,5 +32,15 @@ export interface PostInputExpandableSectionProps {
    * together with height during exit.
    */
   parentGapPx?: number;
+  /**
+   * Hides the action bar (emoji/image/submit) while keeping embeds, tags and the
+   * emoji dialog. Used by layouts that render their own inline actions (e.g. list).
+   */
+  hideActionBar?: boolean;
+  /**
+   * Renders the tag chips and the tags input together on a single wrapping row
+   * instead of stacked. Used by the list layout.
+   */
+  inline?: boolean;
   characterLimit?: CharacterLimit;
 }

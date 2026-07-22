@@ -92,7 +92,7 @@ export function ContentLayout({
         effectiveLayout: requestedLayout,
       };
   const usesWideShellLayout =
-    (effectiveLayout === LAYOUT.WIDE && !disableWideShellLayout) ||
+    ((effectiveLayout === LAYOUT.WIDE || effectiveLayout === LAYOUT.LIST) && !disableWideShellLayout) ||
     (feedVariant !== undefined && effectiveLayout === LAYOUT.VISUAL);
 
   // Close drawers when switching from wide-shell to inline sidebars on desktop

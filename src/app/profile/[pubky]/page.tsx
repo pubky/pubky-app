@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
-import { stripPubkyPrefix } from '@/libs/utils/utils';
+import { fetchProfileForMetadata } from '@/libs/og/ogData';
+import { truncateByGraphemes } from '@/libs/utils/truncate';
+import { resolveDisplayName, stripPubkyPrefix } from '@/libs/utils/utils';
+import { Metadata as buildMetadata } from '@/molecules/Metadata/Metadata';
 import { ProfilePostsPage } from '@/templates/Profile/Posts/ProfilePostsPage';
 
 interface DynamicProfilePageProps {
@@ -7,26 +10,45 @@ interface DynamicProfilePageProps {
 }
 
 /**
- * Canonical metadata for the profile route.
+ * Dynamic metadata for the profile route.
  *
- * Emits `alternates.canonical` pointing at `/profile/[pubky]` so that search
- * engines and link previewers consolidate the legacy `/profile/[pubky]/posts`
- * URL (which 308-redirects here via `next.config.ts`) onto this canonical URL.
+ * Fetches the profile server-side (deduped by the Data Cache with the
+ * `opengraph-image` route) to emit a rich title/description plus OpenGraph /
+ * Twitter text. The preview image itself is supplied by the dynamic
+ * `opengraph-image` / `twitter-image` file convention, so the static images are
+ * omitted here (`omitImages`).
  *
- * Rich title / Open Graph data derived from the profile is intentionally
- * omitted here because the profile data is hydrated on the client (Dexie /
- * Nexus); adding it would require a server-side profile fetch that this route
- * does not currently perform. Revisit when SSR profile fetching is in place.
+ * `alternates.canonical` points at `/profile/[pubky]` so search engines and link
+ * previewers consolidate the legacy `/profile/[pubky]/posts` URL (which
+ * 308-redirects here via `next.config.ts`) onto this canonical URL. Falls back to
+ * canonical-only metadata when the profile fetch fails.
  */
 export async function generateMetadata({ params }: DynamicProfilePageProps): Promise<Metadata> {
   const { pubky } = await params;
   const normalizedPubky = stripPubkyPrefix(decodeURIComponent(pubky));
+  const canonical = `/profile/${normalizedPubky}`;
 
-  return {
-    alternates: {
-      canonical: `/profile/${normalizedPubky}`,
-    },
-  };
+  try {
+    const result = await fetchProfileForMetadata(pubky);
+    if (!result) return { alternates: { canonical } };
+
+    const { user } = result;
+    const title = `${resolveDisplayName(user)} on Pubky`;
+    const description = truncateByGraphemes(user.bio ?? '', 200);
+
+    const { openGraph, twitter } = buildMetadata({ title, description, url: canonical, omitImages: true });
+
+    return {
+      title,
+      // `null` (not the parent's generic description) when the profile has no bio.
+      description: description || null,
+      openGraph,
+      twitter,
+      alternates: { canonical },
+    };
+  } catch {
+    return { alternates: { canonical } };
+  }
 }
 
 /**

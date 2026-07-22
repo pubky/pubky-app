@@ -1176,6 +1176,7 @@
       "title": "Disposition",
       "columns": "Colonnes",
       "wide": "Large",
+      "list": "Liste",
       "visual": "Visuel"
     },
     "content": {

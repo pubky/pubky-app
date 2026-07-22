@@ -3,6 +3,7 @@
 exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for the authenticated state with two loaded cards 1`] = `
 <div
   class="flex w-full flex-col gap-4"
+  data-cy="my-collections-section"
   data-testid="container"
 >
   <div
@@ -143,6 +144,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
 exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for the signed-out fallback state 1`] = `
 <div
   class="flex w-full flex-col gap-4"
+  data-cy="my-collections-section"
   data-testid="container"
 >
   <div

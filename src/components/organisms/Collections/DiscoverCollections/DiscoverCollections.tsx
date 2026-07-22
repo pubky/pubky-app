@@ -358,7 +358,7 @@ export function DiscoverCollections() {
   const showEmpty = !loading && reachedEnd && displayIds.length === 0;
 
   return (
-    <Container overrideDefaults className="flex w-full flex-col gap-4">
+    <Container overrideDefaults data-cy="discover-collections-section" className="flex w-full flex-col gap-4">
       <Container overrideDefaults className="flex items-center gap-3">
         <Heading level={2} size="lg" className="font-light text-muted-foreground">
           {t('discover.title')}

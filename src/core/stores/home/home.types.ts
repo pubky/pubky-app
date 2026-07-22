@@ -2,6 +2,7 @@
 export const LAYOUT = {
   COLUMNS: 'columns',
   WIDE: 'wide',
+  LIST: 'list',
   VISUAL: 'visual',
 } as const;
 
