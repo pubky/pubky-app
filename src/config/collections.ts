@@ -18,6 +18,10 @@ export const COLLECTIONS_SECTION_PAGE_SIZE = 20;
  * usage and latency for users on slow connections. When the cap hits with
  * nothing new to show, the UI surfaces a "no new results" toast and the next
  * click resumes from the advanced cursor.
+ *
+ * Value: 5 — a deliberate, marginal raise over the component-level cap of 3
+ * that preceded the stream-layer refactor, buying extra headroom in filtered
+ * regions while staying far under the shared default.
  */
 export const COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD = 5;
 

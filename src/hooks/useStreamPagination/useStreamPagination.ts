@@ -97,8 +97,12 @@ export function useStreamPagination({
         }
 
         // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
-        // keeps hasMore so the advanced cursor is re-requested. This can't spin, the cursor
-        // always advances by raw count, and an empty raw page forces reachedEnd.
+        // keeps hasMore so the advanced cursor is re-requested. This can't spin IN PLACE (the
+        // cursor always advances by raw count, and a short raw page forces reachedEnd), but an
+        // auto-loading caller (useInfiniteScroll) will chain rounds through a filtered region
+        // until the true stream end, with no per-user-action bound or feedback. Known
+        // limitation, deliberately unchanged here — any remedy (toast + backoff, manual
+        // load-more) is a product-visible UX change tracked as follow-up.
         if (result.nextPageIds.length === 0) {
           setHasMore(!result.reachedEnd);
           setLoadingState(isInitialLoad, false);

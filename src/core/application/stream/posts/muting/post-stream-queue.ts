@@ -5,8 +5,14 @@ import { TQueueEntry } from '../post.types';
 import { CollectParams, CollectResult, CursorForPostFn } from './post-stream-queue.types';
 
 // Safety valve to prevent infinite loops when filters remove many posts.
-// At 20 iterations with a 10-post limit we scan up to 200 raw posts before giving up.
-// This handles extreme cases like a muted user having 200+ consecutive posts.
+// At 20 iterations with the default 10-post limit we scan up to 200 raw posts before giving
+// up (larger caller limits scan proportionally more, e.g. 400 at limit 20). This handles
+// extreme cases like a muted user having 200+ consecutive posts.
+//
+// NOTE: this bounds ONE collect() call, not the caller's behavior — an auto-loading feed
+// whose sentinel refires on every empty-but-not-ended result will chain collects until the
+// true stream end. Callers that need a tighter per-action budget pass `maxIterations`
+// (Discover Collections does).
 const MAX_FETCH_ITERATIONS = 20;
 
 /**
