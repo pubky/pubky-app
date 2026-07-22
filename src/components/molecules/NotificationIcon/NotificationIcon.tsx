@@ -1,11 +1,13 @@
 'use client';
 import { StickyNote } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
-import { BADGE_SIZE, ICON_SIZE, NOTIFICATION_ICON_MAP } from './NotificationIcon.constants';
+import { NotificationType } from '@/models/notification/notification.types';
+import { BADGE_SIZE, ICON_SIZE, NOTIFICATION_ICON_MAP, POST_KIND_ICON_MAP } from './NotificationIcon.constants';
 import type { NotificationIconProps } from './NotificationIcon.types';
 
-export function NotificationIcon({ type, showBadge }: NotificationIconProps) {
-  const IconComponent = NOTIFICATION_ICON_MAP[type] || StickyNote;
+export function NotificationIcon({ type, postKind, showBadge }: NotificationIconProps) {
+  const postKindIcon = type === NotificationType.PostEdited && postKind ? POST_KIND_ICON_MAP[postKind] : undefined;
+  const IconComponent = postKindIcon ?? NOTIFICATION_ICON_MAP[type] ?? StickyNote;
   return (
     <Container
       overrideDefaults={true}

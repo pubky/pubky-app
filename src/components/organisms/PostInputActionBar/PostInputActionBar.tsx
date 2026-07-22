@@ -33,6 +33,7 @@ export function PostInputActionBar({
   isArticle,
   isEdit,
   characterLimit,
+  separateActions = false,
 }: PostInputActionBarProps) {
   const isMobile = useIsMobile();
   const commonButtonProps = React.useMemo(
@@ -48,7 +49,14 @@ export function PostInputActionBar({
   const postButtonText = isSubmitting ? 'Posting...' : postButtonLabel;
   const postButtonIconClassName = isSubmitting ? 'animate-spin' : undefined;
   return (
-    <Container className="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center" overrideDefaults>
+    <Container
+      className={cn(
+        separateActions
+          ? 'flex min-w-0 flex-1 flex-row items-center justify-between gap-6'
+          : 'flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center',
+      )}
+      overrideDefaults
+    >
       <Container className="flex items-center gap-2" overrideDefaults>
         {!isArticle ? (
           <Button
@@ -84,7 +92,7 @@ export function PostInputActionBar({
           </Button>
         ) : null}
       </Container>
-      <Container className="flex items-center justify-end gap-2" overrideDefaults>
+      <Container className={cn('flex items-center justify-end gap-2', separateActions && 'shrink-0')} overrideDefaults>
         {characterLimit ? (
           <Typography
             data-cy="post-input-action-bar-character-count"

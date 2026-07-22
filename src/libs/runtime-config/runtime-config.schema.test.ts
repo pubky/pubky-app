@@ -129,6 +129,22 @@ describe('runtimeEnvInputSchema', () => {
     expect(parsed.defaultUrl).toBe('https://app.example.com');
   });
 
+  it('accepts an empty MODERATED_TAGS JSON array as no moderated tags', () => {
+    const parsed = runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderatedTags: '[]' });
+
+    expect(parsed.moderatedTags).toEqual([]);
+  });
+
+  it('falls back to default moderatedTags when unset or blank', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).moderatedTags).toEqual(APP_RUNTIME_DEFAULTS.moderatedTags);
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderatedTags: '' }).moderatedTags).toEqual(
+      APP_RUNTIME_DEFAULTS.moderatedTags,
+    );
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderatedTags: '   ' }).moderatedTags).toEqual(
+      APP_RUNTIME_DEFAULTS.moderatedTags,
+    );
+  });
+
   it('throws on invalid optional boolean values', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, notificationPollOnStart: 'tru' })).toThrow();
     expect(() => runtimeEnvInputSchemaWithDefaults.parse({ streamPollOnStart: 'yes' })).toThrow();
@@ -147,6 +163,15 @@ describe('runtimeConfigValueSchema', () => {
     expect(parsed.sentryTracesSampleRate).toBe(SENTRY_RUNTIME_DEFAULTS.sentryTracesSampleRate);
     expect(parsed.notificationPollIntervalMs).toBe(APP_RUNTIME_DEFAULTS.notificationPollIntervalMs);
     expect(parsed.moderatedTags).toEqual(APP_RUNTIME_DEFAULTS.moderatedTags);
+  });
+
+  it('accepts an empty moderatedTags array (no moderated tags)', () => {
+    const parsed = runtimeConfigValueSchema.parse({
+      ...NETWORK_RUNTIME_DEFAULTS,
+      moderatedTags: [],
+    });
+
+    expect(parsed.moderatedTags).toEqual([]);
   });
 
   it('accepts an already-parsed config object with the Sentry tier present', () => {

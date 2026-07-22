@@ -17,8 +17,8 @@ export function PostInlineTagsActionsSkeleton() {
   return (
     <Container
       className={cn(
-        'flex-col items-start gap-2 md:flex-row md:items-start md:justify-between md:gap-4',
-        '@max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-2!',
+        'flex-col items-start gap-3 md:flex-row md:items-start md:justify-between md:gap-4',
+        '@max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3!',
       )}
     >
       <Container overrideDefaults className="flex flex-wrap items-center gap-2">

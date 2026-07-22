@@ -177,6 +177,16 @@ vi.mock('@/organisms/PostContent/PostContent', () => {
   };
 });
 
+vi.mock('./PostMainListRow/PostMainListRow', () => {
+  return {
+    PostMainListRow: ({ postId, showFullContent }: { postId: string; showFullContent: boolean }) => (
+      <div data-testid="post-main-list-row" data-show-full-content={String(showFullContent)}>
+        {postId}
+      </div>
+    ),
+  };
+});
+
 vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: ({
@@ -647,6 +657,24 @@ describe('PostMain', () => {
     });
   });
 
+  it('falls back to inline layout on mobile when the inherited layout is list', () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-mobile-list-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-main-list-row')).not.toBeInTheDocument();
+    expect(mockPostHeader).toHaveBeenCalledWith({
+      postId: 'post-mobile-list-1',
+      size: undefined,
+      timeAgoPlacement: undefined,
+    });
+  });
+
   it('inherits side tags layout from the thread context', () => {
     render(
       <PostMainLayoutProvider tagsLayout="side">
@@ -660,6 +688,39 @@ describe('PostMain', () => {
       timeAgoPlacement: 'bottom-left',
     });
     expect(screen.getByTestId('post-content')).toHaveAttribute('data-text-class-name', 'text-xl leading-7');
+  });
+
+  it('renders the compact list row for list tags layout', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-list-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-main-list-row')).toHaveTextContent('post-list-1');
+    expect(screen.getByTestId('post-main-list-row')).toHaveAttribute('data-show-full-content', 'false');
+    expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
+    expect(mockPostHeader).not.toHaveBeenCalled();
+  });
+
+  it('passes full content mode to the list row only for non-reply posts', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-list-full-1" showFullContentInListLayout />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-main-list-row')).toHaveAttribute('data-show-full-content', 'true');
+  });
+
+  it('keeps reply rows compact even when full list content is enabled', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-list-reply-1" isReply showFullContentInListLayout />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-main-list-row')).toHaveAttribute('data-show-full-content', 'false');
   });
 });
 
@@ -730,9 +791,6 @@ describe('PostMain - Snapshots', () => {
       handlePostKeyDown: vi.fn(),
     });
 
-    // Reset mocked hook return values that are overridden in earlier (non-snapshot) tests.
-    // Without this, running the full suite (e.g. CI `test:coverage`) can leak mocked
-    // implementations into snapshot tests and cause snapshot drift.
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,

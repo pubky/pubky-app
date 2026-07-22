@@ -39,6 +39,8 @@ export function PostInputExpandableSection({
   className,
   parentGapPx = 0,
   characterLimit,
+  hideActionBar = false,
+  inline = false,
 }: PostInputExpandableSectionProps) {
   const hasContent = content.trim().length > 0;
   const isUiDisabled = isSubmitting || isDisabled;
@@ -49,6 +51,42 @@ export function PostInputExpandableSection({
   const isEdit = submitMode === POST_INPUT_VARIANT.EDIT;
   const hasParentGapCompensation = parentGapPx > 0;
   const compensatedMarginTop = -parentGapPx;
+
+  const tagChips =
+    tags.length > 0 ? (
+      <Container className="flex flex-wrap items-center gap-2" overrideDefaults>
+        {tags.map((tag, index) => (
+          <PostTag
+            key={`${tag}-${index}`}
+            label={tag}
+            showClose={!isUiDisabled}
+            onClose={() => {
+              setTags((prevTags) => prevTags.filter((_, i) => i !== index));
+            }}
+          />
+        ))}
+      </Container>
+    ) : null;
+
+  const actionBar = !hideActionBar ? (
+    <PostInputActionBar
+      onPostClick={onSubmit}
+      onEmojiClick={() => setShowEmojiPicker(true)}
+      onImageClick={onImageClick}
+      onArticleClick={onArticleClick}
+      isPostDisabled={isPostDisabled}
+      isSubmitting={isSubmitting}
+      postButtonLabel={postButtonLabel}
+      postButtonAriaLabel={postButtonAriaLabel}
+      hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle}
+      isArticle={isArticle}
+      isEdit={isEdit}
+      postButtonIcon={submitIcon ?? IconsButton[submitMode]}
+      characterLimit={characterLimit}
+      separateActions={inline}
+    />
+  ) : null;
+
   return (
     <>
       <AnimatePresence initial={false}>
@@ -105,39 +143,23 @@ export function PostInputExpandableSection({
             <Container className="gap-6">
               {hasContent && !isArticle && <PostLinkEmbeds content={content} />}
 
-              {tags.length > 0 && (
-                <Container className="flex flex-wrap items-center gap-2" overrideDefaults>
-                  {tags.map((tag, index) => (
-                    <PostTag
-                      key={`${tag}-${index}`}
-                      label={tag}
-                      showClose={!isUiDisabled}
-                      onClose={() => {
-                        setTags((prevTags) => prevTags.filter((_, i) => i !== index));
-                      }}
-                    />
-                  ))}
+              {inline ? (
+                <Container overrideDefaults className="flex flex-row flex-wrap items-center gap-2">
+                  {tagChips}
+                  <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-6">
+                    <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
+                    {actionBar}
+                  </Container>
                 </Container>
+              ) : (
+                <>
+                  {tagChips}
+                  <Container className="gap-4">
+                    <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
+                    {actionBar}
+                  </Container>
+                </>
               )}
-              <Container className="gap-4">
-                <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
-
-                <PostInputActionBar
-                  onPostClick={onSubmit}
-                  onEmojiClick={() => setShowEmojiPicker(true)}
-                  onImageClick={onImageClick}
-                  onArticleClick={onArticleClick}
-                  isPostDisabled={isPostDisabled}
-                  isSubmitting={isSubmitting}
-                  postButtonLabel={postButtonLabel}
-                  postButtonAriaLabel={postButtonAriaLabel}
-                  hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle}
-                  isArticle={isArticle}
-                  isEdit={isEdit}
-                  postButtonIcon={submitIcon ?? IconsButton[submitMode]}
-                  characterLimit={characterLimit}
-                />
-              </Container>
             </Container>
           </motion.div>
         )}

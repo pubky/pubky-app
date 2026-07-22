@@ -20,6 +20,9 @@ import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { toAppError } from '@/libs/error/error.utils';
+import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
+import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
@@ -287,6 +290,23 @@ export class PostController {
     return compositePostId;
   }
 
+  /**
+   * Edit a collection's name, description, and cover image.
+   *
+   * `coverImage` is required: pass a `File` to replace, the current cover URL
+   * string to keep it, or `null` to clear. Callers must not omit it.
+   *
+   * Cover cleanup: after the envelope is persisted, if the previous `cover_image`
+   * was a homeserver file URI and is no longer referenced (replaced or cleared),
+   * that file is deleted from the homeserver. Failures during that delete are
+   * logged and swallowed — the edit already succeeded, so a cleanup failure must
+   * not surface as an edit failure (the old file may remain orphaned). External
+   * http(s) covers are never deleted.
+   *
+   * If a new cover File was uploaded and then edit normalization or `commitEdit`
+   * fails, the new file is deleted before rethrowing so the failed edit does not
+   * leave an unreferenced upload.
+   */
   static async commitEditCollection({
     compositeCollectionId,
     name,
@@ -330,12 +350,15 @@ export class PostController {
       });
     }
 
+    const previousCover = currentContent.cover_image;
     let coverImageUrl: string | null = null;
+    let uploadedCoverUri: string | null = null;
     if (coverImage instanceof File) {
       try {
         const fileAttachment = await FileApplication.toFileAttachment({ file: coverImage, pubky: authorId });
         await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
         coverImageUrl = fileAttachment.fileResult.meta.url;
+        uploadedCoverUri = coverImageUrl;
       } catch (error) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
           service: ErrorService.Local,
@@ -347,24 +370,51 @@ export class PostController {
       coverImageUrl = coverImage;
     }
 
-    const nextContent = CollectionPostContent.toJson({
-      name,
-      description,
-      items: currentContent.items ?? [],
-      coverImage: coverImageUrl,
-    });
+    try {
+      const nextContent = CollectionPostContent.toJson({
+        name,
+        description,
+        items: currentContent.items ?? [],
+        coverImage: coverImageUrl,
+      });
 
-    const { post, meta } = await PostNormalizer.toEdit({
-      compositePostId: compositeCollectionId,
-      content: nextContent,
-      currentUserPubky,
-    });
+      const { post, meta } = await PostNormalizer.toEdit({
+        compositePostId: compositeCollectionId,
+        content: nextContent,
+        currentUserPubky,
+      });
 
-    await PostApplication.commitEdit({
-      compositePostId: compositeCollectionId,
-      post,
-      postUrl: meta.url,
-    });
+      await PostApplication.commitEdit({
+        compositePostId: compositeCollectionId,
+        post,
+        postUrl: meta.url,
+      });
+    } catch (error) {
+      // Roll back the newly uploaded cover so a failed edit does not orphan it.
+      // If rollback itself fails, log and still rethrow the original edit error.
+      if (uploadedCoverUri) {
+        await FileApplication.commitDelete([uploadedCoverUri]).catch((cleanupError) => {
+          Logger.warn('[PostController.commitEditCollection] Failed to rollback newly uploaded cover', {
+            compositeCollectionId,
+            uploadedCoverUri,
+            cleanupError,
+          });
+        });
+      }
+      throw toAppError(error, ErrorService.Local, 'commitEditCollection');
+    }
+
+    // Previous cover is no longer referenced by the envelope (replaced or cleared).
+    // Delete it after a successful persist; if delete fails, the edit still stands.
+    if (isHomeserverFileUri(previousCover) && previousCover !== coverImageUrl) {
+      await FileApplication.commitDelete([previousCover]).catch((cleanupError) => {
+        Logger.warn('[PostController.commitEditCollection] Failed to cleanup previous collection cover', {
+          compositeCollectionId,
+          previousCover,
+          cleanupError,
+        });
+      });
+    }
   }
 
   static async commitUpdateCollectionItem({

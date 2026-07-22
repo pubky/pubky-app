@@ -30,7 +30,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
 
@@ -38,7 +38,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://youtu.be/dQw4w9WgXcQ');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
 
@@ -46,7 +46,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/shorts/dQw4w9WgXcQ');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
 
@@ -54,7 +54,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/live/dQw4w9WgXcQ');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
 
@@ -62,7 +62,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/embed/dQw4w9WgXcQ');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
 
@@ -70,7 +70,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://m.youtube.com/watch?v=dQw4w9WgXcQ');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
 
@@ -78,7 +78,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://music.youtube.com/watch?v=UTD5buLHoR4');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/UTD5buLHoR4',
+          value: 'https://www.youtube-nocookie.com/embed/UTD5buLHoR4?enablejsapi=1',
         });
       });
 
@@ -86,7 +86,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/v/dQw4w9WgXcQ');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
 
@@ -94,7 +94,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&feature=share&list=PLxyz');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
 
@@ -102,7 +102,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ#section');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
 
@@ -110,7 +110,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=123&feature=share');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=123',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=123&enablejsapi=1',
         });
       });
     });
@@ -120,7 +120,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=123s');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=123',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=123&enablejsapi=1',
         });
       });
 
@@ -128,7 +128,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1h2m3s');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=3723',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=3723&enablejsapi=1',
         });
       });
 
@@ -136,7 +136,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=90',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=90&enablejsapi=1',
         });
       });
 
@@ -144,14 +144,14 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=2m30s');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=150',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=150&enablejsapi=1',
         });
       });
       it('handles timestamp with only hours (1h)', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1h');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=3600',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=3600&enablejsapi=1',
         });
       });
 
@@ -159,7 +159,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30m');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=1800',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=1800&enablejsapi=1',
         });
       });
 
@@ -167,7 +167,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=45s');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=45',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=45&enablejsapi=1',
         });
       });
 
@@ -175,14 +175,14 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=0');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
       it('parses timestamp on youtu.be URL', () => {
         const result = Youtube.parseEmbed('https://youtu.be/dQw4w9WgXcQ?t=123');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=123',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=123&enablejsapi=1',
         });
       });
 
@@ -190,7 +190,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://music.youtube.com/watch?v=UTD5buLHoR4&t=45');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/UTD5buLHoR4?start=45',
+          value: 'https://www.youtube-nocookie.com/embed/UTD5buLHoR4?start=45&enablejsapi=1',
         });
       });
 
@@ -198,7 +198,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://www.youtube.com/v/dQw4w9WgXcQ?t=60');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=60',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=60&enablejsapi=1',
         });
       });
     });
@@ -280,7 +280,7 @@ describe('ProviderYoutube', () => {
           // Should still return valid embed URL without timestamp
           expect(result).toEqual({
             type: 'url',
-            value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+            value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
           });
         });
       });
@@ -340,7 +340,7 @@ describe('ProviderYoutube', () => {
         results.forEach((result) => {
           expect(result).toEqual({
             type: 'url',
-            value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+            value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
           });
         });
       });
@@ -355,7 +355,7 @@ describe('ProviderYoutube', () => {
 
           expect(validResult).toEqual({
             type: 'url',
-            value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+            value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
           });
           expect(invalidResult).toBeNull();
         }
@@ -373,11 +373,11 @@ describe('ProviderYoutube', () => {
         expect(result1a).toEqual(result1b);
         expect(result1a).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
         expect(result2).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/jNQXAC9IVRw',
+          value: 'https://www.youtube-nocookie.com/embed/jNQXAC9IVRw?enablejsapi=1',
         });
       });
     });
@@ -387,7 +387,7 @@ describe('ProviderYoutube', () => {
         const result = Youtube.parseEmbed('https://WWW.YOUTUBE.COM/WATCH?V=dQw4w9WgXcQ');
         expect(result).toEqual({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         });
       });
     });
@@ -400,7 +400,7 @@ describe('ProviderYoutube', () => {
       const result = Youtube.parseEmbed('https://youtu.be/dQw4w9WgXcQ ');
       expect(result).toEqual({
         type: 'url',
-        value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
       });
     });
 
@@ -408,7 +408,7 @@ describe('ProviderYoutube', () => {
       const result = Youtube.parseEmbed('https://youtu.be/dQw4w9WgXcQ\t');
       expect(result).toEqual({
         type: 'url',
-        value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
       });
     });
 
@@ -416,7 +416,7 @@ describe('ProviderYoutube', () => {
       const result = Youtube.parseEmbed('https://youtu.be/dQw4w9WgXcQ\n');
       expect(result).toEqual({
         type: 'url',
-        value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
       });
     });
 
@@ -424,7 +424,7 @@ describe('ProviderYoutube', () => {
       const result = Youtube.parseEmbed('https://youtu.be/dQw4w9WgXcQ  \t\n');
       expect(result).toEqual({
         type: 'url',
-        value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
       });
     });
   });
@@ -434,12 +434,13 @@ describe('ProviderYoutube', () => {
       render(
         Youtube.renderEmbed({
           type: 'url',
-          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+          value: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1',
         }),
       );
 
       const iframe = screen.getByTestId('YouTube video player');
       expect(iframe).toHaveAttribute('sandbox', `${VIDEO_EMBED_PROPS.sandbox} allow-popups-to-escape-sandbox`);
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
     });
   });
 });

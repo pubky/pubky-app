@@ -6,6 +6,7 @@ import { Container } from '@/atoms/Container/Container';
 import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
 import { cn } from '@/libs/utils/utils';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
+import type { ClickableTagsListProps } from '@/organisms/ClickableTagsList/ClickableTagsList.types';
 import { PostTagsPanel } from '@/organisms/PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelProps } from '@/organisms/PostTagsPanel/PostTagsPanel.types';
 import { PostTagToggleButton } from './PostTagToggleButton';
@@ -24,6 +25,8 @@ interface PostTagsExpandableRowProps {
   showAddButton?: boolean;
   /** Forwarded to `ClickableTagsList` — tags display without toggle/add. */
   tagsReadOnly?: boolean;
+  /** Forwarded to `ClickableTagsList` — limits visible tags without constraining tag creation. */
+  maxVisibleTags?: ClickableTagsListProps['maxVisibleTags'];
   panelWidthMode?: PostTagsPanelProps['widthMode'];
 }
 
@@ -39,6 +42,7 @@ export function PostTagsExpandableRow({
   showTagToggle = true,
   showAddButton = true,
   tagsReadOnly = false,
+  maxVisibleTags,
   panelWidthMode = 'fit',
 }: PostTagsExpandableRowProps) {
   const [internalExpanded, setInternalExpanded] = useState(false);
@@ -88,6 +92,7 @@ export function PostTagsExpandableRow({
             taggedKind={TagKind.POST}
             maxTagLength={POST_TAGS_MAX_LENGTH}
             maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
+            maxVisibleTags={maxVisibleTags}
             showCount={true}
             showInput={false}
             showAddButton={showAddButton}

@@ -168,16 +168,19 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => ({
     taggedId,
     taggedKind,
     showAddButton,
+    maxVisibleTags,
   }: {
     taggedId: string;
     taggedKind: TagKind;
     showAddButton: boolean;
+    maxVisibleTags?: number;
   }) => (
     <div
       data-testid="clickable-tags-list"
       data-tagged-id={taggedId}
       data-tagged-kind={String(taggedKind)}
       data-show-add-button={String(showAddButton)}
+      data-max-visible-tags={maxVisibleTags}
     />
   ),
 }));
@@ -350,6 +353,7 @@ describe('CollectionHero', () => {
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
     expect(avatar).toHaveAttribute('data-fallback-seed', AUTHOR_PUBKY);
+    expect(avatar).toHaveAttribute('data-size', 'sm');
   });
 
   it('links the owner avatar and name to the author profile', () => {
@@ -369,6 +373,7 @@ describe('CollectionHero', () => {
     expect(tags).toHaveAttribute('data-tagged-id', COMPOSITE_ID);
     expect(tags).toHaveAttribute('data-tagged-kind', String(TagKind.POST));
     expect(tags).toHaveAttribute('data-show-add-button', 'true');
+    expect(tags).not.toHaveAttribute('data-max-visible-tags');
     expect(screen.getByLabelText('post.actions.tagPost')).toBeInTheDocument();
   });
 

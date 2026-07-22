@@ -38,12 +38,15 @@ export interface TEditCollectionParams {
   name: string;
   description?: string | null;
   /**
-   * Cover image to set on the collection. Either:
+   * Required cover image decision for the edit. Either:
    * - a `File` (uploaded to the homeserver, the resulting `pubky://` URL replaces `cover_image`),
-   * - a string URL already accessible by Nexus (preserves the existing cover when its current URL is passed back unchanged),
+   * - a string URL already accessible by Nexus (pass the current cover URL unchanged to keep it),
    * - `null` to clear the cover.
+   *
+   * Must be passed explicitly — omitting it is not allowed, so a metadata-only
+   * edit cannot accidentally clear/delete the existing homeserver cover.
    */
-  coverImage?: File | string | null;
+  coverImage: File | string | null;
 }
 
 export interface TDeletePostParams {

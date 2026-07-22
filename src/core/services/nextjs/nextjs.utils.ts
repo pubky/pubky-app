@@ -6,6 +6,9 @@ import { HttpStatusCode } from '@/libs/http/http.types';
 import { isIpSafe } from '@/libs/network/network';
 
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5MB
+const DNS_SAFETY_OPERATION = 'checkDnsSafety';
+const IP_FAMILY_IPV4 = 4;
+const IP_FAMILY_IPV6 = 6;
 const EXPECTED_DNS_ERROR_CODES = new Set([
   'ENOTFOUND',
   'ESERVFAIL',
@@ -19,8 +22,10 @@ const EXPECTED_DNS_ERROR_CODES = new Set([
   'EDESTRUCTION',
 ]);
 
+type TDnsSafeAddress = { address: string; family: 4 | 6 };
+
 type TDnsSafetyResult =
-  | { ok: true }
+  | { ok: true; addresses: TDnsSafeAddress[] }
   | { ok: false; reason: 'dns_failed'; cause?: unknown }
   | { ok: false; reason: 'unsafe_ip' };
 
@@ -32,43 +37,68 @@ export function isHttpProtocol(url: URL): boolean {
 }
 
 /**
- * Resolves DNS for hostname and validates the resolved IP is safe without creating AppErrors.
- * Uses the first resolved IPv4 address to preserve the existing SSRF guard semantics.
+ * Resolves DNS for a hostname and validates every resolved address.
+ * Expected resolver failures are returned as data; unexpected failures throw an AppError.
  */
 export async function checkDnsSafety(hostname: string): Promise<TDnsSafetyResult> {
   // Keep Node.js-only modules out of client bundles if this helper is imported from UI code.
   // See #1435.
   const { isIP } = await import(/* webpackIgnore: true */ 'net');
   const dns = await import(/* webpackIgnore: true */ 'dns/promises');
+  const normalizedHostname = normalizeIpHostname(hostname.toLowerCase());
 
-  let resolvedIp: string | undefined;
-
-  try {
-    // Resolve hostname to IP: use as-is if already an IP, otherwise DNS resolve to IPv4.
-    if (isIP(hostname)) {
-      resolvedIp = hostname;
-    } else {
-      const addresses = await dns.resolve4(hostname);
-      resolvedIp = addresses[0];
-    }
-  } catch (error) {
-    if (isExpectedDnsResolutionError(error)) {
-      return { ok: false, reason: 'dns_failed', cause: error };
+  const ipFamily = isIP(normalizedHostname);
+  if (ipFamily === IP_FAMILY_IPV4 || ipFamily === IP_FAMILY_IPV6) {
+    if (!isIpSafe(normalizedHostname)) {
+      return { ok: false, reason: 'unsafe_ip' };
     }
 
-    throw error;
+    return { ok: true, addresses: [{ address: normalizedHostname, family: ipFamily }] };
   }
 
-  if (!resolvedIp) {
-    return { ok: false, reason: 'dns_failed' };
+  const [ipv4Result, ipv6Result] = await Promise.allSettled([
+    dns.resolve4(normalizedHostname),
+    dns.resolve6(normalizedHostname),
+  ]);
+
+  const resolvedAddresses: TDnsSafeAddress[] = [];
+  let dnsFailureCause: unknown;
+
+  for (const result of [ipv4Result, ipv6Result]) {
+    if (result.status === 'fulfilled') {
+      resolvedAddresses.push(
+        ...result.value.map(
+          (address): TDnsSafeAddress => ({
+            address,
+            family: address.includes(':') ? IP_FAMILY_IPV6 : IP_FAMILY_IPV4,
+          }),
+        ),
+      );
+      continue;
+    }
+
+    if (isExpectedDnsResolutionError(result.reason)) {
+      dnsFailureCause ??= result.reason;
+      continue;
+    }
+
+    throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'DNS safety check failed', {
+      service: ErrorService.NextJsServer,
+      operation: DNS_SAFETY_OPERATION,
+      cause: result.reason,
+      context: { hostname: normalizedHostname },
+    });
   }
 
-  // Reject private/reserved IP ranges to prevent SSRF (e.g. localhost, 10.x, 192.168.x).
-  if (!isIpSafe(resolvedIp)) {
+  if (resolvedAddresses.length === 0) {
+    return { ok: false, reason: 'dns_failed', cause: dnsFailureCause };
+  }
+
+  if (resolvedAddresses.some(({ address }) => !isIpSafe(address))) {
     return { ok: false, reason: 'unsafe_ip' };
   }
 
-  return { ok: true };
+  return { ok: true, addresses: resolvedAddresses };
 }
 
 function isExpectedDnsResolutionError(error: unknown): boolean {
@@ -76,6 +106,14 @@ function isExpectedDnsResolutionError(error: unknown): boolean {
 
   const code = 'code' in error ? error.code : undefined;
   return typeof code === 'string' && EXPECTED_DNS_ERROR_CODES.has(code);
+}
+
+function normalizeIpHostname(hostname: string): string {
+  if (hostname.startsWith('[') && hostname.endsWith(']')) {
+    return hostname.slice(1, -1);
+  }
+
+  return hostname;
 }
 
 /**

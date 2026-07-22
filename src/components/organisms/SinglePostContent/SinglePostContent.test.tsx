@@ -215,10 +215,12 @@ vi.mock('@/organisms/PostMain/PostMain', async () => {
       postId,
       pinActionsToBottom,
       isNavigable,
+      showFullContentInListLayout,
     }: {
       postId: string;
       pinActionsToBottom?: boolean;
       isNavigable?: boolean;
+      showFullContentInListLayout?: boolean;
     }) => {
       const inheritedTagsLayout = usePostMainLayout();
       return (
@@ -227,6 +229,7 @@ vi.mock('@/organisms/PostMain/PostMain', async () => {
           data-post-id={postId}
           data-pin-actions-to-bottom={String(pinActionsToBottom)}
           data-is-navigable={String(isNavigable)}
+          data-show-full-content-in-list-layout={String(showFullContentInListLayout)}
           data-tags-layout={inheritedTagsLayout}
         >
           PostMain
@@ -287,6 +290,7 @@ describe('SinglePostContent', () => {
       expect(screen.getByTestId('post-main')).toHaveAttribute('data-post-id', mockPostId);
       expect(screen.getByTestId('post-main')).toHaveAttribute('data-pin-actions-to-bottom', 'true');
       expect(screen.getByTestId('post-main')).toHaveAttribute('data-is-navigable', 'false');
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-show-full-content-in-list-layout', 'true');
       expect(screen.getByTestId('post-main')).toHaveAttribute('data-tags-layout', 'inline');
       expect(screen.queryByTestId('post-article-detail')).not.toBeInTheDocument();
     });

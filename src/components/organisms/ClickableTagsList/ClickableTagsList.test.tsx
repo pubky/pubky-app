@@ -219,6 +219,28 @@ describe('ClickableTagsList', () => {
       expect(getPostTagButton('web3', 10)).toBeInTheDocument();
     });
 
+    it('limits visible tags without constraining the add-tag input', () => {
+      render(
+        <ClickableTagsList
+          taggedId="post-123"
+          taggedKind={TagKind.POST}
+          tags={mockTags}
+          maxVisibleTags={1}
+          showAddButton
+          addMode
+        />,
+      );
+
+      expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'ethereum tag (3 posts)' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'web3 tag (10 posts)' })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('post-tag-add-button'));
+
+      expect(screen.getByTestId('tag-input')).toBeInTheDocument();
+      expect(mockTagInput).toHaveBeenLastCalledWith(expect.objectContaining({ maxTags: undefined }), undefined);
+    });
+
     it('returns null when no tags and no input/button', () => {
       const { container } = render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={[]} />);
 

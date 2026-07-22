@@ -24,7 +24,7 @@ import type { PostContentBaseProps } from './PostContentBase.types';
  * and attachments for regular posts; delegates `kind=collection` posts to
  * `CollectionCard` with `presentation="embed"`.
  */
-export function PostContentBase({ postId, className, textClassName }: PostContentBaseProps) {
+export function PostContentBase({ postId, className, textClassName, mediaVariant = 'default' }: PostContentBaseProps) {
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
@@ -40,6 +40,7 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
   const hasContent = postDetails.content.trim().length > 0;
   const isBlurred = postDetails.is_blurred;
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
+  const hasAttachments = (postDetails.attachments?.length ?? 0) > 0 || (localAttachments?.length ?? 0) > 0;
   const isCollection = postDetails.kind === 'collection';
 
   if (isDeleted) return <PostDeleted />;
@@ -61,7 +62,7 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
     return <CollectionCard authorPubky={pubky} postId={id} presentation="embed" className={className} />;
   }
 
-  if (!hasContent && !postDetails.attachments?.length && !localAttachments) return null;
+  if (!hasContent && !hasAttachments) return null;
 
   return (
     <Container className={cn('min-w-0 gap-3', className)}>
@@ -72,7 +73,11 @@ export function PostContentBase({ postId, className, textClassName }: PostConten
       {hasContent && <PostLinkEmbeds content={postDetails.content} />}
 
       {/* Attachments on this post */}
-      <PostAttachments attachments={postDetails.attachments} localAttachments={localAttachments} />
+      <PostAttachments
+        attachments={postDetails.attachments}
+        localAttachments={localAttachments}
+        {...(mediaVariant !== 'default' ? { mediaVariant } : {})}
+      />
     </Container>
   );
 }
