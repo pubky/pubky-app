@@ -162,8 +162,6 @@ export class AuthController {
 
       if (isSignedUp) {
         await this.hydrateMeImAlive({ pubky });
-      } else {
-        await AuthApplication.ingestExternalUserWithoutProfile({ pubky, session });
       }
 
       // Update hasProfile after bootstrap completes - triggers redirect via useAuthStatus

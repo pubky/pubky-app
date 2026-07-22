@@ -19,6 +19,7 @@ import { UserNormalizer } from '@/pipes/user/user.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalProfileService } from '@/services/local/profile/profile';
 import { LocalUserService } from '@/services/local/user/user';
+import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 const DELETE_FILE_MAX_ATTEMPTS = 3;
@@ -36,6 +37,10 @@ export class ProfileApplication {
   static async commitCreate({ profile, url, pubky }: TCreateProfileInput) {
     try {
       await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson: profile.toJson() });
+      // Tell Nexus this user exists so it resolves their homeserver and starts indexing.
+      // Fire-and-forget: Nexus being down must not fail onboarding; the indexed:false
+      // gate in BootstrapApplication retries on next sign-in. Errors already logged by Err factories.
+      void NexusBootstrapService.ingest(pubky).catch(() => {});
       const authStore = useAuthStore.getState();
       authStore.setCurrentUserPubky(pubky);
       authStore.setHasProfile(true);

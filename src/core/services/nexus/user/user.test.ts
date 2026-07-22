@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNexusUrl } from '@/config/nexus';
-import { safeFetch } from '@/libs/error/error.http';
-import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { NexusTag, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
@@ -26,16 +23,7 @@ vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
   };
 });
 
-vi.mock('@/libs/error/error.http', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs/error/error.http')>();
-  return {
-    ...actual,
-    safeFetch: vi.fn(),
-  };
-});
-
 const mockQueryNexus = vi.mocked(queryNexus);
-const mockSafeFetch = vi.mocked(safeFetch);
 
 const testUserId = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
 const testViewerId = 'viewer123';
@@ -70,7 +58,7 @@ describe('User API', () => {
   describe('USER_API endpoints', () => {
     it('should generate correct URLs for basic endpoints', () => {
       const params: TUserId = { user_id: testUserId };
-      expect(userApi.ingest(params)).toBe(`${getNexusUrl()}/v0/ingest/${testUserId}`);
+
       expect(userApi.counts(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/counts`);
       expect(userApi.details(params)).toBe(`${getNexusUrl()}/v0/user/${testUserId}/details`);
     });
@@ -149,10 +137,9 @@ describe('User API', () => {
   });
 
   describe('UserApiEndpoint type', () => {
-    it('should have exactly 11 endpoints', () => {
+    it('should have exactly 10 endpoints', () => {
       const endpointKeys = Object.keys(userApi);
-      expect(endpointKeys).toHaveLength(11);
-      expect(endpointKeys).toContain('ingest');
+      expect(endpointKeys).toHaveLength(10);
       expect(endpointKeys).toContain('view');
       expect(endpointKeys).toContain('counts');
       expect(endpointKeys).toContain('details');
@@ -172,21 +159,6 @@ describe('NexusUserService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('ingest', () => {
-    it('should put to the ingest endpoint', async () => {
-      mockSafeFetch.mockResolvedValue(new Response(null, { status: 204 }));
-
-      await NexusUserService.ingest({ user_id: testUserId });
-
-      expect(mockSafeFetch).toHaveBeenCalledWith(
-        `${getNexusUrl()}/v0/ingest/${testUserId}`,
-        { method: HttpMethod.PUT },
-        ErrorService.Nexus,
-        'ingestUser',
-      );
-    });
   });
 
   describe('tags', () => {

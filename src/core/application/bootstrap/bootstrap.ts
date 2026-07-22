@@ -56,6 +56,11 @@ export class BootstrapApplication {
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
     if (!bootstrapData.indexed) {
+      // Tell Nexus this user exists so it resolves their homeserver and starts indexing.
+      // Fire-and-forget: Nexus being down must not fail sign-in; the indexed:false
+      // gate retries on next sign-in. Errors already logged by Err factories.
+      void NexusBootstrapService.ingest(pubky).catch(() => {});
+
       const retryDelayMs = getTtlRetryDelayMs();
       Logger.warn('User is not indexed in Nexus. Scheduling TTL retry', {
         pubky,

@@ -26,17 +26,6 @@ const PUBKYAUTH_PROTOCOL = 'pubkyauth://';
 export const PUBKY_PREFIX = 'pubky';
 const PUBKY_HOSTNAME_PREFIX = '_pubky.';
 
-/**
- * Normalizes a homeserver identity from the Pubky SDK into a z32 public key string.
- */
-export const normalizeHomeserverId = (homeserver: unknown): string => {
-  if (typeof homeserver === 'string') return homeserver.replace(/^pk:/, '');
-  if (homeserver && typeof homeserver === 'object' && 'z32' in homeserver && typeof homeserver.z32 === 'function') {
-    return homeserver.z32();
-  }
-  return String(homeserver);
-};
-
 // Auth polling defaults
 /** Default interval between auth flow polls in milliseconds */
 const AUTH_POLL_INTERVAL_MS = 100;

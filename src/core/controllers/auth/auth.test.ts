@@ -20,7 +20,6 @@ import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
-import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -1047,7 +1046,6 @@ describe('AuthController', () => {
       const mockSession = buildMockSession();
       vi.spyOn(Identity, 'z32FromSession').mockReturnValue(TEST_PUBKY as Pubky);
       vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
-      vi.spyOn(AuthApplication, 'ingestExternalUserWithoutProfile').mockResolvedValue(undefined);
       const authStore = storeMocks.getAuthState();
       vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
 
@@ -1063,7 +1061,6 @@ describe('AuthController', () => {
 
       const z32FromSessionSpy = vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
-      const ingestSpy = vi.spyOn(AuthApplication, 'ingestExternalUserWithoutProfile').mockResolvedValue(undefined);
       const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
 
       const authStore = storeMocks.getAuthState();
@@ -1077,7 +1074,6 @@ describe('AuthController', () => {
       expect(signInStore.setAuthUrlResolved).toHaveBeenCalledWith(true);
       expect(z32FromSessionSpy).toHaveBeenCalledWith({ session: mockSession });
       expect(userIsSignedUpSpy).toHaveBeenCalledWith({ pubky: mockPubky });
-      expect(ingestSpy).not.toHaveBeenCalled();
       expect(signInStore.setProfileChecked).toHaveBeenCalledWith(true);
       expect(initializeSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1103,7 +1099,6 @@ describe('AuthController', () => {
 
       const z32FromSessionSpy = vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
-      const ingestSpy = vi.spyOn(AuthApplication, 'ingestExternalUserWithoutProfile').mockResolvedValue(undefined);
       const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize');
 
       const authStore = storeMocks.getAuthState();
@@ -1117,7 +1112,6 @@ describe('AuthController', () => {
       expect(signInStore.setAuthUrlResolved).toHaveBeenCalledWith(true);
       expect(z32FromSessionSpy).toHaveBeenCalledWith({ session: mockSession });
       expect(userIsSignedUpSpy).toHaveBeenCalledWith({ pubky: mockPubky });
-      expect(ingestSpy).toHaveBeenCalledWith({ pubky: mockPubky, session: mockSession });
       expect(signInStore.setProfileChecked).toHaveBeenCalledWith(true);
       expect(initializeSpy).not.toHaveBeenCalled();
       // Session stored early with hasProfile: null, then setHasProfile called after check
@@ -1127,32 +1121,6 @@ describe('AuthController', () => {
         hasProfile: null,
       });
       expect(authStore.setHasProfile).toHaveBeenCalledWith(false);
-    });
-
-    it('should complete sign-in when external user ingest fails homeserver lookup', async () => {
-      const mockSession = buildMockSession();
-      const mockPubky = TEST_PUBKY as Pubky;
-
-      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
-      vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
-      vi.spyOn(HomeserverService, 'getHomeserver').mockRejectedValue(new Error('homeserver lookup failed'));
-      const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
-      const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize');
-
-      const authStore = storeMocks.getAuthState();
-      const signInStore = storeMocks.getSignInState();
-      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
-      vi.spyOn(useSignInStore, 'getState').mockReturnValue(mockSignInStore(signInStore));
-
-      await expect(AuthController.initializeAuthenticatedSession({ session: mockSession })).resolves.toBeUndefined();
-
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Failed to ingest external homeserver user during sign-in',
-        expect.objectContaining({ pubky: mockPubky }),
-      );
-      expect(initializeSpy).not.toHaveBeenCalled();
-      expect(authStore.setHasProfile).toHaveBeenCalledWith(false);
-      expect(signInStore.setError).not.toHaveBeenCalled();
     });
 
     it('should use remote settings for allowedTypes and apply them to store when initializeSettings returns non-null', async () => {

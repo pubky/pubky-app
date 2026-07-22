@@ -46,7 +46,6 @@ import {
   createCancelableAuthApproval,
   getOwnedResponse,
   isHttpUrl,
-  normalizeHomeserverId,
   parseResponseOrUndefined,
   PUBKY_PREFIX,
   resolveOwnedSessionPath,
@@ -97,11 +96,11 @@ export class HomeserverService {
   }
 
   /**
-   * Resolves the homeserver assigned to a public key via PKARR and returns its z32 id.
-   * @param publicKey - The public key to look up
-   * @returns Normalized homeserver public key (z32)
+   * Checks if the keypair has a homeserver
+   * @param publicKey - The public key to check
+   * @returns The homeserver
    */
-  static async getHomeserver({ publicKey }: TPublicKeyParams): Promise<string> {
+  private static async checkHomeserver({ publicKey }: TPublicKeyParams) {
     try {
       const pubkySdk = this.getPubkySdk();
       const homeserver = await pubkySdk.getHomeserverOf(publicKey);
@@ -109,8 +108,7 @@ export class HomeserverService {
       if (!homeserver) {
         throw Error('Homeserver not found');
       }
-
-      return normalizeHomeserverId(homeserver);
+      return homeserver;
     } catch (error) {
       return handleError({
         error,
@@ -204,7 +202,7 @@ export class HomeserverService {
     const signer = this.getSigner(keypair);
     try {
       // get homeserver from pkarr records
-      await this.getHomeserver({ publicKey: keypair.publicKey });
+      await this.checkHomeserver({ publicKey: keypair.publicKey });
       const session = await signer.signin();
       return { session };
     } catch (signinError) {

@@ -207,4 +207,26 @@ describe('NexusBootstrapService', () => {
       });
     });
   });
+
+  describe('ingest', () => {
+    it('should send a PUT to the ingest endpoint and resolve on an empty 200 body', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(''),
+        headers: {
+          get: vi.fn(),
+        },
+      });
+
+      await expect(NexusBootstrapService.ingest(pubky)).resolves.toBeUndefined();
+
+      expect(mockFetch).toHaveBeenCalledWith(bootstrapApi.ingest(pubky), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    });
+  });
 });
