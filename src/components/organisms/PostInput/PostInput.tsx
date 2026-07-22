@@ -257,19 +257,6 @@ export function PostInput({
 
   return (
     <>
-      {/* `lock_title` — the announcement's card heading, typed above the composer. */}
-      {isLockEnabled && (
-        <Input
-          value={lockTitle}
-          onChange={(event) => setLockTitle(event.target.value)}
-          placeholder={t('lock.titlePlaceholder')}
-          disabled={isPublishingLock}
-          className="mb-4 h-14 rounded-md border border-dashed border-input px-6 py-4 text-base"
-          data-cy="lock-title-input"
-          // Marks the input for the composer's outside-click collapse exclusion (usePostInput).
-          data-lock-title-input=""
-        />
-      )}
       <Container
         data-cy={dataCy}
         id={id}
@@ -401,7 +388,13 @@ export function PostInput({
             parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
             characterLimit={characterLimit}
             lockSwitch={lockSwitch}
-            lockCard={isLockEnabled ? <LockedPostCard title={lockTitle} /> : undefined}
+            lockCard={
+              isLockEnabled ? (
+                <LockedPostCard
+                  editableTitle={{ value: lockTitle, onChange: setLockTitle, disabled: isPublishingLock }}
+                />
+              ) : undefined
+            }
           />
         </Container>
 

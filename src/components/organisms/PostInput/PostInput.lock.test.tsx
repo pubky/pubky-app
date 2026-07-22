@@ -165,7 +165,22 @@ vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({
     props.open ? <div data-testid="auth-dialog" /> : null,
 }));
 vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({
-  LockedPostCard: ({ title }: { title: string }) => <div data-testid="locked-post-card">{title}</div>,
+  LockedPostCard: ({
+    title,
+    editableTitle,
+  }: {
+    title?: string;
+    editableTitle?: { value: string; onChange: (value: string) => void };
+  }) =>
+    editableTitle ? (
+      <input
+        aria-label="Lock title"
+        value={editableTitle.value}
+        onChange={(event) => editableTitle.onChange(event.target.value)}
+      />
+    ) : (
+      <div data-testid="locked-post-card">{title}</div>
+    ),
 }));
 vi.mock('@/molecules/MentionPopover/MentionPopover', () => ({ MentionPopover: () => null }));
 vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => ({ PostInputAttachments: () => null }));
@@ -223,7 +238,7 @@ describe('PostInput lock wiring', () => {
   it('publishes the lock and its announcement from the configured composer state', async () => {
     const { onSuccess } = renderComposer();
     await configureLock();
-    fireEvent.change(screen.getByTestId('input'), { target: { value: 'My title' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lock title' }), { target: { value: 'My title' } });
 
     fireEvent.click(screen.getByTestId('post-button'));
 

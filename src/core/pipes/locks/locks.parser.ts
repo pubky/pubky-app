@@ -80,20 +80,6 @@ export class LockFileParser {
     if (rawVerifierType === VerifierType.PAYMENT) return VerifierType.PAYMENT;
     return null;
   }
-
-  /**
-   * The Lock Server that verifies this lock: the lock file's `lock_server.override` when present.
-   * Returns null when there is no override — the caller then falls back to the creator's
-   * `/pub/locks.app/config.json`.
-   *
-   * TODO:[Locks] #2003 — the config.json fallback is not built yet. The Lock Server always writes an
-   * `override` into the lock file today, so this covers the current cases; add the fallback when a
-   * lock without an override can occur.
-   */
-  static resolveLockServerPubky(lockFile: LockFile | null): string | null {
-    const override = lockFile?.lock_server?.override;
-    return override ? override : null;
-  }
 }
 
 /**

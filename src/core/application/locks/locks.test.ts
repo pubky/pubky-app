@@ -266,6 +266,14 @@ describe('LocksApplication.fetchUnlockedContent', () => {
     await expect(LocksApplication.fetchUnlockedContent({ lockFile, credential: 'cred-abc' })).rejects.toThrow();
     expect(mocks.proxyReadGuardedResource).not.toHaveBeenCalled();
   });
+
+  it('throws when the unlocked primary resource is not a parseable post', async () => {
+    mocks.proxyReadGuardedResource.mockResolvedValue(new TextEncoder().encode('not a post'));
+    const lockFile = asOpaque<LockFile>({ primary_resource: { path: '/priv/locks.app/content/a.json' } });
+
+    // A silent null here would be indistinguishable from "no content" at the caller; must surface.
+    await expect(LocksApplication.fetchUnlockedContent({ lockFile, credential: 'cred' })).rejects.toThrow();
+  });
 });
 
 describe('LocksApplication.replicateUnlockedContent', () => {
@@ -321,7 +329,7 @@ describe('LocksApplication.replicateUnlockedContent', () => {
   });
 });
 
-describe('LocksApplication.loadReplicatedContent', () => {
+describe('LocksApplication.fetchReplicatedContent', () => {
   const READER = 'pubkyreader123';
   const LOCK_URL = 'pubky://pubkycreator123/pub/locks.app/LOCK1.json';
   const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
@@ -331,7 +339,7 @@ describe('LocksApplication.loadReplicatedContent', () => {
   it('returns null (not unlocked) when the post.json marker is absent (404 → null, no error)', async () => {
     mocks.getBytesIfExists.mockResolvedValueOnce(null);
 
-    const result = await LocksApplication.loadReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER });
+    const result = await LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER });
 
     expect(result).toBeNull();
     expect(mocks.getBytesIfExists).toHaveBeenCalledWith(`pubky://${READER}/priv/social/unlocked/LOCK1/post.json`);
@@ -344,18 +352,63 @@ describe('LocksApplication.loadReplicatedContent', () => {
     );
     mocks.getBytes.mockResolvedValueOnce(new Uint8Array([7, 7]));
 
-    const result = await LocksApplication.loadReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER });
+    const result = await LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER });
 
     expect(result?.post).toEqual({ content: 'secret', kind: 'image', attachments: [attachmentUrl] });
     expect(result?.attachments).toEqual([{ id: 'img1', contentType: 'image/png', bytes: new Uint8Array([7, 7]) }]);
     expect(mocks.getBytes).toHaveBeenCalledWith(attachmentUrl);
   });
 
-  it('returns null when the marker exists but is not valid JSON', async () => {
+  it('throws when the marker exists but is not a parseable post (data corruption, not "not unlocked")', async () => {
     mocks.getBytesIfExists.mockResolvedValueOnce(new TextEncoder().encode('not json'));
 
+    await expect(LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER })).rejects.toThrow();
+  });
+});
+
+describe('LocksApplication.fetchOwnContent', () => {
+  const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+  const ownLockFile = asOpaque<LockFile>({
+    creator: 'pubkyowner', // stripPubkyPrefix → 'owner' is the read host (see the test below)
+    primary_resource: {
+      path: '/priv/locks.app/content/post',
+      hash: 'h',
+      content_type: 'application/octet-stream',
+      size: 1,
+    },
+    secondary_resources: { '/priv/locks.app/content/img1': { content_type: 'image/png', hash: 'h', size: 2 } },
+  });
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('reads the guarded original directly from the owner homeserver (no credential/proxy)', async () => {
+    // `stripPubkyPrefix('pubkyowner')` → 'owner', the host for the primary read.
+    const attachmentUri = 'pubky://owner/priv/locks.app/content/img1';
+    mocks.getBytes
+      .mockResolvedValueOnce(encode({ content: 'my secret', kind: 'image', attachments: [attachmentUri] }))
+      .mockResolvedValueOnce(new Uint8Array([5, 5]));
+
+    const result = await LocksApplication.fetchOwnContent({ lockFile: ownLockFile });
+
+    expect(mocks.getBytes).toHaveBeenNthCalledWith(1, 'pubky://owner/priv/locks.app/content/post');
+    expect(mocks.getBytes).toHaveBeenNthCalledWith(2, attachmentUri);
+    expect(result?.post).toEqual({ content: 'my secret', kind: 'image', attachments: [attachmentUri] });
+    expect(result?.attachments).toEqual([{ id: 'img1', contentType: 'image/png', bytes: new Uint8Array([5, 5]) }]);
+    expect(mocks.proxyReadGuardedResource).not.toHaveBeenCalled();
+  });
+
+  it('throws (data error, reported) when the lock file has no primary resource', async () => {
     await expect(
-      LocksApplication.loadReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER }),
-    ).resolves.toBeNull();
+      LocksApplication.fetchOwnContent({
+        lockFile: asOpaque<LockFile>({ creator: 'pubkyowner', primary_resource: undefined, secondary_resources: {} }),
+      }),
+    ).rejects.toThrow();
+    expect(mocks.getBytes).not.toHaveBeenCalled();
+  });
+
+  it('throws (data error) when the guarded original is not a parseable post', async () => {
+    mocks.getBytes.mockResolvedValueOnce(new TextEncoder().encode('not json'));
+
+    await expect(LocksApplication.fetchOwnContent({ lockFile: ownLockFile })).rejects.toThrow();
   });
 });

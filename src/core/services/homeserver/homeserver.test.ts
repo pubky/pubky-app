@@ -492,7 +492,7 @@ describe('HomeserverService', () => {
         await HomeserverService.generateAuthUrl();
 
         expect(mockState.startAuthFlow).toHaveBeenCalledWith(
-          '/pub/pubky.app/:rw,/priv/social/:rw', // Default capabilities
+          '/pub/pubky.app/:rw,/priv/social/:rw,/priv/locks.app/:r', // Default capabilities
           'signin-kind', // AuthFlowKind.signin()
           expect.stringContaining('/inbox'), // HTTP relay (Pubky 0.7+ inbox endpoint)
         );

@@ -110,17 +110,6 @@ describe('LockFileParser', () => {
       expect(LockFileParser.resolveVerifierType(devStaticLock)).toBeNull();
     });
   });
-
-  describe('resolveLockServerPubky', () => {
-    it('returns the lock file override', () => {
-      expect(LockFileParser.resolveLockServerPubky(MOCK_LOCK_FILE)).toBe('pubkyserver123');
-    });
-
-    it('returns null when there is no override to fall back to config.json', () => {
-      expect(LockFileParser.resolveLockServerPubky(null)).toBeNull();
-      expect(LockFileParser.resolveLockServerPubky({ ...MOCK_LOCK_FILE, lock_server: { override: '' } })).toBeNull();
-    });
-  });
 });
 
 describe('LockProofBundler', () => {

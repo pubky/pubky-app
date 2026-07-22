@@ -22,7 +22,8 @@ const mocks = vi.hoisted(() => ({
   unlockContent: vi.fn(),
   fetchUnlockedContent: vi.fn(),
   replicateUnlockedContent: vi.fn(),
-  loadReplicatedContent: vi.fn(),
+  fetchReplicatedContent: vi.fn(),
+  fetchOwnContent: vi.fn(),
 }));
 
 vi.mock('@/application/locks/locks', () => ({
@@ -38,7 +39,8 @@ vi.mock('@/application/locks/locks', () => ({
     unlockContent: mocks.unlockContent,
     fetchUnlockedContent: mocks.fetchUnlockedContent,
     replicateUnlockedContent: mocks.replicateUnlockedContent,
-    loadReplicatedContent: mocks.loadReplicatedContent,
+    fetchReplicatedContent: mocks.fetchReplicatedContent,
+    fetchOwnContent: mocks.fetchOwnContent,
   },
 }));
 
@@ -289,13 +291,24 @@ describe('LocksController.fetchUnlockedContent', () => {
   });
 });
 
-describe('LocksController.loadReplicatedContent', () => {
+describe('LocksController.fetchReplicatedContent', () => {
   it('delegates loading the reader-replicated content to the application', async () => {
     const params = { lockUrl: VALID_LOCK_URL, readerPubky: 'pubkyreader' };
     const content = { post: { content: 'secret', kind: 'short', attachments: null }, attachments: [] };
-    mocks.loadReplicatedContent.mockResolvedValue(content);
+    mocks.fetchReplicatedContent.mockResolvedValue(content);
 
-    await expect(LocksController.loadReplicatedContent(params)).resolves.toEqual(content);
-    expect(mocks.loadReplicatedContent).toHaveBeenCalledWith(params);
+    await expect(LocksController.fetchReplicatedContent(params)).resolves.toEqual(content);
+    expect(mocks.fetchReplicatedContent).toHaveBeenCalledWith(params);
+  });
+});
+
+describe('LocksController.fetchOwnContent', () => {
+  it("delegates loading the creator's own guarded content to the application", async () => {
+    const params = { lockFile: MOCK_LOCK_FILE };
+    const content = { post: { content: 'mine', kind: 'short', attachments: null }, attachments: [] };
+    mocks.fetchOwnContent.mockResolvedValue(content);
+
+    await expect(LocksController.fetchOwnContent(params)).resolves.toEqual(content);
+    expect(mocks.fetchOwnContent).toHaveBeenCalledWith(params);
   });
 });

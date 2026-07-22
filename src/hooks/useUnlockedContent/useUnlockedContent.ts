@@ -1,0 +1,93 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { LocksController } from '@/controllers/locks/locks';
+import { Logger } from '@/libs/logger/logger';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
+import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import type { GuardedPost, TUnlockedContent } from '@/services/locks/locks.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import type { UseUnlockedContentParams, UseUnlockedContentResult } from './useUnlockedContent.types';
+
+/** Guarded attachment bytes → object-URL media, matching the creator-preview `localAttachments` shape. */
+const toLocalMedia = (attachments: TUnlockedContent['attachments']): AttachmentConstructed[] =>
+  attachments.map(({ contentType, bytes }, index) => {
+    // `bytes as BlobPart`: the SDK's `Uint8Array<ArrayBufferLike>` doesn't narrow to Blob's expected view.
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: contentType }));
+    const isImage = contentType.startsWith('image');
+    return { type: contentType, name: `attachment-${index}`, urls: { main: url, feed: isImage ? url : undefined } };
+  });
+
+/**
+ * Resolves the content a reader can see without re-unlocking, and derives whether the lock is the
+ * signed-in user's own. On mount it loads:
+ *  - own lock (a == b): the guarded original from the user's own `/priv` (no unlock, no copy);
+ *  - otherwise: the reader's replicated copy, if this lock was unlocked before.
+ *
+ * A missing result leaves the lock card in place. Attachment bytes are converted to object URLs and
+ * then dropped — only the post text and the media URLs live in state. The feed isn't virtualized, so
+ * keeping raw bytes AND their blobs per card would double every scrolled-past post's memory.
+ */
+export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedContentParams): UseUnlockedContentResult {
+  const [unlockedPost, setUnlockedPost] = useState<GuardedPost | null>(null);
+  const [media, setMedia] = useState<AttachmentConstructed[]>([]);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+
+  // Own lock when I posted it (author) AND I own the guarded storage (lock file creator == me, a == b).
+  const lockOwner = lockFile ? stripPubkyPrefix(lockFile.creator) : null;
+  const isOwnLock = lockOwner !== null && lockOwner === currentUserPubky;
+
+  // Bytes → object URLs here; only post + URLs go to state, so the raw bytes are GC'd once this returns.
+  const applyContent = (content: TUnlockedContent) => {
+    setMedia(toLocalMedia(content.attachments));
+    setUnlockedPost(content.post);
+  };
+
+  useEffect(() => {
+    if (!lock || !currentUserPubky) return;
+
+    // a != b: I posted this but locked it with a different account, so the guarded original lives on
+    // that account's homeserver and can't be read with this session. Leave it locked.
+    // TODO:[Locks] #1998 — phase 2: resolve by forcing the lock-auth account == the pubky.app account.
+    if (lockOwner !== null && !isOwnLock && authorId === currentUserPubky) {
+      Logger.warn('[Locks] own lock posted under a different account — guarded original unreadable (phase 2)', {
+        lock,
+      });
+      return;
+    }
+
+    let cancelled = false;
+    const load =
+      isOwnLock && lockFile
+        ? LocksController.fetchOwnContent({ lockFile })
+        : LocksController.fetchReplicatedContent({ lockUrl: lock, readerPubky: currentUserPubky });
+    load
+      .then((result) => {
+        if (!cancelled && result) applyContent(result);
+      })
+      .catch(() => undefined); // already reported by the Err factory; fall back to the lock card
+    return () => {
+      cancelled = true;
+    };
+    // applyContent omitted: it only touches stable setters, so it's not a real dependency.
+  }, [lock, currentUserPubky, lockFile, authorId, lockOwner, isOwnLock]);
+
+  // Revoke a media set's object URLs when it's replaced or on unmount — after commit, so the DOM has
+  // already swapped to the new URLs (revoking before commit could break an in-flight image load).
+  useEffect(() => {
+    return () => media.forEach((m) => URL.revokeObjectURL(m.urls.main));
+  }, [media]);
+
+  // Swap in a fresh unlock, then replicate it into the reader's /priv so later reads need no unlock.
+  // Best-effort: a failed replication writes no completion marker, so the next unlock just retries.
+  const applyUnlockedContent = (content: TUnlockedContent) => {
+    applyContent(content);
+    if (lock && currentUserPubky) {
+      void LocksController.replicateUnlockedContent({ lockUrl: lock, readerPubky: currentUserPubky, content }).catch(
+        () => undefined,
+      );
+    }
+  };
+
+  return { unlockedPost, applyUnlockedContent, media, isOwnLock };
+}

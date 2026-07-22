@@ -201,7 +201,7 @@ describe('usePostInputLock', () => {
     const { result } = setup();
 
     act(() => result.current.lockSwitch?.onCheckedChange(true));
-    expect(result.current.lockTitle).toBe('');
+    expect(result.current.lockTitle).toBe('defaultTitle'); // seeded default (i18n key under the test mock)
 
     act(() => result.current.setLockTitle('My most famous quote'));
     expect(result.current.lockTitle).toBe('My most famous quote');

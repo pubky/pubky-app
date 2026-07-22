@@ -2,6 +2,7 @@ import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocksService } from '@/services/locks/locks';
@@ -21,8 +22,9 @@ import type {
 } from '@/services/locks/locks.types';
 import type {
   TCreateLockContentParams,
+  TFetchOwnContentParams,
+  TFetchReplicatedContentParams,
   TFetchUnlockedContentParams,
-  TLoadReplicatedContentParams,
   TLockContentFile,
   TReplicateUnlockedContentParams,
   TUnlockContentParams,
@@ -99,11 +101,8 @@ export class LocksApplication {
     return { bundleId, credential: credential.credential, expiresAt: credential.expires_at };
   }
 
-  /** Reads the guarded post + its attachments with the access credential. Returns null when unparseable. */
-  static async fetchUnlockedContent({
-    lockFile,
-    credential,
-  }: TFetchUnlockedContentParams): Promise<TUnlockedContent | null> {
+  /** Reads the guarded post + its attachments with the access credential. Throws when the post is unparseable. */
+  static async fetchUnlockedContent({ lockFile, credential }: TFetchUnlockedContentParams): Promise<TUnlockedContent> {
     const primaryPath = lockFile.primary_resource?.path;
     const readPath = primaryPath ? GuardedContentParser.toReadPath(primaryPath) : null;
     if (!readPath) {
@@ -116,42 +115,61 @@ export class LocksApplication {
 
     const primaryBytes = await LocksService.proxyReadGuardedResource(credential, readPath);
     const post = GuardedContentParser.parsePost(primaryBytes);
-    if (!post) return null;
+    if (!post) {
+      // Unlock succeeded but the primary resource isn't a parseable post — a permanent data error, so
+      // report it (like a dropped attachment) instead of a silent null the caller can't distinguish.
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'unlocked guarded post is not parseable', {
+        service: ErrorService.Locks,
+        operation: 'fetchUnlockedContent',
+        context: { readPath },
+      });
+    }
 
-    const attachments = await this.readGuardedAttachments(lockFile, credential, post.attachments ?? []);
+    // Reader path: proxy-read each attachment through the Lock Server with the access credential.
+    const readBytes = (path: string) => this.proxyReadAttachment(credential, path);
+    const attachments = await this.readAttachments(lockFile, post.attachments ?? [], 'fetchUnlockedContent', readBytes);
     return { post, attachments };
   }
 
+  /** Proxy-reads one attachment: strips the guarded prefix to the relative path the Lock Server expects. */
+  private static proxyReadAttachment(credential: string, path: string): Promise<Uint8Array> {
+    const readPath = GuardedContentParser.toReadPath(path);
+    if (!readPath) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'attachment path is outside the guarded namespace', {
+        service: ErrorService.Locks,
+        operation: 'fetchUnlockedContent',
+        context: { path },
+      });
+    }
+    return LocksService.proxyReadGuardedResource(credential, readPath);
+  }
+
   /**
-   * Proxy-reads each attachment, pairing its bytes with the content type from the lock file. One bad
-   * attachment is reported and dropped, not fatal — the rest of the post still renders. The caller
-   * compares the returned count against the post's attachment count to warn the reader.
+   * Pairs each attachment's bytes with its content type (from the lock file), reading the bytes via the
+   * caller's `readBytes` (reader = proxy-read with a credential; creator = direct read of their own HS).
+   * One bad attachment is reported and dropped, not fatal — the rest of the post still renders.
    */
-  private static async readGuardedAttachments(
+  private static async readAttachments(
     lockFile: LockFile,
-    credential: string,
     uris: string[],
+    operation: string,
+    readBytes: (path: string, uri: string) => Promise<Uint8Array>,
   ): Promise<TUnlockedAttachment[]> {
     const reads = await Promise.all(
       uris.map(async (uri) => {
         try {
           const path = GuardedContentParser.attachmentUriToPath(uri);
-          const readPath = GuardedContentParser.toReadPath(path);
           const contentType = lockFile.secondary_resources?.[path]?.content_type;
-          // No descriptor = a permanent data-integrity error (the bytes live on the owner's HS with no
-          // content type, so they can never render). Report to Sentry, then drop this one attachment.
-          if (!readPath || !contentType) {
+          // No descriptor = a permanent data-integrity error (the bytes live on a HS with no content
+          // type, so they can never render). Report to Sentry, then drop this one attachment.
+          if (!contentType) {
             throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'guarded attachment has no content descriptor', {
               service: ErrorService.Locks,
-              operation: 'fetchUnlockedContent',
+              operation,
               context: { path },
             });
           }
-          return {
-            id: readPath,
-            contentType,
-            bytes: await LocksService.proxyReadGuardedResource(credential, readPath),
-          };
+          return { id: path.slice(path.lastIndexOf('/') + 1), contentType, bytes: await readBytes(path, uri) };
         } catch {
           return null; // already reported (Err factory / service `toAppError`); skip so the rest render
         }
@@ -198,10 +216,10 @@ export class LocksApplication {
   }
 
   /** Already unlocked → load from reader's HS `/priv`. Null if no `post.json` (never unlocked or partial). */
-  static async loadReplicatedContent({
+  static async fetchReplicatedContent({
     lockUrl,
     readerPubky,
-  }: TLoadReplicatedContentParams): Promise<TUnlockedContent | null> {
+  }: TFetchReplicatedContentParams): Promise<TUnlockedContent | null> {
     const lockId = LockContentParser.lockIdFromUrl(lockUrl);
     if (!lockId) return null;
 
@@ -212,7 +230,15 @@ export class LocksApplication {
     if (!postBytes) return null;
 
     const replicated = GuardedContentParser.parseReplicatedPost(postBytes);
-    if (!replicated) return null;
+    if (!replicated) {
+      // Marker present but corrupt (a 200 with unparseable bytes) — a data error, not "not unlocked".
+      // Report it like the other parse failures instead of a silent null.
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'replicated post is not parseable', {
+        service: ErrorService.Locks,
+        operation: 'fetchReplicatedContent',
+        context: { lockId },
+      });
+    }
 
     const refs = replicated.attachments ?? [];
     const attachments = await Promise.all(
@@ -227,6 +253,44 @@ export class LocksApplication {
       post: { content: replicated.content, kind: replicated.kind, attachments: refs.map((ref) => ref.url) },
       attachments,
     };
+  }
+
+  /**
+   * Creator reads their OWN locked content straight from their homeserver
+   * (`/priv/locks.app/content/`) — no unlock, no credential, no replication.
+   * Only valid when the lock owner is the signed-in account (a == b); the caller
+   * verifies that before calling.
+   *
+   * TODO:[Locks] #1998 — content types still come from the public `lock.json` (`secondary_resources`),
+   * since direct-read/proxy-read return bytes only. pubky/locks#25 makes the SDK preserve the
+   * response's content-type header; once it's integrated, read the type from there and drop this.
+   */
+  static async fetchOwnContent({ lockFile }: TFetchOwnContentParams): Promise<TUnlockedContent> {
+    const primaryPath = lockFile.primary_resource?.path;
+    if (!primaryPath) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'lock file has no readable primary resource', {
+        service: ErrorService.Locks,
+        operation: 'fetchOwnContent',
+        context: { primaryPath },
+      });
+    }
+
+    const owner = stripPubkyPrefix(lockFile.creator);
+    const post = GuardedContentParser.parsePost(await HomeserverService.getBytes(`pubky://${owner}${primaryPath}`));
+    if (!post) {
+      // 200 but unparseable — the creator's own guarded original is corrupt. Report, don't return null.
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'own guarded post is not parseable', {
+        service: ErrorService.Locks,
+        operation: 'fetchOwnContent',
+        context: { owner, primaryPath },
+      });
+    }
+
+    // Creator path: the guarded original lives on their own HS, so read each attachment URI directly.
+    const attachments = await this.readAttachments(lockFile, post.attachments ?? [], 'fetchOwnContent', (_path, uri) =>
+      HomeserverService.getBytes(uri),
+    );
+    return { post, attachments };
   }
 
   static exchangeSessionCode(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {

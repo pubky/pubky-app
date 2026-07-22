@@ -13,15 +13,20 @@ export type TFetchUnlockedContentParams = {
   credential: string;
 };
 
+/** Params to copy unlocked content into the reader's own `/priv` (the only write of the three). */
 export type TReplicateUnlockedContentParams = {
   lockUrl: string;
   readerPubky: string;
   content: TUnlockedContent;
 };
 
-export type TLoadReplicatedContentParams = {
+export type TFetchReplicatedContentParams = {
   lockUrl: string;
   readerPubky: string;
+};
+
+export type TFetchOwnContentParams = {
+  lockFile: LockFile;
 };
 
 /**

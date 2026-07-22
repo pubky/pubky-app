@@ -57,6 +57,7 @@ export function usePostInputLock({
   const advancingFromAuth = useRef(false);
   const { toast } = useToast();
   const tToast = useTranslations('toast.post');
+  const tLock = useTranslations('post.lock');
   const timelineFeed = useTimelineFeedContext();
 
   const lockServerPubky = getLockServer() ?? '';
@@ -134,6 +135,8 @@ export function usePostInputLock({
     setLockDraft(captureComposer());
     clearComposer();
     setLockEnabled(true);
+    // Seed the card's title with the default so it reads as real, editable text (not a placeholder).
+    setLockTitle(tLock('defaultTitle'));
 
     // Gate on the Locks session: authenticated → lock content dialog; otherwise sign in first.
     if (useLocksAuthStore.getState().selectIsLocksAuthenticated()) {

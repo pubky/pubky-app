@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import { usePostLock } from '@/hooks/usePostLock/usePostLock';
 import type { UsePostLockResult } from '@/hooks/usePostLock/usePostLock.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import type { LockFile } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LockedPostContent } from './LockedPostContent';
@@ -15,7 +18,8 @@ vi.mock('@/controllers/locks/locks', () => ({
     unlock: vi.fn(),
     fetchUnlockedContent: vi.fn(),
     replicateUnlockedContent: vi.fn().mockResolvedValue(undefined),
-    loadReplicatedContent: vi.fn().mockResolvedValue(null),
+    fetchReplicatedContent: vi.fn().mockResolvedValue(null),
+    fetchOwnContent: vi.fn().mockResolvedValue(null),
   },
 }));
 vi.mock('@/molecules/Toaster/use-toast', () => ({ useToast: () => ({ toast: toastMock }) }));
@@ -46,13 +50,13 @@ describe('LockedPostContent', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     toastMock.mockClear();
-    vi.mocked(LocksController.loadReplicatedContent).mockResolvedValue(null);
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue(null);
     vi.mocked(LocksController.replicateUnlockedContent).mockResolvedValue(undefined);
   });
 
   it('renders the teaser body and the lock card from the parsed lock content', () => {
     mockUsePostLock({});
-    render(<LockedPostContent content="{}" lock={LOCK_URL} />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
 
     expect(screen.getByText('A teaser')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Secret');
@@ -60,29 +64,29 @@ describe('LockedPostContent', () => {
 
   it('renders nothing when the teaser content is unparseable', () => {
     mockUsePostLock({ lockContent: null });
-    const { container } = render(<LockedPostContent content="not json" lock={LOCK_URL} />);
+    const { container } = render(<LockedPostContent content="not json" lock={LOCK_URL} authorId="pubkycreator" />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it('enables Unlock when the lock file resolved', () => {
     mockUsePostLock({ hasError: false });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
   });
 
   it('leaves Unlock inert when the lock file could not be resolved', () => {
     mockUsePostLock({ hasError: true });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
 
-  it('opens the unlock dialog when Unlock is clicked', () => {
+  it('opens the unlock dialog after the button slides over the mask', async () => {
     mockUsePostLock({ hasError: false });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
 
     expect(screen.queryByRole('heading', { name: 'Password to Unlock' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
-    expect(screen.getByRole('heading', { name: 'Password to Unlock' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Password to Unlock' })).toBeInTheDocument();
   });
 
   it('unlocks, reads the guarded post, and renders its content in place of the card', async () => {
@@ -93,10 +97,12 @@ describe('LockedPostContent', () => {
       post: { content: 'the unlocked secret', kind: 'short', attachments: null },
       attachments: [],
     });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
-    fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'anything' } });
+    fireEvent.change(await screen.findByLabelText('Password', { selector: 'input' }), {
+      target: { value: 'anything' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'View Content' }));
 
     await waitFor(() => {
@@ -124,10 +130,10 @@ describe('LockedPostContent', () => {
         { id: 'b', contentType: 'video/mp4', bytes: new Uint8Array([2]) },
       ],
     });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
-    fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'x' } });
+    fireEvent.change(await screen.findByLabelText('Password', { selector: 'input' }), { target: { value: 'x' } });
     fireEvent.click(screen.getByRole('button', { name: 'View Content' }));
 
     await waitFor(() => expect(screen.getByText('the unlocked secret')).toBeInTheDocument());
@@ -147,10 +153,10 @@ describe('LockedPostContent', () => {
       },
       attachments: [{ id: 'a', contentType: 'image/png', bytes: new Uint8Array() }], // one of two dropped
     });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
-    fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'x' } });
+    fireEvent.change(await screen.findByLabelText('Password', { selector: 'input' }), { target: { value: 'x' } });
     fireEvent.click(screen.getByRole('button', { name: 'View Content' }));
 
     // Post still renders (non-blocking) and the reader is warned once.
@@ -158,19 +164,72 @@ describe('LockedPostContent', () => {
     expect(toastMock).toHaveBeenCalledWith({ variant: 'error', description: 'Could not load attachments' });
   });
 
+  it('keeps the dialog open with an error when reading the unlocked content throws', async () => {
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkybob' });
+    mockUsePostLock({ lockFile });
+    vi.mocked(LocksController.unlock).mockResolvedValue({ bundleId: 'b', credential: 'cred', expiresAt: 'e' });
+    // Matches the real AppError thrown in production (fetchUnlockedContent throws Err.validation).
+    vi.mocked(LocksController.fetchUnlockedContent).mockRejectedValue(
+      Err.validation(ValidationErrorCode.INVALID_INPUT, 'unparseable guarded post', {
+        service: ErrorService.Locks,
+        operation: 'fetchUnlockedContent',
+      }),
+    );
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    fireEvent.change(await screen.findByLabelText('Password', { selector: 'input' }), { target: { value: 'x' } });
+    fireEvent.click(screen.getByRole('button', { name: 'View Content' }));
+
+    // The dialog stays open (not silently closed on a correct password); no unlocked content renders.
+    await waitFor(() => expect(LocksController.fetchUnlockedContent).toHaveBeenCalled());
+    expect(screen.getByRole('heading', { name: 'Password to Unlock' })).toBeInTheDocument();
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+  });
+
   it('shows already-unlocked content on mount without the lock card or a password prompt', async () => {
     mockUsePostLock({ hasError: false });
-    vi.mocked(LocksController.loadReplicatedContent).mockResolvedValue({
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
       post: { content: 'previously unlocked', kind: 'short', attachments: null },
       attachments: [],
     });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
 
     await waitFor(() => expect(screen.getByText('previously unlocked')).toBeInTheDocument());
-    expect(LocksController.loadReplicatedContent).toHaveBeenCalledWith({
+    expect(LocksController.fetchReplicatedContent).toHaveBeenCalledWith({
       lockUrl: LOCK_URL,
       readerPubky: 'pubkyreader',
     });
     expect(screen.queryByRole('button', { name: 'Unlock' })).not.toBeInTheDocument();
+  });
+
+  it('reads the creator own content directly when the lock owner is the signed-in user (a == b)', async () => {
+    // stripPubkyPrefix('pubkypubkyreader') === 'pubkyreader' === currentUserPubky → own lock.
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkypubkyreader' });
+    mockUsePostLock({ lockFile });
+    vi.mocked(LocksController.fetchOwnContent).mockResolvedValue({
+      post: { content: 'my own locked content', kind: 'short', attachments: null },
+      attachments: [],
+    });
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkyreader" />);
+
+    await waitFor(() => expect(screen.getByText('my own locked content')).toBeInTheDocument());
+    expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockFile });
+    expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
+    // Own lock keeps the lock card (Unlock present but disabled) + a "My locked content" label.
+    expect(screen.getByText('My locked content')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+  });
+
+  it('leaves the lock locked when I posted it under a different account (a != b)', async () => {
+    // owner ('other') !== me, but I'm the author → my post, other lock account. Phase-2 blocker.
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
+    mockUsePostLock({ lockFile });
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkyreader" />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Unlock' })).toBeInTheDocument());
+    expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
+    expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
   });
 });

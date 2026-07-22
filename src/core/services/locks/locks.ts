@@ -110,11 +110,6 @@ export class LocksService {
   /**
    * Reads + validates a public lock file via the SDK (pkarr resolve + GET inside `readContentLock`).
    * TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
-   *
-   * TODO:[Locks] #2003 — each call re-resolves the creator and their homeserver: the SDK builds a
-   * fresh pkarr client per call, so its resolve cache never survives (pubky/locks#23). Until that
-   * lands, a feed of N lock posts costs 2N resolves. See the idb caching TODO on `useLockFile` for
-   * the app-side half.
    */
   static async readContentLock(lockUrl: string): Promise<unknown> {
     await ensureLocksSdkReady();
@@ -169,13 +164,7 @@ export class LocksService {
     }
   }
 
-  /**
-   * Reads one guarded resource's raw bytes through the Lock Server, authorized by the credential.
-   *
-   * TODO:[Locks] #2003 — also hit by pubky/locks#23: the SDK rebuilds its pkarr client per call, so
-   * an unlock with N attachments re-resolves N times. Unlike the lock file, these bytes are already
-   * replicated to the reader's own `/priv` after unlock (see `LocksApplication.replicateUnlockedContent`).
-   */
+  /** Reads one guarded resource's raw bytes through the Lock Server, authorized by the credential. */
   static async proxyReadGuardedResource(credential: string, path: string): Promise<Uint8Array> {
     try {
       const viewer = await this.getViewer();

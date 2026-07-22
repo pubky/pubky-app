@@ -1,8 +1,9 @@
 import { LocksApplication } from '@/application/locks/locks';
 import type {
   TCreateLockContentParams,
+  TFetchOwnContentParams,
+  TFetchReplicatedContentParams,
   TFetchUnlockedContentParams,
-  TLoadReplicatedContentParams,
   TReplicateUnlockedContentParams,
   TUnlockContentParams,
 } from '@/application/locks/locks.types';
@@ -157,7 +158,7 @@ export class LocksController {
   }
 
   /** Reads the guarded post + attachments after unlock, using the access credential. */
-  static fetchUnlockedContent(params: TFetchUnlockedContentParams): Promise<TUnlockedContent | null> {
+  static fetchUnlockedContent(params: TFetchUnlockedContentParams): Promise<TUnlockedContent> {
     return LocksApplication.fetchUnlockedContent(params);
   }
 
@@ -167,7 +168,12 @@ export class LocksController {
   }
 
   /** Loads already-unlocked content from the reader's `/priv`, or null if this lock isn't unlocked yet. */
-  static loadReplicatedContent(params: TLoadReplicatedContentParams): Promise<TUnlockedContent | null> {
-    return LocksApplication.loadReplicatedContent(params);
+  static fetchReplicatedContent(params: TFetchReplicatedContentParams): Promise<TUnlockedContent | null> {
+    return LocksApplication.fetchReplicatedContent(params);
+  }
+
+  /** Creator reads their own locked content directly from the guarded original (owner == signed-in). */
+  static fetchOwnContent(params: TFetchOwnContentParams): Promise<TUnlockedContent> {
+    return LocksApplication.fetchOwnContent(params);
   }
 }

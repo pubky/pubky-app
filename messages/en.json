@@ -516,10 +516,11 @@
     "lock": {
       "unlock": "Unlock",
       "defaultTitle": "Locked post",
-      "titlePlaceholder": "Title",
+      "titleLabel": "Lock title",
       "teaserPlaceholder": "Write a short announcement to tease your content.",
       "unavailable": "Lock content is not available",
-      "unlocked": "Unlocked"
+      "unlocked": "Unlocked",
+      "myLockedContent": "My locked content"
     },
     "addTag": "add tag",
     "limitReached": "limit reached",
