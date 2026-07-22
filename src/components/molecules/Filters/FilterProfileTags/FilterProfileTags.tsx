@@ -115,7 +115,7 @@ export function FilterProfileTags({
                 <span className="inline-flex w-32">{tagInput}</span>
               </TooltipTrigger>
               <TooltipPortal>
-                <TooltipContent side="right">{tooltipText}</TooltipContent>
+                <TooltipContent side="bottom">{tooltipText}</TooltipContent>
               </TooltipPortal>
             </Tooltip>
           ) : (
