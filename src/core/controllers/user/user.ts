@@ -208,14 +208,14 @@ export class UserController {
         return null;
       }
 
-      return getHomeStreamIdFromFilters(
-        homeState.sort,
-        homeState.reach,
-        homeState.content,
-        authState.currentUserPubky,
-        homeState.profileTags,
-        homeState.taggedAsActive,
-      );
+      return getHomeStreamIdFromFilters({
+        sort: homeState.sort,
+        reach: homeState.reach,
+        content: homeState.content,
+        currentUserPubky: authState.currentUserPubky,
+        profileTags: homeState.profileTags,
+        taggedAsActive: homeState.taggedAsActive,
+      });
     } catch (error) {
       Logger.warn('Failed to get active stream ID', { error });
       return null;

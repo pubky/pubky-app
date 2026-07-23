@@ -18,7 +18,11 @@ import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
 import { TimelineGridPosts } from '../../Posts/GridPosts/GridPosts';
 import { TimelinePosts } from '../../Posts/Posts';
 import { NewPostsSection } from '../NewPostsSection/NewPostsSection';
-import type { TimelineFeedContextValue, TimelineFeedProps } from '../TimelineFeed/TimelineFeed.types';
+import type {
+  HomeTimelineFeedProps,
+  TimelineFeedContextValue,
+  TimelineFeedProps,
+} from '../TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { VisualTimelinePosts } from '../TimelineFeed/VisualTimelinePosts';
 
@@ -33,7 +37,7 @@ interface TimelineFeedContentProps {
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
-  persistentHeader?: TimelineFeedProps['persistentHeader'];
+  persistentHeader?: HomeTimelineFeedProps['persistentHeader'];
   emptyState?: TimelineFeedProps['emptyState'];
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
@@ -46,7 +50,7 @@ interface TimelineFeedWithStreamProps {
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
-  persistentHeader?: TimelineFeedProps['persistentHeader'];
+  persistentHeader?: HomeTimelineFeedProps['persistentHeader'];
   emptyState?: TimelineFeedProps['emptyState'];
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];

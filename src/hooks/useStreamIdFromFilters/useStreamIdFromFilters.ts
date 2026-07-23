@@ -41,5 +41,12 @@ export function useStreamIdFromFilters(contentOverride?: ContentType): PostStrea
     return undefined;
   }
 
-  return getHomeStreamIdFromFilters(sort, reach, effectiveContent, currentUserPubky, profileTags, taggedAsActive);
+  return getHomeStreamIdFromFilters({
+    sort,
+    reach,
+    content: effectiveContent,
+    currentUserPubky,
+    profileTags,
+    taggedAsActive,
+  });
 }

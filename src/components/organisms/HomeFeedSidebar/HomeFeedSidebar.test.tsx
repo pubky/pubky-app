@@ -29,16 +29,12 @@ const {
   mockFilterReach: vi.fn(
     ({
       selectedTab,
-      showNetwork,
-      showMe,
       showTaggedAs,
       profileTags,
       profileTagsDisabled,
       onTabChange,
     }: {
       selectedTab?: string;
-      showNetwork?: boolean;
-      showMe?: boolean;
       showTaggedAs?: boolean;
       profileTags?: string[];
       profileTagsDisabled?: boolean;
@@ -47,8 +43,6 @@ const {
       <div
         data-testid="filter-reach"
         data-selected-tab={selectedTab}
-        data-show-network={showNetwork ? 'true' : undefined}
-        data-show-me={showMe ? 'true' : undefined}
         data-show-tagged-as={showTaggedAs ? 'true' : undefined}
         data-profile-tags={(profileTags ?? []).join(',')}
         data-profile-tags-disabled={profileTagsDisabled ? 'true' : undefined}
@@ -140,8 +134,6 @@ vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
     TAGGED_AS_FILTER_KEY: 'tagged_as',
     FilterReach: (props: {
       selectedTab?: string;
-      showNetwork?: boolean;
-      showMe?: boolean;
       showTaggedAs?: boolean;
       profileTags?: string[];
       profileTagsDisabled?: boolean;

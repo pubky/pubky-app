@@ -50,7 +50,7 @@ type CustomFeedDialogProps = {
   children: ReactNode;
 };
 type CustomFeedDialogContent = PubkyAppPostKind | 'ALL';
-export type CustomFeedReachValue = PubkyAppFeedReach | typeof TAGGED_AS_FILTER_KEY;
+type CustomFeedReachValue = PubkyAppFeedReach | typeof TAGGED_AS_FILTER_KEY;
 
 function isVisualCustomFeedContentSupported(content?: CustomFeedDialogContent): boolean {
   return content === 'ALL' || content === PubkyAppPostKind.Image || content === PubkyAppPostKind.Video;

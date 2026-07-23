@@ -190,7 +190,14 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
       const { currentUserPubky, hasHydrated: authHasHydrated } = useAuthStore.getState();
       this.streamState.currentStreamId =
         homeHasHydrated && authHasHydrated
-          ? getHomeStreamIdFromFilters(sort, reach, content, currentUserPubky, profileTags, taggedAsActive)
+          ? getHomeStreamIdFromFilters({
+              sort,
+              reach,
+              content,
+              currentUserPubky,
+              profileTags,
+              taggedAsActive,
+            })
           : null;
       Logger.debug(`Built ${APP_ROUTES.HOME} streamId`, { streamId: this.streamState.currentStreamId });
     }

@@ -24,7 +24,6 @@ export interface FilterRadioGroupProps<T = string> {
   onClose?: () => void;
   dataCy?: string;
   testId?: string;
-  children?: React.ReactNode;
 }
 
 export function FilterRadioGroup<T extends string = string>({
@@ -37,7 +36,6 @@ export function FilterRadioGroup<T extends string = string>({
   onClose,
   dataCy,
   testId,
-  children,
 }: FilterRadioGroupProps<T>) {
   const headerId = React.useId();
 
@@ -107,7 +105,6 @@ export function FilterRadioGroup<T extends string = string>({
           })}
         </FilterList>
       </Container>
-      {children}
     </FilterRoot>
   );
 }

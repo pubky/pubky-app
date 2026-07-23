@@ -13,8 +13,6 @@ export const TAGGED_AS_FILTER_KEY = 'tagged_as' as const;
 export type ReachFilterValue = ReachType | typeof TAGGED_AS_FILTER_KEY;
 
 interface FilterReachSharedProps {
-  showNetwork?: boolean;
-  showMe?: boolean;
   profileTags?: string[];
   onProfileTagAdd?: (tag: string) => void;
   onProfileTagRemove?: (tag: string) => void;
@@ -29,15 +27,13 @@ interface TaggedAsFilterReachProps extends BaseFilterProps<ReachFilterValue>, Fi
   showTaggedAs: true;
 }
 
-export type FilterReachProps = StandardFilterReachProps | TaggedAsFilterReachProps;
+type FilterReachProps = StandardFilterReachProps | TaggedAsFilterReachProps;
 
 export function FilterReach({
   selectedTab,
   defaultSelectedTab = REACH.ALL,
   onTabChange,
   disabled,
-  showNetwork = false,
-  showMe = false,
   showTaggedAs = false,
   profileTags,
   onProfileTagAdd,
@@ -94,15 +90,6 @@ export function FilterReach({
       ];
 
   if (!showTaggedAs) {
-    if (showNetwork) {
-      reachItems.push({
-        key: REACH.NETWORK,
-        label: t('network'),
-        icon: Waypoints,
-        disabled,
-      });
-    }
-
     reachItems.push(
       {
         key: REACH.FOLLOWING,
@@ -117,15 +104,6 @@ export function FilterReach({
         disabled,
       },
     );
-
-    if (showMe) {
-      reachItems.push({
-        key: REACH.ME,
-        label: t('me'),
-        icon: UserRound,
-        disabled,
-      });
-    }
   }
 
   const handleReachChange = (value: ReachFilterValue) => {

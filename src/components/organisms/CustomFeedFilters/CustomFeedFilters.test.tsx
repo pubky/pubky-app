@@ -123,15 +123,11 @@ vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
       selectedTab,
       defaultSelectedTab,
       disabled,
-      showNetwork,
-      showMe,
       showTaggedAs,
     }: {
       selectedTab?: string;
       defaultSelectedTab?: string;
       disabled?: boolean;
-      showNetwork?: boolean;
-      showMe?: boolean;
       showTaggedAs?: boolean;
     }) => (
       <div
@@ -139,8 +135,6 @@ vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
         data-selected-tab={selectedTab ?? ''}
         data-default-selected-tab={defaultSelectedTab ?? ''}
         data-disabled={disabled}
-        data-show-network={showNetwork}
-        data-show-me={showMe}
         data-show-tagged-as={showTaggedAs}
       >
         FilterReach

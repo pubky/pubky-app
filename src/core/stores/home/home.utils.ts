@@ -65,6 +65,15 @@ const TAGGED_AS_WOT_DOMAIN_DEPTH = 2;
 /** Maps streamId KIND part to CONTENT filter (auto-generated) */
 const KIND_TO_CONTENT = reverseMapping(CONTENT_TO_KIND);
 
+interface HomeStreamFilters {
+  sort: SortType;
+  reach: ReachType;
+  content: ContentType;
+  currentUserPubky?: Pubky | null;
+  profileTags?: string[];
+  taggedAsActive?: boolean;
+}
+
 /**
  * Maps filter state to streamId pattern: sorting:source:kind
  *
@@ -106,14 +115,14 @@ export function getStreamId(sort: SortType, reach: ReachType, content: ContentTy
   return streamId as PostStreamId;
 }
 
-export function getHomeStreamIdFromFilters(
-  sort: SortType,
-  reach: ReachType,
-  content: ContentType,
-  currentUserPubky?: Pubky | null,
-  profileTags: string[] = [],
+export function getHomeStreamIdFromFilters({
+  sort,
+  reach,
+  content,
+  currentUserPubky,
+  profileTags = [],
   taggedAsActive = false,
-): PostStreamId {
+}: HomeStreamFilters): PostStreamId {
   const effectiveReach = currentUserPubky ? reach : REACH.ALL;
   const kind = CONTENT_TO_KIND[content];
 

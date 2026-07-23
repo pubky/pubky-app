@@ -21,7 +21,7 @@ import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { TimelineFeedWithStream } from '../TimelineFeedContent/TimelineFeedContent';
-import type { TimelineFeedProps } from './TimelineFeed.types';
+import type { HomeTimelineFeedProps, TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
 
 export { useTimelineFeedContext } from './TimelineFeedContext';
@@ -32,41 +32,34 @@ export { useTimelineFeedContext } from './TimelineFeedContext';
  * Organism that encapsulates stream calculation and pagination logic.
  * Routes to variant-specific wrappers so each only subscribes to its own data sources.
  */
-export function TimelineFeed({
-  variant,
-  children,
-  persistentHeader,
-  emptyState,
-  pullToRefreshContainerRef,
-  gridTrailingSlot,
-}: TimelineFeedProps) {
-  switch (variant) {
+export function TimelineFeed(props: TimelineFeedProps) {
+  switch (props.variant) {
     case TIMELINE_FEED_VARIANT.HOME:
-      return <HomeTimelineFeed persistentHeader={persistentHeader}>{children}</HomeTimelineFeed>;
+      return <HomeTimelineFeed persistentHeader={props.persistentHeader}>{props.children}</HomeTimelineFeed>;
     case TIMELINE_FEED_VARIANT.CUSTOM:
-      return <CustomTimelineFeed>{children}</CustomTimelineFeed>;
+      return <CustomTimelineFeed>{props.children}</CustomTimelineFeed>;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
       return (
-        <BookmarksTimelineFeed emptyState={emptyState} gridTrailingSlot={gridTrailingSlot}>
-          {children}
+        <BookmarksTimelineFeed emptyState={props.emptyState} gridTrailingSlot={props.gridTrailingSlot}>
+          {props.children}
         </BookmarksTimelineFeed>
       );
     case TIMELINE_FEED_VARIANT.PROFILE:
-      return <ProfileTimelineFeed>{children}</ProfileTimelineFeed>;
+      return <ProfileTimelineFeed>{props.children}</ProfileTimelineFeed>;
     case TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS:
-      return <ProfileCollectionsTimelineFeed>{children}</ProfileCollectionsTimelineFeed>;
+      return <ProfileCollectionsTimelineFeed>{props.children}</ProfileCollectionsTimelineFeed>;
     case TIMELINE_FEED_VARIANT.HOT:
-      return <HotTimelineFeed>{children}</HotTimelineFeed>;
+      return <HotTimelineFeed>{props.children}</HotTimelineFeed>;
     case TIMELINE_FEED_VARIANT.SEARCH:
-      return <SearchTimelineFeed>{children}</SearchTimelineFeed>;
+      return <SearchTimelineFeed>{props.children}</SearchTimelineFeed>;
     case TIMELINE_FEED_VARIANT.COLLECTION:
       return (
         <CollectionTimelineFeed
-          emptyState={emptyState}
-          pullToRefreshContainerRef={pullToRefreshContainerRef}
-          gridTrailingSlot={gridTrailingSlot}
+          emptyState={props.emptyState}
+          pullToRefreshContainerRef={props.pullToRefreshContainerRef}
+          gridTrailingSlot={props.gridTrailingSlot}
         >
-          {children}
+          {props.children}
         </CollectionTimelineFeed>
       );
     default:
@@ -78,8 +71,8 @@ function HomeTimelineFeed({
   children,
   persistentHeader,
 }: {
-  children?: TimelineFeedProps['children'];
-  persistentHeader?: TimelineFeedProps['persistentHeader'];
+  children?: HomeTimelineFeedProps['children'];
+  persistentHeader?: HomeTimelineFeedProps['persistentHeader'];
 }) {
   const content = useHomeStore((state) => state.content);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.HOME);
