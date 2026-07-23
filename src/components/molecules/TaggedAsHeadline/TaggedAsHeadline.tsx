@@ -22,7 +22,7 @@ export function TaggedAsHeadline() {
   );
 
   return (
-    <Typography size="lg" className="font-medium" data-testid="tagged-as-headline">
+    <Typography size="lg" className="font-medium text-muted-foreground" data-testid="tagged-as-headline">
       {t('taggedAsHeadline', { tags: formattedTags })}
     </Typography>
   );

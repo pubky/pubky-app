@@ -32,9 +32,9 @@ describe('TaggedAsHeadline', () => {
 
     render(<TaggedAsHeadline />);
 
-    expect(screen.getByTestId('tagged-as-headline')).toHaveTextContent(
-      "Posts from people my network tagged as 'bitcoiner'",
-    );
+    const headline = screen.getByTestId('tagged-as-headline');
+    expect(headline).toHaveTextContent("Posts from people my network tagged as 'bitcoiner'");
+    expect(headline).toHaveClass('text-muted-foreground');
     expect(mockList).toHaveBeenCalledWith(["'bitcoiner'"], { type: 'disjunction', style: 'long' });
   });
 
