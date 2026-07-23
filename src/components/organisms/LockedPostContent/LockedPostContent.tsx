@@ -77,7 +77,7 @@ export function LockedPostContent({
   };
 
   return (
-    <Container className={cn('min-w-0 gap-3', className)}>
+    <Container className={cn('min-w-0 gap-4', className)}>
       <PostBody
         content={lockContent.teaser_description}
         attachments={attachments ?? null}
