@@ -3,6 +3,7 @@
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import type { QuickReplyContentProps } from './QuickReply.types';
 import { QuickReplyComposerRow } from './QuickReplyComposerRow';
@@ -12,11 +13,12 @@ interface QuickReplyDefaultContentProps extends QuickReplyContentProps {
 }
 
 /**
- * Default (inline/wide) QuickReply content: composer row on top,
+ * Default (inline/wide) QuickReply content: PostHeader on top,
  * tags input and action bar inside the expandable section below.
  */
 export function QuickReplyDefaultContent({
   isWideLayout,
+  currentUserPubky,
   fileInputRef,
   attachments,
   setAttachments,
@@ -38,12 +40,21 @@ export function QuickReplyDefaultContent({
 }: QuickReplyDefaultContentProps) {
   return (
     <>
+      {currentUserPubky && (
+        <PostHeader
+          postId={currentUserPubky}
+          isReplyInput={true}
+          characterLimit={characterLimit}
+          showPopover={false}
+          size={isWideLayout ? 'large' : 'normal'}
+        />
+      )}
+
       <QuickReplyComposerRow
         {...composerRowProps}
         content={content}
         isSubmitting={isSubmitting}
         isAuthenticated={isAuthenticated}
-        avatarSize={isWideLayout ? 'xl' : 'default'}
         textareaClassName={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
       />
 
@@ -69,8 +80,6 @@ export function QuickReplyDefaultContent({
         onImageClick={onImageClick}
         isPostDisabled={isPostDisabled}
         submitMode={POST_INPUT_VARIANT.REPLY}
-        className={isExpanded ? 'mt-4' : ''}
-        characterLimit={characterLimit}
       />
     </>
   );

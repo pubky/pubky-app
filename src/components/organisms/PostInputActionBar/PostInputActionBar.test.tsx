@@ -207,35 +207,6 @@ describe('PostInputActionBar', () => {
     expect(screen.getByRole('button', { name: 'Post' })).toBeInTheDocument();
   });
 
-  it('does not render character limit when not provided', () => {
-    render(<PostInputActionBar hideArticleButton={false} />);
-
-    expect(screen.queryByText(/^\d+\/\d+$/)).not.toBeInTheDocument();
-  });
-
-  it('renders character limit when provided', () => {
-    render(<PostInputActionBar hideArticleButton={false} characterLimit={{ count: 45, max: 300 }} />);
-
-    expect(screen.getByText('45/300')).toBeInTheDocument();
-  });
-
-  it('uses desktop-only classes for character limit', () => {
-    render(<PostInputActionBar hideArticleButton={false} characterLimit={{ count: 45, max: 300 }} />);
-
-    expect(screen.getByText('45/300')).toHaveClass('hidden');
-    expect(screen.getByText('45/300')).toHaveClass('sm:block');
-  });
-
-  it('separates action and submit clusters when separateActions is true', () => {
-    render(<PostInputActionBar hideArticleButton={false} characterLimit={{ count: 45, max: 300 }} separateActions />);
-
-    const root = screen.getAllByTestId('container')[0];
-    expect(root).toHaveClass('flex-1');
-    expect(root).toHaveClass('justify-between');
-    expect(root).toHaveClass('gap-6');
-    expect(screen.getByText('45/300').parentElement).toHaveClass('shrink-0');
-  });
-
   it('uses full width root layout', () => {
     const { container } = render(<PostInputActionBar hideArticleButton={false} />);
 

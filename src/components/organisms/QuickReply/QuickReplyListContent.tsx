@@ -3,18 +3,18 @@
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { LIST_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
-import { getButtonLabel } from '../PostInputExpandableSection/PostInputExpandableSection.utils';
 import type { QuickReplyContentProps } from './QuickReply.types';
 import { QuickReplyComposerRow } from './QuickReplyComposerRow';
-import { QuickReplyListActions } from './QuickReplyListActions';
 
 /**
- * List-layout QuickReply content: single composer row with the actions inline
- * on the top right (character count, emoji, image, reply), and the tags input
- * below the post content.
+ * List-layout QuickReply content: PostHeader on top (with character count when
+ * expanded), composer textarea, then tags above the action bar (actions + submit
+ * on the same row).
  */
 export function QuickReplyListContent({
+  currentUserPubky,
   fileInputRef,
   attachments,
   setAttachments,
@@ -36,26 +36,22 @@ export function QuickReplyListContent({
 }: QuickReplyContentProps) {
   return (
     <>
+      {currentUserPubky && (
+        <PostHeader
+          postId={currentUserPubky}
+          isReplyInput={true}
+          characterLimit={characterLimit}
+          showPopover={false}
+          size="normal"
+        />
+      )}
+
       <QuickReplyComposerRow
         {...composerRowProps}
         content={content}
         isSubmitting={isSubmitting}
         isAuthenticated={isAuthenticated}
-        avatarSize="md"
         textareaClassName={LIST_POST_BODY_TEXT_CLASS}
-        trailing={
-          isExpanded ? (
-            <QuickReplyListActions
-              onEmojiClick={() => setShowEmojiPicker(true)}
-              onImageClick={onImageClick}
-              onSubmit={onSubmit}
-              isPostDisabled={isPostDisabled}
-              isSubmitting={isSubmitting}
-              characterLimit={characterLimit}
-              submitLabel={getButtonLabel(POST_INPUT_VARIANT.REPLY)}
-            />
-          ) : undefined
-        }
       />
 
       <PostInputAttachments
@@ -80,10 +76,6 @@ export function QuickReplyListContent({
         onImageClick={onImageClick}
         isPostDisabled={isPostDisabled}
         submitMode={POST_INPUT_VARIANT.REPLY}
-        className={isExpanded ? 'mt-4' : ''}
-        characterLimit={characterLimit}
-        hideActionBar
-        inline
       />
     </>
   );

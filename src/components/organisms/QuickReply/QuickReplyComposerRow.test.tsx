@@ -17,28 +17,6 @@ vi.mock('@/atoms/Textarea/Textarea', () => ({
   ),
 }));
 
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
-  AvatarWithFallback: ({
-    avatarUrl,
-    name,
-    fallbackSeed,
-    size,
-  }: {
-    avatarUrl?: string;
-    name: string;
-    fallbackSeed: string;
-    size?: string;
-  }) => (
-    <div
-      data-testid="avatar"
-      data-avatar-url={avatarUrl}
-      data-name={name}
-      data-fallback-seed={fallbackSeed}
-      data-size={size}
-    />
-  ),
-}));
-
 vi.mock('@/molecules/MentionPopover/MentionPopover', () => ({
   MentionPopover: ({
     users,
@@ -70,10 +48,6 @@ vi.mock('@/molecules/MentionPopover/MentionPopover', () => ({
 type QuickReplyComposerRowProps = ComponentProps<typeof QuickReplyComposerRow>;
 
 const createProps = (overrides: Partial<QuickReplyComposerRowProps> = {}): QuickReplyComposerRowProps => ({
-  avatarUrl: 'https://example.com/avatar.png',
-  userName: 'Alice',
-  avatarFallbackSeed: 'pk:alice',
-  avatarSize: 'default',
   textareaRef: createRef<HTMLTextAreaElement>(),
   textareaClassName: undefined,
   content: 'hello',
@@ -98,11 +72,8 @@ describe('QuickReplyComposerRow', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the avatar and textarea with reply state', () => {
-    render(<QuickReplyComposerRow {...createProps({ avatarSize: 'md', textareaClassName: 'text-base' })} />);
-
-    expect(screen.getByTestId('avatar')).toHaveAttribute('data-size', 'md');
-    expect(screen.getByTestId('avatar')).toHaveAttribute('data-name', 'Alice');
+  it('renders the textarea with reply state', () => {
+    render(<QuickReplyComposerRow {...createProps({ textareaClassName: 'text-base' })} />);
 
     const textarea = screen.getByTestId('quick-reply-textarea');
     expect(textarea).toHaveValue('hello');

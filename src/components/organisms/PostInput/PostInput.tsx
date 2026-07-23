@@ -194,7 +194,8 @@ export function PostInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
-  const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
+  const characterLimit =
+    isExpanded && !isArticle ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
 
   const isWideLayout = usesWidePostInput(useEffectiveTagsLayout());
 
@@ -329,7 +330,6 @@ export function PostInput({
           submitLabel={submitLabel}
           submitIcon={submitIcon}
           parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
-          characterLimit={characterLimit}
         />
       </Container>
     </Container>

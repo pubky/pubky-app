@@ -87,13 +87,11 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
       ({
         userId,
         userName,
-        characterLimit,
         size,
         timeAgo,
       }: {
         userId: string;
         userName: string;
-        characterLimit?: { count: number; max: number };
         size?: 'normal' | 'large';
         timeAgo?: string | null;
       }) => (
@@ -101,11 +99,6 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
           <div data-testid="avatar" />
           <div>{userName}</div>
           <div>@{userId.substring(0, 8)}</div>
-          {characterLimit && (
-            <div>
-              {characterLimit.count}/{characterLimit.max}
-            </div>
-          )}
           {timeAgo && <div data-testid="bottom-left-time">{timeAgo}</div>}
         </div>
       ),
@@ -298,6 +291,22 @@ describe('PostHeader', () => {
 
     expect(screen.getAllByText('2h')).toHaveLength(1);
     expect(screen.getByTestId('bottom-left-time')).toHaveTextContent('2h');
+  });
+
+  it('renders characterLimit in the top-right instead of timestamp', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
+
+    renderPostHeader(
+      <PostHeader postId="userpubkykey" isReplyInput={true} characterLimit={{ count: 21, max: 2000 }} />,
+    );
+
+    expect(screen.getByText('21/2000')).toBeInTheDocument();
+    expect(screen.queryByText('2h')).not.toBeInTheDocument();
   });
 });
 

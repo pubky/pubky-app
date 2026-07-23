@@ -32,8 +32,6 @@ export function PostInputActionBar({
   hideArticleButton,
   isArticle,
   isEdit,
-  characterLimit,
-  separateActions = false,
 }: PostInputActionBarProps) {
   const isMobile = useIsMobile();
   const commonButtonProps = React.useMemo(
@@ -49,14 +47,7 @@ export function PostInputActionBar({
   const postButtonText = isSubmitting ? 'Posting...' : postButtonLabel;
   const postButtonIconClassName = isSubmitting ? 'animate-spin' : undefined;
   return (
-    <Container
-      className={cn(
-        separateActions
-          ? 'flex min-w-0 flex-1 flex-row items-center justify-between gap-6'
-          : 'flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center',
-      )}
-      overrideDefaults
-    >
+    <Container className="flex w-full flex-row items-center justify-between gap-4" overrideDefaults>
       <Container className="flex items-center gap-2" overrideDefaults>
         {!isArticle ? (
           <Button
@@ -92,23 +83,13 @@ export function PostInputActionBar({
           </Button>
         ) : null}
       </Container>
-      <Container className={cn('flex items-center justify-end gap-2', separateActions && 'shrink-0')} overrideDefaults>
-        {characterLimit ? (
-          <Typography
-            data-cy="post-input-action-bar-character-count"
-            className="hidden shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums sm:block"
-            overrideDefaults
-          >
-            {characterLimit.count}/{characterLimit.max}
-          </Typography>
-        ) : null}
+      <Container className="flex shrink-0 items-center justify-end gap-2" overrideDefaults>
         <Button
           data-cy={getButtonDataCy(postButtonAriaText)}
           {...commonButtonProps}
           onClick={onPostClick}
           disabled={isPostDisabled || !onPostClick}
           aria-label={postButtonAriaText}
-          className="w-full flex-1 sm:flex-auto"
           variant={'default'}
           size={isMobile ? 'default' : 'sm'}
         >

@@ -1,6 +1,7 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
@@ -51,14 +52,23 @@ export function PostHeader({
           userId={userId}
           userName={userDetails.name || ''}
           avatarUrl={avatarUrl}
-          characterLimit={characterLimit}
           showPopover={showPopover}
           size={size}
           timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
           indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
         />
       </div>
-      {timeAgo && timeAgoPlacement === 'top-right' && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />}
+      {characterLimit ? (
+        <Typography
+          data-cy="post-header-character-count"
+          className="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums"
+          overrideDefaults
+        >
+          {characterLimit.count}/{characterLimit.max}
+        </Typography>
+      ) : (
+        timeAgo && timeAgoPlacement === 'top-right' && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />
+      )}
     </Container>
   );
 }

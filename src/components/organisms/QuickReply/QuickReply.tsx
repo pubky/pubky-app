@@ -7,8 +7,6 @@ import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConne
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { Typography } from '@/atoms/Typography/Typography';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
-import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
@@ -32,9 +30,6 @@ export function QuickReply({
   const [promptIndex] = React.useState(() => Math.floor(Math.random() * prompts.length));
   const prompt = prompts[promptIndex] || prompts[0];
 
-  const { userDetails, currentUserPubky } = useCurrentUserProfile();
-  const avatarUrl = useAvatarUrl(userDetails);
-
   const {
     textareaRef,
     containerRef,
@@ -49,6 +44,7 @@ export function QuickReply({
     showEmojiPicker,
     setShowEmojiPicker,
     displayPlaceholder,
+    currentUserPubky,
     handleExpand,
     handleSubmit,
     handleChange,
@@ -105,8 +101,6 @@ export function QuickReply({
 
   const isValid = () => canSubmitPost(POST_INPUT_VARIANT.REPLY, content, attachments, isSubmitting);
 
-  const characterLimit = { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
-
   const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitWithAuth, {
     requireModifier: true,
   });
@@ -120,11 +114,10 @@ export function QuickReply({
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const isListLayout = effectiveTagsLayout === 'list';
+  const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
 
   const contentProps: QuickReplyContentProps = {
-    avatarUrl,
-    userName: userDetails?.name || '',
-    avatarFallbackSeed: currentUserPubky || userDetails?.name || 'user',
+    currentUserPubky,
     textareaRef,
     content,
     displayPlaceholder,
@@ -185,7 +178,7 @@ export function QuickReply({
           </Container>
         )}
 
-        <Container ref={cardRef} className="gap-2" overrideDefaults>
+        <Container ref={cardRef} className={cn(isWideLayout ? '' : 'flex flex-col gap-4')} overrideDefaults>
           {isListLayout ? (
             <QuickReplyListContent {...contentProps} />
           ) : (

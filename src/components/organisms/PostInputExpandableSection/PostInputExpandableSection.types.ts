@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import type { CharacterLimit, PostInputActionSubmitMode } from '../PostInputActionBar/PostInputActionBar.types';
+import type { PostInputActionSubmitMode } from '../PostInputActionBar/PostInputActionBar.types';
 
 export interface PostInputExpandableSectionProps {
   isExpanded: boolean;
@@ -26,21 +26,9 @@ export interface PostInputExpandableSectionProps {
   onEmojiSelect: (emoji: { native: string }) => void;
   onImageClick?: () => void;
   onArticleClick?: () => void;
-  className?: string;
   /**
    * Optional compensation for vertical parent gap (in px) so spacing can animate out
    * together with height during exit.
    */
   parentGapPx?: number;
-  /**
-   * Hides the action bar (emoji/image/submit) while keeping embeds, tags and the
-   * emoji dialog. Used by layouts that render their own inline actions (e.g. list).
-   */
-  hideActionBar?: boolean;
-  /**
-   * Renders the tag chips and the tags input together on a single wrapping row
-   * instead of stacked. Used by the list layout.
-   */
-  inline?: boolean;
-  characterLimit?: CharacterLimit;
 }
