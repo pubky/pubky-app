@@ -258,8 +258,8 @@
       "enterInviteCode": "输入邀请码"
     },
     "phone": {
-      "title": "手机<highlight>验证。</highlight>",
-      "subtitle": "我们将通过短信向您的手机号发送验证码。",
+      "title": "输入<highlight>手机号。</highlight>",
+      "subtitle": "我们将向您发送验证码。",
       "sendCode": "发送验证码",
       "phoneNumber": "手机号码",
       "phoneHint": "输入您的手机号码，包括国家代码（如中国 +86）。",

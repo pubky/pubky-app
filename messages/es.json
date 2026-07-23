@@ -258,8 +258,8 @@
       "enterInviteCode": "Ingresar código de invitacion"
     },
     "phone": {
-      "title": "Verificacion por <highlight>teléfono.</highlight>",
-      "subtitle": "Te enviaremos un código de verificación por SMS a tu número de teléfono.",
+      "title": "Introduce tu <highlight>teléfono.</highlight>",
+      "subtitle": "Te enviaremos un código de verificación.",
       "sendCode": "Enviar código",
       "phoneNumber": "Número de teléfono",
       "phoneHint": "Ingresa tu número de teléfono, incluyendo el código de pais (ej. +34 para España).",

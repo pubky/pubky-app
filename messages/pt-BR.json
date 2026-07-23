@@ -258,8 +258,8 @@
       "enterInviteCode": "Digite o código de convite"
     },
     "phone": {
-      "title": "Prova de <highlight>Telefone.</highlight>",
-      "subtitle": "Enviaremos um código de verificação via SMS para seu número de telefone.",
+      "title": "Digite o <highlight>Telefone.</highlight>",
+      "subtitle": "Enviaremos um código de verificação.",
       "sendCode": "Enviar Código",
       "phoneNumber": "Número de telefone",
       "phoneHint": "Digite seu número de telefone, incluindo o código do pais (ex: +55 para Brasil).",

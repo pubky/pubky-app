@@ -9,7 +9,7 @@ exports[`HumanPhoneInput > matches snapshot 1`] = `
     class="font-bold text-foreground text-5xl lg:text-6xl"
     data-testid="heading-1"
   >
-    Proof of 
+    Enter 
     <span
       class="text-brand"
     >
@@ -19,7 +19,7 @@ exports[`HumanPhoneInput > matches snapshot 1`] = `
   <h2
     class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
   >
-    We will send you a verification code via SMS to your phone number.
+    We will send you a verification code.
   </h2>
 </div>
 `;

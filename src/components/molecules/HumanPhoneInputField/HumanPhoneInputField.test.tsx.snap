@@ -15,12 +15,12 @@ exports[`HumanPhoneInputField > matches snapshot 1`] = `
       data-testid="container"
     >
       <img
-        alt="Pubky phone representing phone number verification"
+        alt="Pubky phone representing phone number entry"
         class="h-auto w-[192px] max-w-full"
         data-nimg="1"
         decoding="async"
         height="600"
-        src="/images/sms-verification-phone.webp"
+        src="/images/phone-number.webp"
         style="color: transparent;"
         width="800"
       />

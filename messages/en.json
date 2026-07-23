@@ -258,8 +258,8 @@
       "enterInviteCode": "Enter invite code"
     },
     "phone": {
-      "title": "Proof of <highlight>Phone.</highlight>",
-      "subtitle": "We will send you a verification code via SMS to your phone number.",
+      "title": "Enter <highlight>Phone.</highlight>",
+      "subtitle": "We will send you a verification code.",
       "sendCode": "Send Code",
       "phoneNumber": "Phone number",
       "phoneHint": "Enter your phone number, including country code (e.g. +1 for US).",

@@ -260,8 +260,8 @@
       "enterInviteCode": "ادخل رمز الدعوة"
     },
     "phone": {
-      "title": "اثبات <highlight>الهاتف.</highlight>",
-      "subtitle": "سنرسل لك رمز تحقق عبر الرسائل القصيرة الى رقم هاتفك.",
+      "title": "ادخل <highlight>الهاتف.</highlight>",
+      "subtitle": "سنرسل لك رمز تحقق.",
       "sendCode": "ارسال الرمز",
       "phoneNumber": "رقم الهاتف",
       "phoneHint": "ادخل رقم هاتفك مع رمز الدولة (مثلا +966 للسعودية).",

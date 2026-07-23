@@ -260,8 +260,8 @@
       "enterInviteCode": "Einladungscode eingeben"
     },
     "phone": {
-      "title": "Telefon<highlight>nachweis.</highlight>",
-      "subtitle": "Wir senden Ihnen einen Verifizierungscode per SMS an Ihre Telefonnummer.",
+      "title": "Telefonnummer <highlight>eingeben.</highlight>",
+      "subtitle": "Wir senden Ihnen einen Verifizierungscode.",
       "sendCode": "Code senden",
       "phoneNumber": "Telefonnummer",
       "phoneHint": "Geben Sie Ihre Telefonnummer einschliesslich Landesvorwahl ein (z.B. +49 für Deutschland).",

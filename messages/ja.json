@@ -258,8 +258,8 @@
       "enterInviteCode": "招待コードを入力"
     },
     "phone": {
-      "title": "電話番号の<highlight>確認。</highlight>",
-      "subtitle": "SMSで確認コードをお送りします。",
+      "title": "電話番号を<highlight>入力。</highlight>",
+      "subtitle": "確認コードをお送りします。",
       "sendCode": "コードを送信",
       "phoneNumber": "電話番号",
       "phoneHint": "国番号を含めて電話番号を入力してください（例：日本は+81）。",
