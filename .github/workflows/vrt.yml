@@ -1,0 +1,15 @@
+name: Visual Regression Tests
+
+# Placeholder workflow. Executes Visual Regression Tests.
+# Real implementation is developed on a separate branch.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    name: Placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: No-op
+        run: echo "Visual Regression Tests workflow placeholder - implementation pending."
