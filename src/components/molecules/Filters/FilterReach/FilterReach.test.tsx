@@ -1,27 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import type { ReactElement } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { REACH } from '@/stores/home/home.types';
 import { FilterReach } from './FilterReach';
 
-const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
-
-vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
-  useIsMobile: mockUseIsMobile,
-}));
-
-function renderWithTooltip(ui: ReactElement) {
-  return render(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
-}
-
 describe('FilterReach', () => {
-  beforeEach(() => {
-    mockUseIsMobile.mockReset();
-    mockUseIsMobile.mockReturnValue(false);
-  });
-
   it('renders with default selected tab and proper ARIA attributes', () => {
     render(<FilterReach />);
 
@@ -81,7 +63,7 @@ describe('FilterReach', () => {
   });
 
   it('renders profile tag selector footer when profile tag props are provided', () => {
-    renderWithTooltip(
+    render(
       <FilterReach
         showNetwork
         showMe
@@ -96,29 +78,8 @@ describe('FilterReach', () => {
     expect(screen.getByPlaceholderText('profile tag')).toBeInTheDocument();
   });
 
-  it('passes selected reach through to the profile tag input tooltip', async () => {
-    const user = userEvent.setup();
-
-    renderWithTooltip(
-      <FilterReach
-        showNetwork
-        showMe
-        selectedTab={REACH.ME}
-        profileTags={[]}
-        onProfileTagAdd={vi.fn()}
-        onProfileTagRemove={vi.fn()}
-      />,
-    );
-
-    await user.hover(screen.getByPlaceholderText('profile tag'));
-
-    await waitFor(() => {
-      expect(screen.getByRole('tooltip')).toHaveTextContent('Show posts from people I tagged as…');
-    });
-  });
-
   it('disables profile tag selector footer when profileTagsDisabled is true', () => {
-    renderWithTooltip(
+    render(
       <FilterReach
         showNetwork
         showMe

@@ -1173,13 +1173,7 @@
       "friends": "Amis",
       "me": "Moi",
       "profileTag": "tag de profil",
-      "profileTagLimitReached": "{max} tags max",
-      "profileTagTooltip": {
-        "network": "Afficher les publications des personnes que mon réseau a étiquetées comme…",
-        "following": "Afficher les publications des personnes que mes abonnements ont étiquetées comme…",
-        "friends": "Afficher les publications des personnes que mes abonnements ont étiquetées comme…",
-        "me": "Afficher les publications des personnes que j’ai étiquetées comme…"
-      }
+      "profileTagLimitReached": "{max} tags max"
     },
     "sort": {
       "title": "Trier",

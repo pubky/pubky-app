@@ -1173,13 +1173,7 @@
       "friends": "友達",
       "me": "自分",
       "profileTag": "プロフィールタグ",
-      "profileTagLimitReached": "最大{max}タグ",
-      "profileTagTooltip": {
-        "network": "ネットワークが次のタグを付けた人の投稿を表示…",
-        "following": "フォロー中の人が次のタグを付けた人の投稿を表示…",
-        "friends": "フォロー中の人が次のタグを付けた人の投稿を表示…",
-        "me": "自分が次のタグを付けた人の投稿を表示…"
-      }
+      "profileTagLimitReached": "最大{max}タグ"
     },
     "sort": {
       "title": "並べ替え",

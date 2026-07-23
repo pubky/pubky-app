@@ -91,7 +91,6 @@ export function FilterReach({
           selectedTags={profileTags}
           onTagAdd={onProfileTagAdd}
           onTagRemove={onProfileTagRemove}
-          reach={selectedTab}
           disabled={profileTagsDisabled}
         />
       ) : null}

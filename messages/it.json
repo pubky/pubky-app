@@ -1173,13 +1173,7 @@
       "friends": "Amici",
       "me": "Io",
       "profileTag": "tag profilo",
-      "profileTagLimitReached": "max {max} tag",
-      "profileTagTooltip": {
-        "network": "Mostra i post delle persone che la mia rete ha taggato come…",
-        "following": "Mostra i post delle persone che i miei seguiti hanno taggato come…",
-        "friends": "Mostra i post delle persone che i miei seguiti hanno taggato come…",
-        "me": "Mostra i post delle persone che ho taggato come…"
-      }
+      "profileTagLimitReached": "max {max} tag"
     },
     "sort": {
       "title": "Ordina",
