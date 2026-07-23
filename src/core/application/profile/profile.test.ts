@@ -107,21 +107,6 @@ describe('ProfileApplication', () => {
       // Ingest only fires after profile.json is actually saved
       expect(NexusBootstrapService.ingest).not.toHaveBeenCalled();
     });
-
-    it('resolves even when the Nexus ingest request rejects', async () => {
-      const profileJson = { name: 'Carol' };
-      const profile = asOpaque<PubkyAppUser>({ toJson: vi.fn(() => profileJson) });
-      const url = 'pubky://user/pub/pubky.app/user';
-      const pubky = 'test-pubky' as Pubky;
-
-      vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
-      vi.mocked(NexusBootstrapService.ingest).mockRejectedValueOnce(new Error('Nexus down'));
-
-      await expect(ProfileApplication.commitCreate({ profile, url, pubky })).resolves.toBeUndefined();
-
-      expect(NexusBootstrapService.ingest).toHaveBeenCalledWith(pubky);
-      expect(mockAuthState.setHasProfile).toHaveBeenCalledWith(true);
-    });
   });
 
   describe('commitUpdateStatus', () => {

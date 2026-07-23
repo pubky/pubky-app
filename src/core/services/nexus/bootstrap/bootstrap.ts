@@ -28,9 +28,13 @@ export class NexusBootstrapService {
    * Asks Nexus to ingest a user: resolves their homeserver and starts indexing them.
    * Idempotent server-side (no-op if the user is already known).
    *
+   * Best-effort: never rejects. Nexus being down must not block onboarding or
+   * sign-in; the indexed:false gate in bootstrap retries on the next sign-in.
+   * Errors are already logged by the Err factories.
+   *
    * @param pubky - User's public key
    */
   static async ingest(pubky: Pubky): Promise<void> {
-    await fetchNexusNoContent({ url: bootstrapApi.ingest(pubky), method: HttpMethod.PUT });
+    await fetchNexusNoContent({ url: bootstrapApi.ingest(pubky), method: HttpMethod.PUT }).catch(() => {});
   }
 }

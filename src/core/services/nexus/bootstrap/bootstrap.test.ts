@@ -228,5 +228,19 @@ describe('NexusBootstrapService', () => {
         },
       });
     });
+
+    it('should resolve even when the response is not ok (best-effort contract)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        headers: {
+          get: vi.fn(),
+        },
+        text: vi.fn().mockResolvedValue(''),
+      });
+
+      await expect(NexusBootstrapService.ingest(pubky)).resolves.toBeUndefined();
+    });
   });
 });

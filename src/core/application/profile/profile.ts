@@ -37,10 +37,8 @@ export class ProfileApplication {
   static async commitCreate({ profile, url, pubky }: TCreateProfileInput) {
     try {
       await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson: profile.toJson() });
-      // Tell Nexus this user exists so it resolves their homeserver and starts indexing.
-      // Fire-and-forget: Nexus being down must not fail onboarding; the indexed:false
-      // gate in BootstrapApplication retries on next sign-in. Errors already logged by Err factories.
-      void NexusBootstrapService.ingest(pubky).catch(() => {});
+      // Tell Nexus this user exists (best-effort, never rejects; see NexusBootstrapService.ingest).
+      void NexusBootstrapService.ingest(pubky);
       const authStore = useAuthStore.getState();
       authStore.setCurrentUserPubky(pubky);
       authStore.setHasProfile(true);

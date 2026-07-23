@@ -680,24 +680,5 @@ describe('BootstrapApplication', () => {
       expect(upsertTtlSpy).not.toHaveBeenCalled();
       expect(mockSubscribeUser).not.toHaveBeenCalled();
     });
-
-    it('should resolve even when the Nexus ingest request rejects', async () => {
-      const bootstrapData = emptyBootstrap();
-      bootstrapData.indexed = false;
-
-      setupMocks({ bootstrapData });
-
-      const ingestSpy = vi.spyOn(NexusBootstrapService, 'ingest').mockRejectedValue(new Error('Nexus down'));
-      vi.spyOn(LocalUserService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
-      vi.spyOn(TtlCoordinator, 'getInstance').mockReturnValue(
-        asOpaque<TtlCoordinator>({
-          subscribeUser: vi.fn(),
-        }),
-      );
-      vi.spyOn(Logger, 'warn').mockImplementation(() => {});
-
-      await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).resolves.toBeDefined();
-      expect(ingestSpy).toHaveBeenCalledWith(TEST_PUBKY);
-    });
   });
 });
