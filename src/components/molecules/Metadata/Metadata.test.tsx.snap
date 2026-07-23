@@ -316,7 +316,7 @@ exports[`Metadata - Snapshots > matches snapshot with empty strings 1`] = `
     },
   ],
   "creator": "Pubky Team",
-  "description": "",
+  "description": null,
   "icons": {
     "apple": [
       {

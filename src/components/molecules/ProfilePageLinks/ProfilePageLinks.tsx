@@ -10,6 +10,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
+import { getSafeExternalUrl } from '@/libs/utils/safeExternalUrl';
 import { getIconFromUrl } from '@/libs/utils/urlToIcon';
 import { DialogCheckLink } from '@/organisms/DialogCheckLink/DialogCheckLink';
 import type { ProfilePageLinksProps } from './ProfilePageLinks.types';
@@ -25,11 +26,16 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
   // Transform raw links from Nexus into the format we need for rendering
   const transformedLinks = useMemo(
     () =>
-      links?.map((link) => ({
-        icon: getIconFromUrl(link.url),
-        label: link.title,
-        url: link.url,
-      })) || [],
+      links?.flatMap((link) => {
+        const safeUrl = getSafeExternalUrl(link.url);
+        if (!safeUrl) return [];
+
+        return {
+          icon: getIconFromUrl(safeUrl),
+          label: link.title,
+          url: safeUrl,
+        };
+      }) || [],
     [links],
   );
   return (

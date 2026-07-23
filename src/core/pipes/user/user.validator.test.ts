@@ -170,11 +170,8 @@ describe('UserValidator', () => {
       },
     );
 
-    /**
-     * Note: Zod's url() validator accepts various protocols, not just http/https
-     */
-    it.each([['https://example.com'], ['http://example.com'], ['ftp://files.example.com']])(
-      'should accept valid URL format: "%s"',
+    it.each([['https://example.com'], ['http://example.com'], ['mailto:test@example.com'], ['tel:+1234567890']])(
+      'should accept a safe profile URL: "%s"',
       (validUrl) => {
         const links = [{ label: 'Valid', url: validUrl }];
         const result = UserValidator.check('TestUser', '', links, null);
@@ -182,6 +179,22 @@ describe('UserValidator', () => {
         expect(result.error).toHaveLength(0);
       },
     );
+
+    it.each([
+      ['javascript:alert(1)'],
+      [' \u0000javascript:alert(1)'],
+      ['java\tscript:alert(1)'],
+      ['data:text/html,<script>alert(1)</script>'],
+      ['vbscript:msgbox(1)'],
+      ['ftp://files.example.com'],
+    ])('should reject an unsafe profile URL: "%s"', (unsafeUrl) => {
+      const result = UserValidator.check('TestUser', '', [{ label: 'Unsafe', url: unsafeUrl }], null);
+
+      expect(result.error).toContainEqual({
+        type: 'link_0',
+        message: 'Invalid URL',
+      });
+    });
 
     it('should report errors for multiple invalid URLs with correct indices', () => {
       const links = [

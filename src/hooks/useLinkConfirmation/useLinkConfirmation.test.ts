@@ -78,6 +78,21 @@ describe('useLinkConfirmation', () => {
     });
   });
 
+  it('blocks an unsafe URL instead of showing the confirmation dialog', () => {
+    const { result } = renderHook(() => useLinkConfirmation());
+    const mockEvent = createMockEvent();
+
+    act(() => {
+      result.current.handleLinkClick('javascript:alert(1)', mockEvent);
+    });
+
+    expect(mockEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(mockEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(windowOpenSpy).not.toHaveBeenCalled();
+    expect(result.current.dialogOpen).toBe(false);
+    expect(result.current.clickedLink).toBe('');
+  });
+
   describe('handleLinkClick with showConfirm disabled', () => {
     beforeEach(() => {
       mockUseSettingsStore.mockReturnValue({
@@ -119,6 +134,21 @@ describe('useLinkConfirmation', () => {
       expect(result.current.dialogOpen).toBe(false);
       expect(result.current.clickedLink).toBe('');
     });
+
+    it.each([' \u0000java\tscript:alert(1)', 'data:text/html,<script>alert(1)</script>', 'vbscript:msgbox(1)'])(
+      'blocks an unsafe URL even when confirmation is disabled: %s',
+      (unsafeUrl) => {
+        const { result } = renderHook(() => useLinkConfirmation());
+
+        act(() => {
+          result.current.handleLinkClick(unsafeUrl, createMockEvent());
+        });
+
+        expect(windowOpenSpy).not.toHaveBeenCalled();
+        expect(result.current.dialogOpen).toBe(false);
+        expect(result.current.clickedLink).toBe('');
+      },
+    );
   });
 
   describe('handleLinkClick with bypass protocols', () => {
