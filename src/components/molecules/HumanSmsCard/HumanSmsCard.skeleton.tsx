@@ -9,13 +9,13 @@ export function HumanSmsCardSkeleton() {
   return (
     <Container className="relative flex-1">
       <Card data-testid="sms-verification-card-skeleton" className="flex-1 gap-0 rounded-md p-6 lg:p-12">
-        <Container className="w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12">
-          <Container className="hidden w-48 shrink-0 lg:block">
+        <Container className="mx-0 w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12">
+          <Container className="mx-0 hidden w-48 shrink-0 lg:block">
             <Skeleton className="size-48 rounded" />
           </Container>
 
-          <Container className="w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6">
-            <Container className="w-full flex-col gap-3">
+          <Container className="mx-0 w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6">
+            <Container className="mx-0 w-full flex-col gap-3">
               <Container className="flex-row items-center justify-between gap-4 lg:justify-start">
                 <Skeleton className="h-5 w-48 rounded lg:h-8 lg:w-56" />
                 <Skeleton className="h-6 w-14 rounded-md lg:hidden" />

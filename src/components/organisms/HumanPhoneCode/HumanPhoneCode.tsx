@@ -82,21 +82,18 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
 
       {/* Verification code card */}
       <Card data-testid="human-phone-code-card" className="gap-0 p-6 lg:p-12">
-        <Container className="flex-col gap-12 lg:flex-row lg:items-start">
-          {/* Verification-code brand plate */}
-          <Container className="flex hidden h-full w-full items-center lg:block lg:w-auto">
+        <Container className="mx-0 w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12">
+          <Container className="mx-0 hidden w-48 shrink-0 lg:block">
             <Image
               priority={true}
               src="/images/sms-verification-code.webp"
               alt="Pubky padlock representing verification code"
-              className="h-auto w-[192px] max-w-full"
+              className="size-48"
             />
           </Container>
 
-          {/* Content section */}
-          <Container className="w-full flex-1 flex-col gap-6">
-            {/* Card header */}
-            <Container className="flex-col gap-3">
+          <Container className="mx-0 w-full flex-col gap-6 lg:max-w-xl lg:flex-1">
+            <Container className="mx-0 flex-col gap-3">
               <Typography as="h3" className="text-2xl leading-[32px] font-semibold text-foreground">
                 {t('label')}
               </Typography>

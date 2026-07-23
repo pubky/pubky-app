@@ -25,8 +25,8 @@ export function ContentCard({ children, className, classNameImage, image, layout
   };
 
   return (
-    <Card className={cn('p-6 md:p-12', className)}>
-      <Container className={cn('gap-12', layoutClasses[layout])}>
+    <Card className={cn('gap-0 p-6 md:p-12', className)}>
+      <Container className={cn('mx-0 w-full gap-4 lg:items-start lg:gap-12', layoutClasses[layout])}>
         {image && (
           <ContentImage
             src={image.src}
@@ -36,7 +36,7 @@ export function ContentCard({ children, className, classNameImage, image, layout
             containerClassName={classNameImage}
           />
         )}
-        <Container className="w-full justify-start gap-4">{children}</Container>
+        <Container className="mx-0 w-full max-w-xl flex-1 justify-start gap-4">{children}</Container>
       </Container>
     </Card>
   );

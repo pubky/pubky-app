@@ -29,18 +29,18 @@ export const HumanPhoneInputField = ({
   const defaultPlaceholder = t('placeholder');
   return (
     <Card data-testid="human-phone-input-card" className="gap-0 p-6 lg:p-12">
-      <Container className="flex-col gap-8 lg:flex-row lg:items-center">
-        <Container className="flex hidden h-full w-full flex-1 items-center lg:block lg:w-auto">
+      <Container className="mx-0 w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12">
+        <Container className="mx-0 hidden w-48 shrink-0 lg:block">
           <Image
             priority={true}
             src="/images/phone-number.webp"
             alt="Pubky phone representing phone number entry"
-            className="h-auto w-[192px] max-w-full"
+            className="size-48"
           />
         </Container>
 
-        <Container className="mr-6 w-full flex-3 gap-6">
-          <Container className="gap-3">
+        <Container className="mx-0 w-full flex-col gap-6 lg:max-w-xl lg:flex-1">
+          <Container className="mx-0 flex-col gap-3">
             <Typography as="h3" className="text-2xl leading-[32px] font-semibold text-foreground sm:text-[28px]">
               {t('phoneNumber')}
             </Typography>
@@ -50,28 +50,26 @@ export const HumanPhoneInputField = ({
             </Typography>
           </Container>
 
-          <Container className="gap-2">
-            <Container
-              data-testid="human-phone-input-wrapper"
-              className="ml-0 flex max-w-128 flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
-            >
-              <Input
-                data-testid="human-phone-input"
-                type="tel"
-                autoFocus
-                value={value}
-                onChange={onChange}
-                placeholder={placeholder ?? defaultPlaceholder}
-                className="border-none bg-transparent text-base font-medium text-brand placeholder:text-brand/50 focus:ring-0 focus:outline-none"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && isValid) {
-                    onEnter?.();
-                  }
-                }}
-              />
+          <Container
+            data-testid="human-phone-input-wrapper"
+            className="flex max-w-128 flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
+          >
+            <Input
+              data-testid="human-phone-input"
+              type="tel"
+              autoFocus
+              value={value}
+              onChange={onChange}
+              placeholder={placeholder ?? defaultPlaceholder}
+              className="border-none bg-transparent text-base font-medium text-brand placeholder:text-brand/50 focus:ring-0 focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && isValid) {
+                  onEnter?.();
+                }
+              }}
+            />
 
-              {isValid && <CheckCircle2 className="h-6 w-6 shrink-0 text-brand" aria-hidden="true" />}
-            </Container>
+            {isValid && <CheckCircle2 className="h-6 w-6 shrink-0 text-brand" aria-hidden="true" />}
           </Container>
         </Container>
       </Container>

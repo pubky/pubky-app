@@ -50,8 +50,8 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
           isUnavailable && 'pointer-events-none opacity-60 blur-[5px]',
         )}
       >
-        <Container className="w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12">
-          <Container className="hidden w-48 shrink-0 flex-col gap-3 lg:flex">
+        <Container className="mx-0 w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12">
+          <Container className="mx-0 hidden w-48 shrink-0 flex-col gap-3 lg:flex">
             <Image
               priority
               src="/images/bitcoin-payment.webp"
@@ -63,8 +63,8 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
             </Typography>
           </Container>
 
-          <Container className="w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6">
-            <Container className="w-full flex-col gap-3">
+          <Container className="mx-0 w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6">
+            <Container className="mx-0 w-full flex-col gap-3">
               <Container className="flex-row items-center justify-between gap-4 lg:justify-start">
                 <Typography
                   as="h3"

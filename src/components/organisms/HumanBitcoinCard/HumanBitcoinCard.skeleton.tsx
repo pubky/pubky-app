@@ -38,14 +38,14 @@ export function HumanBitcoinCardSkeleton() {
   return (
     <Container className="relative flex-1">
       <Card data-testid="bitcoin-payment-card-skeleton" className="flex-1 gap-0 rounded-md p-6 lg:p-12">
-        <Container className="w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12">
-          <Container className="hidden w-48 shrink-0 flex-col gap-3 lg:flex">
+        <Container className="mx-0 w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12">
+          <Container className="mx-0 hidden w-48 shrink-0 flex-col gap-3 lg:flex">
             <Skeleton className="size-48 rounded" />
             <Skeleton className="mx-auto h-3 w-28 rounded" />
           </Container>
 
-          <Container className="w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6">
-            <Container className="w-full flex-col gap-3">
+          <Container className="mx-0 w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6">
+            <Container className="mx-0 w-full flex-col gap-3">
               <Container className="flex-row items-center justify-between gap-4 lg:justify-start">
                 <Skeleton className="h-5 w-40 rounded lg:h-8 lg:w-48" />
                 <Skeleton className="h-6 w-20 rounded-md lg:hidden" />
